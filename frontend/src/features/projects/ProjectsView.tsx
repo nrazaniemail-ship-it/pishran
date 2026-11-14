@@ -46,7 +46,6 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
     setName(value)
     const option = STEEL_PROJECT_OPTIONS.find(item => item.name === value)
     setSteelStage(option?.stage ?? '')
-    setCustomName('')
   }
 
   async function submit(event: React.FormEvent) {
