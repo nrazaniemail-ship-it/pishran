@@ -112,7 +112,7 @@ const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)
   const counts={...common,...(plantType==='dri'?dri:steel)}[entry]??[0,0,0,0,0,0]
   Object.assign(values,{expert:counts[0],technician:counts[1],secretary:counts[2],operator:counts[3],driver:counts[4],laborer:counts[5],allocation:100})
  }
- if(['land','site','vehicles','infrastructure','office','preop'].includes(sheet.id))values.allocation=100
+ if(['land','site','buildings','vehicles','infrastructure','office','preop'].includes(sheet.id))values.allocation=100
  if(sheet.id==='buildings')values.sharedFactor=0
  if(sheet.id==='site')values.year=1
  return{id:sheet.id+'-'+i,label:typeof entry==='string'?entry:entry.label,section:typeof entry==='string'?false:entry.section,values}
