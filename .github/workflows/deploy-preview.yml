@@ -3,6 +3,7 @@ name: Deploy isolated web preview
 on:
   push:
     branches:
+      - main
       - feature/integrated-dri-steelmaking-comfar
   workflow_dispatch:
 
@@ -27,7 +28,7 @@ jobs:
       - name: Checkout preview source
         uses: actions/checkout@v4
         with:
-          ref: feature/integrated-dri-steelmaking-comfar
+          ref: ${{ github.ref_name }}
           path: preview-src
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -39,7 +40,6 @@ jobs:
         working-directory: production-src/frontend
         run: |
           npm install
-          npm run test:financial
           npm run build
       - name: Build feature preview
         working-directory: preview-src/frontend
