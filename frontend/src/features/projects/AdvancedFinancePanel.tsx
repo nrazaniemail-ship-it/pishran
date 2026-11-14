@@ -144,6 +144,7 @@ export default function AdvancedFinancePanel(props: Props) {
     </div>
     <p className="fw-hint">مبنای هزینه‌های سرمایه در گردش عمداً از OPEX کل به‌صورت خودکار تفکیک نمی‌شود؛ ارقام واقعی مواد، تبدیل، محصول، نقد و خرید اعتباری را وارد کنید تا تقسیم‌بندی فرضی در مدل ایجاد نشود.</p>
     <div className="fw-result">اوج نیاز سرمایه در گردش: <b>{money(result.peakWorkingCapital)} {props.currency}</b> · کسری منابع: <b>{money(result.fundingGap)} {props.currency}</b></div>
+    <div className="fw-card"><b>جدول دوره‌ای سرمایه در گردش</b>{result.years.map(r=><div className="fw-validation" key={r.year}><span>سال {r.year} · مواد {money(r.workingCapitalBreakdown.rawMaterials)} · WIP {money(r.workingCapitalBreakdown.workInProgress)} · محصول {money(r.workingCapitalBreakdown.finishedGoods)} · مطالبات {money(r.workingCapitalBreakdown.receivables)} · پرداختنی {money(r.workingCapitalBreakdown.payables)}</span><b>نیاز طی سال {money(r.workingCapital)} · مانده پایان {money(r.closingWorkingCapital)} · تغییر خالص {money(r.changeInWorkingCapital)}</b></div>)}</div>
 
     <h4>۳. استهلاک دارایی‌به‌دارایی و مالیات</h4>
     <p className="fw-hint">دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.</p>
