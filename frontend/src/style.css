@@ -139,3 +139,11 @@
 .roll-actions button{border:1px solid var(--line,#dce3ec);border-radius:6px;background:transparent;color:var(--text,#17243a);height:30px;min-width:27px;display:grid;place-items:center}
 @media(max-width:900px){.rolling-page .roll-steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:560px){.rolling-page .roll-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.roll-product{padding:10px}}
+
+.fw-report-panel{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));background:color-mix(in srgb,var(--surface) 96%,var(--accent))}
+.fw-report-panel .fw-card-head{align-items:flex-end;flex-wrap:wrap}
+.fw-report-panel .fw-card-head h3{display:flex;align-items:center;gap:8px}
+.fw-report-select{min-width:min(100%,300px)}
+.fw-report-actions{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0 8px}
+.fw-report-actions button{display:inline-flex;align-items:center;gap:7px}
+@media(max-width:600px){.fw-report-select{width:100%}.fw-report-actions{display:grid;grid-template-columns:1fr}.fw-report-actions button{justify-content:center}}
