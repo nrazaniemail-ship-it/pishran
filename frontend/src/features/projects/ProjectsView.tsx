@@ -7,7 +7,6 @@ interface Props {
   onCreate: (input: Pick<FeasibilityProject, 'name' | 'industry' | 'capacity' | 'location' | 'steelStage'>) => Promise<void>
   onDelete: (id: string) => Promise<void>
   confirmBeforeDelete: boolean
-  onOpenSample: () => void
   onOpenProject: (project: FeasibilityProject) => void
 }
 
@@ -25,7 +24,7 @@ const STEEL_PROJECT_GROUPS = [
   { stage: 'نورد سرد', projects: ['احداث خط تولید کلاف سرد', 'احداث خط تولید کلاف گالوانیزه', 'احداث خط تولید کلاف رنگی'] },
 ]
 
-export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenSample, onOpenProject }: Props) {
+export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenProject }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [customName, setCustomName] = useState('')
@@ -65,7 +64,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   }
 
   return <section className="projects-page">
-    <div className="page-heading"><div><span className="eyebrow">PROJECT WORKSPACE</span><h1>پروژه‌های امکان‌سنجی</h1><p>پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.</p></div><div className="projects-head-actions"><button className="secondary-button" onClick={onOpenSample}><Factory size={16}/> مشاهده پروژه نمونه نورد ورق ۲۵۰ هزار تنی</button><button className="primary" onClick={() => setShowForm(v => !v)}><Plus size={17}/> پروژه جدید</button></div></div>
+    <div className="page-heading"><div><span className="eyebrow">PROJECT WORKSPACE</span><h1>پروژه‌های امکان‌سنجی</h1><p>پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.</p></div><div className="projects-head-actions"><button className="primary" onClick={() => setShowForm(v => !v)}><Plus size={17}/> پروژه جدید</button></div></div>
     {showForm && <form className="project-form" onSubmit={submit}>
       <h3>تعریف پروژه جدید</h3>
       <div className="form-grid">
