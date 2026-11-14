@@ -501,8 +501,14 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   if (input.workingCapitalPolicy) {
     const policy = input.workingCapitalPolicy
     const dayEntries: [string, number][] = [['موجودی مواد اولیه', policy.rawMaterialDays], ['کالای در جریان ساخت', policy.workInProgressDays], ['محصول نهایی', policy.finishedGoodsDays], ['وصول مطالبات', policy.receivableDays], ['حداقل نقد عملیاتی', policy.cashDays], ['پرداخت بدهی تجاری', policy.payableDays]]
-    dayEntries.forEach(([label, days]) => { if (days > policy.dayBasis) warnings.push(`دوره ${label} از مبنای روزهای سال بیشتر است؛ در محاسبه به مبنای سال محدود می‌شود.`) })
-    if (policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100) warnings.push('درصد تکمیل مواد و تبدیل در جریان ساخت باید حداکثر ۱۰۰٪ باشد.')
+    dayEntries.forEach(([label, days]) => {
+      if (!Number.isFinite(days) || days < 0) warnings.push(`روزهای ${label} باید عددی معتبر و غیرمنفی باشد.`)
+      else if (days > policy.dayBasis) warnings.push(`دوره ${label} از مبنای روزهای سال بیشتر است؛ در محاسبه به مبنای سال محدود می‌شود.`)
+    })
+    const completionEntries: [string, number][] = [['درصد تکمیل مواد در جریان ساخت', policy.workInProgressMaterialCompletionPercent], ['درصد تکمیل تبدیل در جریان ساخت', policy.workInProgressConversionCompletionPercent]]
+    completionEntries.forEach(([label, value]) => { if (!Number.isFinite(value) || value < 0 || value > 100) warnings.push(`${label} باید بین صفر تا ۱۰۰ درصد باشد.`) })
+    const costEntries: [string, number][] = [['هزینه مواد اولیه', policy.annualRawMaterialCost], ['مبنای بدهی تجاری', policy.annualPayablesCost ?? policy.annualRawMaterialCost], ['هزینه تبدیل', policy.annualConversionCost], ['بهای محصول نهایی', policy.annualFinishedGoodsCost], ['درآمد فروش', policy.annualRevenue], ['هزینه نقدی عملیاتی', policy.annualCashOperatingCost]]
+    costEntries.forEach(([label, value]) => { if (!Number.isFinite(value) || value < 0) warnings.push(`${label} باید عددی معتبر و غیرمنفی باشد.`) })
   }
   if (input.discountMode === 'wacc' && discountRate === null) warnings.push('برای محاسبه نرخ تنزیل، ساختار سرمایه و نرخ بازده مورد انتظار سهامدار را تکمیل کنید.')
   if (input.loans.some(loan => loan.repaymentStartYear + loan.graceYears + loan.termYears - 1 > years)) warnings.push('بخشی از بازپرداخت وام‌ها خارج از افق زمانی مدل قرار می‌گیرد.')
