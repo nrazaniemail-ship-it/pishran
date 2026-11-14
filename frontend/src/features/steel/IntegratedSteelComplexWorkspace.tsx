@@ -2,31 +2,11 @@ import { useState } from 'react'
 import { ArrowRight, Factory, Layers3, AlertTriangle, Calculator } from 'lucide-react'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
 import ProcessPlantWorkspace from './ProcessPlantWorkspace'
+import { INTEGRATED_COMFAR_REFERENCE as benchmark } from './integratedProjectBenchmark'
 
 type Unit = 'dri' | 'steelmaking'
 
-const benchmark = {
-  currency: 'EUR',
-  driCapacityTpy: 1_760_000,
-  slabCapacityTpy: 1_200_000,
-  fixedInvestment: 453_858_298,
-  preproductionNet: 6_624_027,
-  capitalizedInterest: 110_500_000,
-  workingCapital: 68_155_775.89,
-  totalInvestment: 639_138_100.89,
-  equity: 139_982_325,
-  longTermDebt: 431_000_000,
-  shortTermDebt: 49_523_442.75,
-  totalSources: 620_505_767.75,
-  fundingGap: 18_632_333.14,
-  referenceRevenue: 887_300_000,
-  referenceFactoryCost: 643_963_499,
-  referenceDepreciation: 26_727_770.59,
-  projectNpvAt25: 19_964_251.38,
-  projectIrr: 26.08,
-  equityNpvAt30: 60_342_720.87,
-  equityIrr: 40.51
-}
+
 
 const money = (value: number) => new Intl.NumberFormat('en-GB', { maximumFractionDigits: 2 }).format(value)
 
