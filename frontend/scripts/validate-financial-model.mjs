@@ -78,6 +78,7 @@ near(rollingAudit.financingCashflowSchedule.longTermLoanGrossDrawdowns,
 near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryTotalInvestment
   - rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetTotalInvestment,
   10009707.09412, 0.1, 'HRCR200 investment base discrepancy')
+assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.some(flag => flag.includes('row 9') && flag.includes('discounted cash flows')), 'HRCR200 discounted-row methodology conflict must remain explicit')
 assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.length >= 5,
   'Source conflicts must remain explicit audit flags')
 console.log('PASS: source-workbook DRI and HRCR200 CAPEX/OPEX bridges and unresolved financing/depreciation flags')
@@ -245,6 +246,7 @@ console.log('Basis comparison: raw Pishran project flows vs IRR-NPV sheet row 9 
   maxAbsoluteDifference: generatedComfarComparison.maxAbsoluteDifference
 })
 assert.equal(generatedProjectCashFlows.length, pishranExpected.projectCashFlows.length, 'Pishran project flow period count')
+for (let index = 0; index < generatedProjectCashFlows.length; index++) near(generatedProjectCashFlows[index], pishranExpected.projectCashFlows[index], 0.01, 'Pishran raw project cash flow period ' + (index + 1))
 assert.ok(generatedProjectCashFlows.every(Number.isFinite), 'Pishran generated cash flows must all be finite')
 assert.ok(generatedProjectCashFlows.some(value => value < 0) && generatedProjectCashFlows.some(value => value > 0),
   'Pishran generated cash flows must contain investment outflow and operating inflow')
@@ -255,6 +257,7 @@ assert.ok(Number.isFinite(generatedNpv) && Number.isFinite(generatedIrr) && Numb
   'Pishran-generated NPV, IRR and MIRR must be finite')
 near(generatedNpv, pishranExpected.npvAt21Percent, 0.01, 'Pishran-generated NPV at 21%')
 near(engine.calculateNpv(generatedProjectCashFlows, 0.25), pishranExpected.npvAt25Percent, 0.01, 'Pishran-generated NPV at 25% for like-rate comparison with General Summary')
+near(pishranExpected.npvAt25Percent - workbookAudit.HOT_ROLLING_200KT_AUDIT.alternativeMetricsInWorkbook.generalSummaryNpvAt25, -37940.98962954, 0.02, 'Pishran and COMFAR General Summary same-rate NPV difference')
 near(generatedIrr, pishranExpected.irr, 1e-8, 'Pishran-generated IRR')
 near(generatedMirr, pishranExpected.mirr, 1e-8, 'Pishran-generated MIRR')
 console.log('Pishran independent project metrics; source COMFAR outputs remain unreconciled pending corrected raw cash-flow export:', {
