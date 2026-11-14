@@ -61,6 +61,13 @@ export async function ensureWorkbookProjects(): Promise<FeasibilityProject[]> {
       steelStage: 'مجتمع احیاء مستقیم و فولادسازی',
       capacity: '۱٬۷۶۰٬۰۰۰ تن DRI و ۱٬۲۰۰٬۰۰۰ تن تختال در سال',
       location: ''
+    },
+    {
+      name: 'پروژه نورد سرد ورق فولادی (CRC200)',
+      industry: 'فولاد و صنایع معدنی',
+      steelStage: 'نورد سرد و پوشش‌دهی',
+      capacity: '۲۰۰٬۰۰۰ تن در سال',
+      location: 'کاشان، منطقه صنعتی کوثر'
     }
   ]
   let next = [...projects]
