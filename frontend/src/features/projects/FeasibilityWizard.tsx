@@ -26,7 +26,7 @@ const stageOptions = [
  {id:'dri',name:'احیای مستقیم',route:'شارژ گندله، احیای گازی/زغالی، خنک‌سازی و بریکت‌سازی',fields:['فناوری احیا','ظرفیت DRI','درجه فلزی‌شدن','درصد کربن محصول','مصرف گندله ویژه','مصرف گاز طبیعی','مصرف برق ویژه','دمای محصول خروجی']},
  {id:'steelmaking',name:'فولادسازی و ریخته‌گری',route:'EAF/IF/BOF، پالایش ثانویه، LF/VD و ریخته‌گری مداوم',fields:['نوع کوره ذوب','ظرفیت مذاب','سایز و تعداد ذوب','ترکیب شارژ DRI/قراضه','مصرف الکترود','مصرف فروآلیاژ','بازده مذاب به شمش','نوع ریخته‌گری و محصول']},
  {id:'hot-rolling',name:'نورد گرم',route:'کوره پیش‌گرم، پوسته‌زدایی، نورد خشن/نهایی، خنک‌کاری و برش',fields:['خانواده محصول تخت/طویل','نوع خط نورد','ابعاد خوراک','محدوده ابعاد محصول','تعداد قفسه/پاس','دمای خروجی نورد','بازده محصول قابل فروش','سرعت خط و گلوگاه']},
- {id:'cold-rolling',name:'نورد سرد و پوشش‌دهی',route:'اسیدشویی، نورد سرد، آنیل، گالوانیزه و رنگی',fields:['نوع محصول CRC/HDG/PPGI','نوع خط اسیدشویی','نوع نورد سرد','ظرفیت آنیلینگ','وزن پوشش روی','ضخامت رنگ خشک','بازده محصول قابل فروش','مصرف اسید/روغن/روی/رنگ']},
+ {id:'cold-rolling',name:'نورد سرد و پوشش‌دهی',route:'تبدیل کلاف گرم به کلاف سرد؛ جزئیات خطوط و عملیات تکمیلی باید با طراحی مهندسی پروژه تطبیق داده شود',fields:['نوع و گرید کلاف گرم ورودی','ظرفیت تأمین کلاف گرم (تن/سال)','ضخامت و عرض کلاف گرم ورودی','مشخصات ضخامت و عرض کلاف سرد','نوع و ظرفیت خط اسیدشویی','نوع و ظرفیت قفسه‌های نورد سرد','ظرفیت عملیات آنیل و تکمیل سطح','بازده و ضایعات خط','مصرف ویژه اسید و مواد شیمیایی','مصرف روغن نورد و روانکار','تعداد نیروی انسانی مستقیم']},
  {id:'rebar-rolling',name:'نورد میلگرد',route:'کوره پیش‌گرم، نورد خشن و میانی، بلوک نهایی، خنک‌کاری و بستر خنک‌کن',fields:['قطرهای میلگرد','گریدهای فولادی','تعداد خطوط و استندها','ظرفیت برش و بسته‌بندی','سرعت نورد','بازده محصول قابل فروش','مصرف انرژی ویژه']},
  {id:'angle-rolling',name:'نورد نبشی',route:'کوره پیش‌گرم، نورد مقاطع، خنک‌کاری و صافکاری',fields:['سایز و ضخامت نبشی','گرید فولادی','تعداد استندها','ظرفیت برش و بسته‌بندی','سرعت نورد','بازده محصول قابل فروش','مصرف انرژی ویژه']},
  {id:'beam-rolling',name:'نورد تیرآهن',route:'کوره پیش‌گرم، نورد یونیورسال/معمولی، خنک‌کاری و صافکاری',fields:['سایز و استاندارد تیرآهن','گرید فولادی','تعداد استندها','ظرفیت صافکاری و برش','سرعت نورد','بازده محصول قابل فروش','مصرف انرژی ویژه']},
@@ -39,21 +39,33 @@ type Step = typeof steps[number][0]
 const makeRow=(name:string,unit='تن',quantity=0,unitPrice=0,source='فرض کاربر'):Row=>({id:crypto.randomUUID?.()??String(Date.now()+Math.random()),name,quantity,unit,unitPrice,source})
 function baseModel(project:FeasibilityProject):Model {
  const rawProject=project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
+ const coldRollingProject=!rawProject&&project.steelStage?.includes('نورد سرد')
  const selectedStage=rawProject?stageOptions[9]:(stageOptions.find(s=>project.steelStage?.includes(s.name))??stageOptions[5])
  return {
-  project:{name:project.name,location:project.location,owner:'',startYear:1405,constructionYears:2,operatingYears:10,currency:'میلیون ریال',fxRate:1},
+  project:{name:project.name,location:project.location,owner:coldRollingProject?'نورد و لوله گالوانیزه فجر کویر کاشان':'',startYear:1403,constructionYears:coldRollingProject?1.5:2,operatingYears:coldRollingProject?15:10,currency:coldRollingProject?'میلیون ریال':'میلیون ریال',fxRate:1},
   stage:selectedStage.id,
-  products:rawProject?[]:[makeRow('محصول اصلی','تن/سال',Number(project.capacity.replace(/[^0-9.]/g,''))||250000,0)],
-  capacity:{nameplate:rawProject?0:(Number(project.capacity.replace(/[^0-9.]/g,''))||250000),operatingDays:rawProject?0:330,hoursPerDay:rawProject?0:24,availability:rawProject?0:85,yield:rawProject?0:95,ramp:rawProject?[]:[70,80,90,100]},
+  products:rawProject?[]:coldRollingProject?[makeRow('کلاف سرد','تن/سال',200000,0,'گزارش فنی-اقتصادی نورد سرد، مهر ۱۴۰۲')]:[makeRow('محصول اصلی','تن/سال',Number(project.capacity.replace(/[^0-9.]/g,''))||250000,0)],
+  capacity:{nameplate:rawProject?0:(coldRollingProject?200000:(Number(project.capacity.replace(/[^0-9.]/g,''))||250000)),operatingDays:rawProject?0:330,hoursPerDay:rawProject?0:24,availability:rawProject?0:100,yield:rawProject?0:100,ramp:rawProject?[]:(coldRollingProject?[80,90,100]:[70,80,90,100])},
   process:{technology:'',route:'',equipment:'',bottleneck:0,notes:''},
-  technical:rawProject?[]:selectedStage.fields.map(field=>makeRow(field,'مقدار',0,0,'برآورد مهندسی')),
-  balance:rawProject?[]:[makeRow('ماده اولیه اصلی','تن/تن محصول',1.125),makeRow('ضایعات و برگشتی','درصد',3)],
-  utilities:rawProject?[]:[makeRow('برق','kWh/تن',120),makeRow('گاز طبیعی','Nm³/تن',45),makeRow('آب صنعتی','m³/تن',0.8)],
+  technical:rawProject?[]:selectedStage.fields.map(field=>makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',field.includes('نیروی انسانی')&&coldRollingProject?250:0,0,coldRollingProject?'نیازمند تکمیل مهندسی؛ گزارش فقط اشتغال مستقیم را مشخص کرده':'برآورد مهندسی')),
+  balance:rawProject?[]:coldRollingProject?[makeRow('کلاف گرم (ماده اولیه اصلی)','تن/تن محصول',1,0,'گزارش: نیاز سالانه ۲۰۰ هزار تن برای تولید ۲۰۰ هزار تن کلاف سرد'),makeRow('ضایعات، افت و برگشتی خط','درصد',0,0,'نیازمند موازنه تفصیلی')]:[makeRow('ماده اولیه اصلی','تن/تن محصول',1.125),makeRow('ضایعات و برگشتی','درصد',3)],
+  utilities:rawProject?[]:coldRollingProject?[makeRow('برق مصرفی خط','kWh/تن',0,0,'نیازمند طراحی مهندسی؛ گزارش فقط هزینه انشعاب و تأمین را دارد'),makeRow('گاز طبیعی','Nm³/تن',0,0,'نیازمند طراحی مهندسی'),makeRow('آب صنعتی و خنک‌کاری','m³/تن',0,0,'نیازمند طراحی مهندسی'),makeRow('اسیدشویی و مواد شیمیایی','kg/تن',0,0,'نیازمند طراحی مهندسی'),makeRow('روغن نورد و روانکار','kg/تن',0,0,'نیازمند طراحی مهندسی')]:[makeRow('برق','kWh/تن',120),makeRow('گاز طبیعی','Nm³/تن',45),makeRow('آب صنعتی','m³/تن',0.8)],
   market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:10,domesticPrice:0,exportPrice:0,domesticShare:85,growth:0},
-  capex:rawProject?[]:[makeRow('زمین و آماده‌سازی','میلیون ریال',1),makeRow('ساختمان و ابنیه','میلیون ریال',1),makeRow('ماشین‌آلات و تجهیزات','میلیون ریال',1),makeRow('تأسیسات و یوتیلیتی','میلیون ریال',1),makeRow('نصب، مهندسی و راه‌اندازی','میلیون ریال',1),makeRow('هزینه‌های پیش از بهره‌برداری','میلیون ریال',1)],
-  opex:rawProject?[]:[makeRow('سایر هزینه‌های متغیر','میلیون ریال/تن',1),makeRow('نیروی انسانی','میلیون ریال/سال',1),makeRow('تعمیرات و نگهداری','میلیون ریال/سال',1),makeRow('اداری، فروش و حمل','میلیون ریال/سال',1)],
-  finance:{equity:40,debt:60,equityCost:35,debtCost:23,tax:20,manualRate:30,method:'wacc',depreciationYears:10,workingCapital:0},
-  risks:rawProject?[]:[makeRow('افزایش قیمت مواد اولیه','درصد',10),makeRow('کاهش قیمت فروش','درصد',10),makeRow('افت ظرفیت تولید','درصد',10),makeRow('تأخیر در راه‌اندازی','ماه',6)]
+  capex:rawProject?[]:coldRollingProject?[
+   makeRow('خرید زمین (۱۳ هکتار؛ ۱۳۰٬۰۰۰ مترمربع)','میلیون ریال',2015000,1,'جدول ۱-۱ گزارش'),
+   makeRow('محوطه‌سازی و آماده‌سازی سایت','میلیون ریال',1092344,1,'جدول ۲-۱ گزارش'),
+   makeRow('ساختمان‌های صنعتی','میلیون ریال',1855680,1,'جدول ۴-۱ گزارش'),
+   makeRow('ساختمان‌های غیرصنعتی','میلیون ریال',57181,1,'جدول ۳-۱ گزارش'),
+   makeRow('ماشین‌آلات، تجهیزات، مهندسی و نصب','میلیون ریال',8114800,1,'جدول ۶-۱ گزارش'),
+   makeRow('وسائط نقلیه','میلیون ریال',162400,1,'جدول ۷-۱ گزارش'),
+   makeRow('تأسیسات زیربنایی و واحدهای جنبی','میلیون ریال',797500,1,'جدول ۸-۱ گزارش'),
+   makeRow('تجهیزات و وسایل اداری و خدماتی','میلیون ریال',10950,1,'جدول ۹-۱ گزارش'),
+   makeRow('هزینه‌های احتمالی متفرقه و پیش‌بینی‌نشده','میلیون ریال',282117,1,'جدول ۱۱-۱ گزارش'),
+   makeRow('هزینه‌های قبل از بهره‌برداری','میلیون ریال',302400,1,'جدول ۱۰-۱ گزارش')
+  ]:[makeRow('زمین و آماده‌سازی','میلیون ریال',1),makeRow('ساختمان و ابنیه','میلیون ریال',1),makeRow('ماشین‌آلات و تجهیزات','میلیون ریال',1),makeRow('تأسیسات و یوتیلیتی','میلیون ریال',1),makeRow('نصب، مهندسی و راه‌اندازی','میلیون ریال',1),makeRow('هزینه‌های پیش از بهره‌برداری','میلیون ریال',1)],
+  opex:rawProject?[]:coldRollingProject?[makeRow('خرید کلاف گرم','میلیون ریال/تن',0,0,'قیمت و شرایط تأمین در گزارش درج نشده'),makeRow('اسید، روغن نورد و مواد مصرفی','میلیون ریال/تن',0,0,'نیازمند برآورد'),makeRow('برق، گاز و آب','میلیون ریال/تن',0,0,'نیازمند برآورد'),makeRow('حقوق و دستمزد ۲۵۰ نفر','میلیون ریال/سال',0,0,'گزارش: ۲۵۰ نفر اشتغال مستقیم؛ مبلغ هزینه درج نشده'),makeRow('تعمیرات و قطعات یدکی','میلیون ریال/سال',0,0,'نیازمند برآورد'),makeRow('اداری، فروش، حمل و سربار','میلیون ریال/سال',0,0,'نیازمند برآورد')]:[makeRow('سایر هزینه‌های متغیر','میلیون ریال/تن',1),makeRow('نیروی انسانی','میلیون ریال/سال',1),makeRow('تعمیرات و نگهداری','میلیون ریال/سال',1),makeRow('اداری، فروش و حمل','میلیون ریال/سال',1)],
+  finance:{equity:coldRollingProject?66:40,debt:coldRollingProject?34:60,equityCost:35,debtCost:coldRollingProject?28:23,tax:20,manualRate:coldRollingProject?28:30,method:coldRollingProject?'manual':'wacc',depreciationYears:coldRollingProject?15:10,workingCapital:0},
+  risks:rawProject?[]:coldRollingProject?[makeRow('تأمین پایدار کلاف گرم و قیمت خرید','سناریو',0,0,'ریسک کلیدی؛ تحلیل حساسیت در گزارش مطرح شده'),makeRow('تغییر قیمت فروش کلاف سرد','درصد',0,0,'نیازمند داده بازار'),makeRow('دسترس‌پذیری خط و تحقق ظرفیت','درصد',0,0,'نیازمند برآورد مهندسی'),makeRow('تأخیر در ساخت و راه‌اندازی','ماه',0,0,'گزارش: دوره ساخت ۱۸ ماه')]:[makeRow('افزایش قیمت مواد اولیه','درصد',10),makeRow('کاهش قیمت فروش','درصد',10),makeRow('افت ظرفیت تولید','درصد',10),makeRow('تأخیر در راه‌اندازی','ماه',6)]
  }
 }
 const n=(v:number)=>Number.isFinite(v)?v:0
