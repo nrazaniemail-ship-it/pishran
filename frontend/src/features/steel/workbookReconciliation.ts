@@ -144,13 +144,17 @@ export const HOT_ROLLING_200KT_AUDIT = {
   alternativeMetricsInWorkbook: {
     generalSummaryTotalInvestment: 26_596_838.875729468,
     irrNpvSheetTotalInvestment: 16_587_131.781609466,
+    irrNpvSheetFixedInvestmentLink: 16_587_131.781609466,
+    capexWorkbookFixedInvestment: 18_463_008.720569465,
+    fixedInvestmentLinkDifference: 1_875_876.938959999,
     generalSummaryNpvAt25: 31_399_764.273352,
     generalSummaryIrrPercent: 48.31,
     generalSummaryMirrPercent: 28.03,
     generalSummaryEquityIrrPercent: 57.99,
     generalSummaryEquityMirrPercent: 30.9,
     irrNpvSheetProjectNpvAt21: 18_509_558.82096656,
-    irrNpvSheetProjectIrrPercent: 43.378234116396674
+    irrNpvSheetProjectIrrPercent: 43.378234116396674,
+    irrNpvSheetNpvFormulaUsesNetDiscountedRow: true
   },
   financingCashflowSchedule: {
     equityContributionsTotal: 16_401_129.53,
