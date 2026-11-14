@@ -164,6 +164,16 @@ const energyDefaults:Record<string,{specific:number;unit:string;price?:number}> 
 const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)=>{
  const values:Record<string,Cell>=Object.fromEntries(sheet.columns.map(col=>[col.key,col.numeric?0:'']))
  const label=typeof entry==='string'?entry:entry.label
+ if(sheet.id==='project'&&typeof entry==='string'){
+  if(label.startsWith('وام '))Object.assign(values,{rate:0,grace:0,term:10,repaymentStart:5,method:'اصل مساوی',capitalizeInterest:'خیر'})
+  if(label==='نرخ مالیات عملکرد (%)')values.value=25
+  if(label==='هزینه حقوق صاحبان سهام (%)')values.value=0
+  if(label==='روش نرخ تنزیل (WACC / دستی)')values.method='WACC'
+  if(label==='نرخ تنزیل دستی (%)')values.value=0
+  if(label==='سرمایه در گردش به درصد هزینه نقدی (%)')values.value=10
+  if(label==='ارزش اسقاط پایان افق تحلیل')values.value=0
+  if(label.startsWith('توزیع CAPEX ثابت')||label.startsWith('توزیع هزینه قبل از بهره‌برداری'))values.value=25
+ }
  if(typeof entry==='string'){
   if(sheet.id==='materials'){
    const item=materialDefaults[label]
