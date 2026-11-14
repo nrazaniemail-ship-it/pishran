@@ -178,11 +178,15 @@ const smartIssues:ValidationIssue[]=useMemo(()=>{
  const rows=[...m.materialBalance,...m.processConsumables,...m.utilities,...m.capex,...m.opex,...m.market]
  if(rows.some(x=>x.quantity<0||x.unitPrice<0||x.confidence<0||x.confidence>100))add('cost-rows','error','مقدار یا قیمت یکی از ردیف‌ها نامعتبر است','مقدار و قیمت باید نامنفی و سطح اطمینان بین صفر تا ۱۰۰٪ باشد.','جداول مواد و هزینه‌ها')
  if(rows.some(x=>(x.currency||m.currency)!==m.currency&&(x.fxRate||0)<=0))add('fx-rates','error','نرخ تبدیل ارز یک یا چند قلم ثبت نشده است','برای هر ردیف با ارز متفاوت از ارز پایه، نرخ تبدیل مثبت وارد کنید.','نرخ تبدیل')
+ if(m.products.some(p=>p.line&&!m.lines.some(l=>l.id===p.line||l.name===p.line)))add('product-line','error','محصول به خط نامعتبر متصل شده است','خط تخصیص‌یافته را انتخاب کنید یا خط تولید متناظر را تعریف کنید.','تخصیص محصول به خط')
+ if(m.market.length===0)add('market-data','info','داده بازار هنوز ثبت نشده است','برای برآورد درآمد و ظرفیت قابل فروش، تقاضا و قیمت بازار را مستند کنید.','مطالعه بازار')
+ if(m.capex.some(x=>x.quantity===0||x.unitPrice===0))add('capex-incomplete','warning','برخی اقلام سرمایه‌گذاری قیمت‌گذاری نشده‌اند','مقدار و قیمت تجهیزات، نصب، ساختمان و هزینه‌های پیش از بهره‌برداری را تکمیل کنید.','CAPEX')
+ if(m.opex.some(x=>x.quantity===0||x.unitPrice===0))add('opex-incomplete','warning','برخی اقلام هزینه جاری ناقص‌اند','مصرف ویژه، مقدار سالانه و قیمت مواد، انرژی، نیروی انسانی و تعمیرات را بررسی کنید.','OPEX')
  if(m.constructionYears<1||m.life<1)add('project-life','error','دوره ساخت یا عمر پروژه نامعتبر است','دوره ساخت و عمر بهره‌برداری باید حداقل یک سال باشند.','دوره پروژه')
  return out
 },[m,totalMix,financial.capexScheduleTotal,rate])
 const passedChecks=validationChecks.filter(x=>x.ok).length
-const blockingChecks=validationChecks.filter(x=>!x.ok)
+const blockingChecks=[...validationChecks.filter(x=>!x.ok),...smartIssues.filter(x=>x.severity==='error').map(x=>({ok:false,t:x.title}))]
 const projectViable=financial.projectNpv>0&&financial.projectIrr!==null&&financial.projectIrr>rate&&financial.pi!==null&&financial.pi>1
 const shareholderViable=financial.equityNpv>0&&financial.equityIrr!==null&&financial.equityIrr>m.ke/100
 const debtViable=m.debt===0?m.loans.length===0:(m.loans.length>0&&financial.minDscr!==null&&financial.minDscr>=1.2)
