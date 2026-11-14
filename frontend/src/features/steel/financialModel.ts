@@ -84,3 +84,13 @@ export function calculateIrr(flows: number[]): number | null {
   }
   return roots.length ? roots.sort((a, b) => Math.abs(a) - Math.abs(b))[0] : null
 }
+
+export function calculateMirr(flows: number[], financeRate: number, reinvestmentRate: number): number | null {
+  if (!flows.length || !flows.every(Number.isFinite) || financeRate <= -1 || reinvestmentRate <= -1) return null
+  const periods = flows.length - 1
+  if (periods <= 0) return null
+  const presentValueNegative = flows.reduce((sum, flow, index) => flow < 0 ? sum + flow / Math.pow(1 + financeRate, index) : sum, 0)
+  const futureValuePositive = flows.reduce((sum, flow, index) => flow > 0 ? sum + flow * Math.pow(1 + reinvestmentRate, periods - index) : sum, 0)
+  if (presentValueNegative >= 0 || futureValuePositive <= 0) return null
+  return Math.pow(futureValuePositive / -presentValueNegative, 1 / periods) - 1
+}
