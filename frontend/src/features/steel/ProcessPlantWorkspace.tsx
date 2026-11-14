@@ -301,7 +301,7 @@ const financeProjectSheet=sheets.find(x=>x.id==='project')!
 const financeProjectRows=data.project??makeRows(financeProjectSheet,plantType)
 const financeRow=(label:string)=>financeProjectRows.find(row=>row.label===label)
 const financeValue=(label:string,fallback=0)=>Number(financeRow(label)?.values.value??fallback)||0
-const materialCapacity=Math.max(1,financeValue('ظرفیت اسمی سالانه تولید (تن)',plantType==='dri'?1760000:1200000))
+const materialCapacity=Math.max(0,financeValue('ظرفیت اسمی سالانه تولید (تن)',plantType==='dri'?1760000:1200000))
 const materialRows=data.materials??makeRows(sheets.find(x=>x.id==='materials')!,plantType)
 const energyRows=data.energy??makeRows(sheets.find(x=>x.id==='energy')!,plantType)
 const salesData=data.sales??makeRows(sheets.find(x=>x.id==='sales')!,plantType)
@@ -357,6 +357,7 @@ const financeInput={
  salvageValue:financeValue('ارزش اسقاط پایان افق تحلیل',0)
 }
 const financeResult=calculateIntegratedFinance(financeInput)
+if(materialCapacity<=0)financeResult.warnings.push('ظرفیت اسمی سالانه باید بزرگ‌تر از صفر باشد؛ نتایج مالی تا اصلاح این مقدار معتبر نیستند.')
 const salesMixTotal=salesData.filter(row=>row.label!=='مجموع').reduce((sum,row)=>sum+Number(row.values.mix??0),0)
 if(Math.abs(salesMixTotal-100)>.01)financeResult.warnings.push('مجموع سهم ترکیب محصولات باید ۱۰۰٪ باشد؛ در حال حاضر '+fmt(salesMixTotal)+'٪ ثبت شده است. درآمد فروش بر اساس سهم‌های ثبت‌شده محاسبه می‌شود.')
 const capexDistributionTotal=capexDistribution.reduce((sum,value)=>sum+value,0)
