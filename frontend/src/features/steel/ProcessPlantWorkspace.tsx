@@ -3,6 +3,7 @@ import {ArrowRight,Save,Plus,Trash2,ChevronLeft,Factory,FileSpreadsheet,Calculat
 import {localStore} from '../../core/storage/localStore'
 import type {FeasibilityProject} from '../../core/projects/projectRepository'
 import {calculateIntegratedFinance} from './financialModel'
+import type {WorkingCapitalPolicy} from './financialModel'
 import type {IntegratedLoanYear} from './financialModel'
 
 type PlantType='dri'|'steelmaking'
@@ -97,7 +98,7 @@ function definitions(type:PlantType):Sheet[]{
    {label:'الف) منابع تأمین مالی — مبالغ به ارز مبنای پروژه',section:true},
    'آورده نقدی سهامدار','وام بانک ملی هامبورگ ۱','وام بانک ملی هامبورگ ۲','وام بانک ملی هامبورگ ۳','وام بانک ملی هامبورگ ۴','وام بانک تجارت ۱','وام بانک تجارت ۲','وام بانک تجارت ۳','وام بانک تجارت ۴','وام سرمایه در گردش',
    {label:'ب) مفروضات مالی — مقادیر در ستون «مقدار مفروضه»',section:true},
-   'ظرفیت اسمی سالانه تولید (تن)','نرخ مالیات عملکرد (%)','هزینه حقوق صاحبان سهام (%)','روش نرخ تنزیل (WACC / دستی)','نرخ تنزیل دستی (%)','سرمایه در گردش به درصد هزینه نقدی (%)','نرخ رشد سالانه قیمت فروش (%)','نرخ رشد سالانه هزینه‌های عملیاتی (%)','ارزش اسقاط پایان افق تحلیل',
+   'ظرفیت اسمی سالانه تولید (تن)','نرخ مالیات عملکرد (%)','هزینه حقوق صاحبان سهام (%)','روش نرخ تنزیل (WACC / دستی)','نرخ تنزیل دستی (%)','سرمایه در گردش به درصد هزینه نقدی (%)','ظرفیت مرجع برآورد CAPEX (تن)','ضریب مقیاس زمین','ضریب مقیاس محوطه‌سازی','ضریب مقیاس ساختمان‌ها','ضریب مقیاس ماشین‌آلات','ضریب مقیاس تأسیسات','ضریب مقیاس وسائط نقلیه','ضریب مقیاس تجهیزات اداری','روز موجودی مواد اولیه','روز کالای در جریان ساخت','روز موجودی محصول نهایی','روز وصول مطالبات','روز موجودی نقد عملیاتی','روز پرداخت به تأمین‌کنندگان','مبنای روزهای سال سرمایه در گردش','نرخ رشد سالانه قیمت فروش (%)','نرخ رشد سالانه هزینه‌های عملیاتی (%)','ارزش اسقاط پایان افق تحلیل',
    {label:'ج) توزیع زمانی سرمایه‌گذاری — درصد هر سال ساخت؛ جمع هر گروه باید ۱۰۰٪ باشد',section:true},
    'توزیع CAPEX ثابت — سال ساخت ۱ (%)','توزیع CAPEX ثابت — سال ساخت ۲ (%)','توزیع CAPEX ثابت — سال ساخت ۳ (%)','توزیع CAPEX ثابت — سال ساخت ۴ (%)',
    'توزیع هزینه قبل از بهره‌برداری — سال ساخت ۱ (%)','توزیع هزینه قبل از بهره‌برداری — سال ساخت ۲ (%)','توزیع هزینه قبل از بهره‌برداری — سال ساخت ۳ (%)','توزیع هزینه قبل از بهره‌برداری — سال ساخت ۴ (%)'
@@ -173,6 +174,21 @@ const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)
   if(label==='روش نرخ تنزیل (WACC / دستی)')values.method='WACC'
   if(label==='نرخ تنزیل دستی (%)')values.value=0
   if(label==='سرمایه در گردش به درصد هزینه نقدی (%)')values.value=10
+  if(label==='ظرفیت مرجع برآورد CAPEX (تن)')values.value=plantType==='dri'?1760000:1200000
+  if(label==='ضریب مقیاس زمین')values.value=.1
+  if(label==='ضریب مقیاس محوطه‌سازی')values.value=.4
+  if(label==='ضریب مقیاس ساختمان‌ها')values.value=.65
+  if(label==='ضریب مقیاس ماشین‌آلات')values.value=.7
+  if(label==='ضریب مقیاس تأسیسات')values.value=.6
+  if(label==='ضریب مقیاس وسائط نقلیه')values.value=.8
+  if(label==='ضریب مقیاس تجهیزات اداری')values.value=.5
+  if(label==='روز موجودی مواد اولیه')values.value=45
+  if(label==='روز کالای در جریان ساخت')values.value=5
+  if(label==='روز موجودی محصول نهایی')values.value=15
+  if(label==='روز وصول مطالبات')values.value=45
+  if(label==='روز موجودی نقد عملیاتی')values.value=10
+  if(label==='روز پرداخت به تأمین‌کنندگان')values.value=30
+  if(label==='مبنای روزهای سال سرمایه در گردش')values.value=360
   if(label==='نرخ رشد سالانه قیمت فروش (%)')values.value=0
   if(label==='نرخ رشد سالانه هزینه‌های عملیاتی (%)')values.value=0
   if(label==='ارزش اسقاط پایان افق تحلیل')values.value=0
@@ -289,12 +305,17 @@ const capexAmount=(sheetId:string,row:Row):number=>{const v=row.values,n=(key:st
  return n('amount')||n('total')||n('annualCost')
 }
 const capexBySheet=(id:string):number=> (data[id]??makeRows(sheets.find(x=>x.id===id)!,plantType)).reduce((sum,row)=>sum+capexAmount(id,row),0)
-const fixedBase:number=capexBySheet('land')+capexBySheet('site')+capexBySheet('buildings')+capexBySheet('infrastructure')+capexBySheet('vehicles')+capexBySheet('office')
+const capexReferenceCapacity=Math.max(1,financeValue('ظرفیت مرجع برآورد CAPEX (تن)',plantType==='dri'?1760000:1200000))
+const capexRatio=materialCapacity/capexReferenceCapacity
+const capexElasticity:Record<string,string>={land:'ضریب مقیاس زمین',site:'ضریب مقیاس محوطه‌سازی',buildings:'ضریب مقیاس ساختمان‌ها',machines:'ضریب مقیاس ماشین‌آلات',infrastructure:'ضریب مقیاس تأسیسات',vehicles:'ضریب مقیاس وسائط نقلیه',office:'ضریب مقیاس تجهیزات اداری'}
+const capexScaleFactor=(id:string)=>Math.pow(Math.max(0,capexRatio),Math.max(0,Math.min(1,financeValue(capexElasticity[id]??'',.65))))
+const capexBaseBySheet=(id:string)=>capexBySheet(id)*capexScaleFactor(id)
+const fixedBase:number=capexBaseBySheet('land')+capexBaseBySheet('site')+capexBaseBySheet('buildings')+capexBaseBySheet('infrastructure')+capexBaseBySheet('vehicles')+capexBaseBySheet('office')
 const contingency:number=Math.round(fixedBase*.05)
-const fixedInvestment:number=fixedBase+capexBySheet('machines')+contingency
+const fixedInvestment:number=fixedBase+capexBaseBySheet('machines')+contingency
 const preOperating:number=capexBySheet('preop')
 const capexTotal:number=fixedInvestment+preOperating
-const summaryValues:number[]=[capexBySheet('land'),capexBySheet('site'),capexBySheet('buildings'),capexBySheet('machines'),capexBySheet('infrastructure'),capexBySheet('vehicles'),capexBySheet('office'),contingency,fixedInvestment,preOperating,capexTotal]
+const summaryValues:number[]=[capexBaseBySheet('land'),capexBaseBySheet('site'),capexBaseBySheet('buildings'),capexBaseBySheet('machines'),capexBaseBySheet('infrastructure'),capexBaseBySheet('vehicles'),capexBaseBySheet('office'),contingency,fixedInvestment,preOperating,capexTotal]
 const infrastructureRows=data.infrastructure??makeRows(sheets.find(x=>x.id==='infrastructure')!,plantType)
 const infrastructureDepreciable=infrastructureRows.filter(row=>!row.section&&!row.label.includes('حق انشعاب')).reduce((sum,row)=>sum+Number(row.values.amount??0)*(Math.max(0,Math.min(100,Number(row.values.allocation??100)))/100),0)
 const financeProjectSheet=sheets.find(x=>x.id==='project')!
@@ -309,8 +330,8 @@ const gradeShareFor=(row:Row)=>{if(plantType==='dri')return 1;const i=row.label.
 const materialPriceFor=(row:Row)=>plantType==='steelmaking'&&row.label.includes('قراضه قابل خرید')?Math.round(Number(salesData[3]?.values.price??550)*.77):Number(row.values.price??0)
 const materialCost=materialRows.filter(row=>!row.section&&!materialSubtotalLabels.includes(row.label)).reduce((sum,row)=>{const v=row.values,qty=Number(v.specific??0)*materialCapacity*gradeShareFor(row);return sum+qty*materialPriceFor(row)},0)
 const energyCost=energyRows.filter(row=>!row.section&&!row.label.includes('جمع مصرف سالیانه')&&!row.label.includes('واحد احیا')&&!row.label.includes('واحد فولادسازی')&&!row.label.includes('هوای فشرده')&&!row.label.includes('ازت')&&!row.label.includes('آرگن')).reduce((sum,row)=>{const v=row.values,qty=v.energyBasis==='hourly'?Number(v.specific??0)*24*365:Number(v.specific??0)*materialCapacity;return sum+qty*Number(v.price??0)},0)
-const maintenanceBases=[capexBySheet('buildings'),capexBySheet('machines'),infrastructureDepreciable,capexBySheet('vehicles'),capexBySheet('office')]
-const depreciationBases=[capexBySheet('site'),capexBySheet('buildings'),capexBySheet('machines'),infrastructureDepreciable,capexBySheet('vehicles'),capexBySheet('office'),preOperating,contingency]
+const maintenanceBases=[capexBaseBySheet('buildings'),capexBaseBySheet('machines'),infrastructureDepreciable*capexScaleFactor('infrastructure'),capexBaseBySheet('vehicles'),capexBaseBySheet('office')]
+const depreciationBases=[capexBaseBySheet('site'),capexBaseBySheet('buildings'),capexBaseBySheet('machines'),infrastructureDepreciable*capexScaleFactor('infrastructure'),capexBaseBySheet('vehicles'),capexBaseBySheet('office'),preOperating,contingency]
 const maintenanceRows=data.maintenance??makeRows(sheets.find(x=>x.id==='maintenance')!,plantType)
 const depreciationData=data.depreciation??makeRows(sheets.find(x=>x.id==='depreciation')!,plantType)
 const salesRevenue=salesData.filter(row=>row.label!=='مجموع').reduce((sum,row)=>sum+materialCapacity*Number(row.values.mix??0)/100*Number(row.values.price??0),0)
@@ -350,6 +371,7 @@ const financeInput={
  taxRate:financeValue('نرخ مالیات عملکرد (%)',25),
  costOfEquity:financeValue('هزینه حقوق صاحبان سهام (%)',0),
  workingCapitalPercent:financeValue('سرمایه در گردش به درصد هزینه نقدی (%)',10),
+ workingCapitalPolicy:{dayBasis:financeValue('مبنای روزهای سال سرمایه در گردش',360)===365?365:360,rawMaterialDays:financeValue('روز موجودی مواد اولیه',45),workInProgressDays:financeValue('روز کالای در جریان ساخت',5),finishedGoodsDays:financeValue('روز موجودی محصول نهایی',15),receivableDays:financeValue('روز وصول مطالبات',45),cashDays:financeValue('روز موجودی نقد عملیاتی',10),payableDays:financeValue('روز پرداخت به تأمین‌کنندگان',30),annualRawMaterialCost:materialCost,annualConversionCost:payrollGrandTotal+energyCost+maintenanceCostTotal+otherOpexTotal,annualFinishedGoodsCost:materialCost+payrollGrandTotal+energyCost+maintenanceCostTotal+otherOpexTotal,annualRevenue:salesRevenue,annualCashOperatingCost:fullCashOpex} as WorkingCapitalPolicy,
  salesEscalationPercent:financeValue('نرخ رشد سالانه قیمت فروش (%)',0),
  opexEscalationPercent:financeValue('نرخ رشد سالانه هزینه‌های عملیاتی (%)',0),
  discountMode:String(financeRow('روش نرخ تنزیل (WACC / دستی)')?.values.method??'WACC').includes('دستی')?'manual' as const:'wacc' as const,
@@ -358,6 +380,8 @@ const financeInput={
 }
 const financeResult=calculateIntegratedFinance(financeInput)
 if(materialCapacity<=0)financeResult.warnings.push('ظرفیت اسمی سالانه باید بزرگ‌تر از صفر باشد؛ نتایج مالی تا اصلاح این مقدار معتبر نیستند.')
+if(capexRatio>3||capexRatio<.33)financeResult.warnings.push('تغییر ظرفیت نسبت به ظرفیت مرجع بیش از دامنه ۰٫۳۳ تا ۳ برابر است؛ برآورد مقیاس‌شده CAPEX نیازمند بازبینی مهندسی است.')
+if(Math.abs(capexRatio-1)>.0001)financeResult.warnings.push('CAPEX با روش مقیاس توان‌دار و ضرایب مستقل هر گروه دارایی برآورد شده است؛ قیمت‌گذاری مجدد تجهیزات، زمین و زیرساخت برای برآورد نهایی الزامی است.')
 const salesMixTotal=salesData.filter(row=>row.label!=='مجموع').reduce((sum,row)=>sum+Number(row.values.mix??0),0)
 if(Math.abs(salesMixTotal-100)>.01)financeResult.warnings.push('مجموع سهم ترکیب محصولات باید ۱۰۰٪ باشد؛ در حال حاضر '+fmt(salesMixTotal)+'٪ ثبت شده است. درآمد فروش بر اساس سهم‌های ثبت‌شده محاسبه می‌شود.')
 const capexDistributionTotal=capexDistribution.reduce((sum,value)=>sum+value,0)
@@ -366,6 +390,7 @@ if(Math.abs(capexDistributionTotal-100)>.01)financeResult.warnings.push('توز�
 if(Math.abs(preopDistributionTotal-100)>.01)financeResult.warnings.push('توزیع هزینه‌های قبل از بهره‌برداری در چهار سال ساخت باید دقیقاً ۱۰۰٪ شود.')
 if(financeResult.totalEquityContribution>0&&financeInput.costOfEquity<=0)financeResult.warnings.push('هزینه حقوق صاحبان سهام صفر است؛ برای WACC قابل اتکا نرخ بازده مورد انتظار سهامدار را وارد کنید.')
 const totalFinanceInterest=financeResult.years.reduce((sum,row)=>sum+row.interest,0)
+const workingCapitalPeakYear=financeResult.years.reduce((best,row)=>row.workingCapital>best.workingCapital?row:best,financeResult.years[0])
 const totalFinancePrincipal=financeResult.years.reduce((sum,row)=>sum+row.principal,0)
 const totalFinanceDebtDrawdown=financeResult.years.reduce((sum,row)=>sum+row.debtDrawdown,0)
 const financeYearKey=(year:number)=>'y'+(year+1)
