@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Layers3, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard } from 'lucide-react'
+import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Layers3, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
 import { createProject, deleteProject, listProjects, type FeasibilityProject } from './core/projects/projectRepository'
@@ -10,8 +10,9 @@ import RollingWorkspace from './features/steel/RollingWorkspace'
 import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
 import FeasibilityWizard from './features/projects/FeasibilityWizard'
 import IntegratedSteelWorkspace from './features/steel/IntegratedSteelWorkspace'
+import Guide from './features/guide/Guide'
 
-type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'integrated-steel'
+type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'integrated-steel' | 'guide'
 
 const modules = [
   { icon: Factory, title: 'مهندسی و طراحی فرآیند', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', status: 'در نقشه راه' },
@@ -106,6 +107,7 @@ export default function App() {
         <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('dashboard')}><LayoutDashboard size={17}/> داشبورد</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('projects')}><FolderKanban size={17}/> پروژه‌ها</button>
         <button className={page === 'steel-group' || page === 'hot-rolling' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('steel-group')}><Factory size={17}/> گروه فولاد</button>
+        <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('guide')}><BookOpen size={17}/> راهنما</button>
         <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('settings')}><Settings size={17}/> تنظیمات</button>
       </nav>
       <div className="top-actions"><span className="connection"><i/> ذخیره محلی فعال</span><button className="avatar" onClick={() => setPage('settings')}>P</button></div>
@@ -140,6 +142,7 @@ export default function App() {
     </>}
 
     {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); setPage(project.steelStage?.includes('مجتمع احیاء') ? 'integrated-steel' : project.steelStage?.includes('نورد گرم') ? 'hot-rolling' : 'project-wizard') }}/>}
+    {page === 'guide' && <Guide/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onExport={exportBackup} onImport={importBackup}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}
     {page === 'hot-rolling' && <RollingWorkspace project={activeProject ?? undefined} onBack={() => setPage('projects')}/>}
