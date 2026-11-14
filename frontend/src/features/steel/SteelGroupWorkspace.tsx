@@ -8,13 +8,14 @@ const stages:Stage[]=[
  {id:'pellet',number:'03',title:'گندله‌سازی',subtitle:'آماده‌سازی و پخت گندله',inputs:'کنسانتره، بنتونیت، آب و سوخت',outputs:'گندله پخته، نرمه و غبار',status:'planned',icon:CircleDot},
  {id:'dri',number:'04',title:'احیای مستقیم',subtitle:'تولید آهن اسفنجی و محصولات فشرده',inputs:'گندله، گاز طبیعی یا زغال‌سنگ و انرژی',outputs:'DRI، HDRI/HBI و گاز خروجی',status:'planned',icon:Factory},
  {id:'steelmaking',number:'05',title:'فولادسازی و ریخته‌گری',subtitle:'ذوب، پالایش ثانویه و ریخته‌گری مداوم',inputs:'DRI/HBI، قراضه، چدن، فروآلیاژ و انرژی',outputs:'اسلب، بیلت، بلوم، سرباره و غبار',status:'planned',icon:Layers3},
- {id:'hot-rolling',number:'06',title:'نورد گرم',subtitle:'محصولات تخت و طویل',inputs:'اسلب برای تختال/ورق؛ بیلت و بلوم برای مقاطع',outputs:'کلاف و ورق گرم، میلگرد، تیرآهن، نبشی و ضایعات',status:'sample',icon:Factory},
- {id:'cold-rolling',number:'07',title:'نورد سرد و پوشش‌دهی',subtitle:'محصولات تخت با ارزش افزوده',inputs:'کلاف گرم، اسید، روغن، روی و رنگ',outputs:'ورق سرد، روغنی، گالوانیزه و رنگی',status:'planned',icon:Package},
+ {id:'hot-rolling',number:'06',title:'نورد گرم',subtitle:'ورق تخت و کلاف، میلگرد، تیرآهن و نبشی',inputs:'اسلب برای تختال/ورق؛ بیلت و بلوم برای مقاطع',outputs:'ورق تخت (Plate)، کلاف گرم (Coil)، میلگرد، تیرآهن، نبشی و ضایعات',status:'sample',icon:Factory},
+ {id:'cold-rolling',number:'07',title:'نورد سرد',subtitle:'تبدیل و پوشش‌دهی کلاف',inputs:'کلاف گرم، اسید، روغن، روی و رنگ',outputs:'کلاف سرد، کلاف گالوانیزه و کلاف رنگی',status:'planned',icon:Package},
 ]
 const branches=[
- {title:'مسیر تخت',items:['اسلب','نورد گرم کلاف / ورق / پلیت','اسیدشویی و نورد سرد','آنیل و تمپر','گالوانیزه گرم یا رنگی']},
- {title:'مسیر طویل',items:['بیلت یا بلوم','نورد میلگرد','نورد تیرآهن و نبشی','خنک‌کاری، صافکاری و بسته‌بندی']},
- {title:'مسیرهای تأمین بیرونی',items:['خرید سنگ‌آهن یا کنسانتره','خرید گندله یا آهن اسفنجی','خرید اسلب، بیلت یا بلوم','فروش محصول میانی به مشتری بیرونی']},
+ {title:'نورد گرم — ورق',items:['اسلب','ورق تخت (Plate)','کلاف گرم (Coil)']},
+ {title:'نورد گرم — محصولات مستقل',items:['بیلت یا بلوم','میلگرد','تیرآهن','نبشی']},
+ {title:'نورد سرد',items:['کلاف سرد','کلاف گالوانیزه','کلاف رنگی']}
+],
 ]
 export default function SteelGroupWorkspace({onOpenHotRolling}:{onOpenHotRolling:()=>void}){
  const [selected,setSelected]=useState('hot-rolling')
