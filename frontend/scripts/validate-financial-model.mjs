@@ -319,6 +319,8 @@ const cyclePolicy = {
   dayBasis: 360,
   rawMaterialDays: 30,
   workInProgressDays: 10,
+  workInProgressMaterialCompletionPercent: 100,
+  workInProgressConversionCompletionPercent: 50,
   finishedGoodsDays: 15,
   receivableDays: 45,
   cashDays: 5,
@@ -331,12 +333,18 @@ const cyclePolicy = {
 }
 const cycle = engine.calculateOperatingCycleWorkingCapital(cyclePolicy, 0.5, 1.1, 1.2)
 near(cycle.rawMaterials, 180, 1e-9, 'Operating cycle raw material inventory')
-near(cycle.workInProgress, 30, 1e-9, 'Operating cycle WIP inventory')
+near(cycle.workInProgress, 90, 1e-9, 'Operating cycle WIP inventory with material and conversion completion')
 near(cycle.finishedGoods, 180, 1e-9, 'Operating cycle finished goods')
 near(cycle.receivables, 495, 1e-9, 'Operating cycle receivables')
 near(cycle.minimumCash, 30, 1e-9, 'Operating cycle minimum cash')
 near(cycle.payables, 120, 1e-9, 'Operating cycle supplier payables')
-near(cycle.netWorkingCapital, 795, 1e-9, 'Operating cycle net working capital')
+near(cycle.netWorkingCapital, 855, 1e-9, 'Operating cycle net working capital')
+near(engine.calculateCashConversionCycleDays(cyclePolicy), 80, 1e-9, 'Cash conversion cycle days')
+const fixedCostCycle = engine.calculateOperatingCycleWorkingCapital({ ...cyclePolicy, annualFixedConversionCost: 900, annualFixedFinishedGoodsCost: 900, annualFixedCashOperatingCost: 900 }, 0.5, 1.1, 1.2)
+near(fixedCostCycle.workInProgress, 105, 1e-9, 'WIP fixed and variable conversion cost split')
+near(fixedCostCycle.finishedGoods, 202.5, 1e-9, 'Finished goods fixed and variable cost split')
+near(fixedCostCycle.minimumCash, 37.5, 1e-9, 'Minimum cash fixed and variable cost split')
+near(fixedCostCycle.netWorkingCapital, 900, 1e-9, 'Fixed-cost-aware operating working capital')
 
 const scaledCapex = engine.calculateCapacityScaledCapex(1000, 100, 200, 0.6)
 near(scaledCapex.factor, Math.pow(2, 0.6), 1e-12, 'Non-linear CAPEX scale factor')
@@ -347,6 +355,6 @@ assert.equal(engine.calculateCapacityScaledCapex(1000, 0, 200, 0.6).valid, false
 const grossWorkingCapitalChange = cycle.rawMaterials + cycle.workInProgress + cycle.finishedGoods + cycle.receivables + cycle.minimumCash
 const netWorkingCapitalChange = grossWorkingCapitalChange - cycle.payables
 near(netWorkingCapitalChange, cycle.netWorkingCapital, 1e-9, 'COMFAR working capital bridge: gross assets less supplier credit')
-console.log('PASS: operating-cycle working capital, supplier credit and 360-day convention')
+console.log('PASS: operating-cycle working capital, WIP completion, fixed/variable costs, supplier credit and cash conversion cycle')
 console.log('PASS: non-linear category CAPEX scaling and invalid-input handling')
 console.log('PASS: integrated WACC, loan amortization, working capital, escalation, project NPV and project/equity IRR')
