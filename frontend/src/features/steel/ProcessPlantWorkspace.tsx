@@ -406,7 +406,14 @@ const financeInput={
 }
 const financeResult=calculateIntegratedFinance(financeInput)
 if(constructionYears+operatingYears!==19)financeResult.warnings.push('برای تطبیق ۱۹ دوره‌ای COMFAR، مجموع سال‌های ساخت و بهره‌برداری باید دقیقاً ۱۹ باشد؛ تعداد فعلی '+(constructionYears+operatingYears)+' سال است.')
-if([constructionStartDate,constructionEndDate,operationStartDate,operationEndDate].some(value=>!/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(value)))financeResult.warnings.push('تاریخ‌های شروع و پایان ساخت و بهره‌برداری را با قالب شمسی سال/ماه/روز وارد کنید؛ نمونه 1405/08/23.')
+const jalaliDateKey=(value:string)=>{const [year,month,day]=value.split('/').map(Number);return year*10000+month*100+day}
+const jalaliDateValid=(value:string)=>{if(!/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(value))return false;const [year,month,day]=value.split('/').map(Number);return year>0&&month>=1&&month<=12&&day>=1&&day<=(month<=6?31:month<=11?30:30)}
+if([constructionStartDate,constructionEndDate,operationStartDate,operationEndDate].some(value=>!jalaliDateValid(value)))financeResult.warnings.push('تاریخ‌های شروع و پایان ساخت و بهره‌برداری باید تاریخ شمسی معتبر با قالب سال/ماه/روز باشند؛ نمونه 1405/08/23.')
+else {
+ if(Number(constructionEndDate.slice(0,4))-Number(constructionStartDate.slice(0,4))!==constructionYears)financeResult.warnings.push('اختلاف سال تاریخ شروع و پایان ساخت با تعداد سال دوره ساخت یکسان نیست؛ تقویم ساخت را بازبینی کنید.')
+ if(Number(operationEndDate.slice(0,4))-Number(operationStartDate.slice(0,4))!==operatingYears)financeResult.warnings.push('اختلاف سال تاریخ شروع و پایان بهره‌برداری با تعداد سال دوره بهره‌برداری یکسان نیست؛ تقویم بهره‌برداری را بازبینی کنید.')
+ if(jalaliDateKey(operationStartDate)<=jalaliDateKey(constructionEndDate))financeResult.warnings.push('شروع دوره بهره‌برداری باید بعد از پایان دوره ساخت باشد.')
+}
 if(materialCapacity<=0)financeResult.warnings.push('ظرفیت اسمی سالانه باید بزرگ‌تر از صفر باشد؛ نتایج مالی تا اصلاح این مقدار معتبر نیستند.')
 if(capexReferenceCapacityInput<=0)financeResult.warnings.push('ظرفیت مرجع CAPEX باید بزرگ‌تر از صفر باشد؛ مقدار مرجع پیش‌فرض صرفاً برای جلوگیری از خطای محاسباتی استفاده شده است.')
 if(Object.values(capexElasticity).some(label=>financeValue(label,.65)<0||financeValue(label,.65)>1))financeResult.warnings.push('توان مقیاس هر گروه CAPEX باید بین صفر و یک باشد؛ مقادیر خارج از دامنه در محاسبه محدود می‌شوند.')
