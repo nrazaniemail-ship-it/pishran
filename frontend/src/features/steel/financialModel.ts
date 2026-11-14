@@ -128,3 +128,37 @@ export function calculateOperatingCostRows(rows: OperatingCostRow[], annualOutpu
   result.totalAtFullOutput = result.fixedAnnual + result.variablePerTonne * annualOutput
   return result
 }
+
+
+export type ProjectCashFlowPeriodInput = {
+  ebitda: number
+  depreciation: number
+  capexSpend: number
+  deltaWorkingCapital: number
+  terminalValue: number
+}
+
+export type ProjectCashFlowPeriodResult = {
+  ebit: number
+  tax: number
+  lossCarryForward: number
+  projectCashFlow: number
+}
+
+/** Project cash flow before financing, with tax-loss carry-forward. */
+export function calculateProjectCashFlowPeriod(
+  input: ProjectCashFlowPeriodInput,
+  taxRate: number,
+  priorLoss = 0,
+): ProjectCashFlowPeriodResult {
+  const values = [input.ebitda, input.depreciation, input.capexSpend, input.deltaWorkingCapital, input.terminalValue, taxRate, priorLoss]
+  if (!values.every(Number.isFinite) || taxRate < 0 || taxRate > 100 || priorLoss < 0) {
+    return { ebit: Number.NaN, tax: Number.NaN, lossCarryForward: Number.NaN, projectCashFlow: Number.NaN }
+  }
+  const ebit = input.ebitda - input.depreciation
+  const taxable = ebit - priorLoss
+  const tax = Math.max(0, taxable) * taxRate / 100
+  const lossCarryForward = taxable < 0 ? -taxable : Math.max(0, priorLoss - ebit)
+  const projectCashFlow = input.ebitda - tax - input.capexSpend - input.deltaWorkingCapital + input.terminalValue
+  return { ebit, tax, lossCarryForward, projectCashFlow }
+}
