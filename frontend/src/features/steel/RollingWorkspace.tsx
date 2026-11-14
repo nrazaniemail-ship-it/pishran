@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useState} from 'react'
 import {ArrowRight,ArrowLeft,ArrowUp,ArrowDown,Plus,Trash2,Save,AlertTriangle} from 'lucide-react'
-import {localStore} from '../../core/storage/localStore'\nimport type {FeasibilityProject} from '../../core/projects/projectRepository'
+import {localStore} from '../../core/storage/localStore'
+import type {FeasibilityProject} from '../../core/projects/projectRepository'
 type SourceType='گزارش/مستند'|'برآورد مهندسی'|'فرض کاربر'|'استعلام سازنده'|'داده واقعی'
 type Row={id:string;name:string;quantity:number;unit:string;unitPrice:number;currency:string;period:string;source:string;sourceType:SourceType;sourceDate:string;confidence:number}
 type Product={id:string;name:string;family:string;line:string;mix:number;grade:string;thkMin:number;thkMax:number;widthMin:number;widthMax:number;lengthMin:number;lengthMax:number;diameterMin:number;diameterMax:number;weightMin:number;weightMax:number;price:number;unit:string}
