@@ -59,6 +59,8 @@ near(rollingAudit.annualOpex.totalIncludingDepreciation - rollingAudit.annualOpe
   rollingAudit.annualOpex.totalExcludingDepreciation, 0.01, 'HRCR200 OPEX excluding depreciation')
 assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabDebtSharePercent, 80,
   'HRCR200 mechanism-tab financing split must remain visible')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingSourceExplicit, false,
+  'HRCR200 working-capital source must remain flagged as unconfirmed')
 assert.equal(rollingAudit.financingAlternativesInWorkbook.fundingSummaryTabEquitySharePercent, 70,
   'HRCR200 alternative financing split must remain visible')
 near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryIrrPercent, 48.31, 0.001,
