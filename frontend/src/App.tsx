@@ -83,7 +83,7 @@ export default function App() {
     await refreshStorage()
   }
 
-  return <main className="app-shell">
+  return <main className={`app-shell app-page-${page}`}>
     <BackupScheduler/>
     <header className="topbar">
       <button className="brand" onClick={() => setPage('dashboard')} aria-label="صفحه اصلی پیشران"><div className="brandmark">پ</div><div><b>پیشران</b><small>INTELLIGENT FEASIBILITY PLATFORM</small></div></button>
