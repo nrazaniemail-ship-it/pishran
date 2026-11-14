@@ -58,6 +58,9 @@
 .fw-head h1{font-size:clamp(22px,3vw,32px);margin:5px 0}
 .fw-head p,.fw-lead{color:var(--muted,#64748b);margin:4px 0 16px}
 .fw-save{display:flex;align-items:center;gap:7px;color:#16845f;font-size:12px;white-space:nowrap}
+.fw-head-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:0}
+.fw-head-actions .secondary-button{white-space:nowrap;font-size:12px}
+@media(max-width:760px){.fw-head-actions{align-items:stretch}.fw-head-actions .secondary-button{white-space:normal}.fw-head{grid-template-columns:1fr auto;gap:10px}.fw-head>div:nth-child(2){grid-column:1/-1;grid-row:1}.fw-head-actions{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center}}
 .fw-progress{background:var(--panel,#fff);border:1px solid var(--line,#e2e8f0);border-radius:15px;padding:15px 18px;margin-bottom:14px}
 .fw-progress>div{display:flex;justify-content:space-between;margin-bottom:10px}
 .fw-progress strong{color:#16845f}
