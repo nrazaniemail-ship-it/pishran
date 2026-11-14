@@ -5,17 +5,18 @@ export type ValidationIssue={id:string;severity:'error'|'warning'|'info';title:s
 export function FieldFeedback({label,value}:{label:string;value:number}){
  const issue=useMemo(()=>{
   if(!Number.isFinite(value))return 'مقدار باید عدد معتبر باشد.'
-  if(value<0)return 'مقدار منفی مجاز نیست؛ واحد و علامت عدد را بررسی کنید.'
-  const percent=/(٪|%|درصد|دسترس‌پذیری|بازده|سهم|ترکیب|نرخ مالیات|نرخ تنزیل|نرخ بهره|تحقق ظرفیت)/i.test(label)
-  if(percent&&value>100)return 'این ورودی درصدی است و نباید از ۱۰۰٪ بیشتر باشد.'
-  if(/ساعت/.test(label)&&value>8760)return 'ساعات سالانه نمی‌تواند از ۸٬۷۶۰ ساعت بیشتر باشد.'
-  if(/ساعت\s*\/\s*روز|ساعت در روز/.test(label)&&value>24)return 'ساعت روزانه نمی‌تواند از ۲۴ ساعت بیشتر باشد.'
+  const signedAllowed=/رشد|تغییر|نوسان/.test(label)
+  if(value<0&&!signedAllowed)return 'مقدار منفی برای این ورودی مجاز نیست؛ علامت و واحد را بررسی کنید.'
+  if(/ساعت\s*\/\s*روز|ساعت در روز|ساعت روزانه/.test(label)&&value>24)return 'ساعت کار روزانه نمی‌تواند بیشتر از ۲۴ ساعت باشد.'
   if(/روز کاری|تعداد روز/.test(label)&&value>366)return 'تعداد روز در سال نمی‌تواند از ۳۶۶ بیشتر باشد.'
+  if(/ساعت/.test(label)&&value>8760)return 'ساعات سالانه نمی‌تواند از ۸٬۷۶۰ ساعت بیشتر باشد.'
   if(/تعداد شیفت/.test(label)&&value>4)return 'تعداد شیفت روزانه معمولاً حداکثر ۴ است؛ مقدار را بررسی کنید.'
+  const percent=/(٪|%|درصد|دسترس‌پذیری|بازده|سهم|ترکیب|نرخ مالیات|نرخ تنزیل|نرخ بهره|تحقق ظرفیت)/i.test(label)
+  if(percent&&(signedAllowed?Math.abs(value)>100:value>100))return 'مقدار درصدی باید در محدوده مجاز حداکثر ۱۰۰٪ باشد.'
   return ''
  },[label,value])
  if(!issue)return null
- return <small className="smart-field-feedback" role="alert"><AlertTriangle size={12}/>{issue}</small>
+ return <small className="smart-field-feedback" role="alert" aria-live="polite"><AlertTriangle size={12}/>{issue}</small>
 }
 export function ValidationPanel({issues,title='کنترل هوشمند اطلاعات'}:{issues:ValidationIssue[];title?:string}){
  const [expanded,setExpanded]=useState(true)
