@@ -9,7 +9,7 @@ import { INTEGRATED_COMFAR_PROJECT_CASH_FLOWS, INTEGRATED_COMFAR_REFERENCE } fro
 
 type PlantType='dri'|'steelmaking'
 type Cell=string|number
-type LoanField='drawdown'|'principal'|'closingBalance'|'interestExpense'|'capitalizedInterest'
+type LoanField=Extract<keyof IntegratedLoanYear,'drawdown'|'principal'|'closingBalance'|'interestExpense'|'capitalizedInterest'>
 type Row={id:string;label:string;values:Record<string,Cell>;section?:boolean}
 type Column={key:string;label:string;unit?:string;numeric?:boolean}
 type Sheet={id:string;title:string;book:'capex'|'opex'|'finance';columns:Column[];rows:(string|{label:string;section:boolean})[];note?:string;readOnly?:boolean}
