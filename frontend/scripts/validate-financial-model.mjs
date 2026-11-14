@@ -405,7 +405,8 @@ assert.ok(Number.isFinite(integrated.mirrEquity), 'Integrated modified equity IR
 assert.ok(workspaceSource.includes("'Modified IRRE on equity':financeResult.mirrEquity===null?0:financeResult.mirrEquity*100"), 'COMFAR modified equity IRR must use the integrated equity cash flow')
 assert.equal(integrated.years.length, 6, 'Integrated model period count')
 near(integrated.years[5].salvageProceeds, 50, 1e-9, 'Terminal salvage proceeds')
-near(integrated.years[5].terminalValue, 50, 1e-9, 'Terminal value includes salvage only; working capital is recovered through the final-period NWC release')\nnear(integrated.years[5].workingCapital, 0, 1e-9, 'Terminal working capital is released at project end')
+near(integrated.years[5].terminalValue, 50, 1e-9, 'Terminal value includes salvage only; working capital is recovered through the final-period NWC release')
+near(integrated.years[5].workingCapital, 0, 1e-9, 'Terminal working capital is released at project end')
 for (let index = 0; index < integrated.years.length; index++) {
   const year = integrated.years[index]
   const openingCash = index ? integrated.years[index - 1].cashBalance : 0
@@ -616,4 +617,6 @@ const scenarioResults = engine.calculateFinancialScenarios({
 })
 assert.ok(scenarioResults.optimistic.npvProject > scenarioResults.base.npvProject,'Optimistic scenario must exceed base NPV')
 assert.ok(scenarioResults.pessimistic.npvProject < scenarioResults.base.npvProject,'Pessimistic scenario must be below base NPV')
-\nconsole.log('PASS: integrated WACC, staged loan amortization, working capital, terminal value, cash flow reconciliation, NPV and project/equity IRR')\nconsole.log('PASS: asset-level depreciation, tax loss carry-forward, multi-variable sensitivity, scenarios and three-statement balance-sheet reconciliation')
+
+console.log('PASS: integrated WACC, staged loan amortization, working capital, terminal value, cash flow reconciliation, NPV and project/equity IRR')
+console.log('PASS: asset-level depreciation, tax loss carry-forward, multi-variable sensitivity, scenarios and three-statement balance-sheet reconciliation')
