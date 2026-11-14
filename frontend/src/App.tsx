@@ -58,7 +58,7 @@ export default function App() {
     setStorageInfo(await localStore.info())
   }
 
-  async function handleCreateProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'capacity' | 'location'>) {
+  async function handleCreateProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'steelStage' | 'capacity' | 'location'>) {
     const created = await createProject(input)
     setProjects(current => [created, ...current])
     await refreshStorage()
