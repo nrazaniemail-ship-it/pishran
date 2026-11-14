@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react'
-import {ArrowRight,ArrowLeft,ArrowUp,ArrowDown,Plus,Trash2,Save,CheckCircle2,AlertTriangle,Factory} from 'lucide-react'
+import {ArrowRight,ArrowLeft,ArrowUp,ArrowDown,Plus,Trash2,Save,AlertTriangle} from 'lucide-react'
 import {localStore} from '../../core/storage/localStore'
 type SourceType='گزارش/مستند'|'برآورد مهندسی'|'فرض کاربر'|'استعلام سازنده'|'داده واقعی'
 type Row={id:string;name:string;quantity:number;unit:string;unitPrice:number;currency:string;period:string;source:string;sourceType:SourceType;sourceDate:string;confidence:number}
@@ -42,7 +42,6 @@ const wacc=m.equity/100*m.ke/100+m.debt/100*m.kd/100*(1-m.tax/100)
 const rate=m.discountMode==='wacc'?wacc:m.manualRate/100
 const weightedPrice=m.products.reduce((a,p)=>a+p.mix/100*p.price,0)
 const annualRevenue=fullOutput*weightedPrice
-const npv=annualRevenue-opex-capex
 const changeProduct=(id:string,k:keyof Product,v:any)=>update('products',m.products.map(x=>x.id===id?{...x,[k]:v}:x))
 const changeLine=(id:string,k:keyof Line,v:any)=>update('lines',m.lines.map(x=>x.id===id?{...x,[k]:v}:x))
 return <section className="fw-page rolling-page" dir="rtl">
