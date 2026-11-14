@@ -37,11 +37,12 @@ export default function PlateSampleProject(){
   const moneyFactor=m.currency==='IRR'?1:m.currency==='IRR-TMN'?0.1:1/Math.max(1,m.fxRate)
   const moneyUnit=m.currency==='IRR'?'میلیون ریال':m.currency==='IRR-TMN'?'میلیون تومان':'میلیون '+m.currency
   const years=m.utilization.length,annualRevenue:number[]=[],annualCost:number[]=[],flows:number[]=[-m.capex/2,-m.capex/2-m.preop-m.workingCapital]
+  const weightedPrice=m.price*m.domesticShare/100+m.exportPrice*(1-m.domesticShare/100)
   const depreciation=m.capex/Math.max(1,m.depreciationYears)
   for(let i=0;i<years;i++){const q=m.capacity*m.utilization[i]/100;const revenue=q*weightedPrice;const variable=q*m.variableCost;const op=variable+m.fixedCost;const ebit=revenue-op-depreciation;const tax=Math.max(0,ebit)*m.tax/100;const fcff=revenue-op-tax;annualRevenue.push(revenue);annualCost.push(op);flows.push(fcff+(i===years-1?m.workingCapital:0))}
-  const npv=calcNpv(flows,rate),projectIrr=irr(flows),sales=m.capacity*m.price,fullCost=m.capacity*m.variableCost+m.fixedCost
-  return {wacc,rate,moneyFactor,moneyUnit,annualRevenue,annualCost,flows,npv,irr:projectIrr,breakEven:m.price>m.variableCost?m.fixedCost/(m.price-m.variableCost):0,fullCost,fullRevenue:sales,slab:m.capacity*m.slabFactor,yield:100/m.slabFactor,year1:m.capacity*m.utilization[0]/100}
- },[m])
+  const npv=calcNpv(flows,rate),projectIrr=irr(flows),sales=m.capacity*weightedPrice,fullCost=m.capacity*m.variableCost+m.fixedCost
+  return {wacc,rate,moneyFactor,moneyUnit,annualRevenue,annualCost,flows,npv,irr:projectIrr,breakEven:weightedPrice>m.variableCost?m.fixedCost/(weightedPrice-m.variableCost):0,fullCost,fullRevenue:sales,slab:m.capacity*m.slabFactor,yield:100/m.slabFactor,year1:m.capacity*m.utilization[0]/100}
+  },[m])
  const tabs:{id:Tab;label:string;icon:any}[]=[{id:'overview',label:'نمای کلی',icon:Gauge},{id:'market',label:'بازار و فروش',icon:BarChart3},{id:'capacity',label:'محصول و ظرفیت',icon:Layers3},{id:'materials',label:'موازنه و مصارف',icon:Factory},{id:'construction',label:'هزینه‌های ساخت',icon:FileText},{id:'operation',label:'هزینه‌های بهره‌برداری',icon:Settings2},{id:'finance',label:'تنظیمات مالی و WACC',icon:Wallet},{id:'results',label:'ارزیابی مالی',icon:Calculator}]
  return <section className="plate-page" dir="rtl">
   <header className="plate-head"><div><span className="eyebrow">DEMO PROJECT / HOT ROLLING PLATE</span><h1>{m.name}</h1><p>پرونده نمونه آموزشی ـ ظرفیت اسمی ۲۵۰ هزار تن ورق تخت قابل فروش در سال</p></div><div className="plate-save"><i/>{loaded?'ذخیره محلی فعال':'در حال بارگذاری'}{saved&&' · '+saved}</div></header>
