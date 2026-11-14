@@ -9,7 +9,7 @@ const UNDO_KEY='pishran_restore_undo_v1'
 const INTERVALS:Record<BackupInterval,number>={ '15m':900000,'1h':3600000,'6h':21600000,'12h':43200000,'1d':86400000,'1w':604800000 }
 const DEFAULTS:BackupPreferences={enabled:false,interval:'1d',lastAt:'',lastSize:0,lastKind:'',folderName:''}
 type BackupRecord={key:string;value:unknown}
-export type PishranBackup={app:'Pishran';schema:number;exportedAt:string;records:BackupRecord[]}
+export type PishranBackup={app:'Pishran';schema:number;exportedAt:string;records:BackupRecord[];backupPreferences?:{enabled:boolean;interval:BackupInterval}}
 
 function openHandleDb():Promise<IDBDatabase|null>{
  if(typeof indexedDB==='undefined')return Promise.resolve(null)
@@ -42,7 +42,7 @@ export async function backupFolderStatus():Promise<{hasFolder:boolean;folderName
 }
 export async function buildBackup():Promise<{payload:PishranBackup;json:string;size:number}>{
  const raw=await localStore.exportAll()
- const payload:PishranBackup={app:'Pishran',schema:2,exportedAt:new Date().toISOString(),records:raw.records}
+ const preferences=await getBackupPreferences()\n const payload:PishranBackup={app:'Pishran',schema:2,exportedAt:new Date().toISOString(),records:raw.records,backupPreferences:{enabled:preferences.enabled,interval:preferences.interval}}
  if(!payload.records.length)throw new Error('هیچ داده‌ای برای پشتیبان‌گیری یافت نشد.')
  const json=JSON.stringify(payload,null,2)
  return {payload,json,size:new Blob([json]).size}
@@ -92,7 +92,7 @@ export async function canUndoRestore():Promise<boolean>{try{return !!JSON.parse(
 export async function undoLastRestore():Promise<number>{
  const raw=localStorage.getItem(UNDO_KEY);if(!raw)throw new Error('نسخه قبل از بازیابی در دسترس نیست.')
  const saved=JSON.parse(raw);if(!Array.isArray(saved.snapshot?.records)||!saved.snapshot.records.length)throw new Error('نسخه اضطراری معتبر نیست.')
- await localStore.replaceAll(saved.snapshot.records);localStorage.removeItem(UNDO_KEY);return saved.snapshot.records.length
+ await localStore.replaceAll(saved.snapshot.records);if(saved.backupPreferences)await saveBackupPreferences(saved.backupPreferences);localStorage.removeItem(UNDO_KEY);return saved.snapshot.records.length
 }
 export async function updateBackupMeta(kind:'manual'|'automatic',size:number){
  const p=await getBackupPreferences();await saveBackupPreferences({...p,lastAt:new Date().toISOString(),lastSize:size,lastKind:kind})
