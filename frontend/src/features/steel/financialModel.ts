@@ -535,7 +535,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const cfads = revenue - variableCashCost - fixedCashCost - tax - maintenanceCapex - changeInWorkingCapital
     const dscr = debtService > 0 ? cfads / debtService : null
     const cashBalance = priorCash + equityContribution + debtDrawdown + revenue - variableCashCost - fixedCashCost -
-      fixedInvestment - preOperatingCost - tax - interest - principal - changeInWorkingCapital + terminalValue
+      fixedInvestment - preOperatingCost - maintenanceCapex - tax - interest - principal - changeInWorkingCapital + terminalValue
     priorCash = cashBalance
 
     cumulativeProject += projectFreeCashFlow
