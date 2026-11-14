@@ -406,7 +406,8 @@ assert.ok(workspaceSource.includes("'Modified IRRE on equity':financeResult.mirr
 assert.equal(integrated.years.length, 6, 'Integrated model period count')
 near(integrated.years[5].salvageProceeds, 50, 1e-9, 'Terminal salvage proceeds')
 near(integrated.years[5].terminalValue, 50, 1e-9, 'Terminal value includes salvage only; working capital is recovered through the final-period NWC release')
-near(integrated.years[5].workingCapital, 108.243216, 1e-9, 'Terminal-year operating working-capital requirement remains visible before recovery')\nnear(integrated.years[5].closingWorkingCapital, 0, 1e-9, 'Terminal working capital is released at project end')
+near(integrated.years[5].workingCapital, 108.243216, 1e-9, 'Terminal-year operating working-capital requirement remains visible before recovery')
+near(integrated.years[5].closingWorkingCapital, 0, 1e-9, 'Terminal working capital is released at project end')
 for (let index = 0; index < integrated.years.length; index++) {
   const year = integrated.years[index]
   const openingCash = index ? integrated.years[index - 1].cashBalance : 0
