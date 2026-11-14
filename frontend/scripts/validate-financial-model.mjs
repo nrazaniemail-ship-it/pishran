@@ -407,7 +407,7 @@ assert.ok(workspaceSource.includes("'Accounts payable':0,'TOTAL SOURCES OF FINAN
 assert.ok(workspaceSource.includes("'TOTAL INVESTMENT COSTS':year.fixedInvestment+year.preOperatingCost+year.changeInWorkingCapital+capitalizedInterest"), 'COMFAR total investment costs must reconcile CAPEX, pre-production, capitalized interest and net working capital')
 assert.ok(workspaceSource.includes("'TOTAL CASH INFLOW':year.revenue+year.equityContribution+year.debtDrawdown+year.terminalValue"), 'Cash flow statement must include terminal recoveries')
 assert.ok(workspaceSource.includes("'TOTAL CASH OUTFLOW':uses"), 'COMFAR cash outflow subtotal must use the same cash-use bridge as the balance')
-assert.ok(workspaceSource.includes("const uses=year.fixedInvestment+year.preOperatingCost+year.changeInWorkingCapital+cashOpex+year.tax+year.interest+year.principal"), 'Cash outflow must include fixed assets, pre-production, net working capital, operating costs, tax, interest and principal')
+assert.ok(workspaceSource.includes("uses=year.fixedInvestment+year.preOperatingCost+year.changeInWorkingCapital+cashOpex+year.tax+year.interest+year.principal"), 'Cash outflow must include fixed assets, pre-production, net working capital, operating costs, tax, interest and principal')
 assert.ok(workspaceSource.includes("'Other income':year.terminalValue"), 'Other income must reconcile to terminal value')
 assert.ok(workspaceSource.includes("'Total short-term loans':shortTerm"), 'Cash-flow statement must use COMFAR short-term-loan row naming')
 assert.ok(workspaceSource.includes("'SURPLUS (DEFICIT)':year.cashBalance-opening,'CUMULATIVE CASH BALANCE':year.cashBalance"), 'Annual and cumulative cash balances must reconcile to the cash-flow statement')
