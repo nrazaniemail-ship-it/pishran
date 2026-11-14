@@ -49,7 +49,7 @@ export async function buildBackup():Promise<{payload:PishranBackup;json:string;s
  return {payload,json,size:new Blob([json]).size}
 }
 function safeDate(d:Date){return d.toISOString().replace(/[:.]/g,'-').replace('T','_').replace('Z','')}
-export async function saveBackupFile(kind:'manual'|'automatic'='manual'):{fileName:string;size:number;folder:string;downloaded:boolean}{
+export async function saveBackupFile(kind:'manual'|'automatic'='manual'):Promise<{fileName:string;size:number;folder:string;downloaded:boolean}>{
  const {json,size}=await buildBackup()
  const fileName=(kind==='automatic'?'pishran-auto-':'pishran-backup-')+safeDate(new Date())+'.json'
  const native=(window as any).Capacitor?.Plugins?.PishranBackup
