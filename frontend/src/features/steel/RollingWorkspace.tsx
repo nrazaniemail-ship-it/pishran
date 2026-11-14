@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from 'react'
 import {ArrowRight,ArrowLeft,ArrowUp,ArrowDown,Plus,Trash2,Save,AlertTriangle} from 'lucide-react'
-import {localStore} from '../../core/storage/localStore'
+import {localStore} from '../../core/storage/localStore'\nimport type {FeasibilityProject} from '../../core/projects/projectRepository'
 type SourceType='گزارش/مستند'|'برآورد مهندسی'|'فرض کاربر'|'استعلام سازنده'|'داده واقعی'
 type Row={id:string;name:string;quantity:number;unit:string;unitPrice:number;currency:string;period:string;source:string;sourceType:SourceType;sourceDate:string;confidence:number}
 type Product={id:string;name:string;family:string;line:string;mix:number;grade:string;thkMin:number;thkMax:number;widthMin:number;widthMax:number;lengthMin:number;lengthMax:number;diameterMin:number;diameterMax:number;weightMin:number;weightMax:number;price:number;unit:string}
@@ -29,7 +29,7 @@ function Rows({title,rows,onChange}:{title:string;rows:Row[];onChange:(v:Row[])=
 export default function RollingWorkspace(){
 const [m,setM]=useState<M>(BASE),[s,setS]=useState(0),[ready,setReady]=useState(false),[saved,setSaved]=useState('')
 const key='pishran:rolling:workspace:v2'
-useEffect(()=>{let live=true;localStore.get<M>(key).then(v=>{if(live){if(v)setM({...BASE,...v});setReady(true)}}).catch(()=>setReady(true));return()=>{live=false}},[])
+useEffect(()=>{let live=true;localStore.get<M>(key).then(v=>{if(live){if(v)setM({...BASE,...v});else if(project)setM({...BASE,name:project.name,location:project.location||BASE.location});setReady(true)}}).catch(()=>setReady(true));return()=>{live=false}},[])
 useEffect(()=>{if(ready)void localStore.set(key,m).then(()=>setSaved(new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})))},[ready,m])
 const update=<K extends keyof M>(k:K,v:M[K])=>setM(x=>({...x,[k]:v}))
 const annualCapacity=useMemo(()=>m.lines.reduce((sum,l)=>sum+l.capacity*Math.max(0,l.availability)/100*Math.max(0,l.yield)/100,0),[m.lines])
