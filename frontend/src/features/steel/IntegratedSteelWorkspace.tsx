@@ -14,11 +14,11 @@ driUtil:[mk('برق',110,'kWh/تن DRI'),mk('گاز طبیعی',250,'Nm³/تن D
 steelUtil:[mk('برق',568,'kWh/تن اسلب'),mk('گاز طبیعی',20,'Nm³/تن اسلب'),mk('آب صنعتی',2.5,'m³/تن اسلب'),mk('اکسیژن',40,'Nm³/تن اسلب')],
 driEquip:['دریافت و انباشت گندله','سرند و انتقال مواد','مدول احیاء و کوره شفت','ریفورمر و مشعل‌ها','بازیاب حرارتی','اسکرابر و کمپرسور گاز','سیستم انتقال HotLink','تخلیه اضطراری DRI سرد','آب خنک‌کن و تصفیه آب'].map(x=>mk(x,1,'مجموعه')),
 steelEquip:['محوطه و آماده‌سازی قراضه','کوره قوس EAF','ترانسفورمر و SVC','تزریق اکسیژن و کربن','کوره پاتیلی LF','گاززدایی VD/VOD/RH','جرثقیل و حمل پاتیل','ماشین ریخته‌گری CCM','برج گردان و تاندیش','قالب و خنک‌کاری ثانویه','صاف‌کننده و ماشین برش','غبارگیر و تصفیه آب','آزمایشگاه'].map(x=>mk(x,1,'مجموعه')),
-driCapex:['مهندسی و لیسانس','تجهیزات اصلی احیاء','انتقال مواد و HotLink','ساختمان و سازه','نصب و راه‌اندازی','قطعات یدکی و پیش‌راه‌اندازی'].map(x=>mk(x)),
-steelCapex:['مهندسی و لیسانس فولادسازی','EAF و تجهیزات برق','LF و متالورژی ثانویه','ماشین ریخته‌گری CCM','غبارگیر، آب و سیالات','ساختمان و سازه','نصب و راه‌اندازی'].map(x=>mk(x)),
-sharedCapex:['زمین و آماده‌سازی','پست و اتصال برق','آب‌رسانی و تصفیه‌خانه','شبکه گاز و اکسیژن','راه و ریل و حمل داخلی','انبار و آزمایشگاه مرکزی','هزینه‌های قبل از بهره‌برداری'].map(x=>mk(x)),
-driOpex:['گندله و حمل','آهک و کاتالیست','گاز طبیعی','برق','آب و اکسیژن','نیروی انسانی','تعمیرات و قطعات'].map(x=>mk(x)),
-steelOpex:['آهن اسفنجی انتقالی داخلی','قراضه و حمل','فروآلیاژ و افزودنی','الکترود و نسوز','برق، گاز، آب و اکسیژن','نیروی انسانی','تعمیرات و قطعات'].map(x=>mk(x)),
+driCapex:['مهندسی و لیسانس','تجهیزات اصلی احیاء','انتقال مواد و HotLink','ساختمان و سازه','نصب و راه‌اندازی','قطعات یدکی و پیش‌راه‌اندازی'].map(x=>mk(x,1,'مبلغ')),
+steelCapex:['مهندسی و لیسانس فولادسازی','EAF و تجهیزات برق','LF و متالورژی ثانویه','ماشین ریخته‌گری CCM','غبارگیر، آب و سیالات','ساختمان و سازه','نصب و راه‌اندازی'].map(x=>mk(x,1,'مبلغ')),
+sharedCapex:['زمین و آماده‌سازی','پست و اتصال برق','آب‌رسانی و تصفیه‌خانه','شبکه گاز و اکسیژن','راه و ریل و حمل داخلی','انبار و آزمایشگاه مرکزی','هزینه‌های قبل از بهره‌برداری'].map(x=>mk(x,1,'مبلغ')),
+driOpex:['گندله و حمل','آهک و کاتالیست','گاز طبیعی','برق','آب و اکسیژن','نیروی انسانی','تعمیرات و قطعات'].map(x=>mk(x,1,'مبلغ')),
+steelOpex:['آهن اسفنجی انتقالی داخلی','قراضه و حمل','فروآلیاژ و افزودنی','الکترود و نسوز','برق، گاز، آب و اکسیژن','نیروی انسانی','تعمیرات و قطعات'].map(x=>mk(x,1,'مبلغ')),
 sharedOpex:['مدیریت مجتمع','لجستیک داخلی','آزمایشگاه و HSE','بیمه و سربار'].map(x=>mk(x))})
 const fmt=(v:number,d=0)=>Number(v||0).toLocaleString('fa-IR',{maximumFractionDigits:d})
 function F({label,value,unit,onChange}:{label:string;value:number|string;unit:string;onChange:(v:any)=>void}){return <label className="fw-field"><span>{label}</span><div><input type={typeof value==='number'?'number':'text'} value={value} onChange={e=>onChange(typeof value==='number'?Number(e.target.value):e.target.value)}/><small>{unit}</small></div></label>}
@@ -31,7 +31,6 @@ useEffect(()=>{if(ready)void localStore.set(key,m).then(()=>setSaved(new Date().
 const upd=<K extends keyof M>(k:K,v:M[K])=>setM(x=>({...x,[k]:v}))
 const sub=<K extends 'dri'|'steel'>(k:K,v:M[K])=>setM(x=>({...x,[k]:v}))
 const d=m.dri.capacity*m.dri.availability/100*m.dri.ramp/100,sl=m.steel.slab*m.steel.availability/100*m.steel.ramp/100,pel=d*m.dri.pellet,extra=d-m.dri.steelFeed,liquid=sl/(m.steel.yield/100||1),mix=m.steel.hdr+m.steel.cdr+m.steel.scrap
-const tabs=[m.driMat,m.steelMat,m.driUtil,m.steelUtil]
 const total=(a:R[])=>a.reduce((v,x)=>v+x.value*x.price,0)
 const capex=total(m.driCapex)+total(m.steelCapex)+total(m.sharedCapex),opex=total(m.driOpex)+total(m.steelOpex)+total(m.sharedOpex)
 return <section className="fw-page isw-page" dir="rtl">
