@@ -47,6 +47,13 @@ assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabDebtShareP
   'HRCR200 mechanism-tab financing split must remain visible')
 assert.equal(rollingAudit.financingAlternativesInWorkbook.fundingSummaryTabEquitySharePercent, 70,
   'HRCR200 alternative financing split must remain visible')
+near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryIrrPercent, 48.31, 0.001,
+  'HRCR200 general-summary IRR')
+near(rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetProjectIrrPercent, 43.378234116396674, 1e-9,
+  'HRCR200 IRR-NPV sheet IRR')
+assert.ok(Math.abs(rollingAudit.alternativeMetricsInWorkbook.generalSummaryIrrPercent
+  - rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetProjectIrrPercent) > 4,
+  'Conflicting HRCR200 IRR outputs must remain an explicit audit item')
 assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.length >= 5,
   'Source conflicts must remain explicit audit flags')
 console.log('PASS: source-workbook DRI and HRCR200 CAPEX/OPEX bridges and unresolved financing/depreciation flags')
