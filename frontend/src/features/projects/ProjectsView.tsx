@@ -8,6 +8,7 @@ interface Props {
   onDelete: (id: string) => Promise<void>
   confirmBeforeDelete: boolean
   onOpenSample: () => void
+  onOpenProject: (project: FeasibilityProject) => void
 }
 
 const STEEL_INDUSTRY = 'فولاد و صنایع معدنی'
@@ -23,7 +24,7 @@ const STEEL_PROJECT_GROUPS = [
   { stage: 'نورد سرد', projects: ['احداث خط تولید کلاف سرد', 'احداث خط تولید کلاف گالوانیزه', 'احداث خط تولید کلاف رنگی'] },
 ]
 
-export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenSample }: Props) {
+export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenSample, onOpenProject }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [customName, setCustomName] = useState('')
@@ -91,6 +92,6 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
       <div className="form-actions"><button type="submit" className="primary">ذخیره پروژه</button><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>انصراف</button></div>
     </form>}
     {projects.length === 0 ? <div className="empty-state"><div className="empty-icon"><FolderOpen size={30}/></div><h3>هنوز پروژه‌ای ثبت نشده است</h3><p>اولین پروژه امکان‌سنجی خود را ایجاد کنید. اطلاعات فقط روی همین دستگاه ذخیره می‌شود.</p><button className="primary" onClick={() => setShowForm(true)}><Plus size={17}/> ایجاد اولین پروژه</button></div> :
-      <div className="project-grid">{projects.map(project => <article className="project-card" key={project.id}><div className="project-card-top"><div className="module-icon"><Factory size={21}/></div><button className="icon-button" title="حذف پروژه" onClick={() => { if (!confirmBeforeDelete || window.confirm('این پروژه حذف شود؟')) void onDelete(project.id) }}><Trash2 size={17}/></button></div><h3>{project.name}</h3><p>{project.steelStage ? `${project.industry} · ${project.steelStage}` : project.industry}</p><div className="project-meta"><span>{project.capacity || 'ظرفیت ثبت نشده'}</span><span>{project.location || 'موقعیت ثبت نشده'}</span></div><div className="project-footer"><span className="draft-pill">پیش‌نویس</span><small>ایجاد شده در {new Date(project.createdAt).toLocaleDateString('fa-IR')}</small></div></article>)}</div>}
+      <div className="project-grid">{projects.map(project => <article className="project-card" key={project.id} onClick={() => onOpenProject(project)} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') onOpenProject(project) }}><div className="project-card-top"><div className="module-icon"><Factory size={21}/></div><button className="icon-button" title="حذف پروژه" onClick={() => { if (!confirmBeforeDelete || window.confirm('این پروژه حذف شود؟')) void onDelete(project.id) }}><Trash2 size={17}/></button></div><h3>{project.name}</h3><p>{project.steelStage ? `${project.industry} · ${project.steelStage}` : project.industry}</p><div className="project-meta"><span>{project.capacity || 'ظرفیت ثبت نشده'}</span><span>{project.location || 'موقعیت ثبت نشده'}</span></div><div className="project-footer"><span className="draft-pill">پیش‌نویس</span><small>ایجاد شده در {new Date(project.createdAt).toLocaleDateString('fa-IR')}</small></div></article>)}</div>}
   </section>
 }
