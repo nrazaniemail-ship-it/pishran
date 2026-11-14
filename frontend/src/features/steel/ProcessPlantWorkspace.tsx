@@ -149,11 +149,11 @@ export default function ProcessPlantWorkspace({project,plantType,onBack}:{projec
   const stock=(n('foreignStock')+n('localStock'))*Math.max(0,Math.min(100,n('sharedAllocation')))/100
   return n('total')||process+stock+n('structurePrice')
  }
- if(sheetId==='vehicles')return n('total')||n('qty')*n('unitPrice')*allocation*allocation
+ if(sheetId==='vehicles')return n('total')||n('qty')*n('unitPrice')*allocation
  if(sheetId==='preop'){
   if(row.label.includes('بیمه ریسک')&&!n('amount'))return fixedInvestment*2.5/1000*allocation
   if(row.label.includes('اخذ وام')&&!n('amount'))return fixedInvestment*1.25/1000*allocation
-  if(row.label.includes('پیش‌بینی‌نشده')&&!n('amount')){const source=data.preop??makeRows(sheets.find(x=>x.id==='preop')!);return source.filter(x=>x.id!==row.id&&!x.section).reduce((sum,x)=>sum+capexAmount('preop',x),0)*.05*allocation}
+  if(row.label.includes('پیش‌بینی‌نشده')&&!n('amount')){const source=data.preop??makeRows(sheets.find(x=>x.id==='preop')!,plantType);return source.filter(x=>x.id!==row.id&&!x.section).reduce((sum,x)=>sum+capexAmount('preop',x),0)*.05*allocation}
   return n('amount')*allocation
  }
  if(sheetId==='infrastructure'||sheetId==='office')return n('amount')*allocation
