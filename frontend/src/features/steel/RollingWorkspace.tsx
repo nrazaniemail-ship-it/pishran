@@ -18,7 +18,7 @@ const uid=()=>crypto.randomUUID?.()??String(Date.now()+Math.random())
 const r=(name:string,unit='',quantity=0,unitPrice=0,source='فرض کاربر'):Row=>({id:uid(),name,quantity,unit,unitPrice,currency:'میلیون ریال',period:'سالانه',source,sourceType:source==='گزارش مرجع'?'گزارش/مستند':'فرض کاربر',sourceDate:'',confidence:50})
 const product=(family='Plate'):Product=>({id:uid(),name:'محصول جدید',family,line:'',mix:0,grade:'',thkMin:0,thkMax:0,widthMin:0,widthMax:0,lengthMin:0,lengthMax:0,diameterMin:0,diameterMax:0,weightMin:0,weightMax:0,price:0,unit:'میلیون ریال/تن'})
 const line=(family='Plate'):Line=>({id:uid(),name:'خط تولید جدید',family,feed:family==='Rebar'||family==='Beam'||family==='Angle'?'بیلت/بلوم':'اسلب',technology:'',capacity:0,days:0,hours:0,shifts:0,availability:0,yield:0,plannedStop:0,unplannedStop:0,route:'',equipment:''})
-const BASE:M={name:'',location:'',owner:'',startYear:1405,constructionYears:2,life:15,currency:'میلیون ریال',fx:1,discountMode:'manual',manualRate:30,equity:100,debt:0,ke:35,kd:23,tax:20,loans:[],capexSchedule:[50,50],nwcDays:30,depreciationYears:15,salvagePct:0,opexFixedShare:20,staff:[],workingCapitalItems:[],
+const BASE:M={name:'',location:'',owner:'',startYear:1405,constructionYears:2,life:15,currency:'میلیون ریال',fx:1,discountMode:'manual',manualRate:30,equity:100,debt:0,ke:35,kd:23,tax:20,loans:[],capexSchedule:[50,50],nwcDays:30,depreciationYears:15,salvagePct:0,opexFixedShare:20,staff:[{id:'staff-management',title:'مدیر و معاون',count:0,monthlySalary:0,insurance:0,overtime:0,bonus:0,seniority:0},{id:'staff-supervisor',title:'رئیس و سرپرست',count:0,monthlySalary:0,insurance:0,overtime:0,bonus:0,seniority:0},{id:'staff-expert',title:'کارشناس',count:0,monthlySalary:0,insurance:0,overtime:0,bonus:0,seniority:0},{id:'staff-technician',title:'تکنسین',count:0,monthlySalary:0,insurance:0,overtime:0,bonus:0,seniority:0},{id:'staff-office',title:'کارمند دفتری و منشی',count:0,monthlySalary:0,insurance:0,overtime:0,bonus:0,seniority:0},{id:'staff-operator',title:'کارگر فنی و راننده',count:0,monthlySalary:0,insurance:0,overtime:0,bonus:0,seniority:0},{id:'staff-laborer',title:'کارگر ساده',count:0,monthlySalary:0,insurance:0,overtime:0,bonus:0,seniority:0}],workingCapitalItems:[{id:'wc-raw',name:'موجودی مواد خام',classification:'asset',annualBase:0,days:30},{id:'wc-energy',name:'موجودی هزینه انرژی',classification:'asset',annualBase:0,days:15},{id:'wc-spares',name:'قطعات یدکی مصرف‌شده',classification:'asset',annualBase:0,days:30},{id:'wc-wip',name:'موجودی کالای در جریان ساخت',classification:'asset',annualBase:0,days:3},{id:'wc-finished',name:'موجودی کالای ساخته‌شده',classification:'asset',annualBase:0,days:5},{id:'wc-receivable',name:'حساب‌های دریافتنی',classification:'asset',annualBase:0,days:0},{id:'wc-cash',name:'تنخواه و موجودی نقد داخلی',classification:'asset',annualBase:0,days:60},{id:'wc-foreign-cash',name:'موجودی نقد خارجی',classification:'asset',annualBase:0,days:60},{id:'wc-deposit',name:'سپرده کوتاه‌مدت',classification:'asset',annualBase:0,days:0},{id:'wc-interest',name:'سپرده بهره‌دار',classification:'asset',annualBase:0,days:0},{id:'wc-payables',name:'حساب‌های پرداختنی مواد خام',classification:'liability',annualBase:0,days:0}],
 products:[],
 lines:[],
 ramp:[100,100,100,100,100,100,100,100,100,100],density:7860,
@@ -47,7 +47,7 @@ function Rows({title,rows,onChange}:{title:string;rows:Row[];onChange:(v:Row[])=
 export default function RollingWorkspace({project,onBack}:{project?:FeasibilityProject;onBack?:()=>void}){
 const key=project?'pishran:rolling:'+project.id+':v2':'pishran:rolling:new:v2'
 const [m,setM]=useState<M>(()=>project?{...BASE,name:project.name,location:project.location||BASE.location}:BASE),[s,setS]=useState(0),[ready,setReady]=useState(false),[saved,setSaved]=useState(''),[reportSection,setReportSection]=useState('all'),[reportMode,setReportMode]=useState<'managerial'|'detailed'>('detailed'),[selectedTables,setSelectedTables]=useState<string[]|null>(null),[selectedCharts,setSelectedCharts]=useState<string[]>(['revenue','cashflow','dscr'])
-useEffect(()=>{let live=true;localStore.get<M>(key).then(v=>{if(live){if(v)setM({...BASE,...v,loans:v.loans||[],capexSchedule:v.capexSchedule||Array.from({length:Math.max(1,v.constructionYears||BASE.constructionYears)},()=>100/Math.max(1,v.constructionYears||BASE.constructionYears)),nwcDays:v.nwcDays??BASE.nwcDays,depreciationYears:v.depreciationYears??BASE.depreciationYears,salvagePct:v.salvagePct??BASE.salvagePct,opexFixedShare:v.opexFixedShare??BASE.opexFixedShare,staff:v.staff||[],workingCapitalItems:v.workingCapitalItems||[]});else if(project)setM({...BASE,name:project.name,location:project.location||BASE.location});setReady(true)}}).catch(()=>setReady(true));return()=>{live=false}},[key,project?.id])
+useEffect(()=>{let live=true;localStore.get<M>(key).then(v=>{if(live){if(v)setM({...BASE,...v,loans:v.loans||[],capexSchedule:v.capexSchedule||Array.from({length:Math.max(1,v.constructionYears||BASE.constructionYears)},()=>100/Math.max(1,v.constructionYears||BASE.constructionYears)),nwcDays:v.nwcDays??BASE.nwcDays,depreciationYears:v.depreciationYears??BASE.depreciationYears,salvagePct:v.salvagePct??BASE.salvagePct,opexFixedShare:v.opexFixedShare??BASE.opexFixedShare,staff:v.staff||BASE.staff,workingCapitalItems:v.workingCapitalItems||BASE.workingCapitalItems});else if(project)setM({...BASE,name:project.name,location:project.location||BASE.location});setReady(true)}}).catch(()=>setReady(true));return()=>{live=false}},[key,project?.id])
 useEffect(()=>{if(ready)void localStore.set(key,m).then(()=>setSaved(new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})))},[ready,key,m])
 const update=<K extends keyof M>(k:K,v:M[K])=>setM(x=>({...x,[k]:v}))
 const setConstructionYears=(v:number)=>setM(x=>({...x,constructionYears:v,capexSchedule:Array.from({length:Math.max(1,Math.min(30,Math.floor(v)||1))},(_,i)=>x.capexSchedule?.[i]??100/Math.max(1,Math.min(30,Math.floor(v)||1)))}))
@@ -61,6 +61,7 @@ const opex=m.opex.reduce((a,x)=>a+x.quantity*x.unitPrice,0)+payrollCost
 const wacc=calculateWacc({equityWeight:m.equity,debtWeight:m.debt,costOfEquity:m.ke,costOfDebt:m.kd,taxRate:m.tax})
 const rate=m.discountMode==='wacc'?(wacc.valid&&wacc.value!==null?wacc.value:m.manualRate/100):m.manualRate/100
 const detailedWorkingCapital=calculateWorkingCapital(m.workingCapitalItems,1)
+const hasDetailedWorkingCapital=m.workingCapitalItems.some(item=>item.annualBase>0)
 const weightedPrice=m.products.reduce((a,p)=>a+p.mix/100*p.price,0)
 const annualRevenue=fullOutput*weightedPrice
 const financial=useMemo(()=>{
@@ -85,7 +86,7 @@ const financial=useMemo(()=>{
   const ebitda=revenue-operatingCost
   const depreciation=operatingYear>0&&operatingYear<=m.depreciationYears?depreciable/Math.max(1,m.depreciationYears):0
   const ebit=ebitda-depreciation
-  const nwc=operatingYear&&operatingYear<m.life?(m.workingCapitalItems.length?calculateWorkingCapital(m.workingCapitalItems,ramp):revenue*Math.max(0,m.nwcDays)/365):0
+  const nwc=operatingYear&&operatingYear<m.life?(hasDetailedWorkingCapital?calculateWorkingCapital(m.workingCapitalItems,ramp):revenue*Math.max(0,m.nwcDays)/365):0
   const deltaNwc=nwc-previousNwc
   previousNwc=nwc
   let draw=0,interest=0,principalPaid=0,fees=0
@@ -148,7 +149,8 @@ const sensitivity=useMemo(()=>{
    const taxBase=Math.max(0,taxable)
    loss=taxable<0?-taxable:Math.max(0,loss-ebit)
    const tax=taxBase*m.tax/100
-   const nwc=operatingYear>0&&operatingYear<m.life?revenue*Math.max(0,m.nwcDays)/365:0
+   const rampFactor=fullOutput>0?row.output/fullOutput:0
+    const nwc=operatingYear>0&&operatingYear<m.life?(hasDetailedWorkingCapital?calculateWorkingCapital(m.workingCapitalItems,rampFactor):revenue*Math.max(0,m.nwcDays)/365):0
    const deltaNwc=nwc-previousNwc
    previousNwc=nwc
    return ebitda-tax-row.capexSpend*capexFactor-deltaNwc+row.terminal
@@ -161,7 +163,7 @@ const sensitivity=useMemo(()=>{
   {key:'opex',label:'هزینه‌های عملیاتی',low:evaluate(1,1.1,1),high:evaluate(1,.9,1),unit:'±۱۰٪'},
   {key:'capex',label:'سرمایه‌گذاری ثابت (CAPEX)',low:evaluate(1,1,1.1),high:evaluate(1,1,.9),unit:'±۱۰٪'}
  ].map(x=>({...x,lowDelta:x.low-base,highDelta:x.high-base,range:Math.abs(x.high-x.low)})).sort((a,b)=>b.range-a.range)
-},[financial,m,rate])
+},[financial,m,rate,hasDetailedWorkingCapital,fullOutput])
 const validationChecks=[
  {ok:m.products.length>0,t:'حداقل یک محصول تعریف شده'},
  {ok:Math.abs(totalMix-100)<.01,t:'جمع ترکیب محصول برابر ۱۰۰٪ است'},
