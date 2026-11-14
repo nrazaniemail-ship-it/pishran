@@ -374,8 +374,9 @@ const financeLoans=loanLabels.map((label,index)=>financeRow(label)).filter((row)
  repaymentMethod:String(row.values.method??'اصل مساوی').includes('یکجا')?'bullet':String(row.values.method??'').includes('اقساط مساوی')?'annuity':'equal-principal',
  capitalizeInterest:String(row.values.capitalizeInterest??'خیر').includes('بله')
 }))
-const capexDistribution=Array.from({length:4},(_,i)=>financeValue('توزیع CAPEX ثابت — سال ساخت '+(i+1)+' (%)',25))
-const preopDistribution=Array.from({length:4},(_,i)=>financeValue('توزیع هزینه قبل از بهره‌برداری — سال ساخت '+(i+1)+' (%)',25))
+const normalizeConstructionDistribution=(values:number[])=>{const total=values.reduce((sum,value)=>sum+Math.max(0,value),0);return total>0?values.map(value=>Math.max(0,value)/total*100):values.map(()=>100/Math.max(1,values.length))}
+const capexDistribution=normalizeConstructionDistribution(Array.from({length:constructionYears},(_,i)=>financeValue('توزیع CAPEX ثابت — سال ساخت '+(i+1)+' (%)',100/constructionYears)))
+const preopDistribution=normalizeConstructionDistribution(Array.from({length:constructionYears},(_,i)=>financeValue('توزیع هزینه قبل از بهره‌برداری — سال ساخت '+(i+1)+' (%)',100/constructionYears)))
 const breakEvenInputs=data['break-even']??makeRows(sheets.find(x=>x.id==='break-even')!,plantType)
 const breakEvenCostBases=[materialCost,payrollGrandTotal,energyCost,maintenanceCostTotal,depreciationCostTotal,otherOpexTotal]
 const variableCashCost=breakEvenCostBases.reduce((sum,cost,index)=>index===4?sum:sum+cost*Math.max(0,Math.min(100,Number(breakEvenInputs[index]?.values.variable??[100,0,80,80,0,50][index])))/100,0)
@@ -388,8 +389,8 @@ const financeInput={
  years:19,constructionYears,capacity:materialCapacity,fullCapacityRevenue:salesRevenue,
  fullCapacityVariableCashCost:variableCashCost,fullCapacityFixedCashCost:fixedCashCost,
  annualDepreciation:depreciationCostTotal,fixedInvestment,preOperatingCost:preOperating,
- fixedInvestmentSchedule:Array.from({length:19},(_,i)=>i<4?fixedInvestment*capexDistribution[i]/100:0),
- preOperatingSchedule:Array.from({length:19},(_,i)=>i<4?preOperating*preopDistribution[i]/100:0),
+ fixedInvestmentSchedule:Array.from({length:19},(_,i)=>i<constructionYears?fixedInvestment*capexDistribution[i]/100:0),
+ preOperatingSchedule:Array.from({length:19},(_,i)=>i<constructionYears?preOperating*preopDistribution[i]/100:0),
  utilization:utilizationSchedule,equityContributions,loans:financeLoans,
  taxRate:financeValue('نرخ مالیات عملکرد پایه (%)',25),
  taxRateSchedule:Array.from({length:19},(_,i)=>Math.max(0,Math.min(100,Number(financeRow('نرخ مالیات عملکرد سالانه (%)')?.values['y'+(i+1)]??financeValue('نرخ مالیات عملکرد پایه (%)',25))))),
