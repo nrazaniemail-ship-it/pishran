@@ -178,13 +178,34 @@ export const HOT_ROLLING_200KT_AUDIT = {
   }
 } as const
 
+/** Exact cash-flow rows transcribed from OPEX workbook sheet "IRR-NPV" (million IRR). */
+export const HOT_ROLLING_COMFAR_CASHFLOW_AUDIT = {
+  periodCount: 18,
+  rawPlanningInflowsC4T4: [9721185.16442,9590444.960733,40836220.027034,41998170.083401,47247051.606626,52495933.129851,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,13954745.454709],
+  rawPlanningOutflowsC5T5: [9721185.16442,9590444.960733,39877355.661086,41349163.44405,45797151.405755,50298705.351348,50126679.414203,44406000.43036,42975588.482275,42975588.482275,42975588.482275,42975588.482275,42975588.482275,42975588.482275,42975588.482275,42975588.482275,42975588.482275,0],
+  rawPlanningNetC6T6: [0,0,958864.3659479991,649006.6393510029,1449900.2008709982,2197227.7785030007,2369251.9432969987,8089930.927140005,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,13954745.454709],
+  rawPlanningNetTotal: 115352013.186844,
+  rawPlanningNetHasNegativePeriod: false,
+  discountedInflowsC7T7: [0,0,36749299.194284,41998170.083401,47247051.606626,52495933.129851,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,52495931.3575,66450676.812209,13954745.454709],
+  discountedOutflowsC8T8: [7908572.82,5905218.02,32823019.989519,33857557.006039,38305544.967744,42807098.913338,42635072.976192,42922343.618779,42975588.482275,42975588.482275,42975588.482275,42975588.482275,42975588.482275,42975588.482275,42975588.482275,42975588.482275,42975588.482275,0],
+  netDiscountedC9S9: [-7908572.82,-5905218.02,3926279.2047649994,8140613.077362001,8941506.638881996,9688834.216513,9860858.381308004,9573587.738720998,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,23475088.329934],
+  netDiscountedSumC9S9: 135955719.749285,
+  secondDiscountedNpvRow11Sum: 18509558.820966564,
+  reportedNpvFormula: 'IRR-NPV!C23 = NPV(C14,D9:S9)+C9',
+  reportedIrrFormula: 'IRR-NPV!C24 = IRR(C9:S9)',
+  reportedMirrFormula: 'IRR-NPV!C25 = MIRR(C9:S9,C18,C17)',
+  equityCashFlowC51T51: [-1581085,-1180886,958864.365948,649006.639351,1449900.200871,2197227.778503,2369251.943297,8089930.92714,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,9520342.875225,23475088.329934,13954745.454709],
+  equityMetricsReported: { npveAt30: 6043074.77598321, irrePercent: 55.85519706607913, mirrePercent: 40.302869421931775 },
+  conclusion: 'The supplied planning rows C4:T6 are not a usable unlevered project cash-flow vector because net flows contain no negative investment periods. Rows 7 and 8 are labelled discounted; row 9 is their net and is then discounted again in row 11 and C23. The sheet IRR/MIRR also operate on row 9. A corrected project IRR/MIRR cannot be reconstructed without the original COMFAR undiscounted project cash-flow export and its timing convention.'
+} as const
+
 export const WORKBOOK_RECONCILIATION_FLAGS = [
   'DRI detailed annual depreciation is EUR 33,020,570, while COMFAR reference-year depreciation is EUR 26,727,770.59; the EUR 6,292,799.41 difference needs an asset-by-asset/year schedule bridge.',
   'DRI COMFAR total uses exceed total financing sources by EUR 18,632,333.14; the gap is not a funded source in the COMFAR sources table.',
   'The integrated cash-flow workbook includes net profit from an existing 700,000 t/y rolling line and a separate uplift after steelmaking starts; those are not the HRCR200 200,000 t/y project.',
   'HRCR200 source tabs conflict (mechanism tab 80/20 versus funding summary 30/70); sponsor has confirmed 30% debt/70% equity. The model uses the funding-summary amounts on the construction-investment base, while the separate working-capital funding source remains unconfirmed.',
   'HRCR200 funding summary sources exceed construction uses including capitalized interest by 0.641470533 million IRR; this small difference may be rounding but is not silently adjusted.',
-  'HRCR200 OPEX IRR-NPV uses row 9 (the difference of rows 7 and 8, both labelled discounted cash flows) as its IRR/MIRR vector and discounts it again for NPV; these reported metrics are not a verified raw unlevered project cash-flow basis.',
+  'HRCR200 OPEX IRR-NPV rows 4–6 are raw financial-planning inflows/outflows/net flows; row 6 has no negative investment period and cannot produce project IRR. Rows 7–9 are labelled discounted cash flows; NPV row 23 discounts row 9 again, while IRR/MIRR also use row 9. A valid unlevered project IRR/MIRR requires the original COMFAR undiscounted project cash-flow export.',
   'HRCR200 OPEX IRR-NPV links total investment to 16,587,131.78 million IRR, while the CAPEX workbook fixed investment is 18,463,008.72 million IRR and the project summary total including construction interest and working capital is 26,596,838.88 million IRR.',
   'HRCR200 detailed OPEX and sales sheets imply 221.234 million IRR/t unit cost and 311.298 million IRR/t average selling price, while the general summary sheet states 213.3 and 307 million IRR/t; detailed-sheet values are used for the independent Pishran model and summary values remain separately disclosed.'
 ] as const
