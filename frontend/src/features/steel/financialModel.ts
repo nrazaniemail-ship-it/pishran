@@ -362,6 +362,7 @@ export type IntegratedFinanceYear = {
   equityContribution: number
   fixedInvestment: number
   preOperatingCost: number
+  maintenanceCapex: number
   workingCapital: number
   workingCapitalBreakdown: WorkingCapitalBreakdown
   salvageProceeds: number
@@ -499,6 +500,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
       : { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: year > constructionYears ? (variableCashCost + fixedCashCost) * Math.max(0, input.workingCapitalPercent) / 100 : 0 }
     const calculatedWorkingCapital = workingCapitalBreakdown.netWorkingCapital
     const workingCapital = year === years ? 0 : calculatedWorkingCapital
+    const statementWorkingCapitalBreakdown: WorkingCapitalBreakdown = year === years ? { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 } : workingCapitalBreakdown
     const changeInWorkingCapital = workingCapital - priorWorkingCapital
     priorWorkingCapital = workingCapital
 
@@ -666,7 +668,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     const netIncome = profitBeforeTax - row.tax
     retainedEarnings += netIncome
     paidInCapital += row.equityContribution
-    cumulativeGrossFixedAssets += row.fixedInvestment + (row as IntegratedFinanceYear & { maintenanceCapex?: number }).maintenanceCapex!
+    cumulativeGrossFixedAssets += row.fixedInvestment + row.maintenanceCapex
     cumulativePreOperatingAssets += row.preOperatingCost
     accumulatedDepreciation += row.depreciation
     const currentAssets = row.workingCapitalBreakdown.rawMaterials + row.workingCapitalBreakdown.workInProgress
@@ -680,8 +682,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
     const operatingCashFlow = netIncome + row.depreciation - row.changeInWorkingCapital
-    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost
-      - ((row as IntegratedFinanceYear & { maintenanceCapex?: number }).maintenanceCapex ?? 0) + row.salvageProceeds
+    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex + row.salvageProceeds
     const financingCashFlow = row.debtDrawdown + row.equityContribution - row.principal
     const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
     return {
