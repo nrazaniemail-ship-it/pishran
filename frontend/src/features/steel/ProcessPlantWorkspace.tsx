@@ -130,7 +130,7 @@ const energyDefaults:Record<string,{specific:number;unit:string;price?:number}> 
 const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)=>{
  const values:Record<string,Cell>=Object.fromEntries(sheet.columns.map(col=>[col.key,col.numeric?0:'']))
  const label=typeof entry==='string'?entry:entry.label
- if(!((typeof entry!=='string')||entry.section)){
+ if(typeof entry==='string'){
   if(sheet.id==='materials'){
    const item=materialDefaults[label]
    if(item)Object.assign(values,{specific:item.specific,unit:item.unit,price:item.price})
