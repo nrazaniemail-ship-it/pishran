@@ -77,10 +77,11 @@ export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPoli
   return { rawMaterials, workInProgress, finishedGoods, receivables, minimumCash, payables, netWorkingCapital: rawMaterials + workInProgress + finishedGoods + receivables + minimumCash - payables }
 }
 
-export function calculateCashConversionCycleDays(policy: Pick<WorkingCapitalPolicy, 'rawMaterialDays' | 'workInProgressDays' | 'finishedGoodsDays' | 'receivableDays' | 'payableDays'>) {
+export function calculateCashConversionCycleDays(policy: Pick<WorkingCapitalPolicy, 'dayBasis' | 'rawMaterialDays' | 'workInProgressDays' | 'finishedGoodsDays' | 'receivableDays' | 'payableDays'>) {
   const values = [policy.rawMaterialDays, policy.workInProgressDays, policy.finishedGoodsDays, policy.receivableDays, policy.payableDays]
-  if (!values.every(Number.isFinite) || values.some(value => value < 0)) return Number.NaN
-  return values[0] + values[1] + values[2] + values[3] - values[4]
+  if (!Number.isFinite(policy.dayBasis) || policy.dayBasis <= 0 || !values.every(Number.isFinite) || values.some(value => value < 0)) return Number.NaN
+  const [raw, wip, finished, receivables, payables] = values.map(value => Math.min(value, policy.dayBasis))
+  return raw + wip + finished + receivables - payables
 }
 
 export function calculateCapacityScaledCapex(referenceCapex: number, referenceCapacity: number, targetCapacity: number, elasticity: number) {
