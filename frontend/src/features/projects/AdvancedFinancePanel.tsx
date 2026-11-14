@@ -84,6 +84,7 @@ export default function AdvancedFinancePanel(props: Props) {
     annualRevenue:props.fullCapacityRevenue,annualCashOperatingCost:state.workingCapitalBases.cash
   }),[state.workingCapitalDays,state.workingCapitalBases,state.wipCompletion,props.fullCapacityRevenue])
   const equityContributions = state.equityContributions.length===years ? state.equityContributions : Array(years).fill(0)
+  const taxRates = state.taxRates?.length===years ? state.taxRates : Array(years).fill(props.taxRate)
   const maintenanceCapexSchedule = utilization.map(u=>(props.fullCapacityFixedCashCost+props.fullCapacityVariableCashCost)*u*state.maintenancePercent/100)
   const input: IntegratedFinanceInput = {
     years,constructionYears:construction,capacity:props.capacity,fullCapacityRevenue:props.fullCapacityRevenue,
@@ -92,7 +93,7 @@ export default function AdvancedFinancePanel(props: Props) {
     maintenanceCapexSchedule,fixedInvestment:props.fixedInvestment,preOperatingCost:0,
     fixedInvestmentSchedule,preOperatingSchedule:Array(years).fill(0),utilization,equityContributions,
     loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
-    taxRate:props.taxRate,taxRateSchedule:state.taxRates.length===years?state.taxRates:Array(years).fill(props.taxRate),waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
+    taxRate:props.taxRate,taxRateSchedule:taxRates,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
     workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:0,opexEscalationPercent:0,
     discountMode:state.discountMode,manualDiscountRate:state.manualRate
   }
@@ -146,7 +147,7 @@ export default function AdvancedFinancePanel(props: Props) {
 
     <h4>۳. استهلاک دارایی‌به‌دارایی و مالیات</h4>
     <p className="fw-hint">دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.</p>
-    <div className="fw-grid">{state.taxRates.map((v,i)=><label className="fw-field" key={i}><span>نرخ مالیات سال {i+1} (%)</span><input type="number" min="0" max="100" value={v} onChange={e=>setState(s=>({...s,taxRates:s.taxRates.map((rate,j)=>j===i?Number(e.target.value):rate)}))}/></label>)}</div>
+    <div className="fw-grid">{taxRates.map((v,i)=><label className="fw-field" key={i}><span>نرخ مالیات سال {i+1} (%)</span><input type="number" min="0" max="100" value={v} onChange={e=>setState(s=>({...s,taxRates:taxRates.map((rate,j)=>j===i?Number(e.target.value):rate)}))}/></label>)}</div>
     <button className="secondary-button" onClick={syncAssets}><RefreshCw size={14}/> همگام‌سازی دارایی‌ها از CAPEX</button>
     {state.assets.map(asset=><div className="fw-grid" key={asset.id}>
       <label className="fw-field"><span>دارایی</span><input value={asset.name} onChange={e=>updateAsset(asset.id,{name:e.target.value})}/></label>
