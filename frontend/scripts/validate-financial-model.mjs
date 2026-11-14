@@ -89,6 +89,10 @@ const pishranExpected = reference.PISHRAN_REFERENCE_MODEL_OUTPUT
 const workspaceSource = await readFile(new URL('../src/features/steel/ProcessPlantWorkspace.tsx', import.meta.url), 'utf8')
 const output = expected.capacity
 const currency = model.currency
+assert.equal(model.equity, 70, 'HRCR200 active model equity share must follow sponsor confirmation')
+assert.equal(model.debt, 30, 'HRCR200 active model debt share must follow sponsor confirmation')
+assert.equal(model.loans.length, 1, 'HRCR200 active model must not assume an unconfirmed working-capital loan')
+near(model.loans[0].amount, 5610850.8, 0.01, 'HRCR200 active fixed loan amount under 30/70 financing')
 
 const integratedComfar19 = [...integratedReference.INTEGRATED_COMFAR_PROJECT_CASH_FLOWS]
 const integratedControls = integratedReference.INTEGRATED_COMFAR_REFERENCE
@@ -154,7 +158,8 @@ const wacc = engine.calculateWacc({
   taxRate: model.waccTax
 })
 assert.equal(wacc.valid, true, 'WACC inputs must be valid')
-near(wacc.value, expected.wacc, 1e-12, 'WACC')
+near(wacc.value, 0.2685, 1e-12, 'Sponsor-confirmed 70/30 WACC')
+near(expected.wacc, 0.21284299025331596, 1e-12, 'Historical workbook WACC remains a source-only benchmark')
 
 const factoryRows = model.opex.filter(row => row.costGroup === 'سربار کارخانه')
 const factory = engine.calculateOperatingCostRows(factoryRows, output, currency)
