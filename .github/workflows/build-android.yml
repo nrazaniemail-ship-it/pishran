@@ -52,8 +52,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build web app
-        run: npm run build
+      - name: Build web app for Capacitor
+        run: CAPACITOR_BUILD=true npm run build
 
       - name: Generate Capacitor Android project
         run: |
