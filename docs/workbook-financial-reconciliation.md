@@ -127,6 +127,22 @@ The investment base is also inconsistent: «مشخصات کلی طرح» reports
 
 The HRCR200 workbook's `IRR-NPV` sheet reports project NPV 18,509,558.82 million IRR at 21%, project IRR 43.3782%, MIRR 33.8651%, equity NPV 6,043,074.78 million IRR at 30%, equity IRR 55.8552%, and equity MIRR 40.3029%.  These values belong only to the HRCR200 case. The same workbook's «مشخصات کلی طرح» sheet separately reports NPV 31,399,764.27 million IRR at 25%, IRR 48.31%, MIRR 28.03%, equity IRR 57.99% and equity MIRR 30.90%. The different NPV discount rates alone do not explain the IRR difference; the cash-flow basis, timing and investment base need reconciliation before either set is treated as definitive.
 
+
+### Independent Pishran calculation and like-rate comparison
+
+The independent Pishran project model was regenerated from the detailed source inputs: CAPEX fixed investment 18,463,008.7206, pre-operation 239,826.6380, OPEX rows, 5% operating tax from the sales sheet, 70/80/90/100% ramp-up, 360-day working-capital schedule, 26% finance rate, 30% reinvestment rate, and terminal salvage 13,954,745.4547 (all monetary amounts million IRR). Its 17-period unlevered project cash-flow vector produces:
+- NPV at 21%: 41,566,364.39 million IRR
+- NPV at 25%: 30,684,422.55 million IRR
+- IRR: 54.0118%
+- MIRR: 36.5245%
+
+At the same 25% discount rate, the independent Pishran NPV is 715,341.72 million IRR (about 2.28%) below the «مشخصات کلی طرح» NPV of 31,399,764.27. The IRR and MIRR still differ materially (5.70 and 8.49 percentage points respectively). The 21% NPV of 18,509,558.82 and IRR/MIRR of 43.3782%/33.8651% from IRR-NPV are preserved as reported values only, not accepted as a verified project-CF benchmark.
+
+A formula-level check shows IRR-NPV!C23 calculates NPV(C14,D9:S9)+C9, while row 9 is row 7 minus row 8 and rows 7 and 8 are each labelled discounted cash flows. The same row 9 is fed to IRR(C9:S9) and MIRR(C9:S9,...). This means the reported NPV discounts the net row again and the IRR/MIRR use a net-discounted row rather than a validated raw project cash-flow vector. Separately, IRR-NPV!C22 links to قیمت فروش!B11 (16,587,131.78), not the CAPEX workbook's fixed investment (18,463,008.72). Therefore, changing Pishran cash flows merely to force the 43.3782% IRR or 18,509,558.82 NPV would encode the source-sheet inconsistency rather than correct it.
+
+The Hot Rolling workspace now shows the independently calculated Pishran metrics beside both sets of COMFAR outputs, corrects the displayed detailed-sheet unit cost and selling price to 221.234 and 311.298 million IRR/t, and explicitly flags the unresolved source-basis conflicts. The financing percentages and repayment schedule remain provisional; a sponsor-approved funding basis or corrected COMFAR raw cash-flow export is still required to close the IRR/MIRR reconciliation.
+
+
 ## 3. Controls added to the application
 
 - Keep DRI/steelmaking and HRCR200 as separate project benchmarks and separate currencies.
