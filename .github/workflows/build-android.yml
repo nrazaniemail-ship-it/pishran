@@ -18,7 +18,10 @@ concurrency:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,6 +32,13 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package.json
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
@@ -37,93 +47,29 @@ jobs:
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses >/dev/null
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Install Bubblewrap and Expect
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Generate Capacitor Android project
         run: |
-          npm install --global @bubblewrap/cli
-          sudo apt-get update
-          sudo apt-get install --yes expect
-          mkdir -p "$HOME/.bubblewrap"
-          printf '{"jdkPath":"%s","androidSdkPath":"%s"}' "$JAVA_HOME" "$ANDROID_HOME" > "$HOME/.bubblewrap/config.json"
+          npx cap add android
+          npx cap sync android
 
-      - name: Generate Android TWA project
+      - name: Build debug APK
         run: |
-          KEY_PASSWORD="$(openssl rand -hex 16)"
-          export KEY_PASSWORD
-          cat > /tmp/init-pishran.exp <<'EXPECT'
-          set timeout 120
-          spawn bubblewrap init --manifest="https://nrazaniemail-ship-it.github.io/pishran/manifest.webmanifest" --directory="android"
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
 
-          expect -re "Domain:"
-          send "\r"
-          expect -re "URL path:"
-          send "\r"
-          expect -re "Application name:"
-          send "\r"
-          expect -re "Short name:"
-          send "\r"
-          expect -re "Application ID:"
-          send "com.pishran.app\r"
-          expect -re "Starting version code"
-          send "\r"
-          expect -re "Display mode:"
-          send "\r"
-          expect -re "Orientation:"
-          send "\r"
-          expect -re "Status bar color:"
-          send "\r"
-          expect -re "Splash screen color:"
-          send "\r"
-          expect -re "Icon URL:"
-          send "https://nrazaniemail-ship-it.github.io/pishran/icons/icon-512.svg\r"
-          expect -re "Maskable icon URL:"
-          send "\r"
-          expect -re "Monochrome icon URL:"
-          send "\r"
-          expect -re "Include support for Play Billing"
-          send "\r"
-          expect -re "Request geolocation permission"
-          send "\r"
-          expect -re "Key store location:"
-          send "\r"
-          expect -re "Key name:"
-          send "\r"
-          expect -re "Do you want to create one now"
-          send "\r"
-          expect -re "First and Last names"
-          send "Pishran Build\r"
-          expect -re "Organizational Unit"
-          send "Mobile\r"
-          expect -re "Organization"
-          send "Pishran\r"
-          expect -re "Country"
-          send "DE\r"
-          expect -re "Password for the Key Store:"
-          send "$env(KEY_PASSWORD)\r"
-          expect -re "Password for the Key:"
-          send "$env(KEY_PASSWORD)\r"
-          expect eof
-          EXPECT
-          expect /tmp/init-pishran.exp
-          echo "KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
-
-      - name: Build signed test APK
-        working-directory: android
-        run: |
-          export BUBBLEWRAP_KEYSTORE_PASSWORD="$KEY_PASSWORD"
-          export BUBBLEWRAP_KEY_PASSWORD="$KEY_PASSWORD"
-          bubblewrap build --skipPwaValidation
-          mkdir -p ../dist-apk
-          find . -type f -name "*.apk" -print -exec cp {} ../dist-apk/Pishran-test.apk \;
-          test -s ../dist-apk/Pishran-test.apk
-          sha256sum ../dist-apk/Pishran-test.apk > ../dist-apk/SHA256SUMS.txt
-          find . -type f -name "assetlinks.json" -exec cp {} ../dist-apk/assetlinks.json \; || true
-
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Pishran-Android-APK
-          path: dist-apk/*
+          path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
