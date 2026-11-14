@@ -11,6 +11,7 @@ import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
 import FeasibilityWizard from './features/projects/FeasibilityWizard'
 import IntegratedSteelWorkspace from './features/steel/IntegratedSteelWorkspace'
 import Guide from './features/guide/Guide'
+import BackupScheduler from './features/settings/BackupScheduler'
 
 type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'integrated-steel' | 'guide'
 
@@ -83,6 +84,7 @@ export default function App() {
   }
 
   return <main className="app-shell">
+    <BackupScheduler/>
     <header className="topbar">
       <button className="brand" onClick={() => setPage('dashboard')} aria-label="صفحه اصلی پیشران"><div className="brandmark">پ</div><div><b>پیشران</b><small>INTELLIGENT FEASIBILITY PLATFORM</small></div></button>
       <nav className="main-nav" aria-label="ناوبری اصلی">
