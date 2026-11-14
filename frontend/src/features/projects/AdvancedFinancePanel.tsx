@@ -34,6 +34,7 @@ type SavedState = {
   workingCapitalDays: { raw: number; wip: number; finished: number; receivable: number; cash: number; payable: number }
   workingCapitalBases: { rawMaterials: number; conversion: number; finishedGoods: number; cash: number; payables: number }
   wipCompletion: { material: number; conversion: number }
+  taxRates: number[]
   discountMode: 'wacc' | 'manual'
   manualRate: number
   maintenancePercent: number
@@ -54,7 +55,7 @@ export default function AdvancedFinancePanel(props: Props) {
     assets:props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100),
     workingCapitalDays:{raw:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
     workingCapitalBases:{rawMaterials:0,conversion:0,finishedGoods:0,cash:0,payables:0},
-    wipCompletion:{material:0,conversion:0},
+    wipCompletion:{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),
     discountMode:'wacc',manualRate:props.costOfEquity,maintenancePercent:0
   }))
   const [loaded,setLoaded]=useState(false)
@@ -91,7 +92,7 @@ export default function AdvancedFinancePanel(props: Props) {
     maintenanceCapexSchedule,fixedInvestment:props.fixedInvestment,preOperatingCost:0,
     fixedInvestmentSchedule,preOperatingSchedule:Array(years).fill(0),utilization,equityContributions,
     loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
-    taxRate:props.taxRate,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
+    taxRate:props.taxRate,taxRateSchedule:state.taxRates.length===years?state.taxRates:Array(years).fill(props.taxRate),waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
     workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:0,opexEscalationPercent:0,
     discountMode:state.discountMode,manualDiscountRate:state.manualRate
   }
@@ -145,6 +146,7 @@ export default function AdvancedFinancePanel(props: Props) {
 
     <h4>۳. استهلاک دارایی‌به‌دارایی و مالیات</h4>
     <p className="fw-hint">دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.</p>
+    <div className="fw-grid">{state.taxRates.map((v,i)=><label className="fw-field" key={i}><span>نرخ مالیات سال {i+1} (%)</span><input type="number" min="0" max="100" value={v} onChange={e=>setState(s=>({...s,taxRates:s.taxRates.map((rate,j)=>j===i?Number(e.target.value):rate)}))}/></label>)}</div>
     <button className="secondary-button" onClick={syncAssets}><RefreshCw size={14}/> همگام‌سازی دارایی‌ها از CAPEX</button>
     {state.assets.map(asset=><div className="fw-grid" key={asset.id}>
       <label className="fw-field"><span>دارایی</span><input value={asset.name} onChange={e=>updateAsset(asset.id,{name:e.target.value})}/></label>
