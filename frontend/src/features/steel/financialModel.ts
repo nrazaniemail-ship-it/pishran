@@ -194,6 +194,8 @@ export type IntegratedFinanceInput = {
   taxRate: number
   costOfEquity: number
   workingCapitalPercent: number
+  salesEscalationPercent: number
+  opexEscalationPercent: number
   discountMode: 'wacc' | 'manual'
   manualDiscountRate: number
   salvageValue?: number
@@ -341,9 +343,12 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   for (let index = 0; index < years; index++) {
     const year = index + 1
     const utilization = Math.max(0, Math.min(1, Number(input.utilization[index] ?? 0)))
-    const revenue = Math.max(0, input.fullCapacityRevenue) * utilization
-    const variableCashCost = Math.max(0, input.fullCapacityVariableCashCost) * utilization
-    const fixedCashCost = year > constructionYears ? Math.max(0, input.fullCapacityFixedCashCost) : 0
+    const operatingYear = Math.max(0, year - constructionYears - 1)
+    const salesFactor = Math.pow(1 + Math.max(-99, input.salesEscalationPercent) / 100, operatingYear)
+    const opexFactor = Math.pow(1 + Math.max(-99, input.opexEscalationPercent) / 100, operatingYear)
+    const revenue = Math.max(0, input.fullCapacityRevenue) * utilization * salesFactor
+    const variableCashCost = Math.max(0, input.fullCapacityVariableCashCost) * utilization * opexFactor
+    const fixedCashCost = year > constructionYears ? Math.max(0, input.fullCapacityFixedCashCost) * opexFactor : 0
     const depreciation = year > constructionYears ? Math.max(0, input.annualDepreciation) : 0
     const fixedInvestment = Math.max(0, Number(input.fixedInvestmentSchedule[index]) || 0)
     const preOperatingCost = Math.max(0, Number(input.preOperatingSchedule[index]) || 0)
@@ -376,7 +381,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const dscr = debtService > 0 ? cfads / debtService : null
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
     const cashBalance = priorCash + equityContribution + debtDrawdown + revenue - variableCashCost - fixedCashCost -
-      fixedInvestment - preOperatingCost - tax - interest - principal - changeInWorkingCapital
+      fixedInvestment - preOperatingCost - tax - interest - principal - changeInWorkingCapital + terminalValue
     priorCash = cashBalance
 
     cumulativeProject += projectFreeCashFlow
