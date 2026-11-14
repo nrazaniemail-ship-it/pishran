@@ -74,18 +74,18 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
           </select>
         </label>
         {isSteel ? <>
-          <label>نام پروژه
+          <label>نوع پروژه
             <select required value={name} onChange={e => changeSteelProject(e.target.value)}>
-              <option value="" disabled>ابتدا نام پروژه را انتخاب کنید</option>
+              <option value="" disabled>ابتدا نوع پروژه را انتخاب کنید</option>
               {STEEL_PROJECT_GROUPS.map(group => <optgroup key={group.stage} label={group.stage}>
                 {group.projects.map(projectName => <option key={projectName} value={projectName}>{projectName}</option>)}
               </optgroup>)}
               <option value={CUSTOM_PROJECT}>سایر پروژه‌های فولادی (عنوان دلخواه)</option>
             </select>
           </label>
-          {isCustom && <label>عنوان دلخواه پروژه<input required value={customName} onChange={e => setCustomName(e.target.value)} placeholder="عنوان پروژه فولادی را وارد کنید"/></label>}
+          {isCustom && <label>عنوان دلخواه نوع پروژه<input required value={customName} onChange={e => setCustomName(e.target.value)} placeholder="نوع پروژه فولادی را وارد کنید"/></label>}
           {steelStage && <label>مرحله زنجیره فولاد<input value={steelStage} readOnly aria-readonly="true"/></label>}
-        </> : <label>نام پروژه<input required value={name} onChange={e => setName(e.target.value)} placeholder="عنوان پروژه را وارد کنید"/></label>}
+        </> : <label>نوع پروژه<input required value={name} onChange={e => setName(e.target.value)} placeholder="نوع پروژه را وارد کنید"/></label>}
         <label>ظرفیت اسمی<input value={capacity} onChange={e => setCapacity(e.target.value)} placeholder="مثلاً ۵۰۰ هزار تن در سال"/></label>
         <label>موقعیت پروژه<input value={location} onChange={e => setLocation(e.target.value)} placeholder="شهر، استان، کشور"/></label>
       </div>
