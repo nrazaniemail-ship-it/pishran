@@ -12,7 +12,7 @@ const c=(key:string,label:string,unit='',numeric=false):Column=>({key,label,unit
 const capexCols=[c('qty','مقدار','',true),c('unit','واحد'),c('unitPrice','هزینه واحد','یورو',true),c('equipment','هزینه تجهیزات','یورو',true),c('allocation','سهم تخصیص به پروژه','٪',true),c('year','سال انجام','',true)]
 const costCols=[c('specific','مصرف ویژه','',true),c('unit','واحد'),c('price','قیمت واحد','یورو',true),c('annualQty','مقدار سالیانه','',true),c('annualCost','هزینه سالیانه','یورو',true)]
 const financeCols=[c('rate','نرخ / درصد','٪',true),c('grace','دوره تنفس','سال',true),c('term','دوره بازپرداخت','سال',true),c('notes','توضیحات')]
-const years=Array.from({length:20},(_,i)=>c('y'+(i+1),'سال '+(i+1),'یورو',true))
+const years=Array.from({length:20},(_,i)=>c('y'+(i+1),i<4?'ساخت '+(i+1):i<19?'بهره‌برداری '+(i+1):'اسقاط','یورو',true))
 const hrCols=[c('expert','کارشناس','نفر',true),c('technician','تکنسین','نفر',true),c('secretary','منشی','نفر',true),c('operator','کارگر فنی','نفر',true),c('driver','راننده','نفر',true),c('laborer','کارگر ساده','نفر',true)]
 const genericCols=[c('amount','مبلغ / مقدار','یورو',true),c('rate','نرخ / درصد','٪',true),c('year','سال','',true),c('notes','توضیحات')]
 const baseRows=[
@@ -98,7 +98,7 @@ function definitions(type:PlantType):Sheet[]{
   makeSheet('results','نتایج','opex',[c('value','نتیجه','',true),c('unit','واحد'),c('source','شیت / رابطه مبنا')],resultRows,'شیت ۹: شاخص‌های سرمایه‌گذاری، سرمایه در گردش، قیمت تمام‌شده، فروش، سود و دوره بازگشت.',true),
   makeSheet('sensitivity','حساسیت','opex',[c('change','تغییر در عوامل','٪',true),c('sales','درآمد فروش / IRR','٪',true),c('capex','سرمایه‌گذاری ثابت / IRR','٪',true),c('opex','هزینه عملیاتی / IRR','٪',true),c('discount','نرخ تنزیل','٪',true)],Array.from({length:11},(_,i)=>String(-20+i*4)),'شیت ۱۰: ماتریس تغییرات درآمد فروش، سرمایه‌گذاری ثابت، هزینه‌های عملیاتی و نرخ تنزیل.'),
   makeSheet('comfar','نتایج کامفار','opex',[c('construction','دوران ساخت','یورو',true),c('production','دوران تولید','یورو',true),c('total','جمع','یورو',true),c('unit','واحد')],['هزینه‌های سرمایه‌گذاری ثابت','هزینه‌های قبل از بهره‌برداری','هزینه‌های قبل از تولید خالص از بهره','بهره دوران ساخت','افزایش سرمایه در گردش خالص','جمع هزینه‌های سرمایه‌گذاری','آورده صاحبان سهام','تسهیلات بلندمدت خارجی','تسهیلات بلندمدت داخلی','وام کوتاه‌مدت','جمع منابع مالی','درآمد فروش سال اول','درآمد فروش سال مرجع','درآمد فروش سال آخر','هزینه‌های کارخانه','هزینه‌های اداری','هزینه‌های عملیاتی','استهلاک','هزینه‌های مالی','هزینه کل تولید','هزینه بازاریابی','بهای تمام‌شده محصولات','سود ناخالص عملیاتی','سود ناخالص','سود مشمول مالیات','مالیات عملکرد','سود خالص','NPV کل سرمایه','IRR کل سرمایه','MIRR کل سرمایه','NPV حقوق صاحبان سهام','IRRE','MIRRE'],'شیت ۱۱: محل تطبیق خروجی‌های COMFAR؛ مقادیر مرجع با محاسبات داخلی پیشران جایگزین نمی‌شوند.'),
-  makeSheet('energy-sensitivity','حساسیت نرخ انرژی','opex',[c('energyChange','تغییر در نرخ انرژی','٪',true),c('irr','نرخ بازگشت سرمایه','٪',true),c('discount','نرخ تنزیل کل پروژه','٪',true)],Array.from({length:9},(_,i)=>String(-80+i*20),'شیت ۱۲: اثر تغییر نرخ انرژی بر نرخ بازگشت سرمایه.')
+  makeSheet('energy-sensitivity','حساسیت نرخ انرژی','opex',[c('energyChange','تغییر در نرخ انرژی','٪',true),c('irr','نرخ بازگشت سرمایه','٪',true),c('discount','نرخ تنزیل کل پروژه','٪',true)],Array.from({length:9},(_,i)=>String(-80+i*20)),'شیت ۱۲: اثر تغییر نرخ انرژی بر نرخ بازگشت سرمایه.'
  ]
  return [...capex,...opex,...finance]
 }
@@ -114,11 +114,12 @@ const makeRows=(sheet:Sheet):Row[]=>sheet.rows.map((entry,i)=>{
   values.allocation=shared?0:100
  }
  if(sheet.id==='site')values.year=1
+ if(['land','vehicles','infrastructure','office','preop'].includes(sheet.id))values.allocation=100
  return{id:sheet.id+'-'+i,label:typeof entry==='string'?entry:entry.label,section:typeof entry==='string'?false:entry.section,values}
 })
 const fmt=(v:number)=>Number(v||0).toLocaleString('fa-IR',{maximumFractionDigits:2})
 export default function ProcessPlantWorkspace({project,plantType,onBack}:{project:FeasibilityProject;plantType:PlantType;onBack:()=>void}){
- const sheets=useMemo(()=>definitions(plantType),[plantType]),key='process-plant:'+plantType+':'+project.id+':excel-sequence-v1'
+ const sheets=useMemo(()=>definitions(plantType),[plantType]),key='process-plant:'+plantType+':'+project.id+':excel-sequence-v2'
  const [data,setData]=useState<Record<string,Row[]>>({}),[selected,setSelected]=useState(sheets[0].id),[ready,setReady]=useState(false),[saved,setSaved]=useState('')
  useEffect(()=>{let alive=true;localStore.get<Record<string,Row[]>>(key).then(v=>{if(alive){setData(v??{});setReady(true)}}).catch(()=>setReady(true));return()=>{alive=false}},[key])
  useEffect(()=>{if(ready)void localStore.set(key,data).then(()=>setSaved(new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})))},[ready,key,data])
@@ -132,9 +133,10 @@ export default function ProcessPlantWorkspace({project,plantType,onBack}:{projec
  const addRow=()=>updateRows([...rows,{id:current.id+'-custom-'+Date.now(),label:'ردیف جدید',values:Object.fromEntries(current.columns.map(col=>[col.key,col.numeric?0:'']))}])
  const capexAmount=(sheetId:string,row:Row)=>{const v=row.values,n=(key:string)=>Number(v[key]??0)||0
  if(sheetId==='land'||sheetId==='site')return n('qty')*n('unitPrice')
- if(sheetId==='buildings')return (n('qty')*n('unitPrice')+n('equipment'))*(1-Math.max(0,Math.min(1,n('sharedRatio'))))
- if(sheetId==='machines')return plantType==='dri'?n('foreign')+n('local'):n('meltForeign')+n('meltLocal')+n('castForeign')+n('castLocal')+n('sharedForeign')+n('sharedLocal')+n('meltingForeign')+n('meltingLocal')+n('castingForeign')+n('castingLocal')+n('handlingForeign')
- if(sheetId==='vehicles')return n('count')*n('unitPrice')
+ if(sheetId==='buildings')return (n('qty')*n('unitPrice')+n('equipment'))*(1-Math.max(0,Math.min(100,n('sharedFactor')))/100)
+ if(sheetId==='machines')return plantType==='dri'?n('foreignDri')+n('localDri')+(n('foreignStock')+n('localStock'))*Math.max(0,Math.min(100,n('sharedAllocation')))/100:n('foreignEaf')+n('localEaf')+n('foreignCcm')+n('localCcm')+(n('foreignStock')+n('localStock'))*Math.max(0,Math.min(100,n('sharedAllocation')))/100+n('structurePrice')
+ if(sheetId==='vehicles')return n('qty')*n('unitPrice')*Math.max(0,Math.min(100,n('allocation')||100))/100
+ if(sheetId==='infrastructure'||sheetId==='office'||sheetId==='preop')return n('amount')*Math.max(0,Math.min(100,n('allocation')||100))/100
  return n('amount')||n('total')||n('annualCost')
 }
 const capexBySheet=(id:string)=> (data[id]??makeRows(sheets.find(x=>x.id===id)!)).reduce((sum,row)=>sum+capexAmount(id,row),0)
