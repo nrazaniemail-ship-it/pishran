@@ -162,14 +162,14 @@ export const EXCEL_REFERENCE_EXPECTED = {
   totalInvestment:18702835.358529467,
   wacc:0.21284299025331596,
   roundedDiscountRate:0.21,
-  npvAtRoundedRate:18509558.82096656,
+  irrNpvSheetReportedNpvAt21:18509558.82096656,
   npvAtExactWacc:18039663.975015666,
-  irr:0.43378234116396674,
-  mirr:0.33865108092920493,
+  irrNpvSheetReportedIrr:0.43378234116396674,
+  irrNpvSheetReportedMirr:0.33865108092920493,
   financeRate:0.26,
   reinvestmentRate:0.30,
-  /** Row 9, periods C:S in OPEX sheet "IRR-NPV"; last period includes the COMFAR salvage inflow. */
-  comfarProjectCashFlows:[
+  /** Row 9, periods C:S in OPEX sheet "IRR-NPV". This is the difference of rows 7 and 8, both labelled discounted cash flows; it is retained only to reproduce the sheet's reported metrics, not as a raw unlevered project cash-flow vector. */
+  comfarIrrNpvNetDiscountedCashFlows:[
     -7908572.82,-5905218.02,3926279.2047649994,8140613.077362001,
     8941506.638881996,9688834.216513,9860858.381308004,9573587.738720998,
     9520342.875225,9520342.875225,9520342.875225,9520342.875225,
@@ -178,6 +178,8 @@ export const EXCEL_REFERENCE_EXPECTED = {
   ],
   sourceNotes:[
     'The OPEX workbook uses 360 days per year for working-capital turnover.',
+    'The IRR-NPV sheet calculates NPV by applying NPV() to row 9, which is itself the difference between two rows labelled discounted cash flows; its IRR/MIRR also use this row. These are source-reported figures, not a verified raw project cash-flow basis.',
+    'The IRR-NPV sheet total-investment link is 16,587,131.78 million IRR, while CAPEX fixed investment is 18,463,008.72 and total project investment including construction interest and working capital is 26,596,838.88 million IRR.',
     'The CAPEX workbook calculates WACC at 21.284299%; the OPEX IRR-NPV sheet rounds the discount rate to 21%.',
     'The 5% operating tax in the sales sheet and 25% WACC tax shield in the CAPEX discount-rate sheet are separate source assumptions.',
     'IRR-NPV cash flows are imported from COMFAR and are not calculated by the source Excel workbook from the operating-cost tabs.'
@@ -194,6 +196,7 @@ export const PISHRAN_REFERENCE_MODEL_OUTPUT = {
     36917432.066469
   ],
   npvAt21Percent:41566364.39409077,
+  npvAt25Percent:30684422.548626937,
   irr:0.5401182097235053,
   mirr:0.36524517442187365
 } as const
