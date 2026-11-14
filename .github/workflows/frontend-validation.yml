@@ -1,0 +1,37 @@
+name: Frontend build and financial validation
+
+on:
+  push:
+    branches: [feature/integrated-dri-steelmaking-comfar]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-validation.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript and production build
+        run: npm run build
+      - name: Financial model regression tests
+        run: npm run test:financial

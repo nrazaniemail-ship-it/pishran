@@ -3,7 +3,7 @@ name: Build Pishran Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, feature/integrated-dri-steelmaking-comfar]
     paths:
       - "frontend/**"
       - ".github/workflows/build-android.yml"

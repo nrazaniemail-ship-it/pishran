@@ -14,21 +14,140 @@ const near = (actual, expected, tolerance, label) => {
   assert.ok(Math.abs(actual - expected) <= tolerance,
     label + ': expected ' + expected + ', got ' + actual + ', delta ' + (actual - expected))
 }
-const [engine, reference] = await Promise.all([
+const [engine, reference, integratedReference, workbookAudit] = await Promise.all([
   loadTypeScriptModule('../src/features/steel/financialModel.ts'),
-  loadTypeScriptModule('../src/features/steel/hotRollingExcelBenchmark.ts')
+  loadTypeScriptModule('../src/features/steel/hotRollingExcelBenchmark.ts'),
+  loadTypeScriptModule('../src/features/steel/integratedProjectBenchmark.ts'),
+  loadTypeScriptModule('../src/features/steel/workbookReconciliation.ts')
 ])
+
+const driAudit = workbookAudit.DRI_STEELMAKING_AUDIT
+near(driAudit.capexCategories.reduce((sum,row)=>sum+row.amount,0),
+  driAudit.capex.fixedInvestment, 0.01, 'DRI CAPEX category roll-up')
+near(driAudit.materials.driUnit + driAudit.materials.steelmakingBase
+  + driAudit.materials.marineGradeAdditives + driAudit.materials.apiGradeAdditives
+  + driAudit.materials.pressureVesselGradeAdditives,
+  driAudit.materials.total, 0.01, 'DRI raw-material grade and process roll-up')
+near(driAudit.products.slabRevenue + driAudit.products.surplusDriRevenue,
+  driAudit.products.totalRevenue, 0.01, 'DRI slab and surplus-DRI sales bridge')
+near(driAudit.energy.driElectricityKwhPerT * 1_760_000
+  + driAudit.energy.steelmakingElectricityKwhPerT * 1_200_000,
+  driAudit.energy.totalElectricityKwh, 0.01, 'DRI and steelmaking electricity consumption')
+near(driAudit.energy.driGasNm3PerT * 1_760_000
+  + driAudit.energy.steelmakingGasNm3PerT * 1_200_000,
+  driAudit.energy.totalGasNm3, 0.01, 'DRI and steelmaking gas consumption')
+near(driAudit.capex.fixedInvestment + driAudit.capex.preproductionNet + driAudit.capex.capitalizedInterest,
+  driAudit.capex.constructionUses, 0.2, 'DRI construction uses bridge')
+near(driAudit.capex.constructionUses + driAudit.workingCapital, driAudit.totalUses, 0.2, 'DRI total uses bridge')
+near(driAudit.funding.equity + driAudit.funding.longTermDebt + driAudit.funding.shortTermDebt,
+  driAudit.funding.totalSources, 0.01, 'DRI total sources bridge')
+near(driAudit.totalUses - driAudit.funding.totalSources, driAudit.funding.fundingGap, 0.01, 'DRI funding gap')
+near(driAudit.annualOpex.rawMaterials + driAudit.annualOpex.labor + driAudit.annualOpex.laborOverhead
+  + driAudit.annualOpex.maintenance + driAudit.annualOpex.utilities + driAudit.annualOpex.other,
+  driAudit.annualOpex.factoryCostExDepreciation, 0.5, 'DRI factory cost excluding depreciation')
+near(driAudit.annualOpex.factoryCostExDepreciation + driAudit.annualOpex.depreciationDetailed,
+  driAudit.annualOpex.totalIncludingDepreciation, 0.5, 'DRI total cost including detailed depreciation')
+near(driAudit.annualOpex.depreciationDetailed - driAudit.comfar.referenceDepreciation,
+  6292799.41, 0.02, 'DRI depreciation discrepancy retained as an audit flag')
+
+const rollingAudit = workbookAudit.HOT_ROLLING_200KT_AUDIT
+near(rollingAudit.capex.fixedInvestment + rollingAudit.capex.preproductionNet,
+  rollingAudit.capex.constructionInvestment, 0.01, 'HRCR200 construction investment')
+near(rollingAudit.capex.constructionInvestment + rollingAudit.capex.capitalizedInterest,
+  rollingAudit.capex.constructionUsesIncludingInterest, 0.01, 'HRCR200 construction uses including interest')
+near(rollingAudit.annualOpex.totalIncludingDepreciation - rollingAudit.annualOpex.depreciation,
+  rollingAudit.annualOpex.totalExcludingDepreciation, 0.01, 'HRCR200 OPEX excluding depreciation')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabDebtSharePercent, 80,
+  'HRCR200 mechanism-tab financing split must remain visible')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingSourceExplicit, false,
+  'HRCR200 working-capital source must remain flagged as unconfirmed')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.fundingSummaryTabEquitySharePercent, 70,
+  'HRCR200 alternative financing split must remain visible')
+near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryIrrPercent, 48.31, 0.001,
+  'HRCR200 general-summary IRR')
+near(rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetProjectIrrPercent, 43.378234116396674, 1e-9,
+  'HRCR200 IRR-NPV sheet IRR')
+assert.ok(Math.abs(rollingAudit.alternativeMetricsInWorkbook.generalSummaryIrrPercent
+  - rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetProjectIrrPercent) > 4,
+  'Conflicting HRCR200 IRR outputs must remain an explicit audit item')
+near(rollingAudit.financingCashflowSchedule.equityContributionsTotal, 16401129.53, 0.01,
+  'HRCR200 COMFAR financing schedule equity contributions')
+near(rollingAudit.financingCashflowSchedule.longTermLoanGrossDrawdowns,
+  rollingAudit.financingCashflowSchedule.longTermLoanPrincipalRepayments, 0.01,
+  'HRCR200 long-term loan gross drawdowns and principal repayments')
+near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryTotalInvestment
+  - rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetTotalInvestment,
+  10009707.09412, 0.1, 'HRCR200 investment base discrepancy')
+assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.some(flag => flag.toLowerCase().includes('rows 7–9') && flag.includes('discounted cash flows')), 'HRCR200 discounted-row methodology conflict must remain explicit')
+assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.length >= 5,
+  'Source conflicts must remain explicit audit flags')
+const comfarCashFlow = workbookAudit.HOT_ROLLING_COMFAR_CASHFLOW_AUDIT
+assert.equal(comfarCashFlow.periodCount, 18, 'HRCR200 raw COMFAR planning cash flow periods')
+assert.equal(comfarCashFlow.rawPlanningNetHasNegativePeriod, false,
+  'HRCR200 raw financial-planning net flow has no initial negative investment period')
+near(comfarCashFlow.rawPlanningNetC6T6.reduce((sum,value)=>sum+value,0),
+  comfarCashFlow.rawPlanningNetTotal, 0.01, 'HRCR200 raw planning net cash flow total')
+assert.equal(engine.calculateIrr(comfarCashFlow.rawPlanningNetC6T6), null,
+  'HRCR200 raw planning net flow cannot produce project IRR without negative investment cash flow')
+assert.equal(comfarCashFlow.netDiscountedC9S9.length, 17, 'HRCR200 discounted net row periods')
+near(comfarCashFlow.netDiscountedC9S9.reduce((sum,value)=>sum+value,0),
+  comfarCashFlow.netDiscountedSumC9S9, 0.01, 'HRCR200 net discounted row sum')
+near(comfarCashFlow.secondDiscountedNpvRow11Sum, 18509558.820966564, 0.01,
+  'HRCR200 NPV after second discount in source sheet')
+assert.ok(comfarCashFlow.reportedNpvFormula.includes('NPV(')
+  && comfarCashFlow.reportedNpvFormula.includes('D9:S9'),
+  'HRCR200 source NPV formula must remain visible')
+near(comfarCashFlow.equityCashFlowC51T51[0] + comfarCashFlow.equityCashFlowC51T51[1],
+  -2761971, 0.01, 'HRCR200 equity cash-flow initial outflows')
+
+console.log('PASS: source-workbook DRI and HRCR200 CAPEX/OPEX bridges and unresolved financing/depreciation flags')
+
 const model = reference.EXCEL_HOT_ROLLING_200KT
 const expected = reference.EXCEL_REFERENCE_EXPECTED
 const pishranExpected = reference.PISHRAN_REFERENCE_MODEL_OUTPUT
 const workspaceSource = await readFile(new URL('../src/features/steel/ProcessPlantWorkspace.tsx', import.meta.url), 'utf8')
+const [projectsViewSource,projectRepositorySource,rollingWorkspaceSource,wizardSource,appSource] = await Promise.all([
+  readFile(new URL('../src/features/projects/ProjectsView.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../src/core/projects/projectRepository.ts', import.meta.url), 'utf8'),
+  readFile(new URL('../src/features/steel/RollingWorkspace.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../src/App.tsx', import.meta.url), 'utf8')
+])
+assert.ok(projectsViewSource.includes('قالب پروژه جدید را انتخاب کنید')
+  && projectsViewSource.includes('تمپلت خام')
+  && projectsViewSource.includes('تمپلیت پروژه نورد ورق گرم'),
+  'New project must ask the user to choose one of the two named templates')
+assert.ok(projectRepositorySource.includes("ProjectTemplateId = 'raw' | 'hot-rolling-200kt'")
+  && projectRepositorySource.includes('templateId?: ProjectTemplateId'),
+  'Project template identity must be persisted with each project')
+assert.ok(rollingWorkspaceSource.includes("project.templateId==='hot-rolling-200kt'")
+  && rollingWorkspaceSource.includes("!project.templateId&&project.steelStage?.includes('نورد گرم')"),
+  'Only explicit hot-rolling template or legacy hot-rolling projects may load benchmark defaults')
+assert.ok(wizardSource.includes("project.templateId==='raw'"),
+  'Raw template must initialize an empty feasibility model')
+assert.ok(appSource.includes("if(project.templateId==='raw') setPage('project-wizard')"),
+  'Raw template must not be routed into the seeded hot-rolling workspace')
+assert.ok(rollingWorkspaceSource.includes('ممیزی جریان نقدی خام و اصلاح‌شده کامفار')
+  && rollingWorkspaceSource.includes('HOT_ROLLING_COMFAR_CASHFLOW_AUDIT'),
+  'Active rolling workspace must expose the COMFAR cash-flow audit')
+assert.equal(model.discountMode, 'wacc', 'Hot-rolling template must use the sponsor-confirmed WACC by default')
+
 const output = expected.capacity
 const currency = model.currency
+assert.equal(model.equity, 70, 'HRCR200 active model equity share must follow sponsor confirmation')
+assert.equal(model.debt, 30, 'HRCR200 active model debt share must follow sponsor confirmation')
+assert.equal(model.loans.length, 1, 'HRCR200 active model must not assume an unconfirmed working-capital loan')
+near(model.loans[0].amount, 5610850.8, 0.01, 'HRCR200 active fixed loan amount under 30/70 financing')
 
-const oxinComfar19 = [-104334839.16,-134611066.5,-133093260.44,-88443158.9,118750252.05,187903947.73,212720544.14,226437947.52,189562697.38,188965374.62,188908346.68,188860859.67,188801551.02,188800575.77,188798288.88,188797422.7,188797422.7,188797422.7,413501431.09]
-near(engine.calculateNpv(oxinComfar19, 0.25), 19964251.38, 0.01, 'Ox in COMFAR 19-period NPV at 25%')
-near(engine.calculateIrr(oxinComfar19), 0.2608, 0.0002, 'Oxin COMFAR 19-period IRR')
-assert.ok(workspaceSource.includes(JSON.stringify(oxinComfar19)), 'Workspace must preload the audited 19-period Oxin COMFAR vector')
+const integratedComfar19 = [...integratedReference.INTEGRATED_COMFAR_PROJECT_CASH_FLOWS]
+const integratedControls = integratedReference.INTEGRATED_COMFAR_REFERENCE
+near(engine.calculateNpv(integratedComfar19, 0.25), integratedControls.projectNpvAt25, 0.01, 'Integrated COMFAR 19-period NPV at 25%')
+near(engine.calculateIrr(integratedComfar19), integratedControls.projectIrr / 100, 0.0002, 'Integrated COMFAR 19-period IRR')
+const funding = integratedReference.calculateComfarFundingGap()
+near(funding.uses, integratedControls.totalInvestment, 0.01, 'COMFAR total uses')
+near(funding.sources, integratedControls.totalSources, 0.01, 'COMFAR total sources')
+near(funding.gap, integratedControls.fundingGap, 0.01, 'COMFAR funding gap')
+assert.ok(workspaceSource.includes('INTEGRATED_COMFAR_PROJECT_CASH_FLOWS'), 'Plant reconciliation must use the centralized COMFAR cash-flow reference')
 assert.ok(workspaceSource.includes('calculateNpv(comfarActualFlows,comfarDiscountRate)'), 'COMFAR NPV must discount year 1 at period zero like the reference')
 
 const material = engine.calculateOperatingCostRows(model.materialBalance, output, currency)
@@ -84,7 +203,8 @@ const wacc = engine.calculateWacc({
   taxRate: model.waccTax
 })
 assert.equal(wacc.valid, true, 'WACC inputs must be valid')
-near(wacc.value, expected.wacc, 1e-12, 'WACC')
+near(wacc.value, 0.2685, 1e-12, 'Sponsor-confirmed 70/30 WACC')
+near(expected.wacc, 0.21284299025331596, 1e-12, 'Historical workbook WACC remains a source-only benchmark')
 
 const factoryRows = model.opex.filter(row => row.costGroup === 'سربار کارخانه')
 const factory = engine.calculateOperatingCostRows(factoryRows, output, currency)
@@ -112,11 +232,11 @@ near(workingCapital, expected.workingCapital, 0.02, 'Net working capital with 36
 const wc365 = engine.calculateWorkingCapital(wcItems, 1, 365)
 assert.ok(Math.abs(wc365 - workingCapital) > 1000, '360/365 convention must materially change the benchmark result')
 
-const cashFlows = [...expected.comfarProjectCashFlows]
-near(engine.calculateNpv(cashFlows, expected.roundedDiscountRate), expected.npvAtRoundedRate, 0.01, 'NPV at Excel rounded 21%')
-near(engine.calculateNpv(cashFlows, expected.wacc), expected.npvAtExactWacc, 0.01, 'NPV at exact WACC')
-near(engine.calculateIrr(cashFlows), expected.irr, 1e-8, 'IRR')
-near(engine.calculateMirr(cashFlows, expected.financeRate, expected.reinvestmentRate), expected.mirr, 1e-8, 'MIRR')
+const cashFlows = [...expected.comfarIrrNpvNetDiscountedCashFlows]
+near(engine.calculateNpv(cashFlows, expected.roundedDiscountRate), expected.irrNpvSheetReportedNpvAt21, 0.01, 'Reproduce reported IRR-NPV sheet NPV at 21% from its row 9 basis')
+near(engine.calculateNpv(cashFlows, expected.wacc), expected.npvAtExactWacc, 0.01, 'Reproduce IRR-NPV sheet NPV on reported discounted-row basis at exact WACC')
+near(engine.calculateIrr(cashFlows), expected.irrNpvSheetReportedIrr, 1e-8, 'Reproduce IRR-NPV sheet reported IRR from its row 9 basis')
+near(engine.calculateMirr(cashFlows, expected.financeRate, expected.reinvestmentRate), expected.irrNpvSheetReportedMirr, 1e-8, 'Reproduce IRR-NPV sheet reported MIRR from its row 9 basis')
 
 
 const totalCapex = model.capex.reduce((sum, row) => sum + row.quantity * row.unitPrice * (row.currency === currency ? 1 : row.fxRate), 0)
@@ -165,8 +285,9 @@ for (let index = 0; index < capexYears + model.life; index++) {
 console.log('DEBUG Pishran generated flows:', JSON.stringify(generatedProjectCashFlows))
 console.log('DEBUG reference flows:', JSON.stringify(pishranExpected.projectCashFlows))
 console.log('DEBUG working capital:', workingCapital, 'OPEX:', opexWithoutDepreciation, 'WACC:', wacc.value)
-const generatedComfarComparison = engine.reconcileCashFlowSeries(generatedProjectCashFlows, expected.comfarProjectCashFlows, 0.01)
-console.log('COMFAR annual cash-flow comparison (benchmark fixture):', {
+const generatedComfarComparison = engine.reconcileCashFlowSeries(generatedProjectCashFlows, expected.comfarIrrNpvNetDiscountedCashFlows, 0.01)
+assert.equal(generatedComfarComparison.matched, false, 'Raw Pishran project cash flows must not be represented as matching the IRR-NPV sheet discounted-row vector')
+console.log('Basis comparison: raw Pishran project flows vs IRR-NPV sheet row 9 (reported net discounted flows; not like-for-like):', {
   matched: generatedComfarComparison.matched,
   periodCountMatch: generatedComfarComparison.periodCountMatch,
   modelTotal: generatedComfarComparison.modelTotal,
@@ -175,6 +296,7 @@ console.log('COMFAR annual cash-flow comparison (benchmark fixture):', {
   maxAbsoluteDifference: generatedComfarComparison.maxAbsoluteDifference
 })
 assert.equal(generatedProjectCashFlows.length, pishranExpected.projectCashFlows.length, 'Pishran project flow period count')
+for (let index = 0; index < generatedProjectCashFlows.length; index++) near(generatedProjectCashFlows[index], pishranExpected.projectCashFlows[index], 0.01, 'Pishran raw project cash flow period ' + (index + 1))
 assert.ok(generatedProjectCashFlows.every(Number.isFinite), 'Pishran generated cash flows must all be finite')
 assert.ok(generatedProjectCashFlows.some(value => value < 0) && generatedProjectCashFlows.some(value => value > 0),
   'Pishran generated cash flows must contain investment outflow and operating inflow')
@@ -183,17 +305,22 @@ const generatedIrr = engine.calculateIrr(generatedProjectCashFlows)
 const generatedMirr = engine.calculateMirr(generatedProjectCashFlows, expected.financeRate, expected.reinvestmentRate)
 assert.ok(Number.isFinite(generatedNpv) && Number.isFinite(generatedIrr) && Number.isFinite(generatedMirr),
   'Pishran-generated NPV, IRR and MIRR must be finite')
-console.log('Pishran-generated metrics (not yet reconciled to COMFAR):', {
-  NPV: generatedNpv, IRR: generatedIrr, MIRR: generatedMirr
+near(generatedNpv, pishranExpected.npvAt21Percent, 0.01, 'Pishran-generated NPV at 21%')
+near(engine.calculateNpv(generatedProjectCashFlows, 0.25), pishranExpected.npvAt25Percent, 0.01, 'Pishran-generated NPV at 25% for like-rate comparison with General Summary')
+near(pishranExpected.npvAt25Percent - workbookAudit.HOT_ROLLING_200KT_AUDIT.alternativeMetricsInWorkbook.generalSummaryNpvAt25, -37940.98962954, 0.02, 'Pishran and COMFAR General Summary same-rate NPV difference')
+near(generatedIrr, pishranExpected.irr, 1e-8, 'Pishran-generated IRR')
+near(generatedMirr, pishranExpected.mirr, 1e-8, 'Pishran-generated MIRR')
+console.log('Pishran independent project metrics; source COMFAR outputs remain unreconciled pending corrected raw cash-flow export:', {
+  NPV21: generatedNpv, NPV25: engine.calculateNpv(generatedProjectCashFlows, 0.25), IRR: generatedIrr, MIRR: generatedMirr
 })
 
 console.log('PASS: raw materials, energy, process consumables, spares, maintenance and payroll')
 console.log('PASS: 360-day working capital = ' + workingCapital.toFixed(4) + ' million Rial')
 console.log('PASS: WACC = ' + (wacc.value * 100).toFixed(6) + '%')
-console.log('PASS: NPV / IRR / MIRR independently reproduce the COMFAR reference row')
+console.log('PASS: Pishran independently reproduces its own raw project cash-flow benchmark; COMFAR row 9 is kept as a separate reported discounted-row control.')
 console.log('PASS: Pishran-generated project cash flows are finite and return valid NPV / IRR / MIRR')
-console.log('REVIEW REQUIRED: generated Pishran cash flows are not yet numerically reconciled to COMFAR cash flows')
-console.log('NOTE: Excel rounds WACC 21.284299% to 21% for its NPV cell.')
+console.log('REVIEW REQUIRED: COMFAR IRR-NPV row 9 is not a verified raw project cash-flow vector; source investment base and financing schedules conflict with the CAPEX workbook.')
+console.log('NOTE: Excel rounds WACC 21.284299% to 21% for its IRR-NPV sheet cell; its row 9 basis is not validated as raw project cash flow.')
 
 
 const integrated = engine.calculateIntegratedFinance({
@@ -444,9 +571,9 @@ assert.ok(workspaceSource.includes("annualFixedConversionCost:fixedConversionCos
 assert.ok(workspaceSource.includes("annualPayablesCost:materialCost+energyCost+maintenanceCostTotal+otherOpexTotal"), 'Supplier credit must use eligible material, energy, maintenance and supplier purchases')
 assert.ok(workspaceSource.includes("annualFixedPayablesCost:financeValue('هزینه ثابت سالانه مشمول بدهی تجاری (یورو)',0)"), 'Fixed supplier-credit purchases must be separately configurable')
 assert.ok(workspaceSource.includes("'Other income':year.terminalValue"), 'COMFAR Other income must include terminal working-capital recovery and salvage')
-assert.ok(workspaceSource.includes('years:19,constructionYears:4'), 'Project model horizon must match four construction plus fifteen operating years')
+assert.ok(workspaceSource.includes('years:19,constructionYears,') && workspaceSource.includes("financeValue('تعداد سال دوره ساخت',4)") && workspaceSource.includes("financeValue('تعداد سال دوره بهره‌برداری',15)"), 'Project model horizon must default to four construction plus fifteen operating years and remain configurable')
 assert.ok(workspaceSource.includes("referenceYear:isScalar?0:annual[8]??0,lastYear:isScalar?0:annual[18]??0"), 'COMFAR reference year 9 and last year 19 must map to the correct periods')
-assert.ok(workspaceSource.includes("const utilizationSchedule=Array.from({length:19},(_,i)=>i<4?0:Math.min(1,[.7,.8,.9,1][i-4]??1))"), 'The terminal year must be the final operating year, not an extra non-operating year')
+assert.ok(workspaceSource.includes("const utilizationSchedule=Array.from({length:19},(_,i)=>i<constructionYears?0:Math.min(1,[.7,.8,.9,1][i-constructionYears]??1))"), 'The terminal year must be the final operating year, not an extra non-operating year')
 assert.ok(workspaceSource.includes("'Increase in fixed assets':year.fixedInvestment"), 'COMFAR cash flow must map annual fixed-asset investment')
 assert.ok(workspaceSource.includes("'Marketing costs':0"), 'COMFAR marketing cost line must remain explicit when no separate marketing input exists')
 assert.ok(workspaceSource.includes("'Increase in net working capital':year.changeInWorkingCapital"), 'COMFAR cash flow must use the annual net working-capital movement')

@@ -15,10 +15,10 @@ export const EXCEL_HOT_ROLLING_200KT = {
   life:15,
   currency:'میلیون ریال',
   fx:1,
-  discountMode:'manual' as const,
+  discountMode:'wacc' as const,
   manualRate:21,
-  equity:16.993324050777078,
-  debt:83.00667594922292,
+  equity:70,
+  debt:30,
   ke:30,
   kd:26,
   tax:5,
@@ -26,8 +26,7 @@ export const EXCEL_HOT_ROLLING_200KT = {
   financeRate:26,
   reinvestmentRate:30,
   loans:[
-    {id:'excel-loan-fixed',name:'وام بلندمدت سرمایه‌گذاری ثابت',amount:14962268.286823574,currency:'میلیون ریال',fxRate:1,fxDate:'1402-07-10',annualRate:26,drawYear:1,graceYears:2,tenorYears:5,method:'اصل مساوی' as const,feeRate:0},
-    {id:'excel-loan-wc',name:'تسهیلات سرمایه در گردش',amount:3309144.525623,currency:'میلیون ریال',fxRate:1,fxDate:'1402-07-10',annualRate:26,drawYear:3,graceYears:0,tenorYears:5,method:'اصل مساوی' as const,feeRate:0}
+    {id:'excel-loan-fixed',name:'وام بلندمدت سرمایه‌گذاری ثابت (۳۰٪ ساختار تأییدشده)',amount:5610850.8,currency:'میلیون ریال',fxRate:1,fxDate:'1402-07-10',annualRate:26,drawYear:1,graceYears:2,tenorYears:5,method:'اصل مساوی' as const,feeRate:0}
   ],
   capexSchedule:[68.0199181361,31.9800818639],
   nwcDays:30,
@@ -136,7 +135,7 @@ export const EXCEL_HOT_ROLLING_200KT = {
     row('opex-marketing','بازاریابی مستقیم (۰٫۱٪ فروش طبق فرمول سلول)',1,'تن محصول',0.311298,'به‌ازای هر تن','بازاریابی')
   ],
   market:[],
-  notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ از شیت نرخ تنزیل جداگانه نگهداری شده‌اند. نرخ تنزیل محاسباتی WACC برابر ۲۱٫۲۸۴۳٪ است؛ شیت IRR-NPV نرخ را به ۲۱٪ گرد کرده است. جریان‌های نقدی مرجع COMFAR در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند.'
+  notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. ساختار تأمین مالی با تأیید حامی پروژه ۷۰٪ آورده و ۳۰٪ بدهی است؛ مبنای مبلغی آن سرمایه‌گذاری ساخت ۱۸٬۷۰۲٬۸۳۵٫۳۶ میلیون ریال است و مقادیر گزارش‌شده منابع به‌ترتیب ۱۳٬۰۹۱٬۹۸۵٫۲ و ۵٬۶۱۰٬۸۵۰٫۸ میلیون ریال‌اند. نرخ WACC بازحساب‌شده با هزینه حقوق صاحبان سهام ۳۰٪، هزینه بدهی ۲۶٪ و سپر مالیاتی ۲۵٪ برابر ۲۶٫۸۵٪ است. نرخ ۲۱٪ شیت IRR-NPV فقط به‌عنوان نرخ تاریخی گزارش منبع نگهداری شده و WACC ساختار تأییدشده نیست. منبع تأمین سرمایه در گردش در فایل صریح نیست و در تسهیلات مدل به‌عنوان بدهی جدید فرض نشده است. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ جداگانه نگهداری شده‌اند. جریان‌های نقدی مرجع COMFAR در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند.'
 } as const
 
 
@@ -162,14 +161,14 @@ export const EXCEL_REFERENCE_EXPECTED = {
   totalInvestment:18702835.358529467,
   wacc:0.21284299025331596,
   roundedDiscountRate:0.21,
-  npvAtRoundedRate:18509558.82096656,
+  irrNpvSheetReportedNpvAt21:18509558.82096656,
   npvAtExactWacc:18039663.975015666,
-  irr:0.43378234116396674,
-  mirr:0.33865108092920493,
+  irrNpvSheetReportedIrr:0.43378234116396674,
+  irrNpvSheetReportedMirr:0.33865108092920493,
   financeRate:0.26,
   reinvestmentRate:0.30,
-  /** Row 9, periods C:S in OPEX sheet "IRR-NPV"; last period includes the COMFAR salvage inflow. */
-  comfarProjectCashFlows:[
+  /** Row 9, periods C:S in OPEX sheet "IRR-NPV". This is the difference of rows 7 and 8, both labelled discounted cash flows; it is retained only to reproduce the sheet's reported metrics, not as a raw unlevered project cash-flow vector. */
+  comfarIrrNpvNetDiscountedCashFlows:[
     -7908572.82,-5905218.02,3926279.2047649994,8140613.077362001,
     8941506.638881996,9688834.216513,9860858.381308004,9573587.738720998,
     9520342.875225,9520342.875225,9520342.875225,9520342.875225,
@@ -178,6 +177,8 @@ export const EXCEL_REFERENCE_EXPECTED = {
   ],
   sourceNotes:[
     'The OPEX workbook uses 360 days per year for working-capital turnover.',
+    'The IRR-NPV sheet calculates NPV by applying NPV() to row 9, which is itself the difference between two rows labelled discounted cash flows; its IRR/MIRR also use this row. These are source-reported figures, not a verified raw project cash-flow basis.',
+    'The IRR-NPV sheet total-investment link is 16,587,131.78 million IRR, while CAPEX fixed investment is 18,463,008.72 and total project investment including construction interest and working capital is 26,596,838.88 million IRR.',
     'The CAPEX workbook calculates WACC at 21.284299%; the OPEX IRR-NPV sheet rounds the discount rate to 21%.',
     'The 5% operating tax in the sales sheet and 25% WACC tax shield in the CAPEX discount-rate sheet are separate source assumptions.',
     'IRR-NPV cash flows are imported from COMFAR and are not calculated by the source Excel workbook from the operating-cost tabs.'
@@ -187,13 +188,15 @@ export const EXCEL_REFERENCE_EXPECTED = {
 /** Project cash-flow vector generated by Pishran's current unlevered project-CF rules from this fixture. */
 export const PISHRAN_REFERENCE_MODEL_OUTPUT = {
   projectCashFlows:[
-    -12721653.300001308,-5981182.058528159,9294626.527943999,14030164.354455996,
-    16008479.906648003,17986795.45884,18446332.50456,18446332.50456,
-    18446332.50456,18446332.50456,18446332.50456,18446332.50456,
-    18411544.422486473,18367316.15456,18367316.15456,18367316.15456,
-    36917432.066469
+    -12721653.300001308,-5981182.058528159,9466927.362944,14227079.594456,
+    16230009.551648002,18232939.508840006,18692476.554560006,18692476.554560006,
+    18692476.554560006,18692476.554560006,18692476.554560006,18692476.554560006,
+    18657688.47248648,18613460.204560008,18613460.204560008,18613460.204560008,
+    37163576.11646901
   ],
-  npvAt21Percent:41566364.39409077,
-  irr:0.5401182097235053,
-  mirr:0.36524517442187365
+  npvAt21Percent:42389832.7876326,
+  npvAt25Percent:31361823.28372246,
+  irr:0.5457016329570905,
+  mirr:0.36645116868762795
+
 } as const
