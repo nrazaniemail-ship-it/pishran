@@ -124,3 +124,18 @@
 .fw-warning svg{flex:none;color:#b7791f;margin-top:3px}
 .isw-steps{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media(max-width:850px){.isw-two{grid-template-columns:1fr}.isw-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.rolling-page .roll-steps{grid-template-columns:repeat(6,minmax(0,1fr))}
+.roll-product{border:1px solid var(--line,#dce3ec);border-radius:12px;padding:14px;margin:12px 0;background:var(--surface,#fff)}
+.roll-product h4{font-size:13px;margin:14px 0 8px}
+.roll-adds{display:flex;flex-wrap:wrap;gap:6px}
+.roll-table{width:100%;overflow-x:auto}
+.roll-row{display:grid;grid-template-columns:1.15fr .65fr .75fr .8fr .75fr 1.45fr .55fr 90px;gap:5px;min-width:1040px;margin:6px 0;align-items:center}
+.roll-row input,.roll-row select{width:100%;min-width:0;border:1px solid var(--line,#dce3ec);border-radius:7px;padding:8px 6px;background:var(--surface,#fff);color:var(--text,#17243a);font:inherit;font-size:11px}
+.roll-row span{font-size:11px;font-weight:700}
+.roll-row.roll-head{padding:8px 4px;border-bottom:1px solid var(--line,#dce3ec)}
+.roll-source{display:flex;gap:4px;flex-direction:column}
+.roll-actions{display:flex;gap:2px}
+.roll-actions button{border:1px solid var(--line,#dce3ec);border-radius:6px;background:transparent;color:var(--text,#17243a);height:30px;min-width:27px;display:grid;place-items:center}
+@media(max-width:900px){.rolling-page .roll-steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.rolling-page .roll-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.roll-product{padding:10px}}
