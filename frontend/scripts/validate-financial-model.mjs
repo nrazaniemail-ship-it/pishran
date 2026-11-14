@@ -155,6 +155,9 @@ for (let index = 0; index < capexYears + model.life; index++) {
   priorProjectLoss = result.lossCarryForward
   generatedProjectCashFlows.push(result.projectCashFlow)
 }
+console.log('DEBUG Pishran generated flows:', JSON.stringify(generatedProjectCashFlows))
+console.log('DEBUG reference flows:', JSON.stringify(pishranExpected.projectCashFlows))
+console.log('DEBUG working capital:', workingCapital, 'OPEX:', opexWithoutDepreciation, 'WACC:', wacc.value)
 assert.equal(generatedProjectCashFlows.length, pishranExpected.projectCashFlows.length, 'Pishran project flow period count')
 assert.ok(generatedProjectCashFlows.every(Number.isFinite), 'Pishran generated cash flows must all be finite')
 assert.ok(generatedProjectCashFlows.some(value => value < 0) && generatedProjectCashFlows.some(value => value > 0),
