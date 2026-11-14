@@ -49,6 +49,10 @@ const smartIssues:ValidationIssue[]=useMemo(()=>{
  if(m.construction<1||m.life<1)add('project-years','error','دوره ساخت یا عمر پروژه نامعتبر است','هر دو دوره باید حداقل یک سال باشند.','دوره ساخت و عمر پروژه')
  const allRows=[...m.driMat,...m.steelMat,...m.driUtil,...m.steelUtil,...m.driEquip,...m.steelEquip,...m.driCapex,...m.steelCapex,...m.sharedCapex,...m.driOpex,...m.steelOpex,...m.sharedOpex]
  if(allRows.some(x=>x.value<0||x.price<0))add('negative-row','error','مقدار یا قیمت یک ردیف منفی است','مقادیر مواد، یوتیلیتی، تجهیزات و هزینه‌ها باید نامنفی باشند.','جداول ورودی')
+ if(m.dri.steelFeed>0&&m.steel.hdr>0&&m.dri.steelFeed<sl*m.steel.hdr/100)add('hdr-shortage','warning','خوراک DRI برای سهم HDRI شارژ کافی نیست','برای تحقق سهم HDRI ثبت‌شده، حدود '+fmt(sl*m.steel.hdr/100)+' تن DRI لازم است؛ خوراک داخلی و ترکیب شارژ را بازبینی کنید.','خوراک DRI و سهم HDRI')
+ if(m.dri.pellet<=0)add('pellet-factor','error','ضریب مصرف گندله نامعتبر است','مصرف ویژه گندله باید مثبت باشد.','مصرف گندله')
+ if(m.dri.femet<0||m.dri.femet>100||m.dri.fetotal<0||m.dri.fetotal>100||m.dri.feo<0||m.dri.feo>100||m.dri.carbon<0||m.dri.carbon>100||m.dri.moisture<0||m.dri.moisture>100)add('dri-chemistry','error','یکی از مشخصات کیفی DRI خارج از محدوده است','درصدهای متالیزاسیون، آهن کل، FeO، کربن و رطوبت باید بین صفر تا ۱۰۰ باشند.','کیفیت آهن اسفنجی')
+ if(m.steel.hdr<0||m.steel.cdr<0||m.steel.scrap<0)add('charge-negative','error','مقادیر ترکیب شارژ منفی است','سهم HDRI، CDRI و قراضه باید نامنفی باشد.','ترکیب شارژ')
  if(!m.dri.technology.trim())add('dri-technology','warning','فناوری احیاء مشخص نشده است','فناوری منتخب و مرجع طراحی را ثبت کنید.','فناوری')
  return out
 },[m,d,sl,liquid,mix])
