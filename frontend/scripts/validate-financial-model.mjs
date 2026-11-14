@@ -182,7 +182,7 @@ const wc365 = engine.calculateWorkingCapital(wcItems, 1, 365)
 assert.ok(Math.abs(wc365 - workingCapital) > 1000, '360/365 convention must materially change the benchmark result')
 
 const cashFlows = [...expected.comfarIrrNpvNetDiscountedCashFlows]
-near(engine.calculateNpv(cashFlows, expected.roundedDiscountRate), expected.irrNpvSheetReportedNpvAt21, 0.01, 'NPV at Excel rounded 21%')
+near(engine.calculateNpv(cashFlows, expected.roundedDiscountRate), expected.irrNpvSheetReportedNpvAt21, 0.01, 'Reproduce reported IRR-NPV sheet NPV at 21% from its row 9 basis')
 near(engine.calculateNpv(cashFlows, expected.wacc), expected.npvAtExactWacc, 0.01, 'Reproduce IRR-NPV sheet NPV on reported discounted-row basis at exact WACC')
 near(engine.calculateIrr(cashFlows), expected.irrNpvSheetReportedIrr, 1e-8, 'Reproduce IRR-NPV sheet reported IRR from its row 9 basis')
 near(engine.calculateMirr(cashFlows, expected.financeRate, expected.reinvestmentRate), expected.irrNpvSheetReportedMirr, 1e-8, 'Reproduce IRR-NPV sheet reported MIRR from its row 9 basis')
@@ -253,8 +253,12 @@ const generatedIrr = engine.calculateIrr(generatedProjectCashFlows)
 const generatedMirr = engine.calculateMirr(generatedProjectCashFlows, expected.financeRate, expected.reinvestmentRate)
 assert.ok(Number.isFinite(generatedNpv) && Number.isFinite(generatedIrr) && Number.isFinite(generatedMirr),
   'Pishran-generated NPV, IRR and MIRR must be finite')
+near(generatedNpv, pishranExpected.npvAt21Percent, 0.01, 'Pishran-generated NPV at 21%')
+near(engine.calculateNpv(generatedProjectCashFlows, 0.25), pishranExpected.npvAt25Percent, 0.01, 'Pishran-generated NPV at 25% for like-rate comparison with General Summary')
+near(generatedIrr, pishranExpected.irr, 1e-8, 'Pishran-generated IRR')
+near(generatedMirr, pishranExpected.mirr, 1e-8, 'Pishran-generated MIRR')
 console.log('Pishran independent project metrics; source COMFAR outputs remain unreconciled pending corrected raw cash-flow export:', {
-  NPV: generatedNpv, IRR: generatedIrr, MIRR: generatedMirr
+  NPV21: generatedNpv, NPV25: engine.calculateNpv(generatedProjectCashFlows, 0.25), IRR: generatedIrr, MIRR: generatedMirr
 })
 
 console.log('PASS: raw materials, energy, process consumables, spares, maintenance and payroll')
