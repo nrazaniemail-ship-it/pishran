@@ -13,7 +13,7 @@ const capexCols=[c('qty','مقدار','',true),c('unit','واحد'),c('unitPrice
 const costCols=[c('specific','مصرف ویژه','',true),c('unit','واحد'),c('price','قیمت واحد','یورو',true),c('annualQty','مقدار سالیانه','',true),c('annualCost','هزینه سالیانه','یورو',true)]
 const financeCols=[c('rate','نرخ / درصد','٪',true),c('grace','دوره تنفس','سال',true),c('term','دوره بازپرداخت','سال',true),c('notes','توضیحات')]
 const years=Array.from({length:20},(_,i)=>c('y'+(i+1),'سال '+(i+1),'یورو',true))
-const hrCols=[c('expert','کارشناس','نفر',true),c('technician','تکنسین','نفر',true),c('secretary','منشی','نفر',true),c('operator','کارگر فنی','نفر',true),c('driver','راننده','نفر',true),c('laborer','کارگر ساده','نفر',true),c('allocation','سهم تخصیص به پروژه','٪',true)]
+const hrCols=[c('expert','کارشناس','نفر',true),c('technician','تکنسین','نفر',true),c('secretary','منشی','نفر',true),c('operator','کارگر فنی','نفر',true),c('driver','راننده','نفر',true),c('laborer','کارگر ساده','نفر',true)]
 const genericCols=[c('amount','مبلغ / مقدار','یورو',true),c('rate','نرخ / درصد','٪',true),c('year','سال','',true),c('notes','توضیحات')]
 const baseRows=[
 'زمین و محوطه اختصاصی پروژه','محوطه و آماده‌سازی سایت','ساختمان‌ها و سیویل غیرصنعتی','تأسیسات زیربنایی و واحدهای جنبی','وسائط نقلیه','وسایل اداری و خدماتی','هزینه‌های قبل از بهره‌برداری'
@@ -47,7 +47,7 @@ const sensitivityRows=['درآمد فروش','هزینه‌های سرمایه�
 const resultRows=['سرمایه‌گذاری ثابت طرح','سرمایه در گردش در ظرفیت کامل','بهره وام‌های بانکی','هزینه‌های قبل از بهره‌برداری','جمع کل سرمایه‌گذاری','متوسط قیمت تمام‌شده محصول','متوسط قیمت فروش محصول','سود سالانه طرح در ظرفیت کامل','دوره بازگشت سرمایه کل','دوره بازگشت سرمایه داینامیک','نرخ تنزیل','NPV','IRR','IRRE']
 const debtRows=['وام بانک ملی هامبورگ ۱','وام بانک ملی هامبورگ ۲','وام بانک ملی هامبورگ ۳','وام بانک ملی هامبورگ ۴','وام بانک تجارت ۱','وام بانک تجارت ۲','وام بانک تجارت ۳','وام بانک تجارت ۴']
 const cashFlowRows=['سود عملیاتی / درآمد فروش محصول','موجودی اول دوره','درآمد فروش محصول','وام‌های بلندمدت','وام‌های کوتاه‌مدت / سرمایه در گردش','آورده نقدی سهامدار','جمع کل منابع مالی','هزینه‌های ثابت سرمایه‌گذاری','سرمایه در گردش موردنیاز','هزینه‌های تولید','مالیات','بهره وام‌ها','بازپرداخت اصل وام‌ها','جمع کل مصارف','سود / سود قابل تقسیم','آورده نقدی سهامدار قابل کسر','سود قابل تقسیم بین سهامداران','موجودی نقد پایان دوره']
-function makeSheet(id:string,title:string,book:Sheet['book'],columns:Column[],rows:string[],note?:string,readOnly=false):Sheet{return{id,title,book,columns,rows,note,readOnly}}
+function makeSheet(id:string,title:string,book:Sheet['book'],columns:Column[],rows:(string|{label:string;section:true})[],note?:string,readOnly=false):Sheet{return{id,title,book,columns,rows,note,readOnly}}
 function definitions(type:PlantType):Sheet[]{
  const dri=type==='dri'
  const landCols=[c('qty','مقدار','',true),c('unit','واحد'),c('unitPrice','هزینه واحد','یورو',true),c('total','هزینه کل','یورو',true)]
