@@ -14,6 +14,44 @@ export type WorkingCapitalItem = {
   days: number
 }
 
+export type WorkingCapitalPolicy = {
+  dayBasis: 360 | 365
+  rawMaterialDays: number
+  workInProgressDays: number
+  finishedGoodsDays: number
+  receivableDays: number
+  cashDays: number
+  payableDays: number
+  annualRawMaterialCost: number
+  annualConversionCost: number
+  annualFinishedGoodsCost: number
+  annualRevenue: number
+  annualCashOperatingCost: number
+}
+
+export type WorkingCapitalBreakdown = {
+  rawMaterials: number
+  workInProgress: number
+  finishedGoods: number
+  receivables: number
+  minimumCash: number
+  payables: number
+  netWorkingCapital: number
+}
+
+export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPolicy, utilization: number, salesFactor = 1, opexFactor = 1): WorkingCapitalBreakdown {
+  const values = [policy.dayBasis, policy.rawMaterialDays, policy.workInProgressDays, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualConversionCost, policy.annualFinishedGoodsCost, policy.annualRevenue, policy.annualCashOperatingCost, utilization, salesFactor, opexFactor]
+  if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1, 7).some(value => value < 0) || values.slice(7).some(value => value < 0)) return { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 }
+  const day = (base: number, days: number, factor: number) => base * factor * Math.min(days, policy.dayBasis) / policy.dayBasis
+  const rawMaterials = day(policy.annualRawMaterialCost, policy.rawMaterialDays, utilization * opexFactor)
+  const workInProgress = day(policy.annualConversionCost, policy.workInProgressDays, utilization * opexFactor)
+  const finishedGoods = day(policy.annualFinishedGoodsCost, policy.finishedGoodsDays, utilization * opexFactor)
+  const receivables = day(policy.annualRevenue, policy.receivableDays, utilization * salesFactor)
+  const minimumCash = day(policy.annualCashOperatingCost, policy.cashDays, utilization * opexFactor)
+  const payables = day(policy.annualRawMaterialCost, policy.payableDays, utilization * opexFactor)
+  return { rawMaterials, workInProgress, finishedGoods, receivables, minimumCash, payables, netWorkingCapital: rawMaterials + workInProgress + finishedGoods + receivables + minimumCash - payables }
+}
+
 export type PayrollItem = {
   count: number
   monthlySalary: number
@@ -194,6 +232,7 @@ export type IntegratedFinanceInput = {
   taxRate: number
   costOfEquity: number
   workingCapitalPercent: number
+  workingCapitalPolicy?: WorkingCapitalPolicy
   salesEscalationPercent: number
   opexEscalationPercent: number
   discountMode: 'wacc' | 'manual'
@@ -227,6 +266,7 @@ export type IntegratedFinanceYear = {
   fixedInvestment: number
   preOperatingCost: number
   workingCapital: number
+  workingCapitalBreakdown: WorkingCapitalBreakdown
   changeInWorkingCapital: number
   projectFreeCashFlow: number
   equityFreeCashFlow: number
@@ -352,9 +392,10 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const depreciation = year > constructionYears && utilization > 0 ? Math.max(0, input.annualDepreciation) : 0
     const fixedInvestment = Math.max(0, Number(input.fixedInvestmentSchedule[index]) || 0)
     const preOperatingCost = Math.max(0, Number(input.preOperatingSchedule[index]) || 0)
-    const workingCapital = year > constructionYears
-      ? (variableCashCost + fixedCashCost) * Math.max(0, input.workingCapitalPercent) / 100
-      : 0
+    const workingCapitalBreakdown: WorkingCapitalBreakdown = input.workingCapitalPolicy
+      ? (year > constructionYears && utilization > 0 ? calculateOperatingCycleWorkingCapital(input.workingCapitalPolicy, utilization, salesFactor, opexFactor) : { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 })
+      : { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: year > constructionYears ? (variableCashCost + fixedCashCost) * Math.max(0, input.workingCapitalPercent) / 100 : 0 }
+    const workingCapital = workingCapitalBreakdown.netWorkingCapital
     const changeInWorkingCapital = workingCapital - priorWorkingCapital
     priorWorkingCapital = workingCapital
 
@@ -394,7 +435,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
       variableCashCost, fixedCashCost, depreciation, ebit, interest, tax, principal, debtDrawdown,
-      equityContribution, fixedInvestment, preOperatingCost, workingCapital, changeInWorkingCapital,
+      equityContribution, fixedInvestment, preOperatingCost, workingCapital, workingCapitalBreakdown, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, dscr,
     })
   }
@@ -414,6 +455,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   if (totalFunding + 1 < totalInvestment + peakWorkingCapital) warnings.push('منابع مالی ثبت‌شده برای سرمایه‌گذاری و سرمایه در گردش کافی نیست.')
   if (input.loans.some(loan => loan.annualRate <= 0 && loan.drawdowns.some(value => value > 0))) warnings.push('برای یک یا چند وام، نرخ بهره صفر یا ثبت‌نشده است.')
   if (input.loans.some(loan => loan.termYears <= 0 && loan.drawdowns.some(value => value > 0))) warnings.push('برای یک یا چند وام، دوره بازپرداخت ثبت نشده است.')
+  if (input.workingCapitalPolicy && input.workingCapitalPolicy.payableDays > input.workingCapitalPolicy.dayBasis) warnings.push('دوره پرداخت بدهی از مبنای روزهای سال بیشتر است؛ مقدار به مبنای سال محدود می‌شود.')
+  if (input.workingCapitalPolicy && input.workingCapitalPolicy.receivableDays > input.workingCapitalPolicy.dayBasis) warnings.push('دوره وصول مطالبات از مبنای روزهای سال بیشتر است؛ مقدار به مبنای سال محدود می‌شود.')
   if (input.discountMode === 'wacc' && discountRate === null) warnings.push('برای محاسبه نرخ تنزیل، ساختار سرمایه و نرخ بازده مورد انتظار سهامدار را تکمیل کنید.')
   if (input.loans.some(loan => loan.repaymentStartYear + loan.graceYears + loan.termYears - 1 > years)) warnings.push('بخشی از بازپرداخت وام‌ها خارج از افق زمانی مدل قرار می‌گیرد.')
   return {
