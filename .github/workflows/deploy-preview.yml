@@ -69,3 +69,5 @@ jobs:
       - name: Deploy preview alongside unchanged production root
         id: deployment
         uses: actions/deploy-pages@v4
+
+# Trigger preview workflow on the current feature branch.
