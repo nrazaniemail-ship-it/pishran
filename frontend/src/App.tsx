@@ -9,8 +9,9 @@ import SettingsView from './features/settings/SettingsView'
 import HotRollingWorkspace from './features/steel/HotRollingWorkspace'
 import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
 import PlateSampleProject from './features/steel/PlateSampleProject'
+import FeasibilityWizard from './features/projects/FeasibilityWizard'
 
-type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'plate-sample'
+type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'plate-sample' | 'project-wizard'
 
 const modules = [
   { icon: Factory, title: 'مهندسی و طراحی فرآیند', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', status: 'در نقشه راه' },
@@ -25,6 +26,7 @@ export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [projects, setProjects] = useState<FeasibilityProject[]>([])
+  const [activeProject, setActiveProject] = useState<FeasibilityProject | null>(null)
   const [storageInfo, setStorageInfo] = useState({ backend: 'در حال بررسی', items: 0 })
   const [ready, setReady] = useState(false)
 
@@ -135,11 +137,12 @@ export default function App() {
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenSample={() => setPage('plate-sample')}/>}
+    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenSample={() => setPage('plate-sample')} onOpenProject={project => { setActiveProject(project); setPage('project-wizard') }}/ >}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onExport={exportBackup} onImport={importBackup}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => setPage('hot-rolling')}/>}
     {page === 'hot-rolling' && <HotRollingWorkspace/>}
     {page === 'plate-sample' && <PlateSampleProject/>}
+    {page === 'project-wizard' && activeProject && <FeasibilityWizard project={activeProject} onBack={() => setPage('projects')}/ >}
 
     <footer>پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری <span>نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری</span></footer>
   </main>
