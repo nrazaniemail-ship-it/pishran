@@ -376,7 +376,7 @@ console.log('PASS: operating-cycle working capital, WIP completion, fixed/variab
 console.log('PASS: non-linear category CAPEX scaling and invalid-input handling')
 assert.ok(workspaceSource.includes("'Increase in net working capital':year.changeInWorkingCapital"), 'COMFAR must report the net working-capital movement after supplier credit')
 assert.ok(workspaceSource.includes("'Accounts payable':0,'TOTAL SOURCES OF FINANCE':year.equityContribution+year.debtDrawdown+financeSumAt(financeLoans,i,'capitalizedInterest')"), 'COMFAR must not double count payables already deducted in net working capital')
-assert.ok(workspaceSource.includes("'Increase in net working capital':year.changeInWorkingCapital"), 'COMFAR investment and financing bridge must use net working capital consistently')
+assert.ok(workspaceSource.includes("'TOTAL INVESTMENT COSTS':year.fixedInvestment+year.preOperatingCost+year.changeInWorkingCapital+capitalizedInterest"), 'COMFAR total investment costs must reconcile CAPEX, pre-production, capitalized interest and net working capital')
 assert.ok(workspaceSource.includes("'TOTAL CASH INFLOW':year.revenue+year.equityContribution+year.debtDrawdown+year.terminalValue"), 'Cash flow statement must include terminal recoveries')
 assert.ok(workspaceSource.includes("'TAXABLE PROFIT':year.taxableProfit"), 'COMFAR taxable profit must use loss carry-forward')
 assert.ok(workspaceSource.includes("'Interest':capitalizedInterest"), 'COMFAR investment cost must include only capitalized interest, not cash interest twice')
