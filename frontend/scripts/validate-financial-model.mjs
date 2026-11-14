@@ -513,7 +513,7 @@ assert.ok(workspaceSource.includes("annualFixedPayablesCost:financeValue('هزی
 assert.ok(workspaceSource.includes("'Other income':year.terminalValue"), 'COMFAR Other income must include terminal working-capital recovery and salvage')
 assert.ok(workspaceSource.includes('years:19,constructionYears,') && workspaceSource.includes("financeValue('تعداد سال دوره ساخت',4)") && workspaceSource.includes("financeValue('تعداد سال دوره بهره‌برداری',15)"), 'Project model horizon must default to four construction plus fifteen operating years and remain configurable')
 assert.ok(workspaceSource.includes("referenceYear:isScalar?0:annual[8]??0,lastYear:isScalar?0:annual[18]??0"), 'COMFAR reference year 9 and last year 19 must map to the correct periods')
-assert.ok(workspaceSource.includes("const utilizationSchedule=Array.from({length:19},(_,i)=>i<4?0:Math.min(1,[.7,.8,.9,1][i-4]??1))"), 'The terminal year must be the final operating year, not an extra non-operating year')
+assert.ok(workspaceSource.includes("const utilizationSchedule=Array.from({length:19},(_,i)=>i<constructionYears?0:Math.min(1,[.7,.8,.9,1][i-constructionYears]??1))"), 'The terminal year must be the final operating year, not an extra non-operating year')
 assert.ok(workspaceSource.includes("'Increase in fixed assets':year.fixedInvestment"), 'COMFAR cash flow must map annual fixed-asset investment')
 assert.ok(workspaceSource.includes("'Marketing costs':0"), 'COMFAR marketing cost line must remain explicit when no separate marketing input exists')
 assert.ok(workspaceSource.includes("'Increase in net working capital':year.changeInWorkingCapital"), 'COMFAR cash flow must use the annual net working-capital movement')
