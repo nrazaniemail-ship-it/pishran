@@ -82,11 +82,11 @@ At full capacity, the current Pishran model uses the OPEX sheet's 5% operating t
 
 The OPEX depreciation worksheet lists asset classes with different straight-line rates and salvage rates: site 7%, buildings 7%, machinery 10.97955%, utilities 12%, vehicles 20%, office equipment 25%, etc. It also explains that total depreciation declines as asset classes finish their useful lives. Pishran currently uses a single annual override of 1,580,327 for all 15 operating years. COMFAR reports depreciation declining over time (for example 1,432,554.34 in 1405, 1,425,537.64 in 1408, and 52,751.46 in 1419). A single flat override cannot reproduce this schedule.
 
-The fix is an asset-level depreciation schedule with acquisition year, depreciable basis, useful life/rate, method, and residual value. The annual total must be derived from those asset schedules.
+The fix is an asset-level depreciation schedule with acquisition year, depreciable basis, useful life/rate, method, and residual value. The new source-backed schedule transcribes the nine depreciating classes in the OPEX sheet plus land (non-depreciable): it reproduces first-year depreciation of approximately **1,580,327.70** million Rial (the sheet displays 1,580,327 after rounding) and produces a declining aggregate schedule as short-life classes finish. It does not overwrite the separate COMFAR-reported depreciation series; COMFAR's 1405 value is 1,432,554.34, so a remaining basis/timing difference still needs explanation.
 
 ### F. Terminal value is not reconciled
 
-Pishran's fixture uses terminal value 13,954,745.45; COMFAR reports scrap value 13,735,466.82. The difference is 219,278.63. The source OPEX depreciation sheet's asset-level salvage assumptions should be used to explain this amount; the terminal value must not remain an unexplained override. Working-capital recovery must be shown separately from asset scrap value.
+The source OPEX depreciation sheet implies a residual value of approximately **3,567,422.70** million Rial when the non-depreciable land basis (2,015,000) and the 10% residual assumptions for the listed asset classes are applied. COMFAR reports **13,735,466.82** million Rial under the separate «ارزش قراضه» / other-income line. The unexplained difference is therefore about **10,168,044.12** million Rial—not the earlier comparison against Pishran's hard-coded override. This is a material unresolved source-data mismatch. The UI now displays the source-derived asset residual beside the COMFAR scrap value rather than treating either as a reconciled figure. Working-capital recovery remains a separate cash-flow movement and must not be silently folded into asset scrap.
 
 ### G. The existing Excel helper row was mislabeled as the COMFAR cash-flow vector
 
@@ -110,9 +110,9 @@ The comparison is intentionally flagged as **not reconciled**. It is not accepta
 2. Add a valuation-date/period-offset parameter to NPV reporting so COMFAR's 12/1404 basis can be reproduced without changing the general NPV convention.
 3. Add separate financing scenarios for the 70/30 funding-source case and the 20/80-plus-working-capital-loan discount-rate case.
 4. Add separate operating-tax scenarios (5% workbook assumption and 25% COMFAR treatment).
-5. Replace the single depreciation override with asset-level straight-line schedules.
+5. Replace the single depreciation override with asset-level straight-line schedules (now implemented as a source-backed schedule for the HRCR200 asset classes; COMFAR's different annual schedule remains separately flagged).
 6. Separate capitalized interest from unlevered CAPEX and show both unlevered and COMFAR-reported project cash flows.
-7. Reconcile asset scrap and working-capital recovery as separate terminal inflows.
+7. Resolve the 10,168,044.12 million Rial gap between workbook-derived asset residual and COMFAR scrap; keep asset scrap and working-capital recovery as separate terminal cash-flow lines.
 8. Make reconciliation status and annual variances visible in the UI and CI; do not mark the model as reconciled until all material annual differences are within a declared tolerance.
 
 **Project creation UX:** the Projects screen now has a one-click action, **«ساخت پروژه مرجع نورد گرم از Excel»**. It creates the HRCR200 200,000 t/y Kashan project as a local draft, seeds the workbook-derived model data, and opens the hot-rolling workspace. The results screen displays the audited COMFAR PDF NPV/IRR beside Pishran's result and explicitly flags the case as unreconciled. Project data remains in the user's local storage; this code must be merged/deployed before it appears in their running app.\n\n**Status:** source data and COMFAR PDF have been audited; the benchmark/test labeling has been corrected. The operating model is deliberately not auto-calibrated to the COMFAR output because the attached source files contain contradictory tax and financing assumptions. A final model correction requires selecting the intended financing/tax scenario and implementing the asset-level depreciation and capitalized-interest treatment above.
