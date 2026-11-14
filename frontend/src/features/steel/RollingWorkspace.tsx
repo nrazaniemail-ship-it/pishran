@@ -135,6 +135,7 @@ const validationChecks=[
  {ok:Math.abs(m.equity+m.debt-100)<.01,t:'ساختار سرمایه ۱۰۰٪ است'},
  {ok:Math.abs(financial.capexScheduleTotal-100)<.01,t:'جمع زمان‌بندی CAPEX برابر ۱۰۰٪ است'},
  {ok:m.loans.every(l=>l.amount>=0&&l.drawYear>=1&&l.tenorYears>0&&l.graceYears>=0&&(l.currency===m.currency||l.fxRate>0)),t:'مفروضات پایه تسهیلات معتبر است'},
+ {ok:(m.debt===0&&m.loans.length===0)||(m.debt>0&&m.loans.length>0),t:'درصد بدهی در ساختار سرمایه با برنامه تسهیلات تطبیق دارد'},
  {ok:financial.totalDebt<=capex+0.01,t:'مجموع برداشت تسهیلات از CAPEX بیشتر نیست'},
  {ok:m.materialBalance.length>0,t:'موازنه مواد تعریف شده'},
  {ok:m.capex.some(x=>x.unitPrice>0),t:'حداقل یک قلم سرمایه‌گذاری قیمت‌گذاری شده'},
@@ -147,7 +148,7 @@ const passedChecks=validationChecks.filter(x=>x.ok).length
 const blockingChecks=validationChecks.filter(x=>!x.ok)
 const projectViable=financial.projectNpv>0&&financial.projectIrr!==null&&financial.projectIrr>rate&&financial.pi!==null&&financial.pi>1
 const shareholderViable=financial.equityNpv>0&&financial.equityIrr!==null&&financial.equityIrr>m.ke/100
-const debtViable=m.loans.length===0||(financial.minDscr!==null&&financial.minDscr>=1.2)
+const debtViable=m.debt===0?m.loans.length===0:(m.loans.length>0&&financial.minDscr!==null&&financial.minDscr>=1.2)
 const recommendation=blockingChecks.length>0?'اطلاعات ناکافی؛ ابتدا موارد کنترلی را تکمیل کنید':projectViable&&shareholderViable&&debtViable?'توصیه به ادامه بررسی و ورود به مرحله امکان‌سنجی تفصیلی':projectViable&&!debtViable?'از نظر اقتصادی جذاب، اما ساختار بدهی و توان بازپرداخت نیازمند اصلاح است':'در مفروضات فعلی، اجرای پروژه توصیه نمی‌شود؛ ابتدا اقتصاد طرح و مفروضات آن بازنگری شود'
 const actionItems:string[]=[]
 if(blockingChecks.length)actionItems.push('ابتدا '+blockingChecks.length+' کنترل نامعتبر را برطرف کنید: '+blockingChecks.map(x=>x.t).join('، ')+'.')
