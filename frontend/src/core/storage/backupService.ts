@@ -44,7 +44,6 @@ export async function buildBackup():Promise<{payload:PishranBackup;json:string;s
  const raw=await localStore.exportAll()
  const preferences=await getBackupPreferences()
  const payload:PishranBackup={app:'Pishran',schema:2,exportedAt:new Date().toISOString(),records:raw.records,backupPreferences:{enabled:preferences.enabled,interval:preferences.interval}}
- if(!payload.records.length)throw new Error('هیچ داده‌ای برای پشتیبان‌گیری یافت نشد.')
  const json=JSON.stringify(payload,null,2)
  return {payload,json,size:new Blob([json]).size}
 }
@@ -77,7 +76,7 @@ async function pruneBrowserFolder(handle:any){
 }
 export function parseBackup(text:string):PishranBackup{
  let obj:any;try{obj=JSON.parse(text)}catch{throw new Error('فایل انتخاب‌شده JSON معتبر نیست.')}
- if(!obj||obj.app!=='Pishran'||![1,2].includes(obj.schema)||!Array.isArray(obj.records)||obj.records.length===0)throw new Error('ساختار فایل پشتیبان پیشران معتبر نیست یا فایل خالی است.')
+ if(!obj||obj.app!=='Pishran'||![1,2].includes(obj.schema)||!Array.isArray(obj.records))throw new Error('ساختار فایل پشتیبان پیشران معتبر نیست یا فایل خالی است.')
  const seen=new Set<string>()
  for(const r of obj.records){if(!r||typeof r.key!=='string'||!r.key.trim()||r.key.length>240||seen.has(r.key))throw new Error('ساختار رکوردهای فایل پشتیبان معتبر نیست.');seen.add(r.key)}
  return obj as PishranBackup
@@ -89,10 +88,10 @@ export async function restoreBackup(payload:PishranBackup):Promise<number>{
  await localStore.replaceAll(payload.records)
  return payload.records.length
 }
-export async function canUndoRestore():Promise<boolean>{try{return !!JSON.parse(localStorage.getItem(UNDO_KEY)||'null')?.snapshot?.records?.length}catch{return false}}
+export async function canUndoRestore():Promise<boolean>{try{return Array.isArray(JSON.parse(localStorage.getItem(UNDO_KEY)||'null')?.snapshot?.records)}catch{return false}}
 export async function undoLastRestore():Promise<number>{
  const raw=localStorage.getItem(UNDO_KEY);if(!raw)throw new Error('نسخه قبل از بازیابی در دسترس نیست.')
- const saved=JSON.parse(raw);if(!Array.isArray(saved.snapshot?.records)||!saved.snapshot.records.length)throw new Error('نسخه اضطراری معتبر نیست.')
+ const saved=JSON.parse(raw);if(!Array.isArray(saved.snapshot?.records))throw new Error('نسخه اضطراری معتبر نیست.')
  await localStore.replaceAll(saved.snapshot.records);if(saved.backupPreferences)await saveBackupPreferences(saved.backupPreferences);localStorage.removeItem(UNDO_KEY);return saved.snapshot.records.length
 }
 export async function updateBackupMeta(kind:'manual'|'automatic',size:number){
