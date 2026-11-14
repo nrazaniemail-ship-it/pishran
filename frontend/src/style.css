@@ -411,3 +411,37 @@ footer{border-top-color:var(--line)}
  .hr-ref-table-title{position:relative}
  .hr-ref-scroll{max-height:60vh}
 }
+
+
+/* Independent DRI / steelmaking workspaces aligned to Excel sheet order */
+.ppw-intro{display:flex;align-items:flex-start;gap:12px;padding:15px 17px;margin:14px 0;background:var(--page);border:1px solid var(--line);border-radius:13px;color:var(--page-accent)}
+.ppw-intro b{display:block;color:var(--text);font-size:13px}.ppw-intro p{margin:5px 0 0;color:var(--muted);font-size:10px;line-height:1.9}
+.ppw-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.ppw-summary article{display:grid;gap:6px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:11px;min-width:0}
+.ppw-summary article>small{font-size:10px;color:var(--muted)}.ppw-summary article>b{font-size:19px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ppw-layout{display:grid;grid-template-columns:minmax(210px,260px) minmax(0,1fr);gap:15px;align-items:start;direction:rtl}
+.ppw-nav{position:sticky;top:12px;max-height:calc(100vh - 115px);overflow:auto;border:1px solid var(--line);border-radius:13px;background:var(--page);padding:8px;scrollbar-width:thin}
+.ppw-nav section+section{border-top:1px solid var(--line);margin-top:9px;padding-top:9px}
+.ppw-nav-head{display:grid;gap:3px;padding:7px 8px 9px}.ppw-nav-head b{font-size:11px}.ppw-nav-head small{font-size:9px;color:var(--muted)}
+.ppw-nav button{display:flex;align-items:center;gap:8px;width:100%;min-height:35px;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--muted);text-align:right;font-size:10px;cursor:pointer}
+.ppw-nav button>span{display:grid;place-items:center;flex:0 0 23px;height:23px;border:1px solid var(--line);border-radius:6px;background:var(--surface);font-size:9px;font-variant-numeric:tabular-nums}
+.ppw-nav button.active{background:var(--page-accent-soft);border-color:color-mix(in srgb,var(--page-accent) 28%,var(--line));color:var(--page-accent);font-weight:700}
+.ppw-nav button.active>span{background:var(--page-accent);border-color:var(--page-accent);color:white}.ppw-nav button svg{margin-right:auto;flex:none}
+.ppw-sheet{min-width:0;border:1px solid var(--line);border-radius:13px;background:var(--surface);padding:16px}
+.ppw-sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ppw-sheet-head h2{font-size:18px;margin:5px 0 0}.ppw-count{font-size:10px;color:var(--muted);white-space:nowrap}
+.ppw-note{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;margin:10px 0 14px;background:var(--page);border:1px solid var(--line);border-radius:9px;color:var(--muted);font-size:10px;line-height:1.9}
+.ppw-note svg{flex:none;margin-top:2px;color:var(--page-accent)}
+.ppw-table-wrap{width:100%;max-height:65vh;overflow:auto;border:1px solid var(--line);border-radius:10px;overscroll-behavior:contain;scrollbar-width:thin}
+.ppw-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;font-size:10px;font-variant-numeric:tabular-nums}
+.ppw-table th,.ppw-table td{padding:7px 8px;border-bottom:1px solid var(--line);border-left:1px solid var(--line);text-align:right;vertical-align:middle;min-width:125px}
+.ppw-table thead th{position:sticky;top:0;z-index:4;background:var(--page);color:var(--muted);font-weight:700;white-space:normal}.ppw-table thead th small{display:block;margin-top:3px;color:var(--page-accent);font-size:9px}
+.ppw-table .ppw-label-col,.ppw-table tbody th{position:sticky;right:0;z-index:2;min-width:205px;max-width:260px;background:var(--page)}
+.ppw-table tbody th input{font-weight:650}
+.ppw-table td input,.ppw-table tbody th input{width:100%;min-width:90px;max-width:100%;box-sizing:border-box;padding:7px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--text);font-size:10px;outline:none}
+.ppw-table td input:focus,.ppw-table tbody th input:focus{border-color:var(--page-accent);background:var(--surface);box-shadow:0 0 0 2px color-mix(in srgb,var(--page-accent) 13%,transparent)}
+.ppw-table td:last-child,.ppw-table thead th:last-child{position:sticky;left:0;z-index:3;min-width:50px;width:50px;background:var(--page);text-align:center}.ppw-table tbody td:last-child{background:var(--surface)}
+.ppw-table tbody tr:last-child td,.ppw-table tbody tr:last-child th{border-bottom:0}.ppw-add{margin-top:11px}
+.ppw-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-size:10px;color:var(--muted)}.ppw-footer>div{display:flex;gap:7px}
+@media(max-width:900px){.ppw-layout{grid-template-columns:minmax(0,1fr)}.ppw-nav{position:relative;top:auto;max-height:none;display:grid;grid-template-columns:1fr 1fr;gap:6px}.ppw-nav section+section{border-top:0;margin-top:0;padding-top:0}.ppw-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.ppw-sheet{padding:11px}.ppw-nav{grid-template-columns:1fr}.ppw-footer{align-items:stretch;flex-direction:column}.ppw-footer>div{justify-content:space-between}.ppw-table-wrap{max-height:58vh}.ppw-table th,.ppw-table td{padding:6px}.ppw-sheet-head h2{font-size:15px}}
