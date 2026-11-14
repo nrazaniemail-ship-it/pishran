@@ -183,11 +183,27 @@ const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)
  if(sheet.id==='site')values.year=1
  return{id:sheet.id+'-'+i,label:typeof entry==='string'?entry:entry.label,section:typeof entry==='string'?false:entry.section,values}
 })
+const migrateStoredData=(stored:Record<string,Row[]>,sheets:Sheet[],plantType:PlantType):Record<string,Row[]>=>{
+ const next={...stored}
+ for(const sheet of sheets){
+  const old=stored[sheet.id]
+  if(!old)continue
+  const template=makeRows(sheet,plantType),oldByLabel=new Map(old.map(row=>[row.label,row])),templateLabels=new Set(template.map(row=>row.label))
+  const merged=template.map(row=>{const previous=oldByLabel.get(row.label);if(!previous)return row;const values={...row.values,...previous.values};if(sheet.id==='inflow'||sheet.id==='loans')for(let i=1;i<=9;i++)values['p'+i]=previous.values['y'+i]??previous.values['p'+i]??0;return{...row,id:previous.id,values}})
+  const extras=old.filter(row=>!templateLabels.has(row.label)&&!(sheet.id==='machines'&&row.label.startsWith('سازه')))
+  next[sheet.id]=[...merged,...extras]
+ }
+ if(!stored.machineStructures){
+  const oldMachines=stored.machines??[]
+  next.machineStructures=makeStructureRows().map(row=>{const previous=oldMachines.find(x=>x.label.replace(/^سازه:\\s*/,'')===row.label);if(!previous)return row;return{...row,values:{...row.values,length:previous.values.structureLength??row.values.length,width:previous.values.structureWidth??row.values.width,craneLevel:previous.values.craneLevel??row.values.craneLevel,steelStructure:previous.values.steelStructure??row.values.steelStructure,roofing:previous.values.roofing??row.values.roofing,cladding:previous.values.cladding??row.values.cladding,steelWeight:previous.values.steelWeight??row.values.steelWeight,price:previous.values.structurePrice??row.values.price}}})
+ }
+ return next
+}
 const fmt=(v:number)=>Number(v||0).toLocaleString('fa-IR',{maximumFractionDigits:2})
 export default function ProcessPlantWorkspace({project,plantType,onBack}:{project:FeasibilityProject;plantType:PlantType;onBack:()=>void}){
  const sheets=useMemo(()=>definitions(plantType),[plantType]),key='process-plant:'+plantType+':'+project.id+':excel-sequence-v2'
  const [data,setData]=useState<Record<string,Row[]>>({}),[selected,setSelected]=useState(sheets[0].id),[ready,setReady]=useState(false),[saved,setSaved]=useState(''),[loadedKey,setLoadedKey]=useState('')
- useEffect(()=>{let alive=true;setReady(false);setSaved('');setLoadedKey('');setData({});localStore.get<Record<string,Row[]>>(key).then(v=>{if(alive){setData(v??{});setLoadedKey(key);setReady(true)}}).catch(()=>{if(alive){setData({});setReady(true)}});return()=>{alive=false}},[key])
+ useEffect(()=>{let alive=true;setReady(false);setSaved('');setLoadedKey('');setData({});localStore.get<Record<string,Row[]>>(key).then(v=>{if(alive){setData(migrateStoredData(v??{},sheets,plantType));setLoadedKey(key);setReady(true)}}).catch(()=>{if(alive){setData({});setReady(true)}});return()=>{alive=false}},[key])
  useEffect(()=>{if(ready&&loadedKey===key)void localStore.set(key,data).then(()=>setSaved(new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})))},[ready,loadedKey,key,data])
  const current=sheets.find(x=>x.id===selected)??sheets[0],rows=data[current.id]??makeRows(current,plantType)
  const updateRows=(next:Row[])=>setData(old=>({...old,[current.id]:next}))
