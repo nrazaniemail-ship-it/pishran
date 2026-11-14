@@ -159,6 +159,15 @@ for (let index = 0; index < capexYears + model.life; index++) {
 console.log('DEBUG Pishran generated flows:', JSON.stringify(generatedProjectCashFlows))
 console.log('DEBUG reference flows:', JSON.stringify(pishranExpected.projectCashFlows))
 console.log('DEBUG working capital:', workingCapital, 'OPEX:', opexWithoutDepreciation, 'WACC:', wacc.value)
+const generatedComfarComparison = engine.reconcileCashFlowSeries(generatedProjectCashFlows, expected.comfarProjectCashFlows, 0.01)
+console.log('COMFAR annual cash-flow comparison (benchmark fixture):', {
+  matched: generatedComfarComparison.matched,
+  periodCountMatch: generatedComfarComparison.periodCountMatch,
+  modelTotal: generatedComfarComparison.modelTotal,
+  referenceTotal: generatedComfarComparison.referenceTotal,
+  totalDifference: generatedComfarComparison.totalDifference,
+  maxAbsoluteDifference: generatedComfarComparison.maxAbsoluteDifference
+})
 assert.equal(generatedProjectCashFlows.length, pishranExpected.projectCashFlows.length, 'Pishran project flow period count')
 assert.ok(generatedProjectCashFlows.every(Number.isFinite), 'Pishran generated cash flows must all be finite')
 assert.ok(generatedProjectCashFlows.some(value => value < 0) && generatedProjectCashFlows.some(value => value > 0),
@@ -216,6 +225,13 @@ const integrated = engine.calculateIntegratedFinance({
   salvageValue: 50
 })
 near(integrated.wacc, 0.15, 1e-12, 'Integrated WACC')
+const matchingCashFlows = engine.reconcileCashFlowSeries([-100, 60, 60], [-100, 60, 60], 0.01)
+assert.equal(matchingCashFlows.matched, true, 'Identical COMFAR cash-flow vectors must reconcile')
+const differingCashFlows = engine.reconcileCashFlowSeries([-100, 55, 60], [-100, 60, 60], 0.01)
+assert.equal(differingCashFlows.matched, false, 'Cash-flow differences above tolerance must be flagged')
+near(differingCashFlows.maxAbsoluteDifference, 5, 1e-12, 'Maximum annual cash-flow variance')
+const missingPeriodCashFlows = engine.reconcileCashFlowSeries([-100, 60], [-100, 60, 0], 0.01)
+assert.equal(missingPeriodCashFlows.periodCountMatch, false, 'Missing COMFAR periods must not be silently aligned')
 const taxSeparationInput = {
   years: 3, constructionYears: 1, capacity: 10,
   fullCapacityRevenue: 1000, fullCapacityVariableCashCost: 200,
