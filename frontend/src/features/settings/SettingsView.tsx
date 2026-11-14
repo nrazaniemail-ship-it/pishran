@@ -1,11 +1,11 @@
 import type { AppSettings } from '../../core/settings/settings'
+import BackupSettings from './BackupSettings'
 
 interface Props {
   settings: AppSettings
   storageInfo: { backend: string; items: number }
   onChange: (next: AppSettings) => void
-  onExport: () => void
-  onImport: (file: File) => void
+  onRestored: () => Promise<void>|void
 }
 
 export default function SettingsView({ settings, storageInfo, onChange, onExport, onImport }: Props) {
@@ -29,12 +29,7 @@ export default function SettingsView({ settings, storageInfo, onChange, onExport
         <label className="setting-row"><span>زبان برنامه</span><select value={settings.language} onChange={e => update('language', e.target.value as AppSettings['language'])}><option value="fa">فارسی</option><option value="en">English</option></select></label>
       </article>
 
-      <article className="settings-card storage-card">
-        <div className="settings-card-title"><span className="settings-symbol">▣</span><div><b>ذخیره‌سازی و پشتیبان</b><small>اطلاعات پروژه‌ها روی دستگاه شما نگهداری می‌شود</small></div></div>
-        <div className="storage-status"><span className="status-dot"/><div><b>ذخیره‌سازی محلی فعال است</b><small>{storageInfo.backend} · {storageInfo.items} مورد داده</small></div></div>
-        <p className="settings-note">در این نسخه ورود کاربری و همگام‌سازی ابری غیرفعال است. داده‌ها در مرورگر یا حافظه داخلی برنامه ذخیره می‌شوند؛ پاک‌کردن داده‌های مرورگر یا حذف برنامه ممکن است آن‌ها را حذف کند.</p>
-        <div className="backup-actions"><button className="primary" onClick={onExport}>دریافت فایل پشتیبان</button><label className="secondary-button">بازیابی فایل پشتیبان<input type="file" accept="application/json,.json" onChange={e => { const file = e.target.files?.[0]; if (file) onImport(file); e.currentTarget.value = '' }}/></label></div>
-      </article>
+      <BackupSettings onRestored={onRestored}/>
     </div>
     <div className="local-only-note"><b>حریم خصوصی:</b> در حالت محلی، اطلاعات پروژه‌ها برای ورود به حساب یا سرور ارسال نمی‌شوند.</div>
   </section>
