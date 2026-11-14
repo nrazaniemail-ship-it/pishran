@@ -405,7 +405,7 @@ assert.ok(Number.isFinite(integrated.mirrEquity), 'Integrated modified equity IR
 assert.ok(workspaceSource.includes("'Modified IRRE on equity':financeResult.mirrEquity===null?0:financeResult.mirrEquity*100"), 'COMFAR modified equity IRR must use the integrated equity cash flow')
 assert.equal(integrated.years.length, 6, 'Integrated model period count')
 near(integrated.years[5].salvageProceeds, 50, 1e-9, 'Terminal salvage proceeds')
-near(integrated.years[5].terminalValue, 50 + integrated.years[5].workingCapital, 1e-9, 'Terminal value includes salvage and working capital recovery')
+near(integrated.years[5].terminalValue, 50, 1e-9, 'Terminal value includes salvage only; working capital is recovered through the final-period NWC release')\nnear(integrated.years[5].workingCapital, 0, 1e-9, 'Terminal working capital is released at project end')
 for (let index = 0; index < integrated.years.length; index++) {
   const year = integrated.years[index]
   const openingCash = index ? integrated.years[index - 1].cashBalance : 0
@@ -578,4 +578,42 @@ assert.ok(workspaceSource.includes("'Increase in fixed assets':year.fixedInvestm
 assert.ok(workspaceSource.includes("'Marketing costs':0"), 'COMFAR marketing cost line must remain explicit when no separate marketing input exists')
 assert.ok(workspaceSource.includes("'Increase in net working capital':year.changeInWorkingCapital"), 'COMFAR cash flow must use the annual net working-capital movement')
 console.log('PASS: COMFAR net working capital, no double-counting of supplier credit, capitalized interest and taxable profit mapping')
-console.log('PASS: integrated WACC, loan amortization, working capital, escalation, terminal value, cash flow reconciliation, NPV and project/equity IRR')
+
+const assetSchedule = engine.calculateAssetDepreciationSchedule([
+  { id:'plant', name:'Plant', cost:1000, residualValue:100, usefulLife:3, startYear:2, method:'straight-line' },
+  { id:'land', name:'Land', cost:500, residualValue:500, usefulLife:30, startYear:2, method:'straight-line' }
+], 5)
+near(assetSchedule[0].depreciation, 0, 1e-9, 'Asset depreciation before in-service year')
+near(assetSchedule[1].depreciation, 300, 1e-9, 'Asset-by-asset straight-line depreciation')
+near(assetSchedule[3].depreciation, 0, 1e-9, 'Depreciation ends after useful life')
+near(assetSchedule[3].closingBookValue, 600, 1e-9, 'Asset book value at residual value')
+const statements = engine.buildThreeFinancialStatements(integrated.years)
+assert.equal(statements.length, integrated.years.length, 'Three statements must cover the full model horizon')
+assert.ok(statements.every(row => row.balanceSheet.reconciled), 'Balance sheet must reconcile without a plug for the integrated reference case')
+for (const row of statements) {
+  near(row.cashFlowStatement.closingCash, row.balanceSheet.cash, 1e-9, 'Cash flow statement and balance sheet cash tie')
+  near(row.balanceSheet.totalAssets, row.balanceSheet.totalLiabilitiesAndEquity, 1e-6, 'Balance sheet reconciliation year ' + row.year)
+}
+const sensitivity = engine.calculateSensitivityMatrix({
+  years:6,constructionYears:1,capacity:100,fullCapacityRevenue:2000,fullCapacityVariableCashCost:600,
+  fullCapacityFixedCashCost:400,annualDepreciation:100,fixedInvestment:1000,preOperatingCost:100,
+  fixedInvestmentSchedule:[1000,0,0,0,0,0],preOperatingSchedule:[100,0,0,0,0,0],
+  utilization:[0,1,1,1,1,1],equityContributions:[600,0,0,0,0,0],
+  loans:[{id:'sensitivity-loan',label:'Loan',drawdowns:[400,0,0,0,0,0],annualRate:10,graceYears:0,termYears:2,repaymentStartYear:2,repaymentMethod:'equal-principal',capitalizeInterest:false}],
+  taxRate:25,costOfEquity:20,workingCapitalPercent:10,salesEscalationPercent:0,opexEscalationPercent:0,
+  discountMode:'manual',manualDiscountRate:15
+})
+assert.equal(sensitivity.length,5,'Sensitivity matrix must contain five volume cases')
+assert.equal(sensitivity[0].length,5,'Sensitivity matrix must contain five price cases')
+assert.ok(sensitivity[0][0].npv < sensitivity[4][4].npv,'Higher price and volume should improve project NPV')
+const scenarioResults = engine.calculateFinancialScenarios({
+  years:6,constructionYears:1,capacity:100,fullCapacityRevenue:2000,fullCapacityVariableCashCost:600,
+  fullCapacityFixedCashCost:400,annualDepreciation:100,fixedInvestment:1000,preOperatingCost:100,
+  fixedInvestmentSchedule:[1000,0,0,0,0,0],preOperatingSchedule:[100,0,0,0,0,0],
+  utilization:[0,1,1,1,1,1],equityContributions:[600,0,0,0,0,0],
+  loans:[],taxRate:25,costOfEquity:20,workingCapitalPercent:10,salesEscalationPercent:0,opexEscalationPercent:0,
+  discountMode:'manual',manualDiscountRate:15
+})
+assert.ok(scenarioResults.optimistic.npvProject > scenarioResults.base.npvProject,'Optimistic scenario must exceed base NPV')
+assert.ok(scenarioResults.pessimistic.npvProject < scenarioResults.base.npvProject,'Pessimistic scenario must be below base NPV')
+\nconsole.log('PASS: integrated WACC, staged loan amortization, working capital, terminal value, cash flow reconciliation, NPV and project/equity IRR')\nconsole.log('PASS: asset-level depreciation, tax loss carry-forward, multi-variable sensitivity, scenarios and three-statement balance-sheet reconciliation')
