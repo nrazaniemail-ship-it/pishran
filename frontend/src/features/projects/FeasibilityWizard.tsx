@@ -55,7 +55,7 @@ const n=(v:number)=>Number.isFinite(v)?v:0
 const fmt=(v:number,d=0)=>n(v).toLocaleString('fa-IR',{maximumFractionDigits:d,minimumFractionDigits:d})
 const sum=(rows:Row[])=>rows.reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)
 function npv(flows:number[],rate:number){return flows.reduce((a,v,i)=>a+v/Math.pow(1+rate,i),0)}
-function irr(flows:number[]){if(!flows.some(v=>v>0)||!flows.some(v=>v<0))return Number.NaN;let lo=-.9,hi=5;for(let i=0;i<180;i++){const mid=(lo+hi)/2;if(npv(flows,mid)>0)lo=mid;else hi=mid}return (lo+hi)/2}
+function irr(flows:number[]){if(!flows.some(v=>v>0)||!flows.some(v=>v<0))return Number.NaN;let lo=-.9,hi=5;const left=npv(flows,lo),right=npv(flows,hi);if(!Number.isFinite(left)||!Number.isFinite(right)||left*right>0)return Number.NaN;for(let i=0;i<180;i++){const mid=(lo+hi)/2;if(npv(flows,mid)*left>0)lo=mid;else hi=mid}return (lo+hi)/2}
 function Field({label,value,unit,onChange,type='number'}:{label:string;value:number|string;unit?:string;onChange:(v:any)=>void;type?:string}){return <label className="fw-field"><span>{label}</span><div><input type={type} value={value} onChange={e=>onChange(type==='number'?Number(e.target.value):e.target.value)}/>{unit&&<small>{unit}</small>}</div></label>}
 function RowEditor({title,rows,onChange,defaultUnit}:{title:string;rows:Row[];onChange:(rows:Row[])=>void;defaultUnit:string}){
  const update=(id:string,key:keyof Row,value:string|number)=>onChange(rows.map(r=>r.id===id?{...r,[key]:value}:r))
@@ -78,13 +78,14 @@ export default function FeasibilityWizard({project,onBack}:{project:FeasibilityP
  const marketSize=m.market.domesticProduction+m.market.imports-m.market.exports
  const revenuePrice=m.market.domesticPrice*(m.market.domesticShare/100)+m.market.exportPrice*(1-m.market.domesticShare/100)
  const model=useMemo(()=>{
-  const flows=[-capex/2,-capex/2-m.finance.workingCapital]
+  const constructionPeriods=Math.max(1,Math.floor(m.project.constructionYears||1))
+  const flows=Array.from({length:constructionPeriods},(_,i)=>-capex/constructionPeriods-(i===constructionPeriods-1?m.finance.workingCapital:0))
   for(let i=0;i<m.project.operatingYears;i++){
    const ramp=m.capacity.ramp[i]??100,qty=cap*ramp/100,rev=qty*revenuePrice,op=qty*variable+fixed,dep=capex/Math.max(1,m.finance.depreciationYears),tax=Math.max(0,rev-op-dep)*m.finance.tax/100
    flows.push(rev-op-tax+(i===m.project.operatingYears-1?m.finance.workingCapital:0))
   }
   return {flows,npv:npv(flows,rate),irr:irr(flows),annualCapacity:cap,revenue:cap*revenuePrice,operatingCost:cap*variable+fixed,marketSize,capex,wacc,rate}
- },[cap,capex,fixed,marketSize,m.finance,m.project.operatingYears,m.capacity.ramp,revenuePrice,rate,variable])
+ },[cap,capex,fixed,marketSize,m.finance,m.project.operatingYears,m.project.constructionYears,m.capacity.ramp,revenuePrice,rate,variable])
  const update=<K extends keyof Model>(key:K,value:Model[K])=>setM(old=>({...old,[key]:value}))
  const current=steps.findIndex(s=>s[0]===step)
  const required:Record<Step,string[]>={profile:['نام پروژه','موقعیت'],stage:['مرحله زنجیره','محصول اصلی'],process:['فناوری و مسیر تولید'],balance:['موازنه مواد'],market:['قیمت فروش'],capex:['سرمایه‌گذاری ثابت'],opex:['هزینه‌های عملیاتی'],finance:['ساختار سرمایه'],risk:['ریسک‌های کلیدی'],results:['کنترل نهایی']}
