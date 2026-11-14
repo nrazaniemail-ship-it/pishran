@@ -84,8 +84,11 @@ export const localStore = {
     } else {
       writeFallback(key, value)
     }
-    // Settings and small app metadata are mirrored for fast boot and PWA interoperability.
-    if (key.startsWith('settings:')) writeFallback(key, value)
+    // Settings mirrors are an optimization; a quota/permission failure must not
+    // turn a successful IndexedDB write into a failed save.
+    if (db && key.startsWith('settings:')) {
+      try { writeFallback(key, value) } catch { /* IndexedDB remains authoritative. */ }
+    }
   },
 
   async remove(key: string): Promise<void> {
@@ -153,7 +156,7 @@ export const localStore = {
         if (key?.startsWith(PREFIX)) localStorage.removeItem(key)
       }
       for (const record of records) writeFallback(record.key, record.value)
-    } catch (error) {
+    } catch {
       if (!db) throw new Error('ذخیره‌سازی محلی در دسترس نیست')
       // IndexedDB is authoritative when available; fallback mirroring may be unavailable.
     }

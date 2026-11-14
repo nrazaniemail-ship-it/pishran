@@ -136,7 +136,7 @@ export const EXCEL_HOT_ROLLING_200KT = {
     row('opex-marketing','بازاریابی مستقیم (۰٫۱٪ فروش طبق فرمول سلول)',1,'تن محصول',0.311298,'به‌ازای هر تن','بازاریابی')
   ],
   market:[],
-  notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ از شیت نرخ تنزیل جداگانه نگهداری شده‌اند. نرخ تنزیل محاسباتی WACC برابر ۲۱٫۲۸۴۳٪ است؛ شیت IRR-NPV نرخ را به ۲۱٪ گرد کرده است. جریان‌های نقدی مرجع COMFAR در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند.'
+  notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ از شیت نرخ تنزیل جداگانه نگهداری شده‌اند. نرخ تنزیل محاسباتی WACC برابر ۲۱٫۲۸۴۳٪ است؛ شیت IRR-NPV نرخ را به ۲۱٪ گرد کرده است. جریان‌های نقدی مرجع COMFAR در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند. این پروژه پیش‌نویس ممیزی است: ساختار تأمین مالی ۷۰/۳۰ شیت منابع با ساختار ۱۶٫۹۹/۸۳٫۰۱ شیت WACC تعارض دارد؛ مالیات عملیاتی ۵٪ اکسل با ۲۵٪ جریان نقدی COMFAR متفاوت است؛ استهلاک دارایی‌محور در مدل فعلی به یک مقدار ثابت ساده شده و بهره سرمایه‌ای‌شده در جریان نقدی بدون اهرم لحاظ نشده است. تا زمان تعیین سناریوی مرجع و رفع این اختلاف‌ها، شاخص‌های مالی این پروژه مبنای تصمیم سرمایه‌گذاری نیستند.'
 } as const
 
 
@@ -168,8 +168,8 @@ export const EXCEL_REFERENCE_EXPECTED = {
   mirr:0.33865108092920493,
   financeRate:0.26,
   reinvestmentRate:0.30,
-  /** Row 9, periods C:S in OPEX sheet "IRR-NPV"; last period includes the COMFAR salvage inflow. */
-  comfarProjectCashFlows:[
+  /** This is the OPEX workbook's own IRR-NPV helper row, not the COMFAR PDF cash-flow series. */
+  excelWorksheetCashFlows:[
     -7908572.82,-5905218.02,3926279.2047649994,8140613.077362001,
     8941506.638881996,9688834.216513,9860858.381308004,9573587.738720998,
     9520342.875225,9520342.875225,9520342.875225,9520342.875225,
@@ -178,9 +178,36 @@ export const EXCEL_REFERENCE_EXPECTED = {
   ],
   sourceNotes:[
     'The OPEX workbook uses 360 days per year for working-capital turnover.',
-    'The CAPEX workbook calculates WACC at 21.284299%; the OPEX IRR-NPV sheet rounds the discount rate to 21%.',
-    'The 5% operating tax in the sales sheet and 25% WACC tax shield in the CAPEX discount-rate sheet are separate source assumptions.',
-    'IRR-NPV cash flows are imported from COMFAR and are not calculated by the source Excel workbook from the operating-cost tabs.'
+    'The CAPEX workbook calculates WACC at 21.284299%; the OPEX IRR-NPV helper sheet rounds the rate to 21%.',
+    'The OPEX sales sheet uses 5% operating tax, while the COMFAR PDF cash-flow report reflects 25% income tax in full-capacity years.',
+    'The OPEX IRR-NPV helper cash-flow row is not the same series as the COMFAR PDF project cash-flow report; both are retained as separate references.'
+  ]
+} as const
+
+/** Audited project cash-flow series transcribed from COMFAR PDF pages 66–70.
+ * Valuation date is 12/1404. Construction years 1403–1404 are discounted with offsets -1 and 0.
+ * The 1420 scrap value is a terminal inflow at the same terminal valuation point as operating year 1419.
+ */
+export const COMFAR_PDF_REFERENCE = {
+  valuationDate:'12/1404',
+  discountRate:0.25,
+  npv:31399764.27,
+  irr:0.4831300309687687,
+  mirr:0.2803,
+  mirrRatesPublished:false,
+  scrapValue:13735466.82,
+  projectCashFlows:[
+    -13907805.03,-8093664.03,9602342.59,14451793.80,16364704.86,
+    18303107.76,18712850.68,15024064.83,15024064.83,15024064.84,
+    15024064.85,14719546.77,14719546.77,14719546.74,14718471.72,
+    14710023.15,28443491.41
+  ],
+  sourcePages:[1,2,8,13,18,34,42,43,50,66,67,68,69,70],
+  notes:[
+    'COMFAR PDF NPV is reported at 25% as of 12/1404; the first construction-year cash flow is one period before the valuation date.',
+    'Terminal scrap value of 13,735,466.82 million Rial is added to the final operating-year cash flow, not treated as an additional operating year.',
+    'The COMFAR PDF uses a 25% income-tax cash-flow profile; the OPEX workbook sales sheet separately states a 5% tax assumption.',
+    'The OPEX IRR-NPV helper row is a separate calculation and must not be labeled as the COMFAR PDF cash-flow series.'
   ]
 } as const
 
@@ -197,3 +224,38 @@ export const PISHRAN_REFERENCE_MODEL_OUTPUT = {
   irr:0.5401182097235053,
   mirr:0.36524517442187365
 } as const
+
+/** Asset classes transcribed from OPEX workbook sheet «استهلاک».
+ * Basis is million Rial. Land is non-depreciable with 100% residual value.
+ */
+export const HRCR200_DEPRECIATION_ASSETS = [
+  {id:'land',label:'زمین',basis:2015000,depreciationRate:0,salvageRate:1},
+  {id:'site',label:'آماده‌سازی سایت',basis:430007.7606094665,depreciationRate:0.07,salvageRate:0.10},
+  {id:'industrial-building',label:'ساختمان صنعتی',basis:2016000,depreciationRate:0.07,salvageRate:0.10},
+  {id:'nonindustrial-building',label:'ساختمان غیرصنعتی و سیویل',basis:381422.057,depreciationRate:0.07,salvageRate:0.10},
+  {id:'machinery',label:'ماشین‌آلات و تجهیزات',basis:10472740,depreciationRate:0.1097955,salvageRate:0.10},
+  {id:'utilities',label:'تأسیسات زیربنایی',basis:1423564,depreciationRate:0.12,salvageRate:0.10},
+  {id:'vehicles',label:'وسایط نقلیه',basis:490500,depreciationRate:0.20,salvageRate:0.10},
+  {id:'office',label:'تجهیزات اداری و خدماتی',basis:70166.50296,depreciationRate:0.25,salvageRate:0.10},
+  {id:'preoperation',label:'هزینه‌های قبل از بهره‌برداری',basis:879191,depreciationRate:0.10,salvageRate:0},
+  {id:'other-preoperation',label:'سایر هزینه‌ها',basis:239826.63796,depreciationRate:0.10,salvageRate:0.10}
+] as const
+/** COMFAR-led project seed. Original Excel assumptions remain available in EXCEL_HOT_ROLLING_200KT. */
+export const COMFAR_BASELINE_HRCR200 = {
+  ...EXCEL_HOT_ROLLING_200KT,
+  discountMode:'manual' as const,
+  manualRate:25,
+  equity:100,
+  debt:0,
+  loans:[],
+  tax:25,
+  annualDepreciationOverride:0,
+  financeRate:0,
+  reinvestmentRate:0,
+  mirrRatesPublished:false,
+  depreciationSource:'source-assets' as const,
+  terminalValueOverride:COMFAR_PDF_REFERENCE.scrapValue,
+  capitalizedInterestSchedule:[1186151.73,2112481.97],
+  notes:EXCEL_HOT_ROLLING_200KT.notes + ' سناریوی فعال این پروژه بر مبنای گزارش COMFAR است: مالیات عملکرد ۲۵٪، نرخ تنزیل دستی ۲۵٪ در تاریخ ارزش‌گذاری ۱۲/۱۴۰۴، بهره سرمایه‌ای‌شده طبق اختلاف دو سال ساخت، استهلاک مشتق از طبقات دارایی اکسل و ارزش قراضه گزارش‌شده در COMFAR. مفروضات ۵٪ مالیات و WACC/ساختار تأمین مالی فایل اکسل به‌عنوان سناریوی مستقل منبع حفظ شده‌اند و با این جریان نقدی ترکیب نمی‌شوند.'
+} as const
+

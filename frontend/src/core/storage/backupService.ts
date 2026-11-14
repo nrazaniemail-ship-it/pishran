@@ -81,19 +81,43 @@ export function parseBackup(text:string):PishranBackup{
  for(const r of obj.records){if(!r||typeof r.key!=='string'||!r.key.trim()||r.key.length>240||seen.has(r.key))throw new Error('ساختار رکوردهای فایل پشتیبان معتبر نیست.');seen.add(r.key)}
  return obj as PishranBackup
 }
+
+// Large pre-restore snapshots belong in IndexedDB, not the ~5 MB localStorage quota.
+const UNDO_DB='pishran_restore_undo'
+const UNDO_STORE='undo'
+function openUndoDb():Promise<IDBDatabase|null>{
+ if(typeof indexedDB==='undefined')return Promise.resolve(null)
+ return new Promise(resolve=>{try{const req=indexedDB.open(UNDO_DB,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(UNDO_STORE))req.result.createObjectStore(UNDO_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>resolve(null);req.onblocked=()=>resolve(null)}catch{resolve(null)}})
+}
+async function writeUndo(value:unknown):Promise<void>{
+ const db=await openUndoDb()
+ if(db){await new Promise<void>((resolve,reject)=>{const tx=db.transaction(UNDO_STORE,'readwrite');tx.objectStore(UNDO_STORE).put(value,'last');tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error??new Error('undo snapshot aborted'))});return}
+ try{localStorage.setItem(UNDO_KEY,JSON.stringify(value))}catch{throw new Error('فضای کافی برای نگه‌داشتن نسخه اضطراری قبل از بازیابی وجود ندارد. ابتدا یک پشتیبان دستی بگیرید.')}
+}
+async function readUndo():Promise<any>{
+ const db=await openUndoDb()
+ if(db){const fromDb=await new Promise<any>(resolve=>{const tx=db.transaction(UNDO_STORE,'readonly');const req=tx.objectStore(UNDO_STORE).get('last');req.onsuccess=()=>resolve(req.result??null);req.onerror=()=>resolve(null)});if(fromDb)return fromDb}
+ try{return JSON.parse(localStorage.getItem(UNDO_KEY)||'null')}catch{return null}
+}
+async function clearUndo():Promise<void>{
+ const db=await openUndoDb()
+ if(db)await new Promise<void>(resolve=>{const tx=db.transaction(UNDO_STORE,'readwrite');tx.objectStore(UNDO_STORE).delete('last');tx.oncomplete=()=>resolve();tx.onerror=()=>resolve();tx.onabort=()=>resolve()})
+ try{localStorage.removeItem(UNDO_KEY)}catch{/* storage may be disabled */}
+}
 export async function restoreBackup(payload:PishranBackup):Promise<number>{
  const current=await localStore.exportAll()
  const previousPreferences=await getBackupPreferences()
- localStorage.setItem(UNDO_KEY,JSON.stringify({at:new Date().toISOString(),snapshot:current,backupPreferences:previousPreferences}))
+ // Abort before touching app data if the emergency snapshot cannot be stored.
+ await writeUndo({at:new Date().toISOString(),snapshot:current,backupPreferences:previousPreferences})
  await localStore.replaceAll(payload.records)
  if(payload.backupPreferences)await saveBackupPreferences({...previousPreferences,enabled:payload.backupPreferences.enabled,interval:payload.backupPreferences.interval,lastAt:'',lastSize:0,lastKind:''})
  return payload.records.length
 }
-export async function canUndoRestore():Promise<boolean>{try{return Array.isArray(JSON.parse(localStorage.getItem(UNDO_KEY)||'null')?.snapshot?.records)}catch{return false}}
+export async function canUndoRestore():Promise<boolean>{const saved=await readUndo();return Array.isArray(saved?.snapshot?.records)}
 export async function undoLastRestore():Promise<number>{
- const raw=localStorage.getItem(UNDO_KEY);if(!raw)throw new Error('نسخه قبل از بازیابی در دسترس نیست.')
- const saved=JSON.parse(raw);if(!Array.isArray(saved.snapshot?.records))throw new Error('نسخه اضطراری معتبر نیست.')
- await localStore.replaceAll(saved.snapshot.records);if(saved.backupPreferences)await saveBackupPreferences(saved.backupPreferences);localStorage.removeItem(UNDO_KEY);return saved.snapshot.records.length
+ const saved=await readUndo();if(!saved)throw new Error('نسخه قبل از بازیابی در دسترس نیست.')
+ if(!Array.isArray(saved.snapshot?.records))throw new Error('نسخه اضطراری معتبر نیست.')
+ await localStore.replaceAll(saved.snapshot.records);if(saved.backupPreferences)await saveBackupPreferences(saved.backupPreferences);await clearUndo();return saved.snapshot.records.length
 }
 export async function updateBackupMeta(kind:'manual'|'automatic',size:number){
  const p=await getBackupPreferences();await saveBackupPreferences({...p,lastAt:new Date().toISOString(),lastSize:size,lastKind:kind})

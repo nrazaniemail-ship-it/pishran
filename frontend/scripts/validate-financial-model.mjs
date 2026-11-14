@@ -22,6 +22,7 @@ const model = reference.EXCEL_HOT_ROLLING_200KT
 const expected = reference.EXCEL_REFERENCE_EXPECTED
 const pishranExpected = reference.PISHRAN_REFERENCE_MODEL_OUTPUT
 const workspaceSource = await readFile(new URL('../src/features/steel/ProcessPlantWorkspace.tsx', import.meta.url), 'utf8')
+const rollingWorkspaceSource = await readFile(new URL('../src/features/steel/RollingWorkspace.tsx', import.meta.url), 'utf8')
 const output = expected.capacity
 const currency = model.currency
 
@@ -112,11 +113,19 @@ near(workingCapital, expected.workingCapital, 0.02, 'Net working capital with 36
 const wc365 = engine.calculateWorkingCapital(wcItems, 1, 365)
 assert.ok(Math.abs(wc365 - workingCapital) > 1000, '360/365 convention must materially change the benchmark result')
 
-const cashFlows = [...expected.comfarProjectCashFlows]
-near(engine.calculateNpv(cashFlows, expected.roundedDiscountRate), expected.npvAtRoundedRate, 0.01, 'NPV at Excel rounded 21%')
-near(engine.calculateNpv(cashFlows, expected.wacc), expected.npvAtExactWacc, 0.01, 'NPV at exact WACC')
-near(engine.calculateIrr(cashFlows), expected.irr, 1e-8, 'IRR')
-near(engine.calculateMirr(cashFlows, expected.financeRate, expected.reinvestmentRate), expected.mirr, 1e-8, 'MIRR')
+const excelWorksheetFlows = [...expected.excelWorksheetCashFlows]
+near(engine.calculateNpv(excelWorksheetFlows, expected.roundedDiscountRate), expected.npvAtRoundedRate, 0.01, 'Excel helper-sheet NPV at rounded 21%')
+near(engine.calculateNpv(excelWorksheetFlows, expected.wacc), expected.npvAtExactWacc, 0.01, 'Excel helper-sheet NPV at exact WACC')
+near(engine.calculateIrr(excelWorksheetFlows), expected.irr, 1e-8, 'Excel helper-sheet IRR')
+near(engine.calculateMirr(excelWorksheetFlows, expected.financeRate, expected.reinvestmentRate), expected.mirr, 1e-8, 'Excel helper-sheet MIRR')
+
+const comfarPdf = reference.COMFAR_PDF_REFERENCE
+const comfarNpvAtValuationDate = comfarPdf.projectCashFlows.reduce(
+  (sum, flow, index) => sum + flow / Math.pow(1 + comfarPdf.discountRate, index - 1), 0)
+near(comfarNpvAtValuationDate, comfarPdf.npv, 0.01, 'COMFAR PDF NPV at 12/1404 and 25%')
+near(engine.calculateIrr(comfarPdf.projectCashFlows), comfarPdf.irr, 0.00002, 'COMFAR PDF IRR')
+assert.equal(comfarPdf.mirrRatesPublished, false,
+  'COMFAR PDF MIRR must not be reverse-engineered into undocumented finance/reinvestment assumptions')
 
 
 const totalCapex = model.capex.reduce((sum, row) => sum + row.quantity * row.unitPrice * (row.currency === currency ? 1 : row.fxRate), 0)
@@ -165,7 +174,7 @@ for (let index = 0; index < capexYears + model.life; index++) {
 console.log('DEBUG Pishran generated flows:', JSON.stringify(generatedProjectCashFlows))
 console.log('DEBUG reference flows:', JSON.stringify(pishranExpected.projectCashFlows))
 console.log('DEBUG working capital:', workingCapital, 'OPEX:', opexWithoutDepreciation, 'WACC:', wacc.value)
-const generatedComfarComparison = engine.reconcileCashFlowSeries(generatedProjectCashFlows, expected.comfarProjectCashFlows, 0.01)
+const generatedComfarComparison = engine.reconcileCashFlowSeries(generatedProjectCashFlows, comfarPdf.projectCashFlows, 0.01)
 console.log('COMFAR annual cash-flow comparison (benchmark fixture):', {
   matched: generatedComfarComparison.matched,
   periodCountMatch: generatedComfarComparison.periodCountMatch,
@@ -175,6 +184,9 @@ console.log('COMFAR annual cash-flow comparison (benchmark fixture):', {
   maxAbsoluteDifference: generatedComfarComparison.maxAbsoluteDifference
 })
 assert.equal(generatedProjectCashFlows.length, pishranExpected.projectCashFlows.length, 'Pishran project flow period count')
+assert.equal(generatedComfarComparison.periodCountMatch, true, 'Pishran and COMFAR PDF flow periods must align')
+assert.equal(generatedComfarComparison.matched, false, 'Material Pishran/COMFAR PDF differences must be surfaced, not silently treated as reconciled')
+assert.ok(generatedComfarComparison.maxAbsoluteDifference > 8_000_000, 'Terminal-period variance must remain visible until model assumptions are reconciled')
 assert.ok(generatedProjectCashFlows.every(Number.isFinite), 'Pishran generated cash flows must all be finite')
 assert.ok(generatedProjectCashFlows.some(value => value < 0) && generatedProjectCashFlows.some(value => value > 0),
   'Pishran generated cash flows must contain investment outflow and operating inflow')
@@ -190,9 +202,9 @@ console.log('Pishran-generated metrics (not yet reconciled to COMFAR):', {
 console.log('PASS: raw materials, energy, process consumables, spares, maintenance and payroll')
 console.log('PASS: 360-day working capital = ' + workingCapital.toFixed(4) + ' million Rial')
 console.log('PASS: WACC = ' + (wacc.value * 100).toFixed(6) + '%')
-console.log('PASS: NPV / IRR / MIRR independently reproduce the COMFAR reference row')
+console.log('PASS: OPEX Excel helper metrics and COMFAR PDF metrics are independently reproduced')
 console.log('PASS: Pishran-generated project cash flows are finite and return valid NPV / IRR / MIRR')
-console.log('REVIEW REQUIRED: generated Pishran cash flows are not yet numerically reconciled to COMFAR cash flows')
+console.log('REVIEW REQUIRED: Pishran generated flows differ from the audited COMFAR PDF vector by ' + generatedComfarComparison.totalDifference.toFixed(2) + ' million Rial in aggregate; max annual variance ' + generatedComfarComparison.maxAbsoluteDifference.toFixed(2))
 console.log('NOTE: Excel rounds WACC 21.284299% to 21% for its NPV cell.')
 
 
@@ -444,11 +456,40 @@ assert.ok(workspaceSource.includes("annualFixedConversionCost:fixedConversionCos
 assert.ok(workspaceSource.includes("annualPayablesCost:materialCost+energyCost+maintenanceCostTotal+otherOpexTotal"), 'Supplier credit must use eligible material, energy, maintenance and supplier purchases')
 assert.ok(workspaceSource.includes("annualFixedPayablesCost:financeValue('هزینه ثابت سالانه مشمول بدهی تجاری (یورو)',0)"), 'Fixed supplier-credit purchases must be separately configurable')
 assert.ok(workspaceSource.includes("'Other income':year.terminalValue"), 'COMFAR Other income must include terminal working-capital recovery and salvage')
-assert.ok(workspaceSource.includes('years:19,constructionYears:4'), 'Project model horizon must match four construction plus fifteen operating years')
+assert.ok(workspaceSource.includes('years:19,constructionYears,'), 'Project model horizon must be 19 periods with a configurable construction period (default 4 construction + 15 operating years)')
 assert.ok(workspaceSource.includes("referenceYear:isScalar?0:annual[8]??0,lastYear:isScalar?0:annual[18]??0"), 'COMFAR reference year 9 and last year 19 must map to the correct periods')
-assert.ok(workspaceSource.includes("const utilizationSchedule=Array.from({length:19},(_,i)=>i<4?0:Math.min(1,[.7,.8,.9,1][i-4]??1))"), 'The terminal year must be the final operating year, not an extra non-operating year')
+assert.ok(workspaceSource.includes("const utilizationSchedule=Array.from({length:19},(_,i)=>i<constructionYears?0:Math.min(1,[.7,.8,.9,1][i-constructionYears]??1))"), 'The terminal year must be the final operating year, not an extra non-operating year')
 assert.ok(workspaceSource.includes("'Increase in fixed assets':year.fixedInvestment"), 'COMFAR cash flow must map annual fixed-asset investment')
 assert.ok(workspaceSource.includes("'Marketing costs':0"), 'COMFAR marketing cost line must remain explicit when no separate marketing input exists')
 assert.ok(workspaceSource.includes("'Increase in net working capital':year.changeInWorkingCapital"), 'COMFAR cash flow must use the annual net working-capital movement')
 console.log('PASS: COMFAR net working capital, no double-counting of supplier credit, capitalized interest and taxable profit mapping')
 console.log('PASS: integrated WACC, loan amortization, working capital, escalation, terminal value, cash flow reconciliation, NPV and project/equity IRR')
+
+
+const hrcrDepreciation = engine.calculateStraightLineAssetSchedule([...reference.HRCR200_DEPRECIATION_ASSETS], 15)
+near(hrcrDepreciation.annualDepreciation[0], 1580327, 1.5, 'HRCR200 source-sheet first-year asset depreciation')
+near(engine.calculateNpvAtPeriodOffset(reference.COMFAR_PDF_REFERENCE.projectCashFlows, reference.COMFAR_PDF_REFERENCE.discountRate, -1),
+  reference.COMFAR_PDF_REFERENCE.npv, 0.01, 'COMFAR valuation-date NPV')
+assert.ok(hrcrDepreciation.annualDepreciation[14] < hrcrDepreciation.annualDepreciation[0],
+  'Asset-level depreciation must decline as short-life assets finish')
+assert.ok(hrcrDepreciation.terminalSalvage > 0, 'Asset-level residual value must be derived from source salvage rates')
+const shortLifeAssets = engine.calculateStraightLineAssetSchedule([...reference.HRCR200_DEPRECIATION_ASSETS], 5)
+assert.ok(shortLifeAssets.terminalSalvage > hrcrDepreciation.terminalSalvage,
+  'Terminal asset book value must retain undepreciated balances when project life is shorter than asset life')
+console.log('PASS: source-backed asset-level straight-line depreciation and residual schedule')
+
+
+const comfarSeed = reference.COMFAR_BASELINE_HRCR200
+assert.equal(comfarSeed.tax, 25, 'COMFAR baseline uses 25% operating tax')
+assert.equal(comfarSeed.manualRate, 25, 'COMFAR baseline uses the reported 25% discount rate')
+assert.equal(comfarSeed.equity, 100, 'COMFAR total-investment cash flow is kept unlevered')
+assert.equal(comfarSeed.debt, 0, 'COMFAR total-investment cash flow must not blend Excel debt weights')
+assert.deepEqual(comfarSeed.capitalizedInterestSchedule, [1186151.73, 2112481.97],
+  'Capitalized construction interest is included as its own two-year schedule')
+assert.equal(comfarSeed.depreciationSource, 'source-assets', 'COMFAR baseline uses asset-level depreciation')
+assert.equal(comfarSeed.mirrRatesPublished, false, 'COMFAR MIRR rates are not published and must not be reverse-engineered')
+assert.equal(comfarSeed.terminalValueOverride, reference.COMFAR_PDF_REFERENCE.scrapValue,
+  'COMFAR reported terminal scrap is a sourced scenario input')
+assert.ok(rollingWorkspaceSource.includes('capitalizedInterestSpend'), 'Workspace project cash flow must include the explicit capitalized-interest schedule')
+assert.ok(rollingWorkspaceSource.includes("m.depreciationSource==='source-assets'"), 'Workspace must support source asset-level depreciation')
+console.log('PASS: COMFAR-led HRCR200 seed keeps tax, financing, interest, depreciation and scrap assumptions explicit')

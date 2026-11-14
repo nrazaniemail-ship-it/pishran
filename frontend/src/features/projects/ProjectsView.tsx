@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Factory, Plus, Trash2, FolderOpen } from 'lucide-react'
+import { Factory, Plus, Trash2, FolderOpen, FileSpreadsheet } from 'lucide-react'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
   onDelete: (id: string) => Promise<void>
   confirmBeforeDelete: boolean
   onOpenProject: (project: FeasibilityProject) => void
+  onCreateReferenceProject?: () => Promise<void>
 }
 
 const STEEL_INDUSTRY = 'فولاد و صنایع معدنی'
@@ -23,7 +24,7 @@ const STEEL_PROJECT_GROUPS = [
   { stage: 'نورد سرد', projects: ['پروژه مستقل نورد سرد', 'احداث خط تولید کلاف سرد', 'احداث خط تولید کلاف گالوانیزه', 'احداث خط تولید کلاف رنگی'] },
 ]
 
-export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenProject }: Props) {
+export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenProject, onCreateReferenceProject }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [customName, setCustomName] = useState('')
@@ -63,7 +64,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   }
 
   return <section className="projects-page">
-    <div className="page-heading"><div><span className="eyebrow">PROJECT WORKSPACE</span><h1>پروژه‌های امکان‌سنجی</h1><p>پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.</p></div><div className="projects-head-actions"><button className="primary" onClick={() => setShowForm(v => !v)}><Plus size={17}/> پروژه جدید</button></div></div>
+    <div className="page-heading"><div><span className="eyebrow">PROJECT WORKSPACE</span><h1>پروژه‌های امکان‌سنجی</h1><p>پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.</p></div><div className="projects-head-actions">{onCreateReferenceProject && <button className="secondary-button" onClick={() => void onCreateReferenceProject()}><FileSpreadsheet size={16}/> ساخت پروژه مرجع نورد گرم از Excel</button>}<button className="primary" onClick={() => setShowForm(v => !v)}><Plus size={17}/> پروژه جدید</button></div></div>
     {showForm && <form className="project-form" onSubmit={submit}>
       <h3>تعریف پروژه جدید</h3>
       <div className="form-grid">

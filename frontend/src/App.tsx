@@ -12,6 +12,7 @@ import FeasibilityWizard from './features/projects/FeasibilityWizard'
 import ProcessPlantWorkspace from './features/steel/ProcessPlantWorkspace'
 import Guide from './features/guide/Guide'
 import BackupScheduler from './features/settings/BackupScheduler'
+import { COMFAR_BASELINE_HRCR200 } from './features/steel/hotRollingExcelBenchmark'
 
 type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'split-integrated' | 'process-plant' | 'guide'
 
@@ -72,6 +73,28 @@ export default function App() {
     await refreshStorage()
   }
 
+  async function handleCreateHotRollingReference() {
+    const referenceName = COMFAR_BASELINE_HRCR200.name
+    let project = projects.find(item => item.name === referenceName && item.industry === 'فولاد و صنایع معدنی')
+    if (!project) {
+      project = await createProject({
+        name: referenceName,
+        industry: 'فولاد و صنایع معدنی',
+        steelStage: 'نورد گرم / ورق',
+        capacity: '۲۰۰٬۰۰۰ تن در سال',
+        location: 'کاشان، ایران'
+      })
+      await localStore.set('pishran:rolling:' + project.id + ':v2', COMFAR_BASELINE_HRCR200)
+      setProjects(current => [project!, ...current])
+    } else {
+      const savedModel = await localStore.get<unknown>('pishran:rolling:' + project.id + ':v2')
+      if (!savedModel) await localStore.set('pishran:rolling:' + project.id + ':v2', COMFAR_BASELINE_HRCR200)
+    }
+    setActiveProject(project)
+    setPage('hot-rolling')
+    await refreshStorage()
+  }
+
   async function handleDeleteProject(id: string) {
     await deleteProject(id)
     setProjects(await listProjects())
@@ -126,7 +149,7 @@ export default function App() {
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); const stage=project.steelStage||''; if(stage.includes('مجتمع احیاء')) setPage('split-integrated'); else if(stage.includes('احیای مستقیم')) {setActivePlantType('dri');setPage('process-plant')} else if(stage.includes('فولادسازی و ریخته‌گری')) {setActivePlantType('steelmaking');setPage('process-plant')} else if(stage.includes('نورد گرم')) setPage('hot-rolling'); else setPage('project-wizard') }}/>}
+    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onCreateReferenceProject={handleCreateHotRollingReference} onOpenProject={project => { setActiveProject(project); const stage=project.steelStage||''; if(stage.includes('مجتمع احیاء')) setPage('split-integrated'); else if(stage.includes('احیای مستقیم')) {setActivePlantType('dri');setPage('process-plant')} else if(stage.includes('فولادسازی و ریخته‌گری')) {setActivePlantType('steelmaking');setPage('process-plant')} else if(stage.includes('نورد گرم')) setPage('hot-rolling'); else setPage('project-wizard') }}/>}
     {page === 'guide' && <Guide/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}

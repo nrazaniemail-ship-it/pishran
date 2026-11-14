@@ -207,7 +207,7 @@ export function reconcileCashFlowSeries(modelFlows: number[], referenceFlows: nu
       model,
       reference,
       difference,
-      differencePercent: difference !== null && reference !== 0 ? difference / Math.abs(reference) * 100 : null,
+      differencePercent: difference !== null && reference !== null && reference !== 0 ? difference / Math.abs(reference) * 100 : null,
       withinTolerance: difference !== null && Math.abs(difference) <= allowedDifference
     }
   })
@@ -580,4 +580,57 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     npvProject, irrProject, npvEquity, irrEquity, mirrProject, mirrEquity, simplePayback, discountedPayback,
     peakWorkingCapital, totalDebtDrawdown, totalEquityContribution, totalFunding, totalInvestment, fundingGap, warnings,
   }
+}
+
+
+export type StraightLineAssetInput = {
+  id: string
+  label: string
+  basis: number
+  depreciationRate: number
+  salvageRate: number
+}
+
+export type StraightLineAssetSchedule = {
+  annualDepreciation: number[]
+  assetRows: Array<{ id: string; label: string; annualDepreciation: number[]; terminalSalvage: number }>
+  terminalSalvage: number
+}
+
+/** Build an asset-by-asset straight-line schedule using source-sheet depreciation and salvage rates.
+ * Rates are decimals (e.g. 0.07); salvage is a share of original basis.
+ */
+export function calculateStraightLineAssetSchedule(assets: StraightLineAssetInput[], periods: number): StraightLineAssetSchedule {
+  const count = Math.max(0, Math.floor(periods))
+  const annualDepreciation = Array.from({ length: count }, () => 0)
+  let terminalSalvage = 0
+  const assetRows = assets.map(asset => {
+    const valid = Number.isFinite(asset.basis) && asset.basis >= 0
+      && Number.isFinite(asset.depreciationRate) && asset.depreciationRate >= 0 && asset.depreciationRate <= 1
+      && Number.isFinite(asset.salvageRate) && asset.salvageRate >= 0 && asset.salvageRate <= 1
+    if (!valid) return { id: asset.id, label: asset.label, annualDepreciation: Array.from({ length: count }, () => 0), terminalSalvage: 0 }
+    const residual = asset.basis * asset.salvageRate
+    const depreciableBasis = Math.max(0, asset.basis - residual)
+    const annualCharge = asset.depreciationRate > 0 ? depreciableBasis * asset.depreciationRate : 0
+    const life = asset.depreciationRate > 0 ? 1 / asset.depreciationRate : 0
+    let remaining = depreciableBasis
+    const schedule = Array.from({ length: count }, (_, index) => {
+      if (remaining <= 1e-8 || life <= index) return 0
+      const fraction = Math.min(1, life - index)
+      const charge = Math.min(remaining, annualCharge * fraction)
+      remaining -= charge
+      return charge
+    })
+    schedule.forEach((value, index) => { annualDepreciation[index] += value })
+    const bookValueAtEnd = residual + remaining
+    terminalSalvage += bookValueAtEnd
+    return { id: asset.id, label: asset.label, annualDepreciation: schedule, terminalSalvage: bookValueAtEnd }
+  })
+  return { annualDepreciation, assetRows, terminalSalvage }
+}
+
+/** NPV with an explicit exponent offset relative to the valuation date. */
+export function calculateNpvAtPeriodOffset(flows: number[], rate: number, firstPeriodOffset: number): number {
+  if (!Number.isFinite(rate) || rate <= -1 || !Number.isFinite(firstPeriodOffset) || !flows.every(Number.isFinite)) return Number.NaN
+  return flows.reduce((sum, flow, index) => sum + flow / Math.pow(1 + rate, firstPeriodOffset + index), 0)
 }
