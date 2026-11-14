@@ -188,8 +188,8 @@ const migrateStoredData=(stored:Record<string,Row[]>,sheets:Sheet[],plantType:Pl
  for(const sheet of sheets){
   const old=stored[sheet.id]
   if(!old)continue
-  const template=makeRows(sheet,plantType),oldByLabel=new Map(old.map(row=>[row.label,row])),templateLabels=new Set(template.map(row=>row.label))
-  const merged=template.map(row=>{const previous=oldByLabel.get(row.label);if(!previous)return row;const values={...row.values,...previous.values};if(sheet.id==='inflow'||sheet.id==='loans')for(let i=1;i<=9;i++)values['p'+i]=previous.values['y'+i]??previous.values['p'+i]??0;return{...row,id:previous.id,values}})
+  const template=makeRows(sheet,plantType),templateLabels=new Set(template.map(row=>row.label))
+  const merged=template.map(row=>{const previous=old.find(x=>x.label===row.label);if(!previous)return row;const values={...row.values,...previous.values};if(sheet.id==='inflow'||sheet.id==='loans')for(let i=1;i<=9;i++)values['p'+i]=previous.values['y'+i]??previous.values['p'+i]??0;return{...row,id:previous.id,values}})
   const extras=old.filter(row=>!templateLabels.has(row.label)&&!(sheet.id==='machines'&&row.label.startsWith('سازه')))
   next[sheet.id]=[...merged,...extras]
  }
