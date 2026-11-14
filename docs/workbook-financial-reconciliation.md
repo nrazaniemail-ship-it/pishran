@@ -131,12 +131,12 @@ The HRCR200 workbook's `IRR-NPV` sheet reports project NPV 18,509,558.82 million
 ### Independent Pishran calculation and like-rate comparison
 
 The independent Pishran project model was regenerated from the detailed source inputs: CAPEX fixed investment 18,463,008.7206, pre-operation 239,826.6380, OPEX rows, 5% operating tax from the sales sheet, 70/80/90/100% ramp-up, 360-day working-capital schedule, 26% finance rate, 30% reinvestment rate, and terminal salvage 13,954,745.4547 (all monetary amounts million IRR). Its 17-period unlevered project cash-flow vector produces:
-- NPV at 21%: 41,566,364.39 million IRR
-- NPV at 25%: 30,684,422.55 million IRR
-- IRR: 54.0118%
-- MIRR: 36.5245%
+- NPV at 21%: 42,389,832.79 million IRR
+- NPV at 25%: 31,361,823.28 million IRR
+- IRR: 54.5702%
+- MIRR: 36.6451%
 
-At the same 25% discount rate, the independent Pishran NPV is 715,341.72 million IRR (about 2.28%) below the «مشخصات کلی طرح» NPV of 31,399,764.27. The IRR and MIRR still differ materially (5.70 and 8.49 percentage points respectively). The 21% NPV of 18,509,558.82 and IRR/MIRR of 43.3782%/33.8651% from IRR-NPV are preserved as reported values only, not accepted as a verified project-CF benchmark.
+At the same 25% discount rate, the independent Pishran NPV is 37,940.99 million IRR (about 0.12%) below the «مشخصات کلی طرح» NPV of 31,399,764.27. The IRR and MIRR still differ materially (6.26 and 8.62 percentage points respectively). The 21% NPV of 18,509,558.82 and IRR/MIRR of 43.3782%/33.8651% from IRR-NPV are preserved as reported values only, not accepted as a verified project-CF benchmark.
 
 A formula-level check shows IRR-NPV!C23 calculates NPV(C14,D9:S9)+C9, while row 9 is row 7 minus row 8 and rows 7 and 8 are each labelled discounted cash flows. The same row 9 is fed to IRR(C9:S9) and MIRR(C9:S9,...). This means the reported NPV discounts the net row again and the IRR/MIRR use a net-discounted row rather than a validated raw project cash-flow vector. Separately, IRR-NPV!C22 links to قیمت فروش!B11 (16,587,131.78), not the CAPEX workbook's fixed investment (18,463,008.72). Therefore, changing Pishran cash flows merely to force the 43.3782% IRR or 18,509,558.82 NPV would encode the source-sheet inconsistency rather than correct it.
 
