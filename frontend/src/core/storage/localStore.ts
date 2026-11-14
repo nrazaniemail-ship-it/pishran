@@ -123,13 +123,41 @@ export const localStore = {
 
   async importAll(backup: { schema?: number; records?: StoreRecord[] }): Promise<number> {
     if (!backup || !Array.isArray(backup.records)) throw new Error('ساختار فایل پشتیبان معتبر نیست')
-    let count = 0
-    for (const record of backup.records) {
-      if (typeof record?.key !== 'string' || !record.key.startsWith('')) continue
-      await this.set(record.key, record.value)
-      count += 1
+    return this.replaceAll(backup.records)
+  },
+
+  async replaceAll(records: StoreRecord[]): Promise<number> {
+    if (!Array.isArray(records) || !records.length) throw new Error('فایل پشتیبان خالی یا نامعتبر است')
+    const seen = new Set<string>()
+    for (const record of records) {
+      if (!record || typeof record.key !== 'string' || !record.key.trim() || record.key.length > 240 || seen.has(record.key)) {
+        throw new Error('ساختار رکوردهای فایل پشتیبان معتبر نیست')
+      }
+      seen.add(record.key)
     }
-    return count
+    const db = await openDatabase()
+    if (db) {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite')
+        const store = tx.objectStore(STORE_NAME)
+        store.clear()
+        for (const record of records) store.put({ key: record.key, value: record.value })
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error ?? new Error('بازیابی اطلاعات متوقف شد'))
+      })
+    }
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+        const key = localStorage.key(i)
+        if (key?.startsWith(PREFIX)) localStorage.removeItem(key)
+      }
+      for (const record of records) writeFallback(record.key, record.value)
+    } catch (error) {
+      if (!db) throw new Error('ذخیره‌سازی محلی در دسترس نیست')
+      // IndexedDB is authoritative when available; fallback mirroring may be unavailable.
+    }
+    return records.length
   },
 
   async info(): Promise<{ backend: 'IndexedDB' | 'localStorage'; items: number }> {
