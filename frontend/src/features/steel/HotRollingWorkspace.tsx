@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {FieldGuide} from '../guide/FieldGuide'
+import {FieldFeedback,ValidationPanel,type ValidationIssue} from './ValidationPanel'
 import { Activity, ArrowDownToLine, CheckCircle2, ClipboardList, Factory, Gauge, Layers3, Save, Settings2, ShieldAlert, Zap } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 
@@ -28,18 +29,33 @@ const opex=[['مواد اولیه','40,844,287','92.31'],['آب، برق و گا
 const market=[['ورق گرم','7,009','6,119','5,162'],['اسیدشویی','307','295','229'],['ورق سرد','2,402','2,154','1,952'],['گالوانیزه','1,916','1,485','1,249'],['رنگی','325','260','249'],['قلع‌اندود','328','290','248'],['سایر','389','220','287']]
 const returns=[['دوره بازگشت عادی','3.86','سال'],['دوره بازگشت دینامیک','5.02','سال'],['NPV با نرخ تنزیل ۲۵٪','31,399,764','میلیون ریال'],['IRR','48.31','درصد'],['MIRR','28.03','درصد'],['نقطه سربه‌سر تولید','12.15','درصد ظرفیت']]
 const fmt=(v:number,d=0)=>v.toLocaleString('fa-IR',{maximumFractionDigits:d,minimumFractionDigits:d})
-function NumField({label,value,unit,onChange,step=1}:{label:string;value:number;unit:string;onChange:(v:number)=>void;step?:number}){return <label className="hr-field"><span className="fw-field-label">{label}<FieldGuide field={label}/></span><div className="hr-input-wrap"><input type="number" min="0" step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/><small>{unit}</small></div></label>}
+function NumField({label,value,unit,onChange,step=1}:{label:string;value:number;unit:string;onChange:(v:number)=>void;step?:number}){return <label className="hr-field"><span className="fw-field-label">{label}<FieldGuide field={label}/></span><div className="hr-input-wrap"><input type="number" min="0" step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/><small>{unit}</small></div><FieldFeedback label={label} value={value}/></label>}
 function TxtField({label,value,onChange}:{label:string;value:string;onChange:(v:string)=>void}){return <label className="hr-field"><span className="fw-field-label">{label}<FieldGuide field={label}/></span><input value={value} onChange={e=>onChange(e.target.value)}/></label>}
 export default function HotRollingWorkspace(){
  const [data,setData]=useState<Data>(DEFAULT),[tab,setTab]=useState<Tab>('overview'),[loaded,setLoaded]=useState(false),[savedAt,setSavedAt]=useState('')
  useEffect(()=>{let alive=true;localStore.get<Data>(KEY).then(v=>{if(!alive)return;if(v)setData({...DEFAULT,...v});setLoaded(true)}).catch(()=>setLoaded(true));return()=>{alive=false}},[])
  useEffect(()=>{if(loaded)localStore.set(KEY,data).then(()=>setSavedAt(new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})))},[data,loaded])
  const calc=useMemo(()=>{const out=Math.max(0,data.annualOutput),slab=out*Math.max(0,data.slabFactor);return{slab,loss:Math.max(0,slab-out),yield:slab?out/slab*100:0,hourly:data.operatingHours?out/data.operatingHours:0,electricity:out*data.electricity,gas:out*data.naturalGas,water:out*data.industrialWater,air:out*data.compressedAir}},[data])
- const change=<K extends keyof Data>(key:K,value:Data[K])=>setData(cur=>({...cur,[key]:value}))
+ const smartIssues:ValidationIssue[]=useMemo(()=>{
+ const out:ValidationIssue[]=[]
+ const add=(id:string,severity:ValidationIssue['severity'],title:string,detail:string,field?:string)=>out.push({id,severity,title,detail,field})
+ if(data.annualOutput<=0)add('output','error','ظرفیت تولید باید مثبت باشد','ظرفیت سالانه محصول نهایی را به تن/سال وارد کنید.','ظرفیت تولید')
+ if(data.operatingHours<=0||data.operatingHours>8760)add('hours','error','ساعات کار سالانه نامعتبر است','ساعات خالص سالانه باید بیشتر از صفر و حداکثر ۸٬۷۶۰ ساعت باشد.','ساعات کار')
+ if(data.slabFactor<1)add('slab-factor','error','ضریب مصرف اسلب کمتر از یک است','برای تولید ورق، مصرف اسلب به ازای هر تن محصول نباید کمتر از یک تن باشد؛ افت و ضایعات را بررسی کنید.','ضریب مصرف اسلب')
+ if(data.slabFactor>1.25)add('slab-factor-high','warning','ضریب مصرف اسلب بالاست','ضریب '+fmt(data.slabFactor,3)+' تن اسلب بر تن محصول از محدوده معمول غربالگری بالاتر است؛ پرت، ته‌مانده و ضایعات را بررسی کنید.','ضریب مصرف اسلب')
+ const pairs:[string,number,number][]=[['ضخامت محصول',data.productThicknessMin,data.productThicknessMax],['عرض محصول',data.productWidthMin,data.productWidthMax],['وزن کلاف',data.coilWeightMin,data.coilWeightMax],['ضخامت اسلب',data.slabThicknessMin,data.slabThicknessMax],['عرض اسلب',data.slabWidthMin,data.slabWidthMax],['طول اسلب',data.slabLengthMin,data.slabLengthMax],['تعداد پاس نورد',data.rollingPassesMin,data.rollingPassesMax]]
+ pairs.forEach(([name,min,max])=>{if(min<0||max<0||max<min)add('range-'+name,'error','بازه '+name+' نامعتبر است','حداقل و حداکثر را بررسی کنید؛ مقدار حداکثر باید بزرگ‌تر یا مساوی حداقل باشد.',name)})
+ if(data.workShifts<1||data.workShifts>4)add('shifts','error','تعداد شیفت نامعتبر است','تعداد شیفت باید بین ۱ تا ۴ باشد.','تعداد شیفت')
+ ;[['برق',data.electricity],['گاز طبیعی',data.naturalGas],['آب صنعتی',data.industrialWater],['هوای فشرده',data.compressedAir]].forEach(([name,value])=>{if(Number(value)<0)add('utility-'+name,'error','مصرف ویژه منفی است','مصرف '+name+' باید نامنفی باشد.',String(name))})
+ if(data.annualOutput>0&&data.operatingHours>0&&data.annualOutput/data.operatingHours>250)add('hourly-output','warning','نرخ تولید ساعتی بالا است','تولید ساعتی محاسباتی '+fmt(data.annualOutput/data.operatingHours,1)+' تن/ساعت است؛ با ظرفیت قفسه‌ها و گلوگاه خط تطبیق دهید.','ظرفیت و ساعات کار')
+ if(calc.yield<75||calc.yield>100)add('yield-range','warning','بازده کل خط خارج از محدوده غربالگری است','بازده محاسباتی '+fmt(calc.yield,1)+'٪ است؛ ضریب مصرف اسلب و ضایعات را دوباره بررسی کنید.','بازده مواد')
+ return out
+},[data,calc])
+const change=<K extends keyof Data>(key:K,value:Data[K])=>setData(cur=>({...cur,[key]:value}))
  const tabs:{id:Tab;title:string;icon:typeof Factory}[]=[{id:'overview',title:'نمای کلی',icon:Gauge},{id:'market',title:'بازار',icon:Activity},{id:'product',title:'محصول و ظرفیت',icon:Layers3},{id:'materials',title:'مواد و انرژی',icon:Zap},{id:'process',title:'فرآیند و تجهیزات',icon:Settings2},{id:'investment',title:'سرمایه و هزینه',icon:Factory},{id:'economics',title:'شاخص‌های مالی',icon:Activity}]
  return <section className="hotrolling-page">
   <div className="hr-page-head"><div><span className="eyebrow">STEEL INDUSTRY / HOT ROLLING</span><h1>امکان‌سنجی نورد گرم ورق</h1><p>نمونه عملی مبتنی بر گزارش فنی–اقتصادی خط نورد گرم کلاف ۲۰۰ هزار تن در سال</p></div><div className="hr-save-state"><span className="status-dot"/><div><b>{loaded?'ذخیره محلی فعال':'در حال بارگذاری'}</b><small>{savedAt?'آخرین ذخیره '+savedAt:'اطلاعات روی همین دستگاه نگهداری می‌شود'}</small></div></div></div>
-  <div className="hr-source-banner"><ClipboardList size={20}/><div><b>مبنای نمونه: گزارش ارزیابی فنی–اقتصادی نورد گرم کلاف فولادی</b><small>تاریخ گزارش: ۱۴۰۲/۰۸/۰۱ · ظرفیت گزارش: ۲۰۰٬۰۰۰ تن در سال · محل مطالعه: کاشان</small></div><span className="hr-source-tag">داده مستند</span></div>
+  <div className="hr-source-banner"><ClipboardList size={20}/><div><b>مبنای نمونه: گزارش ارزیابی فنی–اقتصادی نورد گرم کلاف فولادی</b><small>تاریخ گزارش: ۱۴۰۲/۰۸/۰۱ · ظرفیت گزارش: ۲۰۰٬۰۰۰ تن در سال · محل مطالعه: کاشان</small></div><span className="hr-source-tag">داده مستند</span></div><ValidationPanel issues={smartIssues} title="کنترل هوشمند نمونه نورد گرم"/>
   <div className="hr-tabs" role="tablist">{tabs.map(t=>{const I=t.icon;return <button key={t.id} className={tab===t.id?'active':''} onClick={()=>setTab(t.id)} role="tab" aria-selected={tab===t.id}><I size={16}/>{t.title}</button>})}</div>
   {tab==='overview'&&<>
    <div className="hr-intro-grid"><article className="hr-project-panel"><span className="eyebrow">PROJECT PROFILE</span><h2>{data.projectName}</h2><p>{data.location}</p><div className="hr-route-chip"><Factory size={16}/>{data.processRoute}</div><div className="hr-edit-hint">برای تغییر مفروضات از زبانه‌های بالای صفحه استفاده کنید. تغییرات به‌صورت خودکار ذخیره می‌شوند.</div></article><article className="hr-progress-panel"><span className="eyebrow">DESIGN BASIS</span><div className="hr-big-number">{fmt(data.annualOutput)} <small>تن در سال</small></div><div className="hr-progress-track"><i style={{width:Math.min(100,calc.yield)+'%'}}/></div><div className="hr-progress-meta"><span>بازده وزنی محاسباتی</span><b>{fmt(calc.yield,2)}٪</b></div><small className="hr-muted">مصرف اسلب {fmt(data.slabFactor,3)} تن به ازای هر تن محصول</small></article></div>
