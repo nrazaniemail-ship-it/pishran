@@ -587,7 +587,7 @@ const assetSchedule = engine.calculateAssetDepreciationSchedule([
 ], 5)
 near(assetSchedule[0].depreciation, 0, 1e-9, 'Asset depreciation before in-service year')
 near(assetSchedule[1].depreciation, 300, 1e-9, 'Asset-by-asset straight-line depreciation')
-near(assetSchedule[3].depreciation, 0, 1e-9, 'Depreciation ends after useful life')
+near(assetSchedule[4].depreciation, 0, 1e-9, 'Depreciation ends after useful life')
 near(assetSchedule[3].closingBookValue, 600, 1e-9, 'Asset book value at residual value')
 const statements = engine.buildThreeFinancialStatements(integrated.years)
 assert.equal(statements.length, integrated.years.length, 'Three statements must cover the full model horizon')
