@@ -7,18 +7,19 @@ type Column={key:string;label:string;unit?:string;numeric?:boolean}
 type TableDef={id:string;title:string;columns:Column[];rows:Record<string,Cell>[];note?:string}
 type Section='market'|'capex'|'energy'|'opex'
 const c=(key:string,label:string,unit='',numeric=false):Column=>({key,label,unit,numeric})
+const cellUnit=(col:Column,row:Record<string,Cell>)=>{const specific=row.specificUnit;if(col.key==='specific'&&typeof specific==='string'&&specific)return specific;const unit=row.unit;if(col.key==='specific'&&typeof unit==='string'&&unit)return unit.includes('/تن')||unit.includes('بر تن')?unit:unit+'/تن محصول';if(col.key==='annual'&&typeof unit==='string'&&unit)return unit+'/سال';if(col.key==='value'&&typeof unit==='string'&&unit)return unit;return col.unit||''}
 const row=(...values:Cell[])=>values
 const definitions:Record<Section,{title:string;intro:string;tables:TableDef[]}> = {
  market:{title:'جداول بازار و محصول ورق گرم',intro:'ساختار جداول بازار مطابق فایل Marketing-HRCR200؛ ارقام تاریخی مرجع هستند و باید با سال مبنای مطالعه و منابع جدید به‌روزرسانی شوند.',tables:[
- {id:'slab',title:'تولید و توسعه اسلب',columns:[c('category','گروه'),c('company','نام شرکت'),c('installed','ظرفیت نصب‌شده','هزار تن',true),c('production','میزان تولید برای عرضه ۹۹','هزار تن',true),c('marketable','ظرفیت قابل عرضه به بازار','هزار تن',true),c('domestic','میزان عرضه به بازار داخل ۹۹','هزار تن',true),c('thickness','ضخامت','میلی‌متر'),c('width','عرض','میلی‌متر')],rows:[
+ {id:'slab',title:'تولید و توسعه اسلب',columns:[c('category','گروه'),c('company','نام شرکت'),c('installed','ظرفیت نصب‌شده','هزار تن',true),c('production','میزان تولید برای عرضه ۹۹','هزار تن',true),c('marketable','ظرفیت قابل عرضه به بازار','هزار تن',true),c('domestic','میزان عرضه به بازار داخل ۹۹','هزار تن',true),c('utilization','درصد بهره‌برداری','٪',true),c('thickness','ضخامت','میلی‌متر'),c('width','عرض','میلی‌متر')],rows:[
 {category:'تولیدکنندگان فعلی',company:'گروه فولاد مبارکه - فولاد مبارکه اصفهان',installed:7200,production:1368,marketable:1800,domestic:840,thickness:'200–300',width:'600–2000'},
 {category:'تولیدکنندگان فعلی',company:'گروه فولاد مبارکه - سبا',installed:1500,production:0,marketable:0,domestic:0,thickness:'52–70',width:'850–1560'},
 {category:'تولیدکنندگان فعلی',company:'فولاد خوزستان',installed:1400,production:1389,marketable:1400,domestic:925,thickness:'195–245',width:'1000–1250'},
 {category:'تولیدکنندگان فعلی',company:'گروه فولاد مبارکه - فولاد هرمزگان',installed:1500,production:1451,marketable:1500,domestic:840,thickness:'195–245',width:'1000–2000'},
 {category:'تولیدکنندگان فعلی',company:'نورد و تولید قطعات فولادی ایران',installed:80,production:0,marketable:0,domestic:0,thickness:'0',width:'0'},
 {category:'تولیدکنندگان فعلی',company:'فولاد جهان آرا اروند',installed:1200,production:0,marketable:1200,domestic:0,thickness:'200–300',width:'1200–2200'},
-{category:'جمع کل تولیدکنندگان فعلی',company:'جمع کل (هزار تن)',installed:12880,production:4208,marketable:5900,domestic:2605,thickness:'',width:''},
-{category:'شاخص بهره‌برداری',company:'ظرفیت بهره‌برداری‌شده سال ۹۹',installed:71.322,production:'',marketable:'',domestic:'',thickness:'درصد',width:''},
+{category:'جمع کل تولیدکنندگان فعلی',company:'جمع کل (هزار تن)',installed:12880,production:4208,marketable:5900,domestic:2605,utilization:'',thickness:'',width:''},
+{category:'شاخص بهره‌برداری',company:'ظرفیت بهره‌برداری‌شده سال ۹۹',installed:'',production:'',marketable:'',domestic:'',utilization:71.322,thickness:'',width:''},
 {category:'توسعه‌های آتی محتمل',company:'گروه فولاد مبارکه - فولاد هرمزگان',installed:500,production:'',marketable:'',domestic:'',thickness:'',width:''},
 {category:'توسعه‌های آتی محتمل',company:'گروه گل‌گهر - توسعه آهن و فولاد گل‌گهر',installed:3000,production:'',marketable:'',domestic:'',thickness:'',width:''},
 {category:'توسعه‌های آتی محتمل',company:'فولاد خوزستان',installed:1600,production:'',marketable:'',domestic:'',thickness:'',width:''},
@@ -39,8 +40,8 @@ const definitions:Record<Section,{title:string;intro:string;tables:TableDef[]}> 
 {category:'تولیدکنندگان فعلی',company:'فولاد اصفهان',installed:200,production:48,marketable:200,domestic:48,thickness:'0',width:'0'},
 {category:'تولیدکنندگان فعلی',company:'فولاد خرم‌آباد',installed:350,production:60,marketable:350,domestic:60,thickness:'0',width:'0'},
 {category:'تولیدکنندگان فعلی',company:'ذوب‌آهن بوئین‌زهرا',installed:50,production:0,marketable:50,domestic:0,thickness:'0',width:'0'},
-{category:'جمع کل تولیدکنندگان فعلی',company:'جمع کل (هزار تن)',installed:12130,production:6982,marketable:9630,domestic:6228,thickness:'',width:''},
-{category:'شاخص بهره‌برداری',company:'ظرفیت بهره‌برداری‌شده سال ۹۹',installed:72.502596,production:'',marketable:'',domestic:'',thickness:'درصد',width:''},
+{category:'جمع کل تولیدکنندگان فعلی',company:'جمع کل (هزار تن)',installed:12130,production:6982,marketable:9630,domestic:6228,utilization:'',thickness:'',width:''},
+{category:'شاخص بهره‌برداری',company:'ظرفیت بهره‌برداری‌شده سال ۹۹',installed:'',production:'',marketable:'',domestic:'',utilization:72.502596,thickness:'',width:''},
 {category:'توسعه‌های آتی محتمل',company:'گروه فولاد مبارکه - فولاد مبارکه اصفهان',installed:4200,production:'',marketable:'',domestic:'',thickness:'',width:''},
 {category:'توسعه‌های آتی محتمل',company:'گروه گل‌گهر - توسعه آهن و فولاد گل‌گهر',installed:3000,production:'',marketable:'',domestic:'',thickness:'',width:''},
 {category:'توسعه‌های آتی محتمل',company:'فولاد تربت حیدریه',installed:1400,production:'',marketable:'',domestic:'',thickness:'',width:''},
@@ -114,7 +115,7 @@ export function HotRollingReferenceForms({section,projectId}:{section:Section;pr
   <header className="hr-ref-head"><div><span className="eyebrow">REFERENCE-BASED FORMS</span><h3>{def.title}</h3><p>{def.intro}</p></div><span className="hr-ref-save"><Save size={13}/>{ready?'ذخیره خودکار محلی':'در حال بارگذاری'}</span></header>
   <nav className="hr-ref-tabs">{data.map(t=><button key={t.id} className={active===t.id?'active':''} onClick={()=>setActive(t.id)}>{t.title}</button>)}</nav>
   {table&&<div className="hr-ref-table-card"><div className="hr-ref-table-title"><div><h4>{table.title}</h4><small>ستون‌های عددی همراه با واحد اندازه‌گیری مشخص شده‌اند؛ واحد هر ردیف نیز در ستون مستقل قابل ثبت است.</small></div><button className="secondary-button" onClick={()=>addRow(table.id)}><Plus size={14}/> افزودن ردیف</button></div>
-   <div className="hr-ref-scroll"><table className="hr-ref-table"><thead><tr>{table.columns.map(col=><th key={col.key}>{col.label}{col.unit&&<small>{col.unit}</small>}</th>)}<th>عملیات</th></tr></thead><tbody>{table.rows.map((r,i)=><tr key={i}>{table.columns.map(col=><td key={col.key}><div className="hr-ref-input-wrap"><input aria-label={col.label+(col.unit?'، '+col.unit:'')} type={col.numeric?'number':'text'} step={col.numeric?'any':undefined} value={r[col.key]??''} onChange={e=>updateCell(table.id,i,col.key,col.numeric?(e.target.value===''?'':Number(e.target.value)):e.target.value)}/>{col.numeric&&<small className="hr-ref-cell-unit">{col.unit}</small>}</div></td>)}<td><button className="hr-ref-delete" title="حذف ردیف" onClick={()=>removeRow(table.id,i)}><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>
+   <div className="hr-ref-scroll"><table className="hr-ref-table"><thead><tr>{table.columns.map(col=><th key={col.key}>{col.label}{col.unit&&<small>{col.unit}</small>}</th>)}<th>عملیات</th></tr></thead><tbody>{table.rows.map((r,i)=><tr key={i}>{table.columns.map(col=><td key={col.key}><div className="hr-ref-input-wrap"><input aria-label={col.label+(col.unit?'، '+col.unit:'')} type={col.numeric?'number':'text'} step={col.numeric?'any':undefined} value={r[col.key]??''} onChange={e=>updateCell(table.id,i,col.key,col.numeric?(e.target.value===''?'':Number(e.target.value)):e.target.value)}/>{col.numeric&&<small className="hr-ref-cell-unit">{cellUnit(col,r)}</small>}</div></td>)}<td><button className="hr-ref-delete" title="حذف ردیف" onClick={()=>removeRow(table.id,i)}><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>
    {table.note&&<p className="hr-ref-note">{table.note}</p>}
    <div className="hr-ref-foot"><span>{table.rows.length.toLocaleString('fa-IR')} ردیف · ذخیره محلی پروژه</span><span>مقادیر نمونه از فایل مرجع قابل ویرایش‌اند</span></div>
   </div>}
