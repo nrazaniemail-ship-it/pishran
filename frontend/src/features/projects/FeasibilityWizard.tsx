@@ -38,9 +38,9 @@ const steps = [
 type Step = typeof steps[number][0]
 const makeRow=(name:string,unit='تن',quantity=0,unitPrice=0,source='فرض کاربر'):Row=>({id:crypto.randomUUID?.()??String(Date.now()+Math.random()),name,quantity,unit,unitPrice,source})
 function baseModel(project:FeasibilityProject):Model {
- const rawProject=project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
+ const rawProject=project.templateId==='raw'||project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
  const coldRollingProject=!rawProject&&project.steelStage?.includes('نورد سرد')
- const selectedStage=rawProject?stageOptions[9]:(stageOptions.find(s=>project.steelStage?.includes(s.name))??stageOptions[5])
+ const selectedStage=rawProject?stageOptions[10]:(stageOptions.find(s=>project.steelStage?.includes(s.name))??stageOptions[5])
  return {
   project:{name:project.name,location:project.location,owner:coldRollingProject?'نورد و لوله گالوانیزه فجر کویر کاشان':'',startYear:1403,constructionYears:coldRollingProject?1.5:2,operatingYears:coldRollingProject?15:10,currency:coldRollingProject?'میلیون ریال':'میلیون ریال',fxRate:1},
   stage:selectedStage.id,
