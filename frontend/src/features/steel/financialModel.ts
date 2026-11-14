@@ -548,7 +548,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
-      equityContribution, fixedInvestment, preOperatingCost, workingCapital, workingCapitalBreakdown, salvageProceeds, terminalValue, changeInWorkingCapital,
+      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
     })
   }
