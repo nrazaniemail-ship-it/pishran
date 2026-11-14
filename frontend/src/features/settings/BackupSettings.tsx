@@ -16,23 +16,6 @@ export default function BackupSettings({onRestored}:{onRestored:()=>Promise<void
 
  async function refresh(){const [p,f,u]=await Promise.all([getBackupPreferences(),backupFolderStatus(),canUndoRestore()]);setPrefs(p);setFolder(f);setUndoAvailable(u)}
  useEffect(()=>{void refresh()},[])
- useEffect(()=>{
-  if(!prefs?.enabled)return
-  let active=true
-  const check=async()=>{
-   if(!active)return
-   const current=await getBackupPreferences()
-   if(!current.enabled)return
-   const status=await backupFolderStatus()
-   if(!status.hasFolder)return
-   const due=!current.lastAt||Date.now()-new Date(current.lastAt).getTime()>=backupIntervalMs(current.interval)
-   if(!due)return
-   try{const result=await saveBackupFile('automatic');await updateBackupMeta('automatic',result.size);if(active){await refresh();setMessage('آخرین پشتیبان خودکار با موفقیت ایجاد شد.');setError('')}}catch(e){if(active)setError(e instanceof Error?e.message:'پشتیبان‌گیری خودکار انجام نشد.')}
-  }
-  void check()
-  const timer=window.setInterval(()=>void check(),60000)
-  return()=>{active=false;window.clearInterval(timer)}
- },[prefs?.enabled,prefs?.interval,prefs?.lastAt])
 
  async function update(next:Partial<BackupPreferences>){if(!prefs)return;const p={...prefs,...next};setPrefs(p);await saveBackupPreferences(p)}
  async function pickFolder(){setBusy(true);setError('');setMessage('');try{await chooseBackupFolder();await refresh();setMessage('پوشه پشتیبان با موفقیت انتخاب شد.')}catch(e){setError(e instanceof Error?e.message:'انتخاب پوشه ناموفق بود.')}finally{setBusy(false)}}
