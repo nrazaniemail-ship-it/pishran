@@ -22,6 +22,7 @@ const model = reference.EXCEL_HOT_ROLLING_200KT
 const expected = reference.EXCEL_REFERENCE_EXPECTED
 const pishranExpected = reference.PISHRAN_REFERENCE_MODEL_OUTPUT
 const workspaceSource = await readFile(new URL('../src/features/steel/ProcessPlantWorkspace.tsx', import.meta.url), 'utf8')
+const rollingWorkspaceSource = await readFile(new URL('../src/features/steel/RollingWorkspace.tsx', import.meta.url), 'utf8')
 const output = expected.capacity
 const currency = model.currency
 
@@ -485,6 +486,6 @@ assert.deepEqual(comfarSeed.capitalizedInterestSchedule, [1186151.73, 2112481.97
 assert.equal(comfarSeed.depreciationSource, 'source-assets', 'COMFAR baseline uses asset-level depreciation')
 assert.equal(comfarSeed.terminalValueOverride, reference.COMFAR_PDF_REFERENCE.scrapValue,
   'COMFAR reported terminal scrap is a sourced scenario input')
-assert.ok(workspaceSource.includes('capitalizedInterestSpend'), 'Workspace project cash flow must include the explicit capitalized-interest schedule')
-assert.ok(workspaceSource.includes("m.depreciationSource==='source-assets'"), 'Workspace must support source asset-level depreciation')
+assert.ok(rollingWorkspaceSource.includes('capitalizedInterestSpend'), 'Workspace project cash flow must include the explicit capitalized-interest schedule')
+assert.ok(rollingWorkspaceSource.includes("m.depreciationSource==='source-assets'"), 'Workspace must support source asset-level depreciation')
 console.log('PASS: COMFAR-led HRCR200 seed keeps tax, financing, interest, depreciation and scrap assumptions explicit')
