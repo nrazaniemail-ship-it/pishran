@@ -1,4 +1,7 @@
 import { defineConfig } from 'vite'
+
+// Capacitor serves bundled assets from the app's local origin; GitHub Pages uses the repository subpath.
+const appBase = process.env.CAPACITOR_BUILD === 'true' ? './' : '/pishran/'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -6,7 +9,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   // GitHub project page: https://<user>.github.io/pishran/
   // For a custom domain, change this to '/'.
-  base: '/pishran/',
+  base: appBase,
   plugins: [
     react(),
     tailwindcss(),
