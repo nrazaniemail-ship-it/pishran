@@ -5,7 +5,7 @@ import {HotRollingReferenceForms} from './HotRollingReferenceForms'
 import {ArrowRight,ArrowLeft,ArrowUp,ArrowDown,Plus,Trash2,Save,AlertTriangle,FileText,FileSpreadsheet,FileDown,Printer} from 'lucide-react'
 import {localStore} from '../../core/storage/localStore'
 import type {FeasibilityProject} from '../../core/projects/projectRepository'
-import {calculateIrr,calculateMirr,calculateNpv,calculateOperatingCostRows,calculatePayrollCost,calculateWacc,calculateWorkingCapital} from './financialModel'
+import {calculateIrr,calculateMirr,calculateNpv,calculateOperatingCostRows,calculatePayrollCost,calculateProjectCashFlowPeriod,calculateWacc,calculateWorkingCapital} from './financialModel'
 import {EXCEL_HOT_ROLLING_200KT} from './hotRollingExcelBenchmark'
 type SourceType='گزارش/مستند'|'برآورد مهندسی'|'فرض کاربر'|'استعلام سازنده'|'داده واقعی'
 type Row={id:string;name:string;quantity:number;unit:string;unitPrice:number;currency:string;period:string;source:string;sourceType:SourceType;sourceDate:string;confidence:number;costGroup?:string;origin?:'داخلی'|'خارجی'|'مشترک';foreignCurrency?:string;fxRate?:number;fxDate?:string;freight?:number;customs?:number;installation?:number}
@@ -135,16 +135,15 @@ const financial=useMemo(()=>{
    loanRows.push({year:i+1,loan:loan.name,opening,draw:drawThis,accruedInterest,interest:int,principal,fee,closing:loan.balance})
    draw+=drawThis;interest+=int;principalPaid+=principal;fees+=fee
   }
-  const taxableProject=ebit-projectLoss
-  const projectTaxBase=Math.max(0,taxableProject)
-  projectLoss=taxableProject<0?-taxableProject:Math.max(0,projectLoss-ebit)
-  const projectTax=projectTaxBase*m.tax/100
   const taxableEquity=ebit-interest-equityLoss
   const equityTaxBase=Math.max(0,taxableEquity)
   equityLoss=taxableEquity<0?-taxableEquity:Math.max(0,equityLoss-(ebit-interest))
   const equityTax=equityTaxBase*m.tax/100
   const terminal=operatingYear===m.life?(m.terminalValueOverride>0?m.terminalValueOverride:depreciable*m.salvagePct/100):0
-  const projectCF=ebitda-projectTax-capexSpend-deltaNwc+terminal
+  const projectCashFlowResult=calculateProjectCashFlowPeriod({ebitda,depreciation,capexSpend,deltaWorkingCapital:deltaNwc,terminalValue:terminal},m.tax,projectLoss)
+  projectLoss=projectCashFlowResult.lossCarryForward
+  const projectTax=projectCashFlowResult.tax
+  const projectCF=projectCashFlowResult.projectCashFlow
   const equityInjection=capexSpend-draw
   const equityCF=ebitda-interest-equityTax-equityInjection-deltaNwc+terminal-principalPaid-fees
   const cfads=ebitda-equityTax-deltaNwc
