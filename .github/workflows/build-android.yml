@@ -90,7 +90,7 @@ jobs:
           retention-days: 14
 
   build-ipa:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 50
     defaults:
       run:
