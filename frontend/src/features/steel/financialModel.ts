@@ -269,6 +269,7 @@ export type IntegratedFinanceInput = {
   equityContributions: number[]
   loans: IntegratedLoanInput[]
   taxRate: number
+  taxRateSchedule?: number[]
   waccTaxRate?: number
   costOfEquity: number
   workingCapitalPercent: number
@@ -449,12 +450,13 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const debtBalance = loanRows.reduce((sum, row) => sum + row.closingBalance, 0)
     const ebit = revenue - variableCashCost - fixedCashCost - depreciation
 
+    const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
     const taxableProfit = ebit - interest - taxLoss
-    const tax = Math.max(0, taxableProfit) * Math.max(0, Math.min(100, input.taxRate)) / 100
+    const tax = Math.max(0, taxableProfit) * effectiveTaxRate / 100
     taxLoss = taxableProfit < 0 ? -taxableProfit : 0
 
     const unleveredTaxableProfit = ebit - unleveredTaxLoss
-    const unleveredTax = Math.max(0, unleveredTaxableProfit) * Math.max(0, Math.min(100, input.taxRate)) / 100
+    const unleveredTax = Math.max(0, unleveredTaxableProfit) * effectiveTaxRate / 100
     unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : 0
 
     const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
@@ -514,6 +516,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const fixedCostCaps: [string, number, number][] = [['هزینه ثابت مواد اولیه', policy.annualFixedRawMaterialCost ?? 0, policy.annualRawMaterialCost], ['هزینه ثابت مشمول بدهی تجاری', policy.annualFixedPayablesCost ?? 0, payableBase], ['هزینه ثابت تبدیل', policy.annualFixedConversionCost ?? 0, policy.annualConversionCost], ['هزینه ثابت محصول نهایی', policy.annualFixedFinishedGoodsCost ?? 0, policy.annualFinishedGoodsCost], ['هزینه ثابت نقدی عملیاتی', policy.annualFixedCashOperatingCost ?? 0, policy.annualCashOperatingCost]]
     fixedCostCaps.forEach(([label, fixed, total]) => { if (Number.isFinite(fixed) && Number.isFinite(total) && fixed > total) warnings.push(`${label} از کل مبنای هزینه بیشتر است؛ در محاسبه به سقف کل هزینه محدود می‌شود.`) })
   }
+  if (input.taxRateSchedule?.some(rate => !Number.isFinite(rate) || rate < 0 || rate > 100)) warnings.push('نرخ مالیات عملکرد سالانه باید در تمام دوره‌ها بین صفر تا ۱۰۰ درصد باشد.')
   if (input.waccTaxRate !== undefined && (!Number.isFinite(input.waccTaxRate) || input.waccTaxRate < 0 || input.waccTaxRate > 100)) warnings.push('نرخ مالیات سپر مالیاتی WACC باید بین صفر تا ۱۰۰ درصد باشد.')
   if (input.discountMode === 'wacc' && discountRate === null) warnings.push('برای محاسبه نرخ تنزیل، ساختار سرمایه و نرخ بازده مورد انتظار سهامدار را تکمیل کنید.')
   if (input.loans.some(loan => loan.repaymentStartYear + loan.graceYears + loan.termYears - 1 > years)) warnings.push('بخشی از بازپرداخت وام‌ها خارج از افق زمانی مدل قرار می‌گیرد.')
