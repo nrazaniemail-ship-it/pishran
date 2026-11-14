@@ -81,12 +81,50 @@ near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryTotalInvestment
 assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.some(flag => flag.includes('row 9') && flag.includes('discounted cash flows')), 'HRCR200 discounted-row methodology conflict must remain explicit')
 assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.length >= 5,
   'Source conflicts must remain explicit audit flags')
+const comfarCashFlow = workbookAudit.HOT_ROLLING_COMFAR_CASHFLOW_AUDIT
+assert.equal(comfarCashFlow.periodCount, 18, 'HRCR200 raw COMFAR planning cash flow periods')
+assert.equal(comfarCashFlow.rawPlanningNetHasNegativePeriod, false,
+  'HRCR200 raw financial-planning net flow has no initial negative investment period')
+near(comfarCashFlow.rawPlanningNetC6T6.reduce((sum,value)=>sum+value,0),
+  comfarCashFlow.rawPlanningNetTotal, 0.01, 'HRCR200 raw planning net cash flow total')
+assert.equal(engine.calculateIrr(comfarCashFlow.rawPlanningNetC6T6), null,
+  'HRCR200 raw planning net flow cannot produce project IRR without negative investment cash flow')
+assert.equal(comfarCashFlow.netDiscountedC9S9.length, 17, 'HRCR200 discounted net row periods')
+near(comfarCashFlow.netDiscountedC9S9.reduce((sum,value)=>sum+value,0),
+  comfarCashFlow.netDiscountedSumC9S9, 0.01, 'HRCR200 net discounted row sum')
+near(comfarCashFlow.secondDiscountedNpvRow11Sum, 18509558.820966564, 0.01,
+  'HRCR200 NPV after second discount in source sheet')
+assert.ok(comfarCashFlow.reportedNpvFormula.includes('NPV(')
+  && comfarCashFlow.reportedNpvFormula.includes('D9:S9'),
+  'HRCR200 source NPV formula must remain visible')
+near(comfarCashFlow.equityCashFlowC51T51[0] + comfarCashFlow.equityCashFlowC51T51[1],
+  -2761971, 0.01, 'HRCR200 equity cash-flow initial outflows')
+
 console.log('PASS: source-workbook DRI and HRCR200 CAPEX/OPEX bridges and unresolved financing/depreciation flags')
 
 const model = reference.EXCEL_HOT_ROLLING_200KT
 const expected = reference.EXCEL_REFERENCE_EXPECTED
 const pishranExpected = reference.PISHRAN_REFERENCE_MODEL_OUTPUT
 const workspaceSource = await readFile(new URL('../src/features/steel/ProcessPlantWorkspace.tsx', import.meta.url), 'utf8')
+const [projectsViewSource,projectRepositorySource,rollingWorkspaceSource,wizardSource] = await Promise.all([
+  readFile(new URL('../src/features/projects/ProjectsView.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../src/core/projects/projectRepository.ts', import.meta.url), 'utf8'),
+  readFile(new URL('../src/features/steel/RollingWorkspace.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+])
+assert.ok(projectsViewSource.includes('قالب پروژه جدید را انتخاب کنید')
+  && projectsViewSource.includes('تمپلت خام')
+  && projectsViewSource.includes('تمپلیت پروژه نورد ورق گرم'),
+  'New project must ask the user to choose one of the two named templates')
+assert.ok(projectRepositorySource.includes("ProjectTemplateId = 'raw' | 'hot-rolling-200kt'")
+  && projectRepositorySource.includes('templateId?: ProjectTemplateId'),
+  'Project template identity must be persisted with each project')
+assert.ok(rollingWorkspaceSource.includes("project.templateId==='hot-rolling-200kt'")
+  && rollingWorkspaceSource.includes("!project.templateId&&project.steelStage?.includes('نورد گرم')"),
+  'Only explicit hot-rolling template or legacy hot-rolling projects may load benchmark defaults')
+assert.ok(wizardSource.includes("project.templateId==='raw'"),
+  'Raw template must initialize an empty feasibility model')
+
 const output = expected.capacity
 const currency = model.currency
 assert.equal(model.equity, 70, 'HRCR200 active model equity share must follow sponsor confirmation')
