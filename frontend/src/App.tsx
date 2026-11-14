@@ -12,7 +12,7 @@ import FeasibilityWizard from './features/projects/FeasibilityWizard'
 import ProcessPlantWorkspace from './features/steel/ProcessPlantWorkspace'
 import Guide from './features/guide/Guide'
 import BackupScheduler from './features/settings/BackupScheduler'
-import { EXCEL_HOT_ROLLING_200KT } from './features/steel/hotRollingExcelBenchmark'
+import { COMFAR_BASELINE_HRCR200 } from './features/steel/hotRollingExcelBenchmark'
 
 type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'split-integrated' | 'process-plant' | 'guide'
 
@@ -74,7 +74,7 @@ export default function App() {
   }
 
   async function handleCreateHotRollingReference() {
-    const referenceName = EXCEL_HOT_ROLLING_200KT.name
+    const referenceName = COMFAR_BASELINE_HRCR200.name
     let project = projects.find(item => item.name === referenceName && item.industry === 'فولاد و صنایع معدنی')
     if (!project) {
       project = await createProject({
@@ -84,11 +84,11 @@ export default function App() {
         capacity: '۲۰۰٬۰۰۰ تن در سال',
         location: 'کاشان، ایران'
       })
-      await localStore.set('pishran:rolling:' + project.id + ':v2', EXCEL_HOT_ROLLING_200KT)
+      await localStore.set('pishran:rolling:' + project.id + ':v2', COMFAR_BASELINE_HRCR200)
       setProjects(current => [project!, ...current])
     } else {
       const savedModel = await localStore.get<unknown>('pishran:rolling:' + project.id + ':v2')
-      if (!savedModel) await localStore.set('pishran:rolling:' + project.id + ':v2', EXCEL_HOT_ROLLING_200KT)
+      if (!savedModel) await localStore.set('pishran:rolling:' + project.id + ':v2', COMFAR_BASELINE_HRCR200)
     }
     setActiveProject(project)
     setPage('hot-rolling')
