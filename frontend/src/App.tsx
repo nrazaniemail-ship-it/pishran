@@ -8,8 +8,9 @@ import ProjectsView from './features/projects/ProjectsView'
 import SettingsView from './features/settings/SettingsView'
 import HotRollingWorkspace from './features/steel/HotRollingWorkspace'
 import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
+import PlateSampleProject from './features/steel/PlateSampleProject'
 
-type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling'
+type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'plate-sample'
 
 const modules = [
   { icon: Factory, title: 'مهندسی و طراحی فرآیند', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', status: 'در نقشه راه' },
@@ -134,10 +135,11 @@ export default function App() {
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete}/>}
+    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenSample={() => setPage('plate-sample')}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onExport={exportBackup} onImport={importBackup}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => setPage('hot-rolling')}/>}
     {page === 'hot-rolling' && <HotRollingWorkspace/>}
+    {page === 'plate-sample' && <PlateSampleProject/>}
 
     <footer>پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری <span>نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری</span></footer>
   </main>
