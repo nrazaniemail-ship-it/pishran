@@ -6,7 +6,7 @@ import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSe
 import { createProject, deleteProject, listProjects, type FeasibilityProject } from './core/projects/projectRepository'
 import ProjectsView from './features/projects/ProjectsView'
 import SettingsView from './features/settings/SettingsView'
-import HotRollingWorkspace from './features/steel/HotRollingWorkspace'
+import RollingWorkspace from './features/steel/RollingWorkspace'
 import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
 import PlateSampleProject from './features/steel/PlateSampleProject'
 import FeasibilityWizard from './features/projects/FeasibilityWizard'
@@ -141,7 +141,7 @@ export default function App() {
     {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenSample={() => setPage('plate-sample')} onOpenProject={project => { setActiveProject(project); setPage(project.steelStage?.includes('مجتمع احیاء') ? 'integrated-steel' : 'project-wizard') }}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onExport={exportBackup} onImport={importBackup}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => setPage('hot-rolling')}/>}
-    {page === 'hot-rolling' && <HotRollingWorkspace/>}
+    {page === 'hot-rolling' && <RollingWorkspace/>}
     {page === 'plate-sample' && <PlateSampleProject/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'integrated-steel' && activeProject && <IntegratedSteelWorkspace project={activeProject} onBack={() => setPage('projects')}/>}
