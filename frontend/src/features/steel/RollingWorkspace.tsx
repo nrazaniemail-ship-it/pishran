@@ -153,9 +153,10 @@ const financial=useMemo(()=>{
   rows.push({year:i+1,label:constructionYear?'ساخت '+(i+1):'بهره‌برداری '+operatingYear,output,equityInjection,revenue,operatingCost,ebitda,depreciation,ebit,projectTax,capexSpend,capitalizedInterestSpend,nwc,deltaNwc,draw,interest,principalPaid,fees,projectCF,equityCF,cfads,debtService,dscr:debtService>0?cfads/debtService:null,terminal})
  }
  const projectFlows=rows.map(x=>x.projectCF),equityFlows=rows.map(x=>x.equityCF)
- const projectNpv=npvOf(projectFlows,rate),projectMirr=calculateMirr(projectFlows,m.financeRate/100,m.reinvestmentRate/100),equityRate=m.ke/100,equityNpv=npvOf(equityFlows,equityRate)
- const investmentPv=rows.reduce((a,x,i)=>a+(x.capexSpend+x.capitalizedInterestSpend+x.deltaNwc>0?x.capexSpend+x.capitalizedInterestSpend+x.deltaNwc:0)/Math.pow(1+rate,i),0)
- const inflowPv=rows.reduce((a,x,i)=>a+(x.projectCF>0?x.projectCF:0)/Math.pow(1+rate,i),0)
+ const valuationOffset=m.notes.includes('HRCR200')?-1:0
+ const projectNpv=calculateNpvAtPeriodOffset(projectFlows,rate,valuationOffset),projectMirr=calculateMirr(projectFlows,m.financeRate/100,m.reinvestmentRate/100),equityRate=m.ke/100,equityNpv=npvOf(equityFlows,equityRate)
+ const investmentPv=rows.reduce((a,x,i)=>a+(x.capexSpend+x.capitalizedInterestSpend+x.deltaNwc>0?x.capexSpend+x.capitalizedInterestSpend+x.deltaNwc:0)/Math.pow(1+rate,i+valuationOffset),0)
+ const inflowPv=rows.reduce((a,x,i)=>a+(x.projectCF>0?x.projectCF:0)/Math.pow(1+rate,i+valuationOffset),0)
  const dscrRows=rows.filter(x=>x.dscr!==null&&Number.isFinite(x.dscr))
  const dscrs=dscrRows.map(x=>x.dscr)
  const minDscrRow=dscrRows.length?dscrRows.reduce((a,b)=>a.dscr<=b.dscr?a:b):null
@@ -186,9 +187,9 @@ const sensitivity=useMemo(()=>{
     const nwc=operatingYear>0&&operatingYear<m.life?(hasDetailedWorkingCapital?calculateWorkingCapital(effectiveWorkingCapitalItems,rampFactor,m.workingCapitalDayBasis):revenue*Math.max(0,m.nwcDays)/m.workingCapitalDayBasis):0
    const deltaNwc=nwc-previousNwc
    previousNwc=nwc
-   return ebitda-tax-row.capexSpend*capexFactor-deltaNwc+row.terminal
+   return ebitda-tax-row.capexSpend*capexFactor-row.capitalizedInterestSpend-deltaNwc+row.terminal
   })
-  return npvOf(flows,rate)
+  return calculateNpvAtPeriodOffset(flows,rate,m.notes.includes('HRCR200')?-1:0)
  }
  const base=evaluate(1,1,1)
  return [
