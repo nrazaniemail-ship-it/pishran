@@ -76,28 +76,10 @@ export default function App() {
     await refreshStorage()
   }
 
-  async function exportBackup() {
-    const backup = await localStore.exportAll()
-    const blob = new Blob([JSON.stringify({ app: 'Pishran', ...backup }, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `pishran-backup-${new Date().toISOString().slice(0, 10)}.json`
-    anchor.click()
-    URL.revokeObjectURL(url)
-  }
-
-  async function importBackup(file: File) {
-    try {
-      const backup = JSON.parse(await file.text())
-      const count = await localStore.importAll(backup)
-      setSettings(await loadSettings())
-      setProjects(await listProjects())
-      await refreshStorage()
-      window.alert(`بازیابی انجام شد؛ ${count} مورد اطلاعات وارد شد.`)
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'بازیابی فایل ناموفق بود.')
-    }
+  async function refreshAfterRestore() {
+    setSettings(await loadSettings())
+    setProjects(await listProjects())
+    await refreshStorage()
   }
 
   return <main className="app-shell">
@@ -143,7 +125,7 @@ export default function App() {
 
     {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); setPage(project.steelStage?.includes('مجتمع احیاء') ? 'integrated-steel' : project.steelStage?.includes('نورد گرم') ? 'hot-rolling' : 'project-wizard') }}/>}
     {page === 'guide' && <Guide/>}
-    {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onExport={exportBackup} onImport={importBackup}/>}
+    {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}
     {page === 'hot-rolling' && <RollingWorkspace project={activeProject ?? undefined} onBack={() => setPage('projects')}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard project={activeProject} onBack={() => setPage('projects')}/>}
