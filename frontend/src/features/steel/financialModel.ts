@@ -26,6 +26,8 @@ export type WorkingCapitalPolicy = {
   payableDays: number
   annualRawMaterialCost: number
   annualFixedRawMaterialCost?: number
+  annualPayablesCost?: number
+  annualFixedPayablesCost?: number
   annualConversionCost: number
   annualFixedConversionCost?: number
   annualFinishedGoodsCost: number
@@ -46,7 +48,7 @@ export type WorkingCapitalBreakdown = {
 }
 
 export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPolicy, utilization: number, salesFactor = 1, opexFactor = 1): WorkingCapitalBreakdown {
-  const values = [policy.dayBasis, policy.rawMaterialDays, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualFixedRawMaterialCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, utilization, salesFactor, opexFactor]
+  const values = [policy.dayBasis, policy.rawMaterialDays, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualFixedRawMaterialCost ?? 0, policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, utilization, salesFactor, opexFactor]
   if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1, 7).some(value => value < 0) || values[3] > 100 || values[4] > 100 || values.slice(7).some(value => value < 0)) return { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 }
   const day = (base: number, days: number, factor: number) => base * factor * Math.min(days, policy.dayBasis) / policy.dayBasis
   const activeFactor = utilization > 0 ? 1 : 0
@@ -68,8 +70,10 @@ export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPoli
   const fixedCash = Math.min(policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0)
   const minimumCash = day(policy.annualCashOperatingCost - fixedCash, policy.cashDays, utilization * opexFactor)
     + day(fixedCash, policy.cashDays, activeFactor * opexFactor)
-  const payables = day(variableRawMaterials, policy.payableDays, utilization * opexFactor)
-    + day(fixedRawMaterials, policy.payableDays, activeFactor * opexFactor)
+  const fixedPayables = Math.min(policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0)
+  const variablePayables = Math.max(0, (policy.annualPayablesCost ?? policy.annualRawMaterialCost) - fixedPayables)
+  const payables = day(variablePayables, policy.payableDays, utilization * opexFactor)
+    + day(fixedPayables, policy.payableDays, activeFactor * opexFactor)
   return { rawMaterials, workInProgress, finishedGoods, receivables, minimumCash, payables, netWorkingCapital: rawMaterials + workInProgress + finishedGoods + receivables + minimumCash - payables }
 }
 
