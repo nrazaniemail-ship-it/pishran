@@ -2,7 +2,13 @@
 
 پیشران یک PWA فارسی‌محور برای امکان‌سنجی و ارزیابی پروژه‌های صنعتی و سرمایه‌گذاری است. نسخه فعلی با رویکرد **Local-first** اجرا می‌شود و برای استفاده پایه به حساب کاربری یا سرور نیاز ندارد.
 
-## نسخه‌بندی\n\n- نسخه نمایشی/محصول: **1.0.1** (ثابت تا انتشار نسخه بعدی)\n- کد نسخه اندروید (versionCode): در هر اجرای جدید ساخت APK به‌صورت افزایشی از شماره اجرای GitHub Actions تعیین می‌شود.\n- اجرای مجدد ساخت، شماره نسخه محصول را تغییر نمی‌دهد.\n\n## وضعیت فعلی محصول
+## نسخه‌بندی
+
+- نسخه نمایشی/محصول: **1.0.1** (ثابت تا انتشار نسخه بعدی)
+- کد نسخه اندروید (versionCode): در هر اجرای جدید ساخت APK از شماره اجرای GitHub Actions تعیین می‌شود.
+- اجرای مجدد ساخت، شماره نسخه محصول را تغییر نمی‌دهد.
+
+## وضعیت فعلی محصول
 
 - ورود، ثبت‌نام، احراز هویت و اتصال حساب کاربری: فعلاً غیرفعال / به تعویق افتاده
 - ذخیره اطلاعات: محلی روی دستگاه
@@ -13,25 +19,19 @@
 - اندروید: Capacitor 7؛ وب و APK از یک کدبیس
 - Backend/FastAPI: فعلاً خارج از مسیر اجرایی رابط کاربری و نگه‌داری‌شده برای فاز همگام‌سازی آینده
 
-## معماری لایه‌ای
+## ساختار مخزن
 
 ```text
-frontend/src/
-  app/                 پوسته برنامه و مسیریابی
-  core/
-    storage/           مخزن محلی IndexedDB / localStorage
-    settings/          مدل و سرویس تنظیمات
-    projects/           مدل و repository پروژه‌ها
-  features/
-    dashboard/         داشبورد
-    projects/          فضای کاری پروژه‌ها
-    settings/          تنظیمات و پشتیبان‌گیری
-  shared/
-    components/        اجزای مشترک رابط کاربری
-    utils/             ابزارهای عمومی
+frontend/               PWA (React + Vite + Tailwind) و Capacitor
+  src/core/             ذخیره‌سازی (IndexedDB)، تنظیمات، پروژه‌ها، پشتیبان‌گیری
+  src/features/         projects · settings · guide · steel (مدل مالی و فرآیند)
+  scripts/              validate-financial-model.mjs (تست مرجع COMFAR/Excel)
+backend/                FastAPI: پایه محاسبات (NPV/IRR/بازگشت سرمایه) — خارج از مسیر UI فعلی
+docs/                   معماری، نقشه راه، QA و اسناد فولاد
+.github/workflows/      ci.yml · deploy.yml (Pages) · build-android.yml (APK)
 ```
 
-ساختار فعلی به‌تدریج به این لایه‌ها گسترش می‌یابد؛ منطق ذخیره‌سازی و تنظیمات نباید داخل کامپوننت‌های صفحه پراکنده شود.
+منطق ذخیره‌سازی و تنظیمات نباید داخل کامپوننت‌های صفحه پراکنده شود.
 
 ## ذخیره‌سازی و حریم خصوصی
 
@@ -45,8 +45,18 @@ frontend/src/
 
 ```bash
 cd frontend
-npm install
+npm install          # پس از اولین اجرا package-lock.json را commit کنید
+npm run test:financial
 npm run dev
+```
+
+بک‌اند (اختیاری):
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+python -m pytest -q
+uvicorn app.main:app --reload     # http://localhost:8000/docs
 ```
 
 ساخت نسخه وب:
@@ -62,8 +72,10 @@ npm run android:add
 npm run android:apk
 ```
 
-## انتشار
+## انتشار و کنترل کیفیت
 
+- هر Pull Request با `ci.yml` (تست مالی + build فرانت‌اند + تست بک‌اند) بررسی می‌شود.
+- انتشار روی `main` فقط پس از موفقیت `npm run test:financial` و تست‌های بک‌اند انجام می‌شود.
 - نسخه وب از طریق GitHub Actions در GitHub Pages منتشر می‌شود.
 - نسخه اندروید با Capacitor ساخته می‌شود.
 - Workflow اندروید، APK آزمایشی را به‌صورت Artifact در اجرای GitHub Actions قرار می‌دهد.
