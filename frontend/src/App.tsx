@@ -3,7 +3,7 @@ import ReactECharts from 'echarts-for-react'
 import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Layers3, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
-import { createProject, deleteProject, listProjects, type FeasibilityProject } from './core/projects/projectRepository'
+import { createProject, deleteProject, ensureWorkbookProjects, listProjects, type FeasibilityProject } from './core/projects/projectRepository'
 import ProjectsView from './features/projects/ProjectsView'
 import SettingsView from './features/settings/SettingsView'
 import RollingWorkspace from './features/steel/RollingWorkspace'
@@ -37,7 +37,7 @@ export default function App() {
   useEffect(() => {
     let alive = true
     Promise.all([localStore.remove('sample:plate-250k:v1'), localStore.remove('rolling:sample:v2')])
-      .then(() => Promise.all([loadSettings(), listProjects(), localStore.info()]))
+      .then(() => Promise.all([loadSettings(), ensureWorkbookProjects(), localStore.info()]))
       .then(([nextSettings, nextProjects, info]) => {
         if (!alive) return
         setSettings(nextSettings)
