@@ -162,3 +162,258 @@ export function calculateProjectCashFlowPeriod(
   const projectCashFlow = input.ebitda - tax - input.capexSpend - input.deltaWorkingCapital + input.terminalValue
   return { ebit, tax, lossCarryForward, projectCashFlow }
 }
+
+
+export type IntegratedLoanInput = {
+  id: string
+  label: string
+  drawdowns: number[]
+  annualRate: number
+  graceYears: number
+  termYears: number
+  repaymentStartYear: number
+  repaymentMethod: 'equal-principal' | 'annuity' | 'bullet'
+  capitalizeInterest: boolean
+}
+
+export type IntegratedFinanceInput = {
+  years: number
+  constructionYears: number
+  capacity: number
+  fullCapacityRevenue: number
+  fullCapacityVariableCashCost: number
+  fullCapacityFixedCashCost: number
+  annualDepreciation: number
+  fixedInvestment: number
+  preOperatingCost: number
+  fixedInvestmentSchedule: number[]
+  preOperatingSchedule: number[]
+  utilization: number[]
+  equityContributions: number[]
+  loans: IntegratedLoanInput[]
+  taxRate: number
+  costOfEquity: number
+  workingCapitalPercent: number
+  discountMode: 'wacc' | 'manual'
+  manualDiscountRate: number
+  salvageValue?: number
+}
+
+export type IntegratedLoanYear = {
+  drawdown: number
+  openingBalance: number
+  interestExpense: number
+  capitalizedInterest: number
+  principal: number
+  closingBalance: number
+}
+
+export type IntegratedFinanceYear = {
+  year: number
+  utilization: number
+  production: number
+  revenue: number
+  variableCashCost: number
+  fixedCashCost: number
+  depreciation: number
+  ebit: number
+  interest: number
+  tax: number
+  principal: number
+  debtDrawdown: number
+  equityContribution: number
+  fixedInvestment: number
+  preOperatingCost: number
+  workingCapital: number
+  changeInWorkingCapital: number
+  projectFreeCashFlow: number
+  equityFreeCashFlow: number
+  cashBalance: number
+  debtBalance: number
+  debtService: number
+  dscr: number | null
+}
+
+export type IntegratedFinanceResult = {
+  years: IntegratedFinanceYear[]
+  loanSchedules: Record<string, IntegratedLoanYear[]>
+  wacc: number | null
+  discountRate: number | null
+  weightedCostOfDebt: number
+  equityWeight: number
+  debtWeight: number
+  npvProject: number | null
+  irrProject: number | null
+  npvEquity: number | null
+  irrEquity: number | null
+  mirrProject: number | null
+  simplePayback: number | null
+  discountedPayback: number | null
+  peakWorkingCapital: number
+  totalDebtDrawdown: number
+  totalEquityContribution: number
+  totalFunding: number
+  totalInvestment: number
+  fundingGap: number
+  warnings: string[]
+}
+
+function integratedLoanSchedule(loan: IntegratedLoanInput, years: number, constructionYears: number): IntegratedLoanYear[] {
+  const rate = Math.max(0, finiteNonNegative(loan.annualRate) ? loan.annualRate : 0) / 100
+  const term = Math.max(0, Math.floor(loan.termYears || 0))
+  const start = Math.max(constructionYears + 1, Math.floor(loan.repaymentStartYear || constructionYears + 1))
+  const firstPrincipalYear = start + Math.max(0, Math.floor(loan.graceYears || 0))
+  const totalDrawdown = loan.drawdowns.reduce((total, value) => total + Math.max(0, Number(value) || 0), 0)
+  let balance = 0
+  let annuityPayment: number | null = null
+  const result: IntegratedLoanYear[] = []
+  for (let index = 0; index < years; index++) {
+    const year = index + 1
+    const drawdown = Math.max(0, Number(loan.drawdowns[index]) || 0)
+    const openingBalance = balance
+    const interestAccrued = (openingBalance + drawdown * 0.5) * rate
+    const capitalize = Boolean(loan.capitalizeInterest) && year < firstPrincipalYear
+    const interestExpense = capitalize ? 0 : interestAccrued
+    const capitalizedInterest = capitalize ? interestAccrued : 0
+    const repaymentIndex = year - firstPrincipalYear
+    const repaymentActive = term > 0 && repaymentIndex >= 0 && repaymentIndex < term
+    let principal = 0
+    const availableBalance = openingBalance + drawdown + capitalizedInterest
+    if (repaymentActive) {
+      if (loan.repaymentMethod === 'bullet') {
+        principal = repaymentIndex === term - 1 ? availableBalance : 0
+      } else if (loan.repaymentMethod === 'annuity') {
+        if (annuityPayment === null) {
+          annuityPayment = rate === 0 ? availableBalance / term : availableBalance * rate / (1 - Math.pow(1 + rate, -term))
+        }
+        principal = Math.min(availableBalance, Math.max(0, annuityPayment - interestAccrued))
+      } else {
+        principal = Math.min(availableBalance, totalDrawdown / term)
+      }
+    }
+    balance = Math.max(0, availableBalance - principal)
+    result.push({ drawdown, openingBalance, interestExpense, capitalizedInterest, principal, closingBalance: balance })
+  }
+  return result
+}
+
+/** Integrated 20-year project model. All monetary inputs must use the same base currency. */
+export function calculateIntegratedFinance(input: IntegratedFinanceInput): IntegratedFinanceResult {
+  const years = Math.max(1, Math.min(40, Math.floor(input.years || 20)))
+  const constructionYears = Math.max(1, Math.min(years, Math.floor(input.constructionYears || 4)))
+  const loanSchedules: Record<string, IntegratedLoanYear[]> = {}
+  input.loans.forEach(loan => { loanSchedules[loan.id] = integratedLoanSchedule(loan, years, constructionYears) })
+
+  const totalDebtDrawdown = input.loans.reduce((sum, loan) =>
+    sum + loan.drawdowns.reduce((a, b) => a + Math.max(0, Number(b) || 0), 0), 0)
+  const totalEquityContribution = input.equityContributions.reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0)
+  const totalFunding = totalDebtDrawdown + totalEquityContribution
+  const totalInvestment = Math.max(0, input.fixedInvestment) + Math.max(0, input.preOperatingCost)
+  const weightedCostOfDebt = totalDebtDrawdown > 0
+    ? input.loans.reduce((sum, loan) => sum + loan.drawdowns.reduce((a, b) => a + Math.max(0, Number(b) || 0), 0) * Math.max(0, loan.annualRate), 0) / totalDebtDrawdown
+    : 0
+  const equityWeight = totalFunding > 0 ? totalEquityContribution / totalFunding * 100 : 0
+  const debtWeight = totalFunding > 0 ? totalDebtDrawdown / totalFunding * 100 : 0
+  const waccResult = totalFunding > 0
+    ? calculateWacc({
+        equityWeight,
+        debtWeight,
+        costOfEquity: Math.max(0, input.costOfEquity),
+        costOfDebt: weightedCostOfDebt,
+        taxRate: Math.max(0, Math.min(100, input.taxRate)),
+      })
+    : { value: null as number | null, valid: false, weightTotal: 0 }
+  const wacc = waccResult.valid && waccResult.value !== null ? waccResult.value : null
+  const discountRate = input.discountMode === 'manual'
+    ? Math.max(0, input.manualDiscountRate) / 100
+    : wacc
+
+  let priorCash = 0
+  let priorWorkingCapital = 0
+  let taxLoss = 0
+  let unleveredTaxLoss = 0
+  let cumulativeProject = 0
+  let cumulativeDiscounted = 0
+  let simplePayback: number | null = null
+  let discountedPayback: number | null = null
+  const annualRows: IntegratedFinanceYear[] = []
+
+  for (let index = 0; index < years; index++) {
+    const year = index + 1
+    const utilization = Math.max(0, Math.min(1, Number(input.utilization[index] ?? 0)))
+    const revenue = Math.max(0, input.fullCapacityRevenue) * utilization
+    const variableCashCost = Math.max(0, input.fullCapacityVariableCashCost) * utilization
+    const fixedCashCost = year > constructionYears ? Math.max(0, input.fullCapacityFixedCashCost) : 0
+    const depreciation = year > constructionYears ? Math.max(0, input.annualDepreciation) : 0
+    const fixedInvestment = Math.max(0, Number(input.fixedInvestmentSchedule[index]) || 0)
+    const preOperatingCost = Math.max(0, Number(input.preOperatingSchedule[index]) || 0)
+    const workingCapital = year > constructionYears
+      ? (variableCashCost + fixedCashCost) * Math.max(0, input.workingCapitalPercent) / 100
+      : 0
+    const changeInWorkingCapital = workingCapital - priorWorkingCapital
+    priorWorkingCapital = workingCapital
+
+    const loanRows = input.loans.map(loan => loanSchedules[loan.id][index])
+    const debtDrawdown = loanRows.reduce((sum, row) => sum + row.drawdown, 0)
+    const principal = loanRows.reduce((sum, row) => sum + row.principal, 0)
+    const interest = loanRows.reduce((sum, row) => sum + row.interestExpense, 0)
+    const debtBalance = loanRows.reduce((sum, row) => sum + row.closingBalance, 0)
+    const ebit = revenue - variableCashCost - fixedCashCost - depreciation
+
+    const taxableProfit = ebit - interest - taxLoss
+    const tax = Math.max(0, taxableProfit) * Math.max(0, Math.min(100, input.taxRate)) / 100
+    taxLoss = taxableProfit < 0 ? -taxableProfit : 0
+
+    const unleveredTaxableProfit = ebit - unleveredTaxLoss
+    const unleveredTax = Math.max(0, unleveredTaxableProfit) * Math.max(0, Math.min(100, input.taxRate)) / 100
+    unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : 0
+
+    const terminalValue = year === years ? Math.max(0, input.salvageValue || 0) + workingCapital : 0
+    const projectFreeCashFlow = ebit - unleveredTax + depreciation - fixedInvestment - preOperatingCost - changeInWorkingCapital + terminalValue
+    const equityFreeCashFlow = ebit - interest - tax + depreciation - fixedInvestment - preOperatingCost - changeInWorkingCapital + debtDrawdown - principal + terminalValue
+    const debtService = principal + interest
+    const cfads = revenue - variableCashCost - fixedCashCost - tax
+    const dscr = debtService > 0 ? cfads / debtService : null
+    const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
+    const cashBalance = priorCash + equityContribution + debtDrawdown + revenue - variableCashCost - fixedCashCost -
+      fixedInvestment - preOperatingCost - tax - interest - principal - changeInWorkingCapital
+    priorCash = cashBalance
+
+    cumulativeProject += projectFreeCashFlow
+    if (simplePayback === null && cumulativeProject >= 0 && year > constructionYears) simplePayback = year
+    if (discountRate !== null) {
+      cumulativeDiscounted += projectFreeCashFlow / Math.pow(1 + discountRate, year)
+      if (discountedPayback === null && cumulativeDiscounted >= 0 && year > constructionYears) discountedPayback = year
+    }
+
+    annualRows.push({
+      year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
+      variableCashCost, fixedCashCost, depreciation, ebit, interest, tax, principal, debtDrawdown,
+      equityContribution, fixedInvestment, preOperatingCost, workingCapital, changeInWorkingCapital,
+      projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, dscr,
+    })
+  }
+
+  const projectFlows = [0, ...annualRows.map(row => row.projectFreeCashFlow)]
+  const equityFlows = [0, ...annualRows.map(row => row.equityFreeCashFlow)]
+  const npvProject = discountRate === null ? null : calculateNpv(projectFlows, discountRate)
+  const irrProject = calculateIrr(projectFlows)
+  const npvEquity = calculateNpv(equityFlows, Math.max(0, input.costOfEquity) / 100)
+  const irrEquity = calculateIrr(equityFlows)
+  const mirrProject = discountRate === null ? null : calculateMirr(projectFlows, discountRate, discountRate)
+  const peakWorkingCapital = Math.max(0, ...annualRows.map(row => row.workingCapital))
+  const fundingGap = totalInvestment + peakWorkingCapital - totalFunding
+  const warnings: string[] = []
+  if (totalFunding <= 0) warnings.push('ساختار تأمین مالی ثبت نشده است؛ WACC محاسبه نمی‌شود.')
+  if (totalEquityContribution <= 0 && totalDebtDrawdown > 0) warnings.push('آورده نقدی سهامدار ثبت نشده است؛ وزن حقوق صاحبان سهام صفر است.')
+  if (totalFunding + 1 < totalInvestment + peakWorkingCapital) warnings.push('منابع مالی ثبت‌شده برای سرمایه‌گذاری و سرمایه در گردش کافی نیست.')
+  if (input.loans.some(loan => loan.annualRate <= 0 && loan.drawdowns.some(value => value > 0))) warnings.push('برای یک یا چند وام، نرخ بهره صفر یا ثبت‌نشده است.')
+  if (input.loans.some(loan => loan.termYears <= 0 && loan.drawdowns.some(value => value > 0))) warnings.push('برای یک یا چند وام، دوره بازپرداخت ثبت نشده است.')
+  if (input.discountMode === 'wacc' && discountRate === null) warnings.push('برای محاسبه نرخ تنزیل، ساختار سرمایه و نرخ بازده مورد انتظار سهامدار را تکمیل کنید.')
+  if (input.loans.some(loan => loan.repaymentStartYear + loan.graceYears + loan.termYears - 1 > years)) warnings.push('بخشی از بازپرداخت وام‌ها خارج از افق زمانی مدل قرار می‌گیرد.')
+  return {
+    years: annualRows, loanSchedules, wacc, discountRate, weightedCostOfDebt, equityWeight, debtWeight,
+    npvProject, irrProject, npvEquity, irrEquity, mirrProject, simplePayback, discountedPayback,
+    peakWorkingCapital, totalDebtDrawdown, totalEquityContribution, totalFunding, totalInvestment, fundingGap, warnings,
+  }
+}
