@@ -102,7 +102,17 @@ function definitions(type:PlantType):Sheet[]{
  ]
  return [...capex,...opex,...finance]
 }
-const makeRows=(sheet:Sheet):Row[]=>sheet.rows.map((entry,i)=>({id:sheet.id+'-'+i,label:typeof entry==='string'?entry:entry.label,section:typeof entry==='string'?false:entry.section,values:Object.fromEntries(sheet.columns.map(col=>[col.key,col.numeric?0:'']))}))
+const makeRows=(sheet:Sheet):Row[]=>sheet.rows.map((entry,i)=>{
+ const values:Record<string,Cell>=Object.fromEntries(sheet.columns.map(col=>[col.key,col.numeric?0:'']))
+ if(sheet.id==='payroll'){
+  const salary=[1270,890,640,510,460,390,310][i]??0
+  const insurance=Math.round(salary*.23),overtime=salary*.4
+  Object.assign(values,{salary,insurance,overtime,monthlyTotal:salary+insurance+overtime,annualWage:(salary+insurance)*12,bonus:salary*2,seniority:salary,annualPerPerson:(salary+insurance+overtime)*12+salary*3})
+ }
+ if(sheet.id==='staff'&&!((typeof entry==='object')&&entry.section))values.allocation=100
+ if(sheet.id==='site')values.year=1
+ return{id:sheet.id+'-'+i,label:typeof entry==='string'?entry:entry.label,section:typeof entry==='string'?false:entry.section,values}
+})
 const fmt=(v:number)=>Number(v||0).toLocaleString('fa-IR',{maximumFractionDigits:2})
 export default function ProcessPlantWorkspace({project,plantType,onBack}:{project:FeasibilityProject;plantType:PlantType;onBack:()=>void}){
  const sheets=useMemo(()=>definitions(plantType),[plantType]),key='process-plant:'+plantType+':'+project.id+':excel-sequence-v1'
@@ -117,7 +127,21 @@ export default function ProcessPlantWorkspace({project,plantType,onBack}:{projec
  const addPayrollRow=()=>updatePayrollRows([...payrollData,{id:'payroll-custom-'+Date.now(),label:'ردیف جدید',values:Object.fromEntries(payrollSheet.columns.map(col=>[col.key,col.numeric?0:'']))}])
  const updateCell=(id:string,key:string,value:Cell)=>updateRows(rows.map(row=>row.id===id?{...row,values:{...row.values,[key]:value}}:row))
  const addRow=()=>updateRows([...rows,{id:current.id+'-custom-'+Date.now(),label:'ردیف جدید',values:Object.fromEntries(current.columns.map(col=>[col.key,col.numeric?0:'']))}])
- const capexTotal=Object.entries(data).filter(([id])=>sheets.find(x=>x.id===id)?.book==='capex').flatMap(([,list])=>list).reduce((sum,row)=>{const v=row.values;const amount=Number(v.amount??0)||Number(v.annualCost??0)||((Number(v.foreign??0)+Number(v.local??0)+Number(v.meltingForeign??0)+Number(v.meltingLocal??0)+Number(v.castingForeign??0)+Number(v.castingLocal??0)+Number(v.handlingForeign??0))||((Number(v.qty??0)*Number(v.unitPrice??0)+Number(v.equipment??0))*(Number(v.allocation??100)/100)));return sum+amount},0)
+ const capexAmount=(sheetId:string,row:Row)=>{const v=row.values,n=(key:string)=>Number(v[key]??0)||0
+ if(sheetId==='land'||sheetId==='site')return n('qty')*n('unitPrice')
+ if(sheetId==='buildings')return (n('qty')*n('unitPrice')+n('equipment'))*(1-Math.max(0,Math.min(1,n('sharedRatio'))))
+ if(sheetId==='machines')return plantType==='dri'?n('foreign')+n('local'):n('meltForeign')+n('meltLocal')+n('castForeign')+n('castLocal')+n('sharedForeign')+n('sharedLocal')+n('meltingForeign')+n('meltingLocal')+n('castingForeign')+n('castingLocal')+n('handlingForeign')
+ if(sheetId==='vehicles')return n('count')*n('unitPrice')
+ return n('amount')||n('total')||n('annualCost')
+}
+const capexBySheet=(id:string)=> (data[id]??makeRows(sheets.find(x=>x.id===id)!)).reduce((sum,row)=>sum+capexAmount(id,row),0)
+const fixedBase=capexBySheet('land')+capexBySheet('site')+capexBySheet('buildings')+capexBySheet('infrastructure')+capexBySheet('vehicles')+capexBySheet('office')
+const contingency=Math.round(fixedBase*.05)
+const fixedInvestment=fixedBase+capexBySheet('machines')+contingency
+const preOperating=capexBySheet('preop')
+const capexTotal=fixedInvestment+preOperating
+const summaryValues=[capexBySheet('land'),capexBySheet('site'),capexBySheet('buildings'),capexBySheet('machines'),capexBySheet('infrastructure'),capexBySheet('vehicles'),capexBySheet('office'),contingency,fixedInvestment,preOperating,capexTotal]
+const displayRows=current.id==='fixed-summary'?rows.map((row,i)=>({...row,values:{...row.values,amount:summaryValues[i]??0,share:capexTotal>0?(summaryValues[i]??0)/capexTotal*100:0,source:['خرید زمین','محوطه‌سازی','ساختمان‌ها','ماشین‌آلات','تأسیسات زیربنایی','وسائط نقلیه','وسایل اداری','محاسبه ۵٪ اکسل','جمع هزینه‌های ثابت','قبل از بهره‌برداری','جمع کل'][i]??''}})):rows
  const bookGroups=[{id:'capex',title:'۱. سرمایه‌گذاری ثابت',subtitle:'سرمایه گذاری ثابت.xlsx',items:sheets.filter(x=>x.book==='capex')},{id:'opex',title:'۲. هزینه تولید و بهره‌برداری',subtitle:'هزینه تولید.xlsx',items:sheets.filter(x=>x.book==='opex')},{id:'finance',title:'۳. مدل مالی و جریان نقدی',subtitle:'مدل مالی و جریان نقدی.xlsx',items:sheets.filter(x=>x.book==='finance')}]
  return <section className="fw-page ppw-page" dir="rtl">
   <header className="fw-head"><button className="secondary-button" onClick={onBack}><ArrowRight size={16}/> پروژه‌ها</button><div><span className="eyebrow">PISHRAN / {plantType==='dri'?'DIRECT REDUCTION':'STEELMAKING & CONTINUOUS CASTING'}</span><h1>{project.name}</h1><p>{project.location||'موقعیت ثبت نشده'} · {project.capacity||'ظرفیت ثبت نشده'} · فرم مستقل {plantType==='dri'?'احیاء مستقیم':'فولادسازی و ریخته‌گری'}</p></div><span className="fw-save"><Save size={14}/>{ready?(saved?'ذخیره محلی · '+saved:'ذخیره خودکار فعال'):'در حال بارگذاری'}</span></header>
@@ -127,7 +151,7 @@ export default function ProcessPlantWorkspace({project,plantType,onBack}:{projec
    <main className="ppw-sheet"><div className="ppw-sheet-head"><div><span className="eyebrow">{current.book==='capex'?'CAPEX':current.book==='opex'?'OPEX':'FINANCIAL MODEL'} / SHEET {String(sheets.filter(x=>x.book===current.book).findIndex(x=>x.id===current.id)+1).padStart(2,'0')}</span><h2>{current.title}</h2></div><span className="ppw-count">{fmt(rows.length)} ردیف</span></div>
     {current.note&&<div className="ppw-note"><Calculator size={16}/>{current.note}</div>}
     {current.id==='title'&&<div className="fw-grid"><label className="fw-field"><span>نام پروژه</span><input value={project.name} readOnly/></label><label className="fw-field"><span>مرحله مستقل</span><input value={plantType==='dri'?'احیاء مستقیم':'فولادسازی و ریخته‌گری'} readOnly/></label><label className="fw-field"><span>ظرفیت اسمی</span><input value={project.capacity} readOnly/></label><label className="fw-field"><span>موقعیت</span><input value={project.location} readOnly/></label></div>}
-    <div className="ppw-table-wrap"><table className="ppw-table"><thead><tr><th className="ppw-label-col">شرح / شاخص</th>{current.columns.map(col=><th key={col.key}>{col.label}{col.unit&&<small>{col.unit}</small>}</th>)}<th>عملیات</th></tr></thead><tbody>{rows.map(row=>row.section?<tr key={row.id} className="ppw-section-row"><th colSpan={current.columns.length+2}>{row.label}</th></tr>:<tr key={row.id}><th><input value={row.label} onChange={e=>updateRows(rows.map(x=>x.id===row.id?{...x,label:e.target.value}:x))} aria-label="شرح ردیف"/></th>{current.columns.map(col=><td key={col.key}><input type={col.numeric?'number':'text'} value={row.values[col.key]??(col.numeric?0:'')} onChange={e=>updateCell(row.id,col.key,col.numeric?Number(e.target.value):e.target.value)} aria-label={col.label}/></td>)}<td><button className="icon-button" onClick={()=>updateRows(rows.filter(x=>x.id!==row.id))} title="حذف ردیف"><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>
+    <div className="ppw-table-wrap"><table className="ppw-table"><thead><tr><th className="ppw-label-col">شرح / شاخص</th>{current.columns.map(col=><th key={col.key}>{col.label}{col.unit&&<small>{col.unit}</small>}</th>)}<th>عملیات</th></tr></thead><tbody>{displayRows.map(row=>row.section?<tr key={row.id} className="ppw-section-row"><th colSpan={current.columns.length+2}>{row.label}</th></tr>:<tr key={row.id}><th><input value={row.label} disabled={!!current.readOnly} onChange={e=>updateRows(rows.map(x=>x.id===row.id?{...x,label:e.target.value}:x))} aria-label="شرح ردیف"/></th>{current.columns.map(col=><td key={col.key}><input type={col.numeric?'number':'text'} value={row.values[col.key]??(col.numeric?0:'')} disabled={!!current.readOnly} onChange={e=>updateCell(row.id,col.key,col.numeric?Number(e.target.value):e.target.value)} aria-label={col.label}/></td>)}<td><button className="icon-button" onClick={()=>updateRows(rows.filter(x=>x.id!==row.id))} title="حذف ردیف"><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>
     {current.id==='staff'&&<section className="ppw-payroll"><h3>حقوق و دستمزد — زیرجدول همین شیت</h3><p>تعداد نفرات و اجزای حقوقی برای هر گروه شغلی؛ سربار نیروی انسانی در فایل مرجع در ادامه همین جدول محاسبه می‌شود.</p><div className="ppw-table-wrap"><table className="ppw-table"><thead><tr><th className="ppw-label-col">عنوان</th>{payrollSheet.columns.map(col=><th key={col.key}>{col.label}<small>{col.unit}</small></th>)}<th>عملیات</th></tr></thead><tbody>{payrollData.map(row=><tr key={row.id}><th><input value={row.label} onChange={e=>updatePayrollRows(payrollData.map(x=>x.id===row.id?{...x,label:e.target.value}:x))}/></th>{payrollSheet.columns.map(col=><td key={col.key}><input type={col.numeric?'number':'text'} value={row.values[col.key]??(col.numeric?0:'')} onChange={e=>updatePayrollCell(row.id,col.key,col.numeric?Number(e.target.value):e.target.value)}/></td>)}<td><button className="icon-button" onClick={()=>updatePayrollRows(payrollData.filter(x=>x.id!==row.id))}><Trash2 size={14}/></button></td></tr>)}</tbody></table></div><button className="secondary-button ppw-add" onClick={addPayrollRow}><Plus size={15}/> افزودن گروه حقوقی</button></section>}
     {!current.readOnly&&<button className="secondary-button ppw-add" onClick={addRow}><Plus size={15}/> افزودن ردیف</button>}
     {current.readOnly&&<div className="ppw-note">این شیت از نوع خلاصه/نتیجه است. مقادیر نهایی باید از محاسبات شیت‌های مبنا تغذیه شوند؛ ورود دستی در این مرحله غیرفعال است.</div>}
