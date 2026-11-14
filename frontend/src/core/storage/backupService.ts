@@ -83,9 +83,10 @@ export function parseBackup(text:string):PishranBackup{
 }
 export async function restoreBackup(payload:PishranBackup):Promise<number>{
  const current=await localStore.exportAll()
- if(!current.records.length)throw new Error('تهیه نسخه اضطراری از اطلاعات فعلی ممکن نشد؛ بازیابی متوقف شد.')
- localStorage.setItem(UNDO_KEY,JSON.stringify({at:new Date().toISOString(),snapshot:current}))
+ const previousPreferences=await getBackupPreferences()
+ localStorage.setItem(UNDO_KEY,JSON.stringify({at:new Date().toISOString(),snapshot:current,backupPreferences:previousPreferences}))
  await localStore.replaceAll(payload.records)
+ if(payload.backupPreferences)await saveBackupPreferences({...previousPreferences,enabled:payload.backupPreferences.enabled,interval:payload.backupPreferences.interval,lastAt:'',lastSize:0,lastKind:''})
  return payload.records.length
 }
 export async function canUndoRestore():Promise<boolean>{try{return Array.isArray(JSON.parse(localStorage.getItem(UNDO_KEY)||'null')?.snapshot?.records)}catch{return false}}
