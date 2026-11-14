@@ -20,6 +20,7 @@ const [engine, reference] = await Promise.all([
 ])
 const model = reference.EXCEL_HOT_ROLLING_200KT
 const expected = reference.EXCEL_REFERENCE_EXPECTED
+const pishranExpected = reference.PISHRAN_REFERENCE_MODEL_OUTPUT
 const output = expected.capacity
 const currency = model.currency
 
@@ -110,8 +111,63 @@ near(engine.calculateNpv(cashFlows, expected.wacc), expected.npvAtExactWacc, 0.0
 near(engine.calculateIrr(cashFlows), expected.irr, 1e-8, 'IRR')
 near(engine.calculateMirr(cashFlows, expected.financeRate, expected.reinvestmentRate), expected.mirr, 1e-8, 'MIRR')
 
+
+const totalCapex = model.capex.reduce((sum, row) => sum + row.quantity * row.unitPrice * (row.currency === currency ? 1 : row.fxRate), 0)
+const landCost = model.capex.filter(row => row.costGroup === 'زمین').reduce((sum, row) => sum + row.quantity * row.unitPrice, 0)
+const depreciable = Math.max(0, totalCapex - landCost)
+const ramp = model.ramp
+let priorProjectLoss = 0
+let previousNwc = 0
+let accumulatedDepreciation = 0
+const generatedProjectCashFlows = []
+const weightedPrice = model.products.reduce((sum, product) => sum + product.mix / 100 * product.price, 0)
+const fixedShare = model.opexFixedShare / 100
+const directFixed = material.fixedAnnual + energy.fixedAnnual + consumables.fixedAnnual +
+  spares.fixedAnnual + maintenance.fixedAnnual + payrollTotal
+const directVariablePerTonne = material.variablePerTonne + energy.variablePerTonne +
+  consumables.variablePerTonne + spares.variablePerTonne + maintenance.variablePerTonne
+const capexYears = Math.max(1, Math.floor(model.constructionYears))
+for (let index = 0; index < capexYears + model.life; index++) {
+  const constructionYear = index < capexYears
+  const operatingYear = constructionYear ? 0 : index - capexYears + 1
+  const rampFactor = operatingYear > 0 ? (ramp[operatingYear - 1] ?? 100) / 100 : 0
+  const output = expected.capacity * rampFactor
+  const revenue = output * weightedPrice
+  const generalOpex = general.fixedAnnual * (fixedShare + (1 - fixedShare) * rampFactor) +
+    general.variablePerTonne * output
+  const operatingCost = operatingYear > 0 ? generalOpex + directFixed + directVariablePerTonne * output : 0
+  const ebitda = revenue - operatingCost
+  const annualDepreciation = model.annualDepreciationOverride > 0
+    ? model.annualDepreciationOverride : depreciable / Math.max(1, model.depreciationYears)
+  const depreciation = operatingYear > 0 && operatingYear <= model.depreciationYears
+    ? Math.min(annualDepreciation, Math.max(0, depreciable - accumulatedDepreciation)) : 0
+  accumulatedDepreciation += depreciation
+  const nwc = operatingYear > 0 && operatingYear < model.life
+    ? engine.calculateWorkingCapital(wcItems, rampFactor, model.workingCapitalDayBasis) : 0
+  const deltaWorkingCapital = nwc - previousNwc
+  previousNwc = nwc
+  const capexSpend = constructionYear ? totalCapex * (model.capexSchedule[index] ?? 0) / 100 : 0
+  const terminalValue = operatingYear === model.life
+    ? (model.terminalValueOverride > 0 ? model.terminalValueOverride : depreciable * model.salvagePct / 100) : 0
+  const result = engine.calculateProjectCashFlowPeriod({
+    ebitda, depreciation, capexSpend, deltaWorkingCapital, terminalValue
+  }, model.tax, priorProjectLoss)
+  priorProjectLoss = result.lossCarryForward
+  generatedProjectCashFlows.push(result.projectCashFlow)
+}
+assert.equal(generatedProjectCashFlows.length, pishranExpected.projectCashFlows.length, 'Pishran project flow period count')
+generatedProjectCashFlows.forEach((value, index) =>
+  near(value, pishranExpected.projectCashFlows[index], 0.02, 'Pishran generated project CF period ' + (index + 1)))
+near(engine.calculateNpv(generatedProjectCashFlows, expected.roundedDiscountRate), pishranExpected.npvAt21Percent, 0.05, 'Pishran project NPV')
+near(engine.calculateIrr(generatedProjectCashFlows), pishranExpected.irr, 1e-8, 'Pishran project IRR')
+near(engine.calculateMirr(generatedProjectCashFlows, expected.financeRate, expected.reinvestmentRate), pishranExpected.mirr, 1e-8, 'Pishran project MIRR')
+assert.ok(Math.abs(pishranExpected.npvAt21Percent - expected.npvAtRoundedRate) > 1000000,
+  'Keep the COMFAR/Pishran cash-flow reconciliation gap visible rather than silently forcing equality')
+
 console.log('PASS: raw materials, energy, process consumables, spares, maintenance and payroll')
 console.log('PASS: 360-day working capital = ' + workingCapital.toFixed(4) + ' million Rial')
 console.log('PASS: WACC = ' + (wacc.value * 100).toFixed(6) + '%')
-console.log('PASS: NPV / IRR / MIRR match the Excel COMFAR reference cash flows')
+console.log('PASS: NPV / IRR / MIRR independently reproduce the COMFAR reference row')
+console.log('PASS: Pishran-generated project cash flows and their NPV / IRR / MIRR are reproducible')
+console.log('REVIEW REQUIRED: Pishran project CF metrics differ from the imported COMFAR row; the cash-flow definitions/assumptions need reconciliation')
 console.log('NOTE: Excel rounds WACC 21.284299% to 21% for its NPV cell.')
