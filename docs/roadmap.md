@@ -1,11 +1,13 @@
-# Pishran delivery roadmap
+# نقشه راه پیشران
 
-| Phase | Scope | Acceptance gate |
+| فاز | دامنه | معیار پذیرش |
 |---|---|---|
-| 0 | PWA shell, CI deployment, API health, starter financial endpoint | PWA builds and installs; health endpoint responds |
-| 1 | Auth, organizations, projects, assumptions, file storage | Tenant isolation and audit trail tests pass |
-| 2 | Financial model | Reference test cases for NPV/IRR/MIRR/DSCR pass |
-| 3 | Process engineering + market data | Units, source dates, and provenance are mandatory |
-| 4 | Scenario and risk | Reproducible Monte Carlo and sensitivity tests |
-| 5 | AI copilot and reports | Grounded answers, citations, approval gates, export tests |
-| 6 | Android packaging and release | PWABuilder validation, signed AAB, release checklist |
+| 0 | PWA، انتشار وب و پوسته برنامه | نسخه وب بدون وابستگی به Backend اجرا شود |
+| 1 | معماری Local-first، ذخیره‌سازی و تنظیمات | IndexedDB و fallback محلی، تنظیمات پایدار و backup/restore کار کنند |
+| 2 | فضای کاری پروژه‌ها | ایجاد، ویرایش، حذف و بازیابی پروژه‌ها روی دستگاه |
+| 3 | مدل مهندسی و بازار | واحدها، منابع و تاریخ داده ثبت شوند |
+| 4 | مدل مالی | NPV/IRR/MIRR/DSCR با آزمون‌های مرجع |
+| 5 | سناریو و ریسک | تحلیل حساسیت و Monte Carlo قابل تکرار |
+| 6 | گزارش و خروجی | PDF/Excel و پشتیبان کامل |
+| 7 | Android با Capacitor | APK از همان کدبیس وب ساخته و نصب شود |
+| آینده اختیاری | Authentication و Cloud Sync | فقط با تصمیم جداگانه، تست جداسازی داده و امنیت فعال شود |
