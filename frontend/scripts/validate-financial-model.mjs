@@ -511,7 +511,7 @@ assert.ok(workspaceSource.includes("annualFixedConversionCost:fixedConversionCos
 assert.ok(workspaceSource.includes("annualPayablesCost:materialCost+energyCost+maintenanceCostTotal+otherOpexTotal"), 'Supplier credit must use eligible material, energy, maintenance and supplier purchases')
 assert.ok(workspaceSource.includes("annualFixedPayablesCost:financeValue('هزینه ثابت سالانه مشمول بدهی تجاری (یورو)',0)"), 'Fixed supplier-credit purchases must be separately configurable')
 assert.ok(workspaceSource.includes("'Other income':year.terminalValue"), 'COMFAR Other income must include terminal working-capital recovery and salvage')
-assert.ok(workspaceSource.includes('years:19,constructionYears:4'), 'Project model horizon must match four construction plus fifteen operating years')
+assert.ok(workspaceSource.includes('years:19,constructionYears,') && workspaceSource.includes("financeValue('تعداد سال دوره ساخت',4)") && workspaceSource.includes("financeValue('تعداد سال دوره بهره‌برداری',15)"), 'Project model horizon must default to four construction plus fifteen operating years and remain configurable')
 assert.ok(workspaceSource.includes("referenceYear:isScalar?0:annual[8]??0,lastYear:isScalar?0:annual[18]??0"), 'COMFAR reference year 9 and last year 19 must map to the correct periods')
 assert.ok(workspaceSource.includes("const utilizationSchedule=Array.from({length:19},(_,i)=>i<4?0:Math.min(1,[.7,.8,.9,1][i-4]??1))"), 'The terminal year must be the final operating year, not an extra non-operating year')
 assert.ok(workspaceSource.includes("'Increase in fixed assets':year.fixedInvestment"), 'COMFAR cash flow must map annual fixed-asset investment')
