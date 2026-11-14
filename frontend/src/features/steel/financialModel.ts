@@ -18,6 +18,8 @@ export type WorkingCapitalPolicy = {
   dayBasis: 360 | 365
   rawMaterialDays: number
   workInProgressDays: number
+  workInProgressMaterialCompletionPercent: number
+  workInProgressConversionCompletionPercent: number
   finishedGoodsDays: number
   receivableDays: number
   cashDays: number
@@ -40,16 +42,25 @@ export type WorkingCapitalBreakdown = {
 }
 
 export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPolicy, utilization: number, salesFactor = 1, opexFactor = 1): WorkingCapitalBreakdown {
-  const values = [policy.dayBasis, policy.rawMaterialDays, policy.workInProgressDays, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualConversionCost, policy.annualFinishedGoodsCost, policy.annualRevenue, policy.annualCashOperatingCost, utilization, salesFactor, opexFactor]
+  const values = [policy.dayBasis, policy.rawMaterialDays, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualConversionCost, policy.annualFinishedGoodsCost, policy.annualRevenue, policy.annualCashOperatingCost, utilization, salesFactor, opexFactor]
   if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1, 7).some(value => value < 0) || values.slice(7).some(value => value < 0)) return { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 }
   const day = (base: number, days: number, factor: number) => base * factor * Math.min(days, policy.dayBasis) / policy.dayBasis
   const rawMaterials = day(policy.annualRawMaterialCost, policy.rawMaterialDays, utilization * opexFactor)
-  const workInProgress = day(policy.annualConversionCost, policy.workInProgressDays, utilization * opexFactor)
+  const materialCompletion = Math.min(100, policy.workInProgressMaterialCompletionPercent) / 100
+  const conversionCompletion = Math.min(100, policy.workInProgressConversionCompletionPercent) / 100
+  const workInProgress = day(policy.annualRawMaterialCost, policy.workInProgressDays, utilization * opexFactor * materialCompletion)
+    + day(policy.annualConversionCost, policy.workInProgressDays, utilization * opexFactor * conversionCompletion)
   const finishedGoods = day(policy.annualFinishedGoodsCost, policy.finishedGoodsDays, utilization * opexFactor)
   const receivables = day(policy.annualRevenue, policy.receivableDays, utilization * salesFactor)
   const minimumCash = day(policy.annualCashOperatingCost, policy.cashDays, utilization * opexFactor)
   const payables = day(policy.annualRawMaterialCost, policy.payableDays, utilization * opexFactor)
   return { rawMaterials, workInProgress, finishedGoods, receivables, minimumCash, payables, netWorkingCapital: rawMaterials + workInProgress + finishedGoods + receivables + minimumCash - payables }
+}
+
+export function calculateCashConversionCycleDays(policy: Pick<WorkingCapitalPolicy, 'rawMaterialDays' | 'workInProgressDays' | 'finishedGoodsDays' | 'receivableDays' | 'payableDays'>) {
+  const values = [policy.rawMaterialDays, policy.workInProgressDays, policy.finishedGoodsDays, policy.receivableDays, policy.payableDays]
+  if (!values.every(Number.isFinite) || values.some(value => value < 0)) return Number.NaN
+  return values[0] + values[1] + values[2] + values[3] - values[4]
 }
 
 export function calculateCapacityScaledCapex(referenceCapex: number, referenceCapacity: number, targetCapacity: number, elasticity: number) {
