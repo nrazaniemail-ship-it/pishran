@@ -194,8 +194,7 @@ export const COMFAR_PDF_REFERENCE = {
   npv:31399764.27,
   irr:0.4831300309687687,
   mirr:0.2803,
-  mirrFinanceRate:0.20,
-  mirrReinvestmentRate:0.20,
+  mirrRatesPublished:false,
   scrapValue:13735466.82,
   projectCashFlows:[
     -13907805.03,-8093664.03,9602342.59,14451793.80,16364704.86,
