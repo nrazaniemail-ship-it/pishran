@@ -78,7 +78,7 @@ near(rollingAudit.financingCashflowSchedule.longTermLoanGrossDrawdowns,
 near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryTotalInvestment
   - rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetTotalInvestment,
   10009707.09412, 0.1, 'HRCR200 investment base discrepancy')
-assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.some(flag => flag.includes('row 9') && flag.includes('discounted cash flows')), 'HRCR200 discounted-row methodology conflict must remain explicit')
+assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.some(flag => flag.includes('rows 7–9') && flag.includes('discounted cash flows')), 'HRCR200 discounted-row methodology conflict must remain explicit')
 assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.length >= 5,
   'Source conflicts must remain explicit audit flags')
 const comfarCashFlow = workbookAudit.HOT_ROLLING_COMFAR_CASHFLOW_AUDIT
