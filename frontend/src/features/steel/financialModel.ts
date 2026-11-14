@@ -498,7 +498,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const preOperatingCost = Math.max(0, Number(input.preOperatingSchedule[index]) || 0)
     const workingCapitalBreakdown: WorkingCapitalBreakdown = input.workingCapitalPolicy
       ? (year > constructionYears && utilization > 0 ? calculateOperatingCycleWorkingCapital(input.workingCapitalPolicy, utilization, salesFactor, opexFactor) : { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 })
-      : { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: year > constructionYears ? (variableCashCost + fixedCashCost) * Math.max(0, input.workingCapitalPercent) / 100 : 0 }
+      : (() => { const amount = year > constructionYears ? (variableCashCost + fixedCashCost) * Math.max(0, input.workingCapitalPercent) / 100 : 0; return { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: amount, payables: 0, netWorkingCapital: amount } })()
     const calculatedWorkingCapital = workingCapitalBreakdown.netWorkingCapital
     const workingCapital = year === years ? 0 : calculatedWorkingCapital
     const statementWorkingCapitalBreakdown: WorkingCapitalBreakdown = year === years ? { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 } : workingCapitalBreakdown
