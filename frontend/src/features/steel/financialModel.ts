@@ -269,6 +269,7 @@ export type IntegratedFinanceInput = {
   equityContributions: number[]
   loans: IntegratedLoanInput[]
   taxRate: number
+  waccTaxRate?: number
   costOfEquity: number
   workingCapitalPercent: number
   workingCapitalPolicy?: WorkingCapitalPolicy
@@ -404,7 +405,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
         debtWeight,
         costOfEquity: Math.max(0, input.costOfEquity),
         costOfDebt: weightedCostOfDebt,
-        taxRate: Math.max(0, Math.min(100, input.taxRate)),
+        taxRate: Math.max(0, Math.min(100, input.waccTaxRate ?? input.taxRate)),
       })
     : { value: null as number | null, valid: false, weightTotal: 0 }
   const wacc = waccResult.valid && waccResult.value !== null ? waccResult.value : null
@@ -513,6 +514,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const fixedCostCaps: [string, number, number][] = [['هزینه ثابت مواد اولیه', policy.annualFixedRawMaterialCost ?? 0, policy.annualRawMaterialCost], ['هزینه ثابت مشمول بدهی تجاری', policy.annualFixedPayablesCost ?? 0, payableBase], ['هزینه ثابت تبدیل', policy.annualFixedConversionCost ?? 0, policy.annualConversionCost], ['هزینه ثابت محصول نهایی', policy.annualFixedFinishedGoodsCost ?? 0, policy.annualFinishedGoodsCost], ['هزینه ثابت نقدی عملیاتی', policy.annualFixedCashOperatingCost ?? 0, policy.annualCashOperatingCost]]
     fixedCostCaps.forEach(([label, fixed, total]) => { if (Number.isFinite(fixed) && Number.isFinite(total) && fixed > total) warnings.push(`${label} از کل مبنای هزینه بیشتر است؛ در محاسبه به سقف کل هزینه محدود می‌شود.`) })
   }
+  if (input.waccTaxRate !== undefined && (!Number.isFinite(input.waccTaxRate) || input.waccTaxRate < 0 || input.waccTaxRate > 100)) warnings.push('نرخ مالیات سپر مالیاتی WACC باید بین صفر تا ۱۰۰ درصد باشد.')
   if (input.discountMode === 'wacc' && discountRate === null) warnings.push('برای محاسبه نرخ تنزیل، ساختار سرمایه و نرخ بازده مورد انتظار سهامدار را تکمیل کنید.')
   if (input.loans.some(loan => loan.repaymentStartYear + loan.graceYears + loan.termYears - 1 > years)) warnings.push('بخشی از بازپرداخت وام‌ها خارج از افق زمانی مدل قرار می‌گیرد.')
   return {
