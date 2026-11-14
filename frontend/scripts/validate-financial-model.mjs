@@ -619,7 +619,7 @@ assert.ok(scenarioResults.optimistic.npvProject > scenarioResults.base.npvProjec
 assert.ok(scenarioResults.pessimistic.npvProject < scenarioResults.base.npvProject,'Pessimistic scenario must be below base NPV')
 
 console.log('PASS: integrated WACC, staged loan amortization, working capital, terminal value, cash flow reconciliation, NPV and project/equity IRR')
-console.log('PASS: asset-level depreciation, tax loss carry-forward, multi-variable sensitivity, scenarios and three-statement balance-sheet reconciliation')\n
+console.log('PASS: asset-level depreciation, tax loss carry-forward, multi-variable sensitivity, scenarios and three-statement balance-sheet reconciliation')
 const taxLossModel = engine.calculateIntegratedFinance({
   years:4,constructionYears:1,capacity:100,fullCapacityRevenue:2000,fullCapacityVariableCashCost:600,
   fullCapacityFixedCashCost:400,annualDepreciation:0,depreciationSchedule:[0,1500,0,0],
