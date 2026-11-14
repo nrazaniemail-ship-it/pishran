@@ -107,7 +107,7 @@ The funding summary difference of 0.6415 million IRR is small relative to projec
 | **Total including depreciation** | **44,246,811.392** |
 | **Total excluding depreciation** | **42,666,484.392** |
 
-The workbook reports unit cost of 221,234.05696 IRR/kg including depreciation and 170,665.937568 IRR/kg excluding depreciation. The stated capacity is 200,000 t/y. The direct-marketing line is 62,259.6 million IRR/year and its label says “0.001 percent of sales”; the amount corresponds to 0.001 × sales (0.1%), not 0.001%. Confirm the intended percentage convention. FX assumptions dated 1402/07/10 are EUR/IRR 524,000, USD/IRR 495,000 and CNY/IRR 68,000; they are historical assumptions, not current exchange rates.
+The workbook reports unit cost of 221,234.05696 IRR/kg including depreciation and 170,665.937568 IRR/kg excluding depreciation. The stated capacity is 200,000 t/y. The general project sheet states 285 direct employees and a four-year ramp-up of 70%, 80%, 90% and 100%. The direct-marketing line is 62,259.6 million IRR/year and its label says “0.001 percent of sales”; the amount corresponds to 0.001 × sales (0.1%), not 0.001%. Confirm the intended percentage convention. FX assumptions dated 1402/07/10 are EUR/IRR 524,000, USD/IRR 495,000 and CNY/IRR 68,000; they are historical assumptions, not current exchange rates.
 
 ### Financing conflict requiring sponsor confirmation
 
