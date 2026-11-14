@@ -465,13 +465,10 @@ console.log('PASS: COMFAR net working capital, no double-counting of supplier cr
 console.log('PASS: integrated WACC, loan amortization, working capital, escalation, terminal value, cash flow reconciliation, NPV and project/equity IRR')
 
 
-import { calculateNpvAtPeriodOffset, calculateStraightLineAssetSchedule } from '../src/features/steel/financialModel'
-import { HRCR200_DEPRECIATION_ASSETS, COMFAR_PDF_REFERENCE } from '../src/features/steel/hotRollingExcelBenchmark'
-
-const hrcrDepreciation = calculateStraightLineAssetSchedule([...HRCR200_DEPRECIATION_ASSETS], 15)
+const hrcrDepreciation = engine.calculateStraightLineAssetSchedule([...reference.HRCR200_DEPRECIATION_ASSETS], 15)
 near(hrcrDepreciation.annualDepreciation[0], 1580327, 1.5, 'HRCR200 source-sheet first-year asset depreciation')
-near(calculateNpvAtPeriodOffset(COMFAR_PDF_REFERENCE.projectCashFlows, COMFAR_PDF_REFERENCE.discountRate, -1),
-  COMFAR_PDF_REFERENCE.npv, 0.01, 'COMFAR valuation-date NPV')
+near(engine.calculateNpvAtPeriodOffset(reference.COMFAR_PDF_REFERENCE.projectCashFlows, reference.COMFAR_PDF_REFERENCE.discountRate, -1),
+  reference.COMFAR_PDF_REFERENCE.npv, 0.01, 'COMFAR valuation-date NPV')
 assert.ok(hrcrDepreciation.annualDepreciation[14] < hrcrDepreciation.annualDepreciation[0],
   'Asset-level depreciation must decline as short-life assets finish')
 assert.ok(hrcrDepreciation.terminalSalvage > 0, 'Asset-level residual value must be derived from source salvage rates')
