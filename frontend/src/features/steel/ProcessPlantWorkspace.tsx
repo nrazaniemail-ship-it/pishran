@@ -139,7 +139,7 @@ export default function ProcessPlantWorkspace({project,plantType,onBack}:{projec
  const updatePayrollCell=(id:string,key:string,value:Cell)=>updatePayrollRows(payrollData.map(row=>row.id===id?{...row,values:{...row.values,[key]:value}}:row))
  const addPayrollRow=()=>updatePayrollRows([...payrollData,{id:'payroll-custom-'+Date.now(),label:'ردیف جدید',values:Object.fromEntries(payrollSheet.columns.map(col=>[col.key,col.numeric?0:'']))}])
  const updateCell=(id:string,key:string,value:Cell)=>updateRows(rows.map(row=>row.id===id?{...row,values:{...row.values,[key]:value}}:row))
- const addRow=()=>updateRows([...rows,{id:current.id+'-custom-'+Date.now(),label:'ردیف جدید',values:Object.fromEntries(current.columns.map(col=>[col.key,col.numeric?0:'']))}])
+ const addRow=()=>{const values:Record<string,Cell>=Object.fromEntries(current.columns.map(col=>[col.key,col.numeric?0:'']));if(['land','site','vehicles','infrastructure','office','preop','staff'].includes(current.id))values.allocation=100;if(current.id==='site')values.year=1;if(current.id==='buildings')values.sharedFactor=0;updateRows([...rows,{id:current.id+'-custom-'+Date.now(),label:'ردیف جدید',values}])}
  const capexAmount=(sheetId:string,row:Row):number=>{const v=row.values,n=(key:string)=>Number(v[key]??0)||0,allocation=v.allocation===undefined?1:Math.max(0,Math.min(100,n('allocation')))/100
  if(sheetId==='land')return n('total')||n('qty')*n('unitPrice')*allocation
  if(sheetId==='site')return n('total')||n('qty')*n('unitPrice')*allocation
