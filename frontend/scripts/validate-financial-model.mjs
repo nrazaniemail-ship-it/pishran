@@ -473,6 +473,9 @@ near(engine.calculateNpvAtPeriodOffset(reference.COMFAR_PDF_REFERENCE.projectCas
 assert.ok(hrcrDepreciation.annualDepreciation[14] < hrcrDepreciation.annualDepreciation[0],
   'Asset-level depreciation must decline as short-life assets finish')
 assert.ok(hrcrDepreciation.terminalSalvage > 0, 'Asset-level residual value must be derived from source salvage rates')
+const shortLifeAssets = engine.calculateStraightLineAssetSchedule([...reference.HRCR200_DEPRECIATION_ASSETS], 5)
+assert.ok(shortLifeAssets.terminalSalvage > hrcrDepreciation.terminalSalvage,
+  'Terminal asset book value must retain undepreciated balances when project life is shorter than asset life')
 console.log('PASS: source-backed asset-level straight-line depreciation and residual schedule')
 
 
