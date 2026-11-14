@@ -356,6 +356,7 @@ export type IntegratedFinanceYear = {
   ebit: number
   interest: number
   taxableProfit: number
+  taxLossCarryForward: number
   tax: number
   principal: number
   debtDrawdown: number
@@ -516,7 +517,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
     const taxableProfit = ebit - interest - taxLoss
     const tax = Math.max(0, taxableProfit) * effectiveTaxRate / 100
-    taxLoss = taxableProfit < 0 ? -taxableProfit : 0
+    taxLoss = taxableProfit < 0 ? -taxableProfit : Math.max(0, taxLoss - (ebit - interest))
+    const taxLossCarryForward = taxLoss
 
     const unleveredTaxableProfit = ebit - unleveredTaxLoss
     const unleveredTax = Math.max(0, unleveredTaxableProfit) * effectiveTaxRate / 100
@@ -543,7 +545,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
 
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
-      variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, tax, principal, debtDrawdown,
+      variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
       equityContribution, fixedInvestment, preOperatingCost, workingCapital, workingCapitalBreakdown, salvageProceeds, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
     })
@@ -650,7 +652,7 @@ export function calculateAssetDepreciationSchedule(assets: DepreciationAssetInpu
 
 export type FinancialStatementYear = {
   year: number
-  incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; netIncome: number }
+  incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
   cashFlowStatement: { operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number; netChangeInCash: number; closingCash: number }
   balanceSheet: { cash: number; workingCapitalAssets: number; netFixedAssets: number; deferredPreOperatingAssets: number; totalAssets: number; tradePayables: number; debt: number; totalLiabilities: number; paidInCapital: number; retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number; balanceDifference: number; reconciled: boolean }
 }
@@ -689,7 +691,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
     return {
       year: row.year,
-      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation, ebit, interest: row.interest, profitBeforeTax, tax: row.tax, netIncome },
+      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation, ebit, interest: row.interest, profitBeforeTax, tax: row.tax, taxLossCarryForward: row.taxLossCarryForward, netIncome },
       cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash, closingCash: row.cashBalance },
       balanceSheet: {
         cash: row.cashBalance, workingCapitalAssets: currentAssets, netFixedAssets, deferredPreOperatingAssets,
