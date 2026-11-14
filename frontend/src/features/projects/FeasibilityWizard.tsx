@@ -16,7 +16,7 @@ type Model = {
   market: { demand:number; domesticProduction:number; imports:number; exports:number; targetShare:number; domesticPrice:number; exportPrice:number; domesticShare:number; growth:number }
   capex: Row[]
   opex: Row[]
-  finance: { equity:number; debt:number; equityCost:number; debtCost:number; tax:number; manualRate:number; method:'manual'|'wacc'; depreciationYears:number; workingCapital:number }
+  finance: { equity:number; debt:number; equityCost:number; debtCost:number; tax:number; manualRate:number; method:'manual'|'wacc'; depreciationYears:number; workingCapital:number; financeRate:number; reinvestmentRate:number }
   risks: Row[]
 }
 const stageOptions = [
@@ -65,7 +65,7 @@ function baseModel(project:FeasibilityProject):Model {
    makeRow('هزینه تأمین مالی دوران ساخت (بهره وام)','میلیون ریال',350000,1,'جدول ۱-۳ گزارش')
   ]:[makeRow('زمین و آماده‌سازی','میلیون ریال',1),makeRow('ساختمان و ابنیه','میلیون ریال',1),makeRow('ماشین‌آلات و تجهیزات','میلیون ریال',1),makeRow('تأسیسات و یوتیلیتی','میلیون ریال',1),makeRow('نصب، مهندسی و راه‌اندازی','میلیون ریال',1),makeRow('هزینه‌های پیش از بهره‌برداری','میلیون ریال',1)],
   opex:rawProject?[]:coldRollingProject?[makeRow('خرید کلاف گرم','میلیون ریال/تن',0,0,'قیمت و شرایط تأمین در گزارش درج نشده'),makeRow('اسید، روغن نورد و مواد مصرفی','میلیون ریال/تن',0,0,'نیازمند برآورد'),makeRow('برق، گاز و آب','میلیون ریال/تن',0,0,'نیازمند برآورد'),makeRow('حقوق و دستمزد ۲۵۰ نفر','میلیون ریال/سال',0,0,'گزارش: ۲۵۰ نفر اشتغال مستقیم؛ مبلغ هزینه درج نشده'),makeRow('تعمیرات و قطعات یدکی','میلیون ریال/سال',0,0,'نیازمند برآورد'),makeRow('اداری، فروش، حمل و سربار','میلیون ریال/سال',0,0,'نیازمند برآورد')]:[makeRow('سایر هزینه‌های متغیر','میلیون ریال/تن',1),makeRow('نیروی انسانی','میلیون ریال/سال',1),makeRow('تعمیرات و نگهداری','میلیون ریال/سال',1),makeRow('اداری، فروش و حمل','میلیون ریال/سال',1)],
-  finance:{equity:coldRollingProject?66:40,debt:coldRollingProject?34:60,equityCost:35,debtCost:coldRollingProject?28:23,tax:coldRollingProject?0:20,manualRate:coldRollingProject?28:30,method:coldRollingProject?'manual':'wacc',depreciationYears:coldRollingProject?15:10,workingCapital:0},
+  finance:{equity:rawProject?100:(coldRollingProject?66:40),debt:rawProject?0:(coldRollingProject?34:60),equityCost:35,debtCost:coldRollingProject?28:23,tax:coldRollingProject?0:20,manualRate:coldRollingProject?28:30,method:coldRollingProject?'manual':'wacc',depreciationYears:coldRollingProject?15:10,workingCapital:0,financeRate:coldRollingProject?28:23,reinvestmentRate:coldRollingProject?28:30},
   risks:rawProject?[]:coldRollingProject?[makeRow('تأمین پایدار کلاف گرم و قیمت خرید','سناریو',0,0,'ریسک کلیدی؛ تحلیل حساسیت در گزارش مطرح شده'),makeRow('تغییر قیمت فروش کلاف سرد','درصد',0,0,'نیازمند داده بازار'),makeRow('دسترس‌پذیری خط و تحقق ظرفیت','درصد',0,0,'نیازمند برآورد مهندسی'),makeRow('تأخیر در ساخت و راه‌اندازی','ماه',0,0,'گزارش: دوره ساخت ۱۸ ماه')]:[makeRow('افزایش قیمت مواد اولیه','درصد',10),makeRow('کاهش قیمت فروش','درصد',10),makeRow('افت ظرفیت تولید','درصد',10),makeRow('تأخیر در راه‌اندازی','ماه',6)]
  }
 }
@@ -73,7 +73,8 @@ const n=(v:number)=>Number.isFinite(v)?v:0
 const fmt=(v:number,d=0)=>n(v).toLocaleString('fa-IR',{maximumFractionDigits:d,minimumFractionDigits:d})
 const sum=(rows:Row[])=>rows.reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)
 function npv(flows:number[],rate:number){return flows.reduce((a,v,i)=>a+v/Math.pow(1+rate,i),0)}
-function irr(flows:number[]){if(!flows.some(v=>v>0)||!flows.some(v=>v<0))return Number.NaN;let lo=-.9,hi=5;const left=npv(flows,lo),right=npv(flows,hi);if(!Number.isFinite(left)||!Number.isFinite(right)||left*right>0)return Number.NaN;for(let i=0;i<180;i++){const mid=(lo+hi)/2;if(npv(flows,mid)*left>0)lo=mid;else hi=mid}return (lo+hi)/2}
+function irr(flows:number[]){if(!flows.some(v=>v>0)||!flows.some(v=>v<0))return Number.NaN;const rates=[-.999,-.99,-.95,-.9,-.8,-.6,-.4,-.2,0,.05,.1,.15,.2,.25,.3,.4,.5,.75,1,1.5,2,3,5,10,20,50,100];const roots:number[]=[];let lo=rates[0],flo=npv(flows,lo);for(const hi of rates.slice(1)){const fhi=npv(flows,hi);if(Number.isFinite(flo)&&Number.isFinite(fhi)&&flo*fhi<0){let a=lo,b=hi,fa=flo;for(let i=0;i<160;i++){const mid=(a+b)/2,fm=npv(flows,mid);if(Math.abs(fm)<1e-8){a=mid;b=mid;break}if(fa*fm<=0)b=mid;else{a=mid;fa=fm}}roots.push((a+b)/2)}lo=hi;flo=fhi}return roots.length?roots.sort((a,b)=>Math.abs(a)-Math.abs(b))[0]:Number.NaN}
+function mirr(flows:number[],financeRate:number,reinvestmentRate:number){const n=flows.length-1;if(n<=0||financeRate<=-1||reinvestmentRate<=-1)return Number.NaN;const pv=flows.reduce((s,v,i)=>v<0?s+v/Math.pow(1+financeRate,i):s,0);const fv=flows.reduce((s,v,i)=>v>0?s+v*Math.pow(1+reinvestmentRate,n-i):s,0);return pv<0&&fv>0?Math.pow(fv/-pv,1/n)-1:Number.NaN}
 function Field({label,value,unit,onChange,type='number'}:{label:string;value:number|string;unit?:string;onChange:(v:any)=>void;type?:string}){return <label className="fw-field"><span>{label}</span><div><input type={type} value={value} onChange={e=>onChange(type==='number'?Number(e.target.value):e.target.value)}/>{unit&&<small>{unit}</small>}</div></label>}
 function RowEditor({title,rows,onChange,defaultUnit}:{title:string;rows:Row[];onChange:(rows:Row[])=>void;defaultUnit:string}){
  const update=(id:string,key:keyof Row,value:string|number)=>onChange(rows.map(r=>r.id===id?{...r,[key]:value}:r))
