@@ -380,6 +380,8 @@ assert.ok(workspaceSource.includes("'TOTAL SOURCES OF FINANCE':year.equityContri
 assert.ok(workspaceSource.includes("'TOTAL CASH INFLOW':year.revenue+year.equityContribution+year.debtDrawdown+year.terminalValue"), 'Cash flow statement must include terminal recoveries')
 assert.ok(workspaceSource.includes("'TAXABLE PROFIT':year.taxableProfit"), 'COMFAR taxable profit must use loss carry-forward')
 assert.ok(workspaceSource.includes("'Interest':capitalizedInterest"), 'COMFAR investment cost must include only capitalized interest, not cash interest twice')
+assert.ok(workspaceSource.includes("annualPayablesCost:materialCost+energyCost+maintenanceCostTotal+otherOpexTotal"), 'Supplier credit must use eligible material, energy, maintenance and supplier purchases')
+assert.ok(workspaceSource.includes("annualFixedPayablesCost:financeValue('هزینه ثابت سالانه مشمول بدهی تجاری (یورو)',0)"), 'Fixed supplier-credit purchases must be separately configurable')
 assert.ok(workspaceSource.includes("'Recovery of net working capital':workingCapitalRecovery"), 'Cash flow statement must separately recover net working capital at the end of the project')
 assert.ok(workspaceSource.includes("'Salvage proceeds':year.salvageProceeds"), 'Cash flow statement must separately report salvage proceeds')
 assert.ok(workspaceSource.includes("'Depreciation (non-cash; memorandum)':year.depreciation"), 'Depreciation must be clearly identified as a non-cash memorandum item')
