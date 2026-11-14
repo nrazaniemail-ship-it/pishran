@@ -1,12 +1,14 @@
 import { localStore } from '../storage/localStore'
 
 export type ProjectStatus = 'draft' | 'active' | 'archived'
+export type ProjectTemplateId = 'raw' | 'hot-rolling-200kt'
 
 export interface FeasibilityProject {
   id: string
   name: string
   industry: string
   steelStage?: string
+  templateId?: ProjectTemplateId
   capacity: string
   location: string
   status: ProjectStatus
@@ -22,7 +24,7 @@ export async function listProjects(): Promise<FeasibilityProject[]> {
   return (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
 }
 
-export async function createProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'steelStage' | 'capacity' | 'location'>): Promise<FeasibilityProject> {
+export async function createProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'steelStage' | 'capacity' | 'location' | 'templateId'>): Promise<FeasibilityProject> {
   const projects = await listProjects()
   const now = new Date().toISOString()
   const project: FeasibilityProject = {
