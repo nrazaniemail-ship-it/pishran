@@ -7,6 +7,52 @@
 export const DRI_STEELMAKING_AUDIT = {
   currency: 'EUR',
   capacity: { driTpy: 1_760_000, slabTpy: 1_200_000 },
+  capexCategories: [
+    { name: 'زمین', amount: 0 },
+    { name: 'محوطه‌سازی', amount: 2_456_550 },
+    { name: 'ساختمان‌های غیرصنعتی', amount: 2_676_921 },
+    { name: 'ماشین‌آلات و تجهیزات', amount: 427_304_778 },
+    { name: 'تأسیسات زیربنایی', amount: 16_992_000 },
+    { name: 'وسائط نقلیه', amount: 2_693_752 },
+    { name: 'تجهیزات اداری و خدماتی', amount: 469_844 },
+    { name: 'هزینه‌های پیش‌بینی‌نشده', amount: 1_264_453 }
+  ],
+  materials: {
+    driUnit: 359_973_680,
+    steelmakingBase: 88_066_260,
+    marineGradeAdditives: 7_034_880,
+    apiGradeAdditives: 67_001_880,
+    pressureVesselGradeAdditives: 15_408_360,
+    total: 537_485_060,
+    pelletConsumptionTPerTDri: 1.45,
+    annualPelletConsumptionT: 2_552_000,
+    scrapNetPurchaseTPerTSlab: 0.05,
+    annualScrapNetPurchaseT: 60_000
+  },
+  energy: {
+    driElectricityKwhPerT: 110,
+    steelmakingElectricityKwhPerT: 568,
+    totalElectricityKwh: 875_200_000,
+    driGasNm3PerT: 250,
+    steelmakingGasNm3PerT: 20,
+    totalGasNm3: 464_000_000,
+    driOxygenNm3PerT: 15,
+    steelmakingOxygenNm3PerT: 40,
+    totalOxygenNm3: 74_400_000,
+    totalWaterM3: 5_621_680,
+    compressedAirNm3: 60_720_000,
+    nitrogenNm3: 4_320_000,
+    argonNm3: 648_000,
+    pricedUtilityCost: 69_530_818.4
+  },
+  products: {
+    slabTpy: 1_200_000,
+    slabRevenue: 760_800_000,
+    surplusDriTpy: 460_000,
+    surplusDriRevenue: 126_500_000,
+    totalRevenue: 887_300_000,
+    gradeMixTpy: { marine: 240_000, api: 660_000, pressureVessel: 180_000, construction: 120_000 }
+  },
   capex: {
     fixedInvestment: 453_858_298,
     preproductionNet: 6_624_026.85,
