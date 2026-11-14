@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "android:add": "cap add android",
+    "android:sync": "npm run build && cap sync android",
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
@@ -16,7 +19,11 @@
     "react-dom": "latest",
     "lucide-react": "latest",
     "echarts": "latest",
-    "echarts-for-react": "latest"
+    "echarts-for-react": "latest",
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/filesystem": "^7.0.0",
+    "@capacitor/share": "^7.0.0"
   },
   "devDependencies": {
     "vite-plugin-pwa": "latest",
@@ -24,6 +31,7 @@
     "tailwindcss": "latest",
     "@tailwindcss/vite": "latest",
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "@capacitor/cli": "^7.4.3"
   }
 }
