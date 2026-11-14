@@ -240,3 +240,16 @@ export const HRCR200_DEPRECIATION_ASSETS = [
   {id:'preoperation',label:'هزینه‌های قبل از بهره‌برداری',basis:879191,depreciationRate:0.10,salvageRate:0},
   {id:'other-preoperation',label:'سایر هزینه‌ها',basis:239826.63796,depreciationRate:0.10,salvageRate:0.10}
 ] as const
+/** COMFAR-led project seed. Original Excel assumptions remain available in EXCEL_HOT_ROLLING_200KT. */
+export const COMFAR_BASELINE_HRCR200 = {
+  ...EXCEL_HOT_ROLLING_200KT,
+  discountMode:'manual' as const,
+  manualRate:25,
+  tax:25,
+  annualDepreciationOverride:0,
+  depreciationSource:'source-assets' as const,
+  terminalValueOverride:COMFAR_PDF_REFERENCE.scrapValue,
+  capitalizedInterestSchedule:[1186151.73,2112481.97],
+  notes:EXCEL_HOT_ROLLING_200KT.notes + ' سناریوی فعال این پروژه بر مبنای گزارش COMFAR است: مالیات عملکرد ۲۵٪، نرخ تنزیل دستی ۲۵٪ در تاریخ ارزش‌گذاری ۱۲/۱۴۰۴، بهره سرمایه‌ای‌شده طبق اختلاف دو سال ساخت، استهلاک مشتق از طبقات دارایی اکسل و ارزش قراضه گزارش‌شده در COMFAR. مفروضات ۵٪ مالیات و WACC/ساختار تأمین مالی فایل اکسل به‌عنوان سناریوی مستقل منبع حفظ شده‌اند و با این جریان نقدی ترکیب نمی‌شوند.'
+} as const
+
