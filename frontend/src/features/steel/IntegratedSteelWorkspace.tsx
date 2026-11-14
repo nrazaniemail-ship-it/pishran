@@ -53,6 +53,7 @@ const smartIssues:ValidationIssue[]=useMemo(()=>{
  if(m.dri.pellet<=0)add('pellet-factor','error','ضریب مصرف گندله نامعتبر است','مصرف ویژه گندله باید مثبت باشد.','مصرف گندله')
  if(m.dri.femet<0||m.dri.femet>100||m.dri.fetotal<0||m.dri.fetotal>100||m.dri.feo<0||m.dri.feo>100||m.dri.carbon<0||m.dri.carbon>100||m.dri.moisture<0||m.dri.moisture>100)add('dri-chemistry','error','یکی از مشخصات کیفی DRI خارج از محدوده است','درصدهای متالیزاسیون، آهن کل، FeO، کربن و رطوبت باید بین صفر تا ۱۰۰ باشند.','کیفیت آهن اسفنجی')
  if(m.steel.hdr<0||m.steel.cdr<0||m.steel.scrap<0)add('charge-negative','error','مقادیر ترکیب شارژ منفی است','سهم HDRI، CDRI و قراضه باید نامنفی باشد.','ترکیب شارژ')
+ if(allRows.some(x=>!String(x.source||'').trim()))add('integrated-source','warning','منبع یک یا چند داده فنی یا هزینه‌ای ثبت نشده است','برای مصرف ویژه، قیمت، تجهیزات و هزینه‌ها مرجع یا فرض مهندسی را ثبت کنید.','منبع داده')
  if(!m.dri.technology.trim())add('dri-technology','warning','فناوری احیاء مشخص نشده است','فناوری منتخب و مرجع طراحی را ثبت کنید.','فناوری')
  return out
 },[m,d,sl,liquid,mix])
