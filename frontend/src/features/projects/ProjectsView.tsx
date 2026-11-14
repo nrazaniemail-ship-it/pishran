@@ -35,6 +35,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   const [capacity, setCapacity] = useState('')
   const [location, setLocation] = useState('')
   const isSteel = industry === STEEL_INDUSTRY
+  const isEnergy = industry === 'انرژی و نیروگاه'
 
   function changeIndustry(value: string) {
     setIndustry(value)
@@ -82,7 +83,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
           
           {steelStage && <label>مرحله زنجیره فولاد<input value={steelStage} readOnly aria-readonly="true"/></label>}
         </> : <label>نوع پروژه<input required value={name} onChange={e => setName(e.target.value)} placeholder="نوع پروژه را وارد کنید"/></label>}
-        {isSteel ? <label>ظرفیت اسمی (تن در سال)<input type="text" inputMode="numeric" pattern="[0-9]*" value={capacity} onChange={e => setCapacity(e.target.value.replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))).replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[^0-9]/g, ''))} placeholder="مثلاً ۵۰۰۰۰۰"/></label> : <label>ظرفیت اسمی<input value={capacity} onChange={e => setCapacity(e.target.value)} placeholder="ظرفیت پروژه را وارد کنید"/></label>}
+        {isSteel ? <label>ظرفیت اسمی (تن در سال)<input type="text" inputMode="numeric" pattern="[0-9]*" value={capacity} onChange={e => setCapacity(e.target.value.replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))).replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[^0-9]/g, ''))} placeholder="مثلاً ۵۰۰۰۰۰"/></label> : isEnergy ? <label>ظرفیت اسمی (مگاوات)<input type="text" inputMode="numeric" pattern="[0-9]*" value={capacity} onChange={e => setCapacity(e.target.value.replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))).replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[^0-9]/g, ''))} placeholder="مثلاً ۵۰۰"/></label> : <label>ظرفیت اسمی<input value={capacity} onChange={e => setCapacity(e.target.value)} placeholder="ظرفیت پروژه را وارد کنید"/></label>}
         <label>موقعیت پروژه<input value={location} onChange={e => setLocation(e.target.value)} placeholder="شهر، استان، کشور"/></label>
       </div>
       <div className="form-actions"><button type="submit" className="primary">ذخیره پروژه</button><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>انصراف</button></div>
