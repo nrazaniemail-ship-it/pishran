@@ -138,3 +138,48 @@ export const EXCEL_HOT_ROLLING_200KT = {
   market:[],
   notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ از شیت نرخ تنزیل جداگانه نگهداری شده‌اند. نرخ تنزیل محاسباتی WACC برابر ۲۱٫۲۸۴۳٪ است؛ شیت IRR-NPV نرخ را به ۲۱٪ گرد کرده است. جریان‌های نقدی مرجع COMFAR در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند.'
 } as const
+
+
+/** Cached reference values from the original Excel sheets and the COMFAR cash-flow export. */
+export const EXCEL_REFERENCE_EXPECTED = {
+  capacity:200000,
+  rawMaterials:40844287,
+  energy:269580.16640000005,
+  processConsumables:259099,
+  spareParts:176473.792,
+  maintenance:374760,
+  payrollBase:650052.8640000001,
+  payrollOverhead:130010.57280000002,
+  payrollTotal:780063.4368000001,
+  factoryOverhead:159060,
+  marketing:62259.6,
+  depreciation:1580327,
+  opexWithoutDepreciation:42666484.392,
+  opexWithDepreciation:44246811.392,
+  workingCapital:4595370.457200001,
+  fixedInvestment:18463008.720569465,
+  preOperatingCost:239826.63796,
+  totalInvestment:18702835.358529467,
+  wacc:0.21284299025331596,
+  roundedDiscountRate:0.21,
+  npvAtRoundedRate:18509558.82096656,
+  npvAtExactWacc:18039663.975015666,
+  irr:0.43378234116396674,
+  mirr:0.33865108092920493,
+  financeRate:0.26,
+  reinvestmentRate:0.30,
+  /** Row 9, periods C:S in OPEX sheet "IRR-NPV"; last period includes the COMFAR salvage inflow. */
+  comfarProjectCashFlows:[
+    -7908572.82,-5905218.02,3926279.2047649994,8140613.077362001,
+    8941506.638881996,9688834.216513,9860858.381308004,9573587.738720998,
+    9520342.875225,9520342.875225,9520342.875225,9520342.875225,
+    9520342.875225,9520342.875225,9520342.875225,9520342.875225,
+    23475088.329934
+  ],
+  sourceNotes:[
+    'The OPEX workbook uses 360 days per year for working-capital turnover.',
+    'The CAPEX workbook calculates WACC at 21.284299%; the OPEX IRR-NPV sheet rounds the discount rate to 21%.',
+    'The 5% operating tax in the sales sheet and 25% WACC tax shield in the CAPEX discount-rate sheet are separate source assumptions.',
+    'IRR-NPV cash flows are imported from COMFAR and are not calculated by the source Excel workbook from the operating-cost tabs.'
+  ]
+} as const
