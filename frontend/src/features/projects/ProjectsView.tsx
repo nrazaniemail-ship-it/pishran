@@ -11,7 +11,6 @@ interface Props {
 }
 
 const STEEL_INDUSTRY = 'فولاد و صنایع معدنی'
-const CUSTOM_PROJECT = '__custom__'
 const STEEL_PROJECT_OPTIONS = [
   { name: 'معدن سنگ آهن', stage: 'استخراج سنگ‌آهن' },
   { name: 'کنستانتره', stage: 'فرآوری و کنسانتره' },
@@ -31,18 +30,15 @@ const STEEL_PROJECT_OPTIONS = [
 export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenProject }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
-  const [customName, setCustomName] = useState('')
   const [steelStage, setSteelStage] = useState('')
   const [industry, setIndustry] = useState(STEEL_INDUSTRY)
   const [capacity, setCapacity] = useState('')
   const [location, setLocation] = useState('')
   const isSteel = industry === STEEL_INDUSTRY
-  const isCustom = false
 
   function changeIndustry(value: string) {
     setIndustry(value)
     setName('')
-    setCustomName('')
     setSteelStage('')
   }
 
@@ -55,7 +51,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
-    const projectName = isCustom ? customName.trim() : name.trim()
+    const projectName = name.trim()
     if (!projectName) return
     await onCreate({
       name: projectName,
@@ -64,7 +60,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
       capacity: capacity.trim(),
       location: location.trim()
     })
-    setName(''); setCustomName(''); setSteelStage(''); setCapacity(''); setLocation(''); setShowForm(false)
+    setName(''); setSteelStage(''); setCapacity(''); setLocation(''); setShowForm(false)
   }
 
   return <section className="projects-page">
