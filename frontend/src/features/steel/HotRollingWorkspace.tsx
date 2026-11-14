@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import {FieldGuide} from '../guide/FieldGuide'
 import { Activity, ArrowDownToLine, CheckCircle2, ClipboardList, Factory, Gauge, Layers3, Save, Settings2, ShieldAlert, Zap } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 
@@ -27,8 +28,8 @@ const opex=[['مواد اولیه','40,844,287','92.31'],['آب، برق و گا
 const market=[['ورق گرم','7,009','6,119','5,162'],['اسیدشویی','307','295','229'],['ورق سرد','2,402','2,154','1,952'],['گالوانیزه','1,916','1,485','1,249'],['رنگی','325','260','249'],['قلع‌اندود','328','290','248'],['سایر','389','220','287']]
 const returns=[['دوره بازگشت عادی','3.86','سال'],['دوره بازگشت دینامیک','5.02','سال'],['NPV با نرخ تنزیل ۲۵٪','31,399,764','میلیون ریال'],['IRR','48.31','درصد'],['MIRR','28.03','درصد'],['نقطه سربه‌سر تولید','12.15','درصد ظرفیت']]
 const fmt=(v:number,d=0)=>v.toLocaleString('fa-IR',{maximumFractionDigits:d,minimumFractionDigits:d})
-function NumField({label,value,unit,onChange,step=1}:{label:string;value:number;unit:string;onChange:(v:number)=>void;step?:number}){return <label className="hr-field"><span>{label}</span><div className="hr-input-wrap"><input type="number" min="0" step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/><small>{unit}</small></div></label>}
-function TxtField({label,value,onChange}:{label:string;value:string;onChange:(v:string)=>void}){return <label className="hr-field"><span>{label}</span><input value={value} onChange={e=>onChange(e.target.value)}/></label>}
+function NumField({label,value,unit,onChange,step=1}:{label:string;value:number;unit:string;onChange:(v:number)=>void;step?:number}){return <label className="hr-field"><span className="fw-field-label">{label}<FieldGuide field={label}/></span><div className="hr-input-wrap"><input type="number" min="0" step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/><small>{unit}</small></div></label>}
+function TxtField({label,value,onChange}:{label:string;value:string;onChange:(v:string)=>void}){return <label className="hr-field"><span className="fw-field-label">{label}<FieldGuide field={label}/></span><input value={value} onChange={e=>onChange(e.target.value)}/></label>}
 export default function HotRollingWorkspace(){
  const [data,setData]=useState<Data>(DEFAULT),[tab,setTab]=useState<Tab>('overview'),[loaded,setLoaded]=useState(false),[savedAt,setSavedAt]=useState('')
  useEffect(()=>{let alive=true;localStore.get<Data>(KEY).then(v=>{if(!alive)return;if(v)setData({...DEFAULT,...v});setLoaded(true)}).catch(()=>setLoaded(true));return()=>{alive=false}},[])
