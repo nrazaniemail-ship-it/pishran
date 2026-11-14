@@ -619,4 +619,29 @@ assert.ok(scenarioResults.optimistic.npvProject > scenarioResults.base.npvProjec
 assert.ok(scenarioResults.pessimistic.npvProject < scenarioResults.base.npvProject,'Pessimistic scenario must be below base NPV')
 
 console.log('PASS: integrated WACC, staged loan amortization, working capital, terminal value, cash flow reconciliation, NPV and project/equity IRR')
-console.log('PASS: asset-level depreciation, tax loss carry-forward, multi-variable sensitivity, scenarios and three-statement balance-sheet reconciliation')
+console.log('PASS: asset-level depreciation, tax loss carry-forward, multi-variable sensitivity, scenarios and three-statement balance-sheet reconciliation')\n
+const taxLossModel = engine.calculateIntegratedFinance({
+  years:4,constructionYears:1,capacity:100,fullCapacityRevenue:2000,fullCapacityVariableCashCost:600,
+  fullCapacityFixedCashCost:400,annualDepreciation:0,depreciationSchedule:[0,1500,0,0],
+  fixedInvestment:1000,preOperatingCost:0,fixedInvestmentSchedule:[1000,0,0,0],
+  preOperatingSchedule:[0,0,0,0],utilization:[0,1,1,1],equityContributions:[1000,0,0,0],
+  loans:[],taxRate:25,costOfEquity:20,workingCapitalPercent:0,salesEscalationPercent:0,
+  opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:15
+})
+near(taxLossModel.years[1].taxLossCarryForward,500,1e-9,'Tax loss carried forward after first operating year')
+near(taxLossModel.years[2].taxLossCarryForward,0,1e-9,'Tax loss fully utilized in the following year')
+near(taxLossModel.years[2].tax,125,1e-9,'Tax calculated only after loss carry-forward utilization')
+const capitalizedLoanModel = engine.calculateIntegratedFinance({
+  years:4,constructionYears:2,capacity:100,fullCapacityRevenue:1000,fullCapacityVariableCashCost:200,
+  fullCapacityFixedCashCost:100,annualDepreciation:0,fixedInvestment:1000,preOperatingCost:0,
+  fixedInvestmentSchedule:[500,500,0,0],preOperatingSchedule:[0,0,0,0],utilization:[0,0,1,1],
+  equityContributions:[0,0,0,0],loans:[{id:'capitalized',label:'Capitalized interest loan',drawdowns:[100,0,0,0],
+    annualRate:10,graceYears:0,termYears:2,repaymentStartYear:3,repaymentMethod:'equal-principal',capitalizeInterest:true}],
+  taxRate:20,costOfEquity:20,workingCapitalPercent:0,salesEscalationPercent:0,opexEscalationPercent:0,
+  discountMode:'manual',manualDiscountRate:15
+})
+near(capitalizedLoanModel.loanSchedules.capitalized[0].capitalizedInterest,5,1e-9,'Half-year interest capitalized in drawdown year')
+near(capitalizedLoanModel.loanSchedules.capitalized[1].capitalizedInterest,10.5,1e-9,'Interest capitalized on opening balance in grace year')
+near(capitalizedLoanModel.loanSchedules.capitalized[2].principal,57.75,1e-9,'Equal principal repayment includes capitalized interest')
+assert.ok(engine.buildThreeFinancialStatements(capitalizedLoanModel.years).every(r=>r.balanceSheet.reconciled),'Capitalized interest must be recognized as an asset and balance sheet liability')
+
