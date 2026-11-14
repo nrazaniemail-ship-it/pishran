@@ -207,7 +207,7 @@ export function reconcileCashFlowSeries(modelFlows: number[], referenceFlows: nu
       model,
       reference,
       difference,
-      differencePercent: difference !== null && reference !== 0 ? difference / Math.abs(reference) * 100 : null,
+      differencePercent: difference !== null && reference !== null && reference !== 0 ? difference / Math.abs(reference) * 100 : null,
       withinTolerance: difference !== null && Math.abs(difference) <= allowedDifference
     }
   })
