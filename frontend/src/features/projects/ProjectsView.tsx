@@ -12,15 +12,20 @@ interface Props {
 
 const STEEL_INDUSTRY = 'فولاد و صنایع معدنی'
 const CUSTOM_PROJECT = '__custom__'
-const STEEL_PROJECT_GROUPS = [
-  { stage: 'استخراج سنگ‌آهن', projects: ['احداث معدن سنگ‌آهن', 'توسعه و تجهیز معدن سنگ‌آهن', 'استخراج و دانه‌بندی سنگ‌آهن'] },
-  { stage: 'فرآوری و کنسانتره', projects: ['احداث کارخانه کنسانتره سنگ‌آهن', 'توسعه کارخانه کنسانتره', 'بهینه‌سازی خطوط خردایش و پرعیارسازی'] },
-  { stage: 'گندله‌سازی', projects: ['احداث کارخانه گندله‌سازی', 'توسعه ظرفیت گندله‌سازی', 'احداث واحد آماده‌سازی و پخت گندله'] },
-  { stage: 'احیای مستقیم', projects: ['پروژه مستقل احیای مستقیم (DRI)', 'احداث واحد احیای مستقیم', 'توسعه ظرفیت تولید آهن اسفنجی', 'احداث واحد بریکت‌سازی گرم یا سرد (HBI/CBI)'] },
-  { stage: 'فولادسازی و ریخته‌گری (ذوب و ریخته‌گری مداوم)', projects: ['پروژه مستقل فولادسازی و ریخته‌گری', 'احداث کارخانه فولادسازی و ریخته‌گری اسلب', 'احداث واحد تولید بیلت', 'احداث واحد تولید بلوم', 'توسعه فولادسازی و ریخته‌گری مداوم'] },
-  { stage: 'نورد گرم / ورق', projects: ['پروژه نورد گرم ورق (Plate و Coil)', 'احداث خط تولید ورق تخت (Plate)', 'احداث خط تولید کلاف گرم (Coil)'] },
-  { stage: 'نورد گرم / محصولات مستقل', projects: ['احداث خط نورد میلگرد', 'احداث خط نورد تیرآهن', 'احداث خط نورد نبشی'] },
-  { stage: 'نورد سرد', projects: ['پروژه مستقل نورد سرد', 'احداث خط تولید کلاف سرد', 'احداث خط تولید کلاف گالوانیزه', 'احداث خط تولید کلاف رنگی'] },
+const STEEL_PROJECT_OPTIONS = [
+  { name: 'معدن سنگ آهن', stage: 'استخراج سنگ‌آهن' },
+  { name: 'کنستانتره', stage: 'فرآوری و کنسانتره' },
+  { name: 'گندله سازی', stage: 'گندله‌سازی' },
+  { name: 'احیاء', stage: 'احیای مستقیم' },
+  { name: 'ذوب و ریخته گری', stage: 'فولادسازی و ریخته‌گری' },
+  { name: 'احیاء و فولادسازی- تولید اسلب', stage: 'مجتمع احیاء و فولادسازی - تولید اسلب' },
+  { name: 'نورد ورق گرم- تولید پلیت', stage: 'نورد گرم ورق - تولید پلیت' },
+  { name: 'نورد ورق گرم- تولید کلاف', stage: 'نورد گرم ورق - تولید کلاف' },
+  { name: 'نورد سرد ورق', stage: 'نورد سرد و پوشش‌دهی' },
+  { name: 'نورد میلگرد', stage: 'نورد میلگرد' },
+  { name: 'نورد نبشی', stage: 'نورد نبشی' },
+  { name: 'نورد تیرآهن', stage: 'نورد تیرآهن' },
+  { name: 'سایر', stage: 'سایر' },
 ]
 
 export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenProject }: Props) {
@@ -32,7 +37,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   const [capacity, setCapacity] = useState('')
   const [location, setLocation] = useState('')
   const isSteel = industry === STEEL_INDUSTRY
-  const isCustom = isSteel && name === CUSTOM_PROJECT
+  const isCustom = false
 
   function changeIndustry(value: string) {
     setIndustry(value)
@@ -43,8 +48,8 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
 
   function changeSteelProject(value: string) {
     setName(value)
-    const group = STEEL_PROJECT_GROUPS.find(item => item.projects.includes(value))
-    setSteelStage(group?.stage ?? '')
+    const option = STEEL_PROJECT_OPTIONS.find(item => item.name === value)
+    setSteelStage(option?.stage ?? '')
     setCustomName('')
   }
 
@@ -76,13 +81,10 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
           <label>نوع پروژه
             <select required value={name} onChange={e => changeSteelProject(e.target.value)}>
               <option value="" disabled>ابتدا نوع پروژه را انتخاب کنید</option>
-              {STEEL_PROJECT_GROUPS.map(group => <optgroup key={group.stage} label={group.stage}>
-                {group.projects.map(projectName => <option key={projectName} value={projectName}>{projectName}</option>)}
-              </optgroup>)}
-              <option value={CUSTOM_PROJECT}>سایر پروژه‌های فولادی (عنوان دلخواه)</option>
+              {STEEL_PROJECT_OPTIONS.map(option => <option key={option.name} value={option.name}>{option.name}</option>)}
             </select>
           </label>
-          {isCustom && <label>عنوان دلخواه نوع پروژه<input required value={customName} onChange={e => setCustomName(e.target.value)} placeholder="نوع پروژه فولادی را وارد کنید"/></label>}
+          
           {steelStage && <label>مرحله زنجیره فولاد<input value={steelStage} readOnly aria-readonly="true"/></label>}
         </> : <label>نوع پروژه<input required value={name} onChange={e => setName(e.target.value)} placeholder="نوع پروژه را وارد کنید"/></label>}
         <label>ظرفیت اسمی<input value={capacity} onChange={e => setCapacity(e.target.value)} placeholder="مثلاً ۵۰۰ هزار تن در سال"/></label>
