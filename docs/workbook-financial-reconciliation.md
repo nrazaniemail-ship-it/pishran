@@ -75,6 +75,8 @@ Sources: `CAPEX-HRCR200.Kashan.1402.07.10.rev01.xlsx` and `OPEX-HRCR200.Kashan.1
 
 ### CAPEX and working capital
 
+Fixed-investment categories (million IRR): land 2,015,000; site development 430,007.7606; industrial buildings 2,016,000; non-industrial buildings 381,422.057; machinery/equipment 10,472,740; infrastructure 1,707,981.4; vehicles 490,500; office/service equipment 70,166.50296; contingency 879,191. These sum to fixed investment 18,463,008.7206.
+
 | Item | Source value (million IRR) |
 |---|---:|
 | Fixed investment | 18,463,008.7206 |
