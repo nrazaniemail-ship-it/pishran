@@ -16,6 +16,7 @@ export interface FeasibilityProject {
 
 const PROJECTS_KEY = 'projects:list:v1'
 const WORKBOOK_SEED_KEY = 'projects:workbook-seed:v1'
+const DRI_PROJECT_SEED_KEY = 'projects:dri-direct-reduction-seed:v1'
 
 export async function listProjects(): Promise<FeasibilityProject[]> {
   return (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
@@ -49,7 +50,6 @@ export async function ensureWorkbookProjects(): Promise<FeasibilityProject[]> {
     listProjects(),
     localStore.get<boolean>(WORKBOOK_SEED_KEY)
   ])
-  if (seeded) return projects
   const definitions: Array<Pick<FeasibilityProject, 'name' | 'industry' | 'steelStage' | 'capacity' | 'location'>> = [
     {
       name: 'پروژه نورد گرم ورق',
@@ -67,6 +67,21 @@ export async function ensureWorkbookProjects(): Promise<FeasibilityProject[]> {
     }
   ]
   let next = [...projects]
+  const driSeeded = await localStore.get<boolean>(DRI_PROJECT_SEED_KEY)
+  if (!driSeeded && !next.some(project => project.name === 'واحد احیاء مستقیم')) {
+    const now = new Date().toISOString()
+    next.unshift({
+      name: 'واحد احیاء مستقیم',
+      industry: 'فولاد و صنایع معدنی',
+      steelStage: 'احیای مستقیم',
+      capacity: '۱٬۰۰۰٬۰۰۰ تن آهن اسفنجی سرد (CDRI) در سال',
+      location: 'شهرک صنعتی مربچه، شهرستان رامهرمز',
+      id: crypto.randomUUID?.() ?? `project-${Date.now()}-dri`,
+      status: 'draft',
+      createdAt: now,
+      updatedAt: now
+    })
+  }
   for (const definition of definitions) {
     if (next.some(project => project.name === definition.name)) continue
     const now = new Date().toISOString()
@@ -80,5 +95,6 @@ export async function ensureWorkbookProjects(): Promise<FeasibilityProject[]> {
   }
   if (next.length !== projects.length) await localStore.set(PROJECTS_KEY, next)
   await localStore.set(WORKBOOK_SEED_KEY, true)
+  await localStore.set(DRI_PROJECT_SEED_KEY, true)
   return next
 }
