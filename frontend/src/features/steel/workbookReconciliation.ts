@@ -177,5 +177,8 @@ export const WORKBOOK_RECONCILIATION_FLAGS = [
   'DRI COMFAR total uses exceed total financing sources by EUR 18,632,333.14; the gap is not a funded source in the COMFAR sources table.',
   'The integrated cash-flow workbook includes net profit from an existing 700,000 t/y rolling line and a separate uplift after steelmaking starts; those are not the HRCR200 200,000 t/y project.',
   'HRCR200 financing tabs conflict: the mechanism tab implies 80% debt/20% equity, while the funding summary and general specification imply 30% debt/70% equity. Preserve the selected benchmark only as provisional until the sponsor confirms the intended structure.',
-  'HRCR200 funding summary sources exceed construction uses including capitalized interest by 0.641470533 million IRR; this small difference may be rounding but is not silently adjusted.'
+  'HRCR200 funding summary sources exceed construction uses including capitalized interest by 0.641470533 million IRR; this small difference may be rounding but is not silently adjusted.',
+  'HRCR200 OPEX IRR-NPV uses row 9 (the difference of rows 7 and 8, both labelled discounted cash flows) as its IRR/MIRR vector and discounts it again for NPV; these reported metrics are not a verified raw unlevered project cash-flow basis.',
+  'HRCR200 OPEX IRR-NPV links total investment to 16,587,131.78 million IRR, while the CAPEX workbook fixed investment is 18,463,008.72 million IRR and the project summary total including construction interest and working capital is 26,596,838.88 million IRR.',
+  'HRCR200 detailed OPEX and sales sheets imply 221.234 million IRR/t unit cost and 311.298 million IRR/t average selling price, while the general summary sheet states 213.3 and 307 million IRR/t; detailed-sheet values are used for the independent Pishran model and summary values remain separately disclosed.'
 ] as const
