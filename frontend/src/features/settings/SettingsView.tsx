@@ -8,7 +8,7 @@ interface Props {
   onRestored: () => Promise<void>|void
 }
 
-export default function SettingsView({ settings, storageInfo, onChange, onExport, onImport }: Props) {
+export default function SettingsView({ settings, storageInfo, onChange, onRestored }: Props) {
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => onChange({ ...settings, [key]: value })
 
   return <section className="settings-page">
