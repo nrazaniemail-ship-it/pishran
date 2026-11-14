@@ -178,7 +178,8 @@ const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)
   const counts={...common,...(plantType==='dri'?dri:steel)}[entry]??[0,0,0,0,0,0]
   Object.assign(values,{expert:counts[0],technician:counts[1],secretary:counts[2],operator:counts[3],driver:counts[4],laborer:counts[5],allocation:shared?50:100})
  }
- if(['land','site','buildings','vehicles','infrastructure','office','preop'].includes(sheet.id))values.allocation=100
+ if(['land','site','buildings','vehicles','infrastructure','office','preop'].includes(sheet.id))values.allocation=50
+ if(sheet.id==='machines')values.sharedAllocation=50
  if(sheet.id==='buildings')values.sharedFactor=([0,0,.5,0,0,.5,.5,0,.5,.5,.5,.5,0,.5,.5,.5][i]??0)
  if(sheet.id==='site')values.year=1
  return{id:sheet.id+'-'+i,label:typeof entry==='string'?entry:entry.label,section:typeof entry==='string'?false:entry.section,values}
@@ -237,9 +238,9 @@ const capexAmount=(sheetId:string,row:Row):number=>{const v=row.values,n=(key:st
   const source=data.preop??makeRows(sheets.find(x=>x.id==='preop')!,plantType)
   if(row.section||row.label==='جمع کل هزینه‌های قبل از بهره‌برداری')return 0
   if(preopGroups[row.label])return source.filter(x=>preopGroups[row.label].includes(x.label)).reduce((sum,x)=>sum+Number(x.values.amount??0)*Math.max(0,Math.min(100,Number(x.values.allocation??100)))/100,0)
-  if(row.label.includes('بیمه ریسک'))return n('amount')?n('amount')*allocation:Math.round(fixedInvestment/1000000)*1000000*2.5/1000*allocation
-  if(row.label.includes('اخذ وام'))return n('amount')?n('amount')*allocation:Math.round(fixedInvestment/1000000)*1000000*1.25/1000*allocation
-  if(row.label.includes('۵٪')){const baseLabels=[...Object.keys(preopGroups),'مشاور مادر و همراهی مدیریت پروژه','بیمه ریسک پروژه — ۲٫۵ در هزار سرمایه‌گذاری ثابت','هزینه اخذ وام — ۱٫۲۵ در هزار سرمایه‌گذاری ثابت'];const base=source.filter(x=>baseLabels.includes(x.label)).reduce((sum,x)=>sum+capexAmount('preop',x),0);return n('amount')?n('amount')*allocation:base*.05*allocation}
+  if(row.label.includes('بیمه ریسک'))return n('amount')?n('amount')*allocation:Math.round(fixedInvestment/1000000)*1000000*2.5/1000
+  if(row.label.includes('اخذ وام'))return n('amount')?n('amount')*allocation:Math.round(fixedInvestment/1000000)*1000000*1.25/1000
+  if(row.label.includes('۵٪')){const baseLabels=[...Object.keys(preopGroups),'مشاور مادر و همراهی مدیریت پروژه','بیمه ریسک پروژه — ۲٫۵ در هزار سرمایه‌گذاری ثابت','هزینه اخذ وام — ۱٫۲۵ در هزار سرمایه‌گذاری ثابت'];const base=source.filter(x=>baseLabels.includes(x.label)).reduce((sum,x)=>sum+capexAmount('preop',x),0);return n('amount')?n('amount')*allocation:base*.05}
   if(row.label==='مشاور مادر و همراهی مدیریت پروژه')return n('amount')*allocation
   if(Object.values(preopGroups).some(labels=>labels.includes(row.label)))return 0
   return n('amount')*allocation
@@ -271,7 +272,7 @@ const displayRows:Row[]=current.id==='preop'?rows.map(row=>({...row,values:{...r
  const bookGroups=[{id:'capex',title:'۱. سرمایه‌گذاری ثابت',subtitle:'سرمایه گذاری ثابت.xlsx',items:sheets.filter(x=>x.book==='capex')},{id:'opex',title:'۲. هزینه تولید و بهره‌برداری',subtitle:'هزینه تولید.xlsx',items:sheets.filter(x=>x.book==='opex')},{id:'finance',title:'۳. مدل مالی و جریان نقدی',subtitle:'مدل مالی و جریان نقدی.xlsx',items:sheets.filter(x=>x.book==='finance')}]
  return <section className="fw-page ppw-page" dir="rtl">
   <header className="fw-head"><button className="secondary-button" onClick={onBack}><ArrowRight size={16}/> پروژه‌ها</button><div><span className="eyebrow">PISHRAN / {plantType==='dri'?'DIRECT REDUCTION':'STEELMAKING & CONTINUOUS CASTING'}</span><h1>{project.name}</h1><p>{project.location||'موقعیت ثبت نشده'} · {project.capacity||'ظرفیت ثبت نشده'} · فرم مستقل {plantType==='dri'?'احیاء مستقیم':'فولادسازی و ریخته‌گری'}</p></div><span className="fw-save"><Save size={14}/>{ready?(saved?'ذخیره محلی · '+saved:'ذخیره خودکار فعال'):'در حال بارگذاری'}</span></header>
-  <div className="ppw-intro"><FileSpreadsheet size={20}/><div><b>ساختار فرم‌ها بر اساس توالی شیت‌های فایل‌های Excel</b><p>ترتیب شیت‌ها حفظ شده است. اطلاعات هر پروژه در فضای ذخیره‌سازی مستقل نگهداری می‌شود؛ هیچ داده‌ای بین پروژه احیاء و فولادسازی به‌صورت خودکار مشترک نیست.</p></div></div>
+  <div className="ppw-intro"><FileSpreadsheet size={20}/><div><b>ساختار فرم‌ها بر اساس توالی شیت‌های فایل‌های Excel</b><p>ترتیب شیت‌ها حفظ شده است. اطلاعات هر پروژه مستقل ذخیره می‌شود. برای جلوگیری از دوباره‌شماری، زمین، سایت، ساختمان‌ها، زیرساخت، خودرو، دفتر، هزینه‌های قبل از بهره‌برداری و خدمات عمومی با تخصیص اولیه ۵۰٪ به هر پروژه ثبت می‌شوند؛ سهم‌ها قابل ویرایش‌اند و باید با مبنای واقعی سرمایه‌گذار نهایی شوند.</p></div></div>
   <div className="ppw-summary"><article><small>شیت‌های سرمایه‌گذاری ثابت</small><b>۹</b></article><article><small>شیت‌های هزینه تولید</small><b>۱۲</b></article><article><small>شیت‌های مدل مالی</small><b>۹</b></article><article><small>جمع ثبت‌شده در جدول‌های CAPEX</small><b>{fmt(capexTotal)} <small>یورو</small></b></article></div>
   <div className="ppw-layout"><aside className="ppw-nav">{bookGroups.map(group=><section key={group.id}><div className="ppw-nav-head"><b>{group.title}</b><small>{group.subtitle}</small></div>{group.items.map((sheet,index)=><button key={sheet.id} className={selected===sheet.id?'active':''} onClick={()=>setSelected(sheet.id)}><span>{String(index+1).padStart(2,'0')}</span>{sheet.title}{selected===sheet.id&&<ChevronLeft size={15}/>}</button>)}</section>)}</aside>
    <main className="ppw-sheet"><div className="ppw-sheet-head"><div><span className="eyebrow">{current.book==='capex'?'CAPEX':current.book==='opex'?'OPEX':'FINANCIAL MODEL'} / SHEET {String(sheets.filter(x=>x.book===current.book).findIndex(x=>x.id===current.id)+1).padStart(2,'0')}</span><h2>{current.title}</h2></div><span className="ppw-count">{fmt(rows.length)} ردیف</span></div>
