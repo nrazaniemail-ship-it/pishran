@@ -15,7 +15,7 @@ export const EXCEL_HOT_ROLLING_200KT = {
   life:15,
   currency:'میلیون ریال',
   fx:1,
-  discountMode:'manual' as const,
+  discountMode:'wacc' as const,
   manualRate:21,
   equity:70,
   debt:30,
