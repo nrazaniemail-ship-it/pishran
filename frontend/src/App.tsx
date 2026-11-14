@@ -6,8 +6,9 @@ import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSe
 import { createProject, deleteProject, listProjects, type FeasibilityProject } from './core/projects/projectRepository'
 import ProjectsView from './features/projects/ProjectsView'
 import SettingsView from './features/settings/SettingsView'
+import HotRollingWorkspace from './features/steel/HotRollingWorkspace'
 
-type Page = 'dashboard' | 'projects' | 'settings'
+type Page = 'dashboard' | 'projects' | 'settings' | 'hot-rolling'
 
 const modules = [
   { icon: Factory, title: 'مهندسی و طراحی فرآیند', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', status: 'در نقشه راه' },
@@ -98,6 +99,7 @@ export default function App() {
       <nav className="main-nav" aria-label="ناوبری اصلی">
         <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('dashboard')}><LayoutDashboard size={17}/> داشبورد</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('projects')}><FolderKanban size={17}/> پروژه‌ها</button>
+        <button className={page === 'hot-rolling' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('hot-rolling')}><Factory size={17}/> نورد گرم</button>
         <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('settings')}><Settings size={17}/> تنظیمات</button>
       </nav>
       <div className="top-actions"><span className="connection"><i/> ذخیره محلی فعال</span><button className="avatar" onClick={() => setPage('settings')}>P</button></div>
@@ -109,12 +111,12 @@ export default function App() {
           <span className="eyebrow">INVESTMENT DECISION INTELLIGENCE</span>
           <h1>از ایده تا تصمیم سرمایه‌گذاری، <em>با اطمینان بیشتر.</em></h1>
           <p>محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.</p>
-          <button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> ایجاد پروژه جدید</button>
+          <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> ایجاد پروژه جدید</button><button className="hero-secondary" onClick={() => setPage('hot-rolling')}><Factory size={17}/> مشاهده نمونه نورد گرم ورق</button></div>
         </div>
         <div className="hero-art"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="hero-icon"><Layers3 size={48}/></div><span className="floating f1"><Gauge/> تحلیل اقتصادی</span><span className="floating f2"><ShieldCheck/> ارزیابی ریسک</span></div>
       </section>
 
-      <section className="section-head"><div><span className="eyebrow">WORKSPACE</span><h2>مرکز کنترل سرمایه‌گذاری</h2></div><span className="muted">نسخه محلی · ۰.۲</span></section>
+      <section className="section-head"><div><span className="eyebrow">WORKSPACE</span><h2>مرکز کنترل سرمایه‌گذاری</h2></div><span className="muted">نسخه ۱.۰.۱</span></section>
       <section className="kpis">
         <article className="kpi"><span>پروژه‌های ثبت‌شده</span><b>{projects.length.toLocaleString('fa-IR')}</b><small>ذخیره‌شده روی این دستگاه</small></article>
         <article className="kpi"><span>مدل‌های مالی</span><b>۰</b><small>محاسبات قابل ثبت و نسخه‌بندی</small></article>
@@ -133,7 +135,8 @@ export default function App() {
 
     {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onExport={exportBackup} onImport={importBackup}/>}
+    {page === 'hot-rolling' && <HotRollingWorkspace/>}
 
-    <footer>پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری <span>نسخه محلی · بدون نیاز به ورود یا حساب کاربری</span></footer>
+    <footer>پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری <span>نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری</span></footer>
   </main>
 }
