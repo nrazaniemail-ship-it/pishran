@@ -451,3 +451,5 @@ footer{border-top-color:var(--line)}
 .split-integrated-page .project-card{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
 .split-integrated-page .project-card p{flex:1;line-height:1.9}
 .split-integrated-page .project-card .primary{margin-top:auto}
+
+.ppw-payroll-summary{display:flex;flex-wrap:wrap;gap:10px 22px;padding:12px 14px;margin-top:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:11px;color:var(--muted)}.ppw-payroll-summary b{color:var(--text);font-variant-numeric:tabular-nums}@media(max-width:760px){.ppw-payroll-summary{display:grid;grid-template-columns:1fr;gap:7px}}
