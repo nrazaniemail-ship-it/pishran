@@ -15,6 +15,7 @@ export interface FeasibilityProject {
 }
 
 const PROJECTS_KEY = 'projects:list:v1'
+const WORKBOOK_SEED_KEY = 'projects:workbook-seed:v1'
 
 export async function listProjects(): Promise<FeasibilityProject[]> {
   return (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
@@ -44,7 +45,11 @@ export async function deleteProject(id: string): Promise<void> {
  * project list on first launch without overwriting or duplicating existing work.
  */
 export async function ensureWorkbookProjects(): Promise<FeasibilityProject[]> {
-  const projects = await listProjects()
+  const [projects, seeded] = await Promise.all([
+    listProjects(),
+    localStore.get<boolean>(WORKBOOK_SEED_KEY)
+  ])
+  if (seeded) return projects
   const definitions: Array<Pick<FeasibilityProject, 'name' | 'industry' | 'steelStage' | 'capacity' | 'location'>> = [
     {
       name: 'پروژه نورد گرم ورق',
@@ -74,5 +79,6 @@ export async function ensureWorkbookProjects(): Promise<FeasibilityProject[]> {
     })
   }
   if (next.length !== projects.length) await localStore.set(PROJECTS_KEY, next)
+  await localStore.set(WORKBOOK_SEED_KEY, true)
   return next
 }
