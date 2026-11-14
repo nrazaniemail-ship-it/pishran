@@ -129,6 +129,33 @@ const financial=useMemo(()=>{
  const minDscrRow=dscrRows.length?dscrRows.reduce((a,b)=>a.dscr<=b.dscr?a:b):null
  return {rows,loanRows,capexScheduleTotal:(m.capexSchedule||[]).slice(0,construction).reduce((a,x)=>a+(Number(x)||0),0),projectNpv,projectIrr:irrOf(projectFlows),equityNpv,equityIrr:irrOf(equityFlows),simplePayback:paybackOf(projectFlows),discountedPayback:paybackOf(projectFlows,rate),pi:investmentPv>0?inflowPv/investmentPv:null,minDscr:dscrs.length?Math.min(...dscrs):null,averageDscr:dscrs.length?dscrs.reduce((a,x)=>a+x,0)/dscrs.length:null,minDscrYear:minDscrRow?.year??null,totalDebt:rows.reduce((a,x)=>a+x.draw,0),totalEquity:Math.max(0,capex-rows.reduce((a,x)=>a+x.draw,0)),landCost,depreciable}
 },[m,capex,opex,fullOutput,weightedPrice,rate])
+const sensitivity=useMemo(()=>{
+ const evaluate=(priceFactor:number,opexFactor:number,capexFactor:number)=>{
+  let loss=0,previousNwc=0
+  const flows=financial.rows.map((row:any)=>{
+   const operatingYear=row.year-Math.max(1,Math.floor(m.constructionYears))
+   const revenue=row.revenue*priceFactor
+   const operatingCost=row.operatingCost*opexFactor
+   const ebitda=revenue-operatingCost
+   const ebit=ebitda-row.depreciation
+   const taxable=ebit-loss
+   const taxBase=Math.max(0,taxable)
+   loss=taxable<0?-taxable:Math.max(0,loss-ebit)
+   const tax=taxBase*m.tax/100
+   const nwc=operatingYear>0&&operatingYear<m.life?revenue*Math.max(0,m.nwcDays)/365:0
+   const deltaNwc=nwc-previousNwc
+   previousNwc=nwc
+   return ebitda-tax-row.capexSpend*capexFactor-deltaNwc+row.terminal
+  })
+  return npvOf(flows,rate)
+ }
+ const base=evaluate(1,1,1)
+ return [
+  {key:'price',label:'قیمت فروش محصولات',low:evaluate(.9,1,1),high:evaluate(1.1,1,1),unit:'±۱۰٪'},
+  {key:'opex',label:'هزینه‌های عملیاتی',low:evaluate(1,1.1,1),high:evaluate(1,.9,1),unit:'±۱۰٪'},
+  {key:'capex',label:'سرمایه‌گذاری ثابت (CAPEX)',low:evaluate(1,1,1.1),high:evaluate(1,1,.9),unit:'±۱۰٪'}
+ ].map(x=>({...x,lowDelta:x.low-base,highDelta:x.high-base,range:Math.abs(x.high-x.low)})).sort((a,b)=>b.range-a.range)
+},[financial,m,rate])
 const validationChecks=[
  {ok:m.products.length>0,t:'حداقل یک محصول تعریف شده'},
  {ok:Math.abs(totalMix-100)<.01,t:'جمع ترکیب محصول برابر ۱۰۰٪ است'},
@@ -182,6 +209,9 @@ const smartIssues:ValidationIssue[]=useMemo(()=>{
  if(m.market.length===0)add('market-data','info','داده بازار هنوز ثبت نشده است','برای برآورد درآمد و ظرفیت قابل فروش، تقاضا و قیمت بازار را مستند کنید.','مطالعه بازار')
  if(m.capex.some(x=>x.quantity===0||x.unitPrice===0))add('capex-incomplete','warning','برخی اقلام سرمایه‌گذاری قیمت‌گذاری نشده‌اند','مقدار و قیمت تجهیزات، نصب، ساختمان و هزینه‌های پیش از بهره‌برداری را تکمیل کنید.','CAPEX')
  if(m.opex.some(x=>x.quantity===0||x.unitPrice===0))add('opex-incomplete','warning','برخی اقلام هزینه جاری ناقص‌اند','مصرف ویژه، مقدار سالانه و قیمت مواد، انرژی، نیروی انسانی و تعمیرات را بررسی کنید.','OPEX')
+ if(rows.some(x=>!String(x.source||'').trim()))add('source-missing','warning','منبع داده یک یا چند ردیف ثبت نشده است','برای هر مقدار مهم، منبع، شماره سند یا توضیح فرض مهندسی را وارد کنید.','ردیف‌های مواد، بازار و هزینه')
+ if(rows.some(x=>x.sourceType==='گزارش/مستند'&&!x.sourceDate))add('source-date-missing','warning','تاریخ مرجع برخی مستندات خالی است','تاریخ انتشار یا تاریخ استعلام را ثبت کنید تا داده تاریخی با داده جاری اشتباه نشود.','تاریخ منبع')
+ if(rows.some(x=>x.confidence<50))add('low-confidence','warning','سطح اطمینان برخی داده‌ها پایین است','داده‌های کم‌اطمینان را با استعلام یا سند معتبر جایگزین کنید و اثر آن‌ها را در تحلیل ریسک لحاظ کنید.','سطح اطمینان')
  if(m.constructionYears<1||m.life<1)add('project-life','error','دوره ساخت یا عمر پروژه نامعتبر است','دوره ساخت و عمر بهره‌برداری باید حداقل یک سال باشند.','دوره پروژه')
  return out
 },[m,totalMix,financial.capexScheduleTotal,rate])
@@ -283,7 +313,7 @@ return <section className="fw-page rolling-page" dir="rtl">
 {s===11&&<><h2>۱۲. نتیجه نهایی و توصیه تصمیم‌گیری</h2>
 <div className={blockingChecks.length===0&&projectViable&&shareholderViable&&debtViable?'fw-result':'fw-warning'}><h3>جمع‌بندی ارزیابی پیشران</h3><b>{recommendation}</b><p>این جمع‌بندی بر اساس اطلاعات و مفروضات فعلی ثبت‌شده در پروژه است؛ جایگزین تأیید فنی، استعلام قیمت، اعتبارسنجی بازار یا مصوبه سرمایه‌گذاری نیست.</p><p>کنترل‌های معتبر: <b>{fmt(passedChecks)} از {fmt(validationChecks.length)}</b></p></div>
 <div className="fw-card"><h3>داشبورد تصمیم‌گیری اقتصادی</h3><div className="fw-kpis"><article><small>NPV پروژه</small><b>{fmt(financial.projectNpv)} {m.currency}</b><small>{financial.projectNpv>0?'مثبت؛ ارزش افزوده ایجاد می‌کند':'صفر یا منفی؛ نیازمند بازنگری'}</small></article><article><small>IRR پروژه / نرخ تنزیل</small><b>{financial.projectIrr===null?'—':fmt(financial.projectIrr*100,2)+'٪ / '+fmt(rate*100,2)+'٪'}</b><small>{projectViable?'بالاتر از نرخ مانع':'به حداقل بازده مورد انتظار نرسیده'}</small></article><article><small>PI</small><b>{financial.pi===null?'—':fmt(financial.pi,3)}</b><small>{financial.pi!==null&&financial.pi>1?'بیشتر از یک':'کمتر یا مساوی یک'}</small></article><article><small>بازگشت تنزیل‌شده</small><b>{financial.discountedPayback===null?'در افق طرح ندارد':fmt(financial.discountedPayback,2)+' سال'}</b></article><article><small>NPV سهام‌دار</small><b>{fmt(financial.equityNpv)} {m.currency}</b></article><article><small>IRR سهام‌دار / Ke</small><b>{financial.equityIrr===null?'—':fmt(financial.equityIrr*100,2)+'٪ / '+fmt(m.ke,2)+'٪'}</b></article><article><small>حداقل DSCR</small><b>{financial.minDscr===null?'قابل اعمال نیست':fmt(financial.minDscr,2)}</b><small>{financial.minDscr===null?'تسهیلات تعریف نشده':financial.minDscr>=1.2?'حاشیه پوشش مناسب اولیه':financial.minDscr>=1?'حاشیه محدود و پرریسک':'عدم پوشش خدمت بدهی'}{financial.minDscrYear? ' · سال '+fmt(financial.minDscrYear):''}</small></article><article><small>میانگین DSCR</small><b>{financial.averageDscr===null?'—':fmt(financial.averageDscr,2)}</b></article></div></div>
-<div className="fw-card"><h3>چه کاری انجام دهید؟</h3>{actionItems.map((x,i)=><div className="fw-validation" key={i}><span>{fmt(i+1)}. {x}</span></div>)}</div>
+<div className="fw-card fw-sensitivity"><div className="fw-card-head"><div><h3>تحلیل حساسیت تک‌متغیره NPV پروژه</h3><small className="fw-hint">اثر تغییر ۱۰٪ در هر عامل بر ارزش فعلی خالص پروژه؛ مرتب‌شده بر اساس دامنه اثر.</small></div><span className="hr-source-tag">غربالگری</span></div><div className="fw-sensitivity-base"><span>NPV مبنا</span><b>{fmt(financial.projectNpv)} {m.currency}</b></div>{sensitivity.map(x=><div className="fw-sensitivity-row" key={x.key}><div className="fw-sensitivity-label"><b>{x.label}</b><small>{x.unit}</small></div><div className="fw-sensitivity-values"><span className={x.lowDelta<0?'negative':'positive'}>سناریوی نامطلوب: {fmt(x.low)} <small>({fmt(x.lowDelta)})</small></span><span className={x.highDelta<0?'negative':'positive'}>سناریوی مطلوب: {fmt(x.high)} <small>({fmt(x.highDelta)})</small></span></div><div className="fw-sensitivity-track"><i style={{width:Math.max(3,Math.min(100,x.range/Math.max(1,...sensitivity.map(y=>y.range))*100))+'%'}}/></div></div>)}<small className="fw-hint">روش محاسبه: باز‌محاسبه مالیات با زیان انتقالی و سرمایه در گردش متناسب با درآمد؛ ساختار تأمین مالی ثابت نگه داشته شده است. این تحلیل فقط یک عامل را در هر بار تغییر می‌دهد و جایگزین سناریوهای ترکیبی، تحلیل ریسک نرخ ارز/تأخیر و شبیه‌سازی مونت‌کارلو نیست.</small></div><div className="fw-card"><h3>چه کاری انجام دهید؟</h3>{actionItems.map((x,i)=><div className="fw-validation" key={i}><span>{fmt(i+1)}. {x}</span></div>)}</div>
 <div className="fw-card"><h3>تفسیر معیارهای تصمیم</h3><div className="fw-validation"><span>NPV پروژه مثبت و IRR بالاتر از WACC/نرخ تنزیل</span><b className={projectViable?'good':'missing'}>{projectViable?'قبول':'رد / بازنگری'}</b></div><div className="fw-validation"><span>NPV سهام‌دار مثبت و IRR سهام‌دار بالاتر از Ke</span><b className={shareholderViable?'good':'missing'}>{shareholderViable?'قبول':'رد / بازنگری'}</b></div><div className="fw-validation"><span>حداقل DSCR برابر یا بیشتر از ۱٫۲۰ (در صورت وجود بدهی)</span><b className={debtViable?'good':'missing'}>{m.loans.length===0?'بدون بدهی':debtViable?'قبول':'نیازمند اصلاح'}</b></div><div className="fw-validation"><span>تکمیل کنترل‌های ورودی</span><b className={blockingChecks.length===0?'good':'missing'}>{blockingChecks.length===0?'قبول':'نیازمند تکمیل'}</b></div><small className="fw-hint">حد ۱٫۲۰ برای DSCR یک معیار غربالگری اولیه است، نه الزام عمومی همه بانک‌ها؛ معیار نهایی باید از شروط تسهیلات‌دهنده اخذ شود. برای تصمیم نهایی، هم‌ارزی مبنای قیمت ثابت/جاری، ارز جریان نقدی و نرخ تنزیل ضروری است.</small></div>
 <div className="fw-warning"><AlertTriangle size={17}/> این نتیجه‌گیری فقط یک غربالگری اولیه بر پایه مدل سالانه فعلی است. مدل ماهانه، مالیات و ترازنامه کامل، سناریوها و حساسیت، تورم و تسعیر، سرمایه در گردش تفصیلی و تأیید داده‌های فنی/بازاری باید پیش از تصمیم نهایی سرمایه‌گذاری تکمیل شوند.</div></>}
 </main>
