@@ -622,8 +622,9 @@ export function calculateStraightLineAssetSchedule(assets: StraightLineAssetInpu
       return charge
     })
     schedule.forEach((value, index) => { annualDepreciation[index] += value })
-    terminalSalvage += residual
-    return { id: asset.id, label: asset.label, annualDepreciation: schedule, terminalSalvage: residual }
+    const bookValueAtEnd = residual + remaining
+    terminalSalvage += bookValueAtEnd
+    return { id: asset.id, label: asset.label, annualDepreciation: schedule, terminalSalvage: bookValueAtEnd }
   })
   return { annualDepreciation, assetRows, terminalSalvage }
 }
