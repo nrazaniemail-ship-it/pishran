@@ -49,6 +49,10 @@ export default function HotRollingWorkspace(){
  ;[['برق',data.electricity],['گاز طبیعی',data.naturalGas],['آب صنعتی',data.industrialWater],['هوای فشرده',data.compressedAir]].forEach(([name,value])=>{if(Number(value)<0)add('utility-'+name,'error','مصرف ویژه منفی است','مصرف '+name+' باید نامنفی باشد.',String(name))})
  if(data.annualOutput>0&&data.operatingHours>0&&data.annualOutput/data.operatingHours>250)add('hourly-output','warning','نرخ تولید ساعتی بالا است','تولید ساعتی محاسباتی '+fmt(data.annualOutput/data.operatingHours,1)+' تن/ساعت است؛ با ظرفیت قفسه‌ها و گلوگاه خط تطبیق دهید.','ظرفیت و ساعات کار')
  if(calc.yield<75||calc.yield>100)add('yield-range','warning','بازده کل خط خارج از محدوده غربالگری است','بازده محاسباتی '+fmt(calc.yield,1)+'٪ است؛ ضریب مصرف اسلب و ضایعات را دوباره بررسی کنید.','بازده مواد')
+ if(data.productMix.trim()&&!/^100(?:[.,]0+)?$/.test(data.productMix.trim())&&!/^[0-9]+(?:[.,][0-9]+)?(?:\\s*[,،;]\\s*[0-9]+(?:[.,][0-9]+)?)+$/.test(data.productMix.trim()))add('product-mix-format','warning','قالب ترکیب محصولات نیازمند بررسی است','ترکیب را به‌صورت درصدهای عددی وارد کنید؛ جمع درصدها باید ۱۰۰٪ باشد.','ترکیب محصول')
+ if(data.reheatingTemperature<900||data.reheatingTemperature>1350)add('reheat-temp','warning','دمای هدف خروج اسلب نیازمند بازبینی است','دمای ثبت‌شده را با گرید فولاد، زمان ماند و طراحی کوره تطبیق دهید.','دمای خروج کوره')
+ if(data.rollingPassesMin<1||data.rollingPassesMax>30)add('rolling-passes','warning','تعداد پاس نورد غیرمعمول است','توالی پاس‌ها را با نسبت کاهش ضخامت و توان قفسه‌ها بررسی کنید.','تعداد پاس');
+
  return out
 },[data,calc])
 const change=<K extends keyof Data>(key:K,value:Data[K])=>setData(cur=>({...cur,[key]:value}))
