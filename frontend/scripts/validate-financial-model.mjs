@@ -346,19 +346,19 @@ const cyclePolicy = {
 }
 const cycle = engine.calculateOperatingCycleWorkingCapital(cyclePolicy, 0.5, 1.1, 1.2)
 near(cycle.rawMaterials, 180, 1e-9, 'Operating cycle raw material inventory')
-near(cycle.workInProgress, 90, 1e-9, 'Operating cycle WIP inventory with material and conversion completion')
+near(cycle.workInProgress, 75, 1e-9, 'Operating cycle WIP inventory with material and conversion completion')
 near(cycle.finishedGoods, 180, 1e-9, 'Operating cycle finished goods')
 near(cycle.receivables, 495, 1e-9, 'Operating cycle receivables')
 near(cycle.minimumCash, 30, 1e-9, 'Operating cycle minimum cash')
 near(cycle.payables, 180, 1e-9, 'Operating cycle supplier payables including energy and maintenance purchases')
-near(cycle.netWorkingCapital, 795, 1e-9, 'Operating cycle net working capital with supplier purchase base')
+near(cycle.netWorkingCapital, 780, 1e-9, 'Operating cycle net working capital with supplier purchase base')
 near(engine.calculateCashConversionCycleDays(cyclePolicy), 80, 1e-9, 'Cash conversion cycle days')
 const fixedCostCycle = engine.calculateOperatingCycleWorkingCapital({ ...cyclePolicy, annualFixedConversionCost: 900, annualFixedFinishedGoodsCost: 900, annualFixedCashOperatingCost: 900 }, 0.5, 1.1, 1.2)
-near(fixedCostCycle.workInProgress, 105, 1e-9, 'WIP fixed and variable conversion cost split')
+near(fixedCostCycle.workInProgress, 82.5, 1e-9, 'WIP fixed and variable conversion cost split')
 near(fixedCostCycle.finishedGoods, 202.5, 1e-9, 'Finished goods fixed and variable cost split')
 near(fixedCostCycle.minimumCash, 37.5, 1e-9, 'Minimum cash fixed and variable cost split')
 near(fixedCostCycle.payables, 180, 1e-9, 'Supplier payables use eligible purchases rather than raw materials only')
-near(fixedCostCycle.netWorkingCapital, 840, 1e-9, 'Fixed-cost-aware operating working capital')
+near(fixedCostCycle.netWorkingCapital, 817.5, 1e-9, 'Fixed-cost-aware operating working capital')
 
 const scaledCapex = engine.calculateCapacityScaledCapex(1000, 100, 200, 0.6)
 near(scaledCapex.factor, Math.pow(2, 0.6), 1e-12, 'Non-linear CAPEX scale factor')
@@ -369,7 +369,7 @@ assert.equal(engine.calculateCapacityScaledCapex(1000, 0, 200, 0.6).valid, false
 const grossWorkingCapitalChange = cycle.rawMaterials + cycle.workInProgress + cycle.finishedGoods + cycle.receivables + cycle.minimumCash
 const netWorkingCapitalChange = grossWorkingCapitalChange - cycle.payables
 near(netWorkingCapitalChange, cycle.netWorkingCapital, 1e-9, 'COMFAR working capital bridge: gross assets less supplier credit')
-const priorNwc = 500, currentNwc = 795, priorPayables = 100, currentPayables = 180
+const priorNwc = 500, currentNwc = 780, priorPayables = 100, currentPayables = 180
 const comfarGrossAssetIncrease = (currentNwc - priorNwc) + (currentPayables - priorPayables)
 near(comfarGrossAssetIncrease - (currentPayables - priorPayables), currentNwc - priorNwc, 1e-9, 'COMFAR gross working capital and payable source reconciliation')
 console.log('PASS: operating-cycle working capital, WIP completion, fixed/variable costs, supplier credit and cash conversion cycle')
@@ -379,6 +379,7 @@ assert.ok(workspaceSource.includes("'Accounts payable':changePayables"), 'COMFAR
 assert.ok(workspaceSource.includes("'TOTAL SOURCES OF FINANCE':year.equityContribution+year.debtDrawdown+financeSumAt(financeLoans,i,'capitalizedInterest')+changePayables"), 'COMFAR funding sources must include capitalized interest and supplier credit')
 assert.ok(workspaceSource.includes("'TOTAL CASH INFLOW':year.revenue+year.equityContribution+year.debtDrawdown+year.terminalValue"), 'Cash flow statement must include terminal recoveries')
 assert.ok(workspaceSource.includes("'TAXABLE PROFIT':year.taxableProfit"), 'COMFAR taxable profit must use loss carry-forward')
+assert.ok(workspaceSource.includes("'Interest':capitalizedInterest"), 'COMFAR investment cost must include only capitalized interest, not cash interest twice')
 assert.ok(workspaceSource.includes("'Recovery of net working capital':workingCapitalRecovery"), 'Cash flow statement must separately recover net working capital at the end of the project')
 assert.ok(workspaceSource.includes("'Salvage proceeds':year.salvageProceeds"), 'Cash flow statement must separately report salvage proceeds')
 assert.ok(workspaceSource.includes("'Depreciation (non-cash; memorandum)':year.depreciation"), 'Depreciation must be clearly identified as a non-cash memorandum item')
