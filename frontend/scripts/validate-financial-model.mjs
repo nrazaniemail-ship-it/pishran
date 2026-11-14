@@ -123,8 +123,8 @@ const comfarNpvAtValuationDate = comfarPdf.projectCashFlows.reduce(
   (sum, flow, index) => sum + flow / Math.pow(1 + comfarPdf.discountRate, index - 1), 0)
 near(comfarNpvAtValuationDate, comfarPdf.npv, 0.01, 'COMFAR PDF NPV at 12/1404 and 25%')
 near(engine.calculateIrr(comfarPdf.projectCashFlows), comfarPdf.irr, 0.00002, 'COMFAR PDF IRR')
-near(engine.calculateMirr(comfarPdf.projectCashFlows, comfarPdf.mirrFinanceRate, comfarPdf.mirrReinvestmentRate),
-  comfarPdf.mirr, 0.0002, 'COMFAR PDF MIRR at 20% finance/reinvestment rates')
+assert.equal(comfarPdf.mirrRatesPublished, false,
+  'COMFAR PDF MIRR must not be reverse-engineered into undocumented finance/reinvestment assumptions')
 
 
 const totalCapex = model.capex.reduce((sum, row) => sum + row.quantity * row.unitPrice * (row.currency === currency ? 1 : row.fxRate), 0)
