@@ -68,6 +68,14 @@ near(rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetProjectIrrPercent, 43.
 assert.ok(Math.abs(rollingAudit.alternativeMetricsInWorkbook.generalSummaryIrrPercent
   - rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetProjectIrrPercent) > 4,
   'Conflicting HRCR200 IRR outputs must remain an explicit audit item')
+near(rollingAudit.financingCashflowSchedule.equityContributionsTotal, 16401129.53, 0.01,
+  'HRCR200 COMFAR financing schedule equity contributions')
+near(rollingAudit.financingCashflowSchedule.longTermLoanGrossDrawdowns,
+  rollingAudit.financingCashflowSchedule.longTermLoanPrincipalRepayments, 0.01,
+  'HRCR200 long-term loan gross drawdowns and principal repayments')
+near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryTotalInvestment
+  - rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetTotalInvestment,
+  10009707.09412, 0.1, 'HRCR200 investment base discrepancy')
 assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.length >= 5,
   'Source conflicts must remain explicit audit flags')
 console.log('PASS: source-workbook DRI and HRCR200 CAPEX/OPEX bridges and unresolved financing/depreciation flags')
