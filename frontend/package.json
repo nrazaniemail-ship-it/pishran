@@ -9,7 +9,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "android:add": "cap add android",
     "android:sync": "npm run build && cap sync android",
-    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "test:financial": "node scripts/validate-financial-model.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
