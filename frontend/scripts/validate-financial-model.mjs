@@ -473,3 +473,18 @@ assert.ok(hrcrDepreciation.annualDepreciation[14] < hrcrDepreciation.annualDepre
   'Asset-level depreciation must decline as short-life assets finish')
 assert.ok(hrcrDepreciation.terminalSalvage > 0, 'Asset-level residual value must be derived from source salvage rates')
 console.log('PASS: source-backed asset-level straight-line depreciation and residual schedule')
+
+
+const comfarSeed = reference.COMFAR_BASELINE_HRCR200
+assert.equal(comfarSeed.tax, 25, 'COMFAR baseline uses 25% operating tax')
+assert.equal(comfarSeed.manualRate, 25, 'COMFAR baseline uses the reported 25% discount rate')
+assert.equal(comfarSeed.equity, 100, 'COMFAR total-investment cash flow is kept unlevered')
+assert.equal(comfarSeed.debt, 0, 'COMFAR total-investment cash flow must not blend Excel debt weights')
+assert.deepEqual(comfarSeed.capitalizedInterestSchedule, [1186151.73, 2112481.97],
+  'Capitalized construction interest is included as its own two-year schedule')
+assert.equal(comfarSeed.depreciationSource, 'source-assets', 'COMFAR baseline uses asset-level depreciation')
+assert.equal(comfarSeed.terminalValueOverride, reference.COMFAR_PDF_REFERENCE.scrapValue,
+  'COMFAR reported terminal scrap is a sourced scenario input')
+assert.ok(workspaceSource.includes('capitalizedInterestSpend'), 'Workspace project cash flow must include the explicit capitalized-interest schedule')
+assert.ok(workspaceSource.includes("m.depreciationSource==='source-assets'"), 'Workspace must support source asset-level depreciation')
+console.log('PASS: COMFAR-led HRCR200 seed keeps tax, financing, interest, depreciation and scrap assumptions explicit')
