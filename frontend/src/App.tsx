@@ -137,12 +137,12 @@ export default function App() {
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenSample={() => setPage('plate-sample')} onOpenProject={project => { setActiveProject(project); setPage('project-wizard') }}/ >}
+    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenSample={() => setPage('plate-sample')} onOpenProject={project => { setActiveProject(project); setPage('project-wizard') }}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onExport={exportBackup} onImport={importBackup}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => setPage('hot-rolling')}/>}
     {page === 'hot-rolling' && <HotRollingWorkspace/>}
     {page === 'plate-sample' && <PlateSampleProject/>}
-    {page === 'project-wizard' && activeProject && <FeasibilityWizard project={activeProject} onBack={() => setPage('projects')}/ >}
+    {page === 'project-wizard' && activeProject && <FeasibilityWizard project={activeProject} onBack={() => setPage('projects')}/>}
 
     <footer>پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری <span>نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری</span></footer>
   </main>
