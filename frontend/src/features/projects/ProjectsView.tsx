@@ -32,6 +32,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   const [showTemplateChooser, setShowTemplateChooser] = useState(false)
   const [templateId, setTemplateId] = useState<ProjectTemplateId>('raw')
   const [name, setName] = useState('')
+  const [projectType, setProjectType] = useState('')
   const [steelStage, setSteelStage] = useState('')
   const [industry, setIndustry] = useState(STEEL_INDUSTRY)
   const [capacity, setCapacity] = useState('')
@@ -45,12 +46,14 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
     setShowForm(true)
     setIndustry(STEEL_INDUSTRY)
     if (value === 'hot-rolling-200kt') {
+      setProjectType('نورد ورق گرم- تولید کلاف')
       setName('نورد ورق گرم- تولید کلاف')
       setSteelStage('نورد گرم ورق - تولید کلاف')
       setCapacity('200000')
       setLocation('کاشان، ایران')
     } else {
       setName('')
+      setProjectType('')
       setSteelStage('')
       setCapacity('')
       setLocation('')
@@ -60,11 +63,13 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   function changeIndustry(value: string) {
     setIndustry(value)
     setName('')
+    setProjectType('')
     setSteelStage('')
   }
 
   function changeSteelProject(value: string) {
-    setName(value)
+    setProjectType(value)
+    setName('')
     const option = STEEL_PROJECT_OPTIONS.find(item => item.name === value)
     setSteelStage(option?.stage ?? '')
   }
@@ -81,7 +86,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
       location: location.trim(),
       templateId
     })
-    setName(''); setSteelStage(''); setCapacity(''); setLocation(''); setShowForm(false); setShowTemplateChooser(false); setTemplateId('raw')
+    setName(''); setProjectType(''); setSteelStage(''); setCapacity(''); setLocation(''); setShowForm(false); setShowTemplateChooser(false); setTemplateId('raw')
   }
 
   return <section className="projects-page">
@@ -97,13 +102,13 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
         </label>
         {isSteel ? <>
           <label>نوع پروژه
-            <select required value={name} disabled={templateId === 'hot-rolling-200kt'} onChange={e => changeSteelProject(e.target.value)}>
+            <select required value={projectType} disabled={templateId === 'hot-rolling-200kt'} onChange={e => changeSteelProject(e.target.value)}>
               <option value="" disabled>ابتدا نوع پروژه را انتخاب کنید</option>
               {STEEL_PROJECT_OPTIONS.map(option => <option key={option.name} value={option.name}>{option.name}</option>)}
             </select>
           </label>
           
-          {steelStage && <label>مرحله زنجیره فولاد<input value={steelStage} readOnly aria-readonly="true"/></label>}
+          {steelStage && <label>نام پروژه<input required value={name} onChange={e => setName(e.target.value)} placeholder="نام دلخواه پروژه را وارد کنید"/></label>}
         </> : <label>نوع پروژه<input required value={name} onChange={e => setName(e.target.value)} placeholder="نوع پروژه را وارد کنید"/></label>}
         {isSteel ? <label>ظرفیت اسمی (تن در سال)<input type="text" inputMode="numeric" pattern="[0-9]*" value={capacity} onChange={e => setCapacity(e.target.value.replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))).replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[^0-9]/g, ''))} placeholder="مثلاً ۵۰۰۰۰۰"/></label> : isEnergy ? <label>ظرفیت اسمی (مگاوات)<input type="text" inputMode="numeric" pattern="[0-9]*" value={capacity} onChange={e => setCapacity(e.target.value.replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))).replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[^0-9]/g, ''))} placeholder="مثلاً ۵۰۰"/></label> : <label>ظرفیت اسمی<input value={capacity} onChange={e => setCapacity(e.target.value)} placeholder="ظرفیت پروژه را وارد کنید"/></label>}
         <label>موقعیت پروژه<input value={location} onChange={e => setLocation(e.target.value)} placeholder="شهر، استان، کشور"/></label>
