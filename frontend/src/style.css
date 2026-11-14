@@ -342,3 +342,29 @@ footer{border-top-color:var(--line)}
 .draft-pill.draft-action{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));background:color-mix(in srgb,var(--accent) 9%,var(--surface));color:var(--accent);font:inherit;font-size:10px;font-weight:700;padding:6px 10px;border-radius:8px;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
 .draft-pill.draft-action:hover{background:color-mix(in srgb,var(--accent) 16%,var(--surface));border-color:var(--accent);transform:translateY(-1px)}
 .draft-pill.draft-action:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Reference-aligned hot rolling worksheets */
+.hr-ref-card{margin:18px 0;padding:18px;background:var(--surface);border:1px solid var(--line);border-radius:15px;min-width:0}
+.hr-ref-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.hr-ref-head h3{font-size:16px;margin:5px 0}
+.hr-ref-head p{font-size:10px;line-height:1.9;color:var(--muted);margin:0;max-width:850px}
+.hr-ref-save{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:9px;color:var(--muted);background:var(--page);padding:8px 10px;border-radius:9px}
+.hr-ref-tabs{display:flex;gap:7px;overflow-x:auto;padding:14px 0 12px;scrollbar-width:thin}
+.hr-ref-tabs button{flex:0 0 auto;border:1px solid var(--line);background:var(--page);color:var(--muted);border-radius:9px;padding:9px 12px;font-size:10px;cursor:pointer}
+.hr-ref-tabs button.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.hr-ref-table-card{border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0}
+.hr-ref-table-title{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;background:var(--page)}
+.hr-ref-table-title h4{font-size:13px;margin:0 0 4px}
+.hr-ref-table-title small{font-size:9px;color:var(--muted)}
+.hr-ref-scroll{width:100%;overflow:auto;overscroll-behavior-x:contain}
+.hr-ref-table{border-collapse:separate;border-spacing:0;width:100%;min-width:900px;font-size:10px}
+.hr-ref-table th,.hr-ref-table td{padding:8px;border-bottom:1px solid var(--line);border-left:1px solid var(--line);text-align:right;vertical-align:middle;min-width:115px}
+.hr-ref-table th{position:sticky;top:0;background:var(--page);color:var(--muted);font-weight:700;white-space:normal;min-width:125px}
+.hr-ref-table th small{display:block;color:var(--accent);font-size:9px;font-weight:600;margin-top:4px}
+.hr-ref-table td input{width:100%;min-width:90px;box-sizing:border-box;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--text);padding:8px 7px;font-size:10px;outline:none}
+.hr-ref-table td input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 15%,transparent)}
+.hr-ref-delete{border:0;background:transparent;color:var(--muted);padding:7px;border-radius:7px;cursor:pointer}
+.hr-ref-delete:hover{background:#fff0ed;color:#b54a3b}
+.hr-ref-note{margin:0;padding:11px 14px;background:var(--page);color:var(--muted);font-size:9px;line-height:1.9}
+.hr-ref-foot{display:flex;justify-content:space-between;gap:10px;padding:10px 14px;color:var(--muted);font-size:9px}
+@media(max-width:650px){.hr-ref-card{padding:12px}.hr-ref-head{flex-direction:column}.hr-ref-table-title{align-items:flex-start;flex-direction:column}.hr-ref-foot{flex-direction:column}.hr-ref-tabs button{font-size:9px;padding:8px 10px}}
