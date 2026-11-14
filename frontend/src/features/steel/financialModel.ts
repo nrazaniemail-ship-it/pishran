@@ -366,6 +366,7 @@ export type IntegratedFinanceYear = {
   maintenanceCapex: number
   capitalizedInterest: number
   workingCapital: number
+  closingWorkingCapital: number
   workingCapitalBreakdown: WorkingCapitalBreakdown
   salvageProceeds: number
   terminalValue: number
@@ -503,10 +504,11 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
       ? (year > constructionYears && utilization > 0 ? calculateOperatingCycleWorkingCapital(input.workingCapitalPolicy, utilization, salesFactor, opexFactor) : { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 })
       : (() => { const amount = year > constructionYears ? (variableCashCost + fixedCashCost) * Math.max(0, input.workingCapitalPercent) / 100 : 0; return { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: amount, payables: 0, netWorkingCapital: amount } })()
     const calculatedWorkingCapital = workingCapitalBreakdown.netWorkingCapital
-    const workingCapital = year === years ? 0 : calculatedWorkingCapital
+    const workingCapital = calculatedWorkingCapital
+    const closingWorkingCapital = year === years ? 0 : calculatedWorkingCapital
     const statementWorkingCapitalBreakdown: WorkingCapitalBreakdown = year === years ? { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 } : workingCapitalBreakdown
-    const changeInWorkingCapital = workingCapital - priorWorkingCapital
-    priorWorkingCapital = workingCapital
+    const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
+    priorWorkingCapital = closingWorkingCapital
 
     const loanRows = input.loans.map(loan => loanSchedules[loan.id][index])
     const debtDrawdown = loanRows.reduce((sum, row) => sum + row.drawdown, 0)
@@ -548,7 +550,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
-      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, terminalValue, changeInWorkingCapital,
+      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
     })
   }
