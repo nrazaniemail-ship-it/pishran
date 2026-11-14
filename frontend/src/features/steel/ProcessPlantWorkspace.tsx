@@ -7,7 +7,7 @@ type PlantType='dri'|'steelmaking'
 type Cell=string|number
 type Row={id:string;label:string;values:Record<string,Cell>;section?:boolean}
 type Column={key:string;label:string;unit?:string;numeric?:boolean}
-type Sheet={id:string;title:string;book:'capex'|'opex'|'finance';columns:Column[];rows:(string|{label:string;section:true})[];note?:string;readOnly?:boolean}
+type Sheet={id:string;title:string;book:'capex'|'opex'|'finance';columns:Column[];rows:(string|{label:string;section:boolean})[];note?:string;readOnly?:boolean}
 const c=(key:string,label:string,unit='',numeric=false):Column=>({key,label,unit,numeric})
 const capexCols=[c('qty','مقدار','',true),c('unit','واحد'),c('unitPrice','هزینه واحد','یورو',true),c('equipment','هزینه تجهیزات','یورو',true),c('allocation','سهم تخصیص به پروژه','٪',true),c('year','سال انجام','',true)]
 const costCols=[c('specific','مصرف ویژه','',true),c('unit','واحد'),c('price','قیمت واحد','یورو',true),c('annualQty','مقدار سالیانه','',true),c('annualCost','هزینه سالیانه','یورو',true)]
@@ -165,7 +165,7 @@ const contingency:number=Math.round(fixedBase*.05)
 const fixedInvestment:number=fixedBase+capexBySheet('machines')+contingency
 const preOperating:number=capexBySheet('preop')
 const capexTotal:number=fixedInvestment+preOperating
-const summaryValues=[capexBySheet('land'),capexBySheet('site'),capexBySheet('buildings'),capexBySheet('machines'),capexBySheet('infrastructure'),capexBySheet('vehicles'),capexBySheet('office'),contingency,fixedInvestment,preOperating,capexTotal]
+const summaryValues:number[]=[capexBySheet('land'),capexBySheet('site'),capexBySheet('buildings'),capexBySheet('machines'),capexBySheet('infrastructure'),capexBySheet('vehicles'),capexBySheet('office'),contingency,fixedInvestment,preOperating,capexTotal]
 const displayRows:Row[]=current.id==='fixed-summary'?rows.map((row,i)=>({...row,values:{...row.values,amount:summaryValues[i]??0,share:i<=8&&fixedInvestment>0?(summaryValues[i]??0)/fixedInvestment*100:i===10&&capexTotal>0?100:0,source:['خرید زمین','محوطه‌سازی','ساختمان‌ها','ماشین‌آلات','تأسیسات زیربنایی','وسائط نقلیه','وسایل اداری','محاسبه ۵٪ مطابق اکسل','جمع هزینه‌های ثابت','قبل از بهره‌برداری','جمع کل'][i]??''}})):current.book==='capex'?rows.map(row=>({...row,values:{...row.values,total:capexAmount(current.id,row)}})):current.id==='staff'?rows.map(row=>{if(row.section)return row;const total=['expert','technician','secretary','operator','driver','laborer'].reduce((sum,key)=>sum+Number(row.values[key]??0),0);return row.label==='جمع'?{...row,values:{...row.values,...staffTotals,total:Object.values(staffTotals).reduce((sum,value)=>sum+value,0)}}:{...row,values:{...row.values,total}}}):rows
  const bookGroups=[{id:'capex',title:'۱. سرمایه‌گذاری ثابت',subtitle:'سرمایه گذاری ثابت.xlsx',items:sheets.filter(x=>x.book==='capex')},{id:'opex',title:'۲. هزینه تولید و بهره‌برداری',subtitle:'هزینه تولید.xlsx',items:sheets.filter(x=>x.book==='opex')},{id:'finance',title:'۳. مدل مالی و جریان نقدی',subtitle:'مدل مالی و جریان نقدی.xlsx',items:sheets.filter(x=>x.book==='finance')}]
  return <section className="fw-page ppw-page" dir="rtl">
