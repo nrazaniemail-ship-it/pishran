@@ -68,7 +68,7 @@ public class PishranBackupPlugin extends Plugin {
         Uri uri = savedTree();
         JSObject out = new JSObject();
         out.put("hasFolder", uri != null && hasPersistedPermission(uri));
-        out.put("folderName", uri == null ? "" : displayName(uri));
+        out.put("folderName", uri == null ? "" : (displayName(uri).equalsIgnoreCase("Download") ? "Download/Pishran-Backups" : displayName(uri)));
         call.resolve(out);
     }
 
@@ -81,7 +81,7 @@ public class PishranBackupPlugin extends Plugin {
         if (tree == null || !hasPersistedPermission(tree)) { call.reject("ابتدا پوشه پشتیبان را انتخاب کنید"); return; }
         try {
             ContentResolver resolver = getContext().getContentResolver();
-            Uri parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+            Uri parent = ensureBackupDirectory(tree);
             Uri file = DocumentsContract.createDocument(resolver, parent, "application/json", safeName(name));
             if (file == null) throw new IllegalStateException("ساخت فایل ناموفق بود");
             try (OutputStream stream = resolver.openOutputStream(file, "w")) {
@@ -89,10 +89,10 @@ public class PishranBackupPlugin extends Plugin {
                 stream.write(content.getBytes(StandardCharsets.UTF_8));
                 stream.flush();
             }
-            int removed = prune(tree);
+            int removed = prune(tree, parent);
             JSObject out = new JSObject();
             out.put("fileName", safeName(name));
-            out.put("folderName", displayName(tree));
+            out.put("folderName", displayName(tree).equalsIgnoreCase("Download") ? "Download/Pishran-Backups" : displayName(parent));
             out.put("deletedOldFiles", removed);
             call.resolve(out);
         } catch (Exception e) {
@@ -131,11 +131,27 @@ public class PishranBackupPlugin extends Plugin {
         return clean;
     }
 
-    private int prune(Uri tree) {
+    private Uri ensureBackupDirectory(Uri tree) throws Exception {
+        ContentResolver resolver = getContext().getContentResolver();
+        if ("Pishran-Backups".equalsIgnoreCase(displayName(tree))) return DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+        String rootId = DocumentsContract.getTreeDocumentId(tree);
+        Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, rootId);
+        try (Cursor c = resolver.query(children, new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_MIME_TYPE}, null, null, null)) {
+            if (c != null) while (c.moveToNext()) {
+                if ("Pishran-Backups".equals(c.getString(1)) && DocumentsContract.Document.MIME_TYPE_DIR.equals(c.getString(2))) return DocumentsContract.buildDocumentUriUsingTree(tree, c.getString(0));
+            }
+        }
+        Uri root = DocumentsContract.buildDocumentUriUsingTree(tree, rootId);
+        Uri created = DocumentsContract.createDocument(resolver, root, DocumentsContract.Document.MIME_TYPE_DIR, "Pishran-Backups");
+        if (created == null) throw new IllegalStateException("ساخت پوشه Pishran-Backups ناموفق بود");
+        return created;
+    }
+
+    private int prune(Uri tree, Uri directory) {
         int removed = 0;
         try {
             ContentResolver resolver = getContext().getContentResolver();
-            Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+            Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getDocumentId(directory));
             ArrayList<Uri> backups = new ArrayList<>();
             try (Cursor c = resolver.query(children, new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_LAST_MODIFIED}, null, null, null)) {
                 if (c != null) while (c.moveToNext()) {
