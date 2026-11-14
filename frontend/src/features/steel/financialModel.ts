@@ -528,7 +528,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     cumulativeProject += projectFreeCashFlow
     if (simplePayback === null && cumulativeProject >= 0 && year > constructionYears) simplePayback = year
     if (discountRate !== null) {
-      cumulativeDiscounted += projectFreeCashFlow / Math.pow(1 + discountRate, year)
+      cumulativeDiscounted += projectFreeCashFlow / Math.pow(1 + discountRate, year - 1)
       if (discountedPayback === null && cumulativeDiscounted >= 0 && year > constructionYears) discountedPayback = year
     }
 
@@ -540,8 +540,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     })
   }
 
-  const projectFlows = [0, ...annualRows.map(row => row.projectFreeCashFlow)]
-  const equityFlows = [0, ...annualRows.map(row => row.equityFreeCashFlow)]
+  const projectFlows = annualRows.map(row => row.projectFreeCashFlow)
+  const equityFlows = annualRows.map(row => row.equityFreeCashFlow)
   const npvProject = discountRate === null ? null : calculateNpv(projectFlows, discountRate)
   const irrProject = calculateIrr(projectFlows)
   const npvEquity = calculateNpv(equityFlows, Math.max(0, input.costOfEquity) / 100)
