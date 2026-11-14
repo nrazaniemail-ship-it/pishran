@@ -524,7 +524,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
 
     const unleveredTaxableProfit = ebit - unleveredTaxLoss
     const unleveredTax = Math.max(0, unleveredTaxableProfit) * effectiveTaxRate / 100
-    unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : 0
+    unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : Math.max(0, unleveredTaxLoss - ebit)
 
     const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
     const terminalValue = salvageProceeds
