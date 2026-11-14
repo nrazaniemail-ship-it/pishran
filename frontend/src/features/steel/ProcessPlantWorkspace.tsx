@@ -113,6 +113,7 @@ const makeRows=(sheet:Sheet):Row[]=>sheet.rows.map((entry,i)=>{
   const shared=['دفتر مدیریت','روابط عمومی','خرید','فروش','انبارها','اداری و مالی','خدمات','سیستم‌های اطلاعاتی','کنترل فنی','مطالعات و برنامه‌ریزی استراتژیک','پشتیبانی فنی','تضمین کیفیت','کنترل کیفیت','توسعه'].includes(entry)
   values.allocation=shared?0:100
  }
+ if(['land','vehicles','infrastructure','office','preop'].includes(sheet.id))values.allocation=100
  if(sheet.id==='site')values.year=1
  if(['land','vehicles','infrastructure','office','preop'].includes(sheet.id))values.allocation=100
  return{id:sheet.id+'-'+i,label:typeof entry==='string'?entry:entry.label,section:typeof entry==='string'?false:entry.section,values}
@@ -131,12 +132,17 @@ export default function ProcessPlantWorkspace({project,plantType,onBack}:{projec
  const addPayrollRow=()=>updatePayrollRows([...payrollData,{id:'payroll-custom-'+Date.now(),label:'ردیف جدید',values:Object.fromEntries(payrollSheet.columns.map(col=>[col.key,col.numeric?0:'']))}])
  const updateCell=(id:string,key:string,value:Cell)=>updateRows(rows.map(row=>row.id===id?{...row,values:{...row.values,[key]:value}}:row))
  const addRow=()=>updateRows([...rows,{id:current.id+'-custom-'+Date.now(),label:'ردیف جدید',values:Object.fromEntries(current.columns.map(col=>[col.key,col.numeric?0:'']))}])
- const capexAmount=(sheetId:string,row:Row)=>{const v=row.values,n=(key:string)=>Number(v[key]??0)||0
- if(sheetId==='land'||sheetId==='site')return n('qty')*n('unitPrice')
- if(sheetId==='buildings')return (n('qty')*n('unitPrice')+n('equipment'))*(1-Math.max(0,Math.min(100,n('sharedFactor')))/100)
- if(sheetId==='machines')return plantType==='dri'?n('foreignDri')+n('localDri')+(n('foreignStock')+n('localStock'))*Math.max(0,Math.min(100,n('sharedAllocation')))/100:n('foreignEaf')+n('localEaf')+n('foreignCcm')+n('localCcm')+(n('foreignStock')+n('localStock'))*Math.max(0,Math.min(100,n('sharedAllocation')))/100+n('structurePrice')
- if(sheetId==='vehicles')return n('qty')*n('unitPrice')*Math.max(0,Math.min(100,n('allocation')||100))/100
- if(sheetId==='infrastructure'||sheetId==='office'||sheetId==='preop')return n('amount')*Math.max(0,Math.min(100,n('allocation')||100))/100
+ const capexAmount=(sheetId:string,row:Row)=>{const v=row.values,n=(key:string)=>Number(v[key]??0)||0,allocation=Math.max(0,Math.min(100,n('allocation')))/100
+ if(sheetId==='land')return n('total')||n('qty')*n('unitPrice')*allocation
+ if(sheetId==='site')return n('total')||n('qty')*n('unitPrice')
+ if(sheetId==='buildings')return n('total')||(n('qty')*n('unitPrice')+n('equipment'))*(1-Math.max(0,Math.min(1,n('sharedFactor'))))
+ if(sheetId==='machines'){
+  const process=plantType==='dri'?n('foreignDri')+n('localDri'):n('foreignEaf')+n('localEaf')+n('foreignCcm')+n('localCcm')
+  const stock=(n('foreignStock')+n('localStock'))*Math.max(0,Math.min(100,n('sharedAllocation')))/100
+  return n('total')||process+stock+n('structurePrice')
+ }
+ if(sheetId==='vehicles')return n('total')||n('qty')*n('unitPrice')*allocation
+ if(sheetId==='infrastructure'||sheetId==='office'||sheetId==='preop')return n('amount')*allocation
  return n('amount')||n('total')||n('annualCost')
 }
 const capexBySheet=(id:string)=> (data[id]??makeRows(sheets.find(x=>x.id===id)!)).reduce((sum,row)=>sum+capexAmount(id,row),0)
@@ -146,7 +152,7 @@ const fixedInvestment=fixedBase+capexBySheet('machines')+contingency
 const preOperating=capexBySheet('preop')
 const capexTotal=fixedInvestment+preOperating
 const summaryValues=[capexBySheet('land'),capexBySheet('site'),capexBySheet('buildings'),capexBySheet('machines'),capexBySheet('infrastructure'),capexBySheet('vehicles'),capexBySheet('office'),contingency,fixedInvestment,preOperating,capexTotal]
-const displayRows=current.id==='fixed-summary'?rows.map((row,i)=>({...row,values:{...row.values,amount:summaryValues[i]??0,share:capexTotal>0?(summaryValues[i]??0)/capexTotal*100:0,source:['خرید زمین','محوطه‌سازی','ساختمان‌ها','ماشین‌آلات','تأسیسات زیربنایی','وسائط نقلیه','وسایل اداری','محاسبه ۵٪ اکسل','جمع هزینه‌های ثابت','قبل از بهره‌برداری','جمع کل'][i]??''}})):rows
+const displayRows=current.id==='fixed-summary'?rows.map((row,i)=>({...row,values:{...row.values,amount:summaryValues[i]??0,share:capexTotal>0?(summaryValues[i]??0)/capexTotal*100:0,source:['خرید زمین','محوطه‌سازی','ساختمان‌ها','ماشین‌آلات','تأسیسات زیربنایی','وسائط نقلیه','وسایل اداری','محاسبه ۵٪ مطابق اکسل','جمع هزینه‌های ثابت','قبل از بهره‌برداری','جمع کل'][i]??''}})):rows
  const bookGroups=[{id:'capex',title:'۱. سرمایه‌گذاری ثابت',subtitle:'سرمایه گذاری ثابت.xlsx',items:sheets.filter(x=>x.book==='capex')},{id:'opex',title:'۲. هزینه تولید و بهره‌برداری',subtitle:'هزینه تولید.xlsx',items:sheets.filter(x=>x.book==='opex')},{id:'finance',title:'۳. مدل مالی و جریان نقدی',subtitle:'مدل مالی و جریان نقدی.xlsx',items:sheets.filter(x=>x.book==='finance')}]
  return <section className="fw-page ppw-page" dir="rtl">
   <header className="fw-head"><button className="secondary-button" onClick={onBack}><ArrowRight size={16}/> پروژه‌ها</button><div><span className="eyebrow">PISHRAN / {plantType==='dri'?'DIRECT REDUCTION':'STEELMAKING & CONTINUOUS CASTING'}</span><h1>{project.name}</h1><p>{project.location||'موقعیت ثبت نشده'} · {project.capacity||'ظرفیت ثبت نشده'} · فرم مستقل {plantType==='dri'?'احیاء مستقیم':'فولادسازی و ریخته‌گری'}</p></div><span className="fw-save"><Save size={14}/>{ready?(saved?'ذخیره محلی · '+saved:'ذخیره خودکار فعال'):'در حال بارگذاری'}</span></header>
