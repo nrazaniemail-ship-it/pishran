@@ -191,7 +191,7 @@ const migrateStoredData=(stored:Record<string,Row[]>,sheets:Sheet[],plantType:Pl
   const old=stored[sheet.id]
   if(!old)continue
   const template=makeRows(sheet,plantType),templateLabels=new Set(template.map(row=>row.label))
-  const merged=template.map(row=>{const previous=old.find(x=>x.label===row.label);if(!previous)return row;const values={...row.values,...previous.values};if(sheet.id==='inflow'||sheet.id==='loans')for(let i=1;i<=9;i++)values['p'+i]=previous.values['y'+i]??previous.values['p'+i]??0;return{...row,id:previous.id,values}})
+  const merged=template.map(row=>{const previous=old.find(x=>x.label===row.label);if(!previous)return row;const values={...row.values,...previous.values};if(['land','site','buildings','vehicles','infrastructure','office','preop','staff'].includes(sheet.id)&&values.allocation===50)values.allocation=100;if(sheet.id==='machines'&&values.sharedAllocation===50)values.sharedAllocation=100;if(sheet.id==='buildings')values.sharedFactor=0;if(sheet.id==='inflow'||sheet.id==='loans')for(let i=1;i<=9;i++)values['p'+i]=previous.values['y'+i]??previous.values['p'+i]??0;return{...row,id:previous.id,values}})
   const extras=old.filter(row=>!templateLabels.has(row.label)&&!(sheet.id==='machines'&&row.label.startsWith('سازه')))
   next[sheet.id]=[...merged,...extras]
  }
