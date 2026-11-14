@@ -32,14 +32,16 @@ export default function App() {
 
   useEffect(() => {
     let alive = true
-    Promise.all([loadSettings(), listProjects(), localStore.info()]).then(([nextSettings, nextProjects, info]) => {
-      if (!alive) return
-      setSettings(nextSettings)
-      applySettings(nextSettings)
-      setProjects(nextProjects)
-      setStorageInfo(info)
-      setReady(true)
-    }).catch(() => setReady(true))
+    Promise.all([localStore.remove('sample:plate-250k:v1'), localStore.remove('rolling:sample:v2')])
+      .then(() => Promise.all([loadSettings(), listProjects(), localStore.info()]))
+      .then(([nextSettings, nextProjects, info]) => {
+        if (!alive) return
+        setSettings(nextSettings)
+        applySettings(nextSettings)
+        setProjects(nextProjects)
+        setStorageInfo(info)
+        setReady(true)
+      }).catch(() => setReady(true))
     return () => { alive = false }
   }, [])
 
