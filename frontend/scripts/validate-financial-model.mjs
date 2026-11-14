@@ -484,6 +484,7 @@ assert.equal(comfarSeed.debt, 0, 'COMFAR total-investment cash flow must not ble
 assert.deepEqual(comfarSeed.capitalizedInterestSchedule, [1186151.73, 2112481.97],
   'Capitalized construction interest is included as its own two-year schedule')
 assert.equal(comfarSeed.depreciationSource, 'source-assets', 'COMFAR baseline uses asset-level depreciation')
+assert.equal(comfarSeed.mirrRatesPublished, false, 'COMFAR MIRR rates are not published and must not be reverse-engineered')
 assert.equal(comfarSeed.terminalValueOverride, reference.COMFAR_PDF_REFERENCE.scrapValue,
   'COMFAR reported terminal scrap is a sourced scenario input')
 assert.ok(rollingWorkspaceSource.includes('capitalizedInterestSpend'), 'Workspace project cash flow must include the explicit capitalized-interest schedule')
