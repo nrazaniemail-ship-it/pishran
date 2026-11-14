@@ -288,6 +288,7 @@ export type IntegratedFinanceYear = {
   depreciation: number
   ebit: number
   interest: number
+  taxableProfit: number
   tax: number
   principal: number
   debtDrawdown: number
@@ -463,7 +464,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
 
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
-      variableCashCost, fixedCashCost, depreciation, ebit, interest, tax, principal, debtDrawdown,
+      variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, tax, principal, debtDrawdown,
       equityContribution, fixedInvestment, preOperatingCost, workingCapital, workingCapitalBreakdown, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, dscr,
     })
@@ -484,8 +485,12 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   if (totalFunding + 1 < totalInvestment + peakWorkingCapital) warnings.push('منابع مالی ثبت‌شده برای سرمایه‌گذاری و سرمایه در گردش کافی نیست.')
   if (input.loans.some(loan => loan.annualRate <= 0 && loan.drawdowns.some(value => value > 0))) warnings.push('برای یک یا چند وام، نرخ بهره صفر یا ثبت‌نشده است.')
   if (input.loans.some(loan => loan.termYears <= 0 && loan.drawdowns.some(value => value > 0))) warnings.push('برای یک یا چند وام، دوره بازپرداخت ثبت نشده است.')
-  if (input.workingCapitalPolicy && input.workingCapitalPolicy.payableDays > input.workingCapitalPolicy.dayBasis) warnings.push('دوره پرداخت بدهی از مبنای روزهای سال بیشتر است؛ مقدار به مبنای سال محدود می‌شود.')
-  if (input.workingCapitalPolicy && input.workingCapitalPolicy.receivableDays > input.workingCapitalPolicy.dayBasis) warnings.push('دوره وصول مطالبات از مبنای روزهای سال بیشتر است؛ مقدار به مبنای سال محدود می‌شود.')
+  if (input.workingCapitalPolicy) {
+    const policy = input.workingCapitalPolicy
+    const dayEntries: [string, number][] = [['موجودی مواد اولیه', policy.rawMaterialDays], ['کالای در جریان ساخت', policy.workInProgressDays], ['محصول نهایی', policy.finishedGoodsDays], ['وصول مطالبات', policy.receivableDays], ['حداقل نقد عملیاتی', policy.cashDays], ['پرداخت بدهی تجاری', policy.payableDays]]
+    dayEntries.forEach(([label, days]) => { if (days > policy.dayBasis) warnings.push(`دوره ${label} از مبنای روزهای سال بیشتر است؛ در محاسبه به مبنای سال محدود می‌شود.`) })
+    if (policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100) warnings.push('درصد تکمیل مواد و تبدیل در جریان ساخت باید حداکثر ۱۰۰٪ باشد.')
+  }
   if (input.discountMode === 'wacc' && discountRate === null) warnings.push('برای محاسبه نرخ تنزیل، ساختار سرمایه و نرخ بازده مورد انتظار سهامدار را تکمیل کنید.')
   if (input.loans.some(loan => loan.repaymentStartYear + loan.graceYears + loan.termYears - 1 > years)) warnings.push('بخشی از بازپرداخت وام‌ها خارج از افق زمانی مدل قرار می‌گیرد.')
   return {
