@@ -9,12 +9,11 @@ import SettingsView from './features/settings/SettingsView'
 import RollingWorkspace from './features/steel/RollingWorkspace'
 import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
 import FeasibilityWizard from './features/projects/FeasibilityWizard'
-import IntegratedSteelWorkspace from './features/steel/IntegratedSteelWorkspace'
 import ProcessPlantWorkspace from './features/steel/ProcessPlantWorkspace'
 import Guide from './features/guide/Guide'
 import BackupScheduler from './features/settings/BackupScheduler'
 
-type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'integrated-steel' | 'process-plant' | 'guide'
+type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'split-integrated' | 'process-plant' | 'guide'
 
 const modules = [
   { icon: Factory, title: 'مهندسی و طراحی فرآیند', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', status: 'در نقشه راه' },
@@ -127,13 +126,20 @@ export default function App() {
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); const stage=project.steelStage||''; if(stage.includes('مجتمع احیاء')) setPage('integrated-steel'); else if(stage.includes('احیای مستقیم')) {setActivePlantType('dri');setPage('process-plant')} else if(stage.includes('فولادسازی و ریخته‌گری')) {setActivePlantType('steelmaking');setPage('process-plant')} else if(stage.includes('نورد گرم')) setPage('hot-rolling'); else setPage('project-wizard') }}/>}
+    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); const stage=project.steelStage||''; if(stage.includes('مجتمع احیاء')) setPage('split-integrated'); else if(stage.includes('احیای مستقیم')) {setActivePlantType('dri');setPage('process-plant')} else if(stage.includes('فولادسازی و ریخته‌گری')) {setActivePlantType('steelmaking');setPage('process-plant')} else if(stage.includes('نورد گرم')) setPage('hot-rolling'); else setPage('project-wizard') }}/>}
     {page === 'guide' && <Guide/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}
     {page === 'hot-rolling' && <RollingWorkspace project={activeProject ?? undefined} onBack={() => setPage('projects')}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard project={activeProject} onBack={() => setPage('projects')}/>}
-    {page === 'integrated-steel' && activeProject && <IntegratedSteelWorkspace project={activeProject} onBack={() => setPage('projects')}/>}
+    {page === 'split-integrated' && activeProject && <section className="projects-page split-integrated-page" dir="rtl">
+      <div className="page-heading"><div><span className="eyebrow">PISHRAN / PROJECT SEPARATION</span><h1>تفکیک پروژه مجتمع فولادی</h1><p>{activeProject.name}</p></div><button className="secondary-button" onClick={() => setPage('projects')}>بازگشت به پروژه‌ها</button></div>
+      <div className="ppw-note"><b>این پروژه قدیمی به‌صورت یکپارچه تعریف شده است.</b><p>برای رعایت استقلال مطالعات، دو پروژه جداگانه ایجاد می‌شوند. ظرفیت هر واحد عمداً خالی می‌ماند تا ظرفیت مستقل احیاء و فولادسازی را جداگانه وارد کنید. اطلاعات مالی یا فنی پروژه یکپارچه به‌طور خودکار بین دو پروژه کپی نمی‌شود.</p></div>
+      <div className="project-grid">
+        <article className="project-card"><div className="module-icon"><Factory size={22}/></div><h3>پروژه مستقل احیاء مستقیم (DRI)</h3><p>خوراک گندله، ظرفیت تولید آهن اسفنجی، مواد و انرژی مختص احیاء، نیروی انسانی و CAPEX واحد احیاء.</p><button className="primary" onClick={async()=>{const created=await createProject({name:activeProject.name+' — احیاء مستقیم',industry:activeProject.industry,steelStage:'احیای مستقیم',capacity:'',location:activeProject.location});setProjects(await listProjects());setActiveProject(created);setActivePlantType('dri');setPage('process-plant');await refreshStorage()}}>ایجاد و ورود به پروژه احیاء</button></article>
+        <article className="project-card"><div className="module-icon"><Layers3 size={22}/></div><h3>پروژه مستقل فولادسازی و ریخته‌گری</h3><p>کوره ذوب، پالایش ثانویه، ریخته‌گری مداوم، گریدهای محصول، مواد آلیاژی و هزینه‌های اختصاصی فولادسازی.</p><button className="primary" onClick={async()=>{const created=await createProject({name:activeProject.name+' — فولادسازی و ریخته‌گری',industry:activeProject.industry,steelStage:'فولادسازی و ریخته‌گری (ذوب و ریخته‌گری مداوم)',capacity:'',location:activeProject.location});setProjects(await listProjects());setActiveProject(created);setActivePlantType('steelmaking');setPage('process-plant');await refreshStorage()}}>ایجاد و ورود به پروژه فولادسازی</button></article>
+      </div>
+    </section>}
     {page === 'process-plant' && activeProject && <ProcessPlantWorkspace project={activeProject} plantType={activePlantType} onBack={() => setPage('projects')}/>} 
 
     <footer>پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری <span>نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری</span></footer>
