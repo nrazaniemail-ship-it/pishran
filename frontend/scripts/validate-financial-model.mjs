@@ -22,6 +22,20 @@ const [engine, reference, integratedReference, workbookAudit] = await Promise.al
 ])
 
 const driAudit = workbookAudit.DRI_STEELMAKING_AUDIT
+near(driAudit.capexCategories.reduce((sum,row)=>sum+row.amount,0),
+  driAudit.capex.fixedInvestment, 0.01, 'DRI CAPEX category roll-up')
+near(driAudit.materials.driUnit + driAudit.materials.steelmakingBase
+  + driAudit.materials.marineGradeAdditives + driAudit.materials.apiGradeAdditives
+  + driAudit.materials.pressureVesselGradeAdditives,
+  driAudit.materials.total, 0.01, 'DRI raw-material grade and process roll-up')
+near(driAudit.products.slabRevenue + driAudit.products.surplusDriRevenue,
+  driAudit.products.totalRevenue, 0.01, 'DRI slab and surplus-DRI sales bridge')
+near(driAudit.energy.driElectricityKwhPerT * 1_760_000
+  + driAudit.energy.steelmakingElectricityKwhPerT * 1_200_000,
+  driAudit.energy.totalElectricityKwh, 0.01, 'DRI and steelmaking electricity consumption')
+near(driAudit.energy.driGasNm3PerT * 1_760_000
+  + driAudit.energy.steelmakingGasNm3PerT * 1_200_000,
+  driAudit.energy.totalGasNm3, 0.01, 'DRI and steelmaking gas consumption')
 near(driAudit.capex.fixedInvestment + driAudit.capex.preproductionNet + driAudit.capex.capitalizedInterest,
   driAudit.capex.constructionUses, 0.2, 'DRI construction uses bridge')
 near(driAudit.capex.constructionUses + driAudit.workingCapital, driAudit.totalUses, 0.2, 'DRI total uses bridge')
