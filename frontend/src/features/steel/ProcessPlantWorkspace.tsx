@@ -338,7 +338,7 @@ const breakEvenCostBases=[materialCost,payrollGrandTotal,energyCost,maintenanceC
 const variableCashCost=breakEvenCostBases.reduce((sum,cost,index)=>index===4?sum:sum+cost*Math.max(0,Math.min(100,Number(breakEvenInputs[index]?.values.variable??[100,0,80,80,0,50][index])))/100,0)
 const fullCashOpex=materialCost+payrollGrandTotal+maintenanceCostTotal+energyCost+otherOpexTotal
 const fixedCashCost=Math.max(0,fullCashOpex-variableCashCost)
-const utilizationSchedule=Array.from({length:20},(_,i)=>i<4?0:Math.min(1,[.7,.8,.9,1][i-4]??1))
+const utilizationSchedule=Array.from({length:20},(_,i)=>i<4||i===19?0:Math.min(1,[.7,.8,.9,1][i-4]??1))
 const financeInput={
  years:20,constructionYears:4,capacity:materialCapacity,fullCapacityRevenue:salesRevenue,
  fullCapacityVariableCashCost:variableCashCost,fullCapacityFixedCashCost:fixedCashCost,
