@@ -5,6 +5,7 @@ import type {FeasibilityProject} from '../../core/projects/projectRepository'
 import {calculateCapacityScaledCapex,calculateCashConversionCycleDays,calculateIntegratedFinance,calculateNpv,calculateIrr,reconcileCashFlowSeries} from './financialModel'
 import type {WorkingCapitalPolicy} from './financialModel'
 import type {IntegratedLoanYear} from './financialModel'
+import { INTEGRATED_COMFAR_PROJECT_CASH_FLOWS, INTEGRATED_COMFAR_REFERENCE } from './integratedProjectBenchmark'
 
 type PlantType='dri'|'steelmaking'
 type Cell=string|number
@@ -164,9 +165,9 @@ const energyDefaults:Record<string,{specific:number;unit:string;price?:number}> 
  'آب واحد فولادسازی':{specific:2.5,unit:'m3'},'هوای فشرده — ۵۰٫۶ Nm³ بر تن':{specific:50.6,unit:'Nm3'},'گاز طبیعی واحد فولادسازی':{specific:20,unit:'Nm3'},
  'اکسیژن واحد فولادسازی':{specific:40,unit:'Nm3'},'ازت — ۳٫۶ Nm³ بر تن':{specific:3.6,unit:'Nm3'},'آرگن — ۰٫۵۴ Nm³ بر تن':{specific:.54,unit:'Nm3'},'برق واحد فولادسازی — ۵۶۸ kWh بر تن':{specific:568,unit:'kWh'}
 }
-const comfarReferenceCashFlows:number[]=[-104334839.16,-134611066.5,-133093260.44,-88443158.9,118750252.05,187903947.73,212720544.14,226437947.52,189562697.38,188965374.62,188908346.68,188860859.67,188801551.02,188800575.77,188798288.88,188797422.7,188797422.7,188797422.7,413501431.09]
-const comfarReferenceReportedNpv=19964251.38
-const comfarReferenceReportedIrr=0.2608
+const comfarReferenceCashFlows = [...INTEGRATED_COMFAR_PROJECT_CASH_FLOWS]
+const comfarReferenceReportedNpv = INTEGRATED_COMFAR_REFERENCE.projectNpvAt25
+const comfarReferenceReportedIrr = INTEGRATED_COMFAR_REFERENCE.projectIrr / 100
 const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)=>{
  const values:Record<string,Cell>=Object.fromEntries(sheet.columns.map(col=>[col.key,col.numeric?0:'']))
  const label=typeof entry==='string'?entry:entry.label
