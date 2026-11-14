@@ -1,0 +1,118 @@
+# HRCR200 hot-rolling line — CAPEX/OPEX and COMFAR reconciliation
+
+**Source files**
+- `CAPEX-HRCR200.Kashan.1402.07.10.rev01.xlsx`
+- `OPEX-HRCR200.Kashan.1402.07.10. rev01.xlsx`
+- `COMFAR III - 001 - نتایج تحلیل مالی و اقتصادی طرح.pdf` (135 pages)
+
+All monetary figures below are in **million Rial** unless otherwise stated. This is an audit of the attached reference case, not a fresh vendor quotation or a bankable feasibility opinion.
+
+## 1. Project definition loaded from the spreadsheets
+
+| Item | Source value |
+|---|---:|
+| Project | Hot-rolled steel coil line, Kashan |
+| Capacity | 200,000 t/y |
+| Construction | 2 years (1403–1404 in COMFAR) |
+| Operation | 15 years (1405–1419) |
+| Slab consumption | 1.02 t per tonne of saleable product |
+| Full-capacity coil revenue | 61,400,000 |
+| By-product/scrap revenue | 859,600 |
+| Total full-capacity sales | 62,259,600 |
+| Annual raw materials and process consumables | 40,844,287 |
+| Utilities | 269,580.166 |
+| Spare parts | 176,473.792 |
+| Maintenance | 374,760 |
+| Payroll | 650,052.864 |
+| Payroll overhead | 130,010.573 |
+| Factory overhead | 159,060 |
+| Direct marketing | 62,259.6 |
+| Annual OPEX excluding depreciation | 42,666,484.392 |
+| Annual OPEX including source-sheet depreciation | 44,246,811.392 |
+| Fixed CAPEX | 18,463,009 |
+| Pre-operation cost excluding capitalized interest | 239,826.638 |
+| Capitalized construction interest in COMFAR | 3,298,633.06 |
+| Construction investment incl. capitalized interest | 22,001,469.06 |
+| Full-capacity net working capital | 4,595,370.36 |
+
+The annual operating cost bridge is consistent: COMFAR's full-capacity operating costs of 42,604,224.43 plus marketing of 62,260 equal 42,666,484.43, essentially the OPEX workbook's 42,666,484.392. This means the annual OPEX totals are not the main source of the large cash-flow gap.
+
+## 2. Audited COMFAR results
+
+The COMFAR PDF's total-investment cash-flow report (pages 66–70) states:
+- NPV: **31,399,764.27 million Rial**, at **25%**, valuation date **12/1404**
+- IRR: **48.31%**
+- MIRR: **28.03%**
+- Simple payback: **3.86 years**
+- Discounted payback: **5.02 years**
+
+The project cash-flow vector has 17 periods: two construction years and 15 operating years. The scrap inflow of 13,735,466.82 is a terminal inflow at the same terminal valuation point as operating year 1419; it is not an eighteenth operating year.
+
+The COMFAR PDF's cash-flow NPV uses the valuation date 12/1404. Thus 1403 is at offset -1, 1404 at offset 0, and 1405 onward at positive offsets. A conventional NPV routine that always discounts the first array element at exponent zero will not reproduce this reported NPV unless the valuation date is made explicit.
+
+## 3. Material design and source-data defects
+
+### A. Financing assumptions conflict across the attached workbooks
+
+- CAPEX sheet `نحوه تامین منابع` allocates about **70% equity / 30% long-term debt** to construction investment (equity 13,091,985.2; debt 5,610,850.8), with 3,298,633.06 of capitalized interest.
+- CAPEX sheet `نرخ تنزیل` instead uses 3,740,567.07 equity, 14,962,268.29 fixed-investment debt, and 3,309,144.53 working-capital debt. This implies about **16.99% equity / 83.01% debt**.
+- OPEX sheet `مشخصات کلی طرح` labels the finance amount as 80% and the equity amount as 20%, but the displayed values (5,610,850.8 debt and 13,091,985.2 equity) mathematically correspond to 30% debt and 70% equity.
+
+These are not rounding differences. They are mutually inconsistent capital structures. The model must preserve them as separate scenarios and must not silently combine the funding-source sheet with the discount-rate sheet.
+
+### B. The 5% and 25% tax assumptions are not the same assumption
+
+- OPEX `قیمت فروش` computes net profit using 5%.
+- The COMFAR PDF's operating cash-flow report shows full-capacity income tax around 4.57–4.88 billion million Rial, consistent with a 25% corporate tax treatment, not 5%.
+- The CAPEX WACC sheet separately uses 25% as the tax shield for debt cost.
+
+The application currently uses 5% as operating tax and 25% as the WACC tax shield. That reproduces the Excel sales-sheet assumption but not the tax cash flows in the COMFAR PDF. Both cases must be selectable and clearly labeled; one must not overwrite the other.
+
+### C. Capitalized construction interest is omitted from Pishran's unlevered project-CF comparison
+
+Pishran's current generated construction outflows are 12,721,653.30 and 5,981,182.06. COMFAR reports 13,907,805.03 and 8,093,664.03. The differences are 1,186,151.73 and 2,112,481.97 respectively, matching the capitalized interest shown in the COMFAR pre-production-cost schedule (page 8).
+
+This is a definition mismatch: the current Pishran project cash flow excludes financing costs, while the COMFAR reported total-investment cash flow includes capitalized construction interest. The application should show an unlevered project case and a COMFAR-reported investment-cost case separately.
+
+### D. Operating tax causes the largest recurring operating-period difference
+
+At full capacity, the current Pishran model uses the OPEX sheet's 5% operating tax. COMFAR's report reflects 25% income tax. This produces a recurring annual cash-flow difference of roughly 3.4–3.7 billion million Rial in later full-capacity periods. The tax rate must be a scenario input sourced to a specific workbook/report, not a single global constant.
+
+### E. Depreciation is modeled as a flat override, but the source is asset-specific
+
+The OPEX depreciation worksheet lists asset classes with different straight-line rates and salvage rates: site 7%, buildings 7%, machinery 10.97955%, utilities 12%, vehicles 20%, office equipment 25%, etc. It also explains that total depreciation declines as asset classes finish their useful lives. Pishran currently uses a single annual override of 1,580,327 for all 15 operating years. COMFAR reports depreciation declining over time (for example 1,432,554.34 in 1405, 1,425,537.64 in 1408, and 52,751.46 in 1419). A single flat override cannot reproduce this schedule.
+
+The fix is an asset-level depreciation schedule with acquisition year, depreciable basis, useful life/rate, method, and residual value. The annual total must be derived from those asset schedules.
+
+### F. Terminal value is not reconciled
+
+Pishran's fixture uses terminal value 13,954,745.45; COMFAR reports scrap value 13,735,466.82. The difference is 219,278.63. The source OPEX depreciation sheet's asset-level salvage assumptions should be used to explain this amount; the terminal value must not remain an unexplained override. Working-capital recovery must be shown separately from asset scrap value.
+
+### G. The existing Excel helper row was mislabeled as the COMFAR cash-flow vector
+
+The OPEX `IRR-NPV` helper sheet's row used by the previous fixture produces NPV 18,509,558.82 and IRR 43.3782%. Those values do not match the COMFAR PDF's NPV 31,399,764.27 and IRR 48.31%. The helper row is now retained under a distinct `excelWorksheetCashFlows` name; the PDF vector is separately represented as `COMFAR_PDF_REFERENCE`.
+
+## 4. Pishran vs COMFAR — like-for-like comparison
+
+Using the current Pishran-generated 17-period unlevered vector and the audited COMFAR PDF vector:
+- Pishran IRR: **54.01%**
+- COMFAR PDF IRR: **48.31%**
+- Difference: **+5.70 percentage points**
+- Pishran NPV at 25%, using COMFAR's 12/1404 valuation-date convention: **38,355,528.19**
+- COMFAR NPV at 25% and 12/1404: **31,399,764.27**
+- Difference: **+6,955,763.92**
+
+The comparison is intentionally flagged as **not reconciled**. It is not acceptable for CI to print a warning while reporting the benchmark as passed. The validation script now independently reproduces the Excel helper metrics and the actual COMFAR PDF metrics, then asserts that the current Pishran/COMFAR discrepancy remains visible.
+
+## 5. Remediation plan
+
+1. Keep the source-sheet, COMFAR-PDF, and Pishran-generated datasets separate with explicit provenance.
+2. Add a valuation-date/period-offset parameter to NPV reporting so COMFAR's 12/1404 basis can be reproduced without changing the general NPV convention.
+3. Add separate financing scenarios for the 70/30 funding-source case and the 20/80-plus-working-capital-loan discount-rate case.
+4. Add separate operating-tax scenarios (5% workbook assumption and 25% COMFAR treatment).
+5. Replace the single depreciation override with asset-level straight-line schedules.
+6. Separate capitalized interest from unlevered CAPEX and show both unlevered and COMFAR-reported project cash flows.
+7. Reconcile asset scrap and working-capital recovery as separate terminal inflows.
+8. Make reconciliation status and annual variances visible in the UI and CI; do not mark the model as reconciled until all material annual differences are within a declared tolerance.
+
+**Status:** source data and COMFAR PDF have been audited; the benchmark/test labeling has been corrected. The operating model is deliberately not auto-calibrated to the COMFAR output because the attached source files contain contradictory tax and financing assumptions. A final model correction requires selecting the intended financing/tax scenario and implementing the asset-level depreciation and capitalized-interest treatment above.
