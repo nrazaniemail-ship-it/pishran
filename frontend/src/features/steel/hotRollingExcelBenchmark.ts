@@ -224,3 +224,19 @@ export const PISHRAN_REFERENCE_MODEL_OUTPUT = {
   irr:0.5401182097235053,
   mirr:0.36524517442187365
 } as const
+
+/** Asset classes transcribed from OPEX workbook sheet «استهلاک».
+ * Basis is million Rial. Land is non-depreciable with 100% residual value.
+ */
+export const HRCR200_DEPRECIATION_ASSETS = [
+  {id:'land',label:'زمین',basis:2015000,depreciationRate:0,salvageRate:1},
+  {id:'site',label:'آماده‌سازی سایت',basis:430007.7606094665,depreciationRate:0.07,salvageRate:0.10},
+  {id:'industrial-building',label:'ساختمان صنعتی',basis:2016000,depreciationRate:0.07,salvageRate:0.10},
+  {id:'nonindustrial-building',label:'ساختمان غیرصنعتی و سیویل',basis:381422.057,depreciationRate:0.07,salvageRate:0.10},
+  {id:'machinery',label:'ماشین‌آلات و تجهیزات',basis:10472740,depreciationRate:0.1097955,salvageRate:0.10},
+  {id:'utilities',label:'تأسیسات زیربنایی',basis:1423564,depreciationRate:0.12,salvageRate:0.10},
+  {id:'vehicles',label:'وسایط نقلیه',basis:490500,depreciationRate:0.20,salvageRate:0.10},
+  {id:'office',label:'تجهیزات اداری و خدماتی',basis:70166.50296,depreciationRate:0.25,salvageRate:0.10},
+  {id:'preoperation',label:'هزینه‌های قبل از بهره‌برداری',basis:879191,depreciationRate:0.10,salvageRate:0},
+  {id:'other-preoperation',label:'سایر هزینه‌ها',basis:239826.63796,depreciationRate:0.10,salvageRate:0.10}
+] as const
