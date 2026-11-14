@@ -375,7 +375,7 @@ const financeLoans:IntegratedLoanInput[]=loanLabels.map((label,index)=>financeRo
  graceYears:Math.max(0,Number(row.values.grace??0)),
  termYears:Math.max(0,Number(row.values.term??0)),
  repaymentStartYear:Math.max(5,Number(row.values.repaymentStart??5)),
- repaymentMethod:String(row.values.method??'اصل مساوی').includes('یکجا')?'bullet':String(row.values.method??'').includes('اقساط مساوی')?'annuity':'equal-principal',
+ repaymentMethod:(String(row.values.method??'اصل مساوی').includes('یکجا')?'bullet':String(row.values.method??'').includes('اقساط مساوی')?'annuity':'equal-principal') as IntegratedLoanInput['repaymentMethod'],
  capitalizeInterest:String(row.values.capitalizeInterest??'خیر').includes('بله')
 }))
 const normalizeConstructionDistribution=(values:number[])=>{const total=values.reduce((sum,value)=>sum+Math.max(0,value),0);return total>0?values.map(value=>Math.max(0,value)/total*100):values.map(()=>100/Math.max(1,values.length))}
