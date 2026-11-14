@@ -52,7 +52,7 @@ const definitions:Record<Section,{title:string;intro:string;tables:TableDef[]}> 
 {category:'توسعه‌های آتی محتمل',company:'فولاد آتیه خاورمیانه',installed:400,production:'',marketable:'',domestic:'',thickness:'',width:''},
 {category:'توسعه‌های آتی محتمل',company:'مجتمع فولاد خرم‌آباد',installed:350,production:'',marketable:'',domestic:'',thickness:'',width:''},
 {category:'توسعه‌های آتی محتمل',company:'فولاد جهان‌آرا اروند',installed:1200,production:'',marketable:'',domestic:'',thickness:'',width:''},
-{category:'جمع توسعه‌های آتی',company:'جمع کل (هزار تن)',installed:4320,production:'',marketable:'',domestic:'',thickness:'',width:''}],note:'نام مرجع درخواستی با «نمونه» جایگزین شده است. داده‌های تولید و عرضه مربوط به سال ۱۳۹۹ و توسعه‌های آتی صرفاً ظرفیت‌های محتمل فایل مرجع هستند.'},note:'محدوده ضخامت و عرض در فایل منبع برای برخی تولیدکنندگان ثبت نشده است؛ خانه‌های خالی عمداً خالی گذاشته شده‌اند.'},
+{category:'جمع توسعه‌های آتی',company:'جمع کل (هزار تن)',installed:4320,production:'',marketable:'',domestic:'',thickness:'',width:''}],note:'نام مرجع درخواستی با «نمونه» جایگزین شده است. داده‌های تولید و عرضه مربوط به سال ۱۳۹۹ و توسعه‌های آتی صرفاً ظرفیت‌های محتمل فایل مرجع هستند.'},
  {id:'slab-balance',title:'موازنه اسلب کشور',columns:[c('year','سال'),c('production','تولید محقق‌شده اسلب','هزار تن',true),c('apparent','مصرف ظاهری داخل','هزار تن',true),c('export','صادرات اسلب','هزار تن',true),c('import','واردات اسلب','هزار تن',true),c('surplus','اسلب مازاد نیاز داخل','هزار تن',true)],rows:[{year:'1400',production:11238,apparent:8661,export:2581,import:4,surplus:2581},{year:'1401',production:11697,apparent:9642,export:2048,import:0,surplus:2055}]}
  ]},
  energy:{title:'مصارف ویژه و انرژی خط نورد گرم',intro:'جدول انرژی و دیماند با ساختار فایل «مصارف ویژه و انرژی خط نورد کلاف گرم». واحد مصرف ویژه، واحد دیماند و واحد هزینه از یکدیگر جدا هستند.',tables:[
@@ -104,7 +104,7 @@ export function HotRollingReferenceForms({section,projectId}:{section:Section;pr
  const [data,setData]=useState<TableDef[]>(def.tables)
  const [active,setActive]=useState(def.tables[0]?.id||'')
  const [ready,setReady]=useState(false)
- useEffect(()=>{let live=true;localStore.get<TableDef[]>(storageKey).then(saved=>{if(live){if(saved?.length)setData(saved);setReady(true)}}).catch(()=>setReady(true));return()=>{live=false}},[storageKey])
+ useEffect(()=>{let live=true;localStore.get<TableDef[]>(storageKey).then(saved=>{if(live){if(saved?.length){setData(def.tables.map(base=>{const prior=saved.find(x=>x.id===base.id);return prior?{...base,...prior,columns:base.columns}:base}).concat(saved.filter(x=>!def.tables.some(base=>base.id===x.id))));}setReady(true)}}).catch(()=>setReady(true));return()=>{live=false}},[storageKey])
  useEffect(()=>{if(ready)void localStore.set(storageKey,data)},[ready,storageKey,data])
  const table=data.find(x=>x.id===active)||data[0]
  const updateCell=(tableId:string,rowIndex:number,key:string,value:Cell)=>setData(old=>old.map(t=>t.id!==tableId?t:{...t,rows:t.rows.map((r,i)=>i!==rowIndex?r:{...r,[key]:value})}))
