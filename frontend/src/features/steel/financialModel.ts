@@ -297,6 +297,8 @@ export type IntegratedFinanceYear = {
   preOperatingCost: number
   workingCapital: number
   workingCapitalBreakdown: WorkingCapitalBreakdown
+  salvageProceeds: number
+  terminalValue: number
   changeInWorkingCapital: number
   projectFreeCashFlow: number
   equityFreeCashFlow: number
@@ -444,7 +446,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const unleveredTax = Math.max(0, unleveredTaxableProfit) * Math.max(0, Math.min(100, input.taxRate)) / 100
     unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : 0
 
-    const terminalValue = year === years ? Math.max(0, input.salvageValue || 0) + workingCapital : 0
+    const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
+    const terminalValue = salvageProceeds + (year === years ? workingCapital : 0)
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
     const projectFreeCashFlow = ebit - unleveredTax + depreciation - fixedInvestment - preOperatingCost - changeInWorkingCapital + terminalValue
     const equityFreeCashFlow = -equityContribution + revenue - variableCashCost - fixedCashCost - tax - interest - principal - changeInWorkingCapital + terminalValue
@@ -465,7 +468,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, tax, principal, debtDrawdown,
-      equityContribution, fixedInvestment, preOperatingCost, workingCapital, workingCapitalBreakdown, changeInWorkingCapital,
+      equityContribution, fixedInvestment, preOperatingCost, workingCapital, workingCapitalBreakdown, salvageProceeds, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, dscr,
     })
   }
