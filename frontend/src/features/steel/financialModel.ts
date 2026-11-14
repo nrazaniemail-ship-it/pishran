@@ -94,3 +94,37 @@ export function calculateMirr(flows: number[], financeRate: number, reinvestment
   if (presentValueNegative >= 0 || futureValuePositive <= 0) return null
   return Math.pow(futureValuePositive / -presentValueNegative, 1 / periods) - 1
 }
+
+
+export type OperatingCostRow = {
+  quantity: number
+  unitPrice: number
+  period: string
+  currency?: string
+  fxRate?: number
+}
+
+export type OperatingCostBreakdown = {
+  fixedAnnual: number
+  variablePerTonne: number
+  oneTimeExcluded: number
+  totalAtFullOutput: number
+}
+
+/** Annual/monthly rows are fixed, per-tonne rows scale with output, one-time rows are excluded from recurring OPEX. */
+export function calculateOperatingCostRows(rows: OperatingCostRow[], annualOutput: number, baseCurrency: string): OperatingCostBreakdown {
+  const result: OperatingCostBreakdown = { fixedAnnual: 0, variablePerTonne: 0, oneTimeExcluded: 0, totalAtFullOutput: 0 }
+  if (!Number.isFinite(annualOutput) || annualOutput < 0) return result
+  for (const row of rows) {
+    if (!finiteNonNegative(row.quantity) || !finiteNonNegative(row.unitPrice)) continue
+    const fx = row.currency && row.currency !== baseCurrency ? row.fxRate : 1
+    if (fx === undefined || !finiteNonNegative(fx) || fx === 0) continue
+    const amount = row.quantity * row.unitPrice * fx
+    if (row.period === 'به‌ازای هر تن') result.variablePerTonne += amount
+    else if (row.period === 'ماهانه') result.fixedAnnual += amount * 12
+    else if (row.period === 'یک‌باره') result.oneTimeExcluded += amount
+    else result.fixedAnnual += amount
+  }
+  result.totalAtFullOutput = result.fixedAnnual + result.variablePerTonne * annualOutput
+  return result
+}
