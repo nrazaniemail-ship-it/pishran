@@ -412,6 +412,7 @@ function integratedLoanSchedule(loan: IntegratedLoanInput, years: number, constr
   const totalDrawdown = loan.drawdowns.reduce((total, value) => total + Math.max(0, Number(value) || 0), 0)
   let balance = 0
   let annuityPayment: number | null = null
+  let equalPrincipalPayment: number | null = null
   const result: IntegratedLoanYear[] = []
   for (let index = 0; index < years; index++) {
     const year = index + 1
@@ -434,7 +435,8 @@ function integratedLoanSchedule(loan: IntegratedLoanInput, years: number, constr
         }
         principal = Math.min(availableBalance, Math.max(0, annuityPayment - interestAccrued))
       } else {
-        principal = Math.min(availableBalance, totalDrawdown / term)
+        if (equalPrincipalPayment === null) equalPrincipalPayment = availableBalance / term
+        principal = Math.min(availableBalance, equalPrincipalPayment)
       }
     }
     balance = Math.max(0, availableBalance - principal)
@@ -707,7 +709,7 @@ export function calculateSensitivityMatrix(input: IntegratedFinanceInput, priceC
   return volumeChanges.map(volumeChangePercent => priceChanges.map(priceChangePercent => {
     const result = calculateIntegratedFinance({
       ...input,
-      fullCapacityRevenue: input.fullCapacityRevenue * (1 + priceChangePercent / 100),
+      fullCapacityRevenue: input.fullCapacityRevenue * (1 + priceChangePercent / 100) * (1 + volumeChangePercent / 100),
       capacity: input.capacity * (1 + volumeChangePercent / 100),
       fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * (1 + volumeChangePercent / 100),
       fixedInvestment: input.fixedInvestment,
@@ -720,9 +722,9 @@ export function calculateFinancialScenarios(input: IntegratedFinanceInput) {
   const scenario = (price: number, volume: number, variableCost: number, fixedCost: number, capex: number) =>
     calculateIntegratedFinance({
       ...input,
-      fullCapacityRevenue: input.fullCapacityRevenue * price,
+      fullCapacityRevenue: input.fullCapacityRevenue * price * volume,
       capacity: input.capacity * volume,
-      fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * variableCost,
+      fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * variableCost * volume,
       fullCapacityFixedCashCost: input.fullCapacityFixedCashCost * fixedCost,
       fixedInvestment: input.fixedInvestment * capex,
       fixedInvestmentSchedule: input.fixedInvestmentSchedule.map(value => value * capex),
