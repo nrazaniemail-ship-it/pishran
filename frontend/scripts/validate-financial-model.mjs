@@ -225,4 +225,93 @@ assert.ok(Number.isFinite(integrated.npvProject), 'Integrated project NPV must b
 assert.ok(Number.isFinite(integrated.irrProject), 'Integrated project IRR must be finite')
 assert.ok(Number.isFinite(integrated.irrEquity), 'Integrated equity IRR must be finite')
 assert.equal(integrated.years.length, 6, 'Integrated model period count')
+
+const capacityScenario = engine.calculateIntegratedFinance({
+  ...{
+    years: 6, constructionYears: 1, capacity: 200,
+    fullCapacityRevenue: 4000, fullCapacityVariableCashCost: 1200,
+    fullCapacityFixedCashCost: 400, annualDepreciation: 200,
+    fixedInvestment: 1000, preOperatingCost: 100,
+    fixedInvestmentSchedule: [1000, 0, 0, 0, 0, 0],
+    preOperatingSchedule: [100, 0, 0, 0, 0, 0],
+    utilization: [0, 1, 1, 1, 1, 1],
+    equityContributions: [600, 0, 0, 0, 0, 0],
+    loans: [{ id: 'test-loan', label: 'Test loan', drawdowns: [400, 0, 0, 0, 0, 0],
+      annualRate: 10, graceYears: 0, termYears: 2, repaymentStartYear: 2,
+      repaymentMethod: 'equal-principal', capitalizeInterest: false }],
+    taxRate: 25, costOfEquity: 20, workingCapitalPercent: 10,
+    salesEscalationPercent: 1, opexEscalationPercent: 2,
+    discountMode: 'wacc', manualDiscountRate: 25
+  }
+})
+near(capacityScenario.years[1].production, 200, 1e-9, 'Capacity scenario production')
+near(capacityScenario.years[1].revenue, 4000, 1e-9, 'Capacity scenario revenue')
+near(capacityScenario.years[1].variableCashCost, 1200, 1e-9, 'Capacity scenario variable OPEX')
+near(capacityScenario.years[1].fixedCashCost, 400, 1e-9, 'Capacity scenario fixed OPEX')
+assert.notEqual(capacityScenario.npvProject, integrated.npvProject, 'Capacity changes must update project NPV')
+
+const priceScenario = engine.calculateIntegratedFinance({
+  ...{
+    years: 6, constructionYears: 1, capacity: 100,
+    fullCapacityRevenue: 2200, fullCapacityVariableCashCost: 600,
+    fullCapacityFixedCashCost: 400, annualDepreciation: 100,
+    fixedInvestment: 1000, preOperatingCost: 100,
+    fixedInvestmentSchedule: [1000, 0, 0, 0, 0, 0],
+    preOperatingSchedule: [100, 0, 0, 0, 0, 0],
+    utilization: [0, 1, 1, 1, 1, 1],
+    equityContributions: [600, 0, 0, 0, 0, 0],
+    loans: [{ id: 'test-loan', label: 'Test loan', drawdowns: [400, 0, 0, 0, 0, 0],
+      annualRate: 10, graceYears: 0, termYears: 2, repaymentStartYear: 2,
+      repaymentMethod: 'equal-principal', capitalizeInterest: false }],
+    taxRate: 25, costOfEquity: 20, workingCapitalPercent: 10,
+    salesEscalationPercent: 1, opexEscalationPercent: 2,
+    discountMode: 'wacc', manualDiscountRate: 25
+  }
+})
+near(priceScenario.years[1].revenue, 2200, 1e-9, 'Sales price scenario revenue')
+assert.notEqual(priceScenario.npvProject, integrated.npvProject, 'Sales price changes must update project NPV')
+
+const capitalStructureScenario = engine.calculateIntegratedFinance({
+  ...{
+    years: 6, constructionYears: 1, capacity: 100,
+    fullCapacityRevenue: 2000, fullCapacityVariableCashCost: 600,
+    fullCapacityFixedCashCost: 400, annualDepreciation: 100,
+    fixedInvestment: 1000, preOperatingCost: 100,
+    fixedInvestmentSchedule: [1000, 0, 0, 0, 0, 0],
+    preOperatingSchedule: [100, 0, 0, 0, 0, 0],
+    utilization: [0, 1, 1, 1, 1, 1],
+    equityContributions: [800, 0, 0, 0, 0, 0],
+    loans: [{ id: 'test-loan', label: 'Test loan', drawdowns: [200, 0, 0, 0, 0, 0],
+      annualRate: 10, graceYears: 0, termYears: 2, repaymentStartYear: 2,
+      repaymentMethod: 'equal-principal', capitalizeInterest: false }],
+    taxRate: 25, costOfEquity: 20, workingCapitalPercent: 10,
+    salesEscalationPercent: 1, opexEscalationPercent: 2,
+    discountMode: 'wacc', manualDiscountRate: 25
+  }
+})
+near(capitalStructureScenario.wacc, 0.175, 1e-12, 'Capital structure scenario WACC')
+assert.notEqual(capitalStructureScenario.wacc, integrated.wacc, 'Capital structure changes must update WACC')
+
+const loanRateScenario = engine.calculateIntegratedFinance({
+  ...{
+    years: 6, constructionYears: 1, capacity: 100,
+    fullCapacityRevenue: 2000, fullCapacityVariableCashCost: 600,
+    fullCapacityFixedCashCost: 400, annualDepreciation: 100,
+    fixedInvestment: 1000, preOperatingCost: 100,
+    fixedInvestmentSchedule: [1000, 0, 0, 0, 0, 0],
+    preOperatingSchedule: [100, 0, 0, 0, 0, 0],
+    utilization: [0, 1, 1, 1, 1, 1],
+    equityContributions: [600, 0, 0, 0, 0, 0],
+    loans: [{ id: 'test-loan', label: 'Test loan', drawdowns: [400, 0, 0, 0, 0, 0],
+      annualRate: 12, graceYears: 0, termYears: 2, repaymentStartYear: 2,
+      repaymentMethod: 'equal-principal', capitalizeInterest: false }],
+    taxRate: 25, costOfEquity: 20, workingCapitalPercent: 10,
+    salesEscalationPercent: 1, opexEscalationPercent: 2,
+    discountMode: 'wacc', manualDiscountRate: 25
+  }
+})
+assert.ok(loanRateScenario.years[1].interest > integrated.years[1].interest,
+  'Loan rate changes must update interest expense')
+assert.notEqual(loanRateScenario.wacc, integrated.wacc, 'Loan rate changes must update WACC')
+console.log('PASS: capacity, selling price, capital structure and loan-rate changes propagate to financial results')
 console.log('PASS: integrated WACC, loan amortization, working capital, escalation, project NPV and project/equity IRR')
