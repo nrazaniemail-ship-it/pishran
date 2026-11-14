@@ -44,6 +44,18 @@ The long-term debt is EUR 431m: EUR 363m attributed to Bank Melli Hamburg (EUR 2
 
 The COMFAR report gives reference-year factory costs of EUR 643,963,499, agreeing with detailed OPEX excluding depreciation to EUR 0.40 rounding. Depreciation does **not** reconcile: the detailed OPEX depreciation sheet totals EUR 33,020,570/year, while COMFAR reports EUR 26,727,770.59 in reference year 9 (EUR 38,388,721.26 in first operating year and EUR 25,180,187.80 in last year). The reference-year difference is EUR 6,292,799.41. Keep this as an open reconciliation item; do not overwrite either source value until the asset commissioning/depreciation schedule is rebuilt.
 
+### Detailed process and sales inputs checked
+
+The DRI CAPEX summary rolls up exactly to EUR 453,858,298: land 0; site preparation 2,456,550; non-industrial buildings 2,676,921; machinery/equipment 427,304,778; infrastructure 16,992,000; vehicles 2,693,752; office/service equipment 469,844; contingencies 1,264,453.
+
+The raw-material workbook rolls up to EUR 537,485,060/year:
+- DRI unit inputs: EUR 359,973,680 (pellets 1.45 t/t DRI, or 2,552,000 t/y; pellet internal freight; lime, catalyst, reformer tubes, chemicals and oils).
+- Steelmaking base-grade inputs: EUR 88,066,260, including 60,000 t/y net purchased scrap at 0.05 t/t slab (the source label states this is after 15 kg returned scrap).
+- Grade-specific additions: marine EUR 7,034,880 for 240,000 t/y; API EUR 67,001,880 for 660,000 t/y; pressure-vessel EUR 15,408,360 for 180,000 t/y.
+These groups sum to the annual raw-material total. The source product schedule allocates 1.2m t/y slabs across 240k marine, 660k API, 180k pressure-vessel and 120k construction grades (EUR 760.8m revenue), plus 460k t/y surplus DRI sold for EUR 126.5m; total sales are EUR 887.3m.
+
+The priced energy schedule totals EUR 69,530,818.40/year. It uses 110 kWh/t DRI and 568 kWh/t slab (875.2m kWh/year combined), 250 Nm³/t DRI and 20 Nm³/t slab gas (464m Nm³/year), 15 Nm³/t DRI and 40 Nm³/t slab oxygen (74.4m Nm³/year), and 5,621,680 m³/year water. A separate technical consumption table also lists 60.72m Nm³ compressed air, 4.32m Nm³ nitrogen and 0.648m Nm³ argon, but these three do not appear as separate priced lines in the annual utility cost roll-up. Confirm whether their costs are embedded in other utility/overhead lines or omitted before final approval.
+
 ### Tax and time basis
 
 COMFAR defines four construction years and fifteen operating years (19 periods total). The financial cash-flow workbook labels construction 1403–1406 and production from 1407. Its tax cash-flow rows show a 5% effective tax charge for the first four operating years and 25% from the fifth operating year/reference year 9. The workbook's tax notes describe 25% as the general corporate rate and possible regional exemptions; the source files do not identify the legal exemption decision or its term. Treat the 5% ramp as a workbook assumption pending documentary confirmation, not a universal tax rate.
