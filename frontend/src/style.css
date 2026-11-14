@@ -317,7 +317,7 @@ footer{border-top-color:var(--line)}
  .module,.kpi,.settings-card,.project-card{border-radius:10px}
 }
 
-:root[data-theme="dark"] .app-page-dashboard,.app-page-projects,.app-page-hot-rolling,.app-page-integrated-steel,.app-page-steel-group,.app-page-project-wizard,.app-page-guide,.app-page-settings{color-scheme:dark}
+:root[data-theme="dark"] :root[data-theme="dark"] .app-shell{color-scheme:dark}
 :root[data-theme="dark"] .app-page-dashboard{--page-accent-soft:rgba(120,169,245,.14)}
 :root[data-theme="dark"] .app-page-projects,:root[data-theme="dark"] .app-page-hot-rolling,:root[data-theme="dark"] .app-page-integrated-steel,:root[data-theme="dark"] .app-page-steel-group{--page-accent-soft:rgba(98,194,139,.14)}
 :root[data-theme="dark"] .app-page-project-wizard{--page-accent-soft:rgba(240,138,110,.14)}
