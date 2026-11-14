@@ -3,6 +3,7 @@ import { ArrowRight, Factory, Layers3, AlertTriangle, Calculator } from 'lucide-
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
 import ProcessPlantWorkspace from './ProcessPlantWorkspace'
 import { INTEGRATED_COMFAR_REFERENCE as benchmark } from './integratedProjectBenchmark'
+import { WORKBOOK_RECONCILIATION_FLAGS } from './workbookReconciliation'
 
 type Unit = 'dri' | 'steelmaking'
 
@@ -46,6 +47,7 @@ export default function IntegratedSteelComplexWorkspace({ project, onBack }: { p
         <p>هزینه کارخانه‌ای کامفار، استهلاک را جداگانه گزارش می‌کند؛ مقایسه با OPEX اکسل باید بر مبنای هزینه نقدی و سپس استهلاک جداگانه انجام شود.</p>
         <p>نرخ مالیات دوره اول در خروجی کامفار ۵٪ و نرخ سال مرجع ۲۵٪ است؛ اعمال نرخ ثابت بدون بازسازی معافیت‌ها مجاز نیست.</p>
         <p>این ارقام «مبنای کنترل گزارش» هستند، نه جایگزین مدل محاسباتی و نه تأیید صحت مفروضات مهندسی.</p>
+        {WORKBOOK_RECONCILIATION_FLAGS.slice(0,3).map((flag,index)=><p key={index}><AlertTriangle size={15}/> {flag}</p>) }
       </article>
     </section>
   </section>
