@@ -138,10 +138,10 @@ export default function App() {
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenSample={() => setPage('plate-sample')} onOpenProject={project => { setActiveProject(project); setPage(project.steelStage?.includes('مجتمع احیاء') ? 'integrated-steel' : 'project-wizard') }}/>}
+    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenSample={() => setPage('plate-sample')} onOpenProject={project => { setActiveProject(project); setPage(project.steelStage?.includes('مجتمع احیاء') ? 'integrated-steel' : project.steelStage?.includes('نورد گرم') ? 'hot-rolling' : 'project-wizard') }}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onExport={exportBackup} onImport={importBackup}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => setPage('hot-rolling')}/>}
-    {page === 'hot-rolling' && <RollingWorkspace/>}
+    {page === 'hot-rolling' && <RollingWorkspace project={activeProject ?? undefined}/>}
     {page === 'plate-sample' && <PlateSampleProject/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'integrated-steel' && activeProject && <IntegratedSteelWorkspace project={activeProject} onBack={() => setPage('projects')}/>}
