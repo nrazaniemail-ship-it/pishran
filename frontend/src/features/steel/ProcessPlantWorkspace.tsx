@@ -304,6 +304,11 @@ const capexAmount=(sheetId:string,row:Row):number=>{const v=row.values,n=(key:st
  if(sheetId==='infrastructure'||sheetId==='office')return n('amount')*allocation
  return n('amount')||n('total')||n('annualCost')
 }
+const financeProjectSheet=sheets.find(x=>x.id==='project')!
+const financeProjectRows=data.project??makeRows(financeProjectSheet,plantType)
+const financeRow=(label:string)=>financeProjectRows.find(row=>row.label===label)
+const financeValue=(label:string,fallback=0)=>Number(financeRow(label)?.values.value??fallback)||0
+const materialCapacity=Math.max(0,financeValue('ظرفیت اسمی سالانه تولید (تن)',plantType==='dri'?1760000:1200000))
 const capexBySheet=(id:string):number=> (data[id]??makeRows(sheets.find(x=>x.id===id)!,plantType)).reduce((sum,row)=>sum+capexAmount(id,row),0)
 const capexReferenceCapacity=Math.max(1,financeValue('ظرفیت مرجع برآورد CAPEX (تن)',plantType==='dri'?1760000:1200000))
 const capexRatio=materialCapacity/capexReferenceCapacity
@@ -318,11 +323,6 @@ const capexTotal:number=fixedInvestment+preOperating
 const summaryValues:number[]=[capexBaseBySheet('land'),capexBaseBySheet('site'),capexBaseBySheet('buildings'),capexBaseBySheet('machines'),capexBaseBySheet('infrastructure'),capexBaseBySheet('vehicles'),capexBaseBySheet('office'),contingency,fixedInvestment,preOperating,capexTotal]
 const infrastructureRows=data.infrastructure??makeRows(sheets.find(x=>x.id==='infrastructure')!,plantType)
 const infrastructureDepreciable=infrastructureRows.filter(row=>!row.section&&!row.label.includes('حق انشعاب')).reduce((sum,row)=>sum+Number(row.values.amount??0)*(Math.max(0,Math.min(100,Number(row.values.allocation??100)))/100),0)
-const financeProjectSheet=sheets.find(x=>x.id==='project')!
-const financeProjectRows=data.project??makeRows(financeProjectSheet,plantType)
-const financeRow=(label:string)=>financeProjectRows.find(row=>row.label===label)
-const financeValue=(label:string,fallback=0)=>Number(financeRow(label)?.values.value??fallback)||0
-const materialCapacity=Math.max(0,financeValue('ظرفیت اسمی سالانه تولید (تن)',plantType==='dri'?1760000:1200000))
 const materialRows=data.materials??makeRows(sheets.find(x=>x.id==='materials')!,plantType)
 const energyRows=data.energy??makeRows(sheets.find(x=>x.id==='energy')!,plantType)
 const salesData=data.sales??makeRows(sheets.find(x=>x.id==='sales')!,plantType)
