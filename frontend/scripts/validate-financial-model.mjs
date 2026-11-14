@@ -14,11 +14,43 @@ const near = (actual, expected, tolerance, label) => {
   assert.ok(Math.abs(actual - expected) <= tolerance,
     label + ': expected ' + expected + ', got ' + actual + ', delta ' + (actual - expected))
 }
-const [engine, reference, integratedReference] = await Promise.all([
+const [engine, reference, integratedReference, workbookAudit] = await Promise.all([
   loadTypeScriptModule('../src/features/steel/financialModel.ts'),
   loadTypeScriptModule('../src/features/steel/hotRollingExcelBenchmark.ts'),
-  loadTypeScriptModule('../src/features/steel/integratedProjectBenchmark.ts')
+  loadTypeScriptModule('../src/features/steel/integratedProjectBenchmark.ts'),
+  loadTypeScriptModule('../src/features/steel/workbookReconciliation.ts')
 ])
+
+const driAudit = workbookAudit.DRI_STEELMAKING_AUDIT
+near(driAudit.capex.fixedInvestment + driAudit.capex.preproductionNet + driAudit.capex.capitalizedInterest,
+  driAudit.capex.constructionUses, 0.01, 'DRI construction uses bridge')
+near(driAudit.capex.constructionUses + driAudit.workingCapital, driAudit.totalUses, 0.01, 'DRI total uses bridge')
+near(driAudit.funding.equity + driAudit.funding.longTermDebt + driAudit.funding.shortTermDebt,
+  driAudit.funding.totalSources, 0.01, 'DRI total sources bridge')
+near(driAudit.totalUses - driAudit.funding.totalSources, driAudit.funding.fundingGap, 0.01, 'DRI funding gap')
+near(driAudit.annualOpex.rawMaterials + driAudit.annualOpex.labor + driAudit.annualOpex.laborOverhead
+  + driAudit.annualOpex.maintenance + driAudit.annualOpex.utilities + driAudit.annualOpex.other,
+  driAudit.annualOpex.factoryCostExDepreciation, 0.5, 'DRI factory cost excluding depreciation')
+near(driAudit.annualOpex.factoryCostExDepreciation + driAudit.annualOpex.depreciationDetailed,
+  driAudit.annualOpex.totalIncludingDepreciation, 0.5, 'DRI total cost including detailed depreciation')
+near(driAudit.annualOpex.depreciationDetailed - driAudit.comfar.referenceDepreciation,
+  6292799.41, 0.02, 'DRI depreciation discrepancy retained as an audit flag')
+
+const rollingAudit = workbookAudit.HOT_ROLLING_200KT_AUDIT
+near(rollingAudit.capex.fixedInvestment + rollingAudit.capex.preproductionNet,
+  rollingAudit.capex.constructionInvestment, 0.01, 'HRCR200 construction investment')
+near(rollingAudit.capex.constructionInvestment + rollingAudit.capex.capitalizedInterest,
+  rollingAudit.capex.constructionUsesIncludingInterest, 0.01, 'HRCR200 construction uses including interest')
+near(rollingAudit.annualOpex.totalIncludingDepreciation - rollingAudit.annualOpex.depreciation,
+  rollingAudit.annualOpex.totalExcludingDepreciation, 0.01, 'HRCR200 OPEX excluding depreciation')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabDebtSharePercent, 80,
+  'HRCR200 mechanism-tab financing split must remain visible')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.fundingSummaryTabEquitySharePercent, 70,
+  'HRCR200 alternative financing split must remain visible')
+assert.ok(workbookAudit.WORKBOOK_RECONCILIATION_FLAGS.length >= 5,
+  'Source conflicts must remain explicit audit flags')
+console.log('PASS: source-workbook DRI and HRCR200 CAPEX/OPEX bridges and unresolved financing/depreciation flags')
+
 const model = reference.EXCEL_HOT_ROLLING_200KT
 const expected = reference.EXCEL_REFERENCE_EXPECTED
 const pishranExpected = reference.PISHRAN_REFERENCE_MODEL_OUTPUT
