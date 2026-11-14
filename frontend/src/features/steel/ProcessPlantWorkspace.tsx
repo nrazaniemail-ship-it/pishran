@@ -15,7 +15,7 @@ const c=(key:string,label:string,unit='',numeric=false):Column=>({key,label,unit
 const capexCols=[c('qty','مقدار','',true),c('unit','واحد'),c('unitPrice','هزینه واحد','یورو',true),c('equipment','هزینه تجهیزات','یورو',true),c('allocation','سهم تخصیص به پروژه','٪',true),c('year','سال انجام','',true)]
 const costCols=[c('specific','مصرف ویژه','',true),c('unit','واحد'),c('price','قیمت واحد','یورو',true),c('annualQty','مقدار سالیانه','',true),c('annualCost','هزینه سالیانه','یورو',true)]
 const financeCols=[c('rate','نرخ / درصد','٪',true),c('grace','دوره تنفس','سال',true),c('term','دوره بازپرداخت','سال',true),c('notes','توضیحات')]
-const years=Array.from({length:19},(_,i)=>c('y'+(i+1),i<4?'ساخت '+(i+1):i<19?'بهره‌برداری '+(i+1):'اسقاط','یورو',true))
+const years=Array.from({length:19},(_,i)=>c('y'+(i+1),i<4?'ساخت '+(i+1):i===18?'بهره‌برداری 19 / پایان پروژه':'بهره‌برداری '+(i+1),'یورو',true))
 const hrCols=[c('expert','کارشناس','نفر',true),c('technician','تکنسین','نفر',true),c('secretary','منشی','نفر',true),c('operator','کارگر فنی','نفر',true),c('driver','راننده','نفر',true),c('laborer','کارگر ساده','نفر',true)]
 const genericCols=[c('amount','مبلغ / مقدار','یورو',true),c('rate','نرخ / درصد','٪',true),c('year','سال','',true),c('notes','توضیحات')]
 const baseRows=[
