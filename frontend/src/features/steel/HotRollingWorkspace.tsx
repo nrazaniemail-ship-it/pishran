@@ -30,9 +30,9 @@ const capex=[['زمین','2,015,000'],['محوطه‌سازی و آماده‌س
 const opex=[['مواد اولیه','40,844,287','92.31'],['آب، برق و گاز','269,580','0.61'],['لوازم یدکی','176,474','0.40'],['تعمیر و نگهداری','374,760','0.85'],['نیروی انسانی','650,053','1.47'],['سربار نیروی انسانی','130,011','0.29'],['استهلاک','1,580,327','3.57'],['سربار کارخانه','159,060','0.36'],['بازاریابی مستقیم','62,260','0.14']]
 const market=[['ورق گرم','7,009','6,119','5,162'],['اسیدشویی','307','295','229'],['ورق سرد','2,402','2,154','1,952'],['گالوانیزه','1,916','1,485','1,249'],['رنگی','325','260','249'],['قلع‌اندود','328','290','248'],['سایر','389','220','287']]
 const returns=[['دوره بازگشت عادی','3.86','سال'],['دوره بازگشت دینامیک','5.02','سال'],['NPV با نرخ تنزیل ۲۵٪','31,399,764','میلیون ریال'],['IRR','48.31','درصد'],['MIRR','28.03','درصد'],['نقطه سربه‌سر تولید','12.15','درصد ظرفیت']]
-const pishranFlows=PISHRAN_REFERENCE_MODEL_OUTPUT.projectCashFlows
+const pishranFlows=[...PISHRAN_REFERENCE_MODEL_OUTPUT.projectCashFlows]
 const pishranMetrics={npv21:calculateNpv(pishranFlows,.21),npv25:calculateNpv(pishranFlows,.25),irr:calculateIrr(pishranFlows),mirr:calculateMirr(pishranFlows,EXCEL_REFERENCE_EXPECTED.financeRate,EXCEL_REFERENCE_EXPECTED.reinvestmentRate)}
-const comfarIrrNpv={npv21:EXCEL_REFERENCE_EXPECTED.npvAtRoundedRate,irr:EXCEL_REFERENCE_EXPECTED.irr,mirr:EXCEL_REFERENCE_EXPECTED.mirr}
+const comfarIrrNpv={npv21:EXCEL_REFERENCE_EXPECTED.irrNpvSheetReportedNpvAt21,irr:EXCEL_REFERENCE_EXPECTED.irrNpvSheetReportedIrr,mirr:EXCEL_REFERENCE_EXPECTED.irrNpvSheetReportedMirr}
 const delta=(a:number,b:number)=>a-b
 const fmt=(v:number,d=0)=>v.toLocaleString('fa-IR',{maximumFractionDigits:d,minimumFractionDigits:d})
 function NumField({label,value,unit,onChange,step=1}:{label:string;value:number;unit:string;onChange:(v:number)=>void;step?:number}){return <label className="hr-field"><span className="fw-field-label">{label}<FieldGuide field={label}/></span><div className="hr-input-wrap"><input type="number" min="0" step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/><small>{unit}</small></div><FieldFeedback label={label} value={value}/></label>}
