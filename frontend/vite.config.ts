@@ -33,6 +33,11 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Force installed PWAs to discard stale pre-removal bundles and claim updated clients.
+        cacheId: 'pishran-1-0-1-refresh',
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         navigateFallback: 'index.html',
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         runtimeCaching: [
