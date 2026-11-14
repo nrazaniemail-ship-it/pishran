@@ -97,8 +97,57 @@ function definitions(type:PlantType):Sheet[]{
  ]
  return [...capex,...opex,...finance]
 }
+const materialDefaults:Record<string,{specific:number;unit:string;price:number;gradeShare?:number}> = {
+ 'گندله':{specific:1.45,unit:'تن',price:115},'حمل داخلی گندله':{specific:1.45,unit:'تن',price:24.4},
+ 'آهک پخته':{specific:2,unit:'کیلوگرم',price:.03},'کاتالیست':{specific:.0345,unit:'کیلوگرم',price:3},
+ 'لوله‌های ریفورمر':{specific:.08,unit:'کیلوگرم',price:12.4},'مواد شیمیایی':{specific:3,unit:'کیلوگرم',price:.22},'روغن و گریس':{specific:.025,unit:'کیلوگرم',price:23.4},
+ 'قراضه قابل خرید با کسر قراضه برگشتی (۱۵ کیلوگرم)':{specific:.05,unit:'تن',price:424},'حمل قراضه':{specific:.05,unit:'تن',price:8},
+ 'دولومیت پخته':{specific:26,unit:'کیلوگرم',price:.04},'فرومنگنز پرکربن':{specific:8,unit:'کیلوگرم',price:1.23},'فروسیلیسوم':{specific:4,unit:'کیلوگرم',price:1.12},
+ 'آلومینیوم گرانوله':{specific:6,unit:'کیلوگرم',price:1.61},'کک':{specific:15,unit:'کیلوگرم',price:.21},'پودر کربن':{specific:1,unit:'کیلوگرم',price:.5},
+ 'فلورین':{specific:1,unit:'کیلوگرم',price:.07},'GUNNING MIXTURE':{specific:1,unit:'کیلوگرم',price:.32},'الکترود گرافیتی':{specific:1.6,unit:'کیلوگرم',price:3.05},
+ 'نسوز کوره‌های قوس و پاتیلی':{specific:7.2,unit:'کیلوگرم',price:1.57},'نسوز تاندیش':{specific:1.6,unit:'کیلوگرم',price:.81},
+ 'نسوز تعمیرات موضعی':{specific:1.6,unit:'کیلوگرم',price:1.08},'پودر تاندیش':{specific:.35,unit:'کیلوگرم',price:.36},
+ 'رابط مجرای خروجی مذاب':{specific:.001,unit:'واحد',price:.43},'پودر قالب':{specific:.55,unit:'کیلوگرم',price:1.08},
+ 'نازل انتقال مذاب':{specific:.0004,unit:'واحد',price:.12},'میله متوقف‌کننده مذاب':{specific:.0004,unit:'واحد',price:.43},
+ 'قالب مسی ریخته‌گری مداوم':{specific:.02,unit:'کیلوگرم',price:6.09},'لوله اکسیژن‌کاری':{specific:.055,unit:'شاخه',price:4.46},
+ 'روغن هیدرولیک و گریس':{specific:.02,unit:'کیلوگرم',price:23.4},'ترموکوپل':{specific:.08,unit:'عدد',price:.56},
+ 'نیکل — گرید دریایی':{specific:.6,unit:'کیلوگرم',price:22,gradeShare:.2},'مس — گرید دریایی':{specific:.8,unit:'کیلوگرم',price:8.3,gradeShare:.2},
+ 'فروکروم ۶۵٪ — گرید دریایی':{specific:1.48,unit:'کیلوگرم',price:6.4,gradeShare:.2},
+ 'نیکل — گرید API':{specific:1,unit:'کیلوگرم',price:22,gradeShare:.55},'فرومنگنز کم‌کربن ۷۸٪ — گرید API':{specific:21.15,unit:'کیلوگرم',price:1,gradeShare:.55},
+ 'فرومولیبدن ۶۰٪ — گرید API':{specific:1.8,unit:'کیلوگرم',price:18,gradeShare:.55},'فرونایوبیوم ۶۶٪ — گرید API':{specific:.58,unit:'کیلوگرم',price:29.4,gradeShare:.55},
+ 'فرووانادیم ۶۰٪ — گرید API':{specific:.48,unit:'کیلوگرم',price:13.4,gradeShare:.55},'فروتیتانیوم ۷۰٪ — گرید API':{specific:.36,unit:'کیلوگرم',price:6.9,gradeShare:.55},
+ 'نیکل — گرید مخازن تحت فشار':{specific:1.5,unit:'کیلوگرم',price:22,gradeShare:.15},'فرومنگنز کم‌کربن ۷۸٪ — گرید مخازن تحت فشار':{specific:14.1,unit:'کیلوگرم',price:1,gradeShare:.15},
+ 'فرومولیبدن ۶۰٪ — گرید مخازن تحت فشار':{specific:1.6,unit:'کیلوگرم',price:18,gradeShare:.15},'فرونایوبیوم ۶۶٪ — گرید مخازن تحت فشار':{specific:.33,unit:'کیلوگرم',price:29.4,gradeShare:.15}
+}
+const energyDefaults:Record<string,{specific:number;unit:string;price?:number}> = {
+ 'آب صنعتی':{specific:1.4,unit:'متر مکعب بر تن',price:.13},'آب شرب — مترمکعب بر ساعت':{specific:6,unit:'متر مکعب بر ساعت',price:.13},
+ 'برق مصرفی':{specific:110,unit:'کیلووات ساعت بر تن',price:.04},'برق مصرفی — ۵۶۸ کیلووات‌ساعت بر تن':{specific:568,unit:'کیلووات ساعت بر تن',price:.04},
+ 'اکسیژن گازی':{specific:15,unit:'نرمال متر مکعب بر تن',price:.08},'گاز صنعتی':{specific:250,unit:'نرمال متر مکعب بر تن',price:.06},
+ 'آب واحد احیا':{specific:1.4,unit:'m3'},'گاز طبیعی واحد احیا':{specific:250,unit:'Nm3'},'اکسیژن واحد احیا':{specific:15,unit:'Nm3'},'برق واحد احیا':{specific:110,unit:'kWh'},
+ 'آب واحد فولادسازی':{specific:2.5,unit:'m3'},'هوای فشرده — ۵۰٫۶ Nm³ بر تن':{specific:50.6,unit:'Nm3'},'گاز طبیعی واحد فولادسازی':{specific:20,unit:'Nm3'},
+ 'اکسیژن واحد فولادسازی':{specific:40,unit:'Nm3'},'ازت — ۳٫۶ Nm³ بر تن':{specific:3.6,unit:'Nm3'},'آرگن — ۰٫۵۴ Nm³ بر تن':{specific:.54,unit:'Nm3'},'برق واحد فولادسازی — ۵۶۸ kWh بر تن':{specific:568,unit:'kWh'}
+}
 const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)=>{
  const values:Record<string,Cell>=Object.fromEntries(sheet.columns.map(col=>[col.key,col.numeric?0:'']))
+ const label=typeof entry==='string'?entry:entry.label
+ if(!((typeof entry!=='string')||entry.section)){
+  if(sheet.id==='materials'){
+   const item=materialDefaults[label]
+   if(item)Object.assign(values,{specific:item.specific,unit:item.unit,price:item.price})
+  }
+  if(sheet.id==='energy'){
+   const item=energyDefaults[label]
+   if(item)Object.assign(values,{specific:item.specific,unit:item.unit,price:item.price??0})
+   if(label==='آب شرب — مترمکعب بر ساعت')values.energyBasis='hourly'
+  }
+  if(sheet.id==='maintenance')values.rate=([2,4,4,10,10][i]??0)
+  if(sheet.id==='depreciation'){values.rate=([7,7,8,10,10,20,25,10][i]??0);values.scrap=10}
+  if(sheet.id==='sales'){
+   if(plantType==='dri')Object.assign(values,{price:275,mix:460000/1760000*100,annualQty:460000})
+   else Object.assign(values,{price:[600,660,640,550][i]??0,mix:[20,55,15,10][i]??0})
+  }
+  if(sheet.id==='break-even')values.variable=([100,0,80,80,0,50][i]??0)
+ }
  if(sheet.id==='payroll'){
   const salary=[1270,890,640,510,460,390,310][i]??0
   const insurance=Math.round(salary*.23),overtime=salary*.4,monthlyTotal=salary+insurance+overtime
