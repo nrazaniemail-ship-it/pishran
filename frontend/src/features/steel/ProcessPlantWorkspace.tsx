@@ -195,7 +195,7 @@ const migrateStoredData=(stored:Record<string,Row[]>,sheets:Sheet[],plantType:Pl
  }
  if(!stored.machineStructures){
   const oldMachines=stored.machines??[]
-  next.machineStructures=makeStructureRows().map(row=>{const previous=oldMachines.find(x=>x.label.replace(/^سازه:\\s*/,'')===row.label);if(!previous)return row;return{...row,values:{...row.values,length:previous.values.structureLength??row.values.length,width:previous.values.structureWidth??row.values.width,craneLevel:previous.values.craneLevel??row.values.craneLevel,steelStructure:previous.values.steelStructure??row.values.steelStructure,roofing:previous.values.roofing??row.values.roofing,cladding:previous.values.cladding??row.values.cladding,steelWeight:previous.values.steelWeight??row.values.steelWeight,price:previous.values.structurePrice??row.values.price}}})
+  next.machineStructures=makeStructureRows().map(row=>{const previous=oldMachines.find(x=>(x.label.startsWith('سازه:')?x.label.slice(6).trim():x.label)===row.label);if(!previous)return row;return{...row,values:{...row.values,length:previous.values.structureLength??row.values.length,width:previous.values.structureWidth??row.values.width,craneLevel:previous.values.craneLevel??row.values.craneLevel,steelStructure:previous.values.steelStructure??row.values.steelStructure,roofing:previous.values.roofing??row.values.roofing,cladding:previous.values.cladding??row.values.cladding,steelWeight:previous.values.steelWeight??row.values.steelWeight,price:previous.values.structurePrice??row.values.price}}})
  }
  return next
 }
