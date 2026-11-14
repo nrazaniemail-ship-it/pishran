@@ -173,6 +173,58 @@ export function calculateMirr(flows: number[], financeRate: number, reinvestment
 }
 
 
+export type CashFlowReconciliationPeriod = {
+  period: number
+  model: number | null
+  reference: number | null
+  difference: number | null
+  differencePercent: number | null
+  withinTolerance: boolean
+}
+
+export type CashFlowReconciliation = {
+  matched: boolean
+  periodCountMatch: boolean
+  periods: CashFlowReconciliationPeriod[]
+  modelTotal: number
+  referenceTotal: number
+  totalDifference: number
+  maxAbsoluteDifference: number | null
+}
+
+/** Compare annual project/equity cash-flow vectors without silently aligning missing periods. */
+export function reconcileCashFlowSeries(modelFlows: number[], referenceFlows: number[], tolerance = 0.01): CashFlowReconciliation {
+  const allowedDifference = Number.isFinite(tolerance) ? Math.max(0, tolerance) : 0.01
+  const periodCountMatch = modelFlows.length === referenceFlows.length
+  const periodCount = Math.max(modelFlows.length, referenceFlows.length)
+  const periods = Array.from({ length: periodCount }, (_, index) => {
+    const model = Number.isFinite(modelFlows[index]) ? modelFlows[index] : null
+    const reference = Number.isFinite(referenceFlows[index]) ? referenceFlows[index] : null
+    const difference = model !== null && reference !== null ? model - reference : null
+    return {
+      period: index + 1,
+      model,
+      reference,
+      difference,
+      differencePercent: difference !== null && reference !== 0 ? difference / Math.abs(reference) * 100 : null,
+      withinTolerance: difference !== null && Math.abs(difference) <= allowedDifference
+    }
+  })
+  const modelTotal = modelFlows.reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0)
+  const referenceTotal = referenceFlows.reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0)
+  const differences = periods.map(period => period.difference).filter((value): value is number => value !== null)
+  const maxAbsoluteDifference = differences.length ? Math.max(...differences.map(Math.abs)) : null
+  return {
+    matched: periodCountMatch && periods.every(period => period.withinTolerance),
+    periodCountMatch,
+    periods,
+    modelTotal,
+    referenceTotal,
+    totalDifference: modelTotal - referenceTotal,
+    maxAbsoluteDifference
+  }
+}
+
 export type OperatingCostRow = {
   quantity: number
   unitPrice: number
