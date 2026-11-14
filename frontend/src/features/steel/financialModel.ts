@@ -714,6 +714,15 @@ export function calculateSensitivityMatrix(input: IntegratedFinanceInput, priceC
       fullCapacityRevenue: input.fullCapacityRevenue * (1 + priceChangePercent / 100) * (1 + volumeChangePercent / 100),
       capacity: input.capacity * (1 + volumeChangePercent / 100),
       fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * (1 + volumeChangePercent / 100),
+      workingCapitalPolicy: input.workingCapitalPolicy ? {
+        ...input.workingCapitalPolicy,
+        annualRawMaterialCost: input.workingCapitalPolicy.annualRawMaterialCost * (1 + volumeChangePercent / 100),
+        annualPayablesCost: (input.workingCapitalPolicy.annualPayablesCost ?? input.workingCapitalPolicy.annualRawMaterialCost) * (1 + volumeChangePercent / 100),
+        annualConversionCost: input.workingCapitalPolicy.annualConversionCost * (1 + volumeChangePercent / 100),
+        annualFinishedGoodsCost: input.workingCapitalPolicy.annualFinishedGoodsCost * (1 + volumeChangePercent / 100),
+        annualCashOperatingCost: input.workingCapitalPolicy.annualCashOperatingCost * (1 + volumeChangePercent / 100),
+        annualRevenue: input.workingCapitalPolicy.annualRevenue * (1 + priceChangePercent / 100) * (1 + volumeChangePercent / 100),
+      } : undefined,
       fixedInvestment: input.fixedInvestment,
     })
     return { priceChangePercent, volumeChangePercent, npv: result.npvProject, irr: result.irrProject }
@@ -731,6 +740,15 @@ export function calculateFinancialScenarios(input: IntegratedFinanceInput) {
       fixedInvestment: input.fixedInvestment * capex,
       fixedInvestmentSchedule: input.fixedInvestmentSchedule.map(value => value * capex),
       depreciationSchedule: input.depreciationSchedule?.map(value => value * capex),
+      workingCapitalPolicy: input.workingCapitalPolicy ? {
+        ...input.workingCapitalPolicy,
+        annualRawMaterialCost: input.workingCapitalPolicy.annualRawMaterialCost * variableCost * volume,
+        annualPayablesCost: (input.workingCapitalPolicy.annualPayablesCost ?? input.workingCapitalPolicy.annualRawMaterialCost) * variableCost * volume,
+        annualConversionCost: input.workingCapitalPolicy.annualConversionCost * variableCost * volume,
+        annualFinishedGoodsCost: input.workingCapitalPolicy.annualFinishedGoodsCost * variableCost * volume,
+        annualCashOperatingCost: input.workingCapitalPolicy.annualCashOperatingCost * variableCost * volume,
+        annualRevenue: input.workingCapitalPolicy.annualRevenue * price * volume,
+      } : undefined,
     })
   return {
     pessimistic: scenario(0.9, 0.85, 1.15, 1.1, 1.1),
