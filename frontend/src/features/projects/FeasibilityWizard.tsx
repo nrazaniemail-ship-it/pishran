@@ -98,12 +98,31 @@ export default function FeasibilityWizard({project,onBack}:{project:FeasibilityP
  const revenuePrice=m.market.domesticPrice*(m.market.domesticShare/100)+m.market.exportPrice*(1-m.market.domesticShare/100)
  const model=useMemo(()=>{
   const constructionPeriods=Math.max(1,Math.ceil(m.project.constructionYears||1))
-  const flows=Array.from({length:constructionPeriods},(_,i)=>-capex/constructionPeriods-(i===constructionPeriods-1?m.finance.workingCapital:0))
-  for(let i=0;i<m.project.operatingYears;i++){
-   const ramp=m.capacity.ramp[i]??100,qty=cap*ramp/100,rev=qty*revenuePrice,op=qty*variable+fixed,dep=capex/Math.max(1,m.finance.depreciationYears),tax=Math.max(0,rev-op-dep)*m.finance.tax/100
-   flows.push(rev-op-tax+(i===m.project.operatingYears-1?m.finance.workingCapital:0))
+  const operatingPeriods=Math.max(1,Math.ceil(m.project.operatingYears||1))
+  const equityWeight=Math.min(100,Math.max(0,m.finance.equity))/100
+  const debtWeight=Math.min(100,Math.max(0,m.finance.debt))/100
+  const totalUses=capex+Math.max(0,m.finance.workingCapital)
+  const debtDraw=totalUses*debtWeight
+  const annualPrincipal=debtDraw/operatingPeriods
+  const projectFlows=Array.from({length:constructionPeriods},(_,i)=>-capex/constructionPeriods-(i===constructionPeriods-1?m.finance.workingCapital:0))
+  const equityFlows=projectFlows.map(value=>value*equityWeight)
+  const annualRows:{period:string;project:number;equity:number;debtOpening:number;interest:number;principal:number;tax:number}[]=[]
+  let openingDebt=debtDraw
+  for(let i=0;i<operatingPeriods;i++){
+   const ramp=m.capacity.ramp[i]??100,qty=cap*ramp/100,rev=qty*revenuePrice,op=qty*variable+fixed,dep=capex/Math.max(1,m.finance.depreciationYears)
+   const interest=openingDebt*Math.max(0,m.finance.debtCost)/100
+   const taxProject=Math.max(0,rev-op-dep)*m.finance.tax/100
+   const taxEquity=Math.max(0,rev-op-dep-interest)*m.finance.tax/100
+   const terminalRecovery=i===operatingPeriods-1?Math.max(0,m.finance.workingCapital):0
+   const projectCash=rev-op-taxProject+terminalRecovery
+   const principal=Math.min(openingDebt,annualPrincipal)
+   const equityCash=rev-op-interest-taxEquity-principal+terminalRecovery
+   projectFlows.push(projectCash)
+   equityFlows.push(equityCash)
+   annualRows.push({period:'بهره‌برداری '+(i+1),project:projectCash,equity:equityCash,debtOpening:openingDebt,interest,principal,tax:taxEquity})
+   openingDebt=Math.max(0,openingDebt-principal)
   }
-  return {flows,npv:npv(flows,rate),irr:irr(flows),annualCapacity:cap,revenue:cap*revenuePrice,operatingCost:cap*variable+fixed,breakEven:revenuePrice>variable?fixed/(revenuePrice-variable):Number.POSITIVE_INFINITY,marketSize,capex,wacc,rate}
+  return {flows:projectFlows,equityFlows,npv:npv(projectFlows,rate),irr:irr(projectFlows),mirr:mirr(projectFlows,(m.finance.financeRate??m.finance.debtCost)/100,(m.finance.reinvestmentRate??m.finance.equityCost)/100),equityNpv:npv(equityFlows,m.finance.equityCost/100),equityIrr:irr(equityFlows),equityMirr:mirr(equityFlows,(m.finance.financeRate??m.finance.debtCost)/100,(m.finance.reinvestmentRate??m.finance.equityCost)/100),annualRows,annualCapacity:cap,revenue:cap*revenuePrice,operatingCost:cap*variable+fixed,breakEven:revenuePrice>variable?fixed/(revenuePrice-variable):Number.POSITIVE_INFINITY,marketSize,capex,wacc,rate,totalUses,debtDraw}
  },[cap,capex,fixed,marketSize,m.finance,m.project.operatingYears,m.project.constructionYears,m.capacity.ramp,revenuePrice,rate,variable])
  const update=<K extends keyof Model>(key:K,value:Model[K])=>setM(old=>({...old,[key]:value}))
  const current=steps.findIndex(s=>s[0]===step)
