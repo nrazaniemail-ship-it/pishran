@@ -178,3 +178,51 @@ console.log('PASS: NPV / IRR / MIRR independently reproduce the COMFAR reference
 console.log('PASS: Pishran-generated project cash flows are finite and return valid NPV / IRR / MIRR')
 console.log('REVIEW REQUIRED: generated Pishran cash flows are not yet numerically reconciled to COMFAR cash flows')
 console.log('NOTE: Excel rounds WACC 21.284299% to 21% for its NPV cell.')
+
+
+const integrated = engine.calculateIntegratedFinance({
+  years: 6,
+  constructionYears: 1,
+  capacity: 100,
+  fullCapacityRevenue: 2000,
+  fullCapacityVariableCashCost: 600,
+  fullCapacityFixedCashCost: 400,
+  annualDepreciation: 100,
+  fixedInvestment: 1000,
+  preOperatingCost: 100,
+  fixedInvestmentSchedule: [1000, 0, 0, 0, 0, 0],
+  preOperatingSchedule: [100, 0, 0, 0, 0, 0],
+  utilization: [0, 1, 1, 1, 1, 1],
+  equityContributions: [600, 0, 0, 0, 0, 0],
+  loans: [{
+    id: 'test-loan',
+    label: 'Test loan',
+    drawdowns: [400, 0, 0, 0, 0, 0],
+    annualRate: 10,
+    graceYears: 0,
+    termYears: 2,
+    repaymentStartYear: 2,
+    repaymentMethod: 'equal-principal',
+    capitalizeInterest: false
+  }],
+  taxRate: 25,
+  costOfEquity: 20,
+  workingCapitalPercent: 10,
+  salesEscalationPercent: 1,
+  opexEscalationPercent: 2,
+  discountMode: 'wacc',
+  manualDiscountRate: 25
+})
+near(integrated.wacc, 0.15, 1e-12, 'Integrated WACC')
+near(integrated.totalFunding, 1000, 1e-9, 'Integrated funding')
+near(integrated.peakWorkingCapital, 100, 1e-9, 'Integrated working capital')
+near(integrated.fundingGap, 200, 1e-9, 'Integrated funding gap')
+near(integrated.loanSchedules['test-loan'][1].principal, 200, 1e-9, 'Equal principal repayment')
+near(integrated.years[1].revenue, 2000, 1e-9, 'First operating year sales')
+near(integrated.years[2].revenue, 2020, 1e-9, 'Sales escalation')
+near(integrated.years[2].variableCashCost, 612, 1e-9, 'OPEX escalation')
+assert.ok(Number.isFinite(integrated.npvProject), 'Integrated project NPV must be finite')
+assert.ok(Number.isFinite(integrated.irrProject), 'Integrated project IRR must be finite')
+assert.ok(Number.isFinite(integrated.irrEquity), 'Integrated equity IRR must be finite')
+assert.equal(integrated.years.length, 6, 'Integrated model period count')
+console.log('PASS: integrated WACC, loan amortization, working capital, escalation, project NPV and project/equity IRR')
