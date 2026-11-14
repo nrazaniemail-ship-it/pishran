@@ -104,7 +104,7 @@ The HRCR200 workbook contains inconsistent financing descriptions:
 
 The current app benchmark follows the `مکانیزم تامین سرمایه` tab (80/20) as a provisional choice. Do not silently overwrite it with the alternative 70/30 case; obtain sponsor confirmation and then update the debt/equity structure and repayment schedule together.
 
-The HRCR200 workbook's `IRR-NPV` sheet reports project NPV 18,509,558.82 million IRR at 21%, project IRR 43.3782%, MIRR 33.8651%, equity NPV 6,043,074.78 million IRR at 30%, equity IRR 55.8552%, and equity MIRR 40.3029%. These values belong only to the HRCR200 case.
+The HRCR200 workbook's `IRR-NPV` sheet reports project NPV 18,509,558.82 million IRR at 21%, project IRR 43.3782%, MIRR 33.8651%, equity NPV 6,043,074.78 million IRR at 30%, equity IRR 55.8552%, and equity MIRR 40.3029%.  These values belong only to the HRCR200 case. The same workbook's «مشخصات کلی طرح» sheet separately reports NPV 31,399,764.27 million IRR at 25%, IRR 48.31%, MIRR 28.03%, equity IRR 57.99% and equity MIRR 30.90%. The different NPV discount rates alone do not explain the IRR difference; the cash-flow basis, timing and investment base need reconciliation before either set is treated as definitive.
 
 ## 3. Controls added to the application
 
