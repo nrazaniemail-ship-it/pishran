@@ -106,11 +106,12 @@ const model = reference.EXCEL_HOT_ROLLING_200KT
 const expected = reference.EXCEL_REFERENCE_EXPECTED
 const pishranExpected = reference.PISHRAN_REFERENCE_MODEL_OUTPUT
 const workspaceSource = await readFile(new URL('../src/features/steel/ProcessPlantWorkspace.tsx', import.meta.url), 'utf8')
-const [projectsViewSource,projectRepositorySource,rollingWorkspaceSource,wizardSource] = await Promise.all([
+const [projectsViewSource,projectRepositorySource,rollingWorkspaceSource,wizardSource,appSource] = await Promise.all([
   readFile(new URL('../src/features/projects/ProjectsView.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../src/core/projects/projectRepository.ts', import.meta.url), 'utf8'),
   readFile(new URL('../src/features/steel/RollingWorkspace.tsx', import.meta.url), 'utf8'),
-  readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+  readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../src/App.tsx', import.meta.url), 'utf8')
 ])
 assert.ok(projectsViewSource.includes('قالب پروژه جدید را انتخاب کنید')
   && projectsViewSource.includes('تمپلت خام')
@@ -124,6 +125,12 @@ assert.ok(rollingWorkspaceSource.includes("project.templateId==='hot-rolling-200
   'Only explicit hot-rolling template or legacy hot-rolling projects may load benchmark defaults')
 assert.ok(wizardSource.includes("project.templateId==='raw'"),
   'Raw template must initialize an empty feasibility model')
+assert.ok(appSource.includes("if(project.templateId==='raw') setPage('project-wizard')"),
+  'Raw template must not be routed into the seeded hot-rolling workspace')
+assert.ok(rollingWorkspaceSource.includes('ممیزی جریان نقدی خام و اصلاح‌شده کامفار')
+  && rollingWorkspaceSource.includes('HOT_ROLLING_COMFAR_CASHFLOW_AUDIT'),
+  'Active rolling workspace must expose the COMFAR cash-flow audit')
+assert.equal(model.discountMode, 'wacc', 'Hot-rolling template must use the sponsor-confirmed WACC by default')
 
 const output = expected.capacity
 const currency = model.currency
