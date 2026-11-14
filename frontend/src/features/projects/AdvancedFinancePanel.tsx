@@ -37,7 +37,6 @@ type SavedState = {
   maintenancePercent: number
 }
 const money = (v: number) => Number.isFinite(v) ? v.toLocaleString('fa-IR',{maximumFractionDigits:1}) : '—'
-const zeroBreakdown = { rawMaterials:0, workInProgress:0, finishedGoods:0, receivables:0, minimumCash:0, payables:0, netWorkingCapital:0 }
 const loanMethods: {value: Loan['repaymentMethod']; label:string}[] = [
   {value:'equal-principal',label:'اصل مساوی'}, {value:'annuity',label:'اقساط مساوی'}, {value:'bullet',label:'یکجا در سررسید'}
 ]
@@ -50,7 +49,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
     loans:[{id:'loan-1',label:'تسهیلات اصلی',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,opYears),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
-    assets:[], equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100),
+    assets:props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100),
     workingCapitalDays:{raw:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
     discountMode:'wacc',manualRate:props.costOfEquity,maintenancePercent:0
   }))
@@ -118,7 +117,7 @@ export default function AdvancedFinancePanel(props: Props) {
       <label className="fw-field"><span><input type="checkbox" checked={loan.capitalizeInterest} onChange={e=>updateLoan(loan.id,{capitalizeInterest:e.target.checked})}/> سرمایه‌ای شدن بهره تا شروع بازپرداخت</span></label>
       <b>برداشت سالانه (واحد پول پایه)</b>
       <div className="fw-grid">{Array.from({length:years},(_,i)=><label className="fw-field" key={i}><span>سال {i+1} {i<construction?'· ساخت':'· بهره‌برداری'}</span><input type="number" min="0" value={loan.drawdowns[i]??0} onChange={e=>updateDraw(loan.id,i,Number(e.target.value))}/></label>)}</div>
-      <button className="secondary-button" onClick={()=>setState(s=>({...s,loans:s.loans.filter(l=>l.id!==loan.id)}))}><Trash2 size={14}/> حذف تسهیلات</button>
+      <div className="fw-card"><b>برنامه بازپرداخت همین تسهیلات</b>{(result.loanSchedules[loan.id]??[]).map((r,i)=><div className="fw-validation" key={i}><span>سال {i+1} · برداشت {money(r.drawdown)} · مانده اول {money(r.openingBalance)}</span><b>بهره نقدی {money(r.interestExpense)} · بهره سرمایه‌ای {money(r.capitalizedInterest)} · اصل {money(r.principal)} · مانده پایان {money(r.closingBalance)}</b></div>)}</div><button className="secondary-button" onClick={()=>setState(s=>({...s,loans:s.loans.filter(l=>l.id!==loan.id)}))}><Trash2 size={14}/> حذف تسهیلات</button>
     </div>)}
     <button className="secondary-button" onClick={addLoan}><Plus size={14}/> افزودن وام</button>
     <div className="fw-card">
@@ -184,7 +183,7 @@ export default function AdvancedFinancePanel(props: Props) {
 
     <h4>۷. تطبیق سه صورت مالی و کنترل ترازنامه</h4>
     <div className="fw-result">ترازهای منطبق: <b>{totalBalanceChecks} از {statements.length}</b> دوره</div>
-    <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>سال</th><th>فروش</th><th>EBIT</th><th>سود خالص</th><th>جریان نقد پایان سال</th><th>جمع دارایی‌ها</th><th>بدهی + حقوق مالکانه</th><th>اختلاف تراز</th></tr></thead><tbody>{statements.map(r=><tr key={r.year}><td>{r.year}</td><td>{money(r.incomeStatement.revenue)}</td><td>{money(r.incomeStatement.ebit)}</td><td>{money(r.incomeStatement.netIncome)}</td><td>{money(r.cashFlowStatement.closingCash)}</td><td>{money(r.balanceSheet.totalAssets)}</td><td>{money(r.balanceSheet.totalLiabilitiesAndEquity)}</td><td>{money(r.balanceSheet.balanceDifference)} {r.balanceSheet.reconciled?'✓':'⚠'}</td></tr>)}</tbody></table></div>
+    <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>سال</th><th>فروش</th><th>EBIT</th><th>زیان انتقالی پایان سال</th><th>سود خالص</th><th>جریان نقد پایان سال</th><th>جمع دارایی‌ها</th><th>بدهی + حقوق مالکانه</th><th>اختلاف تراز</th></tr></thead><tbody>{statements.map(r=><tr key={r.year}><td>{r.year}</td><td>{money(r.incomeStatement.revenue)}</td><td>{money(r.incomeStatement.ebit)}</td><td>{money(r.incomeStatement.taxLossCarryForward)}</td><td>{money(r.incomeStatement.netIncome)}</td><td>{money(r.cashFlowStatement.closingCash)}</td><td>{money(r.balanceSheet.totalAssets)}</td><td>{money(r.balanceSheet.totalLiabilitiesAndEquity)}</td><td>{money(r.balanceSheet.balanceDifference)} {r.balanceSheet.reconciled?'✓':'⚠'}</td></tr>)}</tbody></table></div>
     <p className="fw-hint">صورت‌ها از یک مجموعه جریان نقدی و برنامه دارایی/بدهی ساخته می‌شوند؛ هیچ رقم ترازکنندهٔ مصنوعی به حقوق مالکانه اضافه نمی‌شود. اگر اختلاف تراز صفر نباشد، خروجی به‌عنوان عدم تطبیق علامت می‌خورد و باید طبقه‌بندی CAPEX، آورده، بدهی یا سرمایه در گردش بررسی شود. این نسخه هنوز اقلام حسابداری تفصیلی مانند مالیات بر ارزش افزوده، سود تقسیمی، مطالبات/بدهی مالیاتی، تجدید ارزیابی و ثبت‌های چندارزی را پوشش نمی‌دهد.</p>
   </div>
 }
