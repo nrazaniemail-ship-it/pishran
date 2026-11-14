@@ -44,11 +44,11 @@ export function calculatePayrollCost(item: PayrollItem) {
   return item.count * (monthlyCost * 12 + item.annualBonus + item.annualSeniority)
 }
 
-export function calculateWorkingCapital(items: WorkingCapitalItem[], ramp = 1) {
-  if (!Number.isFinite(ramp) || ramp < 0) return 0
+export function calculateWorkingCapital(items: WorkingCapitalItem[], ramp = 1, dayBasis = 360) {
+  if (!Number.isFinite(ramp) || ramp < 0 || !Number.isFinite(dayBasis) || dayBasis <= 0) return 0
   return items.reduce((total, item) => {
     if (!finiteNonNegative(item.annualBase) || !finiteNonNegative(item.days)) return total
-    const amount = item.annualBase * Math.min(item.days, 365) / 365 * ramp
+    const amount = item.annualBase * Math.min(item.days, dayBasis) / dayBasis * ramp
     return total + (item.classification === 'liability' ? -amount : amount)
   }, 0)
 }
