@@ -333,6 +333,7 @@ export type IntegratedFinanceResult = {
   npvEquity: number | null
   irrEquity: number | null
   mirrProject: number | null
+  mirrEquity: number | null
   simplePayback: number | null
   discountedPayback: number | null
   peakWorkingCapital: number
@@ -493,6 +494,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   const npvEquity = calculateNpv(equityFlows, Math.max(0, input.costOfEquity) / 100)
   const irrEquity = calculateIrr(equityFlows)
   const mirrProject = discountRate === null ? null : calculateMirr(projectFlows, discountRate, discountRate)
+  const mirrEquity = calculateMirr(equityFlows, Math.max(0, input.costOfEquity) / 100, Math.max(0, input.costOfEquity) / 100)
   const peakWorkingCapital = Math.max(0, ...annualRows.map(row => row.workingCapital))
   const fundingGap = totalInvestment + peakWorkingCapital - totalFunding
   const warnings: string[] = []
@@ -522,7 +524,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   if (input.loans.some(loan => loan.repaymentStartYear + loan.graceYears + loan.termYears - 1 > years)) warnings.push('بخشی از بازپرداخت وام‌ها خارج از افق زمانی مدل قرار می‌گیرد.')
   return {
     years: annualRows, loanSchedules, wacc, discountRate, weightedCostOfDebt, equityWeight, debtWeight,
-    npvProject, irrProject, npvEquity, irrEquity, mirrProject, simplePayback, discountedPayback,
+    npvProject, irrProject, npvEquity, irrEquity, mirrProject, mirrEquity, simplePayback, discountedPayback,
     peakWorkingCapital, totalDebtDrawdown, totalEquityContribution, totalFunding, totalInvestment, fundingGap, warnings,
   }
 }
