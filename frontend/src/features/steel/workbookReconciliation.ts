@@ -142,6 +142,8 @@ export const HOT_ROLLING_200KT_AUDIT = {
     equityMirrPercent: 40.302869421931775
   },
   alternativeMetricsInWorkbook: {
+    generalSummaryTotalInvestment: 26_596_838.875729468,
+    irrNpvSheetTotalInvestment: 16_587_131.781609466,
     generalSummaryNpvAt25: 31_399_764.273352,
     generalSummaryIrrPercent: 48.31,
     generalSummaryMirrPercent: 28.03,
@@ -149,6 +151,13 @@ export const HOT_ROLLING_200KT_AUDIT = {
     generalSummaryEquityMirrPercent: 30.9,
     irrNpvSheetProjectNpvAt21: 18_509_558.82096656,
     irrNpvSheetProjectIrrPercent: 43.378234116396674
+  },
+  financingCashflowSchedule: {
+    equityContributionsTotal: 16_401_129.53,
+    longTermLoanGrossDrawdowns: 8_909_484.057107,
+    longTermLoanPrincipalRepayments: 8_909_484.057106,
+    netDomesticSourcesInPeriodicSchedule: 16_401_129.530001,
+    irrNpvEquityInitialOutflows: 2_761_971
   },
   financingAlternativesInWorkbook: {
     mechanismTabDebtSharePercent: 80,
