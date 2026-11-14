@@ -1,5 +1,6 @@
-import {useEffect,useState} from 'react'
+import {useEffect,useMemo,useState} from 'react'
 import {FieldGuide} from '../guide/FieldGuide'
+import {FieldFeedback,ValidationPanel,type ValidationIssue} from './ValidationPanel'
 import {ArrowRight,ArrowLeft,Save,Plus,Trash2,AlertTriangle} from 'lucide-react'
 import {localStore} from '../../core/storage/localStore'
 import type {FeasibilityProject} from '../../core/projects/projectRepository'
@@ -22,7 +23,7 @@ driOpex:['گندله و حمل','آهک و کاتالیست','گاز طبیعی'
 steelOpex:['آهن اسفنجی انتقالی داخلی','قراضه و حمل','فروآلیاژ و افزودنی','الکترود و نسوز','برق، گاز، آب و اکسیژن','نیروی انسانی','تعمیرات و قطعات'].map(x=>mk(x,1,'مبلغ')),
 sharedOpex:['مدیریت مجتمع','لجستیک داخلی','آزمایشگاه و HSE','بیمه و سربار'].map(x=>mk(x))})
 const fmt=(v:number,d=0)=>Number(v||0).toLocaleString('fa-IR',{maximumFractionDigits:d})
-function F({label,value,unit,onChange}:{label:string;value:number|string;unit:string;onChange:(v:any)=>void}){return <label className="fw-field"><span className="fw-field-label">{label}<FieldGuide field={label}/></span><div><input type={typeof value==='number'?'number':'text'} value={value} onChange={e=>onChange(typeof value==='number'?Number(e.target.value):e.target.value)}/><small>{unit}</small></div></label>}
+function F({label,value,unit,onChange}:{label:string;value:number|string;unit:string;onChange:(v:any)=>void}){return <label className="fw-field"><span className="fw-field-label">{label}<FieldGuide field={label}/></span><div><input type={typeof value==='number'?'number':'text'} value={value} onChange={e=>onChange(typeof value==='number'?Number(e.target.value):e.target.value)}/><small>{unit}</small></div>{typeof value==='number'&&<FieldFeedback label={label} value={value}/>}</label>}
 function Edit({title,rows,change}:{title:string;rows:R[];change:(v:R[])=>void}){const upd=(id:string,k:keyof R,v:any)=>change(rows.map(x=>x.id===id?{...x,[k]:v}:x));return <div className="fw-card"><div className="fw-card-head"><h3>{title}</h3><button className="secondary-button" onClick={()=>change([...rows,mk('قلم جدید')])}><Plus size={14}/> افزودن</button></div><div className="isw-table">{rows.map(x=><div className="isw-row" key={x.id}><input aria-label="شرح" value={x.name} onChange={e=>upd(x.id,'name',e.target.value)}/><input aria-label="مقدار یا مصرف ویژه" type="number" value={x.value} onChange={e=>upd(x.id,'value',Number(e.target.value))}/><input aria-label="واحد" value={x.unit} onChange={e=>upd(x.id,'unit',e.target.value)}/><input aria-label="قیمت واحد" type="number" value={x.price} onChange={e=>upd(x.id,'price',Number(e.target.value))}/><input aria-label="منبع" value={x.source} onChange={e=>upd(x.id,'source',e.target.value)}/><button className="icon-button" onClick={()=>change(rows.filter(y=>y.id!==x.id))}><Trash2 size={14}/></button></div>)}</div><small className="fw-hint">شرح | مقدار / مصرف ویژه | واحد | قیمت واحد | منبع داده</small></div>}
 export default function IntegratedSteelWorkspace({project,onBack}:{project:FeasibilityProject;onBack:()=>void}){
 const key='integrated-steel:'+project.id+':v1',names=['مبانی پروژه','ظرفیت و برنامه تولید','واحد احیاء مستقیم','واحد فولادسازی و ریخته‌گری','موازنه مواد و محصولات','انرژی و یوتیلیتی','تجهیزات و گلوگاه','سرمایه‌گذاری ثابت','هزینه‌های بهره‌برداری','کنترل و جمع‌بندی']
@@ -32,11 +33,30 @@ useEffect(()=>{if(ready)void localStore.set(key,m).then(()=>setSaved(new Date().
 const upd=<K extends keyof M>(k:K,v:M[K])=>setM(x=>({...x,[k]:v}))
 const sub=<K extends 'dri'|'steel'>(k:K,v:M[K])=>setM(x=>({...x,[k]:v}))
 const d=m.dri.capacity*m.dri.availability/100*m.dri.ramp/100,sl=m.steel.slab*m.steel.availability/100*m.steel.ramp/100,pel=d*m.dri.pellet,extra=d-m.dri.steelFeed,liquid=sl/(m.steel.yield/100||1),mix=m.steel.hdr+m.steel.cdr+m.steel.scrap
+const smartIssues:ValidationIssue[]=useMemo(()=>{
+ const out:ValidationIssue[]=[]
+ const add=(id:string,severity:ValidationIssue['severity'],title:string,detail:string,field?:string)=>out.push({id,severity,title,detail,field})
+ ;[['دسترس‌پذیری احیاء',m.dri.availability],['تحقق ظرفیت احیاء',m.dri.ramp],['دسترس‌پذیری فولادسازی',m.steel.availability],['تحقق ظرفیت فولادسازی',m.steel.ramp],['بازده CCM',m.steel.yield],['HDRI',m.steel.hdr],['CDRI',m.steel.cdr],['قراضه',m.steel.scrap]].forEach(([name,value])=>{if(Number(value)<0||Number(value)>100)add('percent-'+name,'error','درصد '+name+' نامعتبر است','مقادیر درصدی باید بین صفر تا ۱۰۰٪ باشند.',String(name))})
+ if(Math.abs(mix-100)>.01)add('eaf-mix','error','جمع ترکیب شارژ EAF برابر ۱۰۰٪ نیست','جمع فعلی '+fmt(mix,2)+'٪ است؛ HDRI، CDRI و قراضه را اصلاح کنید.','ترکیب شارژ')
+ if(m.dri.hours<=0||m.dri.hours>8760)add('dri-hours','error','ساعات کار احیاء نامعتبر است','ساعات سالانه باید بیشتر از صفر و حداکثر ۸٬۷۶۰ باشد.','ساعات خالص احیاء')
+ if(m.steel.hours<=0||m.steel.hours>8760)add('steel-hours','error','ساعات کار فولادسازی نامعتبر است','ساعات سالانه باید بیشتر از صفر و حداکثر ۸٬۷۶۰ باشد.','ساعات خالص فولادسازی')
+ if(d<0||sl<0)add('production-negative','error','تولید محاسباتی منفی است','ظرفیت، دسترس‌پذیری و تحقق ظرفیت را بررسی کنید.','ظرفیت تولید')
+ if(m.dri.steelFeed<0||m.dri.steelFeed>d)add('dri-feed','error','خوراک ارسالی DRI از تولید واقعی بیشتر است','خوراک فولادسازی باید حداکثر برابر DRI قابل تولید پس از اعمال دسترس‌پذیری و Ramp-up باشد.','خوراک DRI فولادسازی')
+ if(m.steel.yield<=0||m.steel.yield>100)add('ccm-yield','error','بازده ریخته‌گری نامعتبر است','بازده CCM باید بزرگ‌تر از صفر و حداکثر ۱۰۰٪ باشد.','بازده CCM')
+ if(liquid>m.steel.liquid*1.005)add('liquid-capacity','warning','ظرفیت فولاد مذاب برای تولید هدف کافی نیست','مذاب موردنیاز '+fmt(liquid)+' تن است و ظرفیت ثبت‌شده '+fmt(m.steel.liquid)+' تن؛ ظرفیت EAF و تعداد ذوب‌ها را تطبیق دهید.','فولاد مذاب طراحی')
+ if(m.steel.widthMin<=0||m.steel.widthMax<m.steel.widthMin)add('slab-width','error','بازه عرض اسلب نامعتبر است','حداقل عرض باید مثبت و حداکثر عرض بزرگ‌تر یا مساوی حداقل باشد.','عرض اسلب')
+ if(m.steel.lengthMin<=0||m.steel.lengthMax<m.steel.lengthMin)add('slab-length','error','بازه طول اسلب نامعتبر است','حداقل طول باید مثبت و حداکثر طول بزرگ‌تر یا مساوی حداقل باشد.','طول اسلب')
+ if(m.construction<1||m.life<1)add('project-years','error','دوره ساخت یا عمر پروژه نامعتبر است','هر دو دوره باید حداقل یک سال باشند.','دوره ساخت و عمر پروژه')
+ const allRows=[...m.driMat,...m.steelMat,...m.driUtil,...m.steelUtil,...m.driEquip,...m.steelEquip,...m.driCapex,...m.steelCapex,...m.sharedCapex,...m.driOpex,...m.steelOpex,...m.sharedOpex]
+ if(allRows.some(x=>x.value<0||x.price<0))add('negative-row','error','مقدار یا قیمت یک ردیف منفی است','مقادیر مواد، یوتیلیتی، تجهیزات و هزینه‌ها باید نامنفی باشند.','جداول ورودی')
+ if(!m.dri.technology.trim())add('dri-technology','warning','فناوری احیاء مشخص نشده است','فناوری منتخب و مرجع طراحی را ثبت کنید.','فناوری')
+ return out
+},[m,d,sl,liquid,mix])
 const total=(a:R[])=>a.reduce((v,x)=>v+x.value*x.price,0)
 const capex=total(m.driCapex)+total(m.steelCapex)+total(m.sharedCapex),opex=total(m.driOpex)+total(m.steelOpex)+total(m.sharedOpex)
 return <section className="fw-page isw-page" dir="rtl">
 <header className="fw-head"><button className="secondary-button" onClick={onBack}><ArrowRight size={16}/> پروژه‌ها</button><div><span className="eyebrow">INTEGRATED DRI + STEELMAKING</span><h1>{m.name}</h1><p>{m.location} · مجتمع احیاء مستقیم و فولادسازی اسلب</p></div><span className="fw-save"><Save size={14}/>{ready?(saved?'ذخیره خودکار · '+saved:'ذخیره محلی فعال'):'در حال بارگذاری'}</span></header>
-<div className="isw-intro"><b>دو واحد مستقل، یک موازنه مجتمع</b><p>احیاء مستقیم، آهن اسفنجی را تولید می‌کند؛ بخشی به‌عنوان خوراک داخلی فولادسازی منتقل و فقط مازاد آن محصول قابل فروش مجتمع محسوب می‌شود.</p></div>
+<div className="isw-intro"><b>دو واحد مستقل، یک موازنه مجتمع</b><p>احیاء مستقیم، آهن اسفنجی را تولید می‌کند؛ بخشی به‌عنوان خوراک داخلی فولادسازی منتقل و فقط مازاد آن محصول قابل فروش مجتمع محسوب می‌شود.</p></div><ValidationPanel issues={smartIssues} title="کنترل هوشمند مجتمع احیاء و فولادسازی"/>
 <nav className="fw-steps isw-steps">{names.map((x,i)=><button key={x} className={s===i?'active':''} onClick={()=>setS(i)}><small>{fmt(i+1)}</small><span>{x}</span></button>)}</nav>
 <main className="fw-content">
 {s===0&&<><h2>۱. مبانی و شناسنامه</h2><div className="fw-grid"><F label="نام پروژه" value={m.name} unit="" onChange={v=>upd('name',v)}/><F label="موقعیت" value={m.location} unit="" onChange={v=>upd('location',v)}/><F label="دوره ساخت" value={m.construction} unit="سال" onChange={v=>upd('construction',v)}/><F label="عمر بهره‌برداری" value={m.life} unit="سال" onChange={v=>upd('life',v)}/><label className="fw-field"><span>واحد پول</span><select value={m.currency} onChange={e=>upd('currency',e.target.value)}><option>یورو</option><option>دلار آمریکا</option><option>ریال</option><option>تومان</option><option>میلیون ریال</option></select></label></div><div className="fw-result">مبنای مقادیر نمونه: گزارش ارزیابی فنی و اقتصادی مجتمع فولاد اکسین، اردیبهشت ۱۴۰۲. قیمت‌ها و ارقام سرمایه‌گذاری باید برای محل اجرای پروژه به‌روز شوند.</div></>}
