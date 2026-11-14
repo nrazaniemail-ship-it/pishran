@@ -154,7 +154,7 @@ export default function ProcessPlantWorkspace({project,plantType,onBack}:{projec
   const stock=(n('foreignStock')+n('localStock'))*Math.max(0,Math.min(100,n('sharedAllocation')))/100
   return n('total')||process+stock+n('structurePrice')
  }
- if(sheetId==='vehicles')return n('total')||n('qty')*n('unitPrice')*allocation
+ if(sheetId==='vehicles')return n('total')||n('qty')*n('unitPrice')*allocation*allocation
  if(sheetId==='infrastructure'||sheetId==='office'||sheetId==='preop')return n('amount')*allocation
  return n('amount')||n('total')||n('annualCost')
 }
