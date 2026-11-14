@@ -10,10 +10,11 @@ import RollingWorkspace from './features/steel/RollingWorkspace'
 import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
 import FeasibilityWizard from './features/projects/FeasibilityWizard'
 import IntegratedSteelWorkspace from './features/steel/IntegratedSteelWorkspace'
+import ProcessPlantWorkspace from './features/steel/ProcessPlantWorkspace'
 import Guide from './features/guide/Guide'
 import BackupScheduler from './features/settings/BackupScheduler'
 
-type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'integrated-steel' | 'guide'
+type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'integrated-steel' | 'process-plant' | 'guide'
 
 const modules = [
   { icon: Factory, title: 'مهندسی و طراحی فرآیند', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', status: 'در نقشه راه' },
@@ -29,6 +30,7 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [projects, setProjects] = useState<FeasibilityProject[]>([])
   const [activeProject, setActiveProject] = useState<FeasibilityProject | null>(null)
+  const [activePlantType, setActivePlantType] = useState<'dri'|'steelmaking'>('dri')
   const [storageInfo, setStorageInfo] = useState({ backend: 'در حال بررسی', items: 0 })
   const [ready, setReady] = useState(false)
 
@@ -125,13 +127,14 @@ export default function App() {
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); setPage(project.steelStage?.includes('مجتمع احیاء') ? 'integrated-steel' : project.steelStage?.includes('نورد گرم') ? 'hot-rolling' : 'project-wizard') }}/>}
+    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); const stage=project.steelStage||''; if(stage.includes('مجتمع احیاء')) setPage('integrated-steel'); else if(stage.includes('احیای مستقیم')) {setActivePlantType('dri');setPage('process-plant')} else if(stage.includes('فولادسازی و ریخته‌گری')) {setActivePlantType('steelmaking');setPage('process-plant')} else if(stage.includes('نورد گرم')) setPage('hot-rolling'); else setPage('project-wizard') }}/>}
     {page === 'guide' && <Guide/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}
     {page === 'hot-rolling' && <RollingWorkspace project={activeProject ?? undefined} onBack={() => setPage('projects')}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'integrated-steel' && activeProject && <IntegratedSteelWorkspace project={activeProject} onBack={() => setPage('projects')}/>}
+    {page === 'process-plant' && activeProject && <ProcessPlantWorkspace project={activeProject} plantType={activePlantType} onBack={() => setPage('projects')}/>} 
 
     <footer>پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری <span>نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری</span></footer>
   </main>
