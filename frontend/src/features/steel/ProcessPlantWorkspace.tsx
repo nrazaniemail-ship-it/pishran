@@ -98,7 +98,7 @@ function definitions(type:PlantType):Sheet[]{
    {label:'الف) منابع تأمین مالی — مبالغ به ارز مبنای پروژه',section:true},
    'آورده نقدی سهامدار','وام بانک ملی هامبورگ ۱','وام بانک ملی هامبورگ ۲','وام بانک ملی هامبورگ ۳','وام بانک ملی هامبورگ ۴','وام بانک تجارت ۱','وام بانک تجارت ۲','وام بانک تجارت ۳','وام بانک تجارت ۴','وام سرمایه در گردش',
    {label:'ب) مفروضات مالی — مقادیر در ستون «مقدار مفروضه»',section:true},
-   'ظرفیت اسمی سالانه تولید (تن)','نرخ مالیات عملکرد (%)','هزینه حقوق صاحبان سهام (%)','روش نرخ تنزیل (WACC / دستی)','نرخ تنزیل دستی (%)','سرمایه در گردش به درصد هزینه نقدی (%)','ظرفیت مرجع برآورد CAPEX (تن)','توان مقیاس زمین','توان مقیاس محوطه‌سازی','توان مقیاس ساختمان‌ها','توان مقیاس ماشین‌آلات','توان مقیاس تأسیسات','توان مقیاس وسائط نقلیه','توان مقیاس تجهیزات اداری','روز موجودی مواد اولیه','روز کالای در جریان ساخت','درصد تکمیل مواد در جریان ساخت (%)','درصد تکمیل تبدیل در جریان ساخت (%)','روز موجودی محصول نهایی','روز وصول مطالبات','روز موجودی نقد عملیاتی','روز پرداخت به تأمین‌کنندگان','هزینه ثابت سالانه مشمول بدهی تجاری (یورو)','مبنای روزهای سال سرمایه در گردش','نرخ رشد سالانه قیمت فروش (%)','نرخ رشد سالانه هزینه‌های عملیاتی (%)','ارزش اسقاط پایان افق تحلیل',
+   'ظرفیت اسمی سالانه تولید (تن)','نرخ مالیات عملکرد (%)','نرخ مالیات برای سپر مالیاتی WACC (%)','هزینه حقوق صاحبان سهام (%)','روش نرخ تنزیل (WACC / دستی)','نرخ تنزیل دستی (%)','سرمایه در گردش به درصد هزینه نقدی (%)','ظرفیت مرجع برآورد CAPEX (تن)','توان مقیاس زمین','توان مقیاس محوطه‌سازی','توان مقیاس ساختمان‌ها','توان مقیاس ماشین‌آلات','توان مقیاس تأسیسات','توان مقیاس وسائط نقلیه','توان مقیاس تجهیزات اداری','روز موجودی مواد اولیه','روز کالای در جریان ساخت','درصد تکمیل مواد در جریان ساخت (%)','درصد تکمیل تبدیل در جریان ساخت (%)','روز موجودی محصول نهایی','روز وصول مطالبات','روز موجودی نقد عملیاتی','روز پرداخت به تأمین‌کنندگان','هزینه ثابت سالانه مشمول بدهی تجاری (یورو)','مبنای روزهای سال سرمایه در گردش','نرخ رشد سالانه قیمت فروش (%)','نرخ رشد سالانه هزینه‌های عملیاتی (%)','ارزش اسقاط پایان افق تحلیل',
    {label:'ج) توزیع زمانی سرمایه‌گذاری — درصد هر سال ساخت؛ جمع هر گروه باید ۱۰۰٪ باشد',section:true},
    'توزیع CAPEX ثابت — سال ساخت ۱ (%)','توزیع CAPEX ثابت — سال ساخت ۲ (%)','توزیع CAPEX ثابت — سال ساخت ۳ (%)','توزیع CAPEX ثابت — سال ساخت ۴ (%)',
    'توزیع هزینه قبل از بهره‌برداری — سال ساخت ۱ (%)','توزیع هزینه قبل از بهره‌برداری — سال ساخت ۲ (%)','توزیع هزینه قبل از بهره‌برداری — سال ساخت ۳ (%)','توزیع هزینه قبل از بهره‌برداری — سال ساخت ۴ (%)'
@@ -170,6 +170,7 @@ const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)
   if(label.startsWith('وام '))Object.assign(values,{rate:0,grace:0,term:label==='وام سرمایه در گردش'?1:10,repaymentStart:label==='وام سرمایه در گردش'?6:5,method:'اصل مساوی',capitalizeInterest:'خیر'})
   if(label==='ظرفیت اسمی سالانه تولید (تن)')values.value=plantType==='dri'?1760000:1200000
   if(label==='نرخ مالیات عملکرد (%)')values.value=25
+  if(label==='نرخ مالیات برای سپر مالیاتی WACC (%)')values.value=25
   if(label==='هزینه حقوق صاحبان سهام (%)')values.value=0
   if(label==='روش نرخ تنزیل (WACC / دستی)')values.method='WACC'
   if(label==='نرخ تنزیل دستی (%)')values.value=0
@@ -373,6 +374,7 @@ const financeInput={
  preOperatingSchedule:Array.from({length:19},(_,i)=>i<4?preOperating*preopDistribution[i]/100:0),
  utilization:utilizationSchedule,equityContributions,loans:financeLoans,
  taxRate:financeValue('نرخ مالیات عملکرد (%)',25),
+ waccTaxRate:financeValue('نرخ مالیات برای سپر مالیاتی WACC (%)',25),
  costOfEquity:financeValue('هزینه حقوق صاحبان سهام (%)',0),
  workingCapitalPercent:financeValue('سرمایه در گردش به درصد هزینه نقدی (%)',10),
  workingCapitalPolicy:{dayBasis:financeValue('مبنای روزهای سال سرمایه در گردش',360)===365?365:360,rawMaterialDays:financeValue('روز موجودی مواد اولیه',45),workInProgressDays:financeValue('روز کالای در جریان ساخت',5),workInProgressMaterialCompletionPercent:financeValue('درصد تکمیل مواد در جریان ساخت (%)',100),workInProgressConversionCompletionPercent:financeValue('درصد تکمیل تبدیل در جریان ساخت (%)',50),finishedGoodsDays:financeValue('روز موجودی محصول نهایی',15),receivableDays:financeValue('روز وصول مطالبات',45),cashDays:financeValue('روز موجودی نقد عملیاتی',10),payableDays:financeValue('روز پرداخت به تأمین‌کنندگان',30),annualRawMaterialCost:materialCost,annualPayablesCost:materialCost+energyCost+maintenanceCostTotal+otherOpexTotal,annualFixedPayablesCost:financeValue('هزینه ثابت سالانه مشمول بدهی تجاری (یورو)',0),annualConversionCost:payrollGrandTotal+energyCost+maintenanceCostTotal+otherOpexTotal,annualFixedConversionCost:fixedCashCost,annualFinishedGoodsCost:fullCashOpex,annualFixedFinishedGoodsCost:fixedCashCost,annualRevenue:salesRevenue,annualCashOperatingCost:fullCashOpex,annualFixedCashOperatingCost:fixedCashCost} as WorkingCapitalPolicy,
