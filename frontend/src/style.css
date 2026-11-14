@@ -337,3 +337,8 @@ footer{border-top-color:var(--line)}
 :root[data-theme="dark"] .backup-error{background:#3d252b;border-color:#653640;color:#ff9ca8}
 :root[data-theme="dark"] .backup-action-icon,:root[data-theme="dark"] .backup-auto-heading>span{background:#203747;color:#9bcaf0}
 :root[data-theme="dark"] .hr-tabs button.active,:root[data-theme="dark"] .fw-steps button.active,:root[data-theme="dark"] .isw-steps button.active{background:#24583a;border-color:#34764e;color:#c0f0d0}
+
+/* Actionable draft continuation */
+.draft-pill.draft-action{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));background:color-mix(in srgb,var(--accent) 9%,var(--surface));color:var(--accent);font:inherit;font-size:10px;font-weight:700;padding:6px 10px;border-radius:8px;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.draft-pill.draft-action:hover{background:color-mix(in srgb,var(--accent) 16%,var(--surface));border-color:var(--accent);transform:translateY(-1px)}
+.draft-pill.draft-action:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
