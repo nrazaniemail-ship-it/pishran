@@ -61,7 +61,7 @@
 
 ذخیره محلی با کلید مستقل شامل نوع واحد و شناسه پروژه انجام می‌شود:
 
-`process-plant:<plantType>:<projectId>:excel-sequence-v1`
+`process-plant:<plantType>:<projectId>:excel-sequence-v2`
 
 بنابراین داده‌های دو پروژه، حتی اگر از یک مجتمع قدیمی منشأ گرفته باشند، در یک جدول مشترک ذخیره نمی‌شوند.
 
