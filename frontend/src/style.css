@@ -106,3 +106,9 @@
 .project-card[role=button]:hover{transform:translateY(-2px);border-color:#16845f}
 @media(max-width:800px){.fw-head{grid-template-columns:1fr;gap:10px}.fw-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.fw-content{padding:16px}.fw-row{grid-template-columns:1fr 1fr 1fr 34px}.fw-row input:nth-child(4),.fw-row input:nth-child(5){grid-column:span 1}.fw-checklist{grid-template-columns:1fr}.fw-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.fw-page{padding:18px 12px 32px}.fw-grid{grid-template-columns:1fr}.fw-steps button{min-height:48px;padding:7px}.fw-steps button span{font-size:11px}.fw-row{grid-template-columns:1fr 1fr 34px}.fw-row input:nth-child(3),.fw-row input:nth-child(4),.fw-row input:nth-child(5){grid-column:span 1}.fw-footer{flex-wrap:wrap}.fw-footer>span{order:3;width:100%;text-align:center}}
+
+.fw-row{grid-template-columns:1.4fr .8fr .8fr 1fr 1fr 96px}
+.fw-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:1px}
+.fw-row-actions .icon-button{width:29px;height:30px;min-width:29px;padding:0}
+.fw-row-actions .icon-button:disabled{opacity:.25;cursor:not-allowed}
+@media(max-width:800px){.fw-row{grid-template-columns:1fr 1fr 92px}.fw-row-actions{grid-column:3;grid-row:1 / span 2}.fw-row input:nth-child(3),.fw-row input:nth-child(4),.fw-row input:nth-child(5){grid-column:span 1}}
