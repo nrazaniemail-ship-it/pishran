@@ -46,10 +46,7 @@ export async function deleteProject(id: string): Promise<void> {
  * project list on first launch without overwriting or duplicating existing work.
  */
 export async function ensureWorkbookProjects(): Promise<FeasibilityProject[]> {
-  const [projects, seeded] = await Promise.all([
-    listProjects(),
-    localStore.get<boolean>(WORKBOOK_SEED_KEY)
-  ])
+  const projects = await listProjects()
   const definitions: Array<Pick<FeasibilityProject, 'name' | 'industry' | 'steelStage' | 'capacity' | 'location'>> = [
     {
       name: 'پروژه نورد گرم ورق',
