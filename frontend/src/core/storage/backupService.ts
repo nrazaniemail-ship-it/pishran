@@ -42,7 +42,8 @@ export async function backupFolderStatus():Promise<{hasFolder:boolean;folderName
 }
 export async function buildBackup():Promise<{payload:PishranBackup;json:string;size:number}>{
  const raw=await localStore.exportAll()
- const preferences=await getBackupPreferences()\n const payload:PishranBackup={app:'Pishran',schema:2,exportedAt:new Date().toISOString(),records:raw.records,backupPreferences:{enabled:preferences.enabled,interval:preferences.interval}}
+ const preferences=await getBackupPreferences()
+ const payload:PishranBackup={app:'Pishran',schema:2,exportedAt:new Date().toISOString(),records:raw.records,backupPreferences:{enabled:preferences.enabled,interval:preferences.interval}}
  if(!payload.records.length)throw new Error('هیچ داده‌ای برای پشتیبان‌گیری یافت نشد.')
  const json=JSON.stringify(payload,null,2)
  return {payload,json,size:new Blob([json]).size}
