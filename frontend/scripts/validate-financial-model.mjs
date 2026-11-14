@@ -14,9 +14,10 @@ const near = (actual, expected, tolerance, label) => {
   assert.ok(Math.abs(actual - expected) <= tolerance,
     label + ': expected ' + expected + ', got ' + actual + ', delta ' + (actual - expected))
 }
-const [engine, reference] = await Promise.all([
+const [engine, reference, integratedReference] = await Promise.all([
   loadTypeScriptModule('../src/features/steel/financialModel.ts'),
-  loadTypeScriptModule('../src/features/steel/hotRollingExcelBenchmark.ts')
+  loadTypeScriptModule('../src/features/steel/hotRollingExcelBenchmark.ts'),
+  loadTypeScriptModule('../src/features/steel/integratedProjectBenchmark.ts')
 ])
 const model = reference.EXCEL_HOT_ROLLING_200KT
 const expected = reference.EXCEL_REFERENCE_EXPECTED
@@ -25,10 +26,15 @@ const workspaceSource = await readFile(new URL('../src/features/steel/ProcessPla
 const output = expected.capacity
 const currency = model.currency
 
-const oxinComfar19 = [-104334839.16,-134611066.5,-133093260.44,-88443158.9,118750252.05,187903947.73,212720544.14,226437947.52,189562697.38,188965374.62,188908346.68,188860859.67,188801551.02,188800575.77,188798288.88,188797422.7,188797422.7,188797422.7,413501431.09]
-near(engine.calculateNpv(oxinComfar19, 0.25), 19964251.38, 0.01, 'Ox in COMFAR 19-period NPV at 25%')
-near(engine.calculateIrr(oxinComfar19), 0.2608, 0.0002, 'Oxin COMFAR 19-period IRR')
-assert.ok(workspaceSource.includes(JSON.stringify(oxinComfar19)), 'Workspace must preload the audited 19-period Oxin COMFAR vector')
+const integratedComfar19 = [...integratedReference.INTEGRATED_COMFAR_PROJECT_CASH_FLOWS]
+const integratedControls = integratedReference.INTEGRATED_COMFAR_REFERENCE
+near(engine.calculateNpv(integratedComfar19, 0.25), integratedControls.projectNpvAt25, 0.01, 'Integrated COMFAR 19-period NPV at 25%')
+near(engine.calculateIrr(integratedComfar19), integratedControls.projectIrr / 100, 0.0002, 'Integrated COMFAR 19-period IRR')
+const funding = integratedReference.calculateComfarFundingGap()
+near(funding.uses, integratedControls.totalInvestment, 0.01, 'COMFAR total uses')
+near(funding.sources, integratedControls.totalSources, 0.01, 'COMFAR total sources')
+near(funding.gap, integratedControls.fundingGap, 0.01, 'COMFAR funding gap')
+assert.ok(workspaceSource.includes('INTEGRATED_COMFAR_PROJECT_CASH_FLOWS'), 'Plant reconciliation must use the centralized COMFAR cash-flow reference')
 assert.ok(workspaceSource.includes('calculateNpv(comfarActualFlows,comfarDiscountRate)'), 'COMFAR NPV must discount year 1 at period zero like the reference')
 
 const material = engine.calculateOperatingCostRows(model.materialBalance, output, currency)
