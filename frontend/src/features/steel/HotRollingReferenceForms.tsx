@@ -45,7 +45,7 @@ const worksheetTabs:Partial<Record<Section,WorksheetTab[]>>={
   {id:'irr-npv',title:'IRR-NPV',tableIds:['irr-npv']}
  ]
 }
-const columnWidth=(col:Column)=>/^p\\d+$/.test(col.key)?92:
+const columnWidth=(col:Column)=>/^p\d+$/.test(col.key)?92:
  ['item','parameter','source','department','asset','product','need','phase','title','loan','description','type'].includes(col.key)?210:
  ['note','basis','reference','subitem'].includes(col.key)?245:
  ['unit','specificUnit','demandUnit','unitPrice'].includes(col.key)?145:
