@@ -160,6 +160,7 @@ export const HOT_ROLLING_200KT_AUDIT = {
     irrNpvEquityInitialOutflows: 2_761_971
   },
   financingAlternativesInWorkbook: {
+    workingCapitalFundingSourceExplicit: false,
     mechanismTabDebtSharePercent: 80,
     mechanismTabEquitySharePercent: 20,
     fundingSummaryTabEquitySharePercent: 70,
