@@ -25,6 +25,12 @@ const workspaceSource = await readFile(new URL('../src/features/steel/ProcessPla
 const output = expected.capacity
 const currency = model.currency
 
+const oxinComfar19 = [-104334839.16,-134611066.5,-133093260.44,-88443158.9,118750252.05,187903947.73,212720544.14,226437947.52,189562697.38,188965374.62,188908346.68,188860859.67,188801551.02,188800575.77,188798288.88,188797422.7,188797422.7,188797422.7,413501431.09]
+near(engine.calculateNpv(oxinComfar19, 0.25), 19964251.38, 0.01, 'Ox in COMFAR 19-period NPV at 25%')
+near(engine.calculateIrr(oxinComfar19), 0.2608, 0.0002, 'Oxin COMFAR 19-period IRR')
+assert.ok(workspaceSource.includes(JSON.stringify(oxinComfar19)), 'Workspace must preload the audited 19-period Oxin COMFAR vector')
+assert.ok(workspaceSource.includes('calculateNpv(comfarActualFlows,comfarDiscountRate)'), 'COMFAR NPV must discount year 1 at period zero like the reference')
+
 const material = engine.calculateOperatingCostRows(model.materialBalance, output, currency)
 const consumables = engine.calculateOperatingCostRows(model.processConsumables, output, currency)
 const energy = engine.calculateOperatingCostRows(model.utilities, output, currency)
