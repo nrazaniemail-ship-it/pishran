@@ -95,6 +95,15 @@ export const HOT_ROLLING_200KT_AUDIT = {
     equityIrrPercent: 55.85519706607913,
     equityMirrPercent: 40.302869421931775
   },
+  alternativeMetricsInWorkbook: {
+    generalSummaryNpvAt25: 31_399_764.273352,
+    generalSummaryIrrPercent: 48.31,
+    generalSummaryMirrPercent: 28.03,
+    generalSummaryEquityIrrPercent: 57.99,
+    generalSummaryEquityMirrPercent: 30.9,
+    irrNpvSheetProjectNpvAt21: 18_509_558.82096656,
+    irrNpvSheetProjectIrrPercent: 43.378234116396674
+  },
   financingAlternativesInWorkbook: {
     mechanismTabDebtSharePercent: 80,
     mechanismTabEquitySharePercent: 20,
