@@ -314,6 +314,8 @@ export type IntegratedFinanceInput = {
   fullCapacityVariableCashCost: number
   fullCapacityFixedCashCost: number
   annualDepreciation: number
+  depreciationSchedule?: number[]
+  maintenanceCapexSchedule?: number[]
   fixedInvestment: number
   preOperatingCost: number
   fixedInvestmentSchedule: number[]
@@ -354,13 +356,17 @@ export type IntegratedFinanceYear = {
   ebit: number
   interest: number
   taxableProfit: number
+  taxLossCarryForward: number
   tax: number
   principal: number
   debtDrawdown: number
   equityContribution: number
   fixedInvestment: number
   preOperatingCost: number
+  maintenanceCapex: number
+  capitalizedInterest: number
   workingCapital: number
+  closingWorkingCapital: number
   workingCapitalBreakdown: WorkingCapitalBreakdown
   salvageProceeds: number
   terminalValue: number
@@ -370,6 +376,7 @@ export type IntegratedFinanceYear = {
   cashBalance: number
   debtBalance: number
   debtService: number
+  cfads: number
   dscr: number | null
 }
 
@@ -406,6 +413,7 @@ function integratedLoanSchedule(loan: IntegratedLoanInput, years: number, constr
   const totalDrawdown = loan.drawdowns.reduce((total, value) => total + Math.max(0, Number(value) || 0), 0)
   let balance = 0
   let annuityPayment: number | null = null
+  let equalPrincipalPayment: number | null = null
   const result: IntegratedLoanYear[] = []
   for (let index = 0; index < years; index++) {
     const year = index + 1
@@ -428,7 +436,8 @@ function integratedLoanSchedule(loan: IntegratedLoanInput, years: number, constr
         }
         principal = Math.min(availableBalance, Math.max(0, annuityPayment - interestAccrued))
       } else {
-        principal = Math.min(availableBalance, totalDrawdown / term)
+        if (equalPrincipalPayment === null) equalPrincipalPayment = availableBalance / term
+        principal = Math.min(availableBalance, equalPrincipalPayment)
       }
     }
     balance = Math.max(0, availableBalance - principal)
@@ -487,42 +496,48 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const revenue = Math.max(0, input.fullCapacityRevenue) * utilization * salesFactor
     const variableCashCost = Math.max(0, input.fullCapacityVariableCashCost) * utilization * opexFactor
     const fixedCashCost = year > constructionYears && utilization > 0 ? Math.max(0, input.fullCapacityFixedCashCost) * opexFactor : 0
-    const depreciation = year > constructionYears && utilization > 0 ? Math.max(0, input.annualDepreciation) : 0
+    const depreciation = year > constructionYears && utilization > 0 ? Math.max(0, Number(input.depreciationSchedule?.[index] ?? input.annualDepreciation)) : 0
+    const maintenanceCapex = Math.max(0, Number(input.maintenanceCapexSchedule?.[index]) || 0)
     const fixedInvestment = Math.max(0, Number(input.fixedInvestmentSchedule[index]) || 0)
     const preOperatingCost = Math.max(0, Number(input.preOperatingSchedule[index]) || 0)
     const workingCapitalBreakdown: WorkingCapitalBreakdown = input.workingCapitalPolicy
       ? (year > constructionYears && utilization > 0 ? calculateOperatingCycleWorkingCapital(input.workingCapitalPolicy, utilization, salesFactor, opexFactor) : { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 })
-      : { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: year > constructionYears ? (variableCashCost + fixedCashCost) * Math.max(0, input.workingCapitalPercent) / 100 : 0 }
-    const workingCapital = workingCapitalBreakdown.netWorkingCapital
-    const changeInWorkingCapital = workingCapital - priorWorkingCapital
-    priorWorkingCapital = workingCapital
+      : (() => { const amount = year > constructionYears ? (variableCashCost + fixedCashCost) * Math.max(0, input.workingCapitalPercent) / 100 : 0; return { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: amount, payables: 0, netWorkingCapital: amount } })()
+    const calculatedWorkingCapital = workingCapitalBreakdown.netWorkingCapital
+    const workingCapital = calculatedWorkingCapital
+    const closingWorkingCapital = year === years ? 0 : calculatedWorkingCapital
+    const statementWorkingCapitalBreakdown: WorkingCapitalBreakdown = year === years ? { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 } : workingCapitalBreakdown
+    const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
+    priorWorkingCapital = closingWorkingCapital
 
     const loanRows = input.loans.map(loan => loanSchedules[loan.id][index])
     const debtDrawdown = loanRows.reduce((sum, row) => sum + row.drawdown, 0)
     const principal = loanRows.reduce((sum, row) => sum + row.principal, 0)
     const interest = loanRows.reduce((sum, row) => sum + row.interestExpense, 0)
+    const capitalizedInterest = loanRows.reduce((sum, row) => sum + row.capitalizedInterest, 0)
     const debtBalance = loanRows.reduce((sum, row) => sum + row.closingBalance, 0)
     const ebit = revenue - variableCashCost - fixedCashCost - depreciation
 
     const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
     const taxableProfit = ebit - interest - taxLoss
     const tax = Math.max(0, taxableProfit) * effectiveTaxRate / 100
-    taxLoss = taxableProfit < 0 ? -taxableProfit : 0
+    taxLoss = taxableProfit < 0 ? -taxableProfit : Math.max(0, taxLoss - (ebit - interest))
+    const taxLossCarryForward = taxLoss
 
     const unleveredTaxableProfit = ebit - unleveredTaxLoss
     const unleveredTax = Math.max(0, unleveredTaxableProfit) * effectiveTaxRate / 100
-    unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : 0
+    unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : Math.max(0, unleveredTaxLoss - ebit)
 
     const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
-    const terminalValue = salvageProceeds + (year === years ? workingCapital : 0)
+    const terminalValue = salvageProceeds
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
-    const projectFreeCashFlow = ebit - unleveredTax + depreciation - fixedInvestment - preOperatingCost - changeInWorkingCapital + terminalValue
-    const equityFreeCashFlow = -equityContribution + revenue - variableCashCost - fixedCashCost - tax - interest - principal - changeInWorkingCapital + terminalValue
+    const projectFreeCashFlow = ebit - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
+    const equityFreeCashFlow = -equityContribution + revenue - variableCashCost - fixedCashCost - tax - interest - principal - maintenanceCapex - changeInWorkingCapital + terminalValue
     const debtService = principal + interest
-    const cfads = revenue - variableCashCost - fixedCashCost - tax - changeInWorkingCapital
+    const cfads = revenue - variableCashCost - fixedCashCost - tax - maintenanceCapex - changeInWorkingCapital
     const dscr = debtService > 0 ? cfads / debtService : null
     const cashBalance = priorCash + equityContribution + debtDrawdown + revenue - variableCashCost - fixedCashCost -
-      fixedInvestment - preOperatingCost - tax - interest - principal - changeInWorkingCapital + terminalValue
+      fixedInvestment - preOperatingCost - maintenanceCapex - tax - interest - principal - changeInWorkingCapital + terminalValue
     priorCash = cashBalance
 
     cumulativeProject += projectFreeCashFlow
@@ -534,9 +549,9 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
 
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
-      variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, tax, principal, debtDrawdown,
-      equityContribution, fixedInvestment, preOperatingCost, workingCapital, workingCapitalBreakdown, salvageProceeds, terminalValue, changeInWorkingCapital,
-      projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, dscr,
+      variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
+      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, terminalValue, changeInWorkingCapital,
+      projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
     })
   }
 
@@ -579,5 +594,165 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     years: annualRows, loanSchedules, wacc, discountRate, weightedCostOfDebt, equityWeight, debtWeight,
     npvProject, irrProject, npvEquity, irrEquity, mirrProject, mirrEquity, simplePayback, discountedPayback,
     peakWorkingCapital, totalDebtDrawdown, totalEquityContribution, totalFunding, totalInvestment, fundingGap, warnings,
+  }
+}
+
+
+export type DepreciationAssetInput = {
+  id: string
+  name: string
+  cost: number
+  residualValue: number
+  usefulLife: number
+  startYear: number
+  method: 'straight-line' | 'declining-balance'
+  decliningRate?: number
+}
+
+export type AssetDepreciationYear = {
+  year: number
+  depreciation: number
+  closingBookValue: number
+  assets: { id: string; name: string; depreciation: number; closingBookValue: number }[]
+}
+
+/** Asset-by-asset depreciation schedule. Years are model periods, starting at 1. */
+export function calculateAssetDepreciationSchedule(assets: DepreciationAssetInput[], years: number): AssetDepreciationYear[] {
+  const safeYears = Math.max(0, Math.min(60, Math.floor(years)))
+  const books = new Map<string, number>()
+  const rows: AssetDepreciationYear[] = []
+  for (let index = 0; index < safeYears; index++) {
+    const year = index + 1
+    let total = 0
+    let closingTotal = 0
+    const assetRows = assets.map(asset => {
+      const valid = finiteNonNegative(asset.cost) && finiteNonNegative(asset.residualValue)
+        && asset.residualValue <= asset.cost && Number.isFinite(asset.usefulLife) && asset.usefulLife > 0
+        && Number.isFinite(asset.startYear) && asset.startYear >= 1
+      if (!valid) return { id: asset.id, name: asset.name, depreciation: 0, closingBookValue: books.get(asset.id) ?? 0 }
+      const opening = books.has(asset.id) ? books.get(asset.id)! : asset.cost
+      const age = year - Math.floor(asset.startYear) + 1
+      let depreciation = 0
+      if (age > 0 && age <= Math.ceil(asset.usefulLife) && opening > asset.residualValue) {
+        if (asset.method === 'declining-balance') {
+          const rate = finiteNonNegative(asset.decliningRate ?? 0) && (asset.decliningRate ?? 0) > 0
+            ? (asset.decliningRate ?? 0) / 100 : 2 / asset.usefulLife
+          depreciation = Math.min(opening - asset.residualValue, opening * rate)
+        } else {
+          depreciation = Math.min(opening - asset.residualValue, (asset.cost - asset.residualValue) / asset.usefulLife)
+        }
+        if (age >= Math.ceil(asset.usefulLife)) depreciation = opening - asset.residualValue
+      }
+      const closingBookValue = Math.max(asset.residualValue, opening - depreciation)
+      books.set(asset.id, closingBookValue)
+      total += depreciation
+      closingTotal += closingBookValue
+      return { id: asset.id, name: asset.name, depreciation, closingBookValue }
+    })
+    rows.push({ year, depreciation: total, closingBookValue: closingTotal, assets: assetRows })
+  }
+  return rows
+}
+
+export type FinancialStatementYear = {
+  year: number
+  incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
+  cashFlowStatement: { operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number; netChangeInCash: number; closingCash: number }
+  balanceSheet: { cash: number; workingCapitalAssets: number; netFixedAssets: number; deferredPreOperatingAssets: number; totalAssets: number; tradePayables: number; debt: number; totalLiabilities: number; paidInCapital: number; retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number; balanceDifference: number; reconciled: boolean }
+}
+
+/** Builds linked annual P&L, cash flow and balance sheet; never forces the balance sheet to balance with a plug. */
+export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], tolerance = 0.01): FinancialStatementYear[] {
+  let retainedEarnings = 0
+  let paidInCapital = 0
+  let cumulativeGrossFixedAssets = 0
+  let cumulativePreOperatingAssets = 0
+  let accumulatedDepreciation = 0
+  return years.map(row => {
+    const cashOperatingCosts = row.variableCashCost + row.fixedCashCost
+    const ebitda = row.revenue - cashOperatingCosts
+    const ebit = ebitda - row.depreciation
+    const profitBeforeTax = ebit - row.interest
+    const netIncome = profitBeforeTax - row.tax
+    retainedEarnings += netIncome
+    paidInCapital += row.equityContribution
+    cumulativeGrossFixedAssets += row.fixedInvestment + row.maintenanceCapex
+    cumulativePreOperatingAssets += row.preOperatingCost + row.capitalizedInterest
+    accumulatedDepreciation += row.depreciation
+    const currentAssets = row.workingCapitalBreakdown.rawMaterials + row.workingCapitalBreakdown.workInProgress
+      + row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables + row.workingCapitalBreakdown.minimumCash
+    const tradePayables = row.workingCapitalBreakdown.payables
+    const netFixedAssets = Math.max(0, cumulativeGrossFixedAssets - accumulatedDepreciation - row.salvageProceeds)
+    const deferredPreOperatingAssets = cumulativePreOperatingAssets
+    const totalAssets = row.cashBalance + currentAssets + netFixedAssets + deferredPreOperatingAssets
+    const totalLiabilities = row.debtBalance + tradePayables
+    const totalEquity = paidInCapital + retainedEarnings
+    const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
+    const balanceDifference = totalAssets - totalLiabilitiesAndEquity
+    const operatingCashFlow = netIncome + row.depreciation - row.changeInWorkingCapital
+    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex + row.salvageProceeds
+    const financingCashFlow = row.debtDrawdown + row.equityContribution - row.principal
+    const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
+    return {
+      year: row.year,
+      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation, ebit, interest: row.interest, profitBeforeTax, tax: row.tax, taxLossCarryForward: row.taxLossCarryForward, netIncome },
+      cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash, closingCash: row.cashBalance },
+      balanceSheet: {
+        cash: row.cashBalance, workingCapitalAssets: currentAssets, netFixedAssets, deferredPreOperatingAssets,
+        totalAssets, tradePayables, debt: row.debtBalance, totalLiabilities, paidInCapital, retainedEarnings,
+        totalEquity, totalLiabilitiesAndEquity, balanceDifference, reconciled: Math.abs(balanceDifference) <= Math.max(0, tolerance),
+      },
+    }
+  })
+}
+
+export type SensitivityCell = { priceChangePercent: number; volumeChangePercent: number; npv: number | null; irr: number | null }
+export function calculateSensitivityMatrix(input: IntegratedFinanceInput, priceChanges = [-20, -10, 0, 10, 20], volumeChanges = [-20, -10, 0, 10, 20]): SensitivityCell[][] {
+  return volumeChanges.map(volumeChangePercent => priceChanges.map(priceChangePercent => {
+    const result = calculateIntegratedFinance({
+      ...input,
+      fullCapacityRevenue: input.fullCapacityRevenue * (1 + priceChangePercent / 100) * (1 + volumeChangePercent / 100),
+      capacity: input.capacity * (1 + volumeChangePercent / 100),
+      fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * (1 + volumeChangePercent / 100),
+      workingCapitalPolicy: input.workingCapitalPolicy ? {
+        ...input.workingCapitalPolicy,
+        annualRawMaterialCost: input.workingCapitalPolicy.annualRawMaterialCost * (1 + volumeChangePercent / 100),
+        annualPayablesCost: (input.workingCapitalPolicy.annualPayablesCost ?? input.workingCapitalPolicy.annualRawMaterialCost) * (1 + volumeChangePercent / 100),
+        annualConversionCost: input.workingCapitalPolicy.annualConversionCost * (1 + volumeChangePercent / 100),
+        annualFinishedGoodsCost: input.workingCapitalPolicy.annualFinishedGoodsCost * (1 + volumeChangePercent / 100),
+        annualCashOperatingCost: input.workingCapitalPolicy.annualCashOperatingCost * (1 + volumeChangePercent / 100),
+        annualRevenue: input.workingCapitalPolicy.annualRevenue * (1 + priceChangePercent / 100) * (1 + volumeChangePercent / 100),
+      } : undefined,
+      fixedInvestment: input.fixedInvestment,
+    })
+    return { priceChangePercent, volumeChangePercent, npv: result.npvProject, irr: result.irrProject }
+  }))
+}
+
+export function calculateFinancialScenarios(input: IntegratedFinanceInput) {
+  const scenario = (price: number, volume: number, variableCost: number, fixedCost: number, capex: number) =>
+    calculateIntegratedFinance({
+      ...input,
+      fullCapacityRevenue: input.fullCapacityRevenue * price * volume,
+      capacity: input.capacity * volume,
+      fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * variableCost * volume,
+      fullCapacityFixedCashCost: input.fullCapacityFixedCashCost * fixedCost,
+      fixedInvestment: input.fixedInvestment * capex,
+      fixedInvestmentSchedule: input.fixedInvestmentSchedule.map(value => value * capex),
+      depreciationSchedule: input.depreciationSchedule?.map(value => value * capex),
+      workingCapitalPolicy: input.workingCapitalPolicy ? {
+        ...input.workingCapitalPolicy,
+        annualRawMaterialCost: input.workingCapitalPolicy.annualRawMaterialCost * variableCost * volume,
+        annualPayablesCost: (input.workingCapitalPolicy.annualPayablesCost ?? input.workingCapitalPolicy.annualRawMaterialCost) * variableCost * volume,
+        annualConversionCost: input.workingCapitalPolicy.annualConversionCost * variableCost * volume,
+        annualFinishedGoodsCost: input.workingCapitalPolicy.annualFinishedGoodsCost * variableCost * volume,
+        annualCashOperatingCost: input.workingCapitalPolicy.annualCashOperatingCost * variableCost * volume,
+        annualRevenue: input.workingCapitalPolicy.annualRevenue * price * volume,
+      } : undefined,
+    })
+  return {
+    pessimistic: scenario(0.9, 0.85, 1.15, 1.1, 1.1),
+    base: scenario(1, 1, 1, 1, 1),
+    optimistic: scenario(1.1, 1.1, 0.95, 0.98, 0.95),
   }
 }
