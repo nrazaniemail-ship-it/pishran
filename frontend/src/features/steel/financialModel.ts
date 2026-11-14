@@ -363,6 +363,7 @@ export type IntegratedFinanceYear = {
   fixedInvestment: number
   preOperatingCost: number
   maintenanceCapex: number
+  capitalizedInterest: number
   workingCapital: number
   workingCapitalBreakdown: WorkingCapitalBreakdown
   salvageProceeds: number
@@ -508,6 +509,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const debtDrawdown = loanRows.reduce((sum, row) => sum + row.drawdown, 0)
     const principal = loanRows.reduce((sum, row) => sum + row.principal, 0)
     const interest = loanRows.reduce((sum, row) => sum + row.interestExpense, 0)
+    const capitalizedInterest = loanRows.reduce((sum, row) => sum + row.capitalizedInterest, 0)
     const debtBalance = loanRows.reduce((sum, row) => sum + row.closingBalance, 0)
     const ebit = revenue - variableCashCost - fixedCashCost - depreciation
 
@@ -669,7 +671,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     retainedEarnings += netIncome
     paidInCapital += row.equityContribution
     cumulativeGrossFixedAssets += row.fixedInvestment + row.maintenanceCapex
-    cumulativePreOperatingAssets += row.preOperatingCost
+    cumulativePreOperatingAssets += row.preOperatingCost + row.capitalizedInterest
     accumulatedDepreciation += row.depreciation
     const currentAssets = row.workingCapitalBreakdown.rawMaterials + row.workingCapitalBreakdown.workInProgress
       + row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables + row.workingCapitalBreakdown.minimumCash
@@ -705,6 +707,7 @@ export function calculateSensitivityMatrix(input: IntegratedFinanceInput, priceC
       ...input,
       fullCapacityRevenue: input.fullCapacityRevenue * (1 + priceChangePercent / 100),
       capacity: input.capacity * (1 + volumeChangePercent / 100),
+      fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * (1 + volumeChangePercent / 100),
       fixedInvestment: input.fixedInvestment,
     })
     return { priceChangePercent, volumeChangePercent, npv: result.npvProject, irr: result.irrProject }
@@ -721,6 +724,7 @@ export function calculateFinancialScenarios(input: IntegratedFinanceInput) {
       fullCapacityFixedCashCost: input.fullCapacityFixedCashCost * fixedCost,
       fixedInvestment: input.fixedInvestment * capex,
       fixedInvestmentSchedule: input.fixedInvestmentSchedule.map(value => value * capex),
+      depreciationSchedule: input.depreciationSchedule?.map(value => value * capex),
     })
   return {
     pessimistic: scenario(0.9, 0.85, 1.15, 1.1, 1.1),
