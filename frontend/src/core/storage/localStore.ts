@@ -1,0 +1,139 @@
+const DB_NAME = 'pishran_store'
+const STORE_NAME = 'kv'
+const PREFIX = 'pishran_'
+
+type StoreRecord = { key: string; value: unknown }
+
+let dbPromise: Promise<IDBDatabase | null> | null = null
+
+function openDatabase(): Promise<IDBDatabase | null> {
+  if (typeof indexedDB === 'undefined') return Promise.resolve(null)
+  if (!dbPromise) {
+    dbPromise = new Promise((resolve) => {
+      try {
+        const request = indexedDB.open(DB_NAME, 1)
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(STORE_NAME)) {
+            request.result.createObjectStore(STORE_NAME, { keyPath: 'key' })
+          }
+        }
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => resolve(null)
+        request.onblocked = () => resolve(null)
+      } catch {
+        resolve(null)
+      }
+    })
+  }
+  return dbPromise
+}
+
+async function runTransaction<T>(
+  mode: IDBTransactionMode,
+  operation: (store: IDBObjectStore) => IDBRequest<T>
+): Promise<T | undefined> {
+  const db = await openDatabase()
+  if (!db) return undefined
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, mode)
+    const request = operation(tx.objectStore(STORE_NAME))
+    let result: T | undefined
+    request.onsuccess = () => { result = request.result }
+    tx.oncomplete = () => resolve(result)
+    tx.onerror = () => reject(tx.error)
+    tx.onabort = () => reject(tx.error ?? new Error('Storage transaction aborted'))
+  })
+}
+
+function localKey(key: string) {
+  return PREFIX + key
+}
+
+function readFallback<T>(key: string): T | undefined {
+  try {
+    const raw = localStorage.getItem(localKey(key))
+    return raw === null ? undefined : JSON.parse(raw) as T
+  } catch {
+    return undefined
+  }
+}
+
+function writeFallback(key: string, value: unknown) {
+  localStorage.setItem(localKey(key), JSON.stringify(value))
+}
+
+export const localStore = {
+  async get<T>(key: string): Promise<T | undefined> {
+    try {
+      const record = await runTransaction<StoreRecord>('readonly', store => store.get(key))
+      if (record) return record.value as T
+    } catch {
+      // Fall through to the browser-local fallback.
+    }
+    return readFallback<T>(key)
+  },
+
+  async set<T>(key: string, value: T): Promise<void> {
+    const db = await openDatabase()
+    if (db) {
+      try {
+        await runTransaction('readwrite', store => store.put({ key, value }))
+      } catch {
+        writeFallback(key, value)
+      }
+    } else {
+      writeFallback(key, value)
+    }
+    // Settings and small app metadata are mirrored for fast boot and PWA interoperability.
+    if (key.startsWith('settings:')) writeFallback(key, value)
+  },
+
+  async remove(key: string): Promise<void> {
+    try { await runTransaction('readwrite', store => store.delete(key)) } catch { /* local fallback below */ }
+    try { localStorage.removeItem(localKey(key)) } catch { /* storage may be disabled */ }
+  },
+
+  async list(prefix = ''): Promise<StoreRecord[]> {
+    const db = await openDatabase()
+    if (db) {
+      try {
+        const records = await runTransaction<StoreRecord[]>('readonly', store => store.getAll())
+        if (records) return records.filter(record => record.key.startsWith(prefix))
+      } catch { /* local fallback below */ }
+    }
+    const records: StoreRecord[] = []
+    try {
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i)
+        if (key?.startsWith(PREFIX)) {
+          const name = key.slice(PREFIX.length)
+          if (name.startsWith(prefix)) {
+            const value = readFallback(name)
+            if (value !== undefined) records.push({ key: name, value })
+          }
+        }
+      }
+    } catch { /* storage may be disabled */ }
+    return records
+  },
+
+  async exportAll(): Promise<{ schema: number; exportedAt: string; records: StoreRecord[] }> {
+    return { schema: 1, exportedAt: new Date().toISOString(), records: await this.list() }
+  },
+
+  async importAll(backup: { schema?: number; records?: StoreRecord[] }): Promise<number> {
+    if (!backup || !Array.isArray(backup.records)) throw new Error('ساختار فایل پشتیبان معتبر نیست')
+    let count = 0
+    for (const record of backup.records) {
+      if (typeof record?.key !== 'string' || !record.key.startsWith('')) continue
+      await this.set(record.key, record.value)
+      count += 1
+    }
+    return count
+  },
+
+  async info(): Promise<{ backend: 'IndexedDB' | 'localStorage'; items: number }> {
+    const db = await openDatabase()
+    return { backend: db ? 'IndexedDB' : 'localStorage', items: (await this.list()).length }
+  }
+}
