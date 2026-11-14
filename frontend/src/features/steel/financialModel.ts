@@ -348,8 +348,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const opexFactor = Math.pow(1 + Math.max(-99, input.opexEscalationPercent) / 100, operatingYear)
     const revenue = Math.max(0, input.fullCapacityRevenue) * utilization * salesFactor
     const variableCashCost = Math.max(0, input.fullCapacityVariableCashCost) * utilization * opexFactor
-    const fixedCashCost = year > constructionYears ? Math.max(0, input.fullCapacityFixedCashCost) * opexFactor : 0
-    const depreciation = year > constructionYears ? Math.max(0, input.annualDepreciation) : 0
+    const fixedCashCost = year > constructionYears && utilization > 0 ? Math.max(0, input.fullCapacityFixedCashCost) * opexFactor : 0
+    const depreciation = year > constructionYears && utilization > 0 ? Math.max(0, input.annualDepreciation) : 0
     const fixedInvestment = Math.max(0, Number(input.fixedInvestmentSchedule[index]) || 0)
     const preOperatingCost = Math.max(0, Number(input.preOperatingSchedule[index]) || 0)
     const workingCapital = year > constructionYears
