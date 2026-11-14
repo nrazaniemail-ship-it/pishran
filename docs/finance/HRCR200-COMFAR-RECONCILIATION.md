@@ -103,12 +103,12 @@ The UI compares this newly generated series to the audited 17-period COMFAR PDF 
 ## 5. Remediation plan
 
 1. Keep the source-sheet, COMFAR-PDF, and Pishran-generated datasets separate with explicit provenance.
-2. Add a valuation-date/period-offset parameter to NPV reporting so COMFAR's 12/1404 basis can be reproduced without changing the general NPV convention.
-3. Add separate financing scenarios for the 70/30 funding-source case and the 20/80-plus-working-capital-loan discount-rate case.
-4. Add separate operating-tax scenarios (5% workbook assumption and 25% COMFAR treatment).
-5. Replace the single depreciation override with asset-level straight-line schedules (now implemented as a source-backed schedule for the HRCR200 asset classes; COMFAR's different annual schedule remains separately flagged).
-6. Separate capitalized interest from unlevered CAPEX and show both unlevered and COMFAR-reported project cash flows.
+2. <u>Implemented:</u> add a valuation-date/period-offset parameter to NPV reporting so COMFAR's 12/1404 basis can be reproduced without changing the general NPV convention.
+3. <u>Partially implemented:</u> keep the COMFAR total-investment case unlevered and preserve the Excel financing assumptions in a separate source fixture; the conflicting workbook funding structures still need an explicit comparison view.
+4. <u>Implemented in project seed:</u> COMFAR uses 25% operating tax; the original Excel 5% assumption remains in the separate Excel fixture.
+5. <u>Partially implemented:</u> replace the single depreciation override with source-backed asset-level straight-line schedules; COMFAR's different annual schedule remains separately flagged and unresolved.
+6. <u>Implemented in project seed:</u> separate capitalized interest from base CAPEX and include it in the COMFAR total-investment flow through an explicit two-year schedule.
 7. Resolve the 10,168,044.12 million Rial gap between workbook-derived asset residual and COMFAR scrap; keep asset scrap and working-capital recovery as separate terminal cash-flow lines.
-8. Make reconciliation status and annual variances visible in the UI and CI; do not mark the model as reconciled until all material annual differences are within a declared tolerance.
+8. <u>Partially implemented:</u> make reconciliation status and annual variances visible in the UI and CI; the model remains unreconciled until all material annual differences are within a declared tolerance.
 
 **Project creation UX:** the Projects screen now has a one-click action, **«ساخت پروژه مرجع نورد گرم از Excel»**. It creates the HRCR200 200,000 t/y Kashan project as a local draft, seeds the workbook-derived model data, and opens the hot-rolling workspace. The results screen displays the audited COMFAR PDF NPV/IRR beside Pishran's result and explicitly flags the case as unreconciled. Project data remains in the user's local storage; this code must be merged/deployed before it appears in their running app.\n\n**Status:** source data and COMFAR PDF have been audited; the benchmark/test labeling has been corrected. The operating model is deliberately not auto-calibrated to the COMFAR output because the attached source files contain contradictory tax and financing assumptions. The COMFAR-led scenario is now the default project seed; the Excel 5% tax and financing case remains separate. Remaining reconciliation work is to explain COMFAR's depreciation and terminal scrap differences, verify all annual cash-flow rows, and obtain a clean CI run for the latest commit.
