@@ -15,7 +15,6 @@ const branches=[
  {title:'نورد گرم — ورق',items:['اسلب','ورق تخت (Plate)','کلاف گرم (Coil)']},
  {title:'نورد گرم — محصولات مستقل',items:['بیلت یا بلوم','میلگرد','تیرآهن','نبشی']},
  {title:'نورد سرد',items:['کلاف سرد','کلاف گالوانیزه','کلاف رنگی']}
-],
 ]
 export default function SteelGroupWorkspace({onOpenHotRolling}:{onOpenHotRolling:()=>void}){
  const [selected,setSelected]=useState('hot-rolling')
