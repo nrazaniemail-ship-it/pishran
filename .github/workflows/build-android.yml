@@ -52,7 +52,7 @@ jobs:
           KEY_PASSWORD="$(openssl rand -hex 16)"
           export KEY_PASSWORD
           cat > /tmp/init-pishran.exp <<'EXPECT'
-          set timeout 240
+          set timeout 120
           spawn bubblewrap init --manifest="https://nrazaniemail-ship-it.github.io/pishran/manifest.webmanifest" --directory="android"
 
           expect -re "Domain:"
@@ -76,7 +76,7 @@ jobs:
           expect -re "Splash screen color:"
           send "\r"
           expect -re "Icon URL:"
-          send "\r"
+          send "https://nrazaniemail-ship-it.github.io/pishran/icons/icon-512.svg\r"
           expect -re "Maskable icon URL:"
           send "\r"
           expect -re "Monochrome icon URL:"
