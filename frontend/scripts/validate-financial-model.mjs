@@ -21,6 +21,7 @@ const [engine, reference] = await Promise.all([
 const model = reference.EXCEL_HOT_ROLLING_200KT
 const expected = reference.EXCEL_REFERENCE_EXPECTED
 const pishranExpected = reference.PISHRAN_REFERENCE_MODEL_OUTPUT
+const workspaceSource = await readFile(new URL('../src/features/steel/ProcessPlantWorkspace.tsx', import.meta.url), 'utf8')
 const output = expected.capacity
 const currency = model.currency
 
@@ -211,7 +212,8 @@ const integrated = engine.calculateIntegratedFinance({
   salesEscalationPercent: 1,
   opexEscalationPercent: 2,
   discountMode: 'wacc',
-  manualDiscountRate: 25
+  manualDiscountRate: 25,
+  salvageValue: 50
 })
 near(integrated.wacc, 0.15, 1e-12, 'Integrated WACC')
 near(integrated.totalFunding, 1000, 1e-9, 'Integrated funding')
@@ -225,6 +227,15 @@ assert.ok(Number.isFinite(integrated.npvProject), 'Integrated project NPV must b
 assert.ok(Number.isFinite(integrated.irrProject), 'Integrated project IRR must be finite')
 assert.ok(Number.isFinite(integrated.irrEquity), 'Integrated equity IRR must be finite')
 assert.equal(integrated.years.length, 6, 'Integrated model period count')
+near(integrated.years[5].salvageProceeds, 50, 1e-9, 'Terminal salvage proceeds')
+near(integrated.years[5].terminalValue, 50 + integrated.years[5].workingCapital, 1e-9, 'Terminal value includes salvage and working capital recovery')
+for (let index = 0; index < integrated.years.length; index++) {
+  const year = integrated.years[index]
+  const openingCash = index ? integrated.years[index - 1].cashBalance : 0
+  const inflows = year.revenue + year.equityContribution + year.debtDrawdown + year.terminalValue
+  const outflows = year.fixedInvestment + year.preOperatingCost + year.changeInWorkingCapital + year.variableCashCost + year.fixedCashCost + year.tax + year.interest + year.principal
+  near(year.cashBalance - openingCash, inflows - outflows, 1e-8, 'Annual cash flow statement reconciliation year ' + year.year)
+}
 
 const capacityScenario = engine.calculateIntegratedFinance({
   ...{
@@ -357,4 +368,10 @@ const netWorkingCapitalChange = grossWorkingCapitalChange - cycle.payables
 near(netWorkingCapitalChange, cycle.netWorkingCapital, 1e-9, 'COMFAR working capital bridge: gross assets less supplier credit')
 console.log('PASS: operating-cycle working capital, WIP completion, fixed/variable costs, supplier credit and cash conversion cycle')
 console.log('PASS: non-linear category CAPEX scaling and invalid-input handling')
-console.log('PASS: integrated WACC, loan amortization, working capital, escalation, project NPV and project/equity IRR')
+assert.ok(workspaceSource.includes("'Increase in gross working capital':grossWorkingCapitalChange"), 'COMFAR must report gross working capital investment')
+assert.ok(workspaceSource.includes("'Accounts payable':changePayables"), 'COMFAR must report changes in supplier credit separately')
+assert.ok(workspaceSource.includes("'TOTAL SOURCES OF FINANCE':year.equityContribution+year.debtDrawdown+financeSumAt(financeLoans,i,'capitalizedInterest')+changePayables"), 'COMFAR funding sources must include capitalized interest and supplier credit')
+assert.ok(workspaceSource.includes("'TOTAL CASH INFLOW':year.revenue+year.equityContribution+year.debtDrawdown+year.terminalValue"), 'Cash flow statement must include terminal recoveries')
+assert.ok(workspaceSource.includes("'TAXABLE PROFIT':year.taxableProfit"), 'COMFAR taxable profit must use loss carry-forward')
+console.log('PASS: COMFAR gross working capital, supplier credit, capitalized interest and taxable profit mapping')
+console.log('PASS: integrated WACC, loan amortization, working capital, escalation, terminal value, cash flow reconciliation, NPV and project/equity IRR')
