@@ -13,9 +13,6 @@
     "test:financial": "node scripts/validate-financial-model.mjs"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "typescript": "latest",
     "react": "latest",
     "react-dom": "latest",
     "lucide-react": "latest",
@@ -27,13 +24,18 @@
     "@capacitor/share": "^7.0.0"
   },
   "devDependencies": {
-    "vite-plugin-pwa": "latest",
-    "workbox-window": "latest",
-    "tailwindcss": "latest",
+    "@capacitor/cli": "^7.4.3",
     "@tailwindcss/vite": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "@capacitor/cli": "^7.4.3",
-    "typescript": "^5.6.3"
+    "@vitejs/plugin-react": "latest",
+    "tailwindcss": "latest",
+    "typescript": "^5.6.3",
+    "vite": "latest",
+    "vite-plugin-pwa": "latest",
+    "workbox-window": "latest"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
