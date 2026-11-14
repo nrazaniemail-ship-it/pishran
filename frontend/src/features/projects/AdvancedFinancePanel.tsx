@@ -22,6 +22,7 @@ type Props = {
   fixedInvestment: number
   equityPercent: number
   costOfEquity: number
+  costOfDebt: number
   taxRate: number
   capexRows: CapexRow[]
   ramp: number[]
@@ -45,9 +46,11 @@ export default function AdvancedFinancePanel(props: Props) {
   const construction = Math.max(1, Math.ceil(props.constructionYears))
   const opYears = Math.max(1, years - construction)
   const storageKey = 'feasibility:advanced-finance:' + props.projectId
+  const initialCapexSchedule = Array.from({length:years},(_,i)=>i<construction?props.fixedInvestment/construction:0)
+  const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
-    loans:[{id:'loan-1',label:'تسهیلات اصلی',drawdowns:Array(years).fill(0),annualRate:props.taxRate ? 23 : 0,graceYears:0,termYears:Math.max(1,opYears),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
-    assets:[], equityContributions:Array(years).fill(0),
+    loans:[{id:'loan-1',label:'تسهیلات اصلی',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,opYears),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
+    assets:[], equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100),
     workingCapitalDays:{raw:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
     discountMode:'wacc',manualRate:props.costOfEquity,maintenancePercent:0
   }))
@@ -56,14 +59,13 @@ export default function AdvancedFinancePanel(props: Props) {
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
   const capexSchedule = useMemo(()=>Array.from({length:years},(_,i)=>i<construction?props.fixedInvestment/construction:0),[years,construction,props.fixedInvestment])
-  const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const updateLoan=(id:string,patch:Partial<Loan>)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,...patch}:l)}))
   const updateDraw=(id:string,index:number,value:number)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,drawdowns:l.drawdowns.map((v,i)=>i===index?Math.max(0,value):v)}:l)}))
-  const syncAssets=()=>setState(s=>({...s,assets:props.capexRows.filter(r=>r.amount>0).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20}))}))
+  const syncAssets=()=>setState(s=>({...s,assets:props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20}))}))
   const addLoan=()=>setState(s=>({...s,loans:[...s.loans,{id:'loan-'+Date.now(),label:'تسهیلات جدید',drawdowns:Array(years).fill(0),annualRate:20,graceYears:0,termYears:Math.max(1,opYears),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}]}))
   const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی جدید',cost:0,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line',decliningRate:20}]}))
 
-  const depreciation = useMemo(()=>calculateAssetDepreciationSchedule(state.assets.filter(a=>a.cost>0),years),[state.assets,years])
+  const depreciation = useMemo(()=>calculateAssetDepreciationSchedule(state.assets.filter(a=>a.cost>0&&!a.name.includes('زمین')),years),[state.assets,years])
   const utilization = Array.from({length:years},(_,i)=>i<construction?0:Math.max(0,Math.min(100,props.ramp[i-construction]??100))/100)
   const fixedInvestmentSchedule = capexSchedule
   const workingCapitalPolicy = useMemo(()=>({
