@@ -22,7 +22,7 @@ utilities:[],
 capex:[],
 opex:[],
 market:[],
-notes:''}
+notes:'',investorName:'',investorType:'',investorRegistration:'',investorAddress:'',investorContact:'',reportDate:new Date().toISOString().slice(0,10),preparedBy:'',approvedBy:''}
 const fmt=(n:number,d=0)=>Number(n||0).toLocaleString('fa-IR',{maximumFractionDigits:d})
 const makeLoan=():Loan=>({id:uid(),name:'تسهیلات بانکی جدید',amount:0,currency:'میلیون ریال',fxRate:1,fxDate:'',annualRate:23,drawYear:1,graceYears:2,tenorYears:7,method:'اصل مساوی',feeRate:1})
 const npvOf=(flows:number[],rate:number)=>flows.reduce((sum,v,i)=>sum+v/Math.pow(1+rate,i),0)
