@@ -140,7 +140,7 @@ export default function ProcessPlantWorkspace({project,plantType,onBack}:{projec
  const addPayrollRow=()=>updatePayrollRows([...payrollData,{id:'payroll-custom-'+Date.now(),label:'ردیف جدید',values:Object.fromEntries(payrollSheet.columns.map(col=>[col.key,col.numeric?0:'']))}])
  const updateCell=(id:string,key:string,value:Cell)=>updateRows(rows.map(row=>row.id===id?{...row,values:{...row.values,[key]:value}}:row))
  const addRow=()=>updateRows([...rows,{id:current.id+'-custom-'+Date.now(),label:'ردیف جدید',values:Object.fromEntries(current.columns.map(col=>[col.key,col.numeric?0:'']))}])
- const capexAmount=(sheetId:string,row:Row)=>{const v=row.values,n=(key:string)=>Number(v[key]??0)||0,allocation=v.allocation===undefined?1:Math.max(0,Math.min(100,n('allocation')))/100
+ const capexAmount=(sheetId:string,row:Row):number=>{const v=row.values,n=(key:string)=>Number(v[key]??0)||0,allocation=v.allocation===undefined?1:Math.max(0,Math.min(100,n('allocation')))/100
  if(sheetId==='land')return n('total')||n('qty')*n('unitPrice')*allocation
  if(sheetId==='site')return n('total')||n('qty')*n('unitPrice')*allocation
  if(sheetId==='buildings')return n('total')||(n('qty')*n('unitPrice')+n('equipment'))*(1-Math.max(0,Math.min(1,n('sharedFactor'))))*allocation
@@ -159,12 +159,12 @@ export default function ProcessPlantWorkspace({project,plantType,onBack}:{projec
  if(sheetId==='infrastructure'||sheetId==='office')return n('amount')*allocation
  return n('amount')||n('total')||n('annualCost')
 }
-const capexBySheet=(id:string)=> (data[id]??makeRows(sheets.find(x=>x.id===id)!,plantType)).reduce((sum,row)=>sum+capexAmount(id,row),0)
-const fixedBase=capexBySheet('land')+capexBySheet('site')+capexBySheet('buildings')+capexBySheet('infrastructure')+capexBySheet('vehicles')+capexBySheet('office')
-const contingency=Math.round(fixedBase*.05)
-const fixedInvestment=fixedBase+capexBySheet('machines')+contingency
-const preOperating=capexBySheet('preop')
-const capexTotal=fixedInvestment+preOperating
+const capexBySheet=(id:string):number=> (data[id]??makeRows(sheets.find(x=>x.id===id)!,plantType)).reduce((sum,row)=>sum+capexAmount(id,row),0)
+const fixedBase:number=capexBySheet('land')+capexBySheet('site')+capexBySheet('buildings')+capexBySheet('infrastructure')+capexBySheet('vehicles')+capexBySheet('office')
+const contingency:number=Math.round(fixedBase*.05)
+const fixedInvestment:number=fixedBase+capexBySheet('machines')+contingency
+const preOperating:number=capexBySheet('preop')
+const capexTotal:number=fixedInvestment+preOperating
 const summaryValues=[capexBySheet('land'),capexBySheet('site'),capexBySheet('buildings'),capexBySheet('machines'),capexBySheet('infrastructure'),capexBySheet('vehicles'),capexBySheet('office'),contingency,fixedInvestment,preOperating,capexTotal]
 const displayRows:Row[]=current.id==='fixed-summary'?rows.map((row,i)=>({...row,values:{...row.values,amount:summaryValues[i]??0,share:i<=8&&fixedInvestment>0?(summaryValues[i]??0)/fixedInvestment*100:i===10&&capexTotal>0?100:0,source:['خرید زمین','محوطه‌سازی','ساختمان‌ها','ماشین‌آلات','تأسیسات زیربنایی','وسائط نقلیه','وسایل اداری','محاسبه ۵٪ مطابق اکسل','جمع هزینه‌های ثابت','قبل از بهره‌برداری','جمع کل'][i]??''}})):current.book==='capex'?rows.map(row=>({...row,values:{...row.values,total:capexAmount(current.id,row)}})):current.id==='staff'?rows.map(row=>{if(row.section)return row;const total=['expert','technician','secretary','operator','driver','laborer'].reduce((sum,key)=>sum+Number(row.values[key]??0),0);return row.label==='جمع'?{...row,values:{...row.values,...staffTotals,total:Object.values(staffTotals).reduce((sum,value)=>sum+value,0)}}:{...row,values:{...row.values,total}}}):rows
  const bookGroups=[{id:'capex',title:'۱. سرمایه‌گذاری ثابت',subtitle:'سرمایه گذاری ثابت.xlsx',items:sheets.filter(x=>x.book==='capex')},{id:'opex',title:'۲. هزینه تولید و بهره‌برداری',subtitle:'هزینه تولید.xlsx',items:sheets.filter(x=>x.book==='opex')},{id:'finance',title:'۳. مدل مالی و جریان نقدی',subtitle:'مدل مالی و جریان نقدی.xlsx',items:sheets.filter(x=>x.book==='finance')}]
