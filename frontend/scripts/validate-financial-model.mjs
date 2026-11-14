@@ -181,11 +181,11 @@ near(workingCapital, expected.workingCapital, 0.02, 'Net working capital with 36
 const wc365 = engine.calculateWorkingCapital(wcItems, 1, 365)
 assert.ok(Math.abs(wc365 - workingCapital) > 1000, '360/365 convention must materially change the benchmark result')
 
-const cashFlows = [...expected.comfarProjectCashFlows]
-near(engine.calculateNpv(cashFlows, expected.roundedDiscountRate), expected.npvAtRoundedRate, 0.01, 'NPV at Excel rounded 21%')
-near(engine.calculateNpv(cashFlows, expected.wacc), expected.npvAtExactWacc, 0.01, 'NPV at exact WACC')
-near(engine.calculateIrr(cashFlows), expected.irr, 1e-8, 'IRR')
-near(engine.calculateMirr(cashFlows, expected.financeRate, expected.reinvestmentRate), expected.mirr, 1e-8, 'MIRR')
+const cashFlows = [...expected.comfarIrrNpvNetDiscountedCashFlows]
+near(engine.calculateNpv(cashFlows, expected.roundedDiscountRate), expected.irrNpvSheetReportedIrrNpvSheetReportedNpvAt21, 0.01, 'NPV at Excel rounded 21%')
+near(engine.calculateNpv(cashFlows, expected.wacc), expected.npvAtExactWacc, 0.01, 'Reproduce IRR-NPV sheet NPV on reported discounted-row basis at exact WACC')
+near(engine.calculateIrr(cashFlows), expected.irrNpvSheetReportedIrr, 1e-8, 'Reproduce IRR-NPV sheet reported IRR from its row 9 basis')
+near(engine.calculateMirr(cashFlows, expected.financeRate, expected.reinvestmentRate), expected.irrNpvSheetReportedMirr, 1e-8, 'Reproduce IRR-NPV sheet reported MIRR from its row 9 basis')
 
 
 const totalCapex = model.capex.reduce((sum, row) => sum + row.quantity * row.unitPrice * (row.currency === currency ? 1 : row.fxRate), 0)
@@ -234,8 +234,9 @@ for (let index = 0; index < capexYears + model.life; index++) {
 console.log('DEBUG Pishran generated flows:', JSON.stringify(generatedProjectCashFlows))
 console.log('DEBUG reference flows:', JSON.stringify(pishranExpected.projectCashFlows))
 console.log('DEBUG working capital:', workingCapital, 'OPEX:', opexWithoutDepreciation, 'WACC:', wacc.value)
-const generatedComfarComparison = engine.reconcileCashFlowSeries(generatedProjectCashFlows, expected.comfarProjectCashFlows, 0.01)
-console.log('COMFAR annual cash-flow comparison (benchmark fixture):', {
+const generatedComfarComparison = engine.reconcileCashFlowSeries(generatedProjectCashFlows, expected.comfarIrrNpvNetDiscountedCashFlows, 0.01)
+assert.equal(generatedComfarComparison.matched, false, 'Raw Pishran project cash flows must not be represented as matching the IRR-NPV sheet discounted-row vector')
+console.log('Basis comparison: raw Pishran project flows vs IRR-NPV sheet row 9 (reported net discounted flows; not like-for-like):', {
   matched: generatedComfarComparison.matched,
   periodCountMatch: generatedComfarComparison.periodCountMatch,
   modelTotal: generatedComfarComparison.modelTotal,
@@ -252,7 +253,7 @@ const generatedIrr = engine.calculateIrr(generatedProjectCashFlows)
 const generatedMirr = engine.calculateMirr(generatedProjectCashFlows, expected.financeRate, expected.reinvestmentRate)
 assert.ok(Number.isFinite(generatedNpv) && Number.isFinite(generatedIrr) && Number.isFinite(generatedMirr),
   'Pishran-generated NPV, IRR and MIRR must be finite')
-console.log('Pishran-generated metrics (not yet reconciled to COMFAR):', {
+console.log('Pishran independent project metrics; source COMFAR outputs remain unreconciled pending corrected raw cash-flow export:', {
   NPV: generatedNpv, IRR: generatedIrr, MIRR: generatedMirr
 })
 
@@ -261,7 +262,7 @@ console.log('PASS: 360-day working capital = ' + workingCapital.toFixed(4) + ' m
 console.log('PASS: WACC = ' + (wacc.value * 100).toFixed(6) + '%')
 console.log('PASS: NPV / IRR / MIRR independently reproduce the COMFAR reference row')
 console.log('PASS: Pishran-generated project cash flows are finite and return valid NPV / IRR / MIRR')
-console.log('REVIEW REQUIRED: generated Pishran cash flows are not yet numerically reconciled to COMFAR cash flows')
+console.log('REVIEW REQUIRED: COMFAR IRR-NPV row 9 is not a verified raw project cash-flow vector; source investment base and financing schedules conflict with the CAPEX workbook.')
 console.log('NOTE: Excel rounds WACC 21.284299% to 21% for its NPV cell.')
 
 
