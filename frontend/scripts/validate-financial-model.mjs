@@ -182,7 +182,7 @@ const wc365 = engine.calculateWorkingCapital(wcItems, 1, 365)
 assert.ok(Math.abs(wc365 - workingCapital) > 1000, '360/365 convention must materially change the benchmark result')
 
 const cashFlows = [...expected.comfarIrrNpvNetDiscountedCashFlows]
-near(engine.calculateNpv(cashFlows, expected.roundedDiscountRate), expected.irrNpvSheetReportedIrrNpvSheetReportedNpvAt21, 0.01, 'NPV at Excel rounded 21%')
+near(engine.calculateNpv(cashFlows, expected.roundedDiscountRate), expected.irrNpvSheetReportedNpvAt21, 0.01, 'NPV at Excel rounded 21%')
 near(engine.calculateNpv(cashFlows, expected.wacc), expected.npvAtExactWacc, 0.01, 'Reproduce IRR-NPV sheet NPV on reported discounted-row basis at exact WACC')
 near(engine.calculateIrr(cashFlows), expected.irrNpvSheetReportedIrr, 1e-8, 'Reproduce IRR-NPV sheet reported IRR from its row 9 basis')
 near(engine.calculateMirr(cashFlows, expected.financeRate, expected.reinvestmentRate), expected.irrNpvSheetReportedMirr, 1e-8, 'Reproduce IRR-NPV sheet reported MIRR from its row 9 basis')
@@ -260,10 +260,10 @@ console.log('Pishran independent project metrics; source COMFAR outputs remain u
 console.log('PASS: raw materials, energy, process consumables, spares, maintenance and payroll')
 console.log('PASS: 360-day working capital = ' + workingCapital.toFixed(4) + ' million Rial')
 console.log('PASS: WACC = ' + (wacc.value * 100).toFixed(6) + '%')
-console.log('PASS: NPV / IRR / MIRR independently reproduce the COMFAR reference row')
+console.log('PASS: Pishran independently reproduces its own raw project cash-flow benchmark; COMFAR row 9 is kept as a separate reported discounted-row control.')
 console.log('PASS: Pishran-generated project cash flows are finite and return valid NPV / IRR / MIRR')
 console.log('REVIEW REQUIRED: COMFAR IRR-NPV row 9 is not a verified raw project cash-flow vector; source investment base and financing schedules conflict with the CAPEX workbook.')
-console.log('NOTE: Excel rounds WACC 21.284299% to 21% for its NPV cell.')
+console.log('NOTE: Excel rounds WACC 21.284299% to 21% for its IRR-NPV sheet cell; its row 9 basis is not validated as raw project cash flow.')
 
 
 const integrated = engine.calculateIntegratedFinance({
