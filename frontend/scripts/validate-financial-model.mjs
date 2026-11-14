@@ -112,11 +112,19 @@ near(workingCapital, expected.workingCapital, 0.02, 'Net working capital with 36
 const wc365 = engine.calculateWorkingCapital(wcItems, 1, 365)
 assert.ok(Math.abs(wc365 - workingCapital) > 1000, '360/365 convention must materially change the benchmark result')
 
-const cashFlows = [...expected.comfarProjectCashFlows]
-near(engine.calculateNpv(cashFlows, expected.roundedDiscountRate), expected.npvAtRoundedRate, 0.01, 'NPV at Excel rounded 21%')
-near(engine.calculateNpv(cashFlows, expected.wacc), expected.npvAtExactWacc, 0.01, 'NPV at exact WACC')
-near(engine.calculateIrr(cashFlows), expected.irr, 1e-8, 'IRR')
-near(engine.calculateMirr(cashFlows, expected.financeRate, expected.reinvestmentRate), expected.mirr, 1e-8, 'MIRR')
+const excelWorksheetFlows = [...expected.excelWorksheetCashFlows]
+near(engine.calculateNpv(excelWorksheetFlows, expected.roundedDiscountRate), expected.npvAtRoundedRate, 0.01, 'Excel helper-sheet NPV at rounded 21%')
+near(engine.calculateNpv(excelWorksheetFlows, expected.wacc), expected.npvAtExactWacc, 0.01, 'Excel helper-sheet NPV at exact WACC')
+near(engine.calculateIrr(excelWorksheetFlows), expected.irr, 1e-8, 'Excel helper-sheet IRR')
+near(engine.calculateMirr(excelWorksheetFlows, expected.financeRate, expected.reinvestmentRate), expected.mirr, 1e-8, 'Excel helper-sheet MIRR')
+
+const comfarPdf = reference.COMFAR_PDF_REFERENCE
+const comfarNpvAtValuationDate = comfarPdf.projectCashFlows.reduce(
+  (sum, flow, index) => sum + flow / Math.pow(1 + comfarPdf.discountRate, index - 1), 0)
+near(comfarNpvAtValuationDate, comfarPdf.npv, 0.01, 'COMFAR PDF NPV at 12/1404 and 25%')
+near(engine.calculateIrr(comfarPdf.projectCashFlows), comfarPdf.irr, 0.00002, 'COMFAR PDF IRR')
+near(engine.calculateMirr(comfarPdf.projectCashFlows, comfarPdf.mirrFinanceRate, comfarPdf.mirrReinvestmentRate),
+  comfarPdf.mirr, 0.0002, 'COMFAR PDF MIRR at 20% finance/reinvestment rates')
 
 
 const totalCapex = model.capex.reduce((sum, row) => sum + row.quantity * row.unitPrice * (row.currency === currency ? 1 : row.fxRate), 0)
@@ -165,7 +173,7 @@ for (let index = 0; index < capexYears + model.life; index++) {
 console.log('DEBUG Pishran generated flows:', JSON.stringify(generatedProjectCashFlows))
 console.log('DEBUG reference flows:', JSON.stringify(pishranExpected.projectCashFlows))
 console.log('DEBUG working capital:', workingCapital, 'OPEX:', opexWithoutDepreciation, 'WACC:', wacc.value)
-const generatedComfarComparison = engine.reconcileCashFlowSeries(generatedProjectCashFlows, expected.comfarProjectCashFlows, 0.01)
+const generatedComfarComparison = engine.reconcileCashFlowSeries(generatedProjectCashFlows, comfarPdf.projectCashFlows, 0.01)
 console.log('COMFAR annual cash-flow comparison (benchmark fixture):', {
   matched: generatedComfarComparison.matched,
   periodCountMatch: generatedComfarComparison.periodCountMatch,
@@ -175,6 +183,9 @@ console.log('COMFAR annual cash-flow comparison (benchmark fixture):', {
   maxAbsoluteDifference: generatedComfarComparison.maxAbsoluteDifference
 })
 assert.equal(generatedProjectCashFlows.length, pishranExpected.projectCashFlows.length, 'Pishran project flow period count')
+assert.equal(generatedComfarComparison.periodCountMatch, true, 'Pishran and COMFAR PDF flow periods must align')
+assert.equal(generatedComfarComparison.matched, false, 'Material Pishran/COMFAR PDF differences must be surfaced, not silently treated as reconciled')
+assert.ok(generatedComfarComparison.maxAbsoluteDifference > 8_000_000, 'Terminal-period variance must remain visible until model assumptions are reconciled')
 assert.ok(generatedProjectCashFlows.every(Number.isFinite), 'Pishran generated cash flows must all be finite')
 assert.ok(generatedProjectCashFlows.some(value => value < 0) && generatedProjectCashFlows.some(value => value > 0),
   'Pishran generated cash flows must contain investment outflow and operating inflow')
@@ -190,9 +201,9 @@ console.log('Pishran-generated metrics (not yet reconciled to COMFAR):', {
 console.log('PASS: raw materials, energy, process consumables, spares, maintenance and payroll')
 console.log('PASS: 360-day working capital = ' + workingCapital.toFixed(4) + ' million Rial')
 console.log('PASS: WACC = ' + (wacc.value * 100).toFixed(6) + '%')
-console.log('PASS: NPV / IRR / MIRR independently reproduce the COMFAR reference row')
+console.log('PASS: OPEX Excel helper metrics and COMFAR PDF metrics are independently reproduced')
 console.log('PASS: Pishran-generated project cash flows are finite and return valid NPV / IRR / MIRR')
-console.log('REVIEW REQUIRED: generated Pishran cash flows are not yet numerically reconciled to COMFAR cash flows')
+console.log('REVIEW REQUIRED: Pishran generated flows differ from the audited COMFAR PDF vector by ' + generatedComfarComparison.totalDifference.toFixed(2) + ' million Rial in aggregate; max annual variance ' + generatedComfarComparison.maxAbsoluteDifference.toFixed(2))
 console.log('NOTE: Excel rounds WACC 21.284299% to 21% for its NPV cell.')
 
 
