@@ -127,7 +127,7 @@ export const localStore = {
   },
 
   async replaceAll(records: StoreRecord[]): Promise<number> {
-    if (!Array.isArray(records) || !records.length) throw new Error('فایل پشتیبان خالی یا نامعتبر است')
+    if (!Array.isArray(records)) throw new Error('فایل پشتیبان نامعتبر است')
     const seen = new Set<string>()
     for (const record of records) {
       if (!record || typeof record.key !== 'string' || !record.key.trim() || record.key.length > 240 || seen.has(record.key)) {
