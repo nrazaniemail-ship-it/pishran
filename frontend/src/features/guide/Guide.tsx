@@ -65,7 +65,7 @@ export default function Guide() {
     <div className="guide-example"><h4><Lightbulb size={16}/> مثال و تفسیر</h4><p>{t.example}</p></div>
     <div className="guide-subsection"><h4><ClipboardCheck size={16}/> کنترل‌های صحت و تکمیل</h4><ul>{t.checks.map(x=><li key={x}>{x}</li>)}</ul></div>
     <div className="guide-warning"><h4><AlertTriangle size={16}/> خطاهای متداول</h4><ul>{t.pitfalls.map(x=><li key={x}>{x}</li>)}</ul></div>
-   </div>}</article>)}</section>})}
+   </div>}</article>})}</section>})}
    {!results.length&&<div className="guide-empty"><Search size={28}/><h3>نتیجه‌ای پیدا نشد</h3><p>عبارت دیگری جست‌وجو کنید؛ مانند «هزینه سرمایه»، «بازده»، «اسلب» یا «دوره بازگشت».</p></div>}
    <div className="guide-disclaimer"><b>یادداشت روش‌شناسی</b><p>فرمول‌ها چارچوب عمومی مطالعات امکان‌سنجی‌اند. مبنای مالیاتی، تعرفه‌ها، استانداردهای طراحی، قواعد استهلاک و تعهدات وام‌دهنده باید با مقررات و قراردادهای معتبر پروژه تطبیق داده شوند. مثال‌های عددی آموزشی‌اند و داده واقعی پروژه محسوب نمی‌شوند.</p></div>
    </section>
