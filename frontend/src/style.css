@@ -369,3 +369,42 @@ footer{border-top-color:var(--line)}
 .hr-ref-note{margin:0;padding:11px 14px;background:var(--page);color:var(--muted);font-size:9px;line-height:1.9}
 .hr-ref-foot{display:flex;justify-content:space-between;gap:10px;padding:10px 14px;color:var(--muted);font-size:9px}
 @media(max-width:650px){.hr-ref-card{padding:12px}.hr-ref-head{flex-direction:column}.hr-ref-table-title{align-items:flex-start;flex-direction:column}.hr-ref-foot{flex-direction:column}.hr-ref-tabs button{font-size:9px;padding:8px 10px}}
+
+
+/* CAPEX / OPEX workbook navigation and long-table visual audit */
+.hr-ref-layout{display:grid;grid-template-columns:minmax(205px,245px) minmax(0,1fr);gap:16px;align-items:start;direction:rtl;min-width:0}
+.hr-ref-tabs{display:flex;flex-direction:column;gap:5px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 150px);position:sticky;top:14px;padding:7px;border:1px solid var(--line);border-radius:12px;background:var(--page);scrollbar-width:thin}
+.hr-ref-tabs button{display:flex;align-items:center;gap:9px;flex:0 0 auto;width:100%;min-height:40px;text-align:right;white-space:normal;line-height:1.65;padding:7px 9px;border:1px solid transparent;background:transparent;color:var(--muted);border-radius:8px;font-size:10px;cursor:pointer}
+.hr-ref-tabs button:hover:not(.active){background:var(--surface);border-color:var(--line);color:var(--text)}
+.hr-ref-tabs button.active{background:var(--page-accent-soft);border-color:color-mix(in srgb,var(--page-accent) 28%,var(--line));color:var(--page-accent);font-weight:700}
+.hr-ref-tab-index{display:grid;place-items:center;flex:0 0 25px;width:25px;height:25px;border-radius:7px;background:var(--surface);border:1px solid var(--line);font-size:10px;font-variant-numeric:tabular-nums}
+.hr-ref-tabs button.active .hr-ref-tab-index{background:var(--page-accent);border-color:var(--page-accent);color:#fff}
+.hr-ref-tab-label{min-width:0;overflow-wrap:anywhere}
+.hr-ref-sheet-content{display:grid;gap:14px;min-width:0}
+.hr-ref-sheet-content>.hr-ref-table-card{min-width:0;margin:0}
+.hr-ref-scroll{max-height:68vh;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.hr-ref-table{width:max-content;min-width:100%;table-layout:fixed;font-variant-numeric:tabular-nums}
+.hr-ref-table th,.hr-ref-table td{min-width:0;overflow-wrap:anywhere}
+.hr-ref-table th:first-child{position:sticky;right:0;z-index:4;background:var(--page);box-shadow:-2px 0 5px rgba(16,24,40,.06)}
+.hr-ref-table td:first-child{position:sticky;right:0;z-index:2;background:var(--surface);box-shadow:-2px 0 5px rgba(16,24,40,.045)}
+.hr-ref-table td:first-child input{font-weight:600}
+.hr-ref-table th:last-child,.hr-ref-table td:last-child{position:sticky;left:0;z-index:3;min-width:58px;width:58px;background:var(--page);text-align:center}
+.hr-ref-table td:last-child{background:var(--surface)}
+.hr-ref-table td input{min-width:0;max-width:100%;font-variant-numeric:tabular-nums}
+.hr-ref-table th small{line-height:1.5;overflow-wrap:anywhere}
+.hr-ref-table-title{position:sticky;top:0;z-index:5}
+.hr-ref-table tr:last-child td{border-bottom:0}
+.hr-ref-table input:focus-visible{position:relative;z-index:6}
+@media(max-width:900px){
+ .hr-ref-layout{grid-template-columns:minmax(0,1fr);gap:10px}
+ .hr-ref-tabs{position:relative;top:auto;max-height:none;flex-direction:row;overflow-x:auto;overflow-y:hidden;white-space:nowrap;padding:6px;scroll-snap-type:x proximity}
+ .hr-ref-tabs button{width:auto;min-width:170px;max-width:220px;scroll-snap-align:start}
+ .hr-ref-tab-label{white-space:normal}
+ .hr-ref-scroll{max-height:65vh}
+}
+@media(max-width:650px){
+ .hr-ref-tabs button{min-width:150px;max-width:180px;font-size:9px}
+ .hr-ref-table th,.hr-ref-table td{padding:7px 6px}
+ .hr-ref-table-title{position:relative}
+ .hr-ref-scroll{max-height:60vh}
+}
