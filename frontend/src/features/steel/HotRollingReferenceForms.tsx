@@ -6,6 +6,50 @@ type Cell=string|number
 type Column={key:string;label:string;unit?:string;numeric?:boolean}
 type TableDef={id:string;title:string;columns:Column[];rows:Record<string,Cell>[];note?:string}
 type Section='market'|'capex'|'energy'|'opex'
+type WorksheetTab={id:string;title:string;tableIds:string[]}
+const worksheetTabs:Partial<Record<Section,WorksheetTab[]>>={
+ capex:[
+  {id:'assumptions',title:'فرضیات',tableIds:['assumptions']},
+  {id:'land',title:'خرید زمین',tableIds:['land']},
+  {id:'site',title:'محوطه‌سازی',tableIds:['site']},
+  {id:'buildings',title:'ساختمان‌ها',tableIds:['buildings']},
+  {id:'equipment',title:'کل تجهیزات',tableIds:['equipment']},
+  {id:'vehicles',title:'وسائط نقلیه',tableIds:['vehicles']},
+  {id:'utilities',title:'تأسیسات زیربنایی',tableIds:['utilities']},
+  {id:'utilities-development',title:'تأسیسات زیربنایی-توسعه',tableIds:['utilities-development']},
+  {id:'office',title:'وسایل اداری',tableIds:['office']},
+  {id:'preop',title:'قبل از بهره‌برداری',tableIds:['preop']},
+  {id:'fixed-investment',title:'سرمایه‌گذاری ثابت طرح',tableIds:['fixed-investment']},
+  {id:'funding-mechanism',title:'مکانیزم تأمین سرمایه',tableIds:['funding-mechanism']},
+  {id:'funding-sources',title:'نحوه تأمین منابع',tableIds:['funding-sources']},
+  {id:'discount-rate',title:'نرخ تنزیل',tableIds:['discount-rate']},
+  {id:'repayment-schedule',title:'برنامه زمانی بازپرداخت اقساط',tableIds:['repayment-schedule']}
+ ],
+ opex:[
+  {id:'raw',title:'مواد خام',tableIds:['raw']},
+  {id:'energy-cost',title:'انرژی',tableIds:['energy-cost']},
+  {id:'maintenance',title:'تعمیر و نگهداری و لوازم یدکی',tableIds:['maintenance']},
+  {id:'staff',title:'نیروی انسانی',tableIds:['staff','payroll']},
+  {id:'depreciation',title:'استهلاک',tableIds:['depreciation']},
+  {id:'annual-opex',title:'هزینه جاری سالیانه',tableIds:['annual-opex']},
+  {id:'sales',title:'قیمت فروش',tableIds:['sales']},
+  {id:'working-capital',title:'سرمایه در گردش',tableIds:['working-capital']},
+  {id:'break-even',title:'سر به سری',tableIds:['break-even']},
+  {id:'break-even-analysis',title:'تحلیل نقطه سر به سر',tableIds:['break-even-analysis']},
+  {id:'general-project',title:'مشخصات کلی طرح',tableIds:['general-project']},
+  {id:'tax-inflation',title:'مالیات و تورم',tableIds:['tax-inflation']},
+  {id:'irr-sensitivity',title:'IRR حساسیت',tableIds:['irr-sensitivity']},
+  {id:'energy-sensitivity',title:'حساسیت نرخ انرژی',tableIds:['energy-sensitivity']},
+  {id:'financial-cashflows',title:'جریانات نقدی مالی',tableIds:['financial-cashflows']},
+  {id:'periodic-cashflows',title:'جریانات نقدی دوره‌ای',tableIds:['periodic-cashflows']},
+  {id:'irr-npv',title:'IRR-NPV',tableIds:['irr-npv']}
+ ]
+}
+const columnWidth=(col:Column)=>/^p\\d+$/.test(col.key)?92:
+ ['item','parameter','source','department','asset','product','need','phase','title','loan','description','type'].includes(col.key)?210:
+ ['note','basis','reference','subitem'].includes(col.key)?245:
+ ['unit','specificUnit','demandUnit','unitPrice'].includes(col.key)?145:
+ col.numeric?118:155
 const c=(key:string,label:string,unit='',numeric=false):Column=>({key,label,unit,numeric})
 const cellUnit=(col:Column,row:Record<string,Cell>)=>{const specific=row.specificUnit;if(col.key==='specific'&&typeof specific==='string'&&specific)return specific;const demandUnit=row.demandUnit;if(col.key==='demand'&&typeof demandUnit==='string'&&demandUnit)return demandUnit;const unit=row.unit;if(col.key==='demand'&&typeof unit==='string'&&unit)return unit;if(col.key==='specific'&&typeof unit==='string'&&unit)return unit.includes('/تن')||unit.includes('بر تن')?unit:unit+'/تن محصول';if(col.key==='annual'&&typeof specific==='string'&&specific)return specific.replace('/تن','').replace(' بر تن','')+'/سال';if(col.key==='annual'&&typeof unit==='string'&&unit)return unit.replace('/تن','').replace(' بر تن','')+'/سال';if(col.key==='value'&&typeof unit==='string'&&unit)return unit;return col.unit||''}
 const definitions:Record<Section,{title:string;intro:string;tables:TableDef[]}> = {
@@ -87,6 +131,7 @@ const definitions:Record<Section,{title:string;intro:string;tables:TableDef[]}> 
 ]},
 {id:'office',title:'تجهیزات و وسایل اداری و خدماتی',columns:[c('item','شرح'),c('cost','هزینه','میلیون ریال',true),c('residual','هزینه باقیمانده','میلیون ریال',true),c('ratio','درصد باقیمانده','٪',true),c('benchmark','هزینه مرجع','یورو/1000 نفر',true),c('current','هزینه کنونی','ریال',true)],rows:['کامپیوتر','تلفن مرکزی','تلفن','تجهیزات اداری','مبلمان غذاخوری','تجهیزات آشپزخانه','سایر تجهیزات'].map(item=>({item,cost:0,residual:0,ratio:100,benchmark:0,current:0}))},
  {id:'preop',title:'هزینه‌های قبل از بهره‌برداری',columns:[c('item','شرح هزینه'),c('local','مبلغ ریالی','میلیون ریال',true),c('foreign','مبلغ ارزی','یورو',true),c('period','دوره انجام','ماه/سال'),c('note','توضیحات')],rows:['پرسنل فنی در دوران مطالعات','اجاره دفتر موقت','تجهیز دفتر موقت','مطالعات فنی و اقتصادی و طراحی مفهومی','مطالعات زیست‌محیطی','خدمات و خریدهای دوره مطالعه','هزینه کارگاهی دوران ساخت','هزینه دفتر مرکزی دوران ساخت'].map(item=>({item,local:0,foreign:0,period:'',note:''}))}
+ {id:'repayment-schedule',title:'برنامه زمانی بازپرداخت اقساط تسهیلات',columns:[c('item','شرح / ردیف'),c('loan','نام تسهیلات'),c('tenor','دوره بازپرداخت','سال',true),c('count','تعداد اقساط','قسط',true),c('annualRate','نرخ بهره سالانه','٪',true),c('monthlyRate','نرخ بهره ماهیانه','٪',true),c('effectiveAnnual','نرخ بهره مؤثر سالیانه','٪',true),c('effectiveQuarterly','نرخ بهره مؤثر سه‌ماهه','٪',true),...Array.from({length:24},(_,i)=>c('p'+(i+1),'دوره '+(i+1),'میلیون ریال',true))],rows:[{item:'مشخصات وام',loan:'تسهیلات جدید',tenor:0,count:0,annualRate:0,monthlyRate:0,effectiveAnnual:0,effectiveQuarterly:0,...Object.fromEntries(Array.from({length:24},(_,i)=>['p'+(i+1),'']))},{item:'اصل مؤثر هر قسط',loan:'',tenor:'',count:'',annualRate:'',monthlyRate:'',effectiveAnnual:'',effectiveQuarterly:'',...Object.fromEntries(Array.from({length:24},(_,i)=>['p'+(i+1),'']))},{item:'مبلغ بهره مؤثر در هر قسط',loan:'',tenor:'',count:'',annualRate:'',monthlyRate:'',effectiveAnnual:'',effectiveQuarterly:'',...Object.fromEntries(Array.from({length:24},(_,i)=>['p'+(i+1),'']))}],note:'ساختار دوره‌ها و نرخ‌ها مطابق شیت «برنامه زمانی بازپرداخت اقساط» فایل CAPEX است. تعداد و زمان‌بندی اقساط باید متناسب با قرارداد تسهیلات پروژه تکمیل شود.'},
  ]},
  opex:{title:'جداول هزینه‌های بهره‌برداری (OPEX)',intro:'جداول بهره‌برداری بر اساس شیت‌های مواد خام، انرژی، تعمیرات، نیروی انسانی، استهلاک، هزینه جاری، قیمت فروش، سرمایه در گردش و سر‌به‌سری فایل OPEX پیاده‌سازی شده‌اند.',tables:[
  {id:'raw',title:'مواد خام و مصرفی',columns:[c('item','مواد اولیه / مصرفی'),c('specific','مصرف بر واحد تولید','واحد مصرف/تن',true),c('unit','واحد'),c('unitPrice','قیمت واحد','ریال/واحد',true),c('annual','میزان مصرف سالیانه','واحد/سال',true),c('annualCost','هزینه سالیانه','میلیون ریال',true)],rows:[{item:'اسلب',specific:1.02,unit:'تن',unitPrice:195100000,annual:204000,annualCost:39800400},{item:'حمل اسلب از تأمین‌کننده',specific:0,unit:'ریال/کیلوگرم',unitPrice:0,annual:204000,annualCost:784788},{item:'غلتک کاری',specific:0.6048,unit:'کیلوگرم',unitPrice:1000000,annual:120960,annualCost:120960},{item:'غلتک پشتیبان',specific:0.061,unit:'کیلوگرم',unitPrice:550000,annual:12200,annualCost:6710},{item:'غلتک Edger',specific:0.0158,unit:'کیلوگرم',unitPrice:550000,annual:3160,annualCost:1738},{item:'غلتک Pinch Roll',specific:0.0081,unit:'کیلوگرم',unitPrice:550000,annual:1620,annualCost:891},{item:'هوای فشرده (6 بار)',specific:23.6,unit:'Nm³',unitPrice:20000,annual:4720000,annualCost:94400},{item:'روغن هیدرولیک',specific:0.03,unit:'لیتر',unitPrice:600000,annual:6000,annualCost:3600},{item:'روغن صنعتی',specific:0.14,unit:'لیتر',unitPrice:650000,annual:28000,annualCost:18200},{item:'گریس',specific:0.07,unit:'کیلوگرم',unitPrice:900000,annual:14000,annualCost:12600}]},
@@ -114,21 +159,25 @@ export function HotRollingReferenceForms({section,projectId}:{section:Section;pr
  const def=definitions[section]
  const storageKey='pishran:hotrolling-reference:'+projectId+':'+section+':v1'
  const [data,setData]=useState<TableDef[]>(def.tables)
- const [active,setActive]=useState(def.tables[0]?.id||'')
+ const tabs=worksheetTabs[section]||def.tables.map(t=>({id:t.id,title:t.title,tableIds:[t.id]}))
+ const [active,setActive]=useState(tabs[0]?.id||'')
+ const activeTab=tabs.find(t=>t.id===active)||tabs[0]
+ const activeTables=activeTab?data.filter(t=>activeTab.tableIds.includes(t.id)):[]
  const [ready,setReady]=useState(false)
  useEffect(()=>{let live=true;localStore.get<TableDef[]>(storageKey).then(saved=>{if(live){if(saved?.length){setData(def.tables.map(base=>{const prior=saved.find(x=>x.id===base.id);return prior?{...base,...prior,columns:base.columns}:base}).concat(saved.filter(x=>!def.tables.some(base=>base.id===x.id))));}setReady(true)}}).catch(()=>setReady(true));return()=>{live=false}},[storageKey])
  useEffect(()=>{if(ready)void localStore.set(storageKey,data)},[ready,storageKey,data])
- const table=data.find(x=>x.id===active)||data[0]
- const updateCell=(tableId:string,rowIndex:number,key:string,value:Cell)=>setData(old=>old.map(t=>t.id!==tableId?t:{...t,rows:t.rows.map((r,i)=>i!==rowIndex?r:{...r,[key]:value})}))
+  const updateCell=(tableId:string,rowIndex:number,key:string,value:Cell)=>setData(old=>old.map(t=>t.id!==tableId?t:{...t,rows:t.rows.map((r,i)=>i!==rowIndex?r:{...r,[key]:value})}))
  const addRow=(tableId:string)=>setData(old=>old.map(t=>t.id!==tableId?t:{...t,rows:[...t.rows,Object.fromEntries(t.columns.map(col=>[col.key,col.numeric?0:'']))]}))
  const removeRow=(tableId:string,index:number)=>setData(old=>old.map(t=>t.id!==tableId?t:{...t,rows:t.rows.filter((_,i)=>i!==index)}))
  return <section className="hr-ref-card" dir="rtl">
   <header className="hr-ref-head"><div><span className="eyebrow">REFERENCE-BASED FORMS</span><h3>{def.title}</h3><p>{def.intro}</p></div><span className="hr-ref-save"><Save size={13}/>{ready?'ذخیره خودکار محلی':'در حال بارگذاری'}</span></header>
-  <nav className="hr-ref-tabs">{data.map(t=><button key={t.id} className={active===t.id?'active':''} onClick={()=>setActive(t.id)}>{t.title}</button>)}</nav>
-  {table&&<div className="hr-ref-table-card"><div className="hr-ref-table-title"><div><h4>{table.title}</h4><small>ستون‌های عددی همراه با واحد اندازه‌گیری مشخص شده‌اند؛ واحد هر ردیف نیز در ستون مستقل قابل ثبت است.</small></div><button className="secondary-button" onClick={()=>addRow(table.id)}><Plus size={14}/> افزودن ردیف</button></div>
-   <div className="hr-ref-scroll"><table className="hr-ref-table"><thead><tr>{table.columns.map(col=><th key={col.key}>{col.label}{col.unit&&<small>{col.unit}</small>}</th>)}<th>عملیات</th></tr></thead><tbody>{table.rows.map((r,i)=><tr key={i}>{table.columns.map(col=><td key={col.key}><div className="hr-ref-input-wrap"><input aria-label={col.label+(col.unit?'، '+col.unit:'')} type={col.numeric?'number':'text'} step={col.numeric?'any':undefined} value={r[col.key]??''} onChange={e=>updateCell(table.id,i,col.key,col.numeric?(e.target.value===''?'':Number(e.target.value)):e.target.value)}/>{col.numeric&&<small className="hr-ref-cell-unit">{cellUnit(col,r)}</small>}</div></td>)}<td><button className="hr-ref-delete" title="حذف ردیف" onClick={()=>removeRow(table.id,i)}><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>
-   {table.note&&<p className="hr-ref-note">{table.note}</p>}
-   <div className="hr-ref-foot"><span>{table.rows.length.toLocaleString('fa-IR')} ردیف · ذخیره محلی پروژه</span><span>مقادیر نمونه از فایل مرجع قابل ویرایش‌اند</span></div>
-  </div>}
+  <div className="hr-ref-layout">
+   <nav className="hr-ref-tabs" aria-label="برگه‌های فرم بر اساس فایل اکسل">{tabs.map((t,i)=><button key={t.id} type="button" className={activeTab?.id===t.id?'active':''} aria-current={activeTab?.id===t.id?'step':undefined} onClick={()=>setActive(t.id)}><span className="hr-ref-tab-index">{(i+1).toLocaleString('fa-IR')}</span><span className="hr-ref-tab-label">{t.title}</span></button>)}</nav>
+   <div className="hr-ref-sheet-content">{activeTables.map(table=><div className="hr-ref-table-card" key={table.id}><div className="hr-ref-table-title"><div><h4>{table.title}</h4><small>ساختار ستون‌ها مطابق برگه اکسل؛ واحد اندازه‌گیری فیلدهای عددی در عنوان و کنار کادر مقدار درج شده است.</small></div><button className="secondary-button" onClick={()=>addRow(table.id)}><Plus size={14}/> افزودن ردیف</button></div>
+    <div className="hr-ref-scroll"><table className="hr-ref-table"><colgroup>{table.columns.map(col=><col key={col.key} style={{width:columnWidth(col)+'px'}}/>)}<col style={{width:'58px'}}/></colgroup><thead><tr>{table.columns.map(col=><th key={col.key}>{col.label}{col.unit&&<small>{col.unit}</small>}</th>)}<th>عملیات</th></tr></thead><tbody>{table.rows.map((r,i)=><tr key={i}>{table.columns.map(col=><td key={col.key}><div className="hr-ref-input-wrap"><input aria-label={col.label+(cellUnit(col,r)?'، '+cellUnit(col,r):'')} type={col.numeric?'number':'text'} step={col.numeric?'any':undefined} value={r[col.key]??''} onChange={e=>updateCell(table.id,i,col.key,col.numeric?(e.target.value===''?'':Number(e.target.value)):e.target.value)}/>{col.numeric&&cellUnit(col,r)&&<small className="hr-ref-cell-unit">{cellUnit(col,r)}</small>}</div></td>)}<td><button className="hr-ref-delete" title="حذف ردیف" onClick={()=>removeRow(table.id,i)}><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>
+    {table.note&&<p className="hr-ref-note">{table.note}</p>}
+    <div className="hr-ref-foot"><span>{table.rows.length.toLocaleString('fa-IR')} ردیف · ذخیره محلی پروژه</span><span>مقادیر نمونه از فایل مرجع قابل ویرایش‌اند</span></div>
+   </div>)}</div>
+  </div>
  </section>
 }
