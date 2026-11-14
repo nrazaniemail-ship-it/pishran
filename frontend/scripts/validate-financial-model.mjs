@@ -314,4 +314,39 @@ assert.ok(loanRateScenario.years[1].interest > integrated.years[1].interest,
   'Loan rate changes must update interest expense')
 assert.notEqual(loanRateScenario.wacc, integrated.wacc, 'Loan rate changes must update WACC')
 console.log('PASS: capacity, selling price, capital structure and loan-rate changes propagate to financial results')
+
+const cyclePolicy = {
+  dayBasis: 360,
+  rawMaterialDays: 30,
+  workInProgressDays: 10,
+  finishedGoodsDays: 15,
+  receivableDays: 45,
+  cashDays: 5,
+  payableDays: 20,
+  annualRawMaterialCost: 3600,
+  annualConversionCost: 1800,
+  annualFinishedGoodsCost: 7200,
+  annualRevenue: 7200,
+  annualCashOperatingCost: 3600
+}
+const cycle = engine.calculateOperatingCycleWorkingCapital(cyclePolicy, 0.5, 1.1, 1.2)
+near(cycle.rawMaterials, 180, 1e-9, 'Operating cycle raw material inventory')
+near(cycle.workInProgress, 30, 1e-9, 'Operating cycle WIP inventory')
+near(cycle.finishedGoods, 180, 1e-9, 'Operating cycle finished goods')
+near(cycle.receivables, 495, 1e-9, 'Operating cycle receivables')
+near(cycle.minimumCash, 30, 1e-9, 'Operating cycle minimum cash')
+near(cycle.payables, 120, 1e-9, 'Operating cycle supplier payables')
+near(cycle.netWorkingCapital, 795, 1e-9, 'Operating cycle net working capital')
+
+const scaledCapex = engine.calculateCapacityScaledCapex(1000, 100, 200, 0.6)
+near(scaledCapex.factor, Math.pow(2, 0.6), 1e-12, 'Non-linear CAPEX scale factor')
+near(scaledCapex.amount, 1000 * Math.pow(2, 0.6), 1e-9, 'Non-linear CAPEX scaled amount')
+near(engine.calculateCapacityScaledCapex(1000, 100, 200, 0).amount, 1000, 1e-9, 'Fixed CAPEX category elasticity')
+assert.equal(engine.calculateCapacityScaledCapex(1000, 0, 200, 0.6).valid, false, 'Invalid reference capacity must be rejected')
+
+const grossWorkingCapitalChange = cycle.rawMaterials + cycle.workInProgress + cycle.finishedGoods + cycle.receivables + cycle.minimumCash
+const netWorkingCapitalChange = grossWorkingCapitalChange - cycle.payables
+near(netWorkingCapitalChange, cycle.netWorkingCapital, 1e-9, 'COMFAR working capital bridge: gross assets less supplier credit')
+console.log('PASS: operating-cycle working capital, supplier credit and 360-day convention')
+console.log('PASS: non-linear category CAPEX scaling and invalid-input handling')
 console.log('PASS: integrated WACC, loan amortization, working capital, escalation, project NPV and project/equity IRR')
