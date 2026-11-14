@@ -374,12 +374,12 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : 0
 
     const terminalValue = year === years ? Math.max(0, input.salvageValue || 0) + workingCapital : 0
+    const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
     const projectFreeCashFlow = ebit - unleveredTax + depreciation - fixedInvestment - preOperatingCost - changeInWorkingCapital + terminalValue
     const equityFreeCashFlow = -equityContribution + revenue - variableCashCost - fixedCashCost - tax - interest - principal - changeInWorkingCapital + terminalValue
     const debtService = principal + interest
     const cfads = revenue - variableCashCost - fixedCashCost - tax - changeInWorkingCapital
     const dscr = debtService > 0 ? cfads / debtService : null
-    const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
     const cashBalance = priorCash + equityContribution + debtDrawdown + revenue - variableCashCost - fixedCashCost -
       fixedInvestment - preOperatingCost - tax - interest - principal - changeInWorkingCapital + terminalValue
     priorCash = cashBalance
