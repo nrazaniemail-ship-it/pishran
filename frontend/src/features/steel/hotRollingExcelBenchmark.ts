@@ -168,8 +168,8 @@ export const EXCEL_REFERENCE_EXPECTED = {
   mirr:0.33865108092920493,
   financeRate:0.26,
   reinvestmentRate:0.30,
-  /** Row 9, periods C:S in OPEX sheet "IRR-NPV"; last period includes the COMFAR salvage inflow. */
-  comfarProjectCashFlows:[
+  /** This is the OPEX workbook's own IRR-NPV helper row, not the COMFAR PDF cash-flow series. */
+  excelWorksheetCashFlows:[
     -7908572.82,-5905218.02,3926279.2047649994,8140613.077362001,
     8941506.638881996,9688834.216513,9860858.381308004,9573587.738720998,
     9520342.875225,9520342.875225,9520342.875225,9520342.875225,
@@ -178,9 +178,37 @@ export const EXCEL_REFERENCE_EXPECTED = {
   ],
   sourceNotes:[
     'The OPEX workbook uses 360 days per year for working-capital turnover.',
-    'The CAPEX workbook calculates WACC at 21.284299%; the OPEX IRR-NPV sheet rounds the discount rate to 21%.',
-    'The 5% operating tax in the sales sheet and 25% WACC tax shield in the CAPEX discount-rate sheet are separate source assumptions.',
-    'IRR-NPV cash flows are imported from COMFAR and are not calculated by the source Excel workbook from the operating-cost tabs.'
+    'The CAPEX workbook calculates WACC at 21.284299%; the OPEX IRR-NPV helper sheet rounds the rate to 21%.',
+    'The OPEX sales sheet uses 5% operating tax, while the COMFAR PDF cash-flow report reflects 25% income tax in full-capacity years.',
+    'The OPEX IRR-NPV helper cash-flow row is not the same series as the COMFAR PDF project cash-flow report; both are retained as separate references.'
+  ]
+} as const
+
+/** Audited project cash-flow series transcribed from COMFAR PDF pages 66–70.
+ * Valuation date is 12/1404. Construction years 1403–1404 are discounted with offsets -1 and 0.
+ * The 1420 scrap value is a terminal inflow at the same terminal valuation point as operating year 1419.
+ */
+export const COMFAR_PDF_REFERENCE = {
+  valuationDate:'12/1404',
+  discountRate:0.25,
+  npv:31399764.27,
+  irr:0.4831300309687687,
+  mirr:0.2803,
+  mirrFinanceRate:0.20,
+  mirrReinvestmentRate:0.20,
+  scrapValue:13735466.82,
+  projectCashFlows:[
+    -13907805.03,-8093664.03,9602342.59,14451793.80,16364704.86,
+    18303107.76,18712850.68,15024064.83,15024064.83,15024064.84,
+    15024064.85,14719546.77,14719546.77,14719546.74,14718471.72,
+    14710023.15,28443491.41
+  ],
+  sourcePages:[1,2,8,13,18,34,42,43,50,66,67,68,69,70],
+  notes:[
+    'COMFAR PDF NPV is reported at 25% as of 12/1404; the first construction-year cash flow is one period before the valuation date.',
+    'Terminal scrap value of 13,735,466.82 million Rial is added to the final operating-year cash flow, not treated as an additional operating year.',
+    'The COMFAR PDF uses a 25% income-tax cash-flow profile; the OPEX workbook sales sheet separately states a 5% tax assumption.',
+    'The OPEX IRR-NPV helper row is a separate calculation and must not be labeled as the COMFAR PDF cash-flow series.'
   ]
 } as const
 
