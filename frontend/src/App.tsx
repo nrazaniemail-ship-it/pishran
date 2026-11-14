@@ -10,10 +10,11 @@ import RollingWorkspace from './features/steel/RollingWorkspace'
 import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
 import FeasibilityWizard from './features/projects/FeasibilityWizard'
 import ProcessPlantWorkspace from './features/steel/ProcessPlantWorkspace'
+import IntegratedSteelComplexWorkspace from './features/steel/IntegratedSteelComplexWorkspace'
 import Guide from './features/guide/Guide'
 import BackupScheduler from './features/settings/BackupScheduler'
 
-type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'split-integrated' | 'process-plant' | 'guide'
+type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'split-integrated' | 'integrated-plant' | 'process-plant' | 'guide'
 
 const modules = [
   { icon: Factory, title: 'مهندسی و طراحی فرآیند', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', status: 'در نقشه راه' },
@@ -126,7 +127,7 @@ export default function App() {
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); const stage=project.steelStage||''; if(stage.includes('مجتمع احیاء')) setPage('split-integrated'); else if(stage.includes('احیای مستقیم')) {setActivePlantType('dri');setPage('process-plant')} else if(stage.includes('فولادسازی و ریخته‌گری')) {setActivePlantType('steelmaking');setPage('process-plant')} else if(stage.includes('نورد گرم')) setPage('hot-rolling'); else setPage('project-wizard') }}/>}
+    {page === 'projects' && <ProjectsView projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); const stage=project.steelStage||''; if(stage.includes('مجتمع احیاء')) setPage('integrated-plant'); else if(stage.includes('احیای مستقیم')) {setActivePlantType('dri');setPage('process-plant')} else if(stage.includes('فولادسازی و ریخته‌گری')) {setActivePlantType('steelmaking');setPage('process-plant')} else if(stage.includes('نورد گرم')) setPage('hot-rolling'); else setPage('project-wizard') }}/>}
     {page === 'guide' && <Guide/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}
@@ -140,6 +141,7 @@ export default function App() {
         <article className="project-card"><div className="module-icon"><Layers3 size={22}/></div><h3>پروژه مستقل فولادسازی و ریخته‌گری</h3><p>کوره ذوب، پالایش ثانویه، ریخته‌گری مداوم، گریدهای محصول، مواد آلیاژی و هزینه‌های اختصاصی فولادسازی.</p><button className="primary" onClick={async()=>{const created=await createProject({name:activeProject.name+' — فولادسازی و ریخته‌گری',industry:activeProject.industry,steelStage:'فولادسازی و ریخته‌گری (ذوب و ریخته‌گری مداوم)',capacity:'',location:activeProject.location});setProjects(await listProjects());setActiveProject(created);setActivePlantType('steelmaking');setPage('process-plant');await refreshStorage()}}>ایجاد و ورود به پروژه فولادسازی</button></article>
       </div>
     </section>}
+    {page === 'integrated-plant' && activeProject && <IntegratedSteelComplexWorkspace project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'process-plant' && activeProject && <ProcessPlantWorkspace project={activeProject} plantType={activePlantType} onBack={() => setPage('projects')}/>} 
 
     <footer>پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری <span>نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری</span></footer>
