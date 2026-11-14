@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react'
-import {CloudDownload,CloudUpload,FolderOpen,RotateCcw,ShieldCheck,Clock,HardDrive,AlertTriangle} from 'lucide-react'
-import {backupFolderStatus,backupIntervalMs,canUndoRestore,chooseBackupFolder,getBackupPreferences,getBackupPreferences as loadPrefs,parseBackup,restoreBackup,saveBackupFile,saveBackupPreferences,undoLastRestore,updateBackupMeta,type BackupPreferences,type BackupInterval} from '../../core/storage/backupService'
+import {CloudDownload,CloudUpload,FolderOpen,RotateCcw,ShieldCheck,Clock,AlertTriangle} from 'lucide-react'
+import {backupFolderStatus,backupIntervalMs,canUndoRestore,chooseBackupFolder,getBackupPreferences,parseBackup,restoreBackup,saveBackupFile,saveBackupPreferences,undoLastRestore,updateBackupMeta,type BackupPreferences,type BackupInterval} from '../../core/storage/backupService'
 
 const intervals:{value:BackupInterval;label:string}[]=[{value:'15m',label:'۱۵ دقیقه'},{value:'1h',label:'۱ ساعت'},{value:'6h',label:'۶ ساعت'},{value:'12h',label:'۱۲ ساعت'},{value:'1d',label:'۱ روز'},{value:'1w',label:'۱ هفته'}]
 const formatDate=(v:string)=>v?new Intl.DateTimeFormat('fa-IR',{dateStyle:'long',timeStyle:'short'}).format(new Date(v)):'هنوز پشتیبانی ساخته نشده است'
@@ -13,7 +13,6 @@ export default function BackupSettings({onRestored}:{onRestored:()=>Promise<void
  const [busy,setBusy]=useState(false)
  const [message,setMessage]=useState('')
  const [error,setError]=useState('')
- const [now,setNow]=useState(0)
 
  async function refresh(){const [p,f,u]=await Promise.all([getBackupPreferences(),backupFolderStatus(),canUndoRestore()]);setPrefs(p);setFolder(f);setUndoAvailable(u)}
  useEffect(()=>{void refresh()},[])
@@ -34,7 +33,6 @@ export default function BackupSettings({onRestored}:{onRestored:()=>Promise<void
   const timer=window.setInterval(()=>void check(),60000)
   return()=>{active=false;window.clearInterval(timer)}
  },[prefs?.enabled,prefs?.interval,prefs?.lastAt])
- useEffect(()=>{const t=window.setInterval(()=>setNow(Date.now()),60000);return()=>window.clearInterval(t)},[])
 
  async function update(next:Partial<BackupPreferences>){if(!prefs)return;const p={...prefs,...next};setPrefs(p);await saveBackupPreferences(p)}
  async function pickFolder(){setBusy(true);setError('');setMessage('');try{await chooseBackupFolder();await refresh();setMessage('پوشه پشتیبان با موفقیت انتخاب شد.')}catch(e){setError(e instanceof Error?e.message:'انتخاب پوشه ناموفق بود.')}finally{setBusy(false)}}
