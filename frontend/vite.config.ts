@@ -22,8 +22,8 @@ export default defineConfig({
         description: 'پلتفرم هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری',
         lang: 'fa',
         dir: 'rtl',
-        theme_color: '#101b2b',
-        background_color: '#f4f6f9',
+        theme_color: '#185ABD',
+        background_color: '#f5f7fa',
         display: 'standalone',
         start_url: '/pishran/',
         scope: '/pishran/',
@@ -34,7 +34,7 @@ export default defineConfig({
       },
       workbox: {
         // Force installed PWAs to discard stale pre-removal bundles and claim updated clients.
-        cacheId: 'pishran-1-0-1-refresh',
+        cacheId: 'pishran-1-0-1-office-refresh',
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
