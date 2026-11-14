@@ -16,6 +16,13 @@ export default function BackupSettings({onRestored}:{onRestored:()=>Promise<void
 
  async function refresh(){const [p,f,u]=await Promise.all([getBackupPreferences(),backupFolderStatus(),canUndoRestore()]);setPrefs(p);setFolder(f);setUndoAvailable(u)}
  useEffect(()=>{void refresh()},[])
+ useEffect(()=>{
+  const complete=()=>{void refresh();setMessage('پشتیبان‌گیری خودکار با موفقیت انجام شد.');setError('')}
+  const failed=(event:Event)=>{const detail=(event as CustomEvent<string>).detail;setError(detail||'پشتیبان‌گیری خودکار ناموفق بود.')}
+  window.addEventListener('pishran-backup-complete',complete)
+  window.addEventListener('pishran-backup-error',failed)
+  return()=>{window.removeEventListener('pishran-backup-complete',complete);window.removeEventListener('pishran-backup-error',failed)}
+ },[])
 
  async function update(next:Partial<BackupPreferences>){if(!prefs)return;const p={...prefs,...next};setPrefs(p);await saveBackupPreferences(p)}
  async function pickFolder(){setBusy(true);setError('');setMessage('');try{await chooseBackupFolder();await refresh();setMessage('پوشه پشتیبان با موفقیت انتخاب شد.')}catch(e){setError(e instanceof Error?e.message:'انتخاب پوشه ناموفق بود.')}finally{setBusy(false)}}
