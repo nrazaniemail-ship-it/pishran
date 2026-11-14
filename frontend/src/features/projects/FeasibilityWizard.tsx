@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Plus, Trash2, Save, CheckCircle2, AlertCircle, Printer } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
-import { calculateNpv as npv, calculateIrr as irr, calculateMirr as mirr } from '../steel/financialModel'\nimport AdvancedFinancePanel from './AdvancedFinancePanel'
+import { calculateNpv as npv, calculateIrr as irr, calculateMirr as mirr } from '../steel/financialModel'
+import AdvancedFinancePanel from './AdvancedFinancePanel'
 
 type Row = { id:string; name:string; quantity:number; unit:string; unitPrice:number; source:string }
 type Model = {
