@@ -316,3 +316,24 @@ footer{border-top-color:var(--line)}
  .hero{border-radius:14px;padding:24px 20px}
  .module,.kpi,.settings-card,.project-card{border-radius:10px}
 }
+
+:root[data-theme="dark"] .app-page-dashboard,.app-page-projects,.app-page-hot-rolling,.app-page-integrated-steel,.app-page-steel-group,.app-page-project-wizard,.app-page-guide,.app-page-settings{color-scheme:dark}
+:root[data-theme="dark"] .app-page-dashboard{--page-accent-soft:rgba(120,169,245,.14)}
+:root[data-theme="dark"] .app-page-projects,:root[data-theme="dark"] .app-page-hot-rolling,:root[data-theme="dark"] .app-page-integrated-steel,:root[data-theme="dark"] .app-page-steel-group{--page-accent-soft:rgba(98,194,139,.14)}
+:root[data-theme="dark"] .app-page-project-wizard{--page-accent-soft:rgba(240,138,110,.14)}
+:root[data-theme="dark"] .app-page-guide{--page-accent-soft:rgba(193,139,232,.14)}
+:root[data-theme="dark"] .app-page-settings{--page-accent-soft:rgba(120,169,245,.14)}
+:root[data-theme="dark"] .nav-item.active{background:rgba(120,169,245,.14);color:#a9caff}
+:root[data-theme="dark"] .module-icon,:root[data-theme="dark"] .tag,:root[data-theme="dark"] .gold,:root[data-theme="dark"] .draft-pill,:root[data-theme="dark"] .empty-icon{background:#2a3544;color:#b9d2fa}
+:root[data-theme="dark"] .module:nth-child(2) .module-icon,:root[data-theme="dark"] .module:nth-child(3) .module-icon{background:#20392d;color:#8bd4a7}
+:root[data-theme="dark"] .module:nth-child(4) .module-icon{background:#402b27;color:#f0a28c}
+:root[data-theme="dark"] .module:nth-child(5) .module-icon{background:#382943;color:#d3a5ee}
+:root[data-theme="dark"] .module:nth-child(6) .module-icon{background:#203747;color:#9bcaf0}
+:root[data-theme="dark"] .fw-result,:root[data-theme="dark"] .isw-intro,:root[data-theme="dark"] .hr-source-tag,:root[data-theme="dark"] .backup-last,:root[data-theme="dark"] .backup-message{background:#20392d;border-color:#315b43;color:#a9dfbb}
+:root[data-theme="dark"] .fw-report-panel{background:#352923;border-color:#694438}
+:root[data-theme="dark"] .guide-formulas{background:#382943;border-color:#594267}
+:root[data-theme="dark"] .guide-example{background:#203747}
+:root[data-theme="dark"] .guide-warning,:root[data-theme="dark"] .backup-warning{background:#3b3021;border-color:#66502e;color:#f2c47a}
+:root[data-theme="dark"] .backup-error{background:#3d252b;border-color:#653640;color:#ff9ca8}
+:root[data-theme="dark"] .backup-action-icon,:root[data-theme="dark"] .backup-auto-heading>span{background:#203747;color:#9bcaf0}
+:root[data-theme="dark"] .hr-tabs button.active,:root[data-theme="dark"] .fw-steps button.active,:root[data-theme="dark"] .isw-steps button.active{background:#24583a;border-color:#34764e;color:#c0f0d0}
