@@ -216,6 +216,27 @@ const integrated = engine.calculateIntegratedFinance({
   salvageValue: 50
 })
 near(integrated.wacc, 0.15, 1e-12, 'Integrated WACC')
+const taxSeparationInput = {
+  years: 3, constructionYears: 1, capacity: 10,
+  fullCapacityRevenue: 1000, fullCapacityVariableCashCost: 200,
+  fullCapacityFixedCashCost: 100, annualDepreciation: 50,
+  fixedInvestment: 100, preOperatingCost: 0,
+  fixedInvestmentSchedule: [100, 0, 0], preOperatingSchedule: [0, 0, 0],
+  utilization: [0, 1, 1], equityContributions: [60, 0, 0],
+  loans: [{ id: 'tax-test-loan', label: 'Tax test loan', drawdowns: [40, 0, 0],
+    annualRate: 10, graceYears: 0, termYears: 1, repaymentStartYear: 2,
+    repaymentMethod: 'bullet', capitalizeInterest: false }],
+  taxRate: 25, waccTaxRate: 25, costOfEquity: 20,
+  workingCapitalPercent: 0, salesEscalationPercent: 0, opexEscalationPercent: 0,
+  discountMode: 'wacc', manualDiscountRate: 25
+}
+const taxBase = engine.calculateIntegratedFinance(taxSeparationInput)
+const lowerOperatingTax = engine.calculateIntegratedFinance({ ...taxSeparationInput, taxRate: 5 })
+const lowerWaccTaxShield = engine.calculateIntegratedFinance({ ...taxSeparationInput, waccTaxRate: 20 })
+near(lowerOperatingTax.wacc, taxBase.wacc, 1e-12, 'Operating tax must not change WACC tax shield')
+assert.ok(lowerOperatingTax.years[1].tax < taxBase.years[1].tax, 'Operating tax rate must change cash taxes')
+assert.notEqual(lowerWaccTaxShield.wacc, taxBase.wacc, 'WACC tax shield rate must change WACC')
+near(lowerWaccTaxShield.years[1].tax, taxBase.years[1].tax, 1e-9, 'WACC tax shield must not change operating cash taxes')
 near(integrated.totalFunding, 1000, 1e-9, 'Integrated funding')
 near(integrated.peakWorkingCapital, 108.243216, 1e-9, 'Integrated working capital with OPEX escalation')
 near(integrated.fundingGap, 208.243216, 1e-9, 'Integrated funding gap with OPEX escalation')
@@ -381,6 +402,7 @@ assert.ok(workspaceSource.includes("'TOTAL CASH INFLOW':year.revenue+year.equity
 assert.ok(workspaceSource.includes("'TAXABLE PROFIT':year.taxableProfit"), 'COMFAR taxable profit must use loss carry-forward')
 assert.ok(workspaceSource.includes("'Interest':capitalizedInterest"), 'COMFAR investment cost must include only capitalized interest, not cash interest twice')
 assert.ok(workspaceSource.includes("'Total pre-production expenditures':year.preOperatingCost+capitalizedInterest,'Pre-production expenditures (net of interest)':year.preOperatingCost"), 'COMFAR pre-production subtotal must reconcile net expenditures plus capitalized interest')
+assert.ok(workspaceSource.includes("waccTaxRate:financeValue('نرخ مالیات برای سپر مالیاتی WACC (%)',25)"), 'WACC tax shield must be separately configurable from operating tax')
 assert.ok(workspaceSource.includes("annualPayablesCost:materialCost+energyCost+maintenanceCostTotal+otherOpexTotal"), 'Supplier credit must use eligible material, energy, maintenance and supplier purchases')
 assert.ok(workspaceSource.includes("annualFixedPayablesCost:financeValue('هزینه ثابت سالانه مشمول بدهی تجاری (یورو)',0)"), 'Fixed supplier-credit purchases must be separately configurable')
 assert.ok(workspaceSource.includes("'Recovery of net working capital':workingCapitalRecovery"), 'Cash flow statement must separately recover net working capital at the end of the project')
