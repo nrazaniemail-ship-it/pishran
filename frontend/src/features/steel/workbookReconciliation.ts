@@ -168,7 +168,13 @@ export const HOT_ROLLING_200KT_AUDIT = {
     mechanismTabDebtSharePercent: 80,
     mechanismTabEquitySharePercent: 20,
     fundingSummaryTabEquitySharePercent: 70,
-    fundingSummaryTabDebtSharePercent: 30
+    fundingSummaryTabDebtSharePercent: 30,
+    sponsorConfirmedEquitySharePercent: 70,
+    sponsorConfirmedDebtSharePercent: 30,
+    sponsorConfirmedEquityAmount: 13_091_985.2,
+    sponsorConfirmedDebtAmount: 5_610_850.8,
+    sponsorConfirmedFundingBase: 18_702_835.358529467,
+    sponsorConfirmedWaccPercent: 26.85
   }
 } as const
 
@@ -176,7 +182,7 @@ export const WORKBOOK_RECONCILIATION_FLAGS = [
   'DRI detailed annual depreciation is EUR 33,020,570, while COMFAR reference-year depreciation is EUR 26,727,770.59; the EUR 6,292,799.41 difference needs an asset-by-asset/year schedule bridge.',
   'DRI COMFAR total uses exceed total financing sources by EUR 18,632,333.14; the gap is not a funded source in the COMFAR sources table.',
   'The integrated cash-flow workbook includes net profit from an existing 700,000 t/y rolling line and a separate uplift after steelmaking starts; those are not the HRCR200 200,000 t/y project.',
-  'HRCR200 financing tabs conflict: the mechanism tab implies 80% debt/20% equity, while the funding summary and general specification imply 30% debt/70% equity. Preserve the selected benchmark only as provisional until the sponsor confirms the intended structure.',
+  'HRCR200 source tabs conflict (mechanism tab 80/20 versus funding summary 30/70); sponsor has confirmed 30% debt/70% equity. The model uses the funding-summary amounts on the construction-investment base, while the separate working-capital funding source remains unconfirmed.',
   'HRCR200 funding summary sources exceed construction uses including capitalized interest by 0.641470533 million IRR; this small difference may be rounding but is not silently adjusted.',
   'HRCR200 OPEX IRR-NPV uses row 9 (the difference of rows 7 and 8, both labelled discounted cash flows) as its IRR/MIRR vector and discounts it again for NPV; these reported metrics are not a verified raw unlevered project cash-flow basis.',
   'HRCR200 OPEX IRR-NPV links total investment to 16,587,131.78 million IRR, while the CAPEX workbook fixed investment is 18,463,008.72 million IRR and the project summary total including construction interest and working capital is 26,596,838.88 million IRR.',
