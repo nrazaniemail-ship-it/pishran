@@ -48,7 +48,7 @@ export default function IntegratedSteelComplexWorkspace({ project, onBack }: { p
       </article>
     </div>
     <div className="ppw-note"><b>{unit === 'dri' ? 'کارگاه احیای مستقیم' : 'کارگاه فولادسازی و ریخته‌گری'}</b><p>هر دو کارگاه با شناسه همین پروژه ذخیره می‌شوند؛ داده‌های فنی مستقل می‌مانند و پروژه به دو پروژه جداگانه تکثیر نمی‌شود.</p></div>
-    <ProcessPlantWorkspace project={project} plantType={unit} onBack={() => setUnit(unit === 'dri' ? 'steelmaking' : 'dri')}/>
+    <ProcessPlantWorkspace project={project} plantType={unit} onBack={onBack}/>
     <section className="analytics" style={{ marginTop: 24 }}>
       <article className="chart-card">
         <div className="card-heading"><div><span className="eyebrow">COMFAR CONTROL TOTALS</span><h3>مبنای تطبیق گزارش کامفار</h3></div><span className="tag">یورو</span></div>
