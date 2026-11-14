@@ -121,7 +121,7 @@ const fmt=(v:number)=>Number(v||0).toLocaleString('fa-IR',{maximumFractionDigits
 export default function ProcessPlantWorkspace({project,plantType,onBack}:{project:FeasibilityProject;plantType:PlantType;onBack:()=>void}){
  const sheets=useMemo(()=>definitions(plantType),[plantType]),key='process-plant:'+plantType+':'+project.id+':excel-sequence-v2'
  const [data,setData]=useState<Record<string,Row[]>>({}),[selected,setSelected]=useState(sheets[0].id),[ready,setReady]=useState(false),[saved,setSaved]=useState(''),[loadedKey,setLoadedKey]=useState('')
- useEffect(()=>{let alive=true;setReady(false);setLoadedKey('');localStore.get<Record<string,Row[]>>(key).then(v=>{if(alive){setData(v??{});setLoadedKey(key);setReady(true)}}).catch(()=>{if(alive){setData({});setLoadedKey(key);setReady(true)}});return()=>{alive=false}},[key])
+ useEffect(()=>{let alive=true;setReady(false);setLoadedKey('');localStore.get<Record<string,Row[]>>(key).then(v=>{if(alive){setData(v??{});setLoadedKey(key);setReady(true)}}).catch(()=>{if(alive){setData({});setReady(true)}});return()=>{alive=false}},[key])
  useEffect(()=>{if(ready&&loadedKey===key)void localStore.set(key,data).then(()=>setSaved(new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})))},[ready,loadedKey,key,data])
  const current=sheets.find(x=>x.id===selected)??sheets[0],rows=data[current.id]??makeRows(current,plantType)
  const updateRows=(next:Row[])=>setData(old=>({...old,[current.id]:next}))
