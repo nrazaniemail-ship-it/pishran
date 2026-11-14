@@ -179,6 +179,7 @@ const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)
   Object.assign(values,{expert:counts[0],technician:counts[1],secretary:counts[2],operator:counts[3],driver:counts[4],laborer:counts[5],allocation:shared?50:100})
  }
  if(['land','site','buildings','vehicles','infrastructure','office','preop'].includes(sheet.id))values.allocation=50
+ if(sheet.id==='preop'&&['بیمه ریسک پروژه — ۲٫۵ در هزار سرمایه‌گذاری ثابت','هزینه اخذ وام — ۱٫۲۵ در هزار سرمایه‌گذاری ثابت','سایر هزینه‌ها — ۵٪ ردیف‌های قبل'].includes(typeof entry==='string'?entry:''))values.allocation=100
  if(sheet.id==='machines')values.sharedAllocation=50
  if(sheet.id==='buildings')values.sharedFactor=([0,0,.5,0,0,.5,.5,0,.5,.5,.5,.5,0,.5,.5,.5][i]??0)
  if(sheet.id==='site')values.year=1
