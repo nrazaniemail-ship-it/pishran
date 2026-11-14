@@ -32,13 +32,13 @@ const sharedCapexRows={
  office:['کامپیوتر','تلفن مرکزی','تلفن','تجهیزات اداری','مبلمان غذاخوری','تجهیزات آشپزخانه','سایر تجهیزات'],
  preop:['مطالعات اولیه تا تصمیم‌گیری','مشاور مادر و همراهی مدیریت پروژه','هزینه کارگاهی دوران ساخت','هزینه دفتر مرکزی دوران ساخت','بیمه ریسک پروژه','هزینه اخذ وام توسط بانک عامل','سایر هزینه‌های پیش‌بینی‌نشده']
 }
-const machineRows=['دانش فنی و مجوزات','طراحی و مهندسی','ساخت و تأمین تجهیزات','تجهیزات فرایندی','تجهیزات برقی','تجهیزات ابزاردقیق، کنترل و اتوماسیون','سیستم‌های جانبی','حمل و نقل','تأمین مواد مصرفی ۶ ماهه جهت راه‌اندازی','قطعات یدکی دو سالانه','انجام کارهای سیویل، اسکلت فلزی','نصب تجهیزات مکانیکی، برقی، ابزار دقیقی و اتوماسیونی','راه‌اندازی سرد و گرم','کنترل پروژه و نظارت','آموزش']
+const machineRows=['دانش فنی و مجوزات','طراحی و مهندسی','ایستگاه تخلیه کامیون و دریافت گندله','نوار نقاله‌ها و متعلقات انتقال مواد','استاکر و ریکلایمر انباشت و برداشت','سیستم انتقال مواد به کوره احیاء','کوره شفت احیاء مستقیم و متعلقات','ریفورمر گاز طبیعی و کاتالیست نیکل','ریکوپراتور و بازیاب حرارتی','سیستم تصفیه و گردش گاز احیایی','سیستم گاز خنک‌کننده و بلورها','سیستم گاز خنثی','غبارگیر، فیلتر، اسکرابر و جمع‌آوری لجن','سیستم تولید، انباشت و انتقال آهن اسفنجی','تجهیزات برقی، ابزار دقیق و کنترل','تصفیه‌خانه آب و سیستم‌های خنک‌کننده','قطعات یدکی دو ساله و مواد راه‌اندازی','حمل، نصب، راه‌اندازی و آموزش']
 const steelStructureRows=['scrap Yard Bay','Service Bay','Charging & Teeming Bay','Caster Maintenance Bay','Caster Run-Out Table Bay','Slab Storage Bay','SMP Daily & Segment Rolls Maintenance Workshop Bay','Lime, Ferroalloys and Refractories Storage','Building Steel Structure, roofing and cladding','Piling, execution of civil work, Foundation']
 const structureCols=[c('length','طول','متر',true),c('width','عرض','متر'),c('craneLevel','تراز جرثقیل','متر'),c('steelStructure','سازه فولادی'),c('roofing','پوشش سقف'),c('cladding','پوشش دیوار'),c('steelWeight','وزن فولاد','تن',true),c('price','هزینه مرجع','یورو',true)]
 const makeStructureRows=():Row[]=>steelStructureRows.map((label,i)=>({id:'steel-structure-'+i,label,values:{length:[210,90,245,215,50,255,60,90][i]??0,width:['45','12','30','30','32','30','15','3x24'][i]??'',craneLevel:['+12','+38.5','+28.5','+28.5','+21','+14','+6','-(7)'][i]??'',steelStructure:i<8?(i===7?'MSS':'MSS + SSS'):'',roofing:i<8?(i===6?'IP':'SS'):'',cladding:i<8?(i===6?'IP':'SS'):'',steelWeight:i===8?12351:0,price:i===8?20949000:i===9?29550000:0}}))
-const driMaterials:(string|{label:string;section:true})[]=[{label:'مواد مصرفی واحد احیاء مستقیم — ظرفیت اسمی ۱٬۷۶۰٬۰۰۰ تن آهن اسفنجی',section:true},'گندله','حمل داخلی گندله','آهک پخته','کاتالیست','لوله‌های ریفورمر','مواد شیمیایی','روغن و گریس','جمع مواد مصرفی احیاء مستقیم','جمع کل مواد مصرفی']
+const driMaterials:(string|{label:string;section:true})[]=[{label:'مواد اولیه و کمکی واحد احیاء مستقیم — ظرفیت مرجع ۱٬۰۰۰٬۰۰۰ تن CDRI در سال',section:true},'گندله آهن','نرمه آهک / نرمه دولومیت','کاتالیست و لوله ریفورمر','روغن صنعتی','گریس','جمع مواد اولیه و کمکی','جمع کل مواد مصرفی']
 const steelMaterials:(string|{label:string;section:true})[]=[{label:'مواد مصرفی پایه فولاد ساختمانی — ظرفیت مرجع ۱٬۲۰۰٬۰۰۰ تن تختال',section:true},'آهن اسفنجی خریداری‌شده (خوراک مستقل فولادسازی)','قراضه قابل خرید با کسر قراضه برگشتی (۱۵ کیلوگرم)','حمل قراضه','دولومیت پخته','فرومنگنز پرکربن','فروسیلیسوم','آلومینیوم گرانوله','کک','پودر کربن','فلورین','آهک پخته','GUNNING MIXTURE','الکترود گرافیتی','نسوز کوره‌های قوس و پاتیلی','نسوز تاندیش','نسوز تعمیرات موضعی','پودر تاندیش','رابط مجرای خروجی مذاب','پودر قالب','نازل انتقال مذاب','میله متوقف‌کننده مذاب','قالب مسی ریخته‌گری مداوم','لوله اکسیژن‌کاری','روغن هیدرولیک و گریس','ترموکوپل','جمع مواد مصرفی فولاد پایه',{label:'مواد مصرفی اضافی اسلب گرید دریایی — ظرفیت مرجع ۲۴۰٬۰۰۰ تن',section:true},'نیکل — گرید دریایی','مس — گرید دریایی','فروکروم ۶۵٪ — گرید دریایی','جمع مواد مصرفی گرید دریایی',{label:'مواد مصرفی اضافی اسلب گرید API — ظرفیت مرجع ۶۶۰٬۰۰۰ تن',section:true},'نیکل — گرید API','فرومنگنز کم‌کربن ۷۸٪ — گرید API','فرومولیبدن ۶۰٪ — گرید API','فرونایوبیوم ۶۶٪ — گرید API','فرووانادیم ۶۰٪ — گرید API','فروتیتانیوم ۷۰٪ — گرید API','جمع مواد مصرفی گرید API',{label:'مواد مصرفی اضافی اسلب گرید مخازن تحت فشار — ظرفیت مرجع ۱۸۰٬۰۰۰ تن',section:true},'نیکل — گرید مخازن تحت فشار','فرومنگنز کم‌کربن ۷۸٪ — گرید مخازن تحت فشار','فرومولیبدن ۶۰٪ — گرید مخازن تحت فشار','فرونایوبیوم ۶۶٪ — گرید مخازن تحت فشار','جمع مواد مصرفی گرید مخازن تحت فشار','جمع کل مواد مصرفی']
-const driEnergy:(string|{label:string;section:true})[]=[{label:'انرژی مصرفی واحد احیاء مستقیم — ظرفیت اسمی ۱٬۷۶۰٬۰۰۰ تن DRI',section:true},'آب صنعتی','آب شرب — مترمکعب بر ساعت','برق مصرفی','اکسیژن گازی','گاز صنعتی','جمع هزینه انرژی',{label:'خلاصه انرژی واحد احیاء مستقیم',section:true},'آب — جمع مصرف سالیانه','برق مصرفی — جمع مصرف سالیانه','اکسیژن — جمع مصرف سالیانه','گاز — جمع مصرف سالیانه',{label:'مصارف فرآیندی تکمیلی احیاء',section:true},'آب واحد احیاء','گاز طبیعی واحد احیاء','اکسیژن واحد احیاء','برق واحد احیاء']
+const driEnergy:(string|{label:string;section:true})[]=[{label:'مصارف یوتیلیتی واحد احیاء مستقیم — ظرفیت مرجع ۱٬۰۰۰٬۰۰۰ تن CDRI در سال',section:true},'آب صنعتی فرآیند','گاز طبیعی فرآیند','برق مصرفی','جمع هزینه انرژی',{label:'مقادیر سالیانه مرجع — ۳۰۰ روز کاری',section:true},'آب صنعتی — ۱٬۵۰۰٬۰۰۰ مترمکعب در سال','گاز طبیعی — ۲۸۰٬۰۰۰٬۰۰۰ نرمال مترمکعب در سال','برق — ۱۳۰٬۰۰۰ مگاوات‌ساعت در سال',{label:'دیماند ساعتی مرجع',section:true},'آب — ۱۸۸ مترمکعب بر ساعت','گاز طبیعی — ۳۵٬۰۰۰ نرمال مترمکعب بر ساعت','برق — ۱۶٫۲۵ مگاوات','روزهای کاری سال — ۳۰۰']
 const steelEnergy:(string|{label:string;section:true})[]=[{label:'انرژی مصرفی واحد فولادسازی — ظرفیت اسمی ۱٬۲۰۰٬۰۰۰ تن تختال',section:true},'آب صنعتی','آب شرب — مترمکعب بر ساعت','برق مصرفی — ۵۶۸ کیلووات‌ساعت بر تن','اکسیژن گازی','گاز صنعتی','جمع هزینه انرژی',{label:'خلاصه انرژی واحد فولادسازی',section:true},'آب — جمع مصرف سالیانه','برق مصرفی — جمع مصرف سالیانه','اکسیژن — جمع مصرف سالیانه','گاز — جمع مصرف سالیانه',{label:'مصارف فرآیندی تکمیلی فولادسازی',section:true},'آب واحد فولادسازی','هوای فشرده — ۵۰٫۶ Nm³ بر تن','گاز طبیعی واحد فولادسازی','اکسیژن واحد فولادسازی','ازت — ۳٫۶ Nm³ بر تن','آرگن — ۰٫۵۴ Nm³ بر تن','برق واحد فولادسازی — ۵۶۸ kWh بر تن']
 const staffShared=['دفتر مدیریت','روابط عمومی']
 const staffDri=['بهره‌برداری احیاء مستقیم','تعمیرات احیاء مستقیم','تعمیرگاه احیاء','تأسیسات و پشتیبانی احیاء','برنامه‌ریزی تولید احیاء']
@@ -137,9 +137,8 @@ function definitions(type:PlantType):Sheet[]{
  return [...capex,...opex,...finance]
 }
 const materialDefaults:Record<string,{specific:number;unit:string;price:number;gradeShare?:number}> = {
- 'گندله':{specific:1.45,unit:'تن',price:115},'حمل داخلی گندله':{specific:1.45,unit:'تن',price:24.4},
- 'آهک پخته':{specific:2,unit:'کیلوگرم',price:.03},'کاتالیست':{specific:.0345,unit:'کیلوگرم',price:3},
- 'لوله‌های ریفورمر':{specific:.08,unit:'کیلوگرم',price:12.4},'مواد شیمیایی':{specific:3,unit:'کیلوگرم',price:.22},'روغن و گریس':{specific:.025,unit:'کیلوگرم',price:23.4},
+ 'گندله آهن':{specific:1.5,unit:'تن بر تن محصول',price:0},'نرمه آهک / نرمه دولومیت':{specific:7.7,unit:'کیلوگرم بر تن محصول',price:0},
+ 'کاتالیست و لوله ریفورمر':{specific:.1,unit:'کیلوگرم بر تن محصول',price:0},'روغن صنعتی':{specific:.024,unit:'کیلوگرم بر تن محصول',price:0},'گریس':{specific:.006,unit:'کیلوگرم بر تن محصول',price:0},
  'آهن اسفنجی خریداری‌شده (خوراک مستقل فولادسازی)':{specific:0,unit:'تن',price:0},'قراضه قابل خرید با کسر قراضه برگشتی (۱۵ کیلوگرم)':{specific:.05,unit:'تن',price:424},'حمل قراضه':{specific:.05,unit:'تن',price:8},
  'دولومیت پخته':{specific:26,unit:'کیلوگرم',price:.04},'فرومنگنز پرکربن':{specific:8,unit:'کیلوگرم',price:1.23},'فروسیلیسوم':{specific:4,unit:'کیلوگرم',price:1.12},
  'آلومینیوم گرانوله':{specific:6,unit:'کیلوگرم',price:1.61},'کک':{specific:15,unit:'کیلوگرم',price:.21},'پودر کربن':{specific:1,unit:'کیلوگرم',price:.5},
@@ -159,8 +158,8 @@ const materialDefaults:Record<string,{specific:number;unit:string;price:number;g
  'فرومولیبدن ۶۰٪ — گرید مخازن تحت فشار':{specific:1.6,unit:'کیلوگرم',price:18,gradeShare:.15},'فرونایوبیوم ۶۶٪ — گرید مخازن تحت فشار':{specific:.33,unit:'کیلوگرم',price:29.4,gradeShare:.15}
 }
 const energyDefaults:Record<string,{specific:number;unit:string;price?:number}> = {
- 'آب صنعتی':{specific:1.4,unit:'متر مکعب بر تن',price:.13},'آب شرب — مترمکعب بر ساعت':{specific:6,unit:'متر مکعب بر ساعت',price:.13},
- 'برق مصرفی':{specific:110,unit:'کیلووات ساعت بر تن',price:.04},'برق مصرفی — ۵۶۸ کیلووات‌ساعت بر تن':{specific:568,unit:'کیلووات ساعت بر تن',price:.04},
+ 'آب صنعتی فرآیند':{specific:1.5,unit:'مترمکعب بر تن محصول',price:0},'گاز طبیعی فرآیند':{specific:280,unit:'نرمال مترمکعب بر تن محصول',price:0},
+ 'برق مصرفی':{specific:130,unit:'کیلووات‌ساعت بر تن محصول',price:0},'برق مصرفی — ۵۶۸ کیلووات‌ساعت بر تن':{specific:568,unit:'کیلووات ساعت بر تن',price:.04},
  'اکسیژن گازی':{specific:15,unit:'نرمال متر مکعب بر تن',price:.08},'گاز صنعتی':{specific:250,unit:'نرمال متر مکعب بر تن',price:.06},
  'آب واحد احیا':{specific:1.4,unit:'m3'},'گاز طبیعی واحد احیا':{specific:250,unit:'Nm3'},'اکسیژن واحد احیا':{specific:15,unit:'Nm3'},'برق واحد احیا':{specific:110,unit:'kWh'},
  'آب واحد فولادسازی':{specific:2.5,unit:'m3'},'هوای فشرده — ۵۰٫۶ Nm³ بر تن':{specific:50.6,unit:'Nm3'},'گاز طبیعی واحد فولادسازی':{specific:20,unit:'Nm3'},
@@ -175,7 +174,7 @@ const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)
  if(sheet.id==='comfar-reconciliation'&&label==='جریان نقدی واقعی COMFAR (خالص پروژه)')comfarReferenceCashFlows.forEach((value,index)=>values['y'+(index+1)]=value)
  if(sheet.id==='project'&&typeof entry==='string'){
   if(label.startsWith('وام '))Object.assign(values,{rate:0,grace:0,term:label==='وام سرمایه در گردش'?1:10,repaymentStart:label==='وام سرمایه در گردش'?6:5,method:'اصل مساوی',capitalizeInterest:'خیر'})
-  if(label==='ظرفیت اسمی سالانه تولید (تن)')values.value=plantType==='dri'?1760000:1200000
+  if(label==='ظرفیت اسمی سالانه تولید (تن)')values.value=plantType==='dri'?1000000:1200000
   if(label==='تعداد سال دوره ساخت')values.value=4
   if(label==='تعداد سال دوره بهره‌برداری')values.value=15
   if(label==='تاریخ شروع دوره ساخت (شمسی)')values.value='1405/08/23'
@@ -189,7 +188,7 @@ const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)
   if(label==='روش نرخ تنزیل (WACC / دستی)')values.method='WACC'
   if(label==='نرخ تنزیل دستی (%)')values.value=0
   if(label==='سرمایه در گردش به درصد هزینه نقدی (%)')values.value=10
-  if(label==='ظرفیت مرجع برآورد CAPEX (تن)')values.value=plantType==='dri'?1760000:1200000
+  if(label==='ظرفیت مرجع برآورد CAPEX (تن)')values.value=plantType==='dri'?1000000:1200000
   if(label==='توان مقیاس زمین')values.value=.1
   if(label==='توان مقیاس محوطه‌سازی')values.value=.4
   if(label==='توان مقیاس ساختمان‌ها')values.value=.65
@@ -231,7 +230,7 @@ const makeRows=(sheet:Sheet,plantType:PlantType):Row[]=>sheet.rows.map((entry,i)
   if(sheet.id==='depreciation'){values.rate=([7,7,8,10,10,20,25,10][i]??0);values.scrap=10}
   if(sheet.id==='sales'){
    Object.assign(values,{ramp1:70,ramp2:80,ramp3:90,ramp4:100})
-   if(plantType==='dri')Object.assign(values,{price:275,mix:460000/1760000*100,annualQty:460000})
+   if(plantType==='dri')Object.assign(values,{price:99.97,mix:100,annualQty:1000000})
    else Object.assign(values,{price:[600,680,650,550][i]??0,mix:[20,55,15,10][i]??0})
   }
   if(sheet.id==='break-even')values.variable=([100,0,80,80,0,50][i]??0)
