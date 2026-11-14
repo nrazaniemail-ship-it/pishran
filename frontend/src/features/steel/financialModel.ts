@@ -52,6 +52,14 @@ export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPoli
   return { rawMaterials, workInProgress, finishedGoods, receivables, minimumCash, payables, netWorkingCapital: rawMaterials + workInProgress + finishedGoods + receivables + minimumCash - payables }
 }
 
+export function calculateCapacityScaledCapex(referenceCapex: number, referenceCapacity: number, targetCapacity: number, elasticity: number) {
+  const valid = [referenceCapex, referenceCapacity, targetCapacity, elasticity].every(Number.isFinite) && referenceCapex >= 0 && referenceCapacity > 0 && targetCapacity >= 0 && elasticity >= 0 && elasticity <= 1
+  if (!valid) return { amount: Number.NaN, factor: Number.NaN, ratio: Number.NaN, valid: false }
+  const ratio = targetCapacity / referenceCapacity
+  const factor = Math.pow(ratio, elasticity)
+  return { amount: referenceCapex * factor, factor, ratio, valid: Number.isFinite(factor) }
+}
+
 export type PayrollItem = {
   count: number
   monthlySalary: number
