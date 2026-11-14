@@ -1,86 +1,77 @@
 # Pishran | Intelligent Feasibility Platform
 
-A bilingual-ready, Persian-first Progressive Web App (PWA) starter for industrial and business feasibility studies.
+پیشران یک PWA فارسی‌محور برای امکان‌سنجی و ارزیابی پروژه‌های صنعتی و سرمایه‌گذاری است. نسخه فعلی با رویکرد **Local-first** اجرا می‌شود و برای استفاده پایه به حساب کاربری یا سرور نیاز ندارد.
 
-## Architecture
+## وضعیت فعلی محصول
 
-- **Frontend:** React + TypeScript + Vite + Tailwind CSS + ECharts + PWA (Workbox)
-- **Hosting:** GitHub Pages (static frontend)
-- **Backend:** Python + FastAPI (deploy independently, e.g. Render)
-- **Database:** Managed PostgreSQL (Render, Supabase, Neon, or private cloud)
-- **AI:** Provider-agnostic adapter; API keys stay on the backend
-- **Mobile:** Installable PWA; optional Android packaging through PWABuilder
+- ورود، ثبت‌نام، احراز هویت و اتصال حساب کاربری: فعلاً غیرفعال / به تعویق افتاده
+- ذخیره اطلاعات: محلی روی دستگاه
+- پایگاه داده مرورگر: IndexedDB با fallback به localStorage
+- تنظیمات: ذخیره پایدار محلی، با آینه‌سازی کلیدهای مهم
+- پشتیبان‌گیری و بازیابی: فایل JSON از داخل تنظیمات
+- وب: GitHub Pages + PWA
+- اندروید: Capacitor 7؛ وب و APK از یک کدبیس
+- Backend/FastAPI: فعلاً خارج از مسیر اجرایی رابط کاربری و نگه‌داری‌شده برای فاز همگام‌سازی آینده
 
-GitHub Pages serves static files only. It does not run FastAPI or PostgreSQL.
-
-## Repository layout
+## معماری لایه‌ای
 
 ```text
-frontend/          React PWA
-backend/           FastAPI and calculation modules
-.github/workflows/ GitHub Pages deployment
-docs/              Architecture and implementation roadmap
+frontend/src/
+  app/                 پوسته برنامه و مسیریابی
+  core/
+    storage/           مخزن محلی IndexedDB / localStorage
+    settings/          مدل و سرویس تنظیمات
+    projects/           مدل و repository پروژه‌ها
+  features/
+    dashboard/         داشبورد
+    projects/          فضای کاری پروژه‌ها
+    settings/          تنظیمات و پشتیبان‌گیری
+  shared/
+    components/        اجزای مشترک رابط کاربری
+    utils/             ابزارهای عمومی
 ```
 
-## Run locally
+ساختار فعلی به‌تدریج به این لایه‌ها گسترش می‌یابد؛ منطق ذخیره‌سازی و تنظیمات نباید داخل کامپوننت‌های صفحه پراکنده شود.
 
-### Frontend
+## ذخیره‌سازی و حریم خصوصی
+
+- داده‌ها به‌صورت پیش‌فرض از دستگاه خارج نمی‌شوند.
+- IndexedDB محل اصلی ذخیره داده‌های برنامه است؛ در صورت در دسترس نبودن، localStorage استفاده می‌شود.
+- تنظیمات کوچک برای بارگذاری سریع و هماهنگی PWA در localStorage نیز آینه می‌شوند.
+- از مسیر **تنظیمات ← ذخیره‌سازی و پشتیبان** می‌توان فایل JSON گرفت یا اطلاعات را بازیابی کرد.
+- پاک‌کردن داده‌های مرورگر یا حذف برنامه ممکن است داده‌های محلی را حذف کند؛ فایل پشتیبان را در محل امن دیگری نگه دارید.
+
+## اجرای محلی
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-### Backend
+ساخت نسخه وب:
+
 ```bash
-cd backend
-python -m venv .venv
-# Windows: .venv\\Scripts\\activate
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+npm run build
 ```
 
-Frontend expects `VITE_API_BASE_URL` (default `http://localhost:8000`).
+ساخت APK آزمایشی اندروید (پس از نصب Android SDK و Java 17):
 
-### PostgreSQL with Docker
-From repository root:
 ```bash
-docker compose up -d db
+npm run android:add
+npm run android:apk
 ```
-Set `DATABASE_URL` in `backend/.env` to your PostgreSQL connection string. For local development, the API starter currently works without a database; persistence is the next implementation milestone.
 
-## GitHub Pages setup
+## انتشار
 
-1. In GitHub, open **Settings → Pages → Build and deployment**.
-2. Set **Source** to **GitHub Actions**.
-3. In **Settings → Secrets and variables → Actions → Variables**, add:
-   - `VITE_API_BASE_URL`: public HTTPS URL of the deployed FastAPI service.
-4. Push to `main`; workflow builds and deploys `frontend/dist`.
+- نسخه وب از طریق GitHub Actions در GitHub Pages منتشر می‌شود.
+- نسخه اندروید با Capacitor ساخته می‌شود.
+- Workflow اندروید، APK آزمایشی را به‌صورت Artifact در اجرای GitHub Actions قرار می‌دهد.
 
-The Vite base path is configured for `/pishran/`. If using a custom domain, change `base` in `frontend/vite.config.ts` to `/`.
+## Backend آینده
 
-## Backend deployment
+پوشه `backend/` فعلاً فقط پایه محاسبات و API را نگه می‌دارد. رابط کاربری نسخه فعلی به آن وابسته نیست. احراز هویت، سازمان‌ها، همگام‌سازی ابری و PostgreSQL تا زمان تصمیم برای فعال‌سازی مجدد، غیرفعال باقی می‌مانند.
 
-A `render.yaml` blueprint is included as a starting point. Before production:
-- create a managed PostgreSQL database;
-- set `DATABASE_URL`;
-- set `CORS_ORIGINS` to the exact GitHub Pages origin and any custom domain;
-- set AI provider credentials as backend environment secrets only;
-- enable backups, monitoring, TLS, and a migration process.
+## هشدار
 
-## Product modules (planned)
-
-1. Project workspace and assumptions register
-2. Process engineering and capacity / mass-energy balance
-3. Market intelligence and source provenance
-4. CAPEX / OPEX and financial model
-5. NPV, IRR, MIRR, DSCR, break-even and debt schedule
-6. Scenario manager, sensitivity and Monte Carlo
-7. Risk register and investment committee dashboard
-8. AI copilot with citations, audit trail and human approval
-9. Report builder (bank / investor / internal)
-
-## Important
-
-This repository is a **working foundation**, not a validated feasibility-study engine. Financial and engineering calculations must be implemented with documented formulas, units, tests, source references, and independent domain review before being used for investment decisions.
+پیشران در این مرحله یک پایه در حال توسعه است. خروجی‌های نمونه یا محاسبات اولیه نباید بدون فرمول مستند، آزمون مرجع و بازبینی مهندسی/مالی مبنای تصمیم سرمایه‌گذاری قرار گیرند.
