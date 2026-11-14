@@ -42,7 +42,7 @@ The annual operating cost bridge is consistent: COMFAR's full-capacity operating
 The COMFAR PDF's total-investment cash-flow report (pages 66–70) states:
 - NPV: **31,399,764.27 million Rial**, at **25%**, valuation date **12/1404**
 - IRR: **48.31%**
-- MIRR: **28.03%**
+- MIRR: **28.03%** (COMFAR reports the result, but the extracted report pages do not disclose the finance/reinvestment rates used to calculate it; do not infer those rates from the result).
 - Simple payback: **3.86 years**
 - Discounted payback: **5.02 years**
 
@@ -76,7 +76,7 @@ This is a definition mismatch: the current Pishran project cash flow excludes fi
 
 ### D. Operating tax causes the largest recurring operating-period difference
 
-At full capacity, the current Pishran model uses the OPEX sheet's 5% operating tax. COMFAR's report reflects 25% income tax. This produces a recurring annual cash-flow difference of roughly 3.4–3.7 billion million Rial in later full-capacity periods. The tax rate must be a scenario input sourced to a specific workbook/report, not a single global constant.
+At full capacity, the current Pishran model uses the OPEX sheet's 5% operating tax. COMFAR's report reflects 25% income tax. This produces a recurring annual cash-flow difference of roughly 3,422,000–3,727,000 million Rial (about 3.4–3.7 trillion Rial) in later full-capacity periods. The tax rate must be a scenario input sourced to a specific workbook/report, not a single global constant.
 
 ### E. Depreciation is modeled as a flat override, but the source is asset-specific
 
