@@ -704,6 +704,41 @@ const capexBridgeMissingFx = engine.reconcileFixedInvestmentRegister([{
 }],0,0)
 assert.equal(capexBridgeMissingFx.status,'unreconciled','Foreign acquisition without an exchange rate must not reconcile')
 
+
+const hrcrFixedAssets=reference.createHotRollingCoilFixedInvestmentItems()
+const hrcrAssetBridge=engine.reconcileFixedInvestmentRegister(
+  hrcrFixedAssets,
+  workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.constructionInvestment,
+  workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.preproductionNet
+)
+near(hrcrAssetBridge.registerTotal,workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.fixedInvestment,0.01,
+  'HRCR fixed asset register must reconcile to CAPEX fixed investment')
+near(hrcrAssetBridge.preproductionTotal,workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.preproductionNet,0.01,
+  'HRCR preproduction register must reconcile separately')
+assert.equal(hrcrAssetBridge.status,'matched','HRCR fixed assets and preproduction expenditures must reconcile as separate categories')
+const hrcrAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(
+  hrcrFixedAssets,1403,17,'annual',reference.createHotRollingCoilProjectFoundation()
+)
+assert.ok(hrcrAssetBuild.assets.length>=18,'HRCR reference must create asset acquisition vintages from the CAPEX workbook')
+near(hrcrAssetBuild.investmentSchedule.reduce((sum,value)=>sum+value,0),
+  workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.fixedInvestment,0.01,
+  'HRCR asset acquisition schedule must exclude preproduction costs and reconcile to fixed investment')
+assert.equal(hrcrAssetBuild.investmentScheduleVerified,false,
+  'HRCR construction timing estimates must not be treated as verified investment cash flows')
+assert.ok(hrcrAssetBuild.warnings.some(warning=>warning.includes('proportional estimate')),
+  'HRCR acquisition timing assumptions must be disclosed')
+assert.ok(hrcrAssetBuild.warnings.some(warning=>warning.includes('source documents conflict')),
+  'HRCR depreciation condition conflicts must be disclosed')
+const hrcrSite=hrcrFixedAssets.find(item=>item.id==='hrcr-site')
+near(hrcrSite.acquisitions[0].unitPrice,126360.2406094665,0.01,
+  'HRCR site preparation first construction-period acquisition must match the CAPEX source-year rows')
+const hrcrMachinery=hrcrFixedAssets.find(item=>item.id==='hrcr-machinery-local')
+near(hrcrMachinery.depreciation.ratePercent,10.97955,1e-6,
+  'HRCR machinery depreciation rate must use the detailed OPEX depreciation table')
+const hrcrInfrastructure=hrcrFixedAssets.find(item=>item.id==='hrcr-infrastructure-depreciable')
+near(hrcrInfrastructure.depreciation.ratePercent,12,1e-9,
+  'HRCR infrastructure depreciation rate must use the detailed OPEX depreciation table')
+
 const comfarLinearZero = engine.calculateComfarAssetDepreciationSchedule([{
   id:'linear-zero',name:'Linear zero',originalValue:1000,initialBookValue:1000,scrapPercent:10,
   lengthYears:5,lengthMonths:0,ratePercent:20,method:'linear-to-zero',
