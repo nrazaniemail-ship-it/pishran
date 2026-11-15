@@ -43,7 +43,7 @@ export default function FixedInvestmentPanel({ value, foundation, onChange, lang
 
   return <section className="fw-card" style={{ marginTop: 18 }}>
     <h3>{t('دفتر عمومی هزینه‌های سرمایه‌گذاری ثابت','Fixed Investment Register')}</h3>
-    <p className="fw-hint">{t('این دفتر برای همه صنایع و قالب‌ها مشترک است. هر طبقه دارایی می‌تواند چند نوبت تحصیل، ارز، شرایط استهلاک و فروش مستقل داشته باشد. ثبت فرم هنوز به معنی محاسبه استهلاک یا اثر فروش در صورت‌های مالی نیست؛ اتصال موتور در گام بعد انجام می‌شود.','This register is shared across industries and templates. Each asset class can have multiple acquisition periods, currencies, depreciation conditions and disposals. Entering the form does not yet calculate depreciation or disposal effects in the financial statements; engine integration follows.')}</p>
+    <p className="fw-hint">{t('این دفتر برای همه صنایع و قالب‌ها مشترک است. هر طبقه دارایی می‌تواند چند نوبت تحصیل، ارز، شرایط استهلاک و فروش مستقل داشته باشد. فعلاً جمع این دفتر با CAPEX تجمیعی دوباره جمع نمی‌شود تا از دوباره‌شماری جلوگیری شود. محاسبه استهلاک و اثر فروش در صورت‌های مالی پس از تکمیل موتور به آن متصل خواهد شد.','This register is shared across industries and templates. Each asset class can have multiple acquisition periods, currencies, depreciation conditions and disposals. The register total is not yet added to aggregate CAPEX, preventing double-counting. Depreciation and disposal effects will be connected after the calculation engine is completed.')}</p>
     {value.map(item => <div className="fw-card" key={item.id}>
       <div className="fw-grid">
         {field(t('شرح دارایی','Fixed Investment Item'), item.description, v => updateItem(item.id, { description: v }))}
