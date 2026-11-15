@@ -979,6 +979,15 @@ const validAsset = {
 }
 assert.equal(foundation.validateFixedInvestmentItems([validAsset], validFoundation).length, 0,
   'A complete local fixed-asset record must pass register validation')
+const landDepreciation = { ...validAsset, id:'land-depreciation', assetClass:'land' }
+assert.ok(foundation.validateFixedInvestmentItems([landDepreciation], validFoundation).some(issue=>issue.code==='land-not-depreciable'),
+  'Land must not be depreciated')
+const saleBeforeAcquisition = {
+  ...validAsset,
+  sales:[{id:'sale-early',acquisitionId:'acq-1',period:'1402',market:'local',priceMode:'self-defined',currencyCode:'IRR',selfDefinedPrice:50}]
+}
+assert.ok(foundation.validateFixedInvestmentItems([saleBeforeAcquisition], validFoundation).some(issue=>issue.code==='asset-sale-before-acquisition'),
+  'Asset disposal cannot precede acquisition')
 const invalidSumDigitsPartial = {
   ...validAsset, id:'asset-sum-partial',
   depreciation:{method:'sum-of-digits',startingAt:'1405-01-01',ratePercent:null,lengthYears:5,lengthMonths:0,firstDepreciationMonths:6,scrapPercent:10}
@@ -1007,7 +1016,7 @@ assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
   'Common project foundation form must cover the base schedules without inventing unknown assumptions')
 const fixedInvestmentPanel = await readFile(new URL('../src/features/projects/FixedInvestmentPanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('FixedInvestmentPanel')
-  && foundationWizard.includes('fixedInvestmentItems:v.fixedInvestmentItems??[]')
+  && foundationWizard.includes('fixedInvestmentItems:(v.fixedInvestmentItems??[]).map(item=>({...item,depreciation:')
   && foundationWizard.includes('fixedInvestmentItems:[]'),
   'The reusable fixed investment register must be persisted in new and legacy project models')
 assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
@@ -1017,6 +1026,6 @@ assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
   && fixedInvestmentPanel.includes('Linear to scrap')
   && fixedInvestmentPanel.includes('Accelerated')
   && fixedInvestmentPanel.includes('Sum of years digits')
-  && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX'),
+  && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX') && fixedInvestmentPanel.includes('first depreciation year'),
   'Fixed investment foundation must capture acquisition periods, COMFAR depreciation conditions and asset disposals without double-counting CAPEX')
 console.log('PASS: industry-independent project foundation schema, blank defaults, validation and wizard persistence')
