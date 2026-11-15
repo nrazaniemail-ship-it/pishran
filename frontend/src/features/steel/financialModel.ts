@@ -776,7 +776,7 @@ export function calculateComfarAssetDepreciationSchedule(
     const valid = [asset.originalValue, asset.initialBookValue, asset.scrapPercent, asset.lengthYears, months, firstMonths].every(Number.isFinite)
       && asset.originalValue >= 0 && asset.initialBookValue >= 0 && scrapValue <= asset.initialBookValue + 1e-8
       && asset.scrapPercent >= 0 && asset.scrapPercent <= 100
-      && Number.isInteger(asset.lengthYears) && asset.lengthYears >= 0
+      && Number.isFinite(asset.lengthYears) && asset.lengthYears >= 0
       && Number.isInteger(months) && months >= 0 && months <= 11
       && (asset.method === 'none' || length > 0) && Number.isInteger(firstMonths) && firstMonths >= 1 && firstMonths <= 12
       && startPeriod !== null
