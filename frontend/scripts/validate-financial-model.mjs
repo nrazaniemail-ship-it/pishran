@@ -705,6 +705,18 @@ assert.ok(expansionPanelSource.includes('Starting Balances')
   && expansionPanelSource.includes('Work in progress')
   && expansionPanelSource.includes('Finished Product Inventory'),
   'Expansion/rehabilitation English UI must use COMFAR Reference Manual terminology')
+assert.ok(expansionPanelSource.includes('Work in Progress — by Product')
+  && expansionPanelSource.includes('Finished Product Inventory — by Product')
+  && expansionPanelSource.includes('localValue')
+  && expansionPanelSource.includes('foreignValue')
+  && expansionPanelSource.includes('foreignSharePercent')
+  && expansionPanelSource.includes("saved.workInProgress??")
+  && expansionPanelSource.includes("saved.finishedProducts??"),
+  'Expansion/Rehabilitation Starting Balances must support product-level WIP and finished goods, including legacy-data migration')
+assert.ok(expansionPanelSource.includes('Local Accounts Receivable Liquidation Period (Days)')
+  && expansionPanelSource.includes('Local Accounts Payable Payout Period (Days)')
+  && expansionPanelSource.includes('Short-term deposits have only a local-currency field'),
+  'COMFAR current-asset and liability starting balances must retain collection and payout periods and local-only short-term deposits')
 assert.ok(expansionPanelSource.includes('Residual / salvage value')
   && expansionPanelSource.includes('Depreciation method')
   && expansionPanelSource.includes('Cost Centre')
