@@ -148,7 +148,7 @@ export default function App() {
         <article className="project-card"><div className="module-icon"><Layers3 size={22}/></div><h3>پروژه مستقل فولادسازی و ریخته‌گری</h3><p>کوره ذوب، پالایش ثانویه، ریخته‌گری مداوم، گریدهای محصول، مواد آلیاژی و هزینه‌های اختصاصی فولادسازی.</p><button className="primary" onClick={async()=>{const created=await createProject({name:activeProject.name+' — فولادسازی و ریخته‌گری',industry:activeProject.industry,steelStage:'فولادسازی و ریخته‌گری (ذوب و ریخته‌گری مداوم)',capacity:'',location:activeProject.location});setProjects(await listProjects());setActiveProject(created);setActivePlantType('steelmaking');setPage('process-plant');await refreshStorage()}}>ایجاد و ورود به پروژه فولادسازی</button></article>
       </div>
     </section>}
-    {page === 'integrated-plant' && activeProject && <IntegratedSteelComplexWorkspace project={activeProject} onBack={() => setPage('projects')}/>}
+    {page === 'integrated-plant' && activeProject && <IntegratedSteelComplexWorkspace language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'process-plant' && activeProject && <ProcessPlantWorkspace project={activeProject} plantType={activePlantType} onBack={() => setPage('projects')}/>} 
 
     <footer>{isEn ? "Pishran · Intelligent Feasibility & Investment Assessment Platform" : "پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری"} <span>{isEn ? "Version 1.0.1 · No sign-in required" : "نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری"}</span></footer>
