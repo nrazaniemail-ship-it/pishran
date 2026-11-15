@@ -139,7 +139,7 @@ export default function App() {
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language} onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}
     {page === 'hot-rolling' && <RollingWorkspace language={settings.language} project={activeProject ?? undefined} onBack={() => setPage('projects')}/>}
-    {page === 'project-wizard' && activeProject && <FeasibilityWizard project={activeProject} onBack={() => setPage('projects')}/>}
+    {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'split-integrated' && activeProject && <section className="projects-page split-integrated-page" dir="rtl">
       <div className="page-heading"><div><span className="eyebrow">PISHRAN / PROJECT SEPARATION</span><h1>تفکیک پروژه مجتمع فولادی</h1><p>{activeProject.name}</p></div><button className="secondary-button" onClick={() => setPage('projects')}>بازگشت به پروژه‌ها</button></div>
       <div className="ppw-note"><b>این پروژه قدیمی به‌صورت یکپارچه تعریف شده است.</b><p>برای رعایت استقلال مطالعات، دو پروژه جداگانه ایجاد می‌شوند. ظرفیت هر واحد عمداً خالی می‌ماند تا ظرفیت مستقل احیاء و فولادسازی را جداگانه وارد کنید. اطلاعات مالی یا فنی پروژه یکپارچه به‌طور خودکار بین دو پروژه کپی نمی‌شود.</p></div>
