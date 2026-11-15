@@ -93,7 +93,8 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  const wipTotal=state.workInProgress.reduce((sum,item)=>sum+item.localValue+item.foreignValue,0)+((state.workInProgress.length===0)?state.opening.wipLocal+state.opening.wipForeign:0)
  const currentAssets=state.opening.rawMaterialsLocal+state.opening.rawMaterialsForeign+state.opening.suppliesLocal+state.opening.suppliesForeign+wipTotal+finished+state.opening.receivablesLocal+state.opening.receivablesForeign+state.opening.cashLocal+state.opening.cashForeign+state.opening.shortTermDepositsLocal+state.opening.cashSurplusLocal+state.opening.cashSurplusForeign+state.opening.otherAssetsLocal
  const debt=state.loans.reduce((sum,l)=>sum+l.openingBalance,0)
- const liabilities=state.opening.payablesLocal+state.opening.payablesForeign+state.opening.otherLiabilitiesLocal+debt
+ const accruedLoanInterest=state.loans.reduce((sum,l)=>sum+(l.accruedInterest??0),0)
+ const liabilities=state.opening.payablesLocal+state.opening.payablesForeign+state.opening.otherLiabilitiesLocal+debt+accruedLoanInterest
  const equity=state.opening.paidInCapital+state.opening.retainedEarnings-state.opening.accumulatedLosses+state.opening.grants
  const totalAssets=currentAssets+fixedNet
  const balanceDifference=totalAssets-liabilities-equity
@@ -166,7 +167,7 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
    <button className="secondary-button" onClick={()=>setState(s=>({...s,loans:s.loans.filter(l=>l.id!==loan.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
   </div>)}
   <button className="secondary-button" onClick={addLoan}><Plus size={14}/>{t('افزودن تسهیلات موجود','Add Existing Loan')}</button>
-  <div className="fw-result">{t('جمع بدهی افتتاحیه','Opening Debt Total')}: <b>{fmt(debt)}</b> · {t('جمع بدهی و حقوق مالکانه','Liabilities & Equity')}: <b>{fmt(liabilities+equity)}</b> · {t('اختلاف تراز افتتاحیه','Opening Balance Difference')}: <b>{fmt(balanceDifference)} {currency}</b> {Math.abs(balanceDifference)<0.01?'✓':'⚠'}</div>
+  <div className="fw-result">{t('اصل بدهی افتتاحیه','Opening Debt Principal')}: <b>{fmt(debt)}</b> · {t('بهره معوق پرداختنی','Accrued Interest Payable')}: <b>{fmt(accruedLoanInterest)}</b> · {t('جمع بدهی و حقوق مالکانه','Liabilities & Equity')}: <b>{fmt(liabilities+equity)}</b> · {t('اختلاف تراز افتتاحیه','Opening Balance Difference')}: <b>{fmt(balanceDifference)} {currency}</b> {Math.abs(balanceDifference)<0.01?'✓':'⚠'}</div>
   <p className="fw-hint">{t('کنترل تراز صرفاً اختلاف را نشان می‌دهد و هیچ رقم ترازکننده‌ای به سود انباشته یا حقوق مالکانه اضافه نمی‌کند. جزء ارز خارجی هنوز به ماژول Currencies و نرخ تبدیل/درمان اقتصادی آن متصل نشده است؛ بنابراین کنترل تراز تا تکمیل این اتصال و نگاشت حسابداری، مقدماتی است.','The balance check reports the difference and never inserts a balancing plug into retained earnings or equity. The foreign currency component is not yet linked to the Currencies module and its exchange-rate/economic treatment; treat this balance check as provisional until that link and the accounting mapping are completed.')}</p>
   <h4>{t('۴. تحلیل افزایشی ـ بدون طرح','4. Incremental Analysis — Without Project')}</h4>
   {inputFields('without',state.without)}
