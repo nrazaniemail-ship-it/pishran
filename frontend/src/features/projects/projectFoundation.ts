@@ -8,6 +8,9 @@ export type ProjectFoundation = {
   schemaVersion: 1
   planning: {
     periodFrequency: ProjectPeriodFrequency
+    projectStartDate: string
+    projectEndDate: string
+    fiscalYearStartMonth: number | null
     balanceDateMonth: number | null
     balanceDateDay: number | null
     dayCountBasis: 360 | 365 | null
@@ -46,6 +49,9 @@ export function createBlankProjectFoundation(): ProjectFoundation {
     schemaVersion: 1,
     planning: {
       periodFrequency: 'unspecified',
+      projectStartDate: '',
+      projectEndDate: '',
+      fiscalYearStartMonth: null,
       balanceDateMonth: null,
       balanceDateDay: null,
       dayCountBasis: null,
@@ -80,6 +86,23 @@ export function validateProjectFoundation(value: ProjectFoundation): ProjectFoun
   const issue = (path: string, severity: ProjectFoundationIssue['severity'], code: string, message: string) =>
     issues.push({ path, severity, code, message })
   const planning = value.planning
+  const validIsoDate = (date: string) => {
+    const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(date)
+    if (!match) return false
+    const year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
+    if (month < 1 || month > 12 || day < 1) return false
+    return day <= new Date(Date.UTC(year, month, 0)).getUTCDate()
+  }
+  if (planning.projectStartDate && !validIsoDate(planning.projectStartDate))
+    issue('planning.projectStartDate', 'error', 'invalid-project-start-date', 'Project start date must be a valid YYYY-MM-DD date.')
+  if (planning.projectEndDate && !validIsoDate(planning.projectEndDate))
+    issue('planning.projectEndDate', 'error', 'invalid-project-end-date', 'Project end date must be a valid YYYY-MM-DD date.')
+  if (planning.projectStartDate && planning.projectEndDate && validIsoDate(planning.projectStartDate) && validIsoDate(planning.projectEndDate) && planning.projectEndDate < planning.projectStartDate)
+    issue('planning.projectEndDate', 'error', 'project-end-before-start', 'Project end date cannot be earlier than project start date.')
+  if (planning.fiscalYearStartMonth === null)
+    issue('planning.fiscalYearStartMonth', 'warning', 'missing-fiscal-year-start-month', 'Fiscal year start month has not been defined.')
+  else if (!Number.isInteger(planning.fiscalYearStartMonth) || planning.fiscalYearStartMonth < 1 || planning.fiscalYearStartMonth > 12)
+    issue('planning.fiscalYearStartMonth', 'error', 'invalid-fiscal-year-start-month', 'Fiscal year start month must be an integer from 1 to 12.')
   if (planning.periodFrequency === 'unspecified')
     issue('planning.periodFrequency', 'warning', 'missing-period-frequency', 'Financial period frequency has not been defined.')
   if (planning.balanceDateMonth === null)
@@ -152,6 +175,74 @@ export function validateProjectFoundation(value: ProjectFoundation): ProjectFoun
   return issues
 }
 
+
+
+export type ProjectCalendarPeriod = {
+  index: number
+  startDate: string
+  endDate: string
+  days: number
+  partial: boolean
+}
+
+function utcDateOnly(value: string): Date | null {
+  const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(value)
+  if (!match) return null
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? date : null
+}
+
+function isoDateOnly(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+function addUtcMonths(date: Date, months: number): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1))
+}
+
+/**
+ * Builds contiguous financial periods from an inclusive project start/end date.
+ * Annual, semiannual and quarterly periods align to the selected fiscal-year start;
+ * monthly periods align to calendar months. The first and last periods may be partial.
+ */
+export function buildProjectCalendarPeriods(
+  projectStartDate: string,
+  projectEndDate: string,
+  frequency: Exclude<ProjectPeriodFrequency, 'unspecified'>,
+  fiscalYearStartMonth = 1,
+): ProjectCalendarPeriod[] {
+  const start = utcDateOnly(projectStartDate)
+  const end = utcDateOnly(projectEndDate)
+  if (!start || !end || end < start || !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12) return []
+  const monthsPerPeriod = frequency === 'monthly' ? 1 : frequency === 'quarterly' ? 3 : frequency === 'semiannual' ? 6 : 12
+  const anchorMonth = frequency === 'monthly' ? 1 : fiscalYearStartMonth
+  const startMonthIndex = start.getUTCFullYear() * 12 + start.getUTCMonth()
+  const anchorIndex = start.getUTCFullYear() * 12 + (anchorMonth - 1)
+  const elapsed = startMonthIndex - anchorIndex
+  const periodOffset = Math.floor(elapsed / monthsPerPeriod) * monthsPerPeriod
+  let boundary = addUtcMonths(new Date(Date.UTC(start.getUTCFullYear(), anchorMonth - 1, 1)), periodOffset)
+  while (addUtcMonths(boundary, monthsPerPeriod) <= start) boundary = addUtcMonths(boundary, monthsPerPeriod)
+  const endExclusive = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1))
+  const periods: ProjectCalendarPeriod[] = []
+  let cursor = start
+  while (cursor < endExclusive && periods.length < 1200) {
+    const nextBoundary = addUtcMonths(boundary, monthsPerPeriod)
+    const periodEndExclusive = nextBoundary < endExclusive ? nextBoundary : endExclusive
+    const days = Math.round((periodEndExclusive.getTime() - cursor.getTime()) / 86400000)
+    if (days <= 0) return []
+    periods.push({
+      index: periods.length + 1,
+      startDate: isoDateOnly(cursor),
+      endDate: isoDateOnly(new Date(periodEndExclusive.getTime() - 86400000)),
+      days,
+      partial: cursor.getTime() !== boundary.getTime() || periodEndExclusive.getTime() !== nextBoundary.getTime(),
+    })
+    cursor = periodEndExclusive
+    boundary = nextBoundary
+  }
+  return cursor.getTime() === endExclusive.getTime() ? periods : []
+}
 
 export type StartingFixedAssetBalance = {
   id: string
