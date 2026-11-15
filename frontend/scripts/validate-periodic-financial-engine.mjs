@@ -110,7 +110,7 @@ function buildQuarterPeriods(startYear, count) {
 }
 const hrcr200Quarters = buildQuarterPeriods(1403, 21)
 const hrcr200Principal = 3816495.99
-const hrcr200AnnualEffectiveRate = 29.33398475149375
+const hrcr200AnnualEffectiveRate = 29.333398475149375
 const hrcr200Loan = engine.calculatePeriodicLoanSchedule({
   annualRatePercent: hrcr200AnnualEffectiveRate,
   drawdowns: [hrcr200Principal, ...Array(20).fill(0)],
@@ -123,7 +123,7 @@ const hrcr200Loan = engine.calculatePeriodicLoanSchedule({
   periodsPerYear: 4,
 }, hrcr200Quarters, 365)
 assert.equal(hrcr200Loan.valid, true)
-assert.ok(Math.abs(hrcr200Loan.rows[1].periodRatePercent - 7.33349618787344) < 1e-10)
+assert.ok(Math.abs(hrcr200Loan.rows[1].periodRatePercent - 7.333349618787344) < 1e-10)
 assert.ok(Math.abs(hrcr200Loan.rows[1].principal - 89759.7075467898) < 1e-6)
 assert.ok(Math.abs(hrcr200Loan.rows[1].interestExpense - 279876.9941336993) < 1e-6)
 assert.ok(Math.abs(hrcr200Loan.rows[1].debtService - 369636.70168048906) < 1e-6)
