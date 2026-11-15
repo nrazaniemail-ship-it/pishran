@@ -646,3 +646,30 @@ near(capitalizedLoanModel.loanSchedules.capitalized[1].capitalizedInterest,10.5,
 near(capitalizedLoanModel.loanSchedules.capitalized[2].principal,57.75,1e-9,'Equal principal repayment includes capitalized interest')
 assert.ok(engine.buildThreeFinancialStatements(capitalizedLoanModel.years).every(r=>r.balanceSheet.reconciled),'Capitalized interest must be recognized as an asset and balance sheet liability')
 
+
+const withoutEnterprise = [
+  { revenue:0, cashOperatingCosts:0, tax:0, capex:0, changeInWorkingCapital:0 },
+  { revenue:500, cashOperatingCosts:400, tax:0, capex:0, changeInWorkingCapital:0 }
+]
+const withEnterprise = [
+  { revenue:0, cashOperatingCosts:0, tax:0, capex:1000, changeInWorkingCapital:0 },
+  { revenue:2000, cashOperatingCosts:500, tax:0, capex:0, changeInWorkingCapital:100 }
+]
+const incremental = engine.calculateIncrementalEnterpriseAnalysis(withoutEnterprise, withEnterprise, 0.1)
+near(incremental.periods[0].incrementalCashFlow, -1000, 1e-9, 'Expansion incremental construction outflow')
+near(incremental.periods[1].incrementalCashFlow, 1400, 1e-9, 'Expansion incremental operating cash flow')
+near(incremental.incrementalNpv, 272.72727272727275, 1e-8, 'Expansion incremental NPV')
+near(incremental.incrementalIrr, 0.4, 1e-8, 'Expansion incremental IRR')
+assert.equal(incremental.periods.length, 2, 'Incremental analysis must preserve aligned period count')
+const expansionPanelSource = await readFile(new URL('../src/features/projects/ExpansionRehabilitationPanel.tsx', import.meta.url), 'utf8')
+const expansionWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+assert.ok(expansionWizardSource.includes("analysisMode: 'new'|'expansion'|'rehabilitation'|'combined'")
+  && expansionWizardSource.includes("m.analysisMode!=='new'&&<ExpansionRehabilitationPanel"),
+  'Project wizard must activate the existing-enterprise module only for expansion/rehabilitation classifications')
+assert.ok(expansionPanelSource.includes('calculateIncrementalEnterpriseAnalysis')
+  && expansionPanelSource.includes('Opening Balance Difference')
+  && expansionPanelSource.includes('opportunityValue')
+  && expansionPanelSource.includes('withoutProjectCashFlow')
+  && expansionPanelSource.includes('withProjectCashFlow'),
+  'Expansion form must expose opening balances, opportunity values and with/without/incremental scenarios')
+console.log('PASS: COMFAR-style existing-enterprise opening balances and incremental with/without-project analysis')
