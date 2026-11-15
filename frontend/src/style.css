@@ -594,3 +594,9 @@ input,select,textarea{color:var(--text)}
   :root[data-theme="dark"]{--muted:#c0cccf;--line:#53656a}
   .nav-item.active,.primary{outline:1px solid currentColor}
 }
+
+
+/* Accent consistency: primary actions follow the selected palette */
+.primary{background:var(--accent);color:var(--accent-text)}
+.primary:hover{background:color-mix(in srgb,var(--accent) 86%,var(--text));color:var(--accent-text)}
+:root[data-theme="dark"] .primary{background:var(--accent);color:var(--accent-text)}
