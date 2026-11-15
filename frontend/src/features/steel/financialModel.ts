@@ -714,7 +714,7 @@ export type ComfarDepreciationSchedule = {
 
 /** COMFAR VII.N: pre-existing assets start at Starting at; later acquisitions start in the following production period. */
 export function resolveComfarDepreciationStartPeriod(acquisitionPeriod: number, startingAtPeriod: number): number | null {
-  if (!Number.isInteger(acquisitionPeriod) || acquisitionPeriod < 1 || !Number.isInteger(startingAtPeriod) || startingAtPeriod < 1) return null
+  if (!Number.isInteger(acquisitionPeriod) || acquisitionPeriod < 0 || !Number.isInteger(startingAtPeriod) || startingAtPeriod < 1) return null
   return acquisitionPeriod < startingAtPeriod ? startingAtPeriod : acquisitionPeriod + 1
 }
 
@@ -815,7 +815,7 @@ export function calculateComfarAssetDepreciationSchedule(
       }
     }
 
-    let rollingBookValue = 0
+    let rollingBookValue = asset.acquisitionPeriod === 0 ? asset.initialBookValue : 0
     for (let period = 1; period <= count; period += 1) {
       if (period < asset.acquisitionPeriod) {
         perAsset.get(period)!.push({
