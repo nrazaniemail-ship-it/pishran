@@ -23,6 +23,8 @@ assert.ok(directory.validateFinancialMethodParameters('depreciation.straight-lin
   usefulLifeYears: 0, scrapPercent: 120, firstPeriodMonths: 6.5
 }).length >= 3, 'Invalid depreciation parameters must fail closed')
 assert.equal(directory.getFinancialMethod('taxation.period-rate-schedule').calculationStatus, 'implemented')
+assert.ok(directory.getFinancialMethod('taxation.period-rate-schedule').limitations.includes('tax payment timing'),
+  'Period tax method must disclose remaining jurisdictional and tax-payment limitations')
 assert.equal(directory.getFinancialMethod('taxation.loss-carry-forward').benchmarkStatus, 'partial')
 assert.ok(directory.validateFinancialMethodParameters('taxation.period-rate-schedule', { taxRates: 25 }).length === 0)
 assert.ok(directory.validateFinancialMethodParameters('taxation.loss-carry-forward', { openingLoss: -1, taxRatePercent: 25 }).length >= 1)

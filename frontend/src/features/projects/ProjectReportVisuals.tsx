@@ -1,4 +1,5 @@
 import type { OneWaySensitivityAnalysis } from '../steel/financialModel'
+import type { PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
 
 type Props = {
   language: 'fa' | 'en'
@@ -22,6 +23,7 @@ type Props = {
   irrEquity: number | null
   mirrEquity: number | null
   sensitivity: OneWaySensitivityAnalysis | null
+  periodicResult: PeriodicProjectFinanceResult | null
 }
 
 const referenceRows: [string,string,string,string][] = [
@@ -191,6 +193,21 @@ export default function ProjectReportVisuals(props: Props) {
       <div className="fw-validation"><span>{t('سال شروع / دوره ساخت / بهره‌برداری','Start year / construction / operation',language)}</span><b>{fmtValue(project.startYear,0)} / {fmtValue(project.constructionYears,1)} / {fmtValue(project.operatingYears,1)}</b></div>
       <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('شاخص','Indicator',language)}</th><th>{t('مقدار','Value',language)}</th><th>{t('واحد','Unit',language)}</th></tr></thead><tbody>{currentRows.map((row,i)=><tr key={i}><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td></tr>)}</tbody></table></div>
     </div>
+    {props.periodicResult?.valid&&<div className="fw-card">
+      <h4>{t('خروجی‌های مدل مالی دوره‌ای','Periodic Financial Model Outputs',language)}</h4>
+      <div className="fw-grid">
+        <div className="fw-result">NPV · {fmtValue(props.periodicResult.npvProject)} {project.currency}</div>
+        <div className="fw-result">IRR · {props.periodicResult.irrProject==null?'—':fmtValue(props.periodicResult.irrProject)+'%'}</div>
+        <div className="fw-result">MIRR · {props.periodicResult.mirrProject==null?'—':fmtValue(props.periodicResult.mirrProject)+'%'}</div>
+        <div className="fw-result">{t('NPV سهامدار','Equity NPV',language)} · {fmtValue(props.periodicResult.npvEquity)} {project.currency}</div>
+        <div className="fw-result">{t('IRR سهامدار','Equity IRR',language)} · {props.periodicResult.irrEquity==null?'—':fmtValue(props.periodicResult.irrEquity)+'%'}</div>
+        <div className="fw-result">{t('اوج سرمایه در گردش','Peak working capital',language)} · {fmtValue(props.periodicResult.peakWorkingCapital)} {project.currency}</div>
+      </div>
+      <div style={{overflowX:'auto',maxHeight:420}}><table className="fw-table"><thead><tr><th>{t('دوره','Period',language)}</th><th>{t('تاریخ','Dates',language)}</th><th>{t('نرخ مالیات','Tax rate',language)}</th><th>{t('بهره','Interest',language)}</th><th>{t('اصل','Principal',language)}</th><th>CFADS</th><th>DSCR</th><th>{t('جریان نقد پروژه','Project FCF',language)}</th><th>{t('جریان نقد سهامدار','Equity FCF',language)}</th></tr></thead><tbody>{props.periodicResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.startDate} – {row.endDate}</td><td>{fmtValue(row.taxRatePercent)}%</td><td>{fmtValue(row.interestExpense)}</td><td>{fmtValue(row.principal)}</td><td>{fmtValue(row.cfads)}</td><td>{row.dscr==null?'—':fmtValue(row.dscr)+'x'}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.equityFreeCashFlow)}</td></tr>)}</tbody></table></div>
+      {props.periodicResult.warnings.length>0&&<p className="fw-hint">{props.periodicResult.warnings.join(' · ')}</p>}
+    </div>}
+    {props.periodicResult&&!props.periodicResult.valid&&<div className="fw-hint">{t('مدل دوره‌ای به علت نقص یا ناسازگاری ورودی‌ها محاسبه نشده است:','Periodic model was not calculated because inputs are incomplete or inconsistent:',language)} {props.periodicResult.warnings.join(' · ')}</div>}
+    {!props.periodicResult&&<p className="fw-hint">{t('برای نمایش خروجی دوره‌ای، تاریخ‌ها و تناوب مالی را در فونداسیون پروژه تعیین و مرحله جریان نقدی را باز کنید.','Set project dates and financial frequency in the project foundation and open the cash-flow step to generate periodic outputs.',language)}</p>}
     {isHotRollingCoil&&<div className="fw-card">
       <h4>{t('جدول مشخصات کلی پروژه ـ مرجع فایل OPEX','General Project Specification — OPEX Workbook Reference',language)}</h4>
       <p className="fw-hint">{t('این جدول مقادیر مستند شیت «مشخصات کلی طرح» را حفظ می‌کند؛ این ارقام، snapshot تاریخی فایل مرجع هستند و با مفروضات جاری مدل جایگزین نمی‌شوند.','This table preserves the source values from the “General Project Specifications” sheet. These are historical workbook values and are not silently substituted for current model assumptions.',language)}</p>
