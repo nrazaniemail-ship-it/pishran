@@ -615,3 +615,10 @@ input,select,textarea{color:var(--text)}
 .hr-ref-table-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}.fw-table-save-row{display:flex;direction:ltr;justify-content:flex-start;margin:0 0 10px}
 
 .brand-title{border:0;background:none;color:inherit;text-align:start;padding:0;min-width:0}.language-switch{display:inline-flex;align-items:center;justify-content:center;min-width:43px;height:43px;padding:0 10px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text);font-weight:800;letter-spacing:.3px;box-shadow:0 2px 8px #17223512}.language-switch:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+
+
+/* Keep the language control anchored to the page's upper-left corner. */
+.topbar{position:relative}
+.page-language-switch{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:2}
+.topbar .brand{margin-left:58px}
+@media(max-width:650px){.page-language-switch{top:18px;transform:none}.topbar .brand{margin-left:58px}}
