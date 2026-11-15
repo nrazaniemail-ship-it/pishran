@@ -618,6 +618,28 @@ near(assetSchedule[3].closingBookValue, 600, 1e-9, 'Asset book value at residual
 
 
 
+
+const capexBridge = engine.reconcileFixedInvestmentRegister([registerAsset],200,0)
+near(capexBridge.registerTotal,200,1e-9,'Fixed investment register must sum acquisitions in local currency')
+near(capexBridge.capexFixedAssetTarget,200,1e-9,'CAPEX reconciliation target must exclude pre-operating costs')
+near(capexBridge.difference,0,1e-9,'Matching fixed investment register and CAPEX must reconcile')
+assert.equal(capexBridge.status,'matched','A fully reconciled fixed investment register must be marked matched')
+const capexBridgeWithPreop = engine.reconcileFixedInvestmentRegister([registerAsset],250,50)
+near(capexBridgeWithPreop.capexFixedAssetTarget,200,1e-9,'Pre-operating expenses must be excluded from fixed-asset reconciliation')
+const capexBridgeMismatch = engine.reconcileFixedInvestmentRegister([registerAsset],260,0)
+assert.equal(capexBridgeMismatch.status,'unreconciled','A difference between register and aggregate CAPEX must be flagged')
+assert.ok(capexBridgeMismatch.warnings.length>0,'Unreconciled CAPEX must produce an actionable warning')
+const capexBridgeForeign = engine.reconcileFixedInvestmentRegister([{
+  ...registerAsset,origin:'foreign',
+  acquisitions:[{id:'fx-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:300}]
+}],60000,0)
+near(capexBridgeForeign.registerTotal,60000,1e-9,'Foreign fixed-asset acquisitions must be translated to local currency before reconciliation')
+const capexBridgeMissingFx = engine.reconcileFixedInvestmentRegister([{
+  ...registerAsset,origin:'foreign',
+  acquisitions:[{id:'fx-missing',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:null}]
+}],0,0)
+assert.equal(capexBridgeMissingFx.status,'unreconciled','Foreign acquisition without an exchange rate must not reconcile')
+
 const comfarLinearZero = engine.calculateComfarAssetDepreciationSchedule([{
   id:'linear-zero',name:'Linear zero',originalValue:1000,initialBookValue:1000,scrapPercent:10,
   lengthYears:5,lengthMonths:0,ratePercent:20,method:'linear-to-zero',
