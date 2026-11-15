@@ -135,11 +135,11 @@ export const EXCEL_HOT_ROLLING_200KT = {
     row('opex-marketing','بازاریابی مستقیم (۰٫۱٪ فروش طبق فرمول سلول)',1,'تن محصول',0.311298,'به‌ازای هر تن','بازاریابی')
   ],
   market:[],
-  notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. ساختار تأمین مالی با تأیید حامی پروژه ۷۰٪ آورده و ۳۰٪ بدهی است؛ مبنای مبلغی آن سرمایه‌گذاری ساخت ۱۸٬۷۰۲٬۸۳۵٫۳۶ میلیون ریال است و مقادیر گزارش‌شده منابع به‌ترتیب ۱۳٬۰۹۱٬۹۸۵٫۲ و ۵٬۶۱۰٬۸۵۰٫۸ میلیون ریال‌اند. نرخ WACC بازحساب‌شده با هزینه حقوق صاحبان سهام ۳۰٪، هزینه بدهی ۲۶٪ و سپر مالیاتی ۲۵٪ برابر ۲۶٫۸۵٪ است. نرخ ۲۱٪ شیت IRR-NPV فقط به‌عنوان نرخ تاریخی گزارش منبع نگهداری شده و WACC ساختار تأییدشده نیست. منبع تأمین سرمایه در گردش در فایل صریح نیست و در تسهیلات مدل به‌عنوان بدهی جدید فرض نشده است. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ جداگانه نگهداری شده‌اند. جریان‌های نقدی مرجع COMFAR در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند.'
+  notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. ساختار تأمین مالی با تأیید حامی پروژه ۷۰٪ آورده و ۳۰٪ بدهی است؛ مبنای مبلغی آن سرمایه‌گذاری ساخت ۱۸٬۷۰۲٬۸۳۵٫۳۶ میلیون ریال است و مقادیر گزارش‌شده منابع به‌ترتیب ۱۳٬۰۹۱٬۹۸۵٫۲ و ۵٬۶۱۰٬۸۵۰٫۸ میلیون ریال‌اند. نرخ WACC بازحساب‌شده با هزینه حقوق صاحبان سهام ۳۰٪، هزینه بدهی ۲۶٪ و سپر مالیاتی ۲۵٪ برابر ۲۶٫۸۵٪ است. نرخ ۲۱٪ شیت IRR-NPV فقط به‌عنوان نرخ تاریخی گزارش منبع نگهداری شده و WACC ساختار تأییدشده نیست. منبع تأمین سرمایه در گردش در فایل صریح نیست و در تسهیلات مدل به‌عنوان بدهی جدید فرض نشده است. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ جداگانه نگهداری شده‌اند. جریان‌های نقدی مرجع reference در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند.'
 } as const
 
 
-/** Cached reference values from the original Excel sheets and the COMFAR cash-flow export. */
+/** Cached reference values from the original Excel sheets and the reference cash-flow export. */
 export const EXCEL_REFERENCE_EXPECTED = {
   capacity:200000,
   rawMaterials:40844287,
@@ -168,7 +168,7 @@ export const EXCEL_REFERENCE_EXPECTED = {
   financeRate:0.26,
   reinvestmentRate:0.30,
   /** Row 9, periods C:S in OPEX sheet "IRR-NPV". This is the difference of rows 7 and 8, both labelled discounted cash flows; it is retained only to reproduce the sheet's reported metrics, not as a raw unlevered project cash-flow vector. */
-  comfarIrrNpvNetDiscountedCashFlows:[
+  referenceIrrNpvNetDiscountedCashFlows:[
     -7908572.82,-5905218.02,3926279.2047649994,8140613.077362001,
     8941506.638881996,9688834.216513,9860858.381308004,9573587.738720998,
     9520342.875225,9520342.875225,9520342.875225,9520342.875225,
@@ -181,7 +181,7 @@ export const EXCEL_REFERENCE_EXPECTED = {
     'The IRR-NPV sheet total-investment link is 16,587,131.78 million IRR, while CAPEX fixed investment is 18,463,008.72 and total project investment including construction interest and working capital is 26,596,838.88 million IRR.',
     'The CAPEX workbook calculates WACC at 21.284299%; the OPEX IRR-NPV sheet rounds the discount rate to 21%.',
     'The 5% operating tax in the sales sheet and 25% WACC tax shield in the CAPEX discount-rate sheet are separate source assumptions.',
-    'IRR-NPV cash flows are imported from COMFAR and are not calculated by the source Excel workbook from the operating-cost tabs.'
+    'IRR-NPV cash flows are imported from reference and are not calculated by the source Excel workbook from the operating-cost tabs.'
   ]
 } as const
 
