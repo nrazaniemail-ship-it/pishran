@@ -1756,7 +1756,7 @@ export function buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(
     const exact=currency.exchangeRates.find(row=>row.period===period)
     const annual=currency.exchangeRates.find(row=>Number(/^(\d{4})/.exec(row.period)?.[0])===date.getUTCFullYear())
     const rate=exact?.rateToLocal??annual?.rateToLocal
-    return Number.isFinite(rate)&&(rate??0)>0?rate!:null
+    return typeof rate==='number'&&Number.isFinite(rate)&&rate>0?rate:null
   }
   const acquisitionIds=new Set<string>()
   for(const item of activeItems){
