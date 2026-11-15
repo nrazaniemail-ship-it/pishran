@@ -251,3 +251,31 @@
 | انتقال زیان | Loss Carry-forward |
 | نرخ مالیات دوره‌ای | Period-specific Tax Rate |
 | مبنای شمارش روز | Day-count Basis |
+
+
+## دفتر دارایی و سرمایه‌گذاری ثابت — Fixed Investment
+
+| فارسی | English term |
+|---|---|
+| دفتر دارایی‌های ثابت | Fixed Investment Register |
+| قلم سرمایه‌گذاری ثابت | Fixed Investment Item |
+| طبقه دارایی | Asset Class |
+| منشأ دارایی | Asset Origin |
+| دوره تحصیل دارایی | Acquisition Period |
+| هزینه‌های دارایی | Costs of Assets |
+| مقدار | Quantity |
+| قیمت | Price |
+| جمع | Total |
+| شرایط استهلاک | Depreciation Conditions |
+| نوع استهلاک | Type of Depreciation |
+| شروع استهلاک | Starting at |
+| نرخ استهلاک سالانه | Rate (% per annum) |
+| مدت استهلاک | Length |
+| ارزش اسقاط | Scrap |
+| فروش دارایی | Sale of Asset |
+| تاریخ فروش | Date of Sale |
+| بازار فروش | Sale Market |
+| فروش به ارزش دفتری | Sale at book value |
+| قیمت تعریف‌شده | Self-defined price |
+| درآمد/زیان غیرعادی | Extraordinary income/loss |
+| برگشت سرمایه | Return of capital |
