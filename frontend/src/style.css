@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 :root{font-family:'Vazirmatn',Tahoma,sans-serif;color:#172235;background:#f3f5f8;font-synthesis:none;text-rendering:optimizeLegibility;--page:#f3f5f8;--surface:#fff;--text:#172235;--muted:#7c8999;--line:#e5eaf0;--navy:#172c45;--accent:#dcb565;--accent-text:#182b40}
 :root[data-theme="dark"]{--page:#0c1420;--surface:#152235;--text:#e8eef5;--muted:#9baabd;--line:#28384c;--navy:#203852}
@@ -1346,7 +1346,6 @@ input,select,textarea{color:var(--text)}
 }
 
 /* User-selectable font families from the appearance settings directory. */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
 :root[data-font="vazirmatn"]{font-family:'Vazirmatn',Tahoma,sans-serif}
 :root[data-font="tahoma"]{font-family:Tahoma,'Vazirmatn',sans-serif}
 :root[data-font="arial"]{font-family:Arial,'Vazirmatn',sans-serif}
@@ -1355,6 +1354,14 @@ input,select,textarea{color:var(--text)}
 :root[data-font="sahel"]{font-family:'Sahel','Vazirmatn',Tahoma,sans-serif}
 :root[data-font="shabnam"]{font-family:'Shabnam','Vazirmatn',Tahoma,sans-serif}
 :root[data-font="samim"]{font-family:'Samim','Vazirmatn',Tahoma,sans-serif}
+:root[data-font="nazanin"]{font-family:'B Nazanin','BNazanin','Nazanin','Vazirmatn',serif}
+:root[data-font="titr"]{font-family:'B Titr','BTitr','Titr','Vazirmatn',sans-serif}
+:root[data-font="inter"]{font-family:'Inter','Vazirmatn',sans-serif}
+:root[data-font="roboto"]{font-family:'Roboto','Vazirmatn',sans-serif}
+:root[data-font="opensans"]{font-family:'Open Sans','Vazirmatn',sans-serif}
+:root[data-font="lato"]{font-family:'Lato','Vazirmatn',sans-serif}
+:root[data-font="montserrat"]{font-family:'Montserrat','Vazirmatn',sans-serif}
+:root[data-font="poppins"]{font-family:'Poppins','Vazirmatn',sans-serif}
 :root[data-font="serif"]{font-family:Georgia,'Times New Roman',serif}
 :root[data-font="mono"]{font-family:ui-monospace,'Courier New',monospace}
 .font-directory-note{color:var(--muted);font-size:11px;line-height:1.9;margin:4px 2px 12px}
