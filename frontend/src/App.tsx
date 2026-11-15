@@ -52,6 +52,11 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    document.documentElement.lang = settings.language
+    document.documentElement.dir = settings.language === 'en' ? 'ltr' : 'rtl'
+  }, [settings.language])
+
+  useEffect(() => {
     if (!ready) return
     applySettings(settings)
     void saveSettings(settings)
