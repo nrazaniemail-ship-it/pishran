@@ -61,7 +61,7 @@ const smartIssues:ValidationIssue[]=useMemo(()=>{
 const total=(a:R[])=>a.reduce((v,x)=>v+x.value*x.price,0)
 const capex=total(m.driCapex)+total(m.steelCapex)+total(m.sharedCapex),opex=total(m.driOpex)+total(m.steelOpex)+total(m.sharedOpex)
 return <section className="fw-page isw-page" dir="rtl">
-<header className="fw-head"><button className="secondary-button" onClick={onBack}><ArrowRight size={16}/> پروژه‌ها</button><div><span className="eyebrow">INTEGRATED DRI + STEELMAKING</span><h1>{m.name}</h1><p>{m.location} · مجتمع احیاء مستقیم و فولادسازی اسلب</p></div><span className="fw-save"><Save size={14}/>{ready?(saved?'ذخیره خودکار · '+saved:'ذخیره محلی فعال'):'در حال بارگذاری'}</span></header>
+<header className="fw-head"><button className="secondary-button" onClick={onBack}><ArrowRight size={16}/> پروژه‌ها</button><div><h1>{m.name}</h1><p>{m.location} · مجتمع احیاء مستقیم و فولادسازی اسلب</p></div><span className="fw-save"><Save size={14}/>{ready?(saved?'ذخیره خودکار · '+saved:'ذخیره محلی فعال'):'در حال بارگذاری'}</span></header>
 <div className="isw-intro"><b>دو واحد مستقل، یک موازنه مجتمع</b><p>احیاء مستقیم، آهن اسفنجی را تولید می‌کند؛ بخشی به‌عنوان خوراک داخلی فولادسازی منتقل و فقط مازاد آن محصول قابل فروش مجتمع محسوب می‌شود.</p></div><ValidationPanel issues={smartIssues} title="کنترل هوشمند مجتمع احیاء و فولادسازی"/>
 <nav className="fw-steps isw-steps">{names.map((x,i)=><button key={x} className={s===i?'active':''} onClick={()=>setS(i)}><small>{fmt(i+1)}</small><span>{x}</span></button>)}</nav>
 <main className="fw-content">
