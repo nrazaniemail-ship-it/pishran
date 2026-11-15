@@ -961,7 +961,6 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
       }
     }
     const sortedEvents = [...events.entries()].sort(([a], [b]) => a.localeCompare(b))
-    const finalEventDate = sortedEvents[sortedEvents.length - 1]?.[0]
     let previousDate = start
     let accruedInterest = input.openingAccruedInterest ?? 0
     let totalInterest = 0
