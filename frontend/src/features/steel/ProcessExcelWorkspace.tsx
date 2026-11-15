@@ -111,6 +111,7 @@ function Editor({sheet,rows,onChange,onSave}:{sheet:Sheet;rows:Row[];onChange:(r
  const update=(rowId:string,key:string,value:Cell)=>onChange(rows.map(row=>row.id===rowId?{...row,[key]:value}:row))
  const add=()=>onChange([...rows,{id:id(),...Object.fromEntries(sheet.columns.map(col=>[col.key,col.type==='number'?0:'']))}])
  return <div className="fw-card">
+  <div className="fw-card-save-row"><button type="button" className="secondary-button fw-save-button" onClick={onSave}><Save size={14}/> ذخیره این بخش</button></div>
   <div className="fw-card-head"><h3>{sheet.title}</h3><button className="secondary-button" onClick={add}><Plus size={14}/> افزودن ردیف</button></div>
   <div className="fw-hint">{sheet.note}</div>
   <div className="pxw-table-scroll"><table className="pxw-table"><thead><tr>{sheet.columns.map(col=><th key={col.key}>{col.label}{col.unit?' ('+col.unit+')':''}</th>)}<th>حذف</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}>{sheet.columns.map(col=><td key={col.key}><input aria-label={col.label} type={col.type==='number'?'number':'text'} value={row[col.key]??(col.type==='number'?0:'')} onChange={e=>update(row.id,col.key,col.type==='number'?Number(e.target.value):e.target.value)}/></td>)}<td><button className="icon-button" aria-label="حذف ردیف" onClick={()=>onChange(rows.filter(x=>x.id!==row.id))}><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>
