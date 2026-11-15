@@ -1,3 +1,5 @@
+import type { FixedInvestmentItem } from '../projects/projectFoundation'
+
 export type CapitalStructureInput = {
   equityWeight: number
   debtWeight: number
@@ -688,6 +690,8 @@ export type ComfarDepreciationAssetInput = {
   acquisitionPeriod: number
   startingAtPeriod: number
   firstDepreciationMonths?: number
+  acquisitionDate?: string
+  startingAtDate?: string
 }
 
 export type ComfarAssetDepreciationRow = {
@@ -713,9 +717,29 @@ export type ComfarDepreciationSchedule = {
 }
 
 /** COMFAR VII.N: pre-existing assets start at Starting at; later acquisitions start in the following production period. */
-export function resolveComfarDepreciationStartPeriod(acquisitionPeriod: number, startingAtPeriod: number): number | null {
+function comparableComfarDate(value?: string): number | null {
+  if (!value) return null
+  const match = /^(\\d{3,4})[-/](\\d{1,2})[-/](\\d{1,2})$/.exec(value.trim())
+  if (!match) return null
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  return year * 10000 + month * 100 + day
+}
+
+export function resolveComfarDepreciationStartPeriod(
+  acquisitionPeriod: number,
+  startingAtPeriod: number,
+  acquisitionDate?: string,
+  startingAtDate?: string,
+): number | null {
   if (!Number.isInteger(acquisitionPeriod) || acquisitionPeriod < 0 || !Number.isInteger(startingAtPeriod) || startingAtPeriod < 1) return null
-  return acquisitionPeriod < startingAtPeriod ? startingAtPeriod : acquisitionPeriod + 1
+  if (acquisitionPeriod < startingAtPeriod) return startingAtPeriod
+  if (acquisitionPeriod === startingAtPeriod) {
+    const acquiredOn = comparableComfarDate(acquisitionDate)
+    const startingOn = comparableComfarDate(startingAtDate)
+    if (acquiredOn !== null && startingOn !== null && acquiredOn < startingOn) return startingAtPeriod
+  }
+  return acquisitionPeriod + 1
 }
 
 /**
@@ -737,7 +761,7 @@ export function calculateComfarAssetDepreciationSchedule(
     const firstMonths = asset.firstDepreciationMonths ?? 12
     const length = asset.lengthYears + months / 12
     const scrapValue = asset.originalValue * asset.scrapPercent / 100
-    const startPeriod = resolveComfarDepreciationStartPeriod(asset.acquisitionPeriod, asset.startingAtPeriod)
+    const startPeriod = resolveComfarDepreciationStartPeriod(asset.acquisitionPeriod, asset.startingAtPeriod, asset.acquisitionDate, asset.startingAtDate)
     const valid = [asset.originalValue, asset.initialBookValue, asset.scrapPercent, asset.lengthYears, months, firstMonths].every(Number.isFinite)
       && asset.originalValue >= 0 && asset.initialBookValue >= 0 && scrapValue <= asset.initialBookValue + 1e-8
       && asset.scrapPercent >= 0 && asset.scrapPercent <= 100
@@ -752,7 +776,9 @@ export function calculateComfarAssetDepreciationSchedule(
     if (!valid) {
       warnings.push(`${asset.name}: داده‌های استهلاک معتبر نیست یا حالت تقویمی این روش هنوز با فرمول مرجع قابل محاسبه نیست.`)
       for (let period = 1; period <= count; period += 1) {
-        perAsset.get(period)!.push({ id: asset.id, name: asset.name, methodApplied: null, openingBookValue: asset.initialBookValue, depreciation: 0, closingBookValue: asset.initialBookValue })
+        const exists = period >= asset.acquisitionPeriod
+        const bookValue = exists ? asset.initialBookValue : 0
+        perAsset.get(period)!.push({ id: asset.id, name: asset.name, methodApplied: null, openingBookValue: bookValue, depreciation: 0, closingBookValue: bookValue })
       }
       continue
     }
@@ -952,6 +978,95 @@ export function calculateComfarAssetLifecycle(
     }
   }
   return { valid: warnings.length === 0, warnings, depreciation, sales: results }
+}
+
+
+export type FixedInvestmentDepreciationBuild = {
+  assets: ComfarDepreciationAssetInput[]
+  warnings: string[]
+}
+
+/** Convert the shared fixed-investment register to annual depreciation vintages. */
+export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
+  items: FixedInvestmentItem[],
+  projectStartYear: number,
+  periodCount: number,
+): FixedInvestmentDepreciationBuild {
+  const assets: ComfarDepreciationAssetInput[] = []
+  const warnings: string[] = []
+  if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
+    return { assets, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
+  }
+  const parsePeriod = (value: string): { year: number; date: string | undefined } | null => {
+    const match = /^(\\d{3,4})(?:[-/](\\d{1,2})(?:[-/](\\d{1,2}))?)?$/.exec(value.trim())
+    if (!match) return null
+    const date = match[2] && match[3] ? value.trim().replace(/\\//g, '-') : undefined
+    return { year: Number(match[1]), date }
+  }
+  const methodMap: Record<FixedInvestmentItem['depreciation']['method'], ComfarDepreciationMethod | null> = {
+    none: null,
+    'linear-zero': 'linear-to-zero',
+    'linear-scrap': 'linear-to-scrap',
+    accelerated: 'accelerated',
+    'sum-of-digits': 'sum-of-years-digits',
+  }
+  for (const item of items) {
+    const method = methodMap[item.depreciation.method]
+    if (!method) continue
+    const starting = parsePeriod(item.depreciation.startingAt)
+    if (!starting) {
+      warnings.push(`${item.description || item.id}: تاریخ Starting at باید به‌صورت سال یا YYYY-MM-DD وارد شود.`)
+      continue
+    }
+    const startingAtPeriod = Math.max(1, starting.year - projectStartYear + 1)
+    for (const acquisition of item.acquisitions) {
+      const acquired = parsePeriod(acquisition.period)
+      if (!acquired) {
+        warnings.push(`${item.description || item.id}: تاریخ/دوره تحصیل «${acquisition.period}» قابل تشخیص نیست.`)
+        continue
+      }
+      if (acquired.year < projectStartYear) {
+        warnings.push(`${item.description || item.id}: تحصیل قبل از شروع مدل باید از دفتر Starting Balances با بهای ناخالص و استهلاک انباشته وارد شود؛ این نوبت از محاسبه جدید کنار گذاشته شد.`)
+        continue
+      }
+      const acquisitionPeriod = acquired.year - projectStartYear + 1
+      if (acquisitionPeriod > periodCount) continue
+      const saleWithinHorizon = item.sales.some(sale => sale.acquisitionId === acquisition.id && (() => {
+        const sold = parsePeriod(sale.period)
+        return sold !== null && sold.year <= projectStartYear + periodCount - 1
+      })())
+      if (saleWithinHorizon) {
+        warnings.push(`${item.description || item.id}: فروش دارایی در افق مدل ثبت شده است؛ تا تکمیل محاسبه استهلاک تا تاریخ فروش و سود/زیان واگذاری، این نوبت وارد برنامه استهلاک نمی‌شود.`)
+        continue
+      }
+      if (acquired.year === starting.year && (!acquired.date || !starting.date)) {
+        warnings.push(`${item.description || item.id}: برای تحصیل و Starting at در یک سال، تاریخ کامل هر دو لازم است؛ در نبود تاریخ کامل، شروع استهلاک به دوره بعد موکول می‌شود.`)
+      }
+      const exchangeRate = item.origin === 'foreign' ? (acquisition.exchangeRateToLocal ?? 0) : 1
+      const originalValue = acquisition.quantity * acquisition.unitPrice * exchangeRate
+      if (!Number.isFinite(originalValue) || originalValue < 0) {
+        warnings.push(`${item.description || item.id}: بهای تحصیل پس از تبدیل به ارز محلی معتبر نیست.`)
+        continue
+      }
+      assets.push({
+        id: `${item.id}:${acquisition.id}`,
+        name: item.description || item.id,
+        originalValue,
+        initialBookValue: originalValue,
+        scrapPercent: item.depreciation.scrapPercent,
+        lengthYears: item.depreciation.lengthYears ?? 0,
+        lengthMonths: item.depreciation.lengthMonths,
+        ratePercent: item.depreciation.ratePercent ?? undefined,
+        method,
+        acquisitionPeriod,
+        startingAtPeriod,
+        firstDepreciationMonths: item.depreciation.firstDepreciationMonths,
+        acquisitionDate: acquired.date,
+        startingAtDate: starting.date,
+      })
+    }
+  }
+  return { assets, warnings }
 }
 
 export type FinancialStatementYear = {
