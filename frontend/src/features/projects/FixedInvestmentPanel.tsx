@@ -1,0 +1,95 @@
+import {
+  createBlankFixedInvestmentItem, validateFixedInvestmentItems,
+  type FixedInvestmentItem, type FixedInvestmentAcquisition, type FixedInvestmentSale, type ProjectFoundation,
+} from './projectFoundation'
+
+type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en' }
+const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+const assetClasses: { value: FixedInvestmentItem['assetClass']; fa: string; en: string }[] = [
+  { value: 'land', fa: 'زمین', en: 'Land' },
+  { value: 'site', fa: 'محوطه‌سازی و آماده‌سازی سایت', en: 'Site preparation' },
+  { value: 'buildings', fa: 'ساختمان و ابنیه', en: 'Buildings' },
+  { value: 'machinery', fa: 'ماشین‌آلات و تجهیزات', en: 'Machinery and equipment' },
+  { value: 'infrastructure', fa: 'تأسیسات زیربنایی', en: 'Infrastructure' },
+  { value: 'vehicles', fa: 'وسائط نقلیه', en: 'Vehicles' },
+  { value: 'office', fa: 'تجهیزات اداری و خدماتی', en: 'Office and service equipment' },
+  { value: 'intangible', fa: 'دارایی نامشهود', en: 'Intangible assets' },
+  { value: 'other', fa: 'سایر دارایی‌های ثابت', en: 'Other fixed assets' },
+]
+const methods: { value: FixedInvestmentItem['depreciation']['method']; fa: string; en: string }[] = [
+  { value: 'none', fa: 'بدون استهلاک', en: 'Not depreciated' },
+  { value: 'linear-zero', fa: 'خطی تا صفر', en: 'Linear to zero' },
+  { value: 'linear-scrap', fa: 'خطی تا ارزش اسقاط', en: 'Linear to scrap' },
+  { value: 'accelerated', fa: 'شتاب‌یافته', en: 'Accelerated' },
+  { value: 'sum-of-digits', fa: 'مجموع سنوات', en: 'Sum of years digits' },
+]
+
+export default function FixedInvestmentPanel({ value, foundation, onChange, language = 'fa' }: Props) {
+  const en = language === 'en'
+  const t = (fa: string, english: string) => en ? english : fa
+  const issues = validateFixedInvestmentItems(value, foundation)
+  const currencies = [
+    ...(foundation.currencies.localCurrencyCode ? [{ code: foundation.currencies.localCurrencyCode, name: foundation.currencies.localCurrencyName || foundation.currencies.localCurrencyCode }] : []),
+    ...foundation.currencies.foreignCurrencies.map(currency => ({ code: currency.code, name: currency.name })),
+  ]
+  const updateItem = (id: string, patch: Partial<FixedInvestmentItem>) => onChange(value.map(item => item.id === id ? { ...item, ...patch } : item))
+  const updateDepreciation = (id: string, patch: Partial<FixedInvestmentItem['depreciation']>) => onChange(value.map(item => item.id === id ? { ...item, depreciation: { ...item.depreciation, ...patch } } : item))
+  const updateAcquisition = (id: string, acquisitionId: string, patch: Partial<FixedInvestmentAcquisition>) => onChange(value.map(item => item.id === id ? { ...item, acquisitions: item.acquisitions.map(row => row.id === acquisitionId ? { ...row, ...patch } : row) } : item))
+  const updateSale = (id: string, saleId: string, patch: Partial<FixedInvestmentSale>) => onChange(value.map(item => item.id === id ? { ...item, sales: item.sales.map(row => row.id === saleId ? { ...row, ...patch } : row) } : item))
+  const addAcquisition = (id: string) => onChange(value.map(item => item.id === id ? { ...item, acquisitions: [...item.acquisitions, { id: makeId('acq'), period: '', quantity: 1, unitPrice: 0, currencyCode: item.currencyCode, exchangeRateToLocal: null }] } : item))
+  const addSale = (id: string) => onChange(value.map(item => item.id === id ? { ...item, sales: [...item.sales, { id: makeId('sale'), acquisitionId: item.acquisitions[0]?.id ?? '', period: '', market: 'local', priceMode: 'book-value', currencyCode: item.currencyCode, selfDefinedPrice: null }] } : item))
+  const field = (label: string, valueText: string | number, onValue: (value: string) => void, type = 'text', min?: number, max?: number, disabled = false) =>
+    <label className="fw-field"><span>{label}</span><input type={type} value={valueText} min={min} max={max} disabled={disabled} onChange={e => onValue(e.target.value)} /></label>
+
+  return <section className="fw-card" style={{ marginTop: 18 }}>
+    <h3>{t('دفتر عمومی هزینه‌های سرمایه‌گذاری ثابت','Fixed Investment Register')}</h3>
+    <p className="fw-hint">{t('این دفتر برای همه صنایع و قالب‌ها مشترک است. هر طبقه دارایی می‌تواند چند نوبت تحصیل، ارز، شرایط استهلاک و فروش مستقل داشته باشد. ثبت فرم هنوز به معنی محاسبه استهلاک یا اثر فروش در صورت‌های مالی نیست؛ اتصال موتور در گام بعد انجام می‌شود.','This register is shared across industries and templates. Each asset class can have multiple acquisition periods, currencies, depreciation conditions and disposals. Entering the form does not yet calculate depreciation or disposal effects in the financial statements; engine integration follows.')}</p>
+    {value.map(item => <div className="fw-card" key={item.id}>
+      <div className="fw-grid">
+        {field(t('شرح دارایی','Fixed Investment Item'), item.description, v => updateItem(item.id, { description: v }))}
+        <label className="fw-field"><span>{t('طبقه دارایی','Asset Class')}</span><select value={item.assetClass} onChange={e => updateItem(item.id, { assetClass: e.target.value as FixedInvestmentItem['assetClass'], depreciation: e.target.value === 'land' ? { ...item.depreciation, method: 'none' } : item.depreciation })}>{assetClasses.map(option => <option key={option.value} value={option.value}>{en ? option.en : option.fa}</option>)}</select></label>
+        <label className="fw-field"><span>{t('منشأ دارایی','Asset Origin')}</span><select value={item.origin} onChange={e => updateItem(item.id, { origin: e.target.value as FixedInvestmentItem['origin'] })}><option value="local">{t('محلی','Local')}</option><option value="foreign">{t('خارجی','Foreign')}</option></select></label>
+        <label className="fw-field"><span>{t('ارز دارایی','Asset Currency')}</span><select value={item.currencyCode} onChange={e => updateItem(item.id, { currencyCode: e.target.value, acquisitions: item.acquisitions.map(row => ({ ...row, currencyCode: e.target.value })), sales: item.sales.map(row => ({ ...row, currencyCode: e.target.value })) })}><option value="">{t('انتخاب ارز','Select currency')}</option>{currencies.map(currency => <option key={currency.code} value={currency.code}>{currency.code} — {currency.name}</option>)}</select></label>
+        {foundation.costCentres.active && <label className="fw-field"><span>{t('مرکز هزینه','Cost Centre')}</span><select value={item.costCentreId} onChange={e => updateItem(item.id, { costCentreId: e.target.value })}><option value="">{t('انتخاب مرکز هزینه','Select Cost Centre')}</option>{foundation.costCentres.items.map(centre => <option key={centre.id} value={centre.id}>{centre.code} — {centre.name}</option>)}</select></label>}
+        <button type="button" className="secondary-button" onClick={() => onChange(value.filter(row => row.id !== item.id))}>{t('حذف قلم دارایی','Remove Fixed Investment Item')}</button>
+      </div>
+
+      <h4>{t('شرایط استهلاک','Depreciation Conditions')}</h4>
+      <div className="fw-grid">
+        <label className="fw-field"><span>{t('نوع استهلاک','Type of Depreciation')}</span><select value={item.depreciation.method} onChange={e => updateDepreciation(item.id, { method: e.target.value as FixedInvestmentItem['depreciation']['method'] })}>{methods.map(option => <option key={option.value} value={option.value}>{en ? option.en : option.fa}</option>)}</select></label>
+        {field(t('شروع استهلاک','Starting at'), item.depreciation.startingAt, v => updateDepreciation(item.id, { startingAt: v }), 'text')}
+        {field(t('نرخ استهلاک (% در سال)','Rate (% per annum)'), item.depreciation.ratePercent ?? '', v => updateDepreciation(item.id, { ratePercent: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none' || item.depreciation.method === 'sum-of-digits')}
+        {field(t('مدت استهلاک ـ سال','Length — Years'), item.depreciation.lengthYears ?? '', v => updateDepreciation(item.id, { lengthYears: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none')}
+        {field(t('مدت استهلاک ـ ماه','Length — Months'), item.depreciation.lengthMonths, v => updateDepreciation(item.id, { lengthMonths: Number(v) }), 'number', 0, 11, item.depreciation.method === 'none')}
+        {field(t('ارزش اسقاط (% از بهای اولیه)','Scrap (% of original value)'), item.depreciation.scrapPercent, v => updateDepreciation(item.id, { scrapPercent: Number(v) }), 'number', 0, 100, item.depreciation.method === 'none')}
+      </div>
+
+      <h4>{t('هزینه تحصیل دارایی به تفکیک دوره','Costs of Assets by Period')}</h4>
+      {item.acquisitions.map(acquisition => <div className="fw-grid" key={acquisition.id}>
+        {field(t('دوره تحصیل','Acquisition Period'), acquisition.period, v => updateAcquisition(item.id, acquisition.id, { period: v }))}
+        {field(t('مقدار','Quantity'), acquisition.quantity, v => updateAcquisition(item.id, acquisition.id, { quantity: Number(v) }), 'number', 0)}
+        {field(t('قیمت واحد','Price'), acquisition.unitPrice, v => updateAcquisition(item.id, acquisition.id, { unitPrice: Number(v) }), 'number', 0)}
+        {field(t('نرخ تبدیل به ارز محلی','Exchange Rate to Local Currency'), acquisition.exchangeRateToLocal ?? '', v => updateAcquisition(item.id, acquisition.id, { exchangeRateToLocal: v === '' ? null : Number(v) }), 'number', 0, undefined, item.origin === 'local')}
+        <div className="fw-field"><span>{t('جمع ردیف','Total')}</span><b>{(acquisition.quantity * acquisition.unitPrice).toLocaleString(en ? 'en-US' : 'fa-IR', { maximumFractionDigits: 2 })} {acquisition.currencyCode}</b></div>
+        <button type="button" className="secondary-button" onClick={() => updateItem(item.id, { acquisitions: item.acquisitions.filter(row => row.id !== acquisition.id) })}>{t('حذف نوبت تحصیل','Remove Acquisition')}</button>
+      </div>)}
+      <button type="button" className="secondary-button" onClick={() => addAcquisition(item.id)}>{t('افزودن نوبت تحصیل','Add Acquisition')}</button>
+
+      <h4>{t('فروش و واگذاری دارایی','Sale of Asset')}</h4>
+      {item.sales.map(sale => <div className="fw-grid" key={sale.id}>
+        <label className="fw-field"><span>{t('نوبت تحصیل مرتبط','Related Acquisition')}</span><select value={sale.acquisitionId} onChange={e => updateSale(item.id, sale.id, { acquisitionId: e.target.value })}><option value="">{t('انتخاب نوبت','Select Acquisition')}</option>{item.acquisitions.map(acquisition => <option key={acquisition.id} value={acquisition.id}>{acquisition.period}</option>)}</select></label>
+        {field(t('تاریخ/دوره فروش','Date/Period of Sale'), sale.period, v => updateSale(item.id, sale.id, { period: v }))}
+        <label className="fw-field"><span>{t('بازار فروش','Sale Market')}</span><select value={sale.market} onChange={e => updateSale(item.id, sale.id, { market: e.target.value as FixedInvestmentSale['market'] })}><option value="local">{t('محلی','Local')}</option><option value="foreign">{t('خارجی','Foreign')}</option></select></label>
+        <label className="fw-field"><span>{t('روش تعیین قیمت فروش','Asset Liquidation Price')}</span><select value={sale.priceMode} onChange={e => updateSale(item.id, sale.id, { priceMode: e.target.value as FixedInvestmentSale['priceMode'] })}><option value="book-value">{t('به ارزش دفتری','Sale at book value')}</option><option value="self-defined">{t('قیمت تعریف‌شده توسط کاربر','Self-defined price')}</option></select></label>
+        <label className="fw-field"><span>{t('ارز فروش','Sale Currency')}</span><select value={sale.currencyCode} onChange={e => updateSale(item.id, sale.id, { currencyCode: e.target.value })}>{currencies.map(currency => <option key={currency.code} value={currency.code}>{currency.code} — {currency.name}</option>)}</select></label>
+        {sale.priceMode === 'self-defined' && field(t('قیمت فروش','Sale Price'), sale.selfDefinedPrice ?? '', v => updateSale(item.id, sale.id, { selfDefinedPrice: v === '' ? null : Number(v) }), 'number', 0)}
+        <button type="button" className="secondary-button" onClick={() => updateItem(item.id, { sales: item.sales.filter(row => row.id !== sale.id) })}>{t('حذف فروش','Remove Sale')}</button>
+      </div>)}
+      <button type="button" className="secondary-button" disabled={item.acquisitions.length === 0} onClick={() => addSale(item.id)}>{t('افزودن فروش دارایی','Add Asset Sale')}</button>
+    </div>)}
+    <button type="button" className="secondary-button" onClick={() => onChange([...value, createBlankFixedInvestmentItem()])}>{t('افزودن قلم سرمایه‌گذاری ثابت','Add Fixed Investment Item')}</button>
+    <h4>{t('کنترل کامل بودن دفتر دارایی','Fixed Investment Register Validation')}</h4>
+    <div className="fw-validation"><span>{t('خطاهای ثبت','Input errors')}</span><b>{issues.length}</b></div>
+    {issues.map((issue, index) => <div className="fw-hint" key={issue.path + issue.code + index}><b>{issue.path}</b> — {en ? issue.message : issue.message}</div>)}
+  </section>
+}
