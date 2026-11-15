@@ -1035,6 +1035,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     return { assets, sales, investmentSchedule, investmentScheduleVerified: false, warnings: ['موتور یکپارچه فعلی فقط برنامه سالانه را محاسبه می‌کند؛ برای دوره‌های نیم‌سالانه، فصلی یا ماهانه، موتور دوره‌ای متناظر باید فعال شود.'] }
   }
   if (periodFrequency === 'unspecified') {
+    investmentScheduleVerified = false
     warnings.push('تناوب دوره در فونداسیون تعیین نشده است؛ نگاشت سالانه فقط برای پیش‌نمایش استفاده می‌شود و نتیجه تا تعیین Annual تأییدشده نیست.')
   }
   const parsePeriod = (value: string): { year: number; date: string | undefined } | null => {
