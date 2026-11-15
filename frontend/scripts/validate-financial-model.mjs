@@ -114,8 +114,8 @@ const [projectsViewSource,projectRepositorySource,rollingWorkspaceSource,wizardS
   readFile(new URL('../src/App.tsx', import.meta.url), 'utf8')
 ])
 assert.ok(projectsViewSource.includes('قالب پروژه جدید را انتخاب کنید')
-  && projectsViewSource.includes('تمپلت خام')
-  && projectsViewSource.includes('تمپلیت پروژه نورد ورق گرم'),
+  && projectsViewSource.includes('قالب خام')
+  && projectsViewSource.includes('قالب پروژه نورد ورق گرم'),
   'New project must ask the user to choose one of the two named templates')
 assert.ok(projectRepositorySource.includes("ProjectTemplateId = 'raw' | 'hot-rolling-200kt'")
   && projectRepositorySource.includes('templateId?: ProjectTemplateId'),
