@@ -1,4 +1,5 @@
-import type { FixedInvestmentItem, ProjectFoundation, ProjectPeriodFrequency } from '../projects/projectFoundation'
+import type { FixedInvestmentItem, ProjectCalendarPeriod, ProjectFoundation, ProjectPeriodFrequency } from '../projects/projectFoundation'
+import type { PeriodicDepreciationAssetInput, PeriodicDepreciationSaleInput } from './periodicFinancialEngine'
 
 export type CapitalStructureInput = {
   equityWeight: number
@@ -1705,4 +1706,131 @@ export function calculateOneWaySensitivity(
       }
     }),
   }
+}
+
+
+export type PeriodicFixedInvestmentDepreciationBuild = {
+  assets: PeriodicDepreciationAssetInput[]
+  sales: PeriodicDepreciationSaleInput[]
+  fixedInvestmentSchedule: number[]
+  preOperatingSchedule: number[]
+  fixedInvestmentVerified: boolean
+  preOperatingVerified: boolean
+  warnings: string[]
+}
+
+/** Convert fixed-investment acquisition and disposal dates into an exact project-period register. */
+export function buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(
+  items: FixedInvestmentItem[],
+  periods: ProjectCalendarPeriod[],
+  foundation: ProjectFoundation,
+): PeriodicFixedInvestmentDepreciationBuild {
+  const assets: PeriodicDepreciationAssetInput[]=[]
+  const sales: PeriodicDepreciationSaleInput[]=[]
+  const fixedInvestmentSchedule=Array(periods.length).fill(0)
+  const preOperatingSchedule=Array(periods.length).fill(0)
+  const warnings:string[]=[]
+  const activeItems=items.filter(item=>item.description.trim()||item.acquisitions.length>0)
+  let fixedInvestmentVerified=activeItems.some(item=>item.assetClass!=='preproduction')
+  let preOperatingVerified=true
+  const methodMap:Record<FixedInvestmentItem['depreciation']['method'],PeriodicDepreciationAssetInput['method']>={
+    none:'none','linear-zero':'linear-to-zero','linear-scrap':'linear-to-scrap',
+    accelerated:'accelerated','sum-of-digits':'sum-of-years-digits'
+  }
+  const parseDate=(value:string):Date|null=>{
+    const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
+    if(!match)return null
+    const date=new Date(Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3])))
+    return date.getUTCFullYear()===Number(match[1])&&date.getUTCMonth()===Number(match[2])-1&&date.getUTCDate()===Number(match[3])?date:null
+  }
+  const periodIndex=(date:Date)=>periods.findIndex(period=>{
+    const start=parseDate(period.startDate),end=parseDate(period.endDate)
+    return !!start&&!!end&&date.getTime()>=start.getTime()&&date.getTime()<=end.getTime()
+  })
+  const saleExchangeRate=(code:string,period:string):number|null=>{
+    if(code.trim().toUpperCase()===foundation.currencies.localCurrencyCode.trim().toUpperCase())return 1
+    const currency=foundation.currencies.foreignCurrencies.find(row=>row.code.trim().toUpperCase()===code.trim().toUpperCase())
+    if(!currency)return null
+    const date=parseDate(period)
+    if(!date)return null
+    const exact=currency.exchangeRates.find(row=>row.period===period)
+    const annual=currency.exchangeRates.find(row=>Number(/^(\d{4})/.exec(row.period)?.[0])===date.getUTCFullYear())
+    const rate=exact?.rateToLocal??annual?.rateToLocal
+    return Number.isFinite(rate)&&(rate??0)>0?rate!:null
+  }
+  const acquisitionIds=new Set<string>()
+  for(const item of activeItems){
+    if(item.depreciationBasis==='unresolved')warnings.push((item.description||item.id)+': depreciation basis is unresolved; periodic depreciation is provisional.')
+    if(item.depreciationBasis==='source-conflict')warnings.push((item.description||item.id)+': source documents conflict on depreciation; periodic depreciation is provisional.')
+    if(!item.acquisitions.length){
+      warnings.push((item.description||item.id)+': no acquisition date/value is assigned in the fixed-investment register.')
+      if(item.assetClass==='preproduction')preOperatingVerified=false
+      else fixedInvestmentVerified=false
+      continue
+    }
+    for(const acquisition of item.acquisitions){
+      if(!acquisition.allocationBasis||acquisition.allocationBasis==='unallocated'||acquisition.allocationBasis==='proportional-estimate'){
+        warnings.push((item.description||item.id)+': acquisition period must be source-backed or user-confirmed for periodic cash flow.')
+        if(item.assetClass==='preproduction')preOperatingVerified=false
+        else fixedInvestmentVerified=false
+      }
+      const date=parseDate(acquisition.period)
+      const index=date?periodIndex(date):-1
+      const exchangeRate=item.origin==='foreign'?(acquisition.exchangeRateToLocal??0):1
+      const originalValue=acquisition.quantity*acquisition.unitPrice*exchangeRate
+      if(!date||index<0||!Number.isFinite(originalValue)||originalValue<0||(item.origin==='foreign'&&exchangeRate<=0)){
+        warnings.push((item.description||item.id)+': acquisition must have a valid ISO date inside the project calendar and a confirmed local-currency value.')
+        if(item.assetClass==='preproduction')preOperatingVerified=false
+        else fixedInvestmentVerified=false
+        continue
+      }
+      const assetId=item.id+':'+acquisition.id
+      if(acquisitionIds.has(assetId)){
+        warnings.push((item.description||item.id)+': duplicate acquisition vintage identifier '+assetId+'.')
+        continue
+      }
+      acquisitionIds.add(assetId)
+      const startingAtDate=item.depreciation.startingAt?parseDate(item.depreciation.startingAt):null
+      if(item.depreciation.method!=='none'&&item.depreciation.startingAt&&!startingAtDate){
+        warnings.push((item.description||item.id)+': depreciation start must be a full ISO date (YYYY-MM-DD) for periodic depreciation.')
+        continue
+      }
+      assets.push({
+        id:assetId,name:item.description||item.id,
+        assetClass:item.assetClass==='preproduction'?'preproduction':'fixed',
+        originalValue,initialBookValue:originalValue,
+        scrapPercent:item.depreciation.scrapPercent,
+        lengthYears:item.depreciation.lengthYears??0,
+        lengthMonths:item.depreciation.lengthMonths,
+        firstDepreciationMonths:item.depreciation.firstDepreciationMonths,
+        ratePercent:item.depreciation.ratePercent,
+        method:methodMap[item.depreciation.method],
+        acquisitionDate:acquisition.period,
+        startingAtDate:startingAtDate?item.depreciation.startingAt:undefined
+      })
+      if(item.assetClass==='preproduction')preOperatingSchedule[index]+=originalValue
+      else fixedInvestmentSchedule[index]+=originalValue
+    }
+    for(const sale of item.sales){
+      const saleDate=parseDate(sale.period)
+      const index=saleDate?periodIndex(saleDate):-1
+      const assetId=item.id+':'+sale.acquisitionId
+      if(!acquisitionIds.has(assetId)||!saleDate||index<0){
+        warnings.push((item.description||item.id)+': disposal must reference a registered acquisition and a valid ISO date inside the project calendar.')
+        continue
+      }
+      const exchangeRate=sale.priceMode==='book-value'?1:saleExchangeRate(sale.currencyCode,sale.period)
+      if(sale.priceMode==='self-defined'&&(!Number.isFinite(sale.selfDefinedPrice)||sale.selfDefinedPrice===null||sale.selfDefinedPrice<0||exchangeRate===null)){
+        warnings.push((item.description||item.id)+': user-defined disposal proceeds require a valid amount and exchange rate.')
+        continue
+      }
+      sales.push({
+        id:sale.id,assetId,saleDate:sale.period,priceMode:sale.priceMode,
+        selfDefinedPrice:sale.selfDefinedPrice,exchangeRateToLocal:exchangeRate??1
+      })
+    }
+  }
+  if(!activeItems.some(item=>item.assetClass!=='preproduction'))fixedInvestmentVerified=false
+  if(!activeItems.some(item=>item.assetClass==='preproduction'))preOperatingVerified=true
+  return {assets,sales,fixedInvestmentSchedule,preOperatingSchedule,fixedInvestmentVerified,preOperatingVerified,warnings}
 }
