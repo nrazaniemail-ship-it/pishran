@@ -1057,9 +1057,14 @@ assert.ok(quarterlyRegisterBuild.warnings.some(warning=>warning.includes('سال
 assert.equal(engine.resolveComfarDepreciationStartPeriod(registerBuild.assets[0].acquisitionPeriod,registerBuild.assets[0].startingAtPeriod,registerBuild.assets[0].acquisitionDate,registerBuild.assets[0].startingAtDate),1,'Full acquisition date before Starting at must retain same-year depreciation')
 near(registerBuild.assets[0].originalValue,200,1e-9,'Fixed-asset acquisition amount must be converted to local currency')
 const soldRegisterAsset = { ...registerAsset, sales:[{id:'register-sale',acquisitionId:'register-acq',period:'1407',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}] }
-const soldRegisterBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([soldRegisterAsset],1405,12)
-assert.equal(soldRegisterBuild.assets.length,0,'An asset sold within the horizon must not be depreciated past disposal until disposal timing is implemented')
-assert.ok(soldRegisterBuild.warnings.some(warning=>warning.includes('فروش دارایی')),'A disposal inside the horizon must be explicitly flagged')
+const soldRegisterBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([soldRegisterAsset],1405,12,'annual',validFoundation)
+assert.equal(soldRegisterBuild.assets.length,1,'An asset sold within the horizon must retain its depreciation vintage through the disposal period')
+assert.equal(soldRegisterBuild.sales.length,1,'A fixed-investment register sale must map to its acquisition vintage')
+assert.equal(soldRegisterBuild.sales[0].assetId,'register-asset:register-acq','The sale must reference the exact acquisition vintage')
+const soldRegisterLifecycle = engine.calculateComfarAssetLifecycle(soldRegisterBuild.assets,soldRegisterBuild.sales,12)
+assert.equal(soldRegisterLifecycle.valid,true,'A valid register sale must flow into the COMFAR asset lifecycle')
+assert.equal(soldRegisterLifecycle.sales[0].period,3,'A sale period in the register must map to the matching annual project period')
+near(soldRegisterLifecycle.depreciation.periods[3].assets[0].depreciation,0,1e-9,'Depreciation must stop after the registered sale period')
 const invalidBeforeAcquisition = engine.calculateComfarAssetDepreciationSchedule([{
   id:'invalid-before-acquisition',name:'Invalid asset',originalValue:1000,initialBookValue:1000,scrapPercent:10,
   lengthYears:5,method:'sum-of-years-digits',acquisitionPeriod:2,startingAtPeriod:1,firstDepreciationMonths:6
