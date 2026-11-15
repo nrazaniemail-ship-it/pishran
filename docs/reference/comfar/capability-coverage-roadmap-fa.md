@@ -28,12 +28,12 @@ Reference Manual فصل VI ساختار درختی پروژه را بر اساس
 
 | قابلیت مرجع | وضعیت فعلی پیشران | کار لازم برای برابری عملکرد |
 |---|---|---|
-| Project Type: Industrial, Maritime, Agricultural, Infrastructure, Tourism, Mining | دامنه اصلی پیشران بر فولاد و معدن متمرکز است | تعریف پروفایل ساختاری مستقل برای هر نوع پروژه؛ بدون تزریق فرم‌های فولادی به صنایع دیگر |
+| Project Type: Industrial, Maritime, Agricultural, Infrastructure, Tourism, Mining | انتخاب هر شش نوع پروژه در فرم تعریف پروژه اضافه شده؛ ساختار اختصاصی هنوز یکسان/ناقص است | تعریف پروفایل ساختاری مستقل برای هر نوع پروژه؛ بدون تزریق فرم‌های فولادی به صنایع دیگر |
 | Opportunity Study | گزینه سطح مطالعه اضافه شده | تولید ساختار ورودی تجمیعی و خروجی متناسب با سطح فرصت |
 | Feasibility Study | گزینه سطح مطالعه اضافه شده و پیش‌فرض فعلی است | فعال‌سازی ساختار تفصیلی، ریزشدن هزینه‌ها و برنامه‌ها |
 | New Project | موجود | تکمیل گردش‌کار استاندارد |
 | Expansion/Rehabilitation | گزینه و ماژول اختصاصی موجود؛ محاسبات ناقص | تکمیل Opening/Starting Balances، مدل با/بدون طرح، دارایی‌ها و بدهی‌های موجود و Incremental Analysis |
-| Joint-venture Project | گزینه انتخابی اضافه شده | مدل شرکا، طبقات سرمایه، سهم سود/زیان، آورده‌ها، توزیع سود و گزارش هر شریک |
+| Joint-venture Project | گزینه انتخابی و فرم ثبت حداکثر ۲۰ شریک با سهم سرمایه، آورده و سهم سود اضافه شده؛ اتصال محاسباتی ناقص است | مدل طبقات سرمایه، توزیع سود، برداشت‌ها و گزارش جریان نقدی هر شریک |
 | Financial Analysis | موتور مالی موجود اما نیازمند تطبیق گسترده | تکمیل تمام schedules و آزمون‌های فصل XI |
 | Economic Analysis | گزینه انتخابی اضافه شده | موتور قیمت اقتصادی/سایه‌ای و جداول اقتصادی فصل VIII و XII |
 | Cost Centre Analysis | گزینه انتخابی اضافه شده | ساختار مراکز هزینه، تخصیص و گزارش سودآوری هر مرکز |
@@ -156,6 +156,6 @@ Technical Manual مرجع الگوریتم مالی نیست؛ اما برای �
 ## 11. وضعیت فعلی و اولویت بعدی
 
 - فرم Expansion/Rehabilitation، برخی Starting Balances، فهرست دارایی و وام موجود و جدول‌های With/Without/Incremental در پیشران وجود دارد؛ این ماژول هنوز کامل نیست و به توسعه ساختار چندارزی، مانده‌های افتتاحیه تفصیلی، محاسبات دارایی/بدهی و گزارش‌های کامل نیاز دارد.
-- Study Level و گزینه‌های Special Features در فرم Project Definition اضافه شده‌اند؛ در حال حاضر انتخاب آن‌ها ذخیره می‌شود، اما همه موتورهای Economic Analysis، Cost Centre، Cost Allocation، Value-added، Foreign Exchange و Employment هنوز پیاده‌سازی نشده‌اند.
+- Project Type شامل شش گروه COMFAR و Joint-venture Partner با فرم ثبت شرکا اضافه شده است. Study Level و گزینه‌های Special Features نیز در فرم Project Definition ذخیره می‌شوند؛ اما ساختارهای تفصیلی هر نوع پروژه و موتورهای Economic Analysis، Cost Centre، Cost Allocation، Value-added، Foreign Exchange و Employment هنوز پیاده‌سازی نشده‌اند.
 - Incremental Analysis engine اکنون ورودی‌های غیرعددی و افق‌های ناهم‌تراز را رد می‌کند؛ آزمون‌های مرجع به validator اضافه شده‌اند.
 - مرحله بعد: تبدیل انتخاب‌های دامنه تحلیل به ساختارهای داده و فرم‌های واقعی، سپس موتور اقتصادی و مراکز هزینه، و بعد پوشش کامل گزارش‌ها و تست‌های Tutorial.
