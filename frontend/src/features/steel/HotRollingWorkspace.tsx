@@ -5,7 +5,7 @@ import { Activity, ArrowDownToLine, CheckCircle2, ClipboardList, Factory, Gauge,
 import { localStore } from '../../core/storage/localStore'
 import { calculateNpv, calculateIrr, calculateMirr } from './financialModel'
 import { EXCEL_REFERENCE_EXPECTED, PISHRAN_REFERENCE_MODEL_OUTPUT } from './hotRollingExcelBenchmark'
-import { HOT_ROLLING_COMFAR_CASHFLOW_AUDIT } from './workbookReconciliation'
+import { HOT_ROLLING_reference_CASHFLOW_AUDIT } from './workbookReconciliation'
 
 type Tab = 'overview' | 'market' | 'product' | 'materials' | 'process' | 'investment' | 'economics'
 type Data = {
@@ -33,7 +33,7 @@ const market=[['ورق گرم','7,009','6,119','5,162'],['اسیدشویی','307
 const returns=[['دوره بازگشت عادی','3.86','سال'],['دوره بازگشت دینامیک','5.02','سال'],['NPV با نرخ تنزیل ۲۵٪','31,399,764','میلیون ریال'],['IRR','48.31','درصد'],['MIRR','28.03','درصد'],['نقطه سربه‌سر تولید','12.15','درصد ظرفیت']]
 const pishranFlows=[...PISHRAN_REFERENCE_MODEL_OUTPUT.projectCashFlows]
 const pishranMetrics={npv21:calculateNpv(pishranFlows,.21),npv25:calculateNpv(pishranFlows,.25),irr:calculateIrr(pishranFlows),mirr:calculateMirr(pishranFlows,EXCEL_REFERENCE_EXPECTED.financeRate,EXCEL_REFERENCE_EXPECTED.reinvestmentRate)}
-const comfarIrrNpv={npv21:EXCEL_REFERENCE_EXPECTED.irrNpvSheetReportedNpvAt21,irr:EXCEL_REFERENCE_EXPECTED.irrNpvSheetReportedIrr,mirr:EXCEL_REFERENCE_EXPECTED.irrNpvSheetReportedMirr}
+const referenceIrrNpv={npv21:EXCEL_REFERENCE_EXPECTED.irrNpvSheetReportedNpvAt21,irr:EXCEL_REFERENCE_EXPECTED.irrNpvSheetReportedIrr,mirr:EXCEL_REFERENCE_EXPECTED.irrNpvSheetReportedMirr}
 const delta=(a:number,b:number)=>a-b
 const fmt=(v:number,d=0)=>v.toLocaleString('fa-IR',{maximumFractionDigits:d,minimumFractionDigits:d})
 function NumField({label,value,unit,onChange,step=1}:{label:string;value:number;unit:string;onChange:(v:number)=>void;step?:number}){return <label className="hr-field"><span className="fw-field-label">{label}<FieldGuide field={label}/></span><div className="hr-input-wrap"><input type="number" min="0" step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/><small>{unit}</small></div><FieldFeedback label={label} value={value}/></label>}
@@ -102,18 +102,18 @@ const change=<K extends keyof Data>(key:K,value:Data[K])=>setData(cur=>({...cur,
   {tab==='economics'&&<div className="hr-panel"><div className="hr-section-title"><div><span className="eyebrow">FINANCIAL REFERENCE</span><h2>خلاصه شاخص‌های مالی گزارش مرجع</h2></div><span className="hr-source-tag">نقل از گزارش</span></div>
    <div className="hr-econ-grid">{money.map(([l,v,u])=><article key={l}><span>{l}</span><b>{v}</b><small>{u}</small></article>)}</div><h3 className="hr-subtitle">شاخص‌های بازدهی و ارزیابی</h3><div className="hr-econ-grid">{returns.map(([l,v,u])=><article key={l}><span>{l}</span><b>{v}</b><small>{u}</small></article>)}</div>
    <div className="hr-source-reconciliation">
-    <h3 className="hr-subtitle">تطبیق مستقل محاسبات پیشران با خروجی‌های کامفار</h3>
-    <p>محاسبه پیشران از جریان نقدی پروژه پیش از تأمین مالی، با CAPEX، OPEX، برنامه افزایش ظرفیت، سرمایه در گردش و ارزش اسقاط ثبت‌شده در فایل‌های اکسل ساخته شده است. ارقام کامفار در دو شیت منبع یکسان نیستند؛ بنابراین اختلاف‌ها را بدون تغییر مصنوعی جریان نقدی جداگانه نمایش می‌دهیم.</p>
-    <div className="hr-table-wrap"><table className="hr-table"><thead><tr><th>شاخص</th><th>محاسبه پیشران</th><th>کامفار ـ مشخصات کلی طرح</th><th>کامفار ـ IRR-NPV</th></tr></thead><tbody>
+    <h3 className="hr-subtitle">تطبیق مستقل محاسبات پیشران با خروجی‌های مرجع مالی</h3>
+    <p>محاسبه پیشران از جریان نقدی پروژه پیش از تأمین مالی، با CAPEX، OPEX، برنامه افزایش ظرفیت، سرمایه در گردش و ارزش اسقاط ثبت‌شده در فایل‌های اکسل ساخته شده است. ارقام مرجع مالی در دو شیت منبع یکسان نیستند؛ بنابراین اختلاف‌ها را بدون تغییر مصنوعی جریان نقدی جداگانه نمایش می‌دهیم.</p>
+    <div className="hr-table-wrap"><table className="hr-table"><thead><tr><th>شاخص</th><th>محاسبه پیشران</th><th>مرجع مالی ـ مشخصات کلی طرح</th><th>مرجع مالی ـ IRR-NPV</th></tr></thead><tbody>
      <tr><td>NPV در نرخ ۲۵٪ (میلیون ریال)</td><td>{fmt(pishranMetrics.npv25??0,2)}</td><td>31,399,764.27</td><td>— (شیت نرخ ۲۱٪)</td></tr>
-     <tr><td>NPV در نرخ ۲۱٪ (میلیون ریال)</td><td>{fmt(pishranMetrics.npv21??0,2)}</td><td>— (نرخ ۲۵٪)</td><td>{fmt(comfarIrrNpv.npv21,2)}</td></tr>
-     <tr><td>IRR پروژه</td><td>{fmt((pishranMetrics.irr??0)*100,2)}٪</td><td>48.31٪</td><td>{fmt(comfarIrrNpv.irr*100,2)}٪</td></tr>
-     <tr><td>MIRR پروژه</td><td>{fmt((pishranMetrics.mirr??0)*100,2)}٪</td><td>28.03٪</td><td>{fmt(comfarIrrNpv.mirr*100,2)}٪</td></tr>
+     <tr><td>NPV در نرخ ۲۱٪ (میلیون ریال)</td><td>{fmt(pishranMetrics.npv21??0,2)}</td><td>— (نرخ ۲۵٪)</td><td>{fmt(referenceIrrNpv.npv21,2)}</td></tr>
+     <tr><td>IRR پروژه</td><td>{fmt((pishranMetrics.irr??0)*100,2)}٪</td><td>48.31٪</td><td>{fmt(referenceIrrNpv.irr*100,2)}٪</td></tr>
+     <tr><td>MIRR پروژه</td><td>{fmt((pishranMetrics.mirr??0)*100,2)}٪</td><td>28.03٪</td><td>{fmt(referenceIrrNpv.mirr*100,2)}٪</td></tr>
     </tbody></table></div>
     <div className="hr-reconciliation-deltas">
-     <article><span>اختلاف NPV پیشران و خلاصه کامفار در نرخ یکسان ۲۵٪</span><b>{fmt(delta(pishranMetrics.npv25??0,31399764.273352),2)} میلیون ریال</b></article>
-     <article><span>اختلاف IRR پیشران و خلاصه کامفار</span><b>{fmt(delta((pishranMetrics.irr??0)*100,48.31),2)} واحد درصد</b></article>
-     <article><span>اختلاف MIRR پیشران و خلاصه کامفار</span><b>{fmt(delta((pishranMetrics.mirr??0)*100,28.03),2)} واحد درصد</b></article>
+     <article><span>اختلاف NPV پیشران و خلاصه مرجع مالی در نرخ یکسان ۲۵٪</span><b>{fmt(delta(pishranMetrics.npv25??0,31399764.273352),2)} میلیون ریال</b></article>
+     <article><span>اختلاف IRR پیشران و خلاصه مرجع مالی</span><b>{fmt(delta((pishranMetrics.irr??0)*100,48.31),2)} واحد درصد</b></article>
+     <article><span>اختلاف MIRR پیشران و خلاصه مرجع مالی</span><b>{fmt(delta((pishranMetrics.mirr??0)*100,28.03),2)} واحد درصد</b></article>
     </div>
     <h4>مغایرت‌های منبع که مانع تطبیق قطعی‌اند</h4>
     <ul>
@@ -123,16 +123,16 @@ const change=<K extends keyof Data>(key:K,value:Data[K])=>setData(cur=>({...cur,
      <li>شیت «مکانیزم تأمین سرمایه» همچنان ارقام متعارض ۸۰/۲۰ را دارد؛ در مدل فعال، نسبت تأییدشده ۷۰/۳۰ اعمال شده است. منبع تأمین ۴٬۵۹۵٬۳۷۰ میلیون ریال سرمایه در گردش در فایل مشخص نیست و به‌عنوان وام فرض نشده است.</li>
      <li>فرمول NPV در IRR-NPV به صورت NPV روی ردیف ۹ اعمال شده است؛ ردیف ۹ از تفاضل دو ردیف با عنوان جریان نقدی تنزیل‌شده ساخته شده و نباید بدون تأیید روش محاسباتی به‌عنوان جریان نقدی خام پروژه تلقی شود.</li>
     </ul>
-    <h4>ممیزی جریان نقدی خام و اصلاح محاسبات کامفار</h4>
+    <h4>ممیزی جریان نقدی خام و اصلاح محاسبات مرجع مالی</h4>
     <div className="hr-source-note">
-     <p>در شیت «IRR-NPV»، ردیف‌های ۴ تا ۶ جریان‌های برنامه‌ریزی مالی خام هستند. خالص ردیف ۶ در ۱۸ دوره هیچ مقدار منفی ندارد و جمع آن {fmt(HOT_ROLLING_COMFAR_CASHFLOW_AUDIT.rawPlanningNetTotal,2)} میلیون ریال است؛ بنابراین این ردیف به‌تنهایی جریان نقدی پروژه برای محاسبه IRR نیست و سرمایه‌گذاری اولیه را نشان نمی‌دهد.</p>
-     <p>ردیف‌های ۷ و ۸ هر دو «جریان نقدی تنزیل‌شده» نام‌گذاری شده‌اند و ردیف ۹ تفاضل آن‌هاست. فرمول NPV در سلول C23 دوباره NPV را روی ردیف ۹ اعمال می‌کند؛ جمع ردیف ۱۱ به {fmt(HOT_ROLLING_COMFAR_CASHFLOW_AUDIT.secondDiscountedNpvRow11Sum,2)} میلیون ریال می‌رسد. فرمول‌های IRR و MIRR نیز مستقیماً از ردیف ۹ استفاده می‌کنند؛ بنابراین ۴۳٫۳۸٪ و ۳۳٫۸۷٪ را نباید IRR/MIRR معتبر جریان نقدی خام پروژه تلقی کرد.</p>
+     <p>در شیت «IRR-NPV»، ردیف‌های ۴ تا ۶ جریان‌های برنامه‌ریزی مالی خام هستند. خالص ردیف ۶ در ۱۸ دوره هیچ مقدار منفی ندارد و جمع آن {fmt(HOT_ROLLING_reference_CASHFLOW_AUDIT.rawPlanningNetTotal,2)} میلیون ریال است؛ بنابراین این ردیف به‌تنهایی جریان نقدی پروژه برای محاسبه IRR نیست و سرمایه‌گذاری اولیه را نشان نمی‌دهد.</p>
+     <p>ردیف‌های ۷ و ۸ هر دو «جریان نقدی تنزیل‌شده» نام‌گذاری شده‌اند و ردیف ۹ تفاضل آن‌هاست. فرمول NPV در سلول C23 دوباره NPV را روی ردیف ۹ اعمال می‌کند؛ جمع ردیف ۱۱ به {fmt(HOT_ROLLING_reference_CASHFLOW_AUDIT.secondDiscountedNpvRow11Sum,2)} میلیون ریال می‌رسد. فرمول‌های IRR و MIRR نیز مستقیماً از ردیف ۹ استفاده می‌کنند؛ بنابراین ۴۳٫۳۸٪ و ۳۳٫۸۷٪ را نباید IRR/MIRR معتبر جریان نقدی خام پروژه تلقی کرد.</p>
      <p>جریان نقدی آورده سهام‌دار در ردیف ۵۱ جداگانه است و دو خروجی نخست آن جمعاً ۲٬۷۶۱٬۹۷۱ میلیون ریال است؛ شاخص‌های IRRE/MIRRE گزارش‌شده از این سری به دست آمده‌اند، اما این مبالغ با منابع تأمین مالی تأییدشده ۷۰/۳۰ و برنامه تسهیلات شیت‌های دیگر هم‌خوان نیستند.</p>
-     <p><b>اصلاح قابل انجام از روی فایل فعلی:</b> خطای دوباره‌تنزیل ردیف ۹ مشخص و مستند شد؛ اما ساخت یک سری خام معتبر و محاسبه مجدد IRR/MIRR از این دو فایل ممکن نیست، چون خروجی خام مستقل پروژه با سرمایه‌گذاری‌های اولیه و زمان‌بندی آن‌ها ارائه نشده است. تا دریافت خروجی COMFAR شامل جریان نقدی پروژه قبل از تنزیل، نرخ‌ها یا جریان‌ها را برای نزدیک‌کردن مصنوعی شاخص‌ها تغییر نمی‌دهیم.</p>
+     <p><b>اصلاح قابل انجام از روی فایل فعلی:</b> خطای دوباره‌تنزیل ردیف ۹ مشخص و مستند شد؛ اما ساخت یک سری خام معتبر و محاسبه مجدد IRR/MIRR از این دو فایل ممکن نیست، چون خروجی خام مستقل پروژه با سرمایه‌گذاری‌های اولیه و زمان‌بندی آن‌ها ارائه نشده است. تا دریافت خروجی reference شامل جریان نقدی پروژه قبل از تنزیل، نرخ‌ها یا جریان‌ها را برای نزدیک‌کردن مصنوعی شاخص‌ها تغییر نمی‌دهیم.</p>
     </div>
-    <p className="hr-warning"><ShieldAlert size={18}/> پیشران در این صفحه از ریزداده‌های عملیاتی و سرمایه‌گذاری محاسبه می‌کند؛ شاخص‌های کامفار تا زمان تأیید نسخه صحیح جریان نقدی و ساختار تأمین مالی، «مرجع گزارش‌شده» هستند نه مقدار قابل تحمیل به مدل. اختلاف NPV در نرخ یکسان ۲۵٪ حدود {fmt(Math.abs(delta(pishranMetrics.npv25??0,31399764.273352)),2)} میلیون ریال است؛ برای رفع نهایی اختلاف IRR/MIRR باید فایل کامفار اصلاح‌شده یا تأیید رسمی مبنای جریان نقدی دریافت شود.</p>
+    <p className="hr-warning"><ShieldAlert size={18}/> پیشران در این صفحه از ریزداده‌های عملیاتی و سرمایه‌گذاری محاسبه می‌کند؛ شاخص‌های مرجع مالی تا زمان تأیید نسخه صحیح جریان نقدی و ساختار تأمین مالی، «مرجع گزارش‌شده» هستند نه مقدار قابل تحمیل به مدل. اختلاف NPV در نرخ یکسان ۲۵٪ حدود {fmt(Math.abs(delta(pishranMetrics.npv25??0,31399764.273352)),2)} میلیون ریال است؛ برای رفع نهایی اختلاف IRR/MIRR باید فایل مرجع مالی اصلاح‌شده یا تأیید رسمی مبنای جریان نقدی دریافت شود.</p>
    </div>
-   <div className="hr-warning"><ShieldAlert size={18}/><p>این ارقام داده مرجع گزارش ۱۴۰۲/۰۸/۰۱ و خروجی خلاصه COMFAR هستند. توجه: محاسبات فصل هزینه و فروش در صفحه چاپی ۱۲۱، بهای تولید ۲۲۱٬۲۳۴ ریال/کیلوگرم و درآمد فروش ۳۱۱٬۲۹۸ ریال/کیلوگرم را نشان می‌دهد، در حالی که جدول خلاصه مالی صفحه ۱۳۲ به‌ترتیب ۲۱۳ و ۳۰۷ میلیون ریال/تن درج کرده است. این اختلاف باید پیش از انتقال مدل مالی به پیشران با فایل محاسباتی اصلی تطبیق داده شود. قیمت اسلب نیز بر مبنای ۲۳ مهر ۱۴۰۲ است؛ همه ارقام تاریخی‌اند و باید به‌روزرسانی شوند.</p></div></div>}
+   <div className="hr-warning"><ShieldAlert size={18}/><p>این ارقام داده مرجع گزارش ۱۴۰۲/۰۸/۰۱ و خروجی خلاصه reference هستند. توجه: محاسبات فصل هزینه و فروش در صفحه چاپی ۱۲۱، بهای تولید ۲۲۱٬۲۳۴ ریال/کیلوگرم و درآمد فروش ۳۱۱٬۲۹۸ ریال/کیلوگرم را نشان می‌دهد، در حالی که جدول خلاصه مالی صفحه ۱۳۲ به‌ترتیب ۲۱۳ و ۳۰۷ میلیون ریال/تن درج کرده است. این اختلاف باید پیش از انتقال مدل مالی به پیشران با فایل محاسباتی اصلی تطبیق داده شود. قیمت اسلب نیز بر مبنای ۲۳ مهر ۱۴۰۲ است؛ همه ارقام تاریخی‌اند و باید به‌روزرسانی شوند.</p></div></div>}
   <div className="hr-bottom-bar"><div><Save size={16}/><span>{loaded?'ذخیره خودکار روی دستگاه فعال است':'در حال آماده‌سازی فضای ذخیره‌سازی...'}</span></div><button onClick={()=>setData(DEFAULT)}><ArrowDownToLine size={15}/> بازگردانی مفروضات گزارش</button></div>
  </section>
 }
