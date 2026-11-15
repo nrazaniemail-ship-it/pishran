@@ -1137,6 +1137,57 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   return { assets, sales, warnings }
 }
 
+
+export type FixedInvestmentRegisterReconciliation = {
+  registerTotal: number
+  capexFixedAssetTarget: number
+  difference: number
+  status: 'not-entered' | 'matched' | 'unreconciled'
+  warnings: string[]
+}
+
+/**
+ * Compare the asset-by-asset acquisition register with aggregate CAPEX.
+ * The register is not added to CAPEX here: this is a control bridge only,
+ * so the same acquisition cannot be counted twice.
+ */
+export function reconcileFixedInvestmentRegister(
+  items: FixedInvestmentItem[],
+  capexTotal: number,
+  preOperatingCost = 0,
+  tolerance = 1,
+): FixedInvestmentRegisterReconciliation {
+  const warnings: string[] = []
+  const target = Math.max(0, Number(capexTotal) - Math.max(0, Number(preOperatingCost) || 0))
+  let registerTotal = 0
+  for (const item of items) {
+    for (const acquisition of item.acquisitions) {
+      const quantity = Number(acquisition.quantity)
+      const unitPrice = Number(acquisition.unitPrice)
+      const rate = item.origin === 'foreign' ? Number(acquisition.exchangeRateToLocal) : 1
+      if (![quantity, unitPrice, rate].every(Number.isFinite) || quantity < 0 || unitPrice < 0 || rate <= 0) {
+        warnings.push(`${item.description || item.id}: acquisition cannot be reconciled without a valid quantity, price and exchange rate to local currency.`)
+        continue
+      }
+      registerTotal += quantity * unitPrice * rate
+    }
+  }
+  if (!Number.isFinite(capexTotal) || capexTotal < 0 || !Number.isFinite(preOperatingCost) || preOperatingCost < 0) {
+    warnings.push('Aggregate CAPEX and pre-operating cost must be finite non-negative local-currency amounts.')
+  }
+  const difference = registerTotal - target
+  const hasRegister = items.some(item => item.acquisitions.length > 0)
+  const status = !hasRegister && target === 0
+    ? 'not-entered'
+    : Math.abs(difference) <= Math.max(0, tolerance) && warnings.length === 0
+      ? 'matched'
+      : 'unreconciled'
+  if (hasRegister && status === 'unreconciled') {
+    warnings.push('Fixed Investment Register acquisitions do not reconcile to aggregate CAPEX excluding pre-operating expenses. Review unallocated CAPEX, non-depreciable assets and duplicate entries before using the register as a cash-investment source.')
+  }
+  return { registerTotal, capexFixedAssetTarget: target, difference, status, warnings }
+}
+
 export type FinancialStatementYear = {
   year: number
   incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; otherIncomeLoss: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
