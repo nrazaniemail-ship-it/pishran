@@ -4,7 +4,7 @@ export type ThemeMode = 'light' | 'dark' | 'system'
 export type AccentTheme = 'navy' | 'emerald' | 'graphite' | 'gold'
 export type BackgroundTheme = 'bluegray' | 'mist' | 'sage' | 'sand' | 'sky' | 'lavender'
 export type AppLanguage = 'fa' | 'en'
-export type FontTheme = 'vazirmatn' | 'tahoma' | 'arial' | 'system' | 'noto' | 'sahel' | 'shabnam' | 'samim' | 'serif' | 'mono'
+export type FontTheme = 'vazirmatn' | 'tahoma' | 'arial' | 'system' | 'noto' | 'sahel' | 'shabnam' | 'samim' | 'nazanin' | 'titr' | 'inter' | 'roboto' | 'opensans' | 'lato' | 'montserrat' | 'poppins' | 'serif' | 'mono'
 
 export interface AppSettings {
   themeMode: ThemeMode
