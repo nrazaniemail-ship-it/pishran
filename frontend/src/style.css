@@ -684,3 +684,6 @@ input,select,textarea{color:var(--text)}
   background:linear-gradient(145deg,#fff7e9,#f9edd7);
   border-color:#eee0c3;
 }
+
+/* Keep the Pishran brand and primary navigation visible while scrolling */
+.topbar{position:sticky;top:0;z-index:1000;background:var(--page);box-shadow:0 5px 16px rgba(23,34,53,.06)}
