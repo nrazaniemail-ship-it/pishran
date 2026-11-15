@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { listFinancialMethods } from './financialMethodDirectory'
+import type { ProjectCalendarPeriod, ProjectPeriodFrequency } from './projectFoundation'
+import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
+import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
   calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, calculateComfarAssetLifecycle,
@@ -11,7 +14,7 @@ import {
 
 type CapexRow = { id: string; name: string; amount: number }
 type Asset = DepreciationAssetInput
-type Loan = IntegratedLoanInput
+type Loan = IntegratedLoanInput & { periodDrawdowns?: number[]; drawdownMode?: 'annual-day-weighted'|'period-manual'; periodRepaymentStart?: number; periodGracePeriods?: number; periodTerm?: number; periodRateConversion?: 'effective-annual-by-actual-days'|'effective-annual-divided-by-frequency' }
 type Props = {
   projectId: string
   currency: string
@@ -47,6 +50,11 @@ type Props = {
   capexRows: CapexRow[]
   ramp: number[]
   language?: 'fa'|'en'
+  projectPeriods?: ProjectCalendarPeriod[]
+  periodFrequency?: ProjectPeriodFrequency
+  fiscalYearStartMonth?: number | null
+  dayCountBasis?: 360 | 365 | null
+  cashFlowTiming?: 'unspecified'|'period-end'|'mid-period'
 }
 type SavedState = {
   loans: Loan[]
