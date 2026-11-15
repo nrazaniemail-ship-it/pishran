@@ -214,6 +214,15 @@ export default function AdvancedFinancePanel(props: Props) {
     <h4>{t('۳. استهلاک دارایی‌به‌دارایی و مالیات','3. Asset-Level Depreciation & Tax')}</h4>
     <p className="fw-hint">{tr('دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.')}</p>
     <div className="fw-grid">{taxRates.map((v,i)=><label className="fw-field" key={i}><span>{tr('نرخ مالیات سال')} {i+1} (%)</span><input type="number" min="0" max="100" value={v} onChange={e=>setState(s=>({...s,taxRates:taxRates.map((rate,j)=>j===i?Number(e.target.value):rate)}))}/></label>)}</div>
+    {listFinancialMethods('taxation').map(method=><div className="fw-validation" key={method.id}>
+      <b>{tr(method.nameFa,method.nameEn)} · {method.calculationStatus==='implemented'?tr('محاسبه پیاده‌سازی‌شده','Calculation implemented'):method.calculationStatus}</b>
+      <p className="fw-hint">{tr('فرمول:','Formula:')} {method.formula}</p>
+      <p className="fw-hint">{tr('شرایط اعتبار:','Validity:')} {method.validity}</p>
+      <p className="fw-hint">{tr('منبع:','Source:')} {method.source}</p>
+      <p className="fw-hint">{tr('وضعیت تطبیق:','Benchmark status:')} {method.benchmarkStatus==='partial'?tr('تطبیق جزئی','Partially benchmarked'):method.benchmarkStatus==='verified'?tr('تطبیق‌شده','Benchmarked'):tr('تطبیق عددی نشده','Not numerically benchmarked')}</p>
+      {method.limitations&&<p className="fw-hint">{tr('محدودیت‌ها:','Limitations:')} {method.limitations}</p>}
+    </div>)}
+    <p className="fw-hint">{tr('نرخ‌های این فرم سالانه‌اند. محاسبه ماهانه/فصلی پس از تکمیل موتور دوره‌ای فعال می‌شود؛ نرخ سالانه به‌صورت خودکار به دوره‌های کوتاه‌تر تعمیم داده نمی‌شود.','Rates in this form are annual. Monthly/quarterly calculation will be enabled after the period engine is complete; annual rates are not silently extrapolated to shorter periods.')}</p>
     {!props.useFixedInvestmentRegister&&<>
           <button className="secondary-button" onClick={syncAssets}><RefreshCw size={14}/> {tr('همگام‌سازی دارایی‌ها از CAPEX')}</button>
           {comfarLifecycle&&<div className="fw-validation">
