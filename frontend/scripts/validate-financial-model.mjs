@@ -750,6 +750,20 @@ const hrcrInfrastructure=hrcrFixedAssets.find(item=>item.id==='hrcr-infrastructu
 near(hrcrInfrastructure.depreciation.ratePercent,12,1e-9,
   'HRCR infrastructure depreciation rate must use the detailed OPEX depreciation table')
 
+
+const linearScrapFractionalLife=engine.calculateComfarAssetDepreciationSchedule([{
+  id:'linear-scrap-fractional-life',name:'Linear to scrap fractional life',originalValue:1000,initialBookValue:1000,
+  scrapPercent:10,lengthYears:10,lengthMonths:10,ratePercent:100/(10+10/12),
+  method:'linear-to-scrap',acquisitionPeriod:1,startingAtPeriod:1,firstDepreciationMonths:3
+}],14)
+assert.equal(linearScrapFractionalLife.valid,true,'Linear to scrap fractional useful life must validate')
+near(linearScrapFractionalLife.periods[0].depreciation,900/(10+10/12)*3/12,1e-9,
+  'Linear to scrap first partial year must follow COMFAR XI.H')
+near(linearScrapFractionalLife.periods[10].depreciation,900/(10+10/12),1e-9,
+  'COMFAR XI.H must count the correct number of full years after a partial first year')
+near(linearScrapFractionalLife.periods[11].closingBookValue,100,1e-9,
+  'Linear to scrap final period must terminate at salvage value after the correct partial-year count')
+
 const comfarLinearZero = engine.calculateComfarAssetDepreciationSchedule([{
   id:'linear-zero',name:'Linear zero',originalValue:1000,initialBookValue:1000,scrapPercent:10,
   lengthYears:5,lengthMonths:0,ratePercent:20,method:'linear-to-zero',
