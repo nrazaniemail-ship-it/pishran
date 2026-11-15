@@ -747,7 +747,7 @@ near(hrcrInfrastructure.depreciation.ratePercent,12,1e-9,
 const linearScrapFractionalLife=engine.calculateComfarAssetDepreciationSchedule([{
   id:'linear-scrap-fractional-life',name:'Linear to scrap fractional life',originalValue:1000,initialBookValue:1000,
   scrapPercent:10,lengthYears:10,lengthMonths:10,ratePercent:100/(10+10/12),
-  method:'linear-to-scrap',acquisitionPeriod:1,startingAtPeriod:1,firstDepreciationMonths:3
+  method:'linear-to-scrap',acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'1405-01-01',startingAtDate:'1405-06-01',firstDepreciationMonths:3
 }],14)
 assert.equal(linearScrapFractionalLife.valid,true,'Linear to scrap fractional useful life must validate')
 near(linearScrapFractionalLife.periods[0].depreciation,900/(10+10/12)*3/12,1e-9,
