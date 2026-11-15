@@ -673,3 +673,11 @@ assert.ok(expansionPanelSource.includes('calculateIncrementalEnterpriseAnalysis'
   && expansionPanelSource.includes('withProjectCashFlow'),
   'Expansion form must expose opening balances, opportunity values and with/without/incremental scenarios')
 console.log('PASS: COMFAR-style existing-enterprise opening balances and incremental with/without-project analysis')
+
+const opportunityCostCase = engine.calculateIncrementalEnterpriseAnalysis(
+  withoutEnterprise,
+  withEnterprise.map((period,index)=>index===0?{...period,opportunityCost:200}:period),
+  0.1
+)
+near(opportunityCostCase.periods[0].incrementalCashFlow, -1200, 1e-9,
+  'Existing asset opportunity cost must be charged to the with-project incremental case')
