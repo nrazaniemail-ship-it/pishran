@@ -789,6 +789,7 @@ const existingProfileLoan = engine.calculateExistingLoanSchedule({
   repaymentFrequency: 'quarterly',
   repaymentType: 'profile',
   numberOfRepayments: 2,
+  interestPaymentMonth: 12,
   profileRepayments: [
     { date: '2026-04-30', principal: 250 },
     { date: '2026-10-31', principal: 750 },
@@ -832,3 +833,24 @@ near(accruedInterestLoan.rows[0].interestPayable, 20, 1e-9,
   'Previously accrued interest remains payable, not capitalized again')
 near(accruedInterestLoan.rows[0].totalDebtService, accruedInterestLoan.regularPayment + 20, 1e-7,
   'Opening accrued interest is paid in addition to the regular annuity instalment')
+
+const profileLoanInterestDates = engine.calculateExistingLoanSchedule({
+  openingBalance: 1000,
+  annualInterestRatePercent: 12,
+  startDate: '2026-01-31',
+  firstRepaymentDate: '',
+  repaymentFrequency: 'quarterly',
+  repaymentType: 'profile',
+  numberOfRepayments: 0,
+  interestPaymentMonth: 12,
+  profileRepayments: [
+    { date: '2026-06-30', principal: 500 },
+    { date: '2027-06-30', principal: 500 },
+  ],
+})
+assert.equal(profileLoanInterestDates.valid, true,
+  'Profile loan must calculate without an annuity-style first repayment date')
+near(profileLoanInterestDates.rows.find(row=>row.date==='2026-12-31')?.interestPayable??NaN, 80, 1e-9,
+  'Profile loan interest is paid in the selected month, independent of principal repayments')
+near(profileLoanInterestDates.totalInterest, 110, 1e-9,
+  'Profile loan interest accrues over principal changes and is settled at repayment')
