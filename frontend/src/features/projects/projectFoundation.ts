@@ -224,7 +224,7 @@ export function validateStartingFixedAssetBalances(
   return issues
 }
 
-export type FixedInvestmentAssetClass = 'land' | 'site' | 'buildings' | 'machinery' | 'infrastructure' | 'vehicles' | 'office' | 'intangible' | 'other'
+export type FixedInvestmentAssetClass = 'land' | 'site' | 'buildings' | 'machinery' | 'infrastructure' | 'vehicles' | 'office' | 'intangible' | 'preproduction' | 'other'
 export type FixedInvestmentDepreciationMethod = 'none' | 'linear-zero' | 'linear-scrap' | 'accelerated' | 'sum-of-digits'
 export type FixedInvestmentAcquisition = {
   id: string
