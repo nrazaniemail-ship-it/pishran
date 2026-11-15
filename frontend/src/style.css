@@ -1344,3 +1344,17 @@ input,select,textarea{color:var(--text)}
   .page-language-switch{position:static;top:auto;left:auto;transform:none}
   .topbar .brand{margin-left:0}
 }
+
+/* User-selectable font families from the appearance settings directory. */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
+:root[data-font="vazirmatn"]{font-family:'Vazirmatn',Tahoma,sans-serif}
+:root[data-font="tahoma"]{font-family:Tahoma,'Vazirmatn',sans-serif}
+:root[data-font="arial"]{font-family:Arial,'Vazirmatn',sans-serif}
+:root[data-font="system"]{font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
+:root[data-font="noto"]{font-family:'Noto Sans Arabic','Vazirmatn',Tahoma,sans-serif}
+:root[data-font="sahel"]{font-family:'Sahel','Vazirmatn',Tahoma,sans-serif}
+:root[data-font="shabnam"]{font-family:'Shabnam','Vazirmatn',Tahoma,sans-serif}
+:root[data-font="samim"]{font-family:'Samim','Vazirmatn',Tahoma,sans-serif}
+:root[data-font="serif"]{font-family:Georgia,'Times New Roman',serif}
+:root[data-font="mono"]{font-family:ui-monospace,'Courier New',monospace}
+.font-directory-note{color:var(--muted);font-size:11px;line-height:1.9;margin:4px 2px 12px}
