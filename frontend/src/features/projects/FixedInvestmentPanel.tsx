@@ -28,6 +28,17 @@ export default function FixedInvestmentPanel({ value, foundation, onChange, lang
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
   const issues = validateFixedInvestmentItems(value, foundation)
+  const issueMessages: Record<string, string> = {
+    'duplicate-fixed-asset-id':'شناسه اقلام سرمایه‌گذاری ثابت باید یکتا باشد.', 'missing-fixed-asset-description':'شرح هر قلم دارایی را وارد کنید.',
+    'unknown-fixed-asset-currency':'ارز دارایی باید در ساختار ارزهای پروژه تعریف شده باشد.', 'local-asset-currency-mismatch':'دارایی با منشأ محلی باید به ارز محلی ثبت شود.',
+    'foreign-asset-currency-mismatch':'دارایی با منشأ خارجی باید به یکی از ارزهای خارجی تعریف‌شده ثبت شود.', 'missing-fixed-asset-cost-centre':'برای این قلم دارایی یک مرکز هزینه معتبر انتخاب کنید.',
+    'missing-asset-acquisition':'برای هر قلم دارایی حداقل یک دوره تحصیل لازم است.', 'invalid-asset-acquisition':'دوره، مقدار و قیمت تحصیل باید معتبر و نامنفی باشند.',
+    'asset-acquisition-currency-mismatch':'ارز نوبت تحصیل باید با ارز قلم دارایی یکسان باشد.', 'missing-asset-exchange-rate':'برای تحصیل دارایی با منشأ خارجی، نرخ تبدیل مثبت به ارز محلی لازم است.',
+    'missing-depreciation-start':'برای دارایی مستهلک‌شونده، Starting at را تعیین کنید.', 'invalid-depreciation-length':'مدت استهلاک باید مثبت و ماه‌ها بین صفر تا ۱۱ باشد.',
+    'invalid-scrap-percent':'ارزش اسقاط باید بین صفر تا ۱۰۰ درصد بهای اولیه باشد.', 'invalid-depreciation-rate':'نرخ استهلاک باید بیشتر از صفر و حداکثر ۱۰۰ درصد در سال باشد.',
+    'unknown-asset-sale-acquisition':'فروش دارایی باید به یک نوبت تحصیل موجود مرتبط باشد.', 'invalid-asset-sale-period-currency':'برای فروش دارایی، دوره و ارز معتبر لازم است.',
+    'invalid-asset-sale-price':'قیمت فروش تعریف‌شده باید عددی نامنفی باشد.'
+  }
   const currencies = [
     ...(foundation.currencies.localCurrencyCode ? [{ code: foundation.currencies.localCurrencyCode, name: foundation.currencies.localCurrencyName || foundation.currencies.localCurrencyCode }] : []),
     ...foundation.currencies.foreignCurrencies.map(currency => ({ code: currency.code, name: currency.name })),
@@ -49,7 +60,7 @@ export default function FixedInvestmentPanel({ value, foundation, onChange, lang
         {field(t('شرح دارایی','Fixed Investment Item'), item.description, v => updateItem(item.id, { description: v }))}
         <label className="fw-field"><span>{t('طبقه دارایی','Asset Class')}</span><select value={item.assetClass} onChange={e => updateItem(item.id, { assetClass: e.target.value as FixedInvestmentItem['assetClass'], depreciation: e.target.value === 'land' ? { ...item.depreciation, method: 'none' } : item.depreciation })}>{assetClasses.map(option => <option key={option.value} value={option.value}>{en ? option.en : option.fa}</option>)}</select></label>
         <label className="fw-field"><span>{t('منشأ دارایی','Asset Origin')}</span><select value={item.origin} onChange={e => updateItem(item.id, { origin: e.target.value as FixedInvestmentItem['origin'] })}><option value="local">{t('محلی','Local')}</option><option value="foreign">{t('خارجی','Foreign')}</option></select></label>
-        <label className="fw-field"><span>{t('ارز دارایی','Asset Currency')}</span><select value={item.currencyCode} onChange={e => updateItem(item.id, { currencyCode: e.target.value, acquisitions: item.acquisitions.map(row => ({ ...row, currencyCode: e.target.value })), sales: item.sales.map(row => ({ ...row, currencyCode: e.target.value })) })}><option value="">{t('انتخاب ارز','Select currency')}</option>{currencies.map(currency => <option key={currency.code} value={currency.code}>{currency.code} — {currency.name}</option>)}</select></label>
+        <label className="fw-field"><span>{t('ارز دارایی','Asset Currency')}</span><select value={item.currencyCode} onChange={e => updateItem(item.id, { currencyCode: e.target.value, acquisitions: item.acquisitions.map(row => ({ ...row, currencyCode: e.target.value })), sales: item.sales.map(row => ({ ...row, currencyCode: e.target.value })) })}><option value="">{t('انتخاب ارز','Select currency')}</option>{currencies.filter(currency => item.origin === 'local' ? currency.code === foundation.currencies.localCurrencyCode : currency.code !== foundation.currencies.localCurrencyCode).map(currency => <option key={currency.code} value={currency.code}>{currency.code} — {currency.name}</option>)}</select></label>
         {foundation.costCentres.active && <label className="fw-field"><span>{t('مرکز هزینه','Cost Centre')}</span><select value={item.costCentreId} onChange={e => updateItem(item.id, { costCentreId: e.target.value })}><option value="">{t('انتخاب مرکز هزینه','Select Cost Centre')}</option>{foundation.costCentres.items.map(centre => <option key={centre.id} value={centre.id}>{centre.code} — {centre.name}</option>)}</select></label>}
         <button type="button" className="secondary-button" onClick={() => onChange(value.filter(row => row.id !== item.id))}>{t('حذف قلم دارایی','Remove Fixed Investment Item')}</button>
       </div>
@@ -90,6 +101,6 @@ export default function FixedInvestmentPanel({ value, foundation, onChange, lang
     <button type="button" className="secondary-button" onClick={() => onChange([...value, createBlankFixedInvestmentItem()])}>{t('افزودن قلم سرمایه‌گذاری ثابت','Add Fixed Investment Item')}</button>
     <h4>{t('کنترل کامل بودن دفتر دارایی','Fixed Investment Register Validation')}</h4>
     <div className="fw-validation"><span>{t('خطاهای ثبت','Input errors')}</span><b>{issues.length}</b></div>
-    {issues.map((issue, index) => <div className="fw-hint" key={issue.path + issue.code + index}><b>{issue.path}</b> — {en ? issue.message : issue.message}</div>)}
+    {issues.map((issue, index) => <div className="fw-hint" key={issue.path + issue.code + index}><b>{issue.path}</b> — {en ? issue.message : (issueMessages[issue.code] ?? issue.message)}</div>)}
   </section>
 }
