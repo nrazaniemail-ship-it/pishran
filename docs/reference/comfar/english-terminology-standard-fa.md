@@ -278,4 +278,7 @@
 | فروش به ارزش دفتری | Sale at book value |
 | قیمت تعریف‌شده | Self-defined price |
 | درآمد/زیان غیرعادی | Extraordinary income/loss |
+| سایر درآمد/زیان ناشی از فروش دارایی | Other income (or loss) |
+| عواید فروش دارایی | Sale proceeds |
+| ارزش دفتری در دوره فروش | Book value in the period sold |
 | برگشت سرمایه | Return of capital |
