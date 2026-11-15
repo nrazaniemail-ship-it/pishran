@@ -4,7 +4,7 @@ import { localStore } from '../../core/storage/localStore'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
   calculateFinancialScenarios, buildThreeFinancialStatements,
-  type IntegratedFinanceInput, type IntegratedLoanInput, type DepreciationAssetInput,
+  type IntegratedFinanceInput, type IntegratedFinanceResult, type IntegratedLoanInput, type DepreciationAssetInput,
 } from '../steel/financialModel'
 
 type CapexRow = { id: string; name: string; amount: number }
@@ -26,6 +26,11 @@ type Props = {
   depreciationAssets?: Asset[]
   workingCapitalDefaults?: { days: { raw:number; energy:number; spareParts:number; wip:number; finished:number; receivable:number; cash:number; payable:number }; bases: { rawMaterials:number; energy:number; spareParts:number; conversion:number; finishedGoods:number; cash:number; payables:number }; wipCompletion?: { material:number; conversion:number } }
   referenceVersion?: string
+  initialDiscountMode?: 'wacc'|'manual'
+  initialManualRate?: number
+  mirrFinanceRate?: number
+  mirrReinvestmentRate?: number
+  onResult?: (result:IntegratedFinanceResult)=>void
   equityPercent: number
   costOfEquity: number
   costOfDebt: number
@@ -69,7 +74,7 @@ export default function AdvancedFinancePanel(props: Props) {
     workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
     wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},
     wipCompletion:{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),
-    discountMode:'wacc',manualRate:props.costOfEquity,maintenancePercent:0
+    discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0
   }))
   const [loaded,setLoaded]=useState(false)
   useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved)setState({...state,...saved});setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
@@ -108,9 +113,10 @@ export default function AdvancedFinancePanel(props: Props) {
     loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
     taxRate:props.taxRate,taxRateSchedule:taxRates,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
     workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:0,opexEscalationPercent:0,
-    discountMode:state.discountMode,manualDiscountRate:state.manualRate
+    discountMode:state.discountMode,manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.costOfEquity,equityMirrReinvestmentRate:props.costOfEquity
   }
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
+  useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
