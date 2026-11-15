@@ -502,6 +502,16 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     }
     loanSchedules[loan.id] = schedule.rows
   }
+  if (input.annualEquityContributions.some(value => value < 0) ||
+      !validFinite(input.openingWorkingCapital ?? 0) || (input.openingWorkingCapital ?? 0) < 0 ||
+      !validFinite(input.salvageValue ?? 0) || (input.salvageValue ?? 0) < 0 ||
+      (input.discountRatePercent != null && (!validFinite(input.discountRatePercent) || input.discountRatePercent <= -100)) ||
+      (input.mirrFinanceRatePercent != null && (!validFinite(input.mirrFinanceRatePercent) || input.mirrFinanceRatePercent <= -100)) ||
+      (input.mirrReinvestmentRatePercent != null && (!validFinite(input.mirrReinvestmentRatePercent) || input.mirrReinvestmentRatePercent <= -100)) ||
+      new Set(input.loans.map(loan => loan.id)).size !== input.loans.length) {
+    warnings.push('Equity, opening working capital, salvage, discount rates or loan identifiers are invalid.')
+    return empty()
+  }
   const openingLoss = input.openingTaxLoss ?? 0
   const openingUnleveredLoss = input.openingUnleveredTaxLoss ?? 0
   if (!validFinite(openingLoss) || openingLoss < 0 || !validFinite(openingUnleveredLoss) || openingUnleveredLoss < 0) {
@@ -560,6 +570,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     : calculatePeriodicMirr(projectFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
   const mirrEquity = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
     : calculatePeriodicMirr(equityFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
+  const signChanges = (flows: number[]) => flows.filter((value,index)=>value!==0 && index>0 && flows.slice(0,index).some(previous=>previous!==0 && Math.sign(previous)!==Math.sign(value))).length
+  if (signChanges(projectFlows) > 1 || signChanges(equityFlows) > 1)
+    warnings.push('Non-conventional cash-flow signs may produce multiple IRR roots; the reported IRR is one numerical root only.')
   const totalDebtDrawdown = rows.reduce((sum,row)=>sum+row.debtDrawdown,0)
   const totalEquityContribution = rows.reduce((sum,row)=>sum+row.equityContribution,0)
   const totalCapitalizedInterest = rows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
