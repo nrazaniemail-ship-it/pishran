@@ -745,10 +745,14 @@ near(hrcrAssetBridge.registerTotal,workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.f
 near(hrcrAssetBridge.preproductionTotal,workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.preproductionNet,0.01,
   'HRCR preproduction register must reconcile separately')
 assert.equal(hrcrAssetBridge.status,'matched','HRCR fixed assets and preproduction expenditures must reconcile as separate categories')
+const hrcrAssetValidation=foundation.validateFixedInvestmentItems(hrcrFixedAssets,reference.createHotRollingCoilProjectFoundation())
+assert.equal(hrcrAssetValidation.filter(issue=>issue.severity==='error').length,0,'HRCR seed fractional depreciation lives must pass fixed asset validation')
 const hrcrAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(
   hrcrFixedAssets,1403,17,'annual',reference.createHotRollingCoilProjectFoundation()
 )
 assert.ok(hrcrAssetBuild.assets.length>=18,'HRCR reference must create asset acquisition vintages from the CAPEX workbook')
+const hrcrDepreciationRun=engine.calculateComfarAssetDepreciationSchedule(hrcrAssetBuild.assets,17)
+assert.equal(hrcrDepreciationRun.valid,true,'Fractional useful lives from HRCR depreciation rates must be accepted by the XI.H engine')
 near(hrcrAssetBuild.investmentSchedule.reduce((sum,value)=>sum+value,0),
   workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.fixedInvestment,0.01,
   'HRCR asset acquisition schedule must exclude preproduction costs and reconcile to fixed investment')
