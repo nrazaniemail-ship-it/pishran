@@ -619,6 +619,16 @@ near(assetSchedule[3].closingBookValue, 600, 1e-9, 'Asset book value at residual
 
 
 
+
+const duplicateSaleIssues = foundation.validateFixedInvestmentItems([{
+  ...registerAsset,
+  sales:[
+    {id:'sale-one',acquisitionId:'register-acq',period:'1406-12-29',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null},
+    {id:'sale-two',acquisitionId:'register-acq',period:'1407-12-29',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}
+  ]
+}],foundation.createBlankProjectFoundation())
+assert.ok(duplicateSaleIssues.some(issue=>issue.code==='duplicate-acquisition-disposal'),'One acquisition vintage must not be disposed twice')
+
 const capexBridge = engine.reconcileFixedInvestmentRegister([registerAsset],200,0)
 near(capexBridge.registerTotal,200,1e-9,'Fixed investment register must sum acquisitions in local currency')
 near(capexBridge.capexFixedAssetTarget,200,1e-9,'CAPEX reconciliation target must exclude pre-operating costs')
