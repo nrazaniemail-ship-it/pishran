@@ -33,6 +33,8 @@ export default function App() {
   const [activePlantType, setActivePlantType] = useState<'dri'|'steelmaking'>('dri')
   const [storageInfo, setStorageInfo] = useState({ backend: 'در حال بررسی', items: 0 })
   const [ready, setReady] = useState(false)
+  const isEn = settings.language === 'en'
+  const toggleLanguage = () => setSettings(current => ({ ...current, language: current.language === 'fa' ? 'en' : 'fa' }))
 
   useEffect(() => {
     let alive = true
@@ -88,15 +90,15 @@ export default function App() {
   return <main className={`app-shell app-page-${page}`}>
     <BackupScheduler/>
     <header className="topbar">
-      <button className="brand" onClick={() => setPage('dashboard')} aria-label="صفحه اصلی پیشران"><div className="brandmark">پ</div><div><b>پیشران</b><small>INTELLIGENT FEASIBILITY PLATFORM</small></div></button>
+      <button className="brand" onClick={() => setPage('dashboard')} aria-label="صفحه اصلی پیشران"><div className="brandmark">{isEn ? "P" : "پ"}</div><div><b>{isEn ? "Pishran" : "پیشران"}</b><small>INTELLIGENT FEASIBILITY PLATFORM</small></div></button>
       <nav className="main-nav" aria-label="ناوبری اصلی">
-        <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('dashboard')}><LayoutDashboard size={17}/> داشبورد</button>
-        <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('projects')}><FolderKanban size={17}/> پروژه‌ها</button>
-        <button className={page === 'steel-group' || page === 'hot-rolling' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('steel-group')}><Factory size={17}/> گروه فولاد</button>
-        <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('guide')}><BookOpen size={17}/> راهنما</button>
-        <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('settings')}><Settings size={17}/> تنظیمات</button>
+        <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
+        <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
+        <button className={page === 'steel-group' || page === 'hot-rolling' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('steel-group')}><Factory size={17}/> {isEn ? "Steel Group" : "گروه فولاد"}</button>
+        <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
+        <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('settings')}><Settings size={17}/> {isEn ? "Settings" : "تنظیمات"}</button>
       </nav>
-      <div className="top-actions"><span className="connection"><i/> ذخیره محلی فعال</span></div>
+      <div className="top-actions"><span className="connection"><i/> {isEn ? "Local storage active" : "ذخیره محلی فعال"}</span><button className="language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button></div>
     </header>
 
     {page === 'dashboard' && <>
@@ -105,12 +107,12 @@ export default function App() {
           <span className="eyebrow">INVESTMENT DECISION INTELLIGENCE</span>
           <h1>از ایده تا تصمیم سرمایه‌گذاری، <em>با اطمینان بیشتر.</em></h1>
           <p>محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.</p>
-          <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> ایجاد پروژه جدید</button><button className="hero-secondary" onClick={() => setPage('steel-group')}><Factory size={17}/> مشاهده زنجیره فولاد</button></div>
+          <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> ایجاد پروژه جدید</button><button className="hero-secondary" onClick={() => setPage('steel-group')}><Factory size={17}/>{isEn ? "Explore steel value chain" : "مشاهده زنجیره فولاد"}</button></div>
         </div>
         <div className="hero-art"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="hero-icon"><Layers3 size={48}/></div><span className="floating f1"><Gauge/> تحلیل اقتصادی</span><span className="floating f2"><ShieldCheck/> ارزیابی ریسک</span></div>
       </section>
 
-      <section className="section-head"><div><span className="eyebrow">WORKSPACE</span><h2>مرکز کنترل سرمایه‌گذاری</h2></div><span className="muted">نسخه ۱.۰.۱</span></section>
+      <section className="section-head"><div><span className="eyebrow">WORKSPACE</span><h2>{isEn ? "Investment Control Center" : "مرکز کنترل سرمایه‌گذاری"}</h2></div><span className="muted">نسخه ۱.۰.۱</span></section>
       <section className="kpis">
         <article className="kpi"><span>پروژه‌های ثبت‌شده</span><b>{projects.length.toLocaleString('fa-IR')}</b><small>ذخیره‌شده روی این دستگاه</small></article>
         <article className="kpi"><span>مدل‌های مالی</span><b>۰</b><small>محاسبات قابل ثبت و نسخه‌بندی</small></article>
@@ -118,12 +120,12 @@ export default function App() {
         <article className="kpi"><span>وضعیت ذخیره‌سازی</span><b className="live">{storageInfo.backend}</b><small>اطلاعات روی دستگاه نگهداری می‌شود</small></article>
       </section>
 
-      <section className="section-head"><div><span className="eyebrow">PLATFORM MODULES</span><h2>ماژول‌های پیشران</h2></div><span className="muted">معماری لایه‌ای و توسعه‌پذیر</span></section>
+      <section className="section-head"><div><span className="eyebrow">PLATFORM MODULES</span><h2>{isEn ? "Pishran Modules" : "ماژول‌های پیشران"}</h2></div><span className="muted">معماری لایه‌ای و توسعه‌پذیر</span></section>
       <section className="module-grid">{modules.map(({icon: Icon,title,sub,status})=><article className="module" key={title}><div className="module-icon"><Icon size={21}/></div><div className="module-text"><b>{title}</b><p>{sub}</p><small>{status}</small></div></article>)}</section>
 
       <section className="analytics">
         <article className="chart-card"><div className="card-heading"><div><span className="eyebrow">ILLUSTRATIVE DATA</span><h3>نمای نمونه روند بازده</h3></div><span className="tag">داده نمایشی</span></div><ReactECharts option={chart} style={{height:250}}/></article>
-        <article className="insight-card"><div className="module-icon gold"><Bot size={23}/></div><span className="eyebrow">PISHRAN AI COPILOT</span><h3>دستیار تصمیم‌یار سرمایه‌گذاری</h3><p>در نسخه‌های بعدی، پیشران می‌تواند مفروضات را بررسی کند، ریسک‌ها را توضیح دهد و نتایج را با ارجاع به منابع داده تحلیل کند.</p><div className="notice">خروجی‌های این نسخه نمایشی هستند و مبنای تصمیم واقعی سرمایه‌گذاری نیستند.</div></article>
+        <article className="insight-card"><div className="module-icon gold"><Bot size={23}/></div><span className="eyebrow">PISHRAN AI COPILOT</span><h3>{isEn ? "Investment Decision Assistant" : "دستیار تصمیم‌یار سرمایه‌گذاری"}</h3><p>در نسخه‌های بعدی، پیشران می‌تواند مفروضات را بررسی کند، ریسک‌ها را توضیح دهد و نتایج را با ارجاع به منابع داده تحلیل کند.</p><div className="notice">خروجی‌های این نسخه نمایشی هستند و مبنای تصمیم واقعی سرمایه‌گذاری نیستند.</div></article>
       </section>
     </>}
 
@@ -144,6 +146,6 @@ export default function App() {
     {page === 'integrated-plant' && activeProject && <IntegratedSteelComplexWorkspace project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'process-plant' && activeProject && <ProcessPlantWorkspace project={activeProject} plantType={activePlantType} onBack={() => setPage('projects')}/>} 
 
-    <footer>پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری <span>نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری</span></footer>
+    <footer>{isEn ? "Pishran · Intelligent Feasibility & Investment Assessment Platform" : "پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری"} <span>{isEn ? "Version 1.0.1 · No sign-in required" : "نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری"}</span></footer>
   </main>
 }
