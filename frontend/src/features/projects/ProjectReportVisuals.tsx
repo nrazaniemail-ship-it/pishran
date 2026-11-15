@@ -107,6 +107,13 @@ function ReferenceSensitivityChart({ language }: { language:'fa'|'en' }) {
       {series.map(s=><div className="fw-hint" key={s.nameEn}><span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:s.color,marginInlineEnd:6}}/>{language==='en'?s.nameEn:s.nameFa}</div>)}
     </div>
     <p className="fw-hint">{language==='en'?'Energy tariff sensitivity is a separate workbook case: a −80% to +80% energy-cost change moves IRR from 47.65% to 46.01%, with 46.83% at the base case.':'حساسیت نرخ انرژی در شیت جداگانه بررسی شده است: تغییر هزینه انرژی از ۸۰٪ کاهش تا ۸۰٪ افزایش، IRR را از ۴۷٫۶۵٪ به ۴۶٫۰۱٪ می‌رساند؛ مقدار پایه این شیت ۴۶٫۸۳٪ است.'}</p>
+    <svg viewBox="0 0 740 300" role="img" aria-label={language==='en'?'Energy cost sensitivity':'حساسیت هزینه انرژی'} style={{width:'100%',height:'auto',minHeight:210}}>
+      {[46,47,48].map(v=><g key={v}><line x1="64" x2="684" y1={258-(v-45)/5*210} y2={258-(v-45)/5*210} stroke="currentColor" strokeOpacity=".12"/><text x="56" y={262-(v-45)/5*210} textAnchor="end" fontSize="10" fill="currentColor">{v}%</text></g>)}
+      {[-80,-60,-40,-20,0,20,40,60,80].map(v=><text key={v} x={64+(v+80)/160*620} y="280" textAnchor="middle" fontSize="9" fill="currentColor">{v>0?'+':''}{v}%</text>)}
+      <polyline points={[47.65,47.45,47.24,47.04,46.83,46.63,46.42,46.21,46.01].map((v,i)=>`${64+(i/8)*620},${258-(v-45)/5*210}`).join(' ')} fill="none" stroke="#547baf" strokeWidth="3"/>
+      {[47.65,47.45,47.24,47.04,46.83,46.63,46.42,46.21,46.01].map((v,i)=><circle key={i} cx={64+(i/8)*620} cy={258-(v-45)/5*210} r="3.5" fill="#547baf"/>)}
+      <text x="374" y="296" textAnchor="middle" fontSize="11" fill="currentColor">{language==='en'?'Energy cost change':'تغییر هزینه انرژی'}</text>
+    </svg>
     <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{language==='en'?'Energy cost change':'تغییر هزینه انرژی'}</th><th>IRR</th></tr></thead><tbody>{[-80,-60,-40,-20,0,20,40,60,80].map((v,i)=><tr key={v}><td>{v>0?'+':''}{v}%</td><td>{[47.65,47.45,47.24,47.04,46.83,46.63,46.42,46.21,46.01][i].toFixed(2)}%</td></tr>)}</tbody></table></div>
   </div>
 }
