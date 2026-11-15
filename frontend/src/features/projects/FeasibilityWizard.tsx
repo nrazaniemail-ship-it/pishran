@@ -211,12 +211,13 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
     {id:'hr-contingency',name:'هزینه‌های احتمالی سرمایه‌ای',cost:879191,residualValue:0,usefulLife:10,startYear:Math.ceil(m.project.constructionYears)+1,method:'straight-line' as const},
     {id:'hr-preop',name:'هزینه‌های قبل از بهره‌برداری',cost:239826.63796,residualValue:23982.663796,usefulLife:10,startYear:Math.ceil(m.project.constructionYears)+1,method:'straight-line' as const}
   ]:undefined
+  const annualProjectStartYear=m.foundation.planning.periodFrequency!=='annual'&&m.foundation.planning.projectStartDate?Number(m.foundation.planning.projectStartDate.slice(0,4)):m.project.startYear
   const fixedInvestmentLifecycleInputs=m.fixedInvestmentItems.length
     ?buildComfarDepreciationAssetsFromFixedInvestmentItems(
       m.fixedInvestmentItems,
-      m.project.startYear,
+      annualProjectStartYear,
       Math.max(1,Math.ceil(m.project.constructionYears||1)+Math.ceil(m.project.operatingYears||1)),
-      m.foundation.planning.periodFrequency,
+      'annual',
       m.foundation
     )
     :{assets:[],sales:[],investmentSchedule:Array.from({length:Math.max(1,Math.ceil(m.project.constructionYears||1)+Math.ceil(m.project.operatingYears||1))},()=>0),investmentScheduleVerified:false,preOperatingSchedule:Array.from({length:Math.max(1,Math.ceil(m.project.constructionYears||1)+Math.ceil(m.project.operatingYears||1))},()=>0),preOperatingScheduleVerified:false,warnings:[]}
