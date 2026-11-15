@@ -1198,6 +1198,8 @@ assert.equal(engine.resolveComfarDepreciationStartPeriod(registerBuild.assets[0]
 near(registerBuild.assets[0].originalValue,200,1e-9,'Fixed-asset acquisition amount must be converted to local currency')
 assert.equal(registerBuild.investmentSchedule[0],200,'Confirmed asset acquisitions must create a periodised investment cash-flow schedule')
 assert.equal(registerBuild.investmentScheduleVerified,true,'Source-supported acquisition periods must verify register-based CAPEX timing')
+const unspecifiedFrequencyBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([registerAsset],1405,12,'unspecified',validFoundation)
+assert.equal(unspecifiedFrequencyBuild.investmentScheduleVerified,false,'Unspecified project period frequency must not verify register-based CAPEX timing')
 const estimatedRegisterBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([{
   ...registerAsset,acquisitions:registerAsset.acquisitions.map(row=>({...row,allocationBasis:'proportional-estimate'}))
 }],1405,12,'annual',validFoundation)
