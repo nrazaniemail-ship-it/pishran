@@ -1182,7 +1182,7 @@ export function reconcileFixedInvestmentRegister(
     : Math.abs(difference) <= Math.max(0, tolerance) && warnings.length === 0
       ? 'matched'
       : 'unreconciled'
-  if (hasRegister && status === 'unreconciled') {
+  if (status === 'unreconciled') {
     warnings.push('Fixed Investment Register acquisitions do not reconcile to aggregate CAPEX excluding pre-operating expenses. Review unallocated CAPEX, non-depreciable assets and duplicate entries before using the register as a cash-investment source.')
   }
   return { registerTotal, capexFixedAssetTarget: target, difference, status, warnings }
