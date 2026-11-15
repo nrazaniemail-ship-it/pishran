@@ -135,3 +135,100 @@ export function validateProjectFoundation(value: ProjectFoundation): ProjectFoun
     issue('taxation.rates', 'warning', 'missing-tax-rates', 'The tax system is selected but no period-specific tax rates have been entered.')
   return issues
 }
+
+export type FixedInvestmentAssetClass = 'land' | 'site' | 'buildings' | 'machinery' | 'infrastructure' | 'vehicles' | 'office' | 'intangible' | 'other'
+export type FixedInvestmentDepreciationMethod = 'none' | 'linear-zero' | 'linear-scrap' | 'accelerated' | 'sum-of-digits'
+export type FixedInvestmentAcquisition = {
+  id: string
+  period: string
+  quantity: number
+  unitPrice: number
+  currencyCode: string
+  exchangeRateToLocal: number | null
+}
+export type FixedInvestmentSale = {
+  id: string
+  acquisitionId: string
+  period: string
+  market: 'local' | 'foreign'
+  priceMode: 'book-value' | 'self-defined'
+  currencyCode: string
+  selfDefinedPrice: number | null
+}
+export type FixedInvestmentItem = {
+  id: string
+  description: string
+  assetClass: FixedInvestmentAssetClass
+  origin: 'local' | 'foreign'
+  currencyCode: string
+  costCentreId: string
+  depreciation: {
+    method: FixedInvestmentDepreciationMethod
+    startingAt: string
+    ratePercent: number | null
+    lengthYears: number | null
+    lengthMonths: number
+    scrapPercent: number
+  }
+  acquisitions: FixedInvestmentAcquisition[]
+  sales: FixedInvestmentSale[]
+}
+
+export function createBlankFixedInvestmentItem(): FixedInvestmentItem {
+  return {
+    id: 'fixed-asset-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    description: '',
+    assetClass: 'other',
+    origin: 'local',
+    currencyCode: '',
+    costCentreId: '',
+    depreciation: { method: 'none', startingAt: '', ratePercent: null, lengthYears: null, lengthMonths: 0, scrapPercent: 0 },
+    acquisitions: [],
+    sales: [],
+  }
+}
+
+export function validateFixedInvestmentItems(items: FixedInvestmentItem[], foundation: ProjectFoundation): ProjectFoundationIssue[] {
+  const issues: ProjectFoundationIssue[] = []
+  const issue = (path: string, code: string, message: string) => issues.push({ path, severity: 'error', code, message })
+  const itemIds = items.map(item => item.id)
+  if (new Set(itemIds).size !== itemIds.length) issue('fixedInvestmentItems', 'duplicate-fixed-asset-id', 'Fixed investment item identifiers must be unique.')
+  const validCurrencyCodes = new Set([foundation.currencies.localCurrencyCode, ...foundation.currencies.foreignCurrencies.map(currency => currency.code)].map(code => code.trim().toUpperCase()).filter(Boolean))
+  items.forEach((item, index) => {
+    const path = `fixedInvestmentItems[${index}]`
+    if (!item.description.trim()) issue(path + '.description', 'missing-fixed-asset-description', 'Enter a description for each fixed investment item.')
+    if (!item.currencyCode.trim() || !validCurrencyCodes.has(item.currencyCode.trim().toUpperCase()))
+      issue(path + '.currencyCode', 'unknown-fixed-asset-currency', 'The asset currency must be defined in the project currency structure.')
+    if (foundation.costCentres.active && (!item.costCentreId || !foundation.costCentres.items.some(centre => centre.id === item.costCentreId)))
+      issue(path + '.costCentreId', 'missing-fixed-asset-cost-centre', 'Select a valid Cost Centre for this fixed investment item.')
+    if (item.acquisitions.length === 0) issue(path + '.acquisitions', 'missing-asset-acquisition', 'At least one acquisition period is required for a fixed investment item.')
+    item.acquisitions.forEach((acquisition, acquisitionIndex) => {
+      const acquisitionPath = path + `.acquisitions[${acquisitionIndex}]`
+      if (!acquisition.period.trim() || !Number.isFinite(acquisition.quantity) || acquisition.quantity < 0 || !Number.isFinite(acquisition.unitPrice) || acquisition.unitPrice < 0)
+        issue(acquisitionPath, 'invalid-asset-acquisition', 'Acquisition period, quantity and unit price must be valid and non-negative.')
+      if (acquisition.currencyCode.trim().toUpperCase() !== item.currencyCode.trim().toUpperCase())
+        issue(acquisitionPath + '.currencyCode', 'asset-acquisition-currency-mismatch', 'Acquisition currency must match the fixed investment item currency.')
+      if (item.origin === 'foreign' && (!Number.isFinite(acquisition.exchangeRateToLocal) || (acquisition.exchangeRateToLocal ?? 0) <= 0))
+        issue(acquisitionPath + '.exchangeRateToLocal', 'missing-asset-exchange-rate', 'Foreign-origin asset acquisitions require a positive exchange rate to local currency.')
+    })
+    if (item.depreciation.method !== 'none') {
+      if (!item.depreciation.startingAt.trim()) issue(path + '.depreciation.startingAt', 'missing-depreciation-start', 'Define Starting at for depreciable assets.')
+      if (!Number.isInteger(item.depreciation.lengthYears) || (item.depreciation.lengthYears ?? 0) < 0 || !Number.isInteger(item.depreciation.lengthMonths) || item.depreciation.lengthMonths < 0 || item.depreciation.lengthMonths > 11 || ((item.depreciation.lengthYears ?? 0) + item.depreciation.lengthMonths / 12) <= 0)
+        issue(path + '.depreciation.length', 'invalid-depreciation-length', 'Depreciation Length must be greater than zero and months must be from 0 to 11.')
+      if (!Number.isFinite(item.depreciation.scrapPercent) || item.depreciation.scrapPercent < 0 || item.depreciation.scrapPercent > 100)
+        issue(path + '.depreciation.scrapPercent', 'invalid-scrap-percent', 'Scrap must be between 0 and 100 percent of original value.')
+      if (item.depreciation.method !== 'sum-of-digits' && (!Number.isFinite(item.depreciation.ratePercent) || (item.depreciation.ratePercent ?? 0) <= 0 || (item.depreciation.ratePercent ?? 0) > 100))
+        issue(path + '.depreciation.ratePercent', 'invalid-depreciation-rate', 'Rate must be greater than 0 and no more than 100 percent per annum.')
+    }
+    item.sales.forEach((sale, saleIndex) => {
+      const salePath = path + `.sales[${saleIndex}]`
+      if (!sale.acquisitionId || !item.acquisitions.some(acquisition => acquisition.id === sale.acquisitionId))
+        issue(salePath + '.acquisitionId', 'unknown-asset-sale-acquisition', 'An asset sale must refer to an existing acquisition.')
+      if (!sale.period.trim() || !sale.currencyCode.trim() || !validCurrencyCodes.has(sale.currencyCode.trim().toUpperCase()))
+        issue(salePath, 'invalid-asset-sale-period-currency', 'Asset sale requires a period and a defined currency.')
+      if (sale.priceMode === 'self-defined' && (!Number.isFinite(sale.selfDefinedPrice) || (sale.selfDefinedPrice ?? 0) < 0))
+        issue(salePath + '.selfDefinedPrice', 'invalid-asset-sale-price', 'A self-defined sale price must be a non-negative number.')
+    })
+  })
+  return issues
+}
