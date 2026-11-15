@@ -786,7 +786,13 @@ export function calculateComfarAssetDepreciationSchedule(
       const rate = (asset.ratePercent ?? 0) / 100
       for (let age = 1; age <= maxAge && bookValue > salvage + 1e-8; age += 1) {
         const remainingLife = length - (age - 1) - m1 / 12
-        if (remainingLife <= 0) break
+        if (remainingLife <= 0) {
+          const period = startPeriod! + age - 1
+          const depreciation = Math.max(0, bookValue - salvage)
+          depreciationByPeriod.set(period, { amount: depreciation, method: 'linear-to-scrap' })
+          bookValue = salvage
+          break
+        }
         const periodFraction = age === 1 ? m1 / 12 : 1
         const acceleratedAnnual = bookValue * rate
         const linearAnnual = (bookValue - salvage) / remainingLife
