@@ -51,6 +51,18 @@ near(driAudit.annualOpex.factoryCostExDepreciation + driAudit.annualOpex.depreci
 near(driAudit.annualOpex.depreciationDetailed - driAudit.reference.referenceDepreciation,
   6292799.41, 0.02, 'DRI depreciation discrepancy retained as an audit flag')
 
+const hrcrFixedAssets = reference.createHotRollingCoilFixedInvestmentItems()
+const hrcrFoundation = reference.createHotRollingCoilProjectFoundation()
+const hrcrRegisterTotal = hrcrFixedAssets.reduce((total,item)=>total+item.acquisitions.reduce((subtotal,acquisition)=>subtotal+acquisition.quantity*acquisition.unitPrice*(item.origin==='foreign'?(acquisition.exchangeRateToLocal??0):1),0),0)
+near(hrcrRegisterTotal,rollingAudit.capex.fixedInvestment,0.01,'HRCR200 asset register must reconcile to fixed investment CAPEX')
+assert.equal(hrcrFixedAssets.length,10,'HRCR200 register must seed land, site, buildings, local/foreign machinery, infrastructure split, vehicles, office and contingencies')
+const hrcrDepreciationBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(hrcrFixedAssets,1403,17,'annual',hrcrFoundation)
+assert.equal(hrcrDepreciationBuild.warnings.length,0,'HRCR200 reference fixed-asset vintages must map without unsupported dates or currencies')
+const hrcrLifecycle = engine.calculateComfarAssetLifecycle(hrcrDepreciationBuild.assets,hrcrDepreciationBuild.sales,17)
+near(hrcrLifecycle.depreciation.periods[2].depreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.conditionsTableFirstYearDepreciation,0.01,'HRCR200 first production-year depreciation from detailed conditions table')
+near(reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarFirstYear-hrcrLifecycle.depreciation.periods[2].depreciation,554.2483246,0.01,'HRCR200 first-year COMFAR depreciation variance must remain visible, not be tuned away')
+assert.ok(Math.abs(hrcrLifecycle.depreciation.periods[2].depreciation-rollingAudit.depreciationReconciliation.comfarFirstYear)>500,'HRCR200 depreciation reconciliation must remain open pending asset-level Starting at/disposal data')
+
 const rollingAudit = workbookAudit.HOT_ROLLING_200KT_AUDIT
 near(rollingAudit.capex.fixedInvestment + rollingAudit.capex.preproductionNet,
   rollingAudit.capex.constructionInvestment, 0.01, 'HRCR200 construction investment')
