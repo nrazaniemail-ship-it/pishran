@@ -55,7 +55,21 @@
 | تعدیلات سالانه | Annual Adjustments |
 | دوره‌های آغازین | Starting Periods |
 
-## 4. تسهیلات، دوره بازپرداخت و خدمت بدهی
+## 4. سرمایه و مشارکت
+| فارسی | اصطلاح انگلیسی مرجع COMFAR |
+|---|---|
+| سرمایه عادی | Ordinary Capital |
+| سرمایه ممتاز | Preference Capital |
+| سرمایه پرداخت‌شده | Paid-in Capital |
+| بازپرداخت / استرداد سرمایه | Capital Refund |
+| سود ممتاز | Preferred Dividends |
+| انتقال سود به خارج از کشور | Export of Profit |
+| شریک محلی | Local Partner |
+| شریک خارجی | Foreign Partner |
+| یارانه‌ها و کمک‌های بلاعوض | Subsidies and Grants |
+| حقوق صاحبان سهام / سرمایه ریسک‌پذیر | Equity / Risk Capital |
+
+## 5. تسهیلات، دوره بازپرداخت و خدمت بدهی
 | فارسی | اصطلاح انگلیسی مرجع COMFAR |
 |---|---|
 | نوع تسهیلات | Type of Loan |
@@ -83,7 +97,7 @@
 | کارمزد تعهد | Commitment Fee |
 | سایر کارمزدها | Other Fees |
 
-## 5. برنامه‌های فنی و عملیاتی
+## 6. برنامه‌های فنی و عملیاتی
 | فارسی | اصطلاح انگلیسی استاندارد |
 |---|---|
 | برنامه تولید | Production Programme |
@@ -105,7 +119,7 @@
 | استهلاک انباشته | Accumulated Depreciation |
 | ارزش فرصت | Opportunity Cost / Opportunity Value (با توجه به کاربرد) |
 
-## 6. هزینه‌ها، تأمین مالی و جریان نقدی
+## 7. هزینه‌ها، تأمین مالی و جریان نقدی
 | فارسی | اصطلاح انگلیسی استاندارد |
 |---|---|
 | سرمایه‌گذاری ثابت | Fixed Investment |
@@ -137,7 +151,7 @@
 | دوره بازگشت | Payback Period |
 | دوره بازگشت تنزیل‌شده | Discounted Payback Period |
 
-## 7. تحلیل‌های ویژه و خروجی‌ها
+## 8. تحلیل‌های ویژه و خروجی‌ها
 | فارسی | اصطلاح انگلیسی مرجع/استاندارد |
 |---|---|
 | تحلیل حساسیت | Sensitivity Analysis |
@@ -157,7 +171,7 @@
 | صورت سود و زیان | Income Statement |
 | صورت جریان وجوه نقد | Cash Flow Statement |
 
-## 8. اصطلاحات رابط کاربری و گردش‌کار
+## 9. اصطلاحات رابط کاربری و گردش‌کار
 | فارسی | اصطلاح انگلیسی استاندارد |
 |---|---|
 | ذخیره پروژه | Save Project |
@@ -174,14 +188,14 @@
 | تنظیمات صفحه | Page Setup |
 | چاپ | Print |
 
-## 9. الزامات کنترل کیفیت ترجمه
+## 10. الزامات کنترل کیفیت ترجمه
 - برای هر واژه کلیدی یک شناسه ثابت در فرهنگ واژگان نرم‌افزار تعریف شود؛ رشته انگلیسی در چند کامپوننت به‌صورت دستی و متفاوت نوشته نشود.
 - ترجمه انگلیسی گزارش و فرم باید از همان فرهنگ واژگان رابط استفاده کند.
 - اصطلاحاتی که در COMFAR III و استانداردهای جدید مالی چند معنی دارند (مانند Opportunity Cost، Salvage Value و Starting Balances) باید با توجه به فصل و محاسبه انتخاب شوند.
 - آزمون CI باید اصطلاحات مهم انگلیسی توسعه/بازسازی را در فرم و گزارش کنترل کند.
 - اصطلاحات مالی پیشرفته‌ای که در COMFAR III کلاسیک به همین شکل وجود ندارند (مانند CFADS و DSCR) با واژگان صنعتی استاندارد حفظ شوند و به‌عنوان قابلیت تکمیلی پیشران معرفی شوند، نه اینکه به COMFAR نسبت داده شوند.
 
-## 10. مراجع
+## 11. مراجع
 - COMFAR III Expert Reference Manual, Table of Contents: chapters VI–XIV.
 - Chapter VII: Financial Data Input؛ به‌ویژه VII.F Project Identification، VII.G Planning Horizon، VII.H Product Definition، VII.I Currencies، VII.J Cost Centers، VII.M Discounting و VII.T Expansion/Rehabilitation.
 - Chapter X: Presentation of Results؛ به‌ویژه X.C Financial Schedules and Graphs.
