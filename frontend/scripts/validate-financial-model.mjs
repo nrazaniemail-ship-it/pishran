@@ -21,6 +21,7 @@ const [engine, reference, integratedReference, workbookAudit, foundation] = awai
   loadTypeScriptModule('../src/features/steel/workbookReconciliation.ts'),
   loadTypeScriptModule('../src/features/projects/projectFoundation.ts')
 ])
+const periodicEngine = await loadTypeScriptModule('../src/features/steel/periodicFinancialEngine.ts')
 
 const validStartingAsset = {
   id: 'validation-asset', name: 'Validation asset', grossCost: 1000,
@@ -150,7 +151,7 @@ const periodicAssetBuild=engine.buildPeriodicComfarDepreciationAssetsFromFixedIn
 assert.equal(periodicAssetBuild.warnings.length,0,'Explicit ISO acquisition and disposal dates must build without unresolved timing warnings')
 assert.equal(periodicAssetBuild.fixedInvestmentSchedule[0],1200)
 assert.equal(periodicAssetBuild.preOperatingSchedule.reduce((sum,value)=>sum+value,0),0)
-const periodicAssetLifecycle=integratedReference.calculatePeriodicComfarAssetLifecycle(periodicAssetBuild.assets,periodicAssetBuild.sales,periodicAssetCalendar)
+const periodicAssetLifecycle=periodicEngine.calculatePeriodicComfarAssetLifecycle(periodicAssetBuild.assets,periodicAssetBuild.sales,periodicAssetCalendar)
 assert.equal(periodicAssetLifecycle.valid,true)
 assert.equal(periodicAssetLifecycle.sales.length,1)
 assert.equal(periodicAssetLifecycle.sales[0].saleProceeds,1500)
