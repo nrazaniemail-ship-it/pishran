@@ -609,3 +609,9 @@ input,select,textarea{color:var(--text)}
 :root[lang="en"] body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
 :root[lang="en"] .main-nav{direction:ltr}
 :root[lang="en"] .topbar,:root[lang="en"] .top-actions{direction:ltr}
+
+
+/* Explicit per-section save controls; auto-save remains enabled as a safety net. */
+.fw-card-save-row{display:flex;justify-content:flex-start;margin:0 0 10px;}
+.fw-save-button{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:6px 12px;border:1px solid var(--line);background:var(--surface-soft);color:var(--navy);font-size:12px;font-weight:700;border-radius:9px;cursor:pointer;}
+.fw-save-button:hover{background:var(--accent);color:var(--accent-text);border-color:var(--focus);}
