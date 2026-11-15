@@ -20,6 +20,10 @@ type Props = {
   fullCapacityVariableCashCost: number
   fullCapacityFixedCashCost: number
   fixedInvestment: number
+  preOperatingCost: number
+  depreciationAssets?: Asset[]
+  workingCapitalDefaults?: { days: { raw:number; energy:number; spareParts:number; wip:number; finished:number; receivable:number; cash:number; payable:number }; bases: { rawMaterials:number; energy:number; spareParts:number; conversion:number; finishedGoods:number; cash:number; payables:number }; wipCompletion?: { material:number; conversion:number } }
+  referenceVersion?: string
   equityPercent: number
   costOfEquity: number
   costOfDebt: number
@@ -32,8 +36,8 @@ type SavedState = {
   loans: Loan[]
   assets: Asset[]
   equityContributions: number[]
-  workingCapitalDays: { raw: number; wip: number; finished: number; receivable: number; cash: number; payable: number }
-  workingCapitalBases: { rawMaterials: number; conversion: number; finishedGoods: number; cash: number; payables: number }
+  workingCapitalDays: { raw: number; energy:number; spareParts:number; wip: number; finished: number; receivable: number; cash: number; payable: number }
+  workingCapitalBases: { rawMaterials: number; energy:number; spareParts:number; conversion: number; finishedGoods: number; cash: number; payables: number }
   wipCompletion: { material: number; conversion: number }
   taxRates: number[]
   discountMode: 'wacc' | 'manual'
@@ -53,14 +57,15 @@ export default function AdvancedFinancePanel(props: Props) {
   const years = Math.max(1, Math.min(40, Math.ceil(props.constructionYears) + Math.ceil(props.operatingYears)))
   const construction = Math.max(1, Math.ceil(props.constructionYears))
   const opYears = Math.max(1, years - construction)
-  const storageKey = 'feasibility:advanced-finance:' + props.projectId
+  const storageKey = 'feasibility:advanced-finance:' + props.projectId + (props.referenceVersion ? ':' + props.referenceVersion : '')
   const initialCapexSchedule = Array.from({length:years},(_,i)=>i<construction?props.fixedInvestment/construction:0)
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
     loans:[{id:'loan-1',label:'تسهیلات اصلی',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,opYears),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
-    assets:props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100),
-    workingCapitalDays:{raw:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
-    workingCapitalBases:{rawMaterials:0,conversion:0,finishedGoods:0,cash:0,payables:0},
+    assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100),
+    workingCapitalDays:props.workingCapitalDefaults?.days??{raw:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
+    workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
+    wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},
     wipCompletion:{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),
     discountMode:'wacc',manualRate:props.costOfEquity,maintenancePercent:0
   }))
@@ -71,7 +76,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const capexSchedule = useMemo(()=>Array.from({length:years},(_,i)=>i<construction?props.fixedInvestment/construction:0),[years,construction,props.fixedInvestment])
   const updateLoan=(id:string,patch:Partial<Loan>)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,...patch}:l)}))
   const updateDraw=(id:string,index:number,value:number)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,drawdowns:l.drawdowns.map((v,i)=>i===index?Math.max(0,value):v)}:l)}))
-  const syncAssets=()=>setState(s=>({...s,assets:props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20}))}))
+  const syncAssets=()=>setState(s=>({...s,assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20}))}))
   const addLoan=()=>setState(s=>({...s,loans:[...s.loans,{id:'loan-'+Date.now(),label:'تسهیلات جدید',drawdowns:Array(years).fill(0),annualRate:20,graceYears:0,termYears:Math.max(1,opYears),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}]}))
   const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی جدید',cost:0,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line',decliningRate:20}]}))
 
@@ -79,11 +84,11 @@ export default function AdvancedFinancePanel(props: Props) {
   const utilization = Array.from({length:years},(_,i)=>i<construction?0:Math.max(0,Math.min(100,props.ramp[i-construction]??100))/100)
   const fixedInvestmentSchedule = capexSchedule
   const workingCapitalPolicy = useMemo(()=>({
-    dayBasis:360 as const,rawMaterialDays:state.workingCapitalDays.raw,workInProgressDays:state.workingCapitalDays.wip,
+    dayBasis:360 as const,rawMaterialDays:state.workingCapitalDays.raw,energyDays:state.workingCapitalDays.energy,sparePartsDays:state.workingCapitalDays.spareParts,workInProgressDays:state.workingCapitalDays.wip,
     workInProgressMaterialCompletionPercent:state.wipCompletion.material,workInProgressConversionCompletionPercent:state.wipCompletion.conversion,
     finishedGoodsDays:state.workingCapitalDays.finished,receivableDays:state.workingCapitalDays.receivable,
     cashDays:state.workingCapitalDays.cash,payableDays:state.workingCapitalDays.payable,
-    annualRawMaterialCost:state.workingCapitalBases.rawMaterials,
+    annualRawMaterialCost:state.workingCapitalBases.rawMaterials,annualEnergyCost:state.workingCapitalBases.energy,annualSparePartsCost:state.workingCapitalBases.spareParts,
     annualPayablesCost:state.workingCapitalBases.payables,
     annualConversionCost:state.workingCapitalBases.conversion,
     annualFinishedGoodsCost:state.workingCapitalBases.finishedGoods,
@@ -96,8 +101,8 @@ export default function AdvancedFinancePanel(props: Props) {
     years,constructionYears:construction,capacity:props.capacity,fullCapacityRevenue:props.fullCapacityRevenue,
     fullCapacityVariableCashCost:props.fullCapacityVariableCashCost,fullCapacityFixedCashCost:props.fullCapacityFixedCashCost,
     annualDepreciation:0,depreciationSchedule:depreciation.map(r=>r.depreciation),
-    maintenanceCapexSchedule,fixedInvestment:props.fixedInvestment,preOperatingCost:0,
-    fixedInvestmentSchedule,preOperatingSchedule:Array(years).fill(0),utilization,equityContributions,
+    maintenanceCapexSchedule,fixedInvestment:props.fixedInvestment,preOperatingCost:props.preOperatingCost,
+    fixedInvestmentSchedule,preOperatingSchedule:Array.from({length:years},(_,i)=>i<construction?props.preOperatingCost/construction:0),utilization,equityContributions,
     loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
     taxRate:props.taxRate,taxRateSchedule:taxRates,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
     workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:0,opexEscalationPercent:0,
@@ -141,16 +146,16 @@ export default function AdvancedFinancePanel(props: Props) {
     <h4>{t('۲. سرمایه در گردش دوره‌ای','2. Periodic Working Capital')}</h4>
     <p className="fw-hint">{tr('مبنای روز ۳۶۰ روز است. روزهای نگهداری/وصول/پرداخت را از چرخه واقعی پروژه وارد کنید؛ مقدار صفر یعنی برای آن قلم سرمایه در گردش منظور نمی‌شود.')}</p>
     <div className="fw-grid">
-      {([['raw','روز موجودی مواد اولیه'],['wip','روز کالای در جریان ساخت'],['finished','روز محصول نهایی'],['receivable','روز وصول مطالبات'],['cash','روز حداقل نقد عملیاتی'],['payable','روز پرداخت بدهی تجاری']] as [keyof SavedState['workingCapitalDays'],string][]).map(([key,label])=><label className="fw-field" key={key}><span>{tr(label)}</span><input type="number" min="0" value={state.workingCapitalDays[key]} onChange={e=>updateDay(key,Number(e.target.value))}/></label>)}
+      {([['raw','روز موجودی مواد اولیه'],['energy','روز موجودی/پوشش هزینه انرژی'],['spareParts','روز موجودی قطعات یدکی'],['wip','روز کالای در جریان ساخت'],['finished','روز محصول نهایی'],['receivable','روز وصول مطالبات'],['cash','روز حداقل نقد عملیاتی'],['payable','روز پرداخت بدهی تجاری']] as [keyof SavedState['workingCapitalDays'],string][]).map(([key,label])=><label className="fw-field" key={key}><span>{tr(label)}</span><input type="number" min="0" value={state.workingCapitalDays[key]} onChange={e=>updateDay(key,Number(e.target.value))}/></label>)}
     </div>
     <div className="fw-grid">
-      {([['rawMaterials','مبنای سالانه مواد اولیه'],['conversion','مبنای سالانه هزینه تبدیل'],['finishedGoods','بهای سالانه محصول ساخته‌شده'],['cash','هزینه نقدی سالانه برای حداقل نقد'],['payables','مبنای سالانه بدهی تجاری']] as [keyof SavedState['workingCapitalBases'],string][]).map(([key,label])=><label className="fw-field" key={key}><span>{tr(label)} ({props.currency})</span><input type="number" min="0" value={state.workingCapitalBases[key]} onChange={e=>setState(s=>({...s,workingCapitalBases:{...s.workingCapitalBases,[key]:Math.max(0,Number(e.target.value))}}))}/></label>)}
+      {([['rawMaterials','مبنای سالانه مواد اولیه'],['energy','مبنای سالانه هزینه انرژی'],['spareParts','مبنای سالانه قطعات یدکی'],['conversion','مبنای سالانه هزینه تبدیل'],['finishedGoods','بهای سالانه محصول ساخته‌شده'],['cash','هزینه نقدی سالانه برای حداقل نقد'],['payables','مبنای سالانه بدهی تجاری']] as [keyof SavedState['workingCapitalBases'],string][]).map(([key,label])=><label className="fw-field" key={key}><span>{tr(label)} ({props.currency})</span><input type="number" min="0" value={state.workingCapitalBases[key]} onChange={e=>setState(s=>({...s,workingCapitalBases:{...s.workingCapitalBases,[key]:Math.max(0,Number(e.target.value))}}))}/></label>)}
       <label className="fw-field"><span>{tr('تکمیل مواد در جریان ساخت (%)')}</span><input type="number" min="0" max="100" value={state.wipCompletion.material} onChange={e=>setState(s=>({...s,wipCompletion:{...s.wipCompletion,material:Math.max(0,Math.min(100,Number(e.target.value)))}}))}/></label>
       <label className="fw-field"><span>{tr('تکمیل تبدیل در جریان ساخت (%)')}</span><input type="number" min="0" max="100" value={state.wipCompletion.conversion} onChange={e=>setState(s=>({...s,wipCompletion:{...s.wipCompletion,conversion:Math.max(0,Math.min(100,Number(e.target.value)))}}))}/></label>
     </div>
     <p className="fw-hint">{tr('مبنای هزینه‌های سرمایه در گردش عمداً از OPEX کل به‌صورت خودکار تفکیک نمی‌شود؛ ارقام واقعی مواد، تبدیل، محصول، نقد و خرید اعتباری را وارد کنید تا تقسیم‌بندی فرضی در مدل ایجاد نشود.')}</p>
     <div className="fw-result">{tr('اوج نیاز سرمایه در گردش')}: <b>{money(result.peakWorkingCapital)} {props.currency}</b> · {tr('کسری منابع')}: <b>{money(result.fundingGap)} {props.currency}</b></div>
-    <div className="fw-card"><b>{t('جدول دوره‌ای سرمایه در گردش','Periodic Working Capital Schedule')}</b>{result.years.map(r=><div className="fw-validation" key={r.year}><span>{tr('سال')} {r.year} · {tr('مواد')} {money(r.workingCapitalBreakdown.rawMaterials)} · WIP {money(r.workingCapitalBreakdown.workInProgress)} · {tr('محصول')} {money(r.workingCapitalBreakdown.finishedGoods)} · {tr('مطالبات')} {money(r.workingCapitalBreakdown.receivables)} · {tr('پرداختنی')} {money(r.workingCapitalBreakdown.payables)}</span><b>نیاز طی سال {money(r.workingCapital)} · مانده پایان {money(r.closingWorkingCapital)} · تغییر خالص {money(r.changeInWorkingCapital)}</b></div>)}</div>
+    <div className="fw-card"><b>{t('جدول دوره‌ای سرمایه در گردش','Periodic Working Capital Schedule')}</b>{result.years.map(r=><div className="fw-validation" key={r.year}><span>{tr('سال')} {r.year} · {tr('مواد')} {money(r.workingCapitalBreakdown.rawMaterials)} · {tr('انرژی')} {money(r.workingCapitalBreakdown.energy??0)} · {tr('قطعات یدکی')} {money(r.workingCapitalBreakdown.spareParts??0)} · WIP {money(r.workingCapitalBreakdown.workInProgress)} · {tr('محصول')} {money(r.workingCapitalBreakdown.finishedGoods)} · {tr('مطالبات')} {money(r.workingCapitalBreakdown.receivables)} · {tr('پرداختنی')} {money(r.workingCapitalBreakdown.payables)}</span><b>نیاز طی سال {money(r.workingCapital)} · مانده پایان {money(r.closingWorkingCapital)} · تغییر خالص {money(r.changeInWorkingCapital)}</b></div>)}</div>
 
     <h4>{t('۳. استهلاک دارایی‌به‌دارایی و مالیات','3. Asset-Level Depreciation & Tax')}</h4>
     <p className="fw-hint">{tr('دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.')}</p>
