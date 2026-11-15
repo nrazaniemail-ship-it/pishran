@@ -50,6 +50,8 @@ type SavedState = {
   discountMode: 'wacc' | 'manual'
   manualRate: number
   maintenancePercent: number
+  salesEscalationPercent: number
+  opexEscalationPercent: number
 }
 const money = (v: number) => Number.isFinite(v) ? v.toLocaleString(typeof document!=='undefined'&&document.documentElement.lang==='en'?'en-US':'fa-IR',{maximumFractionDigits:1}) : '—'
 const loanMethods: {value: Loan['repaymentMethod']; label:string}[] = [
@@ -74,7 +76,7 @@ export default function AdvancedFinancePanel(props: Props) {
     workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
     wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},
     wipCompletion:{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),
-    discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0
+    discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0
   }))
   const [loaded,setLoaded]=useState(false)
   useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved)setState({...state,...saved});setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
@@ -112,7 +114,7 @@ export default function AdvancedFinancePanel(props: Props) {
     fixedInvestmentSchedule,preOperatingSchedule:Array.from({length:years},(_,i)=>i<construction?props.preOperatingCost/construction:0),utilization,equityContributions,
     loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
     taxRate:props.taxRate,taxRateSchedule:taxRates,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
-    workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:0,opexEscalationPercent:0,
+    workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:state.salesEscalationPercent,opexEscalationPercent:state.opexEscalationPercent,
     discountMode:state.discountMode,manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.costOfEquity,equityMirrReinvestmentRate:props.costOfEquity
   }
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
@@ -185,6 +187,8 @@ export default function AdvancedFinancePanel(props: Props) {
       <label className="fw-field"><span>{tr('نرخ تنزیل')}</span><select value={state.discountMode} onChange={e=>setState(s=>({...s,discountMode:e.target.value as SavedState['discountMode']}))}><option value="wacc">WACC</option><option value="manual">{tr('دستی')}</option></select></label>
       {state.discountMode==='manual'&&<label className="fw-field"><span>{tr('نرخ تنزیل دستی (%)')}</span><input type="number" value={state.manualRate} onChange={e=>setState(s=>({...s,manualRate:Number(e.target.value)}))}/></label>}
       <label className="fw-field"><span>{tr('CAPEX نگهداری سالانه (% هزینه نقدی)')}</span><input type="number" min="0" value={state.maintenancePercent} onChange={e=>setState(s=>({...s,maintenancePercent:Number(e.target.value)}))}/></label>
+      <label className="fw-field"><span>{t('رشد سالانه قیمت فروش (%)','Annual Selling Price Escalation (%)')}</span><input type="number" min="-99" value={state.salesEscalationPercent} onChange={e=>setState(s=>({...s,salesEscalationPercent:Number(e.target.value)}))}/></label>
+      <label className="fw-field"><span>{t('رشد سالانه هزینه‌های عملیاتی (%)','Annual OPEX Escalation (%)')}</span><input type="number" min="-99" value={state.opexEscalationPercent} onChange={e=>setState(s=>({...s,opexEscalationPercent:Number(e.target.value)}))}/></label>
     </div>
 
     <h4>{t('۴. شاخص‌های مالی، CFADS و DSCR','4. Financial Metrics, CFADS & DSCR')}</h4>
