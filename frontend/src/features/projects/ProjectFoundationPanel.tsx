@@ -1,0 +1,89 @@
+import type { ProjectFoundation, ProjectCurrency, ProjectCostCentre, ProjectInflationIndex, ProjectTaxRate } from './projectFoundation'
+
+type Props = { value: ProjectFoundation; onChange: (value: ProjectFoundation) => void; language?: 'fa' | 'en' }
+const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+
+export default function ProjectFoundationPanel({ value, onChange, language = 'fa' }: Props) {
+  const en = language === 'en'
+  const t = (fa: string, english: string) => en ? english : fa
+  const update = (patch: Partial<ProjectFoundation>) => onChange({ ...value, ...patch })
+  const updatePlanning = (patch: Partial<ProjectFoundation['planning']>) => update({ planning: { ...value.planning, ...patch } })
+  const updateCurrencies = (patch: Partial<ProjectFoundation['currencies']>) => update({ currencies: { ...value.currencies, ...patch } })
+  const updateCentres = (patch: Partial<ProjectFoundation['costCentres']>) => update({ costCentres: { ...value.costCentres, ...patch } })
+  const updateInflation = (patch: Partial<ProjectFoundation['inflation']>) => update({ inflation: { ...value.inflation, ...patch } })
+  const updateDiscounting = (patch: Partial<ProjectFoundation['discounting']>) => update({ discounting: { ...value.discounting, ...patch } })
+  const updateTax = (patch: Partial<ProjectFoundation['taxation']>) => update({ taxation: { ...value.taxation, ...patch } })
+  const input = (label: string, valueText: string | number, onValue: (value: string) => void, type = 'text', min?: number, max?: number) =>
+    <label className="fw-field"><span>{label}</span><input type={type} value={valueText} min={min} max={max} onChange={e => onValue(e.target.value)} /></label>
+
+  const addCurrency = () => updateCurrencies({ foreignCurrencies: [...value.currencies.foreignCurrencies, { id: makeId('currency'), code: '', name: '', exchangeRates: [] }] })
+  const updateCurrency = (id: string, patch: Partial<ProjectCurrency>) => updateCurrencies({ foreignCurrencies: value.currencies.foreignCurrencies.map(row => row.id === id ? { ...row, ...patch } : row) })
+  const addCostCentre = () => updateCentres({ items: [...value.costCentres.items, { id: makeId('centre'), code: '', name: '' }] })
+  const updateCostCentre = (id: string, patch: Partial<ProjectCostCentre>) => updateCentres({ items: value.costCentres.items.map(row => row.id === id ? { ...row, ...patch } : row) })
+  const addInflationIndex = () => updateInflation({ indices: [...value.inflation.indices, { id: makeId('index'), name: '', currencyCode: value.currencies.localCurrencyCode, rates: [] }] })
+  const updateIndex = (id: string, patch: Partial<ProjectInflationIndex>) => updateInflation({ indices: value.inflation.indices.map(row => row.id === id ? { ...row, ...patch } : row) })
+  const addTaxRate = () => updateTax({ rates: [...value.taxation.rates, { id: makeId('tax'), period: '', ratePercent: 0 }] })
+  const updateTaxRate = (id: string, patch: Partial<ProjectTaxRate>) => updateTax({ rates: value.taxation.rates.map(row => row.id === id ? { ...row, ...patch } : row) })
+
+  return <section className="fw-card" style={{ marginTop: 18 }}>
+    <h3>{t('فونداسیون مشترک پروژه و تنظیمات پایه','Common Project Foundation & Base Settings')}</h3>
+    <p className="fw-hint">{t('این تنظیمات مستقل از صنعت و قالب پروژه‌اند. در قالب خام، نرخ‌ها و داده‌های نامعلوم عمداً خالی می‌مانند؛ هیچ نرخ ارز، تورم، مالیات یا نرخ تنزیل ساختگی به مدل تزریق نمی‌شود.','These settings are industry- and template-independent. In the blank template, unknown rates and data remain empty; no exchange rate, inflation, tax or discount rate is assumed.')}</p>
+
+    <h4>{t('۱. دوره‌بندی و تاریخ مبنا','1. Planning Periods & Balance Date')}</h4>
+    <div className="fw-grid">
+      <label className="fw-field"><span>{t('تناوب دوره مالی','Financial Period Frequency')}</span><select value={value.planning.periodFrequency} onChange={e => updatePlanning({ periodFrequency: e.target.value as ProjectFoundation['planning']['periodFrequency'] })}><option value="annual">{t('سالانه','Annual')}</option><option value="semiannual">{t('شش‌ماهه','Semiannual')}</option><option value="quarterly">{t('فصلی','Quarterly')}</option><option value="monthly">{t('ماهانه','Monthly')}</option></select></label>
+      <label className="fw-field"><span>{t('مبنای شمارش روز','Day-count Basis')}</span><select value={value.planning.dayCountBasis} onChange={e => updatePlanning({ dayCountBasis: Number(e.target.value) as 360 | 365 })}><option value={360}>360</option><option value={365}>365</option></select></label>
+      {input(t('ماه تاریخ تراز','Balance Date Month'), value.planning.balanceDateMonth, v => updatePlanning({ balanceDateMonth: Number(v) }), 'number', 1, 12)}
+      {input(t('روز تاریخ تراز','Balance Date Day'), value.planning.balanceDateDay, v => updatePlanning({ balanceDateDay: Number(v) }), 'number', 1, 31)}
+      {input(t('تاریخ ارزش‌گذاری','Valuation Date'), value.planning.valuationDate, v => updatePlanning({ valuationDate: v }), 'date')}
+      <label className="fw-field"><span>{t('زمان‌بندی جریان نقدی برای تنزیل','Cash Flow Timing for Discounting')}</span><select value={value.planning.cashFlowTiming} onChange={e => updatePlanning({ cashFlowTiming: e.target.value as ProjectFoundation['planning']['cashFlowTiming'] })}><option value="period-end">{t('پایان دوره','Period-end')}</option><option value="mid-period">{t('میانه دوره','Mid-period')}</option></select></label>
+    </div>
+
+    <h4>{t('۲. ارزها و نرخ‌های تبدیل','2. Currencies & Exchange Rates')}</h4>
+    <div className="fw-grid">
+      {input(t('کد ارز محلی (ISO)','Local Currency Code (ISO)'), value.currencies.localCurrencyCode, v => updateCurrencies({ localCurrencyCode: v.toUpperCase() }))}
+      {input(t('نام ارز محلی','Local Currency Name'), value.currencies.localCurrencyName, v => updateCurrencies({ localCurrencyName: v }))}
+    </div>
+    {value.currencies.foreignCurrencies.map(currency => <div className="fw-grid" key={currency.id}>
+      {input(t('کد ارز خارجی','Foreign Currency Code'), currency.code, v => updateCurrency(currency.id, { code: v.toUpperCase() }))}
+      {input(t('نام ارز خارجی','Foreign Currency Name'), currency.name, v => updateCurrency(currency.id, { name: v }))}
+      <button type="button" className="secondary-button" onClick={() => updateCurrencies({ foreignCurrencies: value.currencies.foreignCurrencies.filter(row => row.id !== currency.id) })}>{t('حذف ارز','Remove Currency')}</button>
+    </div>)}
+    <button type="button" className="secondary-button" onClick={addCurrency}>{t('افزودن ارز خارجی','Add Foreign Currency')}</button>
+
+    <h4>{t('۳. مراکز هزینه','3. Cost Centres')}</h4>
+    <label className="fw-field"><span>{t('فعال‌سازی تحلیل مراکز هزینه','Enable Cost Centre Analysis')}</span><input type="checkbox" checked={value.costCentres.active} onChange={e => updateCentres({ active: e.target.checked })} /></label>
+    {value.costCentres.items.map(centre => <div className="fw-grid" key={centre.id}>
+      {input(t('کد مرکز','Cost Centre Code'), centre.code, v => updateCostCentre(centre.id, { code: v }))}
+      {input(t('نام مرکز','Cost Centre Name'), centre.name, v => updateCostCentre(centre.id, { name: v }))}
+      <button type="button" className="secondary-button" onClick={() => updateCentres({ items: value.costCentres.items.filter(row => row.id !== centre.id) })}>{t('حذف مرکز','Remove Cost Centre')}</button>
+    </div>)}
+    <button type="button" className="secondary-button" onClick={addCostCentre}>{t('افزودن مرکز هزینه','Add Cost Centre')}</button>
+
+    <h4>{t('۴. تورم و شاخص‌های قیمت','4. Inflation & Price Indices')}</h4>
+    <label className="fw-field"><span>{t('فعال‌سازی تورم','Enable Inflation')}</span><input type="checkbox" checked={value.inflation.active} onChange={e => updateInflation({ active: e.target.checked })} /></label>
+    {value.inflation.indices.map(index => <div className="fw-grid" key={index.id}>
+      {input(t('نام شاخص','Index Name'), index.name, v => updateIndex(index.id, { name: v }))}
+      {input(t('کد ارز شاخص','Index Currency Code'), index.currencyCode, v => updateIndex(index.id, { currencyCode: v.toUpperCase() }))}
+      <button type="button" className="secondary-button" onClick={() => updateInflation({ indices: value.inflation.indices.filter(row => row.id !== index.id) })}>{t('حذف شاخص','Remove Index')}</button>
+      <div className="fw-hint">{t('نرخ‌های تورم دوره‌ای در مرحله بعد به ردیف‌های قیمت و هزینه متصل می‌شوند.','Period-specific inflation rates will be linked to price and cost rows in the next implementation step.')}</div>
+    </div>)}
+    <button type="button" className="secondary-button" onClick={addInflationIndex}>{t('افزودن شاخص قیمت','Add Price Index')}</button>
+
+    <h4>{t('۵. تنزیل و مالیات','5. Discounting & Taxation')}</h4>
+    <div className="fw-grid">
+      <label className="fw-field"><span>{t('روش نرخ تنزیل','Discounting Method')}</span><select value={value.discounting.method} onChange={e => updateDiscounting({ method: e.target.value as ProjectFoundation['discounting']['method'] })}><option value="manual">{t('نرخ دستی','Manual Rate')}</option><option value="wacc">WACC</option></select></label>
+      {input(t('نرخ تنزیل مالی (%)','Financial Discount Rate (%)'), value.discounting.financialRatePercent ?? '', v => updateDiscounting({ financialRatePercent: v === '' ? null : Number(v) }), 'number', -99, 1000)}
+      {input(t('نرخ تنزیل اقتصادی (%)','Economic Discount Rate (%)'), value.discounting.economicRatePercent ?? '', v => updateDiscounting({ economicRatePercent: v === '' ? null : Number(v) }), 'number', -99, 1000)}
+      <label className="fw-field"><span>{t('نظام مالیاتی','Tax System')}</span><select value={value.taxation.system} onChange={e => updateTax({ system: e.target.value as ProjectFoundation['taxation']['system'] })}><option value="corporate">{t('مالیات بر درآمد شرکت','Corporate Income Tax')}</option><option value="none">{t('بدون مالیات','No Tax')}</option><option value="custom">{t('سفارشی','Custom')}</option></select></label>
+      <label className="fw-field"><span>{t('انتقال زیان مالیاتی','Loss Carry-forward')}</span><input type="checkbox" checked={value.taxation.lossCarryForward} onChange={e => updateTax({ lossCarryForward: e.target.checked })} /></label>
+      {input(t('مدت انتقال زیان (سال؛ خالی = نامحدود/تعریف‌نشده)','Loss Carry-forward Period (Years; blank = unspecified)'), value.taxation.lossCarryForwardYears ?? '', v => updateTax({ lossCarryForwardYears: v === '' ? null : Number(v) }), 'number', 0, 100)}
+    </div>
+    {value.taxation.rates.map(rate => <div className="fw-grid" key={rate.id}>
+      {input(t('دوره مالیاتی','Tax Period'), rate.period, v => updateTaxRate(rate.id, { period: v }))}
+      {input(t('نرخ مالیات (%)','Tax Rate (%)'), rate.ratePercent, v => updateTaxRate(rate.id, { ratePercent: Number(v) }), 'number', 0, 100)}
+      <button type="button" className="secondary-button" onClick={() => updateTax({ rates: value.taxation.rates.filter(row => row.id !== rate.id) })}>{t('حذف نرخ','Remove Rate')}</button>
+    </div>)}
+    <button type="button" className="secondary-button" onClick={addTaxRate}>{t('افزودن نرخ مالیاتی دوره‌ای','Add Period-specific Tax Rate')}</button>
+  </section>
+}
