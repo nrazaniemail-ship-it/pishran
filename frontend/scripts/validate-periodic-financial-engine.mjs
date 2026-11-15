@@ -27,6 +27,6 @@ assert.equal(engine.calculatePeriodTax(10, 101, 0).tax, Number.NaN)
 assert.ok(Math.abs(engine.calculatePeriodicNpv([ -100, 125 ], [
   { index: 1, startDate: '2025-01-01', endDate: '2025-06-30', days: 181, partial: false },
   { index: 2, startDate: '2025-07-01', endDate: '2025-12-31', days: 184, partial: false },
-], 25, 365, 'period-end') - (-100 + 125 / 1.25)) < 0.2)
+], 25, 365, 'period-end') - (-100 / Math.pow(1.25, 181 / 365) + 125 / 1.25)) < 1e-9)
 assert.ok(Number.isNaN(engine.calculatePeriodicNpv([100], [], 25, 365)))
 console.log('PASS: periodic financial primitives, day-count allocation, tax-loss roll-forward and dated NPV')
