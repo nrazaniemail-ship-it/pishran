@@ -1,4 +1,4 @@
-export const INTEGRATED_COMFAR_REFERENCE = {
+export const INTEGRATED_reference_REFERENCE = {
   currency: 'EUR',
   driCapacityTpy: 1_760_000,
   slabCapacityTpy: 1_200_000,
@@ -21,8 +21,8 @@ export const INTEGRATED_COMFAR_REFERENCE = {
   equityIrr: 40.51
 } as const
 
-// Nineteen annual net project cash-flow periods transcribed from the COMFAR control schedule.
-export const INTEGRATED_COMFAR_PROJECT_CASH_FLOWS = [
+// Nineteen annual net project cash-flow periods transcribed from the reference control schedule.
+export const INTEGRATED_reference_PROJECT_CASH_FLOWS = [
   -104334839.16, -134611066.5, -133093260.44, -88443158.9,
   118750252.05, 187903947.73, 212720544.14, 226437947.52,
   189562697.38, 188965374.62, 188908346.68, 188860859.67,
@@ -30,13 +30,13 @@ export const INTEGRATED_COMFAR_PROJECT_CASH_FLOWS = [
   188797422.7, 188797422.7, 413501431.09
 ] as const
 
-export function calculateComfarFundingGap() {
-  const uses = INTEGRATED_COMFAR_REFERENCE.fixedInvestment
-    + INTEGRATED_COMFAR_REFERENCE.preproductionNet
-    + INTEGRATED_COMFAR_REFERENCE.capitalizedInterest
-    + INTEGRATED_COMFAR_REFERENCE.workingCapital
-  const sources = INTEGRATED_COMFAR_REFERENCE.equity
-    + INTEGRATED_COMFAR_REFERENCE.longTermDebt
-    + INTEGRATED_COMFAR_REFERENCE.shortTermDebt
+export function calculatereferenceFundingGap() {
+  const uses = INTEGRATED_reference_REFERENCE.fixedInvestment
+    + INTEGRATED_reference_REFERENCE.preproductionNet
+    + INTEGRATED_reference_REFERENCE.capitalizedInterest
+    + INTEGRATED_reference_REFERENCE.workingCapital
+  const sources = INTEGRATED_reference_REFERENCE.equity
+    + INTEGRATED_reference_REFERENCE.longTermDebt
+    + INTEGRATED_reference_REFERENCE.shortTermDebt
   return { uses, sources, gap: uses - sources }
 }
