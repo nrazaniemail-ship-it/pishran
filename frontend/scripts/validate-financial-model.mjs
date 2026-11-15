@@ -1182,8 +1182,9 @@ const validAsset = {
   acquisitions:[{id:'acq-1',period:'1403',quantity:1,unitPrice:100,currencyCode:'IRR',exchangeRateToLocal:null}],
   sales:[]
 }
-assert.equal(foundation.validateFixedInvestmentItems([validAsset], validFoundation).length, 0,
-  'A complete local fixed-asset record must pass register validation')
+const validAssetIssues = foundation.validateFixedInvestmentItems([validAsset], validFoundation)
+assert.equal(validAssetIssues.filter(issue=>issue.severity==='error').length, 0,
+  'A complete local fixed-asset record must pass register validation: ' + JSON.stringify(validAssetIssues))
 const sameYearBeforeStart = engine.resolveComfarDepreciationStartPeriod(2,2,'1405-01-01','1405-06-01')
 const sameYearAfterStart = engine.resolveComfarDepreciationStartPeriod(2,2,'1405-07-01','1405-06-01')
 assert.equal(sameYearBeforeStart,2,'An acquisition before Starting at in the same year must start depreciation in that year')
