@@ -652,3 +652,22 @@ input,select,textarea{color:var(--text)}
 .calculator-keys button.operator{background:#e4efe8;border-color:#d3e3d9;color:#315b4d}
 .calculator-keys button.clear{background:#fff0e9;border-color:#f3ddd2;color:#99533f}
 @media(max-width:650px){.floating-calculator{right:14px;bottom:14px}.calculator-panel{width:min(292px,calc(100vw - 28px))}.calculator-launcher{min-height:48px;padding:0 15px}}
+
+
+/* Dashboard KPI cards: distinct, soft pastel backgrounds for clearer grouping */
+:root:not([data-theme="dark"]) .kpis .kpi:nth-child(1){
+  background:linear-gradient(145deg,#f0f6ff,#e5efff);
+  border-color:#d5e3f8;
+}
+:root:not([data-theme="dark"]) .kpis .kpi:nth-child(2){
+  background:linear-gradient(145deg,#eff8f3,#e2f2e9);
+  border-color:#d1e7d9;
+}
+:root:not([data-theme="dark"]) .kpis .kpi:nth-child(3){
+  background:linear-gradient(145deg,#f5f1ff,#ece7fb);
+  border-color:#dfd7f3;
+}
+:root:not([data-theme="dark"]) .kpis .kpi:nth-child(4){
+  background:linear-gradient(145deg,#fff7e9,#f9edd7);
+  border-color:#eee0c3;
+}
