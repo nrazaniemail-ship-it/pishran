@@ -705,6 +705,13 @@ assert.ok(expansionPanelSource.includes('Starting Balances')
   && expansionPanelSource.includes('Work in progress')
   && expansionPanelSource.includes('Finished Product Inventory'),
   'Expansion/rehabilitation English UI must use COMFAR Reference Manual terminology')
+assert.ok(expansionPanelSource.includes('Residual / salvage value')
+  && expansionPanelSource.includes('Depreciation method')
+  && expansionPanelSource.includes('Cost Centre')
+  && expansionPanelSource.includes('Repayment Frequency')
+  && expansionPanelSource.includes('Grace Period (years)')
+  && expansionPanelSource.includes('Next Instalment Date'),
+  'Existing fixed assets and long-term debt starting balances must expose COMFAR depreciation and repayment attributes')
 assert.ok(expansionPanelSource.includes('Long-Term Debt and Equity Capital')
   && expansionPanelSource.includes('Opportunity Value'),
   'Existing fixed assets and long-term finance must use consistent COMFAR vocabulary')
