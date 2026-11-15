@@ -1608,3 +1608,101 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
     closingBalance: balance, rows,
   }
 }
+
+
+export type OneWaySensitivityFactor = {
+  id: 'selling-price' | 'fixed-investment' | 'operating-cost' | 'energy-cost'
+  labelFa: string
+  labelEn: string
+  available: boolean
+  lowNpv: number | null
+  highNpv: number | null
+  lowIrr: number | null
+  highIrr: number | null
+}
+export type OneWaySensitivityAnalysis = {
+  changePercent: number
+  baseNpv: number | null
+  baseIrr: number | null
+  factors: OneWaySensitivityFactor[]
+}
+
+/**
+ * Recalculate the integrated finance model for one-factor-at-a-time shocks.
+ * Energy sensitivity is enabled only when a distinct annual energy-cost basis exists.
+ */
+export function calculateOneWaySensitivity(
+  input: IntegratedFinanceInput,
+  changePercent = 20,
+): OneWaySensitivityAnalysis {
+  const shock = Math.max(0, Math.min(80, Math.abs(changePercent)))
+  const base = calculateIntegratedFinance(input)
+  const scalePolicy = (factor: number, energyOnly = false): WorkingCapitalPolicy | undefined => {
+    const policy = input.workingCapitalPolicy
+    if (!policy) return undefined
+    if (energyOnly) return { ...policy, annualEnergyCost: (policy.annualEnergyCost ?? 0) * factor }
+    return {
+      ...policy,
+      annualRawMaterialCost: policy.annualRawMaterialCost * factor,
+      annualEnergyCost: (policy.annualEnergyCost ?? 0) * factor,
+      annualSparePartsCost: (policy.annualSparePartsCost ?? 0) * factor,
+      annualFixedRawMaterialCost: policy.annualFixedRawMaterialCost === undefined ? undefined : policy.annualFixedRawMaterialCost * factor,
+      annualPayablesCost: (policy.annualPayablesCost ?? policy.annualRawMaterialCost) * factor,
+      annualFixedPayablesCost: policy.annualFixedPayablesCost === undefined ? undefined : policy.annualFixedPayablesCost * factor,
+      annualConversionCost: policy.annualConversionCost * factor,
+      annualFixedConversionCost: policy.annualFixedConversionCost === undefined ? undefined : policy.annualFixedConversionCost * factor,
+      annualFinishedGoodsCost: policy.annualFinishedGoodsCost * factor,
+      annualFixedFinishedGoodsCost: policy.annualFixedFinishedGoodsCost === undefined ? undefined : policy.annualFixedFinishedGoodsCost * factor,
+      annualCashOperatingCost: policy.annualCashOperatingCost * factor,
+      annualFixedCashOperatingCost: policy.annualFixedCashOperatingCost === undefined ? undefined : policy.annualFixedCashOperatingCost * factor,
+    }
+  }
+  const run = (id: OneWaySensitivityFactor['id'], factor: number) => {
+    const scenario: IntegratedFinanceInput = { ...input }
+    if (id === 'selling-price') {
+      scenario.fullCapacityRevenue = input.fullCapacityRevenue * factor
+      scenario.workingCapitalPolicy = input.workingCapitalPolicy
+        ? { ...input.workingCapitalPolicy, annualRevenue: input.workingCapitalPolicy.annualRevenue * factor }
+        : undefined
+    } else if (id === 'fixed-investment') {
+      scenario.fixedInvestment = input.fixedInvestment * factor
+      scenario.fixedInvestmentSchedule = input.fixedInvestmentSchedule.map(value => value * factor)
+      scenario.depreciationSchedule = input.depreciationSchedule?.map(value => value * factor)
+    } else if (id === 'operating-cost') {
+      scenario.fullCapacityVariableCashCost = input.fullCapacityVariableCashCost * factor
+      scenario.fullCapacityFixedCashCost = input.fullCapacityFixedCashCost * factor
+      scenario.maintenanceCapexSchedule = input.maintenanceCapexSchedule?.map(value => value * factor)
+      scenario.workingCapitalPolicy = scalePolicy(factor)
+    } else {
+      const energyCost = input.workingCapitalPolicy?.annualEnergyCost ?? 0
+      const variableBase = input.fullCapacityVariableCashCost
+      const energyShare = variableBase > 0 ? Math.max(0, Math.min(1, energyCost / variableBase)) : 0
+      scenario.fullCapacityVariableCashCost = variableBase * (1 + (factor - 1) * energyShare)
+      scenario.workingCapitalPolicy = scalePolicy(factor, true)
+    }
+    return calculateIntegratedFinance(scenario)
+  }
+  const definitions: { id: OneWaySensitivityFactor['id']; labelFa: string; labelEn: string; available: boolean }[] = [
+    { id: 'selling-price', labelFa: 'قیمت فروش', labelEn: 'Selling price', available: true },
+    { id: 'fixed-investment', labelFa: 'سرمایه‌گذاری ثابت', labelEn: 'Fixed investment', available: true },
+    { id: 'operating-cost', labelFa: 'هزینه‌های عملیاتی', labelEn: 'Operating costs', available: true },
+    { id: 'energy-cost', labelFa: 'هزینه انرژی', labelEn: 'Energy cost', available: Boolean(input.workingCapitalPolicy && (input.workingCapitalPolicy.annualEnergyCost ?? 0) > 0) },
+  ]
+  return {
+    changePercent: shock,
+    baseNpv: base.npvProject,
+    baseIrr: base.irrProject,
+    factors: definitions.map(definition => {
+      if (!definition.available) return { ...definition, lowNpv: null, highNpv: null, lowIrr: null, highIrr: null }
+      const low = run(definition.id, 1 - shock / 100)
+      const high = run(definition.id, 1 + shock / 100)
+      return {
+        ...definition,
+        lowNpv: low.npvProject,
+        highNpv: high.npvProject,
+        lowIrr: low.irrProject,
+        highIrr: high.irrProject,
+      }
+    }),
+  }
+}
