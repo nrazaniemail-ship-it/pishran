@@ -125,6 +125,17 @@ assert.ok(rollingWorkspaceSource.includes("project.templateId==='hot-rolling-200
   'Only explicit hot-rolling template or legacy hot-rolling projects may load benchmark defaults')
 assert.ok(wizardSource.includes("project.templateId==='raw'"),
   'Raw template must initialize an empty feasibility model')
+assert.ok(wizardSource.includes("value=\"industrial\"")
+  && wizardSource.includes("value=\"maritime\"")
+  && wizardSource.includes("value=\"agricultural\"")
+  && wizardSource.includes("value=\"infrastructure\"")
+  && wizardSource.includes("value=\"tourism\"")
+  && wizardSource.includes("value=\"mining\""),
+  'Project Type must cover COMFAR industrial, maritime, agricultural, infrastructure, tourism and mining categories')
+assert.ok(wizardSource.includes("Joint-venture Partners")
+  && wizardSource.includes("m.partners.length>=20")
+  && wizardSource.includes("profitSharePercent"),
+  'Joint-venture project must support up to 20 partner records and separate capital/profit shares')
 assert.ok(wizardSource.includes("Opportunity Study")
   && wizardSource.includes("Feasibility Study")
   && wizardSource.includes("Joint-venture Project")
