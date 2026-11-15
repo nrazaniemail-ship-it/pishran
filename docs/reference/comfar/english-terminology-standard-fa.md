@@ -30,6 +30,8 @@
 | داده‌های ورودی تحلیل مالی | Data Input for Financial Analysis |
 | داده‌های ورودی تحلیل اقتصادی | Data Input for Economic Analysis |
 
+> نکته مرجع: در COMFAR III، مبالغ Starting Balances (به‌جز اقلامی که با روز تعریف می‌شوند) به ارز محلی وارد می‌شوند. Foreign Currency Component، سهم/ترکیب ارزی اقلام برای Economic Analysis و Foreign Exchange Effect است؛ نباید مبلغ ارزی خام را بدون تبدیل به ارز محلی با مبالغ محلی جمع کرد.
+
 ## 3. اصطلاحات توسعه/بازسازی و مانده‌های افتتاحیه
 | فارسی | اصطلاح انگلیسی مرجع/استاندارد |
 |---|---|
