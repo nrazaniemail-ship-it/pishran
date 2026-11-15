@@ -615,3 +615,5 @@ input,select,textarea{color:var(--text)}
 .fw-card-save-row{display:flex;justify-content:flex-start;margin:0 0 10px;}
 .fw-save-button{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:6px 12px;border:1px solid var(--line);background:var(--surface-soft);color:var(--navy);font-size:12px;font-weight:700;border-radius:9px;cursor:pointer;}
 .fw-save-button:hover{background:var(--accent);color:var(--accent-text);border-color:var(--focus);}
+
+.hr-ref-table-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
