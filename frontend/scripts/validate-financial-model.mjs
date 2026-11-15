@@ -968,15 +968,22 @@ assert.ok(foundation.validateProjectFoundation(missingCurrencyFoundation).some(i
 const blankAsset = foundation.createBlankFixedInvestmentItem()
 assert.equal(blankAsset.acquisitions.length, 0, 'Blank fixed investment item must not invent acquisition amounts')
 assert.equal(blankAsset.depreciation.method, 'none', 'Blank fixed investment item must not assume a depreciation method')
+assert.equal(blankAsset.depreciation.firstDepreciationMonths, 12, 'Blank asset must expose an explicit first-year month default that is neutral until depreciation is selected')
 const validAsset = {
   ...blankAsset,
   id:'asset-valid', description:'Production machinery', assetClass:'machinery', origin:'local', currencyCode:'IRR',
-  depreciation:{method:'linear-scrap',startingAt:'1405-01-01',ratePercent:10,lengthYears:10,lengthMonths:0,scrapPercent:10},
+  depreciation:{method:'linear-scrap',startingAt:'1405-01-01',ratePercent:10,lengthYears:10,lengthMonths:0,firstDepreciationMonths:12,scrapPercent:10},
   acquisitions:[{id:'acq-1',period:'1403',quantity:1,unitPrice:100,currencyCode:'IRR',exchangeRateToLocal:null}],
   sales:[]
 }
 assert.equal(foundation.validateFixedInvestmentItems([validAsset], validFoundation).length, 0,
   'A complete local fixed-asset record must pass register validation')
+const invalidSumDigitsPartial = {
+  ...validAsset, id:'asset-sum-partial',
+  depreciation:{method:'sum-of-digits',startingAt:'1405-01-01',ratePercent:null,lengthYears:5,lengthMonths:0,firstDepreciationMonths:6,scrapPercent:10}
+}
+assert.ok(foundation.validateFixedInvestmentItems([invalidSumDigitsPartial], validFoundation).some(issue=>issue.code==='sum-of-years-partial-period-not-benchmarked'),
+  'Sum of years digits must fail closed for unbenchmarked partial-year depreciation')
 const invalidForeignAsset = {
   ...validAsset, id:'asset-foreign', origin:'foreign', currencyCode:'USD',
   acquisitions:[{id:'acq-foreign',period:'1403',quantity:1,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:null}]
