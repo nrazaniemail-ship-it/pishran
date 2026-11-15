@@ -56,7 +56,6 @@ export default function SettingsView({ settings, storageInfo, onChange, onRestor
         <div className="settings-card-title"><span className="settings-symbol">⚙</span><div><b>{en ? 'App Behaviour' : 'رفتار برنامه'}</b><small>{en ? 'General and safety options' : 'گزینه‌های عمومی و ایمنی'}</small></div></div>
         <label className="setting-row"><span>{en ? 'Confirm before deleting data' : 'تأیید پیش از حذف اطلاعات'}</span><input type="checkbox" checked={settings.confirmBeforeDelete} onChange={e => update('confirmBeforeDelete', e.target.checked)}/></label>
         <label className="setting-row"><span>{en ? 'Back up automatically when exporting' : 'پشتیبان‌گیری خودکار هنگام خروجی گرفتن'}</span><input type="checkbox" checked={settings.autoBackup} onChange={e => update('autoBackup', e.target.checked)}/></label>
-        <label className="setting-row"><span>{en ? 'Application language' : 'زبان برنامه'}</span><select value={settings.language} onChange={e => update('language', e.target.value as AppSettings['language'])}><option value="fa">{en ? 'Persian' : 'فارسی'}</option><option value="en">English</option></select></label>
       </article>
 
       <BackupSettings language={settings.language} onRestored={onRestored}/>
