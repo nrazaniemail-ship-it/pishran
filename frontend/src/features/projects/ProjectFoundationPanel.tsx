@@ -7,6 +7,18 @@ export default function ProjectFoundationPanel({ value, onChange, language = 'fa
   const en = language === 'en'
   const issues = validateProjectFoundation(value)
   const t = (fa: string, english: string) => en ? english : fa
+  const issueMessages: Record<string, string> = {
+    'invalid-balance-month':'ماه تاریخ تراز باید عدد صحیحی بین ۱ تا ۱۲ باشد.', 'invalid-balance-day':'روز تاریخ تراز باید عدد صحیحی بین ۱ تا ۳۱ باشد.',
+    'missing-valuation-date':'تاریخ ارزش‌گذاری هنوز تعیین نشده است.', 'missing-local-currency':'پیش از محاسبه، ارز محلی را مشخص کنید.',
+    'duplicate-currency-code':'کد ارزها باید یکتا باشد.', 'incomplete-currency':'برای هر ارز خارجی، کد و نام لازم است.',
+    'invalid-exchange-rate':'هر نرخ ارز باید دوره و نرخ مثبت به ارز محلی داشته باشد.', 'empty-cost-centres':'تحلیل مراکز هزینه فعال است اما مرکزی تعریف نشده است.',
+    'duplicate-cost-centre-code':'کد مراکز هزینه باید یکتا باشد.', 'incomplete-cost-centre':'برای هر مرکز هزینه، کد و نام لازم است.',
+    'unknown-parent-cost-centre':'مرکز هزینه والد انتخاب‌شده وجود ندارد.', 'empty-inflation-indices':'تورم فعال است اما شاخص قیمتی تعریف نشده است.',
+    'incomplete-inflation-index':'هر شاخص تورم به نام و کد ارز نیاز دارد.', 'invalid-inflation-rate':'هر نرخ تورم باید دوره و نرخی بزرگ‌تر از ۱۰۰- درصد داشته باشد.',
+    'invalid-discount-rate':'نرخ تنزیل باید بزرگ‌تر از ۱۰۰- درصد باشد.', 'missing-financial-discount-rate':'نرخ تنزیل مالی دستی تعیین نشده است.',
+    'invalid-loss-carryforward-period':'مدت انتقال زیان باید عدد صحیح نامنفی باشد.', 'invalid-tax-rate':'هر نرخ مالیات باید بین صفر تا ۱۰۰ درصد باشد.',
+    'missing-tax-rates':'نظام مالیاتی انتخاب شده اما نرخ مالیات دوره‌ای وارد نشده است.'
+  }
   const update = (patch: Partial<ProjectFoundation>) => onChange({ ...value, ...patch })
   const updatePlanning = (patch: Partial<ProjectFoundation['planning']>) => update({ planning: { ...value.planning, ...patch } })
   const updateCurrencies = (patch: Partial<ProjectFoundation['currencies']>) => update({ currencies: { ...value.currencies, ...patch } })
@@ -104,6 +116,6 @@ export default function ProjectFoundationPanel({ value, onChange, language = 'fa
 
     <h4>{t('کنترل کامل بودن فونداسیون','Foundation Validation')}</h4>
     <div className="fw-validation"><span>{t('خطاهای مانع محاسبه','Calculation-blocking errors')}</span><b>{issues.filter(issue => issue.severity === 'error').length}</b><span>{t('هشدارها','Warnings')}</span><b>{issues.filter(issue => issue.severity === 'warning').length}</b></div>
-    {issues.map((issue, index) => <div className="fw-hint" key={issue.path + issue.code + index}><b>{issue.severity === 'error' ? t('خطا','Error') : t('هشدار','Warning')} · {issue.path}</b> — {issue.message}</div>)}
+    {issues.map((issue, index) => <div className="fw-hint" key={issue.path + issue.code + index}><b>{issue.severity === 'error' ? t('خطا','Error') : t('هشدار','Warning')} · {issue.path}</b> — {en ? issue.message : (issueMessages[issue.code] ?? issue.message)}</div>)}
   </section>
 }
