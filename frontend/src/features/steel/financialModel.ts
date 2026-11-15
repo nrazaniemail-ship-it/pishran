@@ -1098,7 +1098,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
   return years.map(row => {
     const cashOperatingCosts = row.variableCashCost + row.fixedCashCost
     const ebitda = row.revenue - cashOperatingCosts
-    const ebit = ebitda - row.depreciation
+    const ebit = ebitda - row.depreciation + (row.assetSaleOtherIncomeLoss ?? 0)
     const profitBeforeTax = ebit - row.interest
     const netIncome = profitBeforeTax - row.tax
     retainedEarnings += netIncome
