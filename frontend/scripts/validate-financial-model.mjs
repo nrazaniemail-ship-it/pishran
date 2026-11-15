@@ -1124,6 +1124,11 @@ assert.ok(foundationWizard.includes('buildComfarDepreciationAssetsFromFixedInves
   && foundationWizard.includes('comfarDepreciationAssets={fixedInvestmentLifecycleInputs.assets}')
   && foundationWizard.includes('comfarAssetSales={fixedInvestmentLifecycleInputs.sales}'),
   'The fixed investment register must feed acquisition vintages and sale events into the project finance panel')
+assert.ok(advancedFinanceSource.includes('useFixedInvestmentRegister ? Array(years).fill(0)')
+  && advancedFinanceSource.includes('!props.useFixedInvestmentRegister'),
+  'New feasibility projects must not fall back to assumed legacy depreciation when the shared register is blank')
+assert.ok(foundationWizard.includes('useFixedInvestmentRegister={true}'),
+  'The project wizard must use the common Fixed Investment Register as the authoritative depreciation source')
 assert.ok(advancedFinanceSource.includes('calculateComfarAssetLifecycle')
   && advancedFinanceSource.includes('assetSaleSchedule')
   && advancedFinanceSource.includes('Other income / loss')
