@@ -211,7 +211,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
     {id:'hr-contingency',name:'هزینه‌های احتمالی سرمایه‌ای',cost:879191,residualValue:0,usefulLife:10,startYear:Math.ceil(m.project.constructionYears)+1,method:'straight-line' as const},
     {id:'hr-preop',name:'هزینه‌های قبل از بهره‌برداری',cost:239826.63796,residualValue:23982.663796,usefulLife:10,startYear:Math.ceil(m.project.constructionYears)+1,method:'straight-line' as const}
   ]:undefined
-  const annualProjectStartYear=m.foundation.planning.periodFrequency!=='annual'&&m.foundation.planning.projectStartDate?Number(m.foundation.planning.projectStartDate.slice(0,4)):m.project.startYear
+  const annualProjectStartYear=(m.foundation.planning.periodFrequency==='monthly'||m.foundation.planning.periodFrequency==='quarterly'||m.foundation.planning.periodFrequency==='semiannual')&&m.foundation.planning.projectStartDate?Number(m.foundation.planning.projectStartDate.slice(0,4)):m.project.startYear
   const fixedInvestmentLifecycleInputs=m.fixedInvestmentItems.length
     ?buildComfarDepreciationAssetsFromFixedInvestmentItems(
       m.fixedInvestmentItems,
