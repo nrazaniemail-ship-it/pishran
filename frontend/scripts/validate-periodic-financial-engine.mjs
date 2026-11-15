@@ -29,4 +29,28 @@ assert.ok(Math.abs(engine.calculatePeriodicNpv([ -100, 125 ], [
   { index: 2, startDate: '2025-07-01', endDate: '2025-12-31', days: 184, partial: false },
 ], 25, 365, 'period-end') - (-100 / Math.pow(1.25, 181 / 365) + 125 / 1.25)) < 1e-9)
 assert.ok(Number.isNaN(engine.calculatePeriodicNpv([100], [], 25, 365)))
-console.log('PASS: periodic financial primitives, day-count allocation, tax-loss roll-forward and dated NPV')
+
+const leapQuarter = [
+  { index: 1, startDate: '2024-01-01', endDate: '2024-03-31', days: 91, partial: false },
+  { index: 2, startDate: '2024-04-01', endDate: '2024-06-30', days: 91, partial: false },
+  { index: 3, startDate: '2024-07-01', endDate: '2024-09-30', days: 92, partial: false },
+  { index: 4, startDate: '2024-10-01', endDate: '2024-12-31', days: 92, partial: false },
+]
+const quarterlyAllocation = engine.allocateAnnualFlowsToPeriods([366000], leapQuarter, 1)
+assert.ok(Math.abs(quarterlyAllocation.reduce((sum, amount) => sum + amount, 0) - 366000) < 1e-9)
+const partialYear = [
+  { index: 1, startDate: '2024-02-01', endDate: '2024-02-29', days: 29, partial: true },
+  { index: 2, startDate: '2024-03-01', endDate: '2024-03-31', days: 31, partial: true },
+]
+const partialAllocation = engine.allocateAnnualFlowsToPeriods([366000], partialYear, 1)
+assert.ok(Math.abs(partialAllocation.reduce((sum, amount) => sum + amount, 0) - 60000) < 1e-9)
+const nonJanuaryFiscalYear = [
+  { index: 1, startDate: '2024-01-01', endDate: '2024-03-31', days: 91, partial: false },
+  { index: 2, startDate: '2024-04-01', endDate: '2024-06-30', days: 91, partial: false },
+]
+const splitFiscalYears = engine.allocateAnnualFlowsToPeriods([366000, 365000], nonJanuaryFiscalYear, 4)
+assert.ok(Math.abs(splitFiscalYears[0] - 91000) < 1e-9)
+assert.ok(Math.abs(splitFiscalYears[1] - 91000) < 1e-9)
+assert.deepEqual(engine.allocateAnnualFlowsToPeriods([100], [{ index: 1, startDate: '2025-01-01', endDate: '2025-01-31', days: 30, partial: true }], 1), [])
+
+console.log('PASS: periodic financial primitives, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
