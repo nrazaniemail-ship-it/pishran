@@ -1,7 +1,9 @@
 import {
   createBlankFixedInvestmentItem, validateFixedInvestmentItems,
   type FixedInvestmentItem, type FixedInvestmentAcquisition, type FixedInvestmentSale, type ProjectFoundation,
+  type FixedInvestmentDepreciationMethod,
 } from './projectFoundation'
+import { listFinancialMethods, type FinancialMethodDefinition } from './financialMethodDirectory'
 import { buildComfarDepreciationAssetsFromFixedInvestmentItems, calculateComfarAssetLifecycle, reconcileFixedInvestmentRegister } from '../steel/financialModel'
 
 type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; projectStartYear: number; periodCount: number; capexTotal: number; preOperatingCost?: number; referenceDepreciationByYear?: ReadonlyArray<readonly [number, number]>; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean }
@@ -18,13 +20,17 @@ const assetClasses: { value: FixedInvestmentItem['assetClass']; fa: string; en: 
   { value: 'preproduction', fa: 'هزینه‌های قبل از بهره‌برداری', en: 'Pre-production expenditures' },
   { value: 'other', fa: 'سایر دارایی‌های ثابت', en: 'Other fixed assets' },
 ]
-const methods: { value: FixedInvestmentItem['depreciation']['method']; fa: string; en: string }[] = [
-  { value: 'none', fa: 'بدون استهلاک', en: 'Not depreciated' },
-  { value: 'linear-zero', fa: 'خطی تا صفر', en: 'Linear to zero' },
-  { value: 'linear-scrap', fa: 'خطی تا ارزش اسقاط', en: 'Linear to scrap' },
-  { value: 'accelerated', fa: 'شتاب‌یافته', en: 'Accelerated' },
-  { value: 'sum-of-digits', fa: 'مجموع سنوات', en: 'Sum of years digits' },
-]
+const directoryMethodToAssetMethod: Record<string, FixedInvestmentDepreciationMethod> = {
+  'depreciation.none': 'none',
+  'depreciation.straight-line-zero': 'linear-zero',
+  'depreciation.straight-line-scrap': 'linear-scrap',
+  'depreciation.accelerated': 'accelerated',
+  'depreciation.sum-of-years-digits': 'sum-of-digits',
+}
+const methods: { value: FixedInvestmentDepreciationMethod; definition: FinancialMethodDefinition }[] =
+  listFinancialMethods('depreciation')
+    .filter(definition => directoryMethodToAssetMethod[definition.id] !== undefined)
+    .map(definition => ({ value: directoryMethodToAssetMethod[definition.id], definition }))
 
 export default function FixedInvestmentPanel({ value, foundation, projectStartYear, periodCount, capexTotal, preOperatingCost = 0, referenceDepreciationByYear, onChange, language = 'fa', blankTemplate = false }: Props) {
   const en = language === 'en'
@@ -106,7 +112,20 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
 
       <h4>{t('شرایط استهلاک','Depreciation Conditions')}</h4>
       <div className="fw-grid">
-        <label className="fw-field"><span>{t('نوع استهلاک','Type of Depreciation')}</span><select value={item.depreciation.method} onChange={e => updateDepreciation(item.id, { method: e.target.value as FixedInvestmentItem['depreciation']['method'] })}>{methods.map(option => <option key={option.value} value={option.value}>{en ? option.en : option.fa}</option>)}</select></label>
+        <label className="fw-field"><span>{t('روش استهلاک از دایرکتوری','Depreciation Method Directory')}</span><select value={item.depreciation.method} onChange={e => updateDepreciation(item.id, { method: e.target.value as FixedInvestmentItem['depreciation']['method'] })}>{methods.map(option => <option key={option.definition.id} value={option.value}>{en ? option.definition.nameEn : option.definition.nameFa}</option>)}</select></label>
+        {(() => {
+          const definition = methods.find(option => option.value === item.depreciation.method)?.definition
+          if (!definition) return null
+          const calculationLabel = definition.calculationStatus === 'implemented' ? t('محاسبه در موتور موجود است','Calculation implemented') : definition.calculationStatus === 'conditional' ? t('محاسبه با محدودیت','Conditional calculation') : t('فقط در فهرست روش‌ها؛ محاسبه فعال نیست','Catalogue only; calculation inactive')
+          const benchmarkLabel = definition.benchmarkStatus === 'verified' ? t('آزمون مرجع تأییدشده','Benchmark verified') : definition.benchmarkStatus === 'partial' ? t('اعتبارسنجی جزئی','Partially benchmarked') : t('هنوز با مرجع عددی تطبیق نشده','Not numerically benchmarked')
+          return <div className="fw-hint" role="note">
+            <strong>{calculationLabel} · {benchmarkLabel}</strong>
+            <div>{t('فرمول: ','Formula: ')}{definition.formula}</div>
+            <div>{t('دامنه اعتبار: ','Validity: ')}{definition.validity}</div>
+            <div>{t('منبع: ','Source: ')}{definition.source}</div>
+            {definition.limitations && <div>{t('محدودیت: ','Limitation: ')}{definition.limitations}</div>}
+          </div>
+        })()}
         <label className="fw-field"><span>{t('مبنای شرایط استهلاک','Depreciation Condition Evidence')}</span><select value={item.depreciationBasis??'unresolved'} onChange={e=>updateItem(item.id,{depreciationBasis:e.target.value as FixedInvestmentItem['depreciationBasis']})}>
           <option value="source-table">{t('مستند به جدول منبع','Source-table')}</option>
           <option value="user-confirmed">{t('تأییدشده توسط کاربر','User-confirmed')}</option>
