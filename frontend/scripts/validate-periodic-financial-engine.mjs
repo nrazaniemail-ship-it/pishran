@@ -291,6 +291,34 @@ assert.equal(soldAsset.sales[0].saleProceeds,1500)
 assert.ok(soldAsset.sales[0].gainLoss>0)
 assert.equal(soldAsset.periods[9].closingBookValue,0)
 assert.ok(soldAsset.periods.slice(10).every(period=>period.closingBookValue===0))
+
+const integratedAssetDisposal = engine.calculateIntegratedPeriodicFinance({
+  periods: monthlyDepreciationPeriods, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [12000, 12000], annualVariableCost: [6000, 6000], annualFixedCost: [2000, 2000],
+  annualDepreciation: [600, 600], annualFixedInvestment: [1200, 0],
+  annualPreOperatingCost: [0, 0], annualMaintenanceCapex: [0, 0], annualTaxRates: [25, 25],
+  annualEquityContributions: [1200, 0], workingCapitalByPeriod: Array(monthlyDepreciationPeriods.length).fill(0),
+  loans: [], discountRatePercent: 25, mirrFinanceRatePercent: 10, mirrReinvestmentRatePercent: 12,
+  depreciationByPeriod: soldAsset.depreciationByPeriod,
+  fixedInvestmentByPeriod: soldAsset.fixedInvestmentByPeriod,
+  preOperatingCostByPeriod: soldAsset.preOperatingCostByPeriod,
+  assetSaleProceedsByPeriod: soldAsset.saleProceedsByPeriod,
+  assetSaleGainLossByPeriod: soldAsset.saleGainLossByPeriod,
+  assetSaleBookValueDisposedByPeriod: soldAsset.bookValueDisposedByPeriod,
+})
+assert.equal(integratedAssetDisposal.valid,true)
+assert.equal(integratedAssetDisposal.rows[0].fixedInvestment,1200)
+assert.equal(integratedAssetDisposal.rows[0].depreciation,0)
+assert.equal(integratedAssetDisposal.rows[9].assetSaleProceeds,1500)
+assert.ok(integratedAssetDisposal.rows[9].assetSaleGainLoss>0)
+assert.equal(integratedAssetDisposal.totalAssetSaleProceeds,1500)
+const salePeriodRow=integratedAssetDisposal.rows[9]
+const expectedSaleProjectFlow=salePeriodRow.ebit-salePeriodRow.assetSaleGainLoss-salePeriodRow.unleveredTax
+  +salePeriodRow.depreciation-salePeriodRow.fixedInvestment-salePeriodRow.preOperatingCost
+  -salePeriodRow.maintenanceCapex-salePeriodRow.changeInWorkingCapital
+  +salePeriodRow.assetSaleProceeds+salePeriodRow.salvageValue
+assert.ok(Math.abs(salePeriodRow.projectFreeCashFlow-expectedSaleProjectFlow)<1e-8,
+  'Asset disposal gain/loss must affect taxable profit without double counting proceeds in project cash flow')
 const invalidPeriodicAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   id:'asset-invalid-date',name:'Invalid date asset',assetClass:'fixed',
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
@@ -326,4 +354,4 @@ assert.ok(projectFoundationPanelSource.includes('Day-count Basis')
 assert.ok(advancedFinanceSource.includes('Values in the period tax schedule override the annual rate.')
   && !advancedFinanceSource.includes('Monthly/quarterly calculation will be enabled after the period engine is complete'),
   'Tax UI must explain period-specific overrides rather than claim monthly/quarterly support is unavailable')
-console.log('PASS: asset-level monthly/quarterly depreciation, disposals and integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
+console.log('PASS: asset-level monthly/quarterly depreciation, disposals and integrated asset cash flows, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
