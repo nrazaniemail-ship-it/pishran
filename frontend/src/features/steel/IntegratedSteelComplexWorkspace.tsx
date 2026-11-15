@@ -31,7 +31,7 @@ export default function IntegratedSteelComplexWorkspace({ project, onBack, langu
       </article>
     </div>
     <div className="ppw-note"><b>{unit==='dri'?t('کارگاه احیای مستقیم','Direct Reduction Workspace'):t('کارگاه فولادسازی و ریخته‌گری','Steelmaking & Casting Workspace')}</b><p>{t('هر دو کارگاه با شناسه همین پروژه ذخیره می‌شوند؛ داده‌های فنی مستقل می‌مانند و پروژه به دو پروژه جداگانه تکثیر نمی‌شود.','Both workspaces are saved under this project ID. Their technical data remain independent, without duplicating the project into two separate projects.')}</p></div>
-    <ProcessPlantWorkspace project={project} plantType={unit} onBack={onBack}/>
+    <ProcessPlantWorkspace language={language} project={project} plantType={unit} onBack={onBack}/>
     <section className="analytics" style={{ marginTop: 24 }}>
       <article className="chart-card">
         <div className="card-heading"><div><span className="eyebrow">COMFAR CONTROL TOTALS</span><h3>{t('مبنای تطبیق گزارش کامفار','COMFAR Report Reconciliation Basis')}</h3></div><span className="tag">{t('یورو','EUR')}</span></div>
