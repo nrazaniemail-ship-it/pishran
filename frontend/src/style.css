@@ -737,3 +737,208 @@ input,select,textarea{color:var(--text)}
 :root[data-theme="dark"] .nav-item.active{background:rgba(120,169,245,.14);color:#a9caff;box-shadow:inset -3px 0 #78a9f5}
 :root[data-theme="dark"] .hero{background:linear-gradient(120deg,#1a2b40,#20364b);color:#eef4fb}
 :root[data-theme="dark"] .hero p{color:#c1cfdf}
+
+
+/* Unified Search Console-inspired styling for project and steel workspaces */
+:root:not([data-theme="dark"]){
+  --workspace-blue:#3978c8;
+  --workspace-blue-soft:#edf4fd;
+  --workspace-border:#e2e9f1;
+  --workspace-shadow:0 3px 14px rgba(38,61,89,.045);
+}
+:root:not([data-theme="dark"]) .projects-page,
+:root:not([data-theme="dark"]) .steel-group-page,
+:root:not([data-theme="dark"]) .fw-page{
+  color:#2b3b4e;
+}
+:root:not([data-theme="dark"]) .projects-page .page-heading,
+:root:not([data-theme="dark"]) .steel-group-head,
+:root:not([data-theme="dark"]) .fw-head{
+  padding:5px 0 17px;
+  border-bottom:1px solid var(--workspace-border);
+  margin-bottom:20px;
+}
+:root:not([data-theme="dark"]) .page-heading h1,
+:root:not([data-theme="dark"]) .steel-group-head h1,
+:root:not([data-theme="dark"]) .fw-head h1{
+  color:#25384d;
+  letter-spacing:-.35px;
+}
+:root:not([data-theme="dark"]) .page-heading p,
+:root:not([data-theme="dark"]) .steel-group-head p,
+:root:not([data-theme="dark"]) .fw-head p,
+:root:not([data-theme="dark"]) .fw-lead{
+  color:#718198;
+}
+:root:not([data-theme="dark"]) .project-form,
+:root:not([data-theme="dark"]) .project-card,
+:root:not([data-theme="dark"]) .empty-state,
+:root:not([data-theme="dark"]) .steel-chain-panel,
+:root:not([data-theme="dark"]) .steel-stage-detail,
+:root:not([data-theme="dark"]) .steel-integrations,
+:root:not([data-theme="dark"]) .steel-control-grid article,
+:root:not([data-theme="dark"]) .fw-progress,
+:root:not([data-theme="dark"]) .fw-content,
+:root:not([data-theme="dark"]) .fw-card,
+:root:not([data-theme="dark"]) .ppw-sheet,
+:root:not([data-theme="dark"]) .ppw-note{
+  background:#fff;
+  border-color:var(--workspace-border);
+  box-shadow:var(--workspace-shadow);
+  border-radius:15px;
+}
+:root:not([data-theme="dark"]) .project-card,
+:root:not([data-theme="dark"]) .steel-stage-card,
+:root:not([data-theme="dark"]) .ppw-nav{
+  transition:border-color .16s ease,background .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+:root:not([data-theme="dark"]) .project-card:hover,
+:root:not([data-theme="dark"]) .steel-stage-card:hover{
+  border-color:#b8cfea;
+  box-shadow:0 5px 18px rgba(44,83,130,.075);
+}
+:root:not([data-theme="dark"]) .project-card[role="button"]:hover{
+  border-color:#8fb5e2;
+}
+:root:not([data-theme="dark"]) .project-form h3,
+:root:not([data-theme="dark"]) .steel-panel-heading h2,
+:root:not([data-theme="dark"]) .steel-panel-heading h3,
+:root:not([data-theme="dark"]) .fw-content h2,
+:root:not([data-theme="dark"]) .fw-card h3{
+  color:#2c435d;
+}
+:root:not([data-theme="dark"]) .form-grid input,
+:root:not([data-theme="dark"]) .form-grid select,
+:root:not([data-theme="dark"]) .fw-field input,
+:root:not([data-theme="dark"]) .fw-field select,
+:root:not([data-theme="dark"]) .fw-field textarea,
+:root:not([data-theme="dark"]) .fw-row input,
+:root:not([data-theme="dark"]) .roll-row input,
+:root:not([data-theme="dark"]) .roll-row select{
+  background:#fbfcfe;
+  border-color:#dce5ef;
+  border-radius:9px;
+  color:#2b3b4e;
+}
+:root:not([data-theme="dark"]) .form-grid input:focus,
+:root:not([data-theme="dark"]) .form-grid select:focus,
+:root:not([data-theme="dark"]) .fw-field input:focus,
+:root:not([data-theme="dark"]) .fw-field select:focus,
+:root:not([data-theme="dark"]) .fw-field textarea:focus,
+:root:not([data-theme="dark"]) .fw-row input:focus,
+:root:not([data-theme="dark"]) .roll-row input:focus,
+:root:not([data-theme="dark"]) .roll-row select:focus{
+  border-color:#78a7df;
+  box-shadow:0 0 0 3px rgba(57,120,200,.11);
+  outline:0;
+}
+:root:not([data-theme="dark"]) .steel-principle,
+:root:not([data-theme="dark"]) .steel-planned-note,
+:root:not([data-theme="dark"]) .steel-io-grid>div,
+:root:not([data-theme="dark"]) .steel-branch-flow span,
+:root:not([data-theme="dark"]) .ppw-table-wrap{
+  background:#f5f8fc;
+  border-color:#e5ebf3;
+}
+:root:not([data-theme="dark"]) .steel-principle{
+  color:#354a62;
+}
+:root:not([data-theme="dark"]) .steel-stage-card{
+  background:#f8fafd;
+  border-color:#e1e9f2;
+}
+:root:not([data-theme="dark"]) .steel-stage-card.selected{
+  background:#edf4fd;
+  border-color:#8db5e4;
+  box-shadow:inset 0 0 0 1px #8db5e4;
+  color:#245f9f;
+}
+:root:not([data-theme="dark"]) .steel-stage-no{
+  background:#e9f1fb;
+  color:#3675bc;
+}
+:root:not([data-theme="dark"]) .steel-stage-card.selected .steel-stage-no{
+  background:#3978c8;
+  color:#fff;
+}
+:root:not([data-theme="dark"]) .steel-active-action button,
+:root:not([data-theme="dark"]) .fw-steps button.active,
+:root:not([data-theme="dark"]) .hr-tabs button.active,
+:root:not([data-theme="dark"]) .ppw-nav button.active{
+  background:#eaf2fd;
+  border-color:#a8c6e9;
+  color:#2869ac;
+}
+:root:not([data-theme="dark"]) .steel-active-action button{
+  background:#3978c8;
+  border-color:#3978c8;
+  color:#fff;
+}
+:root:not([data-theme="dark"]) .fw-steps button,
+:root:not([data-theme="dark"]) .hr-tabs button,
+:root:not([data-theme="dark"]) .ppw-nav button{
+  border-color:#e2e9f1;
+  border-radius:10px;
+}
+:root:not([data-theme="dark"]) .fw-progress>i{background:#e9eff6}
+:root:not([data-theme="dark"]) .fw-progress>i>span{background:#3978c8}
+:root:not([data-theme="dark"]) .fw-progress strong,
+:root:not([data-theme="dark"]) .fw-save{color:#3478bd}
+:root:not([data-theme="dark"]) .fw-result{
+  background:#eef6ff;
+  border-color:#cfe1f7;
+}
+:root:not([data-theme="dark"]) .fw-result b{color:#2869ac}
+:root:not([data-theme="dark"]) .fw-choice button.active{
+  background:#edf4fd;
+  border-color:#9bbde5;
+  color:#2869ac;
+}
+:root:not([data-theme="dark"]) .ppw-nav{
+  background:#fff;
+  border-color:#e2e9f1;
+  box-shadow:var(--workspace-shadow);
+}
+:root:not([data-theme="dark"]) .ppw-nav button.active>span{
+  background:#3978c8;
+  border-color:#3978c8;
+  color:#fff;
+}
+:root:not([data-theme="dark"]) .hr-panel,
+:root:not([data-theme="dark"]) .hr-project-panel,
+:root:not([data-theme="dark"]) .hr-progress-panel{
+  border-color:var(--workspace-border);
+  box-shadow:var(--workspace-shadow);
+  border-radius:15px;
+}
+:root:not([data-theme="dark"]) .hr-tabs button{
+  background:#fff;
+  border-color:#e2e9f1;
+}
+:root:not([data-theme="dark"]) .hr-tabs button.active{
+  background:#3978c8;
+  color:#fff;
+  border-color:#3978c8;
+}
+:root:not([data-theme="dark"]) .hr-tabs button:hover:not(.active){
+  background:#edf4fd;
+  color:#2869ac;
+  border-color:#bfd4ed;
+}
+:root:not([data-theme="dark"]) .fw-report-panel{
+  background:#f5f9fe;
+  border-color:#d8e6f6;
+}
+:root:not([data-theme="dark"]) .fw-report-meta,
+:root:not([data-theme="dark"]) .fw-report-pickers{
+  background:#fff;
+  border-color:#e2e9f1;
+}
+@media(max-width:900px){
+  .projects-page .page-heading,.steel-group-head,.fw-head{gap:12px}
+}
+@media(max-width:650px){
+  .projects-page .page-heading,.steel-group-head,.fw-head{padding-bottom:13px;margin-bottom:15px}
+  .project-form,.fw-content,.fw-card,.steel-chain-panel,.steel-stage-detail,.steel-integrations{border-radius:12px}
+}
+/* Keep dark mode's existing palette and contrast rules unchanged. */
