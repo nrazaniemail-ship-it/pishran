@@ -1309,8 +1309,9 @@ assert.ok(foundation.validateFixedInvestmentItems([invalidForeignAsset], validFo
 const foundationWizard = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 const foundationPanel = await readFile(new URL('../src/features/projects/ProjectFoundationPanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('ProjectFoundationPanel')
-  && foundationWizard.includes('foundation:mergeProjectFoundation(v.foundation)')
-  && foundationWizard.includes('foundation:createBlankProjectFoundation()'),
+  && foundationWizard.includes('mergeProjectFoundation(v.foundation)')
+  && foundationWizard.includes('createBlankProjectFoundation()')
+  && foundationWizard.includes('foundation:isHotRolling?mergeHotRollingCoilProjectFoundation(v.foundation):mergeProjectFoundation(v.foundation)'),
   'Project foundation must be integrated into the saved project model with legacy-safe migration')
 assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
   && foundationPanel.includes('Cost Centres')
