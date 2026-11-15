@@ -725,6 +725,14 @@ assert.ok(expansionPanelSource.includes('Local Accounts Receivable Liquidation P
   && expansionPanelSource.includes('Local Accounts Payable Payout Period (Days)')
   && expansionPanelSource.includes('Short-term deposits have only a local-currency field'),
   'COMFAR current-asset and liability starting balances must retain collection and payout periods and local-only short-term deposits')
+assert.ok(expansionPanelSource.includes('Linear to zero')
+  && expansionPanelSource.includes('Linear to scrap')
+  && expansionPanelSource.includes('Accelerated')
+  && expansionPanelSource.includes('Sum of digits')
+  && expansionPanelSource.includes('Starting at')
+  && expansionPanelSource.includes('Scrap (% of original value)')
+  && expansionPanelSource.includes("asset.depreciationMethod!=='sum-of-digits'"),
+  'Existing fixed-asset depreciation inputs must match COMFAR four methods and disable rate for Sum of digits')
 assert.ok(expansionPanelSource.includes('Residual / salvage value')
   && expansionPanelSource.includes('Depreciation method')
   && expansionPanelSource.includes('Cost Centre')
