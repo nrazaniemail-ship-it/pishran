@@ -184,6 +184,7 @@ export type FixedInvestmentItem = {
     ratePercent: number | null
     lengthYears: number | null
     lengthMonths: number
+    firstDepreciationMonths: number
     scrapPercent: number
   }
   acquisitions: FixedInvestmentAcquisition[]
@@ -198,7 +199,7 @@ export function createBlankFixedInvestmentItem(): FixedInvestmentItem {
     origin: 'local',
     currencyCode: '',
     costCentreId: '',
-    depreciation: { method: 'none', startingAt: '', ratePercent: null, lengthYears: null, lengthMonths: 0, scrapPercent: 0 },
+    depreciation: { method: 'none', startingAt: '', ratePercent: null, lengthYears: null, lengthMonths: 0, firstDepreciationMonths: 12, scrapPercent: 0 },
     acquisitions: [],
     sales: [],
   }
@@ -237,8 +238,17 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
         issue(path + '.depreciation.length', 'invalid-depreciation-length', 'Depreciation Length must be greater than zero and months must be from 0 to 11.')
       if (!Number.isFinite(item.depreciation.scrapPercent) || item.depreciation.scrapPercent < 0 || item.depreciation.scrapPercent > 100)
         issue(path + '.depreciation.scrapPercent', 'invalid-scrap-percent', 'Scrap must be between 0 and 100 percent of original value.')
+      if (!Number.isInteger(item.depreciation.firstDepreciationMonths) || item.depreciation.firstDepreciationMonths < 1 || item.depreciation.firstDepreciationMonths > 12)
+        issue(path + '.depreciation.firstDepreciationMonths', 'invalid-first-depreciation-months', 'Months in first depreciation year must be an integer from 1 to 12.')
+      if (item.depreciation.method === 'sum-of-digits' && (item.depreciation.lengthMonths !== 0 || item.depreciation.firstDepreciationMonths !== 12))
+        issue(path + '.depreciation', 'sum-of-years-partial-period-not-benchmarked', 'Sum of years digits with partial first year or additional life months is not enabled until independently benchmarked against reference output.')
       if (item.depreciation.method !== 'sum-of-digits' && (!Number.isFinite(item.depreciation.ratePercent) || (item.depreciation.ratePercent ?? 0) <= 0 || (item.depreciation.ratePercent ?? 0) > 100))
         issue(path + '.depreciation.ratePercent', 'invalid-depreciation-rate', 'Rate must be greater than 0 and no more than 100 percent per annum.')
+      if ((item.depreciation.method === 'linear-zero' || item.depreciation.method === 'linear-scrap') && Number.isFinite(item.depreciation.ratePercent) && (item.depreciation.ratePercent ?? 0) > 0 && (item.depreciation.lengthYears ?? 0) + item.depreciation.lengthMonths / 12 > 0) {
+        const expectedRate = 100 / ((item.depreciation.lengthYears ?? 0) + item.depreciation.lengthMonths / 12)
+        if (Math.abs((item.depreciation.ratePercent ?? 0) - expectedRate) > 0.02)
+          issue(path + '.depreciation.ratePercent', 'depreciation-rate-length-mismatch', 'For linear depreciation, Rate and Length must be mathematically consistent.')
+      }
     }
     item.sales.forEach((sale, saleIndex) => {
       const salePath = path + `.sales[${saleIndex}]`
