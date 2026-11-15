@@ -101,7 +101,8 @@ export default function App() {
   return <main className={`app-shell app-page-${page}`} dir={isEn?"ltr":"rtl"}>
     <BackupScheduler/>
     <header className="topbar">
-      <div className="brand"><button className="language-switch brand-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button><button className="brand-title" type="button" onClick={() => setPage('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b><small>INTELLIGENT FEASIBILITY PLATFORM</small></button></div>
+      <button className="language-switch page-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button>
+      <div className="brand"><button className="brand-title" type="button" onClick={() => setPage('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b><small>INTELLIGENT FEASIBILITY PLATFORM</small></button></div>
       <nav className="main-nav" aria-label={isEn?"Primary navigation":"ناوبری اصلی"}>
         <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
