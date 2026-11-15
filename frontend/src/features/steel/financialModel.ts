@@ -807,13 +807,22 @@ export function calculateIncrementalEnterpriseAnalysis(
   withProject: EnterpriseScenarioPeriodInput[],
   discountRate: number,
 ): IncrementalAnalysisResult {
-  if (!withoutProject.length || withoutProject.length !== withProject.length ||
-      !Number.isFinite(discountRate) || discountRate <= -1) {
-    return {
-      periods: [], withoutProjectNpv: Number.NaN, withProjectNpv: Number.NaN,
-      incrementalNpv: Number.NaN, incrementalIrr: null, incrementalCashFlowTotal: Number.NaN,
-    }
+  const invalidResult: IncrementalAnalysisResult = {
+    periods: [], withoutProjectNpv: Number.NaN, withProjectNpv: Number.NaN,
+    incrementalNpv: Number.NaN, incrementalIrr: null, incrementalCashFlowTotal: Number.NaN,
   }
+  if (!withoutProject.length || withoutProject.length !== withProject.length ||
+      !Number.isFinite(discountRate) || discountRate <= -1) return invalidResult
+
+  // The two enterprise cases must share the same period boundaries. Never
+  // silently truncate, pad or coerce missing source values into a cash flow.
+  const requiredValuesAreValid = (period: EnterpriseScenarioPeriodInput) =>
+    [period.revenue, period.cashOperatingCosts, period.tax, period.capex,
+      period.changeInWorkingCapital].every(Number.isFinite) &&
+    [period.opportunityCost, period.assetSaleProceeds, period.terminalValue]
+      .every(value => value === undefined || Number.isFinite(value))
+  if (![...withoutProject, ...withProject].every(requiredValuesAreValid)) return invalidResult
+
   const cashFlow = (period: EnterpriseScenarioPeriodInput) =>
     period.revenue - period.cashOperatingCosts - period.tax - period.capex - (period.opportunityCost ?? 0) -
     period.changeInWorkingCapital + (period.assetSaleProceeds ?? 0) + (period.terminalValue ?? 0)
