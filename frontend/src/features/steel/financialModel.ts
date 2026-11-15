@@ -943,6 +943,8 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
   if (profile && input.profileRepayments!.some((item, index, rows) =>
       index > 0 && item.date <= rows[index - 1].date))
     return invalid('Profile repayment dates must be strictly increasing.')
+  if (profile && input.profileRepayments![0].date !== input.firstRepaymentDate)
+    return invalid('First repayment date must match the first profile repayment date.')
   const count = profile ? input.profileRepayments!.length : input.numberOfRepayments
   const regularPayment = profile ? 0 : periodicRate === 0
     ? balance / count
@@ -967,7 +969,7 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
       principal = regularPayment - firstInterestPayable
     }
     if (index === count - 1 && !profile) principal = balance
-    if (!Number.isFinite(principal) || principal < -1e-7)
+    if (!Number.isFinite(principal) || principal < -1e-7 || principal > balance + 1e-7)
       return invalid('The selected repayment terms do not amortize the opening balance.')
     principal = Math.min(balance, Math.max(0, principal))
     const capitalizedInterest = index === 0 ? capitalizedGraceInterest : 0
