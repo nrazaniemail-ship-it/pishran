@@ -932,13 +932,19 @@ assert.equal(engine.calculateExistingLoanSchedule({
 const blankFoundation = foundation.createBlankProjectFoundation()
 assert.equal(blankFoundation.schemaVersion, 1, 'Project foundation must be versioned')
 assert.equal(blankFoundation.currencies.localCurrencyCode, '', 'Blank template must not assume a local currency')
+assert.equal(blankFoundation.planning.periodFrequency, 'unspecified', 'Blank template must not assume annual periods')
+assert.equal(blankFoundation.planning.balanceDateMonth, null, 'Blank template must not assume a balance date month')
+assert.equal(blankFoundation.planning.dayCountBasis, null, 'Blank template must not assume a day-count basis')
+assert.equal(blankFoundation.discounting.method, 'unspecified', 'Blank template must not assume a discounting method')
+assert.equal(blankFoundation.taxation.system, 'unspecified', 'Blank template must not assume a tax system')
+assert.equal(blankFoundation.taxation.lossCarryForward, null, 'Blank template must not assume loss carry-forward treatment')
 assert.equal(blankFoundation.currencies.foreignCurrencies.length, 0, 'Blank template must not invent foreign currencies or exchange rates')
 assert.equal(blankFoundation.discounting.financialRatePercent, null, 'Blank template must not assume a financial discount rate')
 assert.equal(blankFoundation.taxation.rates.length, 0, 'Blank template must not assume tax rates')
 assert.equal(blankFoundation.inflation.indices.length, 0, 'Blank template must not assume inflation indices')
 assert.equal(blankFoundation.costCentres.items.length, 0, 'Blank template must not invent cost centres')
 const validFoundation = foundation.mergeProjectFoundation({
-  planning: { valuationDate: '2026-12-31' },
+  planning: { periodFrequency:'annual', balanceDateMonth:12, balanceDateDay:31, dayCountBasis:360, valuationDate:'2026-12-31', cashFlowTiming:'period-end' },
   currencies: { localCurrencyCode: 'IRR', localCurrencyName: 'Iranian Rial', foreignCurrencies: [
     { id:'usd', code:'USD', name:'US Dollar', exchangeRates:[{period:'1405',rateToLocal:1000000}] }
   ] },
