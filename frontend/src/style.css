@@ -1042,3 +1042,83 @@ input,select,textarea{color:var(--text)}
   color:#3d352c;
   border-color:#e1d5c5;
 }
+
+
+/* Four-color professional palette: beige, blue-gray, mint, and warm gold. */
+:root:not([data-theme="dark"]){
+  --brand-bluegray:#e5eaf1;
+  --brand-mint:#e5eee7;
+  --brand-gold:#f2e3cf;
+  --brand-beige:#f4ecdf;
+  --brand-panel:#f8f2e8;
+  --brand-ink:#3d352c;
+  --brand-border:#e1d6c7;
+}
+:root:not([data-theme="dark"]) .main-nav{
+  background:var(--brand-bluegray);
+  border-color:#d5dde7;
+}
+:root:not([data-theme="dark"]) .nav-item{
+  color:#43546a;
+}
+:root:not([data-theme="dark"]) .nav-item.active{
+  background:#d3deeb;
+  border-color:#bdcada;
+  color:#294e78;
+}
+:root:not([data-theme="dark"]) .kpi:nth-child(1),
+:root:not([data-theme="dark"]) .dashboard-kpi:nth-child(1){
+  background:var(--brand-bluegray);
+  border-color:#d5dde7;
+}
+:root:not([data-theme="dark"]) .kpi:nth-child(2),
+:root:not([data-theme="dark"]) .dashboard-kpi:nth-child(2){
+  background:var(--brand-mint);
+  border-color:#d3e2d6;
+}
+:root:not([data-theme="dark"]) .kpi:nth-child(3),
+:root:not([data-theme="dark"]) .dashboard-kpi:nth-child(3){
+  background:#eee7f2;
+  border-color:#dfd4e8;
+}
+:root:not([data-theme="dark"]) .kpi:nth-child(4),
+:root:not([data-theme="dark"]) .dashboard-kpi:nth-child(4){
+  background:var(--brand-gold);
+  border-color:#e7d7c1;
+}
+:root:not([data-theme="dark"]) .notice-success,
+:root:not([data-theme="dark"]) .status-success,
+:root:not([data-theme="dark"]) .success-message{
+  background:var(--brand-mint);
+  border-color:#d3e2d6;
+  color:#355844;
+}
+:root:not([data-theme="dark"]) .notice-warning,
+:root:not([data-theme="dark"]) .status-warning{
+  background:var(--brand-gold);
+  border-color:#e7d7c1;
+  color:#70502d;
+}
+:root:not([data-theme="dark"]) .project-form,
+:root:not([data-theme="dark"]) .project-card,
+:root:not([data-theme="dark"]) .empty-state,
+:root:not([data-theme="dark"]) .steel-chain-panel,
+:root:not([data-theme="dark"]) .steel-stage-detail,
+:root:not([data-theme="dark"]) .steel-integrations,
+:root:not([data-theme="dark"]) .fw-content,
+:root:not([data-theme="dark"]) .fw-card,
+:root:not([data-theme="dark"]) .ppw-sheet,
+:root:not([data-theme="dark"]) .ppw-note,
+:root:not([data-theme="dark"]) .hr-panel,
+:root:not([data-theme="dark"]) .hr-project-panel,
+:root:not([data-theme="dark"]) .hr-progress-panel{
+  background:var(--brand-panel);
+  border-color:var(--brand-border);
+}
+/* Preserve pure white exclusively for fields where users enter or edit values. */
+:root:not([data-theme="dark"]) input:not([type="checkbox"]):not([type="radio"]),
+:root:not([data-theme="dark"]) select,
+:root:not([data-theme="dark"]) textarea,
+:root:not([data-theme="dark"]) .calculator-display{
+  background:#fff;
+}
