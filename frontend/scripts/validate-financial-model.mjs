@@ -864,3 +864,9 @@ near(profileLoanInterestDates.rows.find(row=>row.date==='2026-12-31')?.interestP
   'Profile loan interest is paid in the selected month, independent of principal repayments')
 near(profileLoanInterestDates.totalInterest, 110, 1e-9,
   'Profile loan interest accrues over principal changes and is settled at repayment')
+
+assert.equal(engine.calculateExistingLoanSchedule({
+  openingBalance: 1000, annualInterestRatePercent: 12, startDate: '2026-01-31',
+  firstRepaymentDate: '2026-04-15', repaymentFrequency: 'quarterly',
+  repaymentType: 'annuity', numberOfRepayments: 4,
+}).valid, false, 'Annuity and constant-principal repayments must use month-end dates')
