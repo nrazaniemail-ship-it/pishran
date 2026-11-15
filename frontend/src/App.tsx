@@ -60,10 +60,10 @@ export default function App() {
   const chart = useMemo(() => ({
     tooltip: { trigger: 'axis' },
     grid: { left: 12, right: 12, top: 24, bottom: 20, containLabel: true },
-    xAxis: { type: 'category', data: ['سال ۱', 'سال ۲', 'سال ۳', 'سال ۴', 'سال ۵'], axisLine: { lineStyle: { color: '#cbd5e1' } } },
+    xAxis: { type: 'category', data: isEn ? ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'] : ['سال ۱', 'سال ۲', 'سال ۳', 'سال ۴', 'سال ۵'], axisLine: { lineStyle: { color: '#cbd5e1' } } },
     yAxis: { type: 'value', axisLabel: { formatter: '{value}%' }, splitLine: { lineStyle: { color: '#edf0f4' } } },
     series: [{ name: 'بازده نمونه', type: 'line', smooth: true, data: [8, 12, 16, 19, 23], areaStyle: { opacity: .08 }, lineStyle: { width: 3 }, symbolSize: 8 }]
-  }), [])
+  }), [isEn])
 
   async function refreshStorage() {
     setStorageInfo(await localStore.info())
@@ -105,27 +105,27 @@ export default function App() {
       <section className="hero">
         <div className="hero-copy">
           <span className="eyebrow">INVESTMENT DECISION INTELLIGENCE</span>
-          <h1>از ایده تا تصمیم سرمایه‌گذاری، <em>با اطمینان بیشتر.</em></h1>
-          <p>محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.</p>
-          <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> ایجاد پروژه جدید</button><button className="hero-secondary" onClick={() => setPage('steel-group')}><Factory size={17}/>{isEn ? "Explore steel value chain" : "مشاهده زنجیره فولاد"}</button></div>
+          <h1>{isEn ? <>From idea to investment decision, <em>with greater confidence.</em></> : <>از ایده تا تصمیم سرمایه‌گذاری، <em>با اطمینان بیشتر.</em></>}</h1>
+          <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
+          <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button><button className="hero-secondary" onClick={() => setPage('steel-group')}><Factory size={17}/>{isEn ? "Explore steel value chain" : "مشاهده زنجیره فولاد"}</button></div>
         </div>
         <div className="hero-art"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="hero-icon"><Layers3 size={48}/></div><span className="floating f1"><Gauge/> تحلیل اقتصادی</span><span className="floating f2"><ShieldCheck/> ارزیابی ریسک</span></div>
       </section>
 
-      <section className="section-head"><div><span className="eyebrow">WORKSPACE</span><h2>{isEn ? "Investment Control Center" : "مرکز کنترل سرمایه‌گذاری"}</h2></div><span className="muted">نسخه ۱.۰.۱</span></section>
+      <section className="section-head"><div><span className="eyebrow">WORKSPACE</span><h2>{isEn ? "Investment Control Center" : "مرکز کنترل سرمایه‌گذاری"}</h2></div><span className="muted">{isEn ? 'Version 1.0.1' : 'نسخه ۱.۰.۱'}</span></section>
       <section className="kpis">
-        <article className="kpi"><span>پروژه‌های ثبت‌شده</span><b>{projects.length.toLocaleString('fa-IR')}</b><small>ذخیره‌شده روی این دستگاه</small></article>
-        <article className="kpi"><span>مدل‌های مالی</span><b>۰</b><small>محاسبات قابل ثبت و نسخه‌بندی</small></article>
-        <article className="kpi"><span>سناریوهای مقایسه‌شده</span><b>۰</b><small>پایه‌ای برای تحلیل عدم‌قطعیت</small></article>
-        <article className="kpi"><span>وضعیت ذخیره‌سازی</span><b className="live">{storageInfo.backend}</b><small>اطلاعات روی دستگاه نگهداری می‌شود</small></article>
+        <article className="kpi"><span>{isEn ? 'Registered projects' : 'پروژه‌های ثبت‌شده'}</span><b>{projects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</b><small>{isEn ? 'Stored on this device' : 'ذخیره‌شده روی این دستگاه'}</small></article>
+        <article className="kpi"><span>{isEn ? 'Financial models' : 'مدل‌های مالی'}</span><b>{isEn ? '0' : '۰'}</b><small>{isEn ? 'Traceable and versioned calculations' : 'محاسبات قابل ثبت و نسخه‌بندی'}</small></article>
+        <article className="kpi"><span>{isEn ? 'Compared scenarios' : 'سناریوهای مقایسه‌شده'}</span><b>۰</b><small>{isEn ? 'A foundation for uncertainty analysis' : 'پایه‌ای برای تحلیل عدم‌قطعیت'}</small></article>
+        <article className="kpi"><span>{isEn ? 'Storage status' : 'وضعیت ذخیره‌سازی'}</span><b className="live">{storageInfo.backend}</b><small>{isEn ? 'Data is kept on this device' : 'اطلاعات روی دستگاه نگهداری می‌شود'}</small></article>
       </section>
 
-      <section className="section-head"><div><span className="eyebrow">PLATFORM MODULES</span><h2>{isEn ? "Pishran Modules" : "ماژول‌های پیشران"}</h2></div><span className="muted">معماری لایه‌ای و توسعه‌پذیر</span></section>
+      <section className="section-head"><div><span className="eyebrow">PLATFORM MODULES</span><h2>{isEn ? "Pishran Modules" : "ماژول‌های پیشران"}</h2></div><span className="muted">{isEn ? 'Layered and extensible architecture' : 'معماری لایه‌ای و توسعه‌پذیر'}</span></section>
       <section className="module-grid">{modules.map(({icon: Icon,title,sub,status,enTitle,enSub,enStatus})=><article className="module" key={title}><div className="module-icon"><Icon size={21}/></div><div className="module-text"><b>{isEn ? enTitle : title}</b><p>{isEn ? enSub : sub}</p><small>{isEn ? enStatus : status}</small></div></article>)}</section>
 
       <section className="analytics">
         <article className="chart-card"><div className="card-heading"><div><span className="eyebrow">ILLUSTRATIVE DATA</span><h3>{isEn ? "Illustrative return trend" : "نمای نمونه روند بازده"}</h3></div><span className="tag">{isEn ? "Sample data" : "داده نمایشی"}</span></div><ReactECharts option={chart} style={{height:250}}/></article>
-        <article className="insight-card"><div className="module-icon gold"><Bot size={23}/></div><span className="eyebrow">PISHRAN AI COPILOT</span><h3>{isEn ? "Investment Decision Assistant" : "دستیار تصمیم‌یار سرمایه‌گذاری"}</h3><p>در نسخه‌های بعدی، پیشران می‌تواند مفروضات را بررسی کند، ریسک‌ها را توضیح دهد و نتایج را با ارجاع به منابع داده تحلیل کند.</p><div className="notice">خروجی‌های این نسخه نمایشی هستند و مبنای تصمیم واقعی سرمایه‌گذاری نیستند.</div></article>
+        <article className="insight-card"><div className="module-icon gold"><Bot size={23}/></div><span className="eyebrow">PISHRAN AI COPILOT</span><h3>{isEn ? "Investment Decision Assistant" : "دستیار تصمیم‌یار سرمایه‌گذاری"}</h3><p>{isEn ? 'Future versions of Pishran will review assumptions, explain risks and analyse results with references to source data.' : 'در نسخه‌های بعدی، پیشران می‌تواند مفروضات را بررسی کند، ریسک‌ها را توضیح دهد و نتایج را با ارجاع به منابع داده تحلیل کند.'}</p><div className="notice">{isEn ? 'This version contains illustrative outputs. Do not use them as the basis for actual investment decisions.' : 'خروجی‌های این نسخه نمایشی هستند و مبنای تصمیم واقعی سرمایه‌گذاری نیستند.'}</div></article>
       </section>
     </>}
 
