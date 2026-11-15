@@ -635,3 +635,20 @@ input,select,textarea{color:var(--text)}
 .honeycomb-red{background:linear-gradient(145deg,#ffe0d5,#ef9a83);color:#783b31}
 @media(max-width:850px){.hero-art.honeycomb-art{width:330px;transform:scale(.88);transform-origin:center}.honeycomb-cell{width:100px;height:88px}}
 @media(max-width:650px){.hero-art.honeycomb-art{display:flex;width:100%;height:auto;transform:none;margin:16px auto 0;overflow:visible}.hero{flex-direction:column;align-items:stretch}.honeycomb-row{height:72px;gap:1px}.honeycomb-cell{width:96px;height:84px;margin-top:-6px;gap:3px}.honeycomb-cell svg{width:18px;height:18px}.honeycomb-cell span{font-size:9px}}
+
+
+/* Always-available floating calculator */
+.floating-calculator{position:fixed;right:22px;bottom:22px;z-index:1200;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.calculator-launcher{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:50px;padding:0 18px;border:1px solid #c8dcd2;border-radius:999px;background:#e8f2ec;color:#315b4d;font-weight:800;box-shadow:0 5px 18px rgba(39,62,67,.16);cursor:pointer}
+.calculator-launcher:hover{background:#dcece3}
+.calculator-panel{width:292px;padding:14px;border:1px solid #d9e5df;border-radius:18px;background:#fff;color:#263b34;box-shadow:0 12px 35px rgba(39,62,67,.2)}
+.calculator-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;color:#315b4d}
+.calculator-heading button{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:9px;background:#f1f6f3;color:#47675b;cursor:pointer}
+.calculator-display{min-height:68px;padding:10px 12px;margin-bottom:10px;border:1px solid #e1ebe5;border-radius:12px;background:#f7faf8;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;overflow-wrap:anywhere;font-size:23px;font-weight:700}
+.calculator-display small{font-size:11px;color:#b45b4d}
+.calculator-keys{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.calculator-keys button{height:43px;border:1px solid #e4ece7;border-radius:10px;background:#f6f9f7;color:#30473e;font-size:16px;font-weight:650;cursor:pointer}
+.calculator-keys button:hover{background:#eaf2ed}
+.calculator-keys button.operator{background:#e4efe8;border-color:#d3e3d9;color:#315b4d}
+.calculator-keys button.clear{background:#fff0e9;border-color:#f3ddd2;color:#99533f}
+@media(max-width:650px){.floating-calculator{right:14px;bottom:14px}.calculator-panel{width:min(292px,calc(100vw - 28px))}.calculator-launcher{min-height:48px;padding:0 15px}}
