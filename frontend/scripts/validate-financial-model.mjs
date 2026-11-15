@@ -623,7 +623,6 @@ const comfarLinearZero = engine.calculateComfarAssetDepreciationSchedule([{
 assert.equal(comfarLinearZero.valid,true,'COMFAR Linear to zero partial first-year schedule must validate')
 near(comfarLinearZero.periods[0].depreciation,0,1e-9,'Depreciation must not start before Starting at')
 near(comfarLinearZero.periods[1].depreciation,100,1e-9,'Linear to zero first partial-year depreciation')
-near(comfarLinearScrap.periods[0].closingBookValue,0,1e-9,'Assets must not appear on the balance sheet before acquisition period')
 near(comfarLinearZero.periods[5].closingBookValue,100,1e-9,'Linear to zero must stop at salvage value')
 near(comfarLinearZero.periods[6].depreciation,0,1e-9,'Linear to zero must not depreciate after reaching salvage')
 const comfarLinearScrap = engine.calculateComfarAssetDepreciationSchedule([{
@@ -631,6 +630,7 @@ const comfarLinearScrap = engine.calculateComfarAssetDepreciationSchedule([{
   lengthYears:5,ratePercent:20,method:'linear-to-scrap',
   acquisitionPeriod:2,startingAtPeriod:1,firstDepreciationMonths:12
 }],7)
+near(comfarLinearScrap.periods[0].closingBookValue,0,1e-9,'Assets must not appear on the balance sheet before acquisition period')
 near(comfarLinearScrap.periods[2].depreciation,180,1e-9,'Linear to scrap annual depreciation')
 near(comfarLinearScrap.periods[6].closingBookValue,100,1e-9,'Linear to scrap must finish at salvage')
 const comfarAccelerated = engine.calculateComfarAssetDepreciationSchedule([{
