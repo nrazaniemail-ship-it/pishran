@@ -1005,13 +1005,14 @@ export function calculateComfarAssetLifecycle(
 }
 
 
+
 export type FixedInvestmentDepreciationBuild = {
   assets: ComfarDepreciationAssetInput[]
   sales: ComfarAssetSaleInput[]
   warnings: string[]
 }
 
-/** Convert the shared fixed-investment register to annual depreciation vintages. */
+/** Convert the shared fixed-investment register to annual acquisition vintages and linked disposal events. */
 export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   items: FixedInvestmentItem[],
   projectStartYear: number,
@@ -1022,9 +1023,14 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   const assets: ComfarDepreciationAssetInput[] = []
   const sales: ComfarAssetSaleInput[] = []
   const warnings: string[] = []
-  if (periodFrequency !== 'annual') return { assets, sales, warnings: ['پیش‌نمایش استهلاک فعلی فقط برای دوره‌بندی سالانه اعتبارسنجی شده است؛ برای دوره‌بندی شش‌ماهه، فصلی یا ماهانه موتور دوره‌ای جداگانه لازم است.'] }
   if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
     return { assets, sales, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
+  }
+  if (periodFrequency !== 'annual' && periodFrequency !== 'unspecified') {
+    return { assets, sales, warnings: ['موتور یکپارچه فعلی فقط برنامه سالانه را محاسبه می‌کند؛ برای دوره‌های نیم‌سالانه، فصلی یا ماهانه، موتور دوره‌ای متناظر باید فعال شود.'] }
+  }
+  if (periodFrequency === 'unspecified') {
+    warnings.push('تناوب دوره در فونداسیون تعیین نشده است؛ نگاشت سالانه فقط برای پیش‌نمایش استفاده می‌شود و نتیجه تا تعیین Annual تأییدشده نیست.')
   }
   const parsePeriod = (value: string): { year: number; date: string | undefined } | null => {
     const match = /^(\\d{3,4})(?:[-/](\\d{1,2})(?:[-/](\\d{1,2}))?)?$/.exec(value.trim())
@@ -1032,21 +1038,33 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     const date = match[2] && match[3] ? value.trim().replace(/\\//g, '-') : undefined
     return { year: Number(match[1]), date }
   }
-  const methodMap: Record<FixedInvestmentItem['depreciation']['method'], ComfarDepreciationMethod> = {
-    none: 'none',
+  const methodMap: Record<FixedInvestmentItem['depreciation']['method'], ComfarDepreciationMethod | null> = {
+    none: null,
     'linear-zero': 'linear-to-zero',
     'linear-scrap': 'linear-to-scrap',
     accelerated: 'accelerated',
     'sum-of-digits': 'sum-of-years-digits',
   }
+  const exchangeRateForSale = (currencyCode: string, period: string): number | null => {
+    if (!foundation) return null
+    if (currencyCode.trim().toUpperCase() === foundation.currencies.localCurrencyCode.trim().toUpperCase()) return 1
+    const currency = foundation.currencies.foreignCurrencies.find(row => row.code.trim().toUpperCase() === currencyCode.trim().toUpperCase())
+    if (!currency) return null
+    const salePeriod = parsePeriod(period)
+    if (!salePeriod) return null
+    const exact = currency.exchangeRates.find(row => row.period === period)
+    const annual = currency.exchangeRates.find(row => parsePeriod(row.period)?.year === salePeriod.year)
+    const rate = exact?.rateToLocal ?? annual?.rateToLocal
+    return Number.isFinite(rate) && (rate ?? 0) > 0 ? rate! : null
+  }
   for (const item of items) {
     const method = methodMap[item.depreciation.method]
-    const starting = method === 'none' ? null : parsePeriod(item.depreciation.startingAt)
-    if (method !== 'none' && !starting) {
+    const starting = parsePeriod(item.depreciation.startingAt)
+    if (method && !starting) {
       warnings.push(`${item.description || item.id}: تاریخ Starting at باید به‌صورت سال یا YYYY-MM-DD وارد شود.`)
       continue
     }
-    const startingAtPeriod = method === 'none' ? 1 : Math.max(1, starting!.year - projectStartYear + 1)
+    const startingAtPeriod = starting ? Math.max(1, starting.year - projectStartYear + 1) : 1
     for (const acquisition of item.acquisitions) {
       const acquired = parsePeriod(acquisition.period)
       if (!acquired) {
@@ -1059,84 +1077,64 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       }
       const acquisitionPeriod = acquired.year - projectStartYear + 1
       if (acquisitionPeriod > periodCount) continue
-      const relatedSales = item.sales.filter(sale => sale.acquisitionId === acquisition.id)
-      const invalidSaleDate = relatedSales.some(sale => parsePeriod(sale.period) === null)
-      if (invalidSaleDate) {
-        warnings.push(`${item.description || item.id}: تاریخ فروش دارایی قابل تشخیص نیست؛ این نوبت از برنامه استهلاک کنار گذاشته شد.`)
-        continue
-      }
-      if (acquired.year === starting.year && (!acquired.date || !starting.date)) {
-        warnings.push(`${item.description || item.id}: برای تحصیل و Starting at در یک سال، تاریخ کامل هر دو لازم است؛ در نبود تاریخ کامل، شروع استهلاک به دوره بعد موکول می‌شود.`)
-      }
-      if (item.origin === 'foreign' && (!Number.isFinite(acquisition.exchangeRateToLocal) || (acquisition.exchangeRateToLocal ?? 0) <= 0)) {
-        warnings.push(`${item.description || item.id}: نرخ تبدیل مثبت به ارز محلی برای نوبت تحصیل خارجی لازم است.`)
-        continue
-      }
-      if (!Number.isFinite(acquisition.quantity) || acquisition.quantity <= 0 || !Number.isFinite(acquisition.unitPrice) || acquisition.unitPrice < 0) {
-        warnings.push(`${item.description || item.id}: مقدار و قیمت نوبت تحصیل معتبر نیست.`)
-        continue
-      }
       const exchangeRate = item.origin === 'foreign' ? (acquisition.exchangeRateToLocal ?? 0) : 1
       const originalValue = acquisition.quantity * acquisition.unitPrice * exchangeRate
       if (!Number.isFinite(originalValue) || originalValue < 0) {
         warnings.push(`${item.description || item.id}: بهای تحصیل پس از تبدیل به ارز محلی معتبر نیست.`)
         continue
       }
-      assets.push({
-        id: `${item.id}:${acquisition.id}`,
-        name: item.description || item.id,
-        originalValue,
-        initialBookValue: originalValue,
-        scrapPercent: item.depreciation.scrapPercent,
-        lengthYears: item.depreciation.lengthYears ?? 0,
-        lengthMonths: item.depreciation.lengthMonths,
-        ratePercent: item.depreciation.ratePercent ?? undefined,
-        method,
-        acquisitionPeriod,
-        startingAtPeriod,
-        firstDepreciationMonths: item.depreciation.firstDepreciationMonths,
-        acquisitionDate: acquired.date,
-        startingAtDate: starting?.date,
-      })
-      for (const sale of relatedSales) {
+      const assetId = `${item.id}:${acquisition.id}`
+      if (method) {
+        assets.push({
+          id: assetId,
+          name: item.description || item.id,
+          originalValue,
+          initialBookValue: originalValue,
+          scrapPercent: item.depreciation.scrapPercent,
+          lengthYears: item.depreciation.lengthYears ?? 0,
+          lengthMonths: item.depreciation.lengthMonths,
+          ratePercent: item.depreciation.ratePercent ?? undefined,
+          method,
+          acquisitionPeriod,
+          startingAtPeriod,
+          firstDepreciationMonths: item.depreciation.firstDepreciationMonths,
+          acquisitionDate: acquired.date,
+          startingAtDate: starting?.date,
+        })
+      }
+      for (const sale of item.sales.filter(row => row.acquisitionId === acquisition.id)) {
         const sold = parsePeriod(sale.period)
-        if (!sold) continue
-        const salePeriod = sold.year - projectStartYear + 1
-        if (salePeriod < acquisitionPeriod) {
-          warnings.push(`${item.description || item.id}: تاریخ فروش نمی‌تواند پیش از دوره تحصیل باشد.`)
+        if (!sold) {
+          warnings.push(`${item.description || item.id}: تاریخ فروش «${sale.period}» قابل تشخیص نیست.`)
           continue
         }
-        if (salePeriod > periodCount) continue
-        let exchangeRateToLocal = 1
-        if (sale.priceMode === 'self-defined') {
-          const localCode = foundation?.currencies.localCurrencyCode.trim().toUpperCase() ?? ''
-          const saleCode = sale.currencyCode.trim().toUpperCase()
-          if (saleCode && saleCode !== localCode) {
-            const currency = foundation?.currencies.foreignCurrencies.find(row => row.code.trim().toUpperCase() === saleCode)
-            const exactRate = currency?.exchangeRates.find(row => row.period === sale.period)?.rateToLocal
-            const annualRate = currency?.exchangeRates.find(row => row.period === String(sold.year))?.rateToLocal
-            const rate = exactRate ?? annualRate
-            if (!Number.isFinite(rate) || (rate ?? 0) <= 0) {
-              warnings.push(`${item.description || item.id}: نرخ تبدیل ارز فروش برای ${sale.period} تعریف نشده است.`)
-              continue
-            }
-            exchangeRateToLocal = rate!
+        const salePeriod = sold.year - projectStartYear + 1
+        if (salePeriod < acquisitionPeriod || salePeriod > periodCount) {
+          warnings.push(`${item.description || item.id}: دوره فروش باید پس از تحصیل و در افق پروژه باشد.`)
+          continue
+        }
+        let saleFx = 1
+        if (sale.priceMode === 'self-defined' && sale.market === 'foreign') {
+          const resolved = exchangeRateForSale(sale.currencyCode, sale.period)
+          if (resolved === null) {
+            warnings.push(`${item.description || item.id}: برای فروش ارزی در ${sale.period} نرخ تبدیل به ارز محلی تعریف نشده است.`)
+            continue
           }
+          saleFx = resolved
         }
         sales.push({
           id: sale.id,
-          assetId: `${item.id}:${acquisition.id}`,
+          assetId,
           period: salePeriod,
           priceMode: sale.priceMode,
           selfDefinedPrice: sale.selfDefinedPrice ?? undefined,
-          exchangeRateToLocal,
+          exchangeRateToLocal: saleFx,
         })
       }
     }
   }
   return { assets, sales, warnings }
 }
-
 
 export type FixedInvestmentRegisterReconciliation = {
   registerTotal: number
