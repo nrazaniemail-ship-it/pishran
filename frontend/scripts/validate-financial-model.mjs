@@ -684,6 +684,15 @@ const lifecycleLoss = engine.calculateComfarAssetLifecycle([{
   {id:'sale-below-book',assetId:'loss-machine',period:2,priceMode:'self-defined',selfDefinedPrice:500,exchangeRateToLocal:1}
 ],5)
 near(lifecycleLoss.sales[0].otherIncomeLoss,-140,1e-9,'Sale proceeds below book value are Other loss')
+near(lifecycleLoss.sales[0].returnOfCapital,500,1e-9,'Only proceeds actually recovered up to book value count as return of capital')
+near(lifecycle.depreciation.periods[2].assets[0].openingBookValue,0,1e-9,'Disposed asset must not reappear as an opening fixed asset in later periods')
+const landLifecycle = engine.calculateComfarAssetLifecycle([{
+  id:'land-no-dep',name:'Land',originalValue:1000,initialBookValue:1000,scrapPercent:100,
+  lengthYears:0,method:'none',acquisitionPeriod:1,startingAtPeriod:1,firstDepreciationMonths:12
+}],[{id:'land-sale',assetId:'land-no-dep',period:2,priceMode:'book-value'}],4)
+assert.equal(landLifecycle.valid,true,'Non-depreciated land must still be available for disposal')
+near(landLifecycle.depreciation.periods[0].assets[0].depreciation,0,1e-9,'Land must not be depreciated')
+near(landLifecycle.sales[0].saleProceeds,1000,1e-9,'Book-value sale of land must return its book value')
 const lifecycleForeign = engine.calculateComfarAssetLifecycle([{
   id:'foreign-machine',name:'Foreign machine',originalValue:1000,initialBookValue:1000,scrapPercent:10,
   lengthYears:5,ratePercent:20,method:'linear-to-scrap',
@@ -1079,6 +1088,8 @@ const saleBeforeAcquisition = {
 }
 assert.ok(foundation.validateFixedInvestmentItems([saleBeforeAcquisition], validFoundation).some(issue=>issue.code==='asset-sale-before-acquisition'),
   'Asset disposal cannot precede acquisition')
+const saleOffBalanceDate = { ...validAsset, sales:[{id:'sale-off-date',acquisitionId:'acq-1',period:'1405-06-30',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}] }
+assert.ok(foundation.validateFixedInvestmentItems([saleOffBalanceDate], validFoundation).some(issue=>issue.code==='asset-sale-not-at-balance-date'), 'Asset sale dates must be balance dates')
 const invalidSumDigitsPartial = {
   ...validAsset, id:'asset-sum-partial',
   depreciation:{method:'sum-of-digits',startingAt:'1405-01-01',ratePercent:null,lengthYears:5,lengthMonths:0,firstDepreciationMonths:6,scrapPercent:10}
@@ -1117,7 +1128,7 @@ assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
   && fixedInvestmentPanel.includes('Linear to scrap')
   && fixedInvestmentPanel.includes('Accelerated')
   && fixedInvestmentPanel.includes('Sum of years digits')
-  && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX') && fixedInvestmentPanel.includes('first depreciation year') && fixedInvestmentPanel.includes('Asset Depreciation Schedule Preview') && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems'),
+  && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX') && fixedInvestmentPanel.includes('first depreciation year') && fixedInvestmentPanel.includes('Asset Depreciation Schedule Preview') && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems') && fixedInvestmentPanel.includes('calculateComfarAssetLifecycle') && fixedInvestmentPanel.includes('Asset Sale Proceeds'),
   'Fixed investment foundation must capture acquisition periods, COMFAR depreciation conditions and asset disposals without double-counting CAPEX')
 const advancedFinanceSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems')
