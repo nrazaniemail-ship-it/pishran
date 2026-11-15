@@ -804,6 +804,8 @@ assert.equal(engine.calculateExistingLoanSchedule({
 }).valid, false, 'Existing loan must reject a zero repayment count')
 
 assert.ok(expansionPanelSource.includes('Annuity')
+  && expansionPanelSource.includes('openingAccruedInterest:loan.accruedInterest??0')
+  && expansionPanelSource.includes('Accrued Interest Payable')
   && expansionPanelSource.includes('Constant Principal')
   && expansionPanelSource.includes('Profile')
   && expansionPanelSource.includes('First Repayment Date')
