@@ -22,6 +22,10 @@ assert.equal(directory.validateFinancialMethodParameters('depreciation.straight-
 assert.ok(directory.validateFinancialMethodParameters('depreciation.straight-line-scrap', {
   usefulLifeYears: 0, scrapPercent: 120, firstPeriodMonths: 6.5
 }).length >= 3, 'Invalid depreciation parameters must fail closed')
+assert.equal(directory.getFinancialMethod('taxation.period-rate-schedule').calculationStatus, 'implemented')
+assert.equal(directory.getFinancialMethod('taxation.loss-carry-forward').benchmarkStatus, 'partial')
+assert.ok(directory.validateFinancialMethodParameters('taxation.period-rate-schedule', { taxRates: 25 }).length === 0)
+assert.ok(directory.validateFinancialMethodParameters('taxation.loss-carry-forward', { openingLoss: -1, taxRatePercent: 25 }).length >= 1)
 assert.ok(directory.validateFinancialMethodParameters('valuation.mirr', { financeRate: 25 }).some(issue => issue.parameter === 'reinvestmentRate'))
 assert.ok(directory.validateFinancialMethodParameters('missing.method', {}).some(issue => issue.code === 'unknown-method'))
 
