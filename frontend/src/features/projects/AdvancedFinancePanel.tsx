@@ -43,6 +43,7 @@ type Props = {
   mirrReinvestmentRate?: number
   onResult?: (result:IntegratedFinanceResult)=>void
   onSensitivity?: (analysis:OneWaySensitivityAnalysis)=>void
+  onPeriodicResult?: (result:PeriodicProjectFinanceResult|null)=>void
   equityPercent: number
   costOfEquity: number
   costOfDebt: number
@@ -220,6 +221,7 @@ export default function AdvancedFinancePanel(props: Props) {
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     })
   },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,JSON.stringify(state.loans),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule)])
+  useEffect(()=>{props.onPeriodicResult?.(periodicFinanceResult)},[periodicFinanceResult,props.onPeriodicResult])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
