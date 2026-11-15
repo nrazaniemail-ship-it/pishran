@@ -849,6 +849,7 @@ export type ExistingLoanRepaymentFrequency = 'annual'|'semiannual'|'quarterly'|'
 export type ExistingLoanRepaymentType = 'annuity'|'constant-principal'|'profile'
 export type ExistingLoanScheduleInput = {
   openingBalance: number
+  openingAccruedInterest?: number
   annualInterestRatePercent: number
   startDate: string
   firstRepaymentDate: string
@@ -912,6 +913,7 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
   if (!start || !first) return invalid('A valid opening date and first repayment date are required.')
   if (first <= start) return invalid('The first repayment date must be after the opening date.')
   if (!Number.isFinite(input.openingBalance) || input.openingBalance < 0 ||
+      !Number.isFinite(input.openingAccruedInterest ?? 0) || (input.openingAccruedInterest ?? 0) < 0 ||
       !Number.isFinite(input.annualInterestRatePercent) || input.annualInterestRatePercent < 0)
     return invalid('Opening balance and annual interest rate must be non-negative finite values.')
   if (!Number.isInteger(input.numberOfRepayments) || input.numberOfRepayments < 1 || input.numberOfRepayments > 1200)
@@ -925,11 +927,11 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
   const graceInterest = input.openingBalance * annualRate * graceMonths / 12
   let balance = input.openingBalance
   let capitalizedGraceInterest = 0
-  let firstInterestPayable = graceInterest
+  let firstInterestPayable = graceInterest + (input.openingAccruedInterest ?? 0)
   if (input.capitalizeGraceInterest) {
     capitalizedGraceInterest = graceInterest
     balance += graceInterest
-    firstInterestPayable = 0
+    firstInterestPayable = input.openingAccruedInterest ?? 0
   }
   const profile = input.repaymentType === 'profile'
   if (profile && (!input.profileRepayments?.length ||
@@ -956,7 +958,7 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
     let principal = profile
       ? input.profileRepayments![index].principal
       : input.repaymentType === 'constant-principal'
-        ? input.openingBalance / count
+        ? balance / count
         : regularPayment - intervalInterest
     if (input.repaymentType === 'annuity' && index === 0 && !input.capitalizeGraceInterest) {
       principal = regularPayment - firstInterestPayable
