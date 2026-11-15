@@ -753,6 +753,10 @@ const hrcrAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItem
 assert.ok(hrcrAssetBuild.assets.length>=18,'HRCR reference must create asset acquisition vintages from the CAPEX workbook')
 const hrcrDepreciationRun=engine.calculateComfarAssetDepreciationSchedule(hrcrAssetBuild.assets,17)
 assert.equal(hrcrDepreciationRun.valid,true,'Fractional useful lives from HRCR depreciation rates must be accepted by the XI.H engine')
+near(hrcrDepreciationRun.periods[2].depreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterFirstYearDepreciation,0.01,
+  'HRCR seeded register first-year depreciation must match its independently calculated benchmark')
+near(hrcrDepreciationRun.periods[2].depreciation-workbookAudit.HOT_ROLLING_200KT_AUDIT.depreciationReconciliation.comfarFirstYear,150171.6296744,0.01,
+  'HRCR preliminary register must disclose rather than conceal its first-year variance from COMFAR output')
 near(hrcrAssetBuild.investmentSchedule.reduce((sum,value)=>sum+value,0),
   workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.fixedInvestment,0.01,
   'HRCR asset acquisition schedule must exclude preproduction costs and reconcile to fixed investment')
