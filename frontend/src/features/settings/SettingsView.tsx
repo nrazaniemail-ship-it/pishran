@@ -13,7 +13,7 @@ export default function SettingsView({ settings, storageInfo, onChange, onRestor
   const en = settings.language === 'en'
 
   return <section className="settings-page">
-    <div className="page-heading"><div><span className="eyebrow">PREFERENCES & LOCAL DATA</span><h1>{en ? 'Pishran Settings' : 'تنظیمات پیشران'}</h1><p>{en ? 'Appearance, app behaviour and on-device data management' : 'ظاهر، رفتار برنامه و مدیریت اطلاعات روی همین دستگاه'}</p></div></div>
+    <div className="page-heading"><div><h1>{en ? 'Pishran Settings' : 'تنظیمات پیشران'}</h1><p>{en ? 'Appearance, app behaviour and on-device data management' : 'ظاهر، رفتار برنامه و مدیریت اطلاعات روی همین دستگاه'}</p></div></div>
 
     <div className="settings-grid">
       <article className="settings-card">
