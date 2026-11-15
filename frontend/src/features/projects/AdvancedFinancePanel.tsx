@@ -358,5 +358,24 @@ export default function AdvancedFinancePanel(props: Props) {
     <div className="fw-result">{tr('ترازهای منطبق: ')}<b>{totalBalanceChecks} {tr('از')} {statements.length}</b> {tr('دوره')}</div>
     <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('سال')}</th><th>{tr('فروش')}</th><th>EBIT</th><th>{tr('زیان انتقالی پایان سال')}</th><th>{tr('سود خالص')}</th><th>{tr('جریان نقد پایان سال')}</th><th>{tr('جمع دارایی‌ها')}</th><th>{tr('بدهی + حقوق مالکانه')}</th><th>{tr('اختلاف تراز')}</th></tr></thead><tbody>{statements.map(r=><tr key={r.year}><td>{r.year}</td><td>{money(r.incomeStatement.revenue)}</td><td>{money(r.incomeStatement.ebit)}</td><td>{money(r.incomeStatement.taxLossCarryForward)}</td><td>{money(r.incomeStatement.netIncome)}</td><td>{money(r.cashFlowStatement.closingCash)}</td><td>{money(r.balanceSheet.totalAssets)}</td><td>{money(r.balanceSheet.totalLiabilitiesAndEquity)}</td><td>{money(r.balanceSheet.balanceDifference)} {r.balanceSheet.reconciled?'✓':'⚠'}</td></tr>)}</tbody></table></div>
     <p className="fw-hint">{tr('صورت‌ها از یک مجموعه جریان نقدی و برنامه دارایی/بدهی ساخته می‌شوند؛ هیچ رقم ترازکنندهٔ مصنوعی به حقوق مالکانه اضافه نمی‌شود. اگر اختلاف تراز صفر نباشد، خروجی به‌عنوان عدم تطبیق علامت می‌خورد و باید طبقه‌بندی CAPEX، آورده، بدهی یا سرمایه در گردش بررسی شود. این نسخه هنوز اقلام حسابداری تفصیلی مانند مالیات بر ارزش افزوده، سود تقسیمی، مطالبات/بدهی مالیاتی، تجدید ارزیابی و ثبت‌های چندارزی را پوشش نمی‌دهد.')}</p>
+    <h4>{t('۸. موتور یکپارچه جریان نقدی ماهانه/فصلی','8. Integrated Monthly / Quarterly Cash-Flow Engine')}</h4>
+    {periodicFinanceResult?.valid?<div className="fw-card">
+      <p className="fw-hint">{t('جریان‌های سالانه با تعداد روز واقعی به دوره‌های پروژه تخصیص یافته‌اند. برداشت وام می‌تواند روزشمار از مبالغ سالانه توزیع شود یا برای هر دوره مستقلاً ثبت شود. مالیات، زیان انتقالی، بهره، اصل بدهی و سرمایه در گردش در سطح هر دوره محاسبه می‌شوند.','Annual flows are allocated to project periods by actual day counts. Loan drawdowns can be day-weighted from annual amounts or entered directly by period. Tax, loss carry-forward, interest, principal and working capital are calculated period by period.')}</p>
+      <div className="fw-kpis">
+        <article><small>NPV {t('پروژه','Project')}</small><b>{money(periodicFinanceResult.npvProject??NaN)}</b></article>
+        <article><small>IRR {t('پروژه','Project')}</small><b>{periodicFinanceResult.irrProject==null?'—':money(periodicFinanceResult.irrProject)+'%'}</b></article>
+        <article><small>MIRR {t('پروژه','Project')}</small><b>{periodicFinanceResult.mirrProject==null?'—':money(periodicFinanceResult.mirrProject)+'%'}</b></article>
+        <article><small>NPV {t('سهامدار','Equity')}</small><b>{money(periodicFinanceResult.npvEquity??NaN)}</b></article>
+        <article><small>IRR {t('سهامدار','Equity')}</small><b>{periodicFinanceResult.irrEquity==null?'—':money(periodicFinanceResult.irrEquity)+'%'}</b></article>
+        <article><small>{t('اوج سرمایه در گردش','Peak working capital')}</small><b>{money(periodicFinanceResult.peakWorkingCapital)}</b></article>
+      </div>
+      <div style={{overflowX:'auto',maxHeight:480}}>
+        <table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ','Dates')}</th><th>{t('روز','Days')}</th><th>{t('فروش','Revenue')}</th><th>{t('هزینه متغیر','Variable cost')}</th><th>{t('هزینه ثابت','Fixed cost')}</th><th>{t('استهلاک','Depreciation')}</th><th>{t('بهره','Interest')}</th><th>{t('اصل','Principal')}</th><th>{t('مالیات','Tax')}</th><th>{t('تغییر سرمایه در گردش','Change in WC')}</th><th>CFADS</th><th>DSCR</th><th>{t('جریان نقدی پروژه','Project FCF')}</th></tr></thead>
+          <tbody>{periodicFinanceResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.startDate} – {row.endDate}</td><td>{row.days}</td><td>{money(row.revenue)}</td><td>{money(row.variableCost)}</td><td>{money(row.fixedCost)}</td><td>{money(row.depreciation)}</td><td>{money(row.interestExpense)}</td><td>{money(row.principal)}</td><td>{money(row.tax)}</td><td>{money(row.changeInWorkingCapital)}</td><td>{money(row.cfads)}</td><td>{row.dscr==null?'—':money(row.dscr)+'x'}</td><td>{money(row.projectFreeCashFlow)}</td></tr>)}</tbody>
+        </table>
+      </div>
+      {periodicFinanceResult.warnings.length>0&&<ul className="fw-checklist">{periodicFinanceResult.warnings.map((warning,i)=><li key={i}>{tr(warning)}</li>)}</ul>}
+    </div>:<p className="fw-hint">{periodicFinanceResult?.warnings.length?periodicFinanceResult.warnings.join(' · '):t('برای فعال‌سازی محاسبه دوره‌ای، تاریخ شروع و پایان پروژه، تناوب مالی، ماه آغاز سال مالی، مبنای روزشمار و زمان‌بندی جریان نقدی را در فونداسیون پروژه تعیین کنید.','To activate periodic calculations, define project start/end dates, financial frequency, fiscal-year start month, day-count basis and cash-flow timing in the project foundation.')}</p>}
+
   </div>
 }
