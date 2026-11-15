@@ -20,6 +20,14 @@ export default function SettingsView({ settings, storageInfo, onChange, onRestor
         <div className="settings-card-title"><span className="settings-symbol">◐</span><div><b>{en ? 'Display & Appearance' : 'نمایش و ظاهر'}</b><small>{en ? 'App theme and accent colour' : 'پوسته و رنگ محیط برنامه'}</small></div></div>
         <label className="setting-row"><span>{en ? 'Display mode' : 'حالت نمایش'}</span><select value={settings.themeMode} onChange={e => update('themeMode', e.target.value as AppSettings['themeMode'])}><option value="light">{en ? 'Light' : 'روشن'}</option><option value="dark">{en ? 'Dark' : 'تیره'}</option><option value="system">{en ? 'System' : 'مطابق دستگاه'}</option></select></label>
         <label className="setting-row"><span>{en ? 'Accent colour' : 'رنگ اصلی'}</span><select value={settings.accentTheme} onChange={e => update('accentTheme', e.target.value as AppSettings['accentTheme'])}><option value="navy">{en ? 'Soft teal (default)' : 'سبزآبی ملایم (پیش‌فرض)'}</option><option value="emerald">{en ? 'Sage green' : 'سبز مریم‌گلی'}</option><option value="gold">{en ? 'Warm sand' : 'شن روشن'}</option><option value="graphite">{en ? 'Slate grey' : 'خاکستری سنگی'}</option></select></label>
+        <label className="setting-row"><span>{en ? 'Background palette' : 'رنگ زمینه'}</span><select value={settings.backgroundTheme ?? 'bluegray'} onChange={e => update('backgroundTheme', e.target.value as AppSettings['backgroundTheme'])}>
+          <option value="bluegray">{en ? 'Blue grey' : 'آبی خاکستری'}</option>
+          <option value="mist">{en ? 'Cool mist' : 'مه‌آلود روشن'}</option>
+          <option value="sage">{en ? 'Soft sage' : 'سبز مریم‌گلی روشن'}</option>
+          <option value="sand">{en ? 'Warm sand' : 'شن روشن'}</option>
+          <option value="sky">{en ? 'Pale sky' : 'آسمانی ملایم'}</option>
+          <option value="lavender">{en ? 'Soft lavender' : 'یاسی ملایم'}</option>
+        </select></label>
         <label className="setting-row"><span>{en ? 'Compact layout' : 'چیدمان فشرده'}</span><input type="checkbox" checked={settings.compactMode} onChange={e => update('compactMode', e.target.checked)}/></label>
       </article>
 
