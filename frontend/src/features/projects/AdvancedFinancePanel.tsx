@@ -153,6 +153,8 @@ export default function AdvancedFinancePanel(props: Props) {
   }
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
+  const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
+  useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
