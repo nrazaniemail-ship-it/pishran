@@ -274,7 +274,7 @@ const migrateStoredData=(stored:Record<string,Row[]>,sheets:Sheet[],plantType:Pl
  }
  return next
 }
-const fmt=(v:number)=>Number(v||0).toLocaleString('fa-IR',{maximumFractionDigits:2})
+const fmt=(v:number)=>Number(v||0).toLocaleString(typeof document!=='undefined'&&document.documentElement.lang==='en'?'en-US':'fa-IR',{maximumFractionDigits:2})
 export default function ProcessPlantWorkspace({project,plantType,onBack,language='fa'}:{project:FeasibilityProject;plantType:PlantType;onBack:()=>void;language?:'fa'|'en'}){
  const en=language==='en'
  const t=(fa:string,english:string)=>en?english:fa
