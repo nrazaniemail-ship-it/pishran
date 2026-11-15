@@ -74,7 +74,7 @@ function baseModel(project:FeasibilityProject):Model {
 const n=(v:number)=>Number.isFinite(v)?v:0
 const fmt=(v:number,d=0)=>n(v).toLocaleString('fa-IR',{maximumFractionDigits:d,minimumFractionDigits:d})
 const sum=(rows:Row[])=>rows.reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)
-function Field({label,value,unit,onChange,type='number'}:{label:string;value:number|string;unit?:string;onChange:(v:any)=>void;type?:string}){return <label className="fw-field"><span>{en?(stepEn[label]??label):label}</span><div><input type={type} value={value} onChange={e=>onChange(type==='number'?Number(e.target.value):e.target.value)}/>{unit&&<small>{unit}</small>}</div></label>}
+function Field({label,value,unit,onChange,type='number'}:{label:string;value:number|string;unit?:string;onChange:(v:any)=>void;type?:string}){return <label className="fw-field"><span>{label}</span><div><input type={type} value={value} onChange={e=>onChange(type==='number'?Number(e.target.value):e.target.value)}/>{unit&&<small>{unit}</small>}</div></label>}
 function RowEditor({title,rows,onChange,defaultUnit}:{title:string;rows:Row[];onChange:(rows:Row[])=>void;defaultUnit:string}){
  const update=(id:string,key:keyof Row,value:string|number)=>onChange(rows.map(r=>r.id===id?{...r,[key]:value}:r))
  const move=(index:number,direction:number)=>{const next=[...rows],target=index+direction;if(target<0||target>=next.length)return;[next[index],next[target]]=[next[target],next[index]];onChange(next)}
