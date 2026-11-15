@@ -114,10 +114,10 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
             </select>
           </label>
           
-          {steelStage && <label>{t('نام پروژه','Project Name')}<input required value={name} onChange={e => setName(e.target.value)} placeholder="{t('نام دلخواه پروژه را وارد کنید','Enter a project name')}"/></label>}
-        </> : <label>{t('نوع پروژه','Project Type')}<input required value={name} onChange={e => setName(e.target.value)} placeholder="{t('نوع پروژه','Project Type')} را وارد کنید"/></label>}
+          {steelStage && <label>{t('نام پروژه','Project Name')}<input required value={name} onChange={e => setName(e.target.value)} placeholder={t('نام دلخواه پروژه را وارد کنید','Enter a project name')}/></label>}
+        </> : <label>{t('نوع پروژه','Project Type')}<input required value={name} onChange={e => setName(e.target.value)} placeholder={t('نوع پروژه را وارد کنید','Enter project type')}/></label>}
         {isSteel ? <label>{t('ظرفیت اسمی (تن در سال)','Nameplate Capacity (tonnes/year)')}<input type="text" inputMode="numeric" pattern="[0-9]*" value={capacity} onChange={e => setCapacity(e.target.value.replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))).replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[^0-9]/g, ''))} placeholder={t('مثلاً ۵۰۰۰۰۰','e.g. 500000')}/></label> : isEnergy ? <label>{t('ظرفیت اسمی (مگاوات)','Nameplate Capacity (MW)')}<input type="text" inputMode="numeric" pattern="[0-9]*" value={capacity} onChange={e => setCapacity(e.target.value.replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))).replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[^0-9]/g, ''))} placeholder={t('مثلاً ۵۰۰','e.g. 500')}/></label> : <label>{t('ظرفیت اسمی','Nameplate Capacity')}<input value={capacity} onChange={e => setCapacity(e.target.value)} placeholder={t('ظرفیت پروژه را وارد کنید','Enter project capacity')}/></label>}
-        <label>{t('موقعیت پروژه','Project Location')}<input value={location} onChange={e => setLocation(e.target.value)} placeholder="{t('شهر، استان، کشور','City, region, country')}"/></label>
+        <label>{t('موقعیت پروژه','Project Location')}<input value={location} onChange={e => setLocation(e.target.value)} placeholder={t('شهر، استان، کشور','City, region, country')}/></label>
       </div>
       <div className="form-actions"><button type="submit" className="primary">{t('ذخیره پروژه','Save Project')}</button><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>{t('انصراف','Cancel')}</button></div>
     </form>}
