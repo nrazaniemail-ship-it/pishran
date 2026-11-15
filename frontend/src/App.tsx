@@ -138,7 +138,7 @@ export default function App() {
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language} onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}
-    {page === 'hot-rolling' && <RollingWorkspace project={activeProject ?? undefined} onBack={() => setPage('projects')}/>}
+    {page === 'hot-rolling' && <RollingWorkspace language={settings.language} project={activeProject ?? undefined} onBack={() => setPage('projects')}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'split-integrated' && activeProject && <section className="projects-page split-integrated-page" dir="rtl">
       <div className="page-heading"><div><span className="eyebrow">PISHRAN / PROJECT SEPARATION</span><h1>تفکیک پروژه مجتمع فولادی</h1><p>{activeProject.name}</p></div><button className="secondary-button" onClick={() => setPage('projects')}>بازگشت به پروژه‌ها</button></div>
