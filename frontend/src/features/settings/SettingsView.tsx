@@ -30,7 +30,7 @@ export default function SettingsView({ settings, storageInfo, onChange, onRestor
         <label className="setting-row"><span>{en ? 'Application language' : 'زبان برنامه'}</span><select value={settings.language} onChange={e => update('language', e.target.value as AppSettings['language'])}><option value="fa">{en ? 'Persian' : 'فارسی'}</option><option value="en">English</option></select></label>
       </article>
 
-      <BackupSettings onRestored={onRestored}/>
+      <BackupSettings language={settings.language} onRestored={onRestored}/>
     </div>
     <div className="local-only-note"><b>{en ? 'Privacy:' : 'حریم خصوصی:'}</b> {en ? 'In local mode, project data is not sent to an account or server.' : 'در حالت محلی، اطلاعات پروژه‌ها برای ورود به حساب یا سرور ارسال نمی‌شوند.'}</div>
   </section>
