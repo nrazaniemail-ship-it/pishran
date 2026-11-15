@@ -1323,3 +1323,24 @@ input,select,textarea{color:var(--text)}
 }
 :root[data-theme="dark"] input::placeholder,
 :root[data-theme="dark"] textarea::placeholder{color:#788697!important}
+
+
+/* Keep the language switch above and outside the fixed desktop navigation panel. */
+@media(min-width:901px){
+  .page-language-switch{
+    position:fixed;
+    left:max(16px,calc((100vw - 1440px)/2 + 32px));
+    top:16px;
+    transform:none;
+    z-index:1105;
+  }
+  .topbar .brand{margin-left:0}
+}
+@media(max-width:900px){
+  .page-language-switch{position:static;transform:none;align-self:center;flex:0 0 auto}
+  .topbar .brand{margin-left:0}
+}
+@media(max-width:650px){
+  .page-language-switch{position:static;top:auto;left:auto;transform:none}
+  .topbar .brand{margin-left:0}
+}
