@@ -779,6 +779,7 @@ export type EnterpriseScenarioPeriodInput = {
   cashOperatingCosts: number
   tax: number
   capex: number
+  opportunityCost?: number
   changeInWorkingCapital: number
   assetSaleProceeds?: number
   terminalValue?: number
@@ -814,7 +815,7 @@ export function calculateIncrementalEnterpriseAnalysis(
     }
   }
   const cashFlow = (period: EnterpriseScenarioPeriodInput) =>
-    period.revenue - period.cashOperatingCosts - period.tax - period.capex -
+    period.revenue - period.cashOperatingCosts - period.tax - period.capex - (period.opportunityCost ?? 0) -
     period.changeInWorkingCapital + (period.assetSaleProceeds ?? 0) + (period.terminalValue ?? 0)
   const withoutFlows = withoutProject.map(cashFlow)
   const withFlows = withProject.map(cashFlow)
