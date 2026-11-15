@@ -152,6 +152,78 @@ export function validateProjectFoundation(value: ProjectFoundation): ProjectFoun
   return issues
 }
 
+
+export type StartingFixedAssetBalance = {
+  id: string
+  name: string
+  grossCost: number
+  accumulatedDepreciation: number
+  remainingLife: number
+  opportunityValue: number
+  residualValue?: number
+  commissioningDate?: string
+  depreciationMethod?: FixedInvestmentDepreciationMethod
+  depreciationRatePercent?: number
+  depreciationLengthYears?: number
+  depreciationLengthMonths?: number
+  firstDepreciationMonths?: number
+  salvagePercent?: number
+  depreciationStartDate?: string
+  costCentre?: string
+  foreignSharePercent?: number
+  status: 'active' | 'replace' | 'idle' | 'sell'
+}
+
+export function validateStartingFixedAssetBalances(
+  assets: StartingFixedAssetBalance[],
+  foundation: ProjectFoundation,
+): ProjectFoundationIssue[] {
+  const issues: ProjectFoundationIssue[] = []
+  const issue = (path: string, code: string, message: string) =>
+    issues.push({ path, severity: 'error', code, message })
+  const ids = assets.map(asset => asset.id)
+  if (new Set(ids).size !== ids.length) issue('startingAssets', 'duplicate-starting-asset-id', 'Starting fixed asset identifiers must be unique.')
+  assets.forEach((asset, index) => {
+    const path = `startingAssets[${index}]`
+    if (!asset.name.trim()) issue(path + '.name', 'missing-starting-asset-name', 'Enter a description for each existing fixed asset.')
+    if (!Number.isFinite(asset.grossCost) || asset.grossCost < 0)
+      issue(path + '.grossCost', 'invalid-starting-asset-gross-cost', 'Gross cost must be a finite non-negative amount.')
+    if (!Number.isFinite(asset.accumulatedDepreciation) || asset.accumulatedDepreciation < 0 || asset.accumulatedDepreciation > asset.grossCost)
+      issue(path + '.accumulatedDepreciation', 'invalid-starting-asset-accumulated-depreciation', 'Accumulated depreciation must be between zero and gross cost.')
+    if (!Number.isFinite(asset.remainingLife) || asset.remainingLife < 0)
+      issue(path + '.remainingLife', 'invalid-starting-asset-remaining-life', 'Remaining useful life must be a finite non-negative number.')
+    if (!Number.isFinite(asset.opportunityValue) || asset.opportunityValue < 0)
+      issue(path + '.opportunityValue', 'invalid-starting-asset-opportunity-value', 'Opportunity value must be a finite non-negative amount.')
+    if (asset.residualValue !== undefined && (!Number.isFinite(asset.residualValue) || asset.residualValue < 0 || asset.residualValue > asset.grossCost))
+      issue(path + '.residualValue', 'invalid-starting-asset-residual-value', 'Residual value must be between zero and gross cost.')
+    if (asset.foreignSharePercent !== undefined && (!Number.isFinite(asset.foreignSharePercent) || asset.foreignSharePercent < 0 || asset.foreignSharePercent > 100))
+      issue(path + '.foreignSharePercent', 'invalid-starting-asset-foreign-share', 'Foreign currency component must be between zero and 100 percent.')
+    if (foundation.costCentres.active && asset.costCentre && !foundation.costCentres.items.some(item => item.id === asset.costCentre || item.code === asset.costCentre))
+      issue(path + '.costCentre', 'unknown-starting-asset-cost-centre', 'Select a defined Cost Centre for this existing fixed asset.')
+    const validDate = (value?: string) => !value || /^\\d{4}-\\d{2}-\\d{2}$/.test(value)
+    if (!validDate(asset.commissioningDate) || !validDate(asset.depreciationStartDate))
+      issue(path + '.dates', 'invalid-starting-asset-date', 'Commissioning date and depreciation start date must use YYYY-MM-DD.')
+    if (asset.commissioningDate && asset.depreciationStartDate && asset.depreciationStartDate < asset.commissioningDate)
+      issue(path + '.depreciationStartDate', 'depreciation-before-commissioning', 'Depreciation cannot start before the commissioning date.')
+    const method = asset.depreciationMethod ?? 'linear-scrap'
+    if (method !== 'none') {
+      if (asset.status === 'active' && asset.remainingLife <= 0)
+        issue(path + '.remainingLife', 'missing-starting-asset-remaining-life', 'An active depreciable asset requires positive remaining useful life.')
+      if (asset.depreciationLengthYears !== undefined && (!Number.isInteger(asset.depreciationLengthYears) || asset.depreciationLengthYears < 0))
+        issue(path + '.depreciationLengthYears', 'invalid-starting-asset-depreciation-length', 'Depreciation length in years must be a non-negative integer.')
+      if (asset.depreciationLengthMonths !== undefined && (!Number.isInteger(asset.depreciationLengthMonths) || asset.depreciationLengthMonths < 0 || asset.depreciationLengthMonths > 11))
+        issue(path + '.depreciationLengthMonths', 'invalid-starting-asset-depreciation-months', 'Additional depreciation life months must be from zero to 11.')
+      if (asset.firstDepreciationMonths !== undefined && (!Number.isInteger(asset.firstDepreciationMonths) || asset.firstDepreciationMonths < 1 || asset.firstDepreciationMonths > 12))
+        issue(path + '.firstDepreciationMonths', 'invalid-starting-asset-first-months', 'Months in first depreciation year must be from 1 to 12.')
+      if (method !== 'sum-of-digits' && asset.depreciationRatePercent !== undefined && (!Number.isFinite(asset.depreciationRatePercent) || asset.depreciationRatePercent <= 0 || asset.depreciationRatePercent > 100))
+        issue(path + '.depreciationRatePercent', 'invalid-starting-asset-depreciation-rate', 'Depreciation rate must be greater than zero and no more than 100 percent.')
+      if (method === 'sum-of-digits' && ((asset.depreciationLengthMonths ?? 0) !== 0 || (asset.firstDepreciationMonths ?? 12) !== 12))
+        issue(path + '.depreciation', 'starting-asset-sum-of-years-partial-not-benchmarked', 'Sum of years digits with partial periods is held until independently benchmarked.')
+    }
+  })
+  return issues
+}
+
 export type FixedInvestmentAssetClass = 'land' | 'site' | 'buildings' | 'machinery' | 'infrastructure' | 'vehicles' | 'office' | 'intangible' | 'other'
 export type FixedInvestmentDepreciationMethod = 'none' | 'linear-zero' | 'linear-scrap' | 'accelerated' | 'sum-of-digits'
 export type FixedInvestmentAcquisition = {
