@@ -56,6 +56,13 @@ type Props = {
   fiscalYearStartMonth?: number | null
   dayCountBasis?: 360 | 365 | null
   cashFlowTiming?: 'unspecified'|'period-end'|'mid-period'
+  periodicDepreciationByPeriod?: number[]
+  periodicFixedInvestmentByPeriod?: number[]
+  periodicPreOperatingCostByPeriod?: number[]
+  periodicAssetSaleProceedsByPeriod?: number[]
+  periodicAssetSaleGainLossByPeriod?: number[]
+  periodicAssetSaleBookValueDisposedByPeriod?: number[]
+  periodicAssetWarnings?: string[]
 }
 type SavedState = {
   loans: Loan[]
@@ -222,10 +229,16 @@ export default function AdvancedFinancePanel(props: Props) {
       annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:taxRates,annualEquityContributions:equityContributions,
       workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
+      depreciationByPeriod:props.periodicDepreciationByPeriod,
+      fixedInvestmentByPeriod:props.periodicFixedInvestmentByPeriod,
+      preOperatingCostByPeriod:props.periodicPreOperatingCostByPeriod,
+      assetSaleProceedsByPeriod:props.periodicAssetSaleProceedsByPeriod,
+      assetSaleGainLossByPeriod:props.periodicAssetSaleGainLossByPeriod,
+      assetSaleBookValueDisposedByPeriod:props.periodicAssetSaleBookValueDisposedByPeriod,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     })
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule)])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(props.periodicDepreciationByPeriod),JSON.stringify(props.periodicFixedInvestmentByPeriod),JSON.stringify(props.periodicPreOperatingCostByPeriod),JSON.stringify(props.periodicAssetSaleProceedsByPeriod),JSON.stringify(props.periodicAssetSaleGainLossByPeriod),JSON.stringify(props.periodicAssetSaleBookValueDisposedByPeriod)])
   useEffect(()=>{props.onPeriodicResult?.(periodicFinanceResult)},[periodicFinanceResult,props.onPeriodicResult])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
