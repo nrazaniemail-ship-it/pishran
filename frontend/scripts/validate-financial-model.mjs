@@ -811,7 +811,9 @@ assert.ok(expansionPanelSource.includes('Annuity')
   && expansionPanelSource.includes('Profile')
   && expansionPanelSource.includes('First Repayment Date')
   && expansionPanelSource.includes('Number of Repayments')
-  && expansionPanelSource.includes('Repayment Schedule and Debt Service'),
+  && expansionPanelSource.includes('Repayment Schedule and Debt Service')
+  && expansionPanelSource.includes('Month Interest Paid')
+  && expansionPanelSource.includes('interestPaymentMonth:loan.interestPaymentMonth??12'),
   'Expansion/Rehabilitation loan form must expose COMFAR loan types and repayment schedule')
 console.log('PASS: COMFAR-style existing-loan repayment schedules, grace-period capitalization and profile repayments')
 
