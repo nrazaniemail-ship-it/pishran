@@ -869,6 +869,7 @@ export type ExistingLoanScheduleRow = {
   principalRepayment: number
   totalDebtService: number
   closingBalance: number
+  accruedInterestBalance?: number
 }
 export type ExistingLoanScheduleResult = {
   valid: boolean
