@@ -53,4 +53,94 @@ assert.ok(Math.abs(splitFiscalYears[0] - 91000) < 1e-9)
 assert.ok(Math.abs(splitFiscalYears[1] - 91000) < 1e-9)
 assert.deepEqual(engine.allocateAnnualFlowsToPeriods([100], [{ index: 1, startDate: '2025-01-01', endDate: '2025-01-31', days: 30, partial: true }], 1), [])
 
-console.log('PASS: periodic financial primitives, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
+const equalPrincipalLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100000, 100000, 0, 0],
+  repaymentMethod: 'equal-principal',
+  repaymentStartPeriod: 3,
+  gracePeriods: 0,
+  termPeriods: 2,
+  capitalizeInterest: true,
+}, quarter, 365)
+assert.equal(equalPrincipalLoan.valid, true)
+assert.ok(equalPrincipalLoan.rows[0].capitalizedInterest > 0)
+assert.equal(equalPrincipalLoan.rows[0].interestExpense, 0)
+assert.ok(equalPrincipalLoan.rows[2].principal > 0)
+assert.ok(equalPrincipalLoan.rows[3].principal > 0)
+assert.ok(Math.abs(equalPrincipalLoan.rows[3].closingBalance) < 1e-8)
+const annuityLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100000, 100000, 0, 0],
+  repaymentMethod: 'annuity',
+  repaymentStartPeriod: 3,
+  gracePeriods: 0,
+  termPeriods: 2,
+  capitalizeInterest: false,
+}, quarter, 365)
+assert.equal(annuityLoan.valid, true)
+assert.ok(annuityLoan.rows[0].interestExpense > 0)
+assert.ok(annuityLoan.rows[2].principal > 0)
+assert.ok(Math.abs(annuityLoan.rows[3].closingBalance) < 1e-8)
+const bulletLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100000, 100000, 0, 0],
+  repaymentMethod: 'bullet',
+  repaymentStartPeriod: 3,
+  gracePeriods: 0,
+  termPeriods: 2,
+  capitalizeInterest: true,
+}, quarter, 365)
+assert.equal(bulletLoan.valid, true)
+assert.equal(bulletLoan.rows[2].principal, 0)
+assert.ok(bulletLoan.rows[3].principal > 0)
+assert.ok(Math.abs(bulletLoan.rows[3].closingBalance) < 1e-8)
+function buildQuarterPeriods(startYear, count) {
+  return Array.from({ length: count }, (_, index) => {
+    const start = new Date(Date.UTC(startYear, index * 3, 1))
+    const next = new Date(Date.UTC(startYear, (index + 1) * 3, 1))
+    const end = new Date(next.getTime() - 86400000)
+    return {
+      index: index + 1,
+      startDate: start.toISOString().slice(0, 10),
+      endDate: end.toISOString().slice(0, 10),
+      days: Math.round((end.getTime() - start.getTime()) / 86400000) + 1,
+      partial: false,
+    }
+  })
+}
+const hrcr200Quarters = buildQuarterPeriods(1403, 21)
+const hrcr200Principal = 3816495.99
+const hrcr200AnnualEffectiveRate = 29.333398475149375
+const hrcr200Loan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: hrcr200AnnualEffectiveRate,
+  drawdowns: [hrcr200Principal, ...Array(20).fill(0)],
+  repaymentMethod: 'annuity',
+  repaymentStartPeriod: 2,
+  gracePeriods: 0,
+  termPeriods: 20,
+  capitalizeInterest: false,
+  rateConversion: 'effective-annual-divided-by-frequency',
+  periodsPerYear: 4,
+}, hrcr200Quarters, 365)
+assert.equal(hrcr200Loan.valid, true)
+assert.ok(Math.abs(hrcr200Loan.rows[1].periodRatePercent - 7.333349618787344) < 1e-10)
+assert.ok(Math.abs(hrcr200Loan.rows[1].principal - 89759.7075467898) < 1e-6)
+assert.ok(Math.abs(hrcr200Loan.rows[1].interestExpense - 279876.9941336993) < 1e-6)
+assert.ok(Math.abs(hrcr200Loan.rows[1].debtService - 369636.70168048906) < 1e-6)
+assert.ok(Math.abs(hrcr200Loan.rows[20].closingBalance) < 1e-7)
+assert.ok(Math.abs(hrcr200Loan.rows.slice(1).reduce((sum, row) => sum + row.principal, 0) - hrcr200Principal) < 1e-6)
+
+const invalidDrawdownLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100000, 0, 10000, 0],
+  repaymentMethod: 'bullet',
+  repaymentStartPeriod: 2,
+  gracePeriods: 0,
+  termPeriods: 2,
+  capitalizeInterest: false,
+}, quarter, 365)
+assert.equal(invalidDrawdownLoan.valid, false)
+assert.ok(invalidDrawdownLoan.issues.some(issue => issue.includes('after principal repayment')))
+
+
+console.log('PASS: periodic loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
