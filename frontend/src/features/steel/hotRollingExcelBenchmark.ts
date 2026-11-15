@@ -8,6 +8,43 @@ const row=(id:string,name:string,quantity:number,unit:string,unitPrice:number,pe
 })
 const department=(id:string,department:string,expert:number,technician:number,secretary:number,operator:number,driver:number,laborer:number)=>({id,department,expert,technician,secretary,operator,driver,laborer})
 
+
+/** Upgrade the seeded HRCR asset register without overwriting user-edited amounts, rates or periods. */
+export function migrateHotRollingCoilFixedInvestmentItems(
+  savedItems: FixedInvestmentItem[],
+  savedSeedVersion: number,
+): FixedInvestmentItem[] {
+  const defaults = createHotRollingCoilFixedInvestmentItems()
+  if (savedSeedVersion < 1 && savedItems.length === 0) return defaults
+  const defaultById = new Map(defaults.map(item => [item.id, item]))
+  const migrated = savedItems.map(saved => {
+    const baseline = defaultById.get(saved.id)
+    return {
+      ...saved,
+      costCentreId: saved.costCentreId ?? '',
+      depreciationBasis: saved.depreciationBasis ?? baseline?.depreciationBasis ?? 'unresolved',
+      depreciation: {
+        ...saved.depreciation,
+        lengthMonths: saved.depreciation?.lengthMonths ?? 0,
+        firstDepreciationMonths: saved.depreciation?.firstDepreciationMonths ?? 12,
+      },
+      acquisitions: (saved.acquisitions ?? []).map(acquisition => ({
+        ...acquisition,
+        allocationBasis: acquisition.allocationBasis
+          ?? baseline?.acquisitions.find(row => row.id === acquisition.id)?.allocationBasis
+          ?? 'unallocated',
+      })),
+    }
+  })
+  const originalFixedAssetIds = defaults.filter(item => item.assetClass !== 'preproduction').map(item => item.id)
+  const containsFullSeed = originalFixedAssetIds.every(id => migrated.some(item => item.id === id))
+  if (savedSeedVersion < 2 && containsFullSeed && !migrated.some(item => item.assetClass === 'preproduction')) {
+    const preproduction = defaults.find(item => item.assetClass === 'preproduction')
+    if (preproduction) migrated.push(preproduction)
+  }
+  return migrated
+}
+
 export const EXCEL_HOT_ROLLING_200KT = {
   name:'پروژه آزمون مرجع نورد کلاف گرم ۲۰۰ هزار تن',
   location:'کاشان، ایران',
