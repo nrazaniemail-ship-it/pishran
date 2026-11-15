@@ -164,17 +164,17 @@ export const HOT_ROLLING_200KT_AUDIT = {
     irrNpvEquityInitialOutflows: 2_761_971
   },
   financingAlternativesInWorkbook: {
-    workingCapitalFundingSourceExplicit: false,
+    workingCapitalFundingSourceConflict: true,
     mechanismTabDebtSharePercent: 80,
     mechanismTabEquitySharePercent: 20,
     fundingSummaryTabEquitySharePercent: 70,
     fundingSummaryTabDebtSharePercent: 30,
-    sponsorConfirmedEquitySharePercent: 70,
-    sponsorConfirmedDebtSharePercent: 30,
-    sponsorConfirmedEquityAmount: 13_091_985.2,
-    sponsorConfirmedDebtAmount: 5_610_850.8,
-    sponsorConfirmedFundingBase: 18_702_835.358529467,
-    sponsorConfirmedWaccPercent: 26.85
+    sponsorRequestedEquitySharePercent: 20,
+    sponsorRequestedDebtSharePercent: 80,
+    comfarReferenceEquityAmount: 13_091_985.2,
+    comfarReferenceDebtAmount: 5_610_850.8,
+    comfarReferenceFundingBase: 18_702_835.358529467,
+    comfarReferenceWaccPercent: 26.85
   }
 } as const
 
@@ -203,7 +203,7 @@ export const WORKBOOK_RECONCILIATION_FLAGS = [
   'DRI detailed annual depreciation is EUR 33,020,570, while reference reference-year depreciation is EUR 26,727,770.59; the EUR 6,292,799.41 difference needs an asset-by-asset/year schedule bridge.',
   'DRI reference total uses exceed total financing sources by EUR 18,632,333.14; the gap is not a funded source in the reference sources table.',
   'The integrated cash-flow workbook includes net profit from an existing 700,000 t/y rolling line and a separate uplift after steelmaking starts; those are not the HRCR200 200,000 t/y project.',
-  'HRCR200 source tabs conflict (mechanism tab 80/20 versus funding summary 30/70); sponsor has confirmed 30% debt/70% equity. The model uses the funding-summary amounts on the construction-investment base, while the separate working-capital funding source remains unconfirmed.',
+  'HRCR200 source tabs conflict: the mechanism-tab summary reports 80/20 debt/equity, while the periodised funding summary and COMFAR output report 30/70 debt/equity during construction. The sponsor-requested active case is 20/80 equity/debt and must remain separate from both source cases. Working-capital funding is also inconsistent between the CAPEX schedule and COMFAR output.',
   'HRCR200 funding summary sources exceed construction uses including capitalized interest by 0.641470533 million IRR; this small difference may be rounding but is not silently adjusted.',
   'HRCR200 OPEX IRR-NPV rows 4–6 are raw financial-planning inflows/outflows/net flows; row 6 has no negative investment period and cannot produce project IRR. Rows 7–9 are labelled discounted cash flows; NPV row 23 discounts row 9 again, while IRR/MIRR also use row 9. A valid unlevered project IRR/MIRR requires the original reference undiscounted project cash-flow export.',
   'HRCR200 OPEX IRR-NPV links total investment to 16,587,131.78 million IRR, while the CAPEX workbook fixed investment is 18,463,008.72 million IRR and the project summary total including construction interest and working capital is 26,596,838.88 million IRR.',
