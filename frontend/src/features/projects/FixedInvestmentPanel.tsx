@@ -87,8 +87,8 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
   const updateSale = (id: string, saleId: string, patch: Partial<FixedInvestmentSale>) => onChange(value.map(item => item.id === id ? { ...item, sales: item.sales.map(row => row.id === saleId ? { ...row, ...patch } : row) } : item))
   const addAcquisition = (id: string) => onChange(value.map(item => item.id === id ? { ...item, acquisitions: [...item.acquisitions, { id: makeId('acq'), period: '', quantity: blankTemplate ? 0 : 1, unitPrice: 0, currencyCode: item.currencyCode, exchangeRateToLocal: null, allocationBasis: 'unallocated' }] } : item))
   const addSale = (id: string) => onChange(value.map(item => item.id === id ? { ...item, sales: [...item.sales, { id: makeId('sale'), acquisitionId: item.acquisitions[0]?.id ?? '', period: '', market: 'local', priceMode: 'book-value', currencyCode: item.currencyCode, selfDefinedPrice: null }] } : item))
-  const field = (label: string, valueText: string | number, onValue: (value: string) => void, type = 'text', min?: number, max?: number, disabled = false) =>
-    <label className="fw-field"><span>{label}</span><input type={type} value={blankTemplate && type === 'number' && valueText === 0 ? '' : valueText} min={min} max={max} disabled={disabled} onChange={e => onValue(e.target.value)} /></label>
+  const field = (label: string, valueText: string | number, onValue: (value: string) => void, type = 'text', min?: number, max?: number, disabled = false, step?: number) =>
+    <label className="fw-field"><span>{label}</span><input type={type} value={blankTemplate && type === 'number' && valueText === 0 ? '' : valueText} min={min} max={max} step={step} disabled={disabled} onChange={e => onValue(e.target.value)} /></label>
 
   return <section className="fw-card" style={{ marginTop: 18 }}>
     <h3>{t('دفتر عمومی هزینه‌های سرمایه‌گذاری ثابت','Fixed Investment Register')}</h3>
@@ -114,7 +114,7 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
         </select></label>
         {field(t('شروع استهلاک','Starting at'), item.depreciation.startingAt, v => updateDepreciation(item.id, { startingAt: v }), 'text')}
         {field(t('نرخ استهلاک (% در سال)','Rate (% per annum)'), item.depreciation.ratePercent ?? '', v => updateDepreciation(item.id, { ratePercent: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none' || item.depreciation.method === 'sum-of-digits')}
-        {field(t('مدت استهلاک ـ سال','Length — Years'), item.depreciation.lengthYears ?? '', v => updateDepreciation(item.id, { lengthYears: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none')}
+        {field(t('مدت استهلاک ـ سال','Length — Years'), item.depreciation.lengthYears ?? '', v => updateDepreciation(item.id, { lengthYears: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none', 0.001)}
         {field(t('مدت استهلاک ـ ماه','Length — Months'), item.depreciation.lengthMonths, v => updateDepreciation(item.id, { lengthMonths: Number(v) }), 'number', 0, 11, item.depreciation.method === 'none')}
         {field(t('ماه‌های مشمول استهلاک در سال اول','Months in first depreciation year'), item.depreciation.firstDepreciationMonths, v => updateDepreciation(item.id, { firstDepreciationMonths: Number(v) }), 'number', 1, 12, item.depreciation.method === 'none')}
         {field(t('ارزش اسقاط (% از بهای اولیه)','Scrap (% of original value)'), item.depreciation.scrapPercent, v => updateDepreciation(item.id, { scrapPercent: Number(v) }), 'number', 0, 100, item.depreciation.method === 'none')}
