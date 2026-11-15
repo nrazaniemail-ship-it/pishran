@@ -734,9 +734,9 @@ assert.equal(editedHrcrMigration.find(item=>item.id==='hrcr-machinery-local').de
 assert.equal(editedHrcrMigration.find(item=>item.id==='hrcr-machinery-local').acquisitions[0].quantity,3,
   'HRCR seed migration must preserve user-edited acquisition quantities')
 
-const hrcrFixedAssets=reference.createHotRollingCoilFixedInvestmentItems()
+const hrcrDepreciationAssets=reference.createHotRollingCoilFixedInvestmentItems()
 const hrcrAssetBridge=engine.reconcileFixedInvestmentRegister(
-  hrcrFixedAssets,
+  hrcrDepreciationAssets,
   workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.constructionInvestment,
   workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.preproductionNet
 )
@@ -745,10 +745,10 @@ near(hrcrAssetBridge.registerTotal,workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.f
 near(hrcrAssetBridge.preproductionTotal,workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.preproductionNet,0.01,
   'HRCR preproduction register must reconcile separately')
 assert.equal(hrcrAssetBridge.status,'matched','HRCR fixed assets and preproduction expenditures must reconcile as separate categories')
-const hrcrAssetValidation=foundation.validateFixedInvestmentItems(hrcrFixedAssets,reference.createHotRollingCoilProjectFoundation())
+const hrcrAssetValidation=foundation.validateFixedInvestmentItems(hrcrDepreciationAssets,reference.createHotRollingCoilProjectFoundation())
 assert.equal(hrcrAssetValidation.filter(issue=>issue.severity==='error').length,0,'HRCR seed fractional depreciation lives must pass fixed asset validation')
 const hrcrAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(
-  hrcrFixedAssets,1403,17,'annual',reference.createHotRollingCoilProjectFoundation()
+  hrcrDepreciationAssets,1403,17,'annual',reference.createHotRollingCoilProjectFoundation()
 )
 assert.ok(hrcrAssetBuild.assets.length>=18,'HRCR reference must create asset acquisition vintages from the CAPEX workbook')
 const hrcrDepreciationRun=engine.calculateComfarAssetDepreciationSchedule(hrcrAssetBuild.assets,17)
@@ -768,13 +768,13 @@ assert.ok(hrcrAssetBuild.warnings.some(warning=>warning.includes('proportional e
   'HRCR acquisition timing assumptions must be disclosed')
 assert.ok(hrcrAssetBuild.warnings.some(warning=>warning.includes('source documents conflict')),
   'HRCR depreciation condition conflicts must be disclosed')
-const hrcrSite=hrcrFixedAssets.find(item=>item.id==='hrcr-site')
+const hrcrSite=hrcrDepreciationAssets.find(item=>item.id==='hrcr-site')
 near(hrcrSite.acquisitions[0].unitPrice,126360.2406094665,0.01,
   'HRCR site preparation first construction-period acquisition must match the CAPEX source-year rows')
-const hrcrMachinery=hrcrFixedAssets.find(item=>item.id==='hrcr-machinery-local')
+const hrcrMachinery=hrcrDepreciationAssets.find(item=>item.id==='hrcr-machinery-local')
 near(hrcrMachinery.depreciation.ratePercent,10.97955,1e-6,
   'HRCR machinery depreciation rate must use the detailed OPEX depreciation table')
-const hrcrInfrastructure=hrcrFixedAssets.find(item=>item.id==='hrcr-infrastructure-depreciable')
+const hrcrInfrastructure=hrcrDepreciationAssets.find(item=>item.id==='hrcr-infrastructure-depreciable')
 near(hrcrInfrastructure.depreciation.ratePercent,12,1e-9,
   'HRCR infrastructure depreciation rate must use the detailed OPEX depreciation table')
 
