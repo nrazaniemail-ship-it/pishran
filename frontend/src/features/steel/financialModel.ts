@@ -772,3 +772,65 @@ export function calculateFinancialScenarios(input: IntegratedFinanceInput) {
     optimistic: scenario(1.1, 1.1, 0.95, 0.98, 0.95),
   }
 }
+
+
+export type EnterpriseScenarioPeriodInput = {
+  revenue: number
+  cashOperatingCosts: number
+  tax: number
+  capex: number
+  changeInWorkingCapital: number
+  assetSaleProceeds?: number
+  terminalValue?: number
+}
+
+export type IncrementalAnalysisPeriod = {
+  period: number
+  withoutProjectCashFlow: number
+  withProjectCashFlow: number
+  incrementalCashFlow: number
+}
+
+export type IncrementalAnalysisResult = {
+  periods: IncrementalAnalysisPeriod[]
+  withoutProjectNpv: number
+  withProjectNpv: number
+  incrementalNpv: number
+  incrementalIrr: number | null
+  incrementalCashFlowTotal: number
+}
+
+/** Builds the COMFAR-style three-stage view: without project, with project, and the period-by-period incremental effect. */
+export function calculateIncrementalEnterpriseAnalysis(
+  withoutProject: EnterpriseScenarioPeriodInput[],
+  withProject: EnterpriseScenarioPeriodInput[],
+  discountRate: number,
+): IncrementalAnalysisResult {
+  if (!withoutProject.length || withoutProject.length !== withProject.length ||
+      !Number.isFinite(discountRate) || discountRate <= -1) {
+    return {
+      periods: [], withoutProjectNpv: Number.NaN, withProjectNpv: Number.NaN,
+      incrementalNpv: Number.NaN, incrementalIrr: null, incrementalCashFlowTotal: Number.NaN,
+    }
+  }
+  const cashFlow = (period: EnterpriseScenarioPeriodInput) =>
+    period.revenue - period.cashOperatingCosts - period.tax - period.capex -
+    period.changeInWorkingCapital + (period.assetSaleProceeds ?? 0) + (period.terminalValue ?? 0)
+  const withoutFlows = withoutProject.map(cashFlow)
+  const withFlows = withProject.map(cashFlow)
+  const periods = withoutFlows.map((value, index) => ({
+    period: index + 1,
+    withoutProjectCashFlow: value,
+    withProjectCashFlow: withFlows[index],
+    incrementalCashFlow: withFlows[index] - value,
+  }))
+  const incrementalFlows = periods.map(row => row.incrementalCashFlow)
+  return {
+    periods,
+    withoutProjectNpv: calculateNpv(withoutFlows, discountRate),
+    withProjectNpv: calculateNpv(withFlows, discountRate),
+    incrementalNpv: calculateNpv(incrementalFlows, discountRate),
+    incrementalIrr: calculateIrr(incrementalFlows),
+    incrementalCashFlowTotal: incrementalFlows.reduce((sum, value) => sum + value, 0),
+  }
+}
