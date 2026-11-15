@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ArrowRight, Factory, Layers3, AlertTriangle, Calculator } from 'lucide-react'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
 import ProcessPlantWorkspace from './ProcessPlantWorkspace'
-import { INTEGRATED_Reference_REFERENCE as benchmark } from './integratedProjectBenchmark'
+import { INTEGRATED_reference_REFERENCE as benchmark } from './integratedProjectBenchmark'
 import { WORKBOOK_RECONCILIATION_FLAGS } from './workbookReconciliation'
 
 type Unit = 'dri' | 'steelmaking'
