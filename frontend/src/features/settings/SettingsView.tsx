@@ -29,10 +29,18 @@ export default function SettingsView({ settings, storageInfo, onChange, onRestor
           <option value="sahel">Sahel — ساحل</option>
           <option value="shabnam">Shabnam — شبنم</option>
           <option value="samim">Samim — صمیم</option>
+          <option value="nazanin">B Nazanin — نازنین</option>
+          <option value="titr">B Titr — تیتر</option>
+          <option value="inter">Inter — English</option>
+          <option value="roboto">Roboto — English</option>
+          <option value="opensans">Open Sans — English</option>
+          <option value="lato">Lato — English</option>
+          <option value="montserrat">Montserrat — English</option>
+          <option value="poppins">Poppins — English</option>
           <option value="serif">{en ? 'Serif' : 'سریف (با دندانه)'}</option>
           <option value="mono">{en ? 'Monospace' : 'تک‌فاصله (Monospace)'}</option>
         </select></label>
-        <p className="font-directory-note">{en ? 'The list includes common web and system font families. A font is displayed when it is available on the device or loaded by the browser.' : 'این فهرست خانواده‌های رایج فونت وب و سیستم را شامل می‌شود؛ نمایش هر فونت به موجود بودن آن روی دستگاه یا بارگذاری آن در مرورگر بستگی دارد.'}</p>
+        <p className="font-directory-note">{en ? 'Includes Persian and English font families. B Nazanin and B Titr require local installation; web fonts load from Google Fonts.' : 'فهرست شامل فونت‌های فارسی و انگلیسی است. نازنین و تیتر در صورت نصب بودن روی دستگاه نمایش داده می‌شوند؛ فونت‌های وب از Google Fonts بارگذاری می‌شوند.'}</p>
         <label className="setting-row"><span>{en ? 'Background palette' : 'رنگ زمینه'}</span><select value={settings.backgroundTheme ?? 'bluegray'} onChange={e => update('backgroundTheme', e.target.value as AppSettings['backgroundTheme'])}>
           <option value="bluegray">{en ? 'Blue grey' : 'آبی خاکستری'}</option>
           <option value="mist">{en ? 'Cool mist' : 'مه‌آلود روشن'}</option>
