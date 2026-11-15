@@ -1760,8 +1760,8 @@ export function buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(
   }
   const acquisitionIds=new Set<string>()
   for(const item of activeItems){
-    if(item.depreciationBasis==='unresolved')warnings.push((item.description||item.id)+': depreciation basis is unresolved; periodic depreciation is provisional.')
-    if(item.depreciationBasis==='source-conflict')warnings.push((item.description||item.id)+': source documents conflict on depreciation; periodic depreciation is provisional.')
+    if(item.depreciationBasis==='unresolved'){warnings.push((item.description||item.id)+': depreciation basis is unresolved; periodic depreciation is provisional.');if(item.assetClass==='preproduction')preOperatingVerified=false;else fixedInvestmentVerified=false}
+    if(item.depreciationBasis==='source-conflict'){warnings.push((item.description||item.id)+': source documents conflict on depreciation; periodic depreciation is provisional.');if(item.assetClass==='preproduction')preOperatingVerified=false;else fixedInvestmentVerified=false}
     if(!item.acquisitions.length){
       warnings.push((item.description||item.id)+': no acquisition date/value is assigned in the fixed-investment register.')
       if(item.assetClass==='preproduction')preOperatingVerified=false
@@ -1793,6 +1793,7 @@ export function buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(
       const startingAtDate=item.depreciation.startingAt?parseDate(item.depreciation.startingAt):null
       if(item.depreciation.method!=='none'&&item.depreciation.startingAt&&!startingAtDate){
         warnings.push((item.description||item.id)+': depreciation start must be a full ISO date (YYYY-MM-DD) for periodic depreciation.')
+        if(item.assetClass==='preproduction')preOperatingVerified=false;else fixedInvestmentVerified=false
         continue
       }
       assets.push({
@@ -1817,11 +1818,13 @@ export function buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(
       const assetId=item.id+':'+sale.acquisitionId
       if(!acquisitionIds.has(assetId)||!saleDate||index<0){
         warnings.push((item.description||item.id)+': disposal must reference a registered acquisition and a valid ISO date inside the project calendar.')
+        if(item.assetClass==='preproduction')preOperatingVerified=false;else fixedInvestmentVerified=false
         continue
       }
       const exchangeRate=sale.priceMode==='book-value'?1:saleExchangeRate(sale.currencyCode,sale.period)
       if(sale.priceMode==='self-defined'&&(!Number.isFinite(sale.selfDefinedPrice)||sale.selfDefinedPrice===null||sale.selfDefinedPrice<0||exchangeRate===null)){
         warnings.push((item.description||item.id)+': user-defined disposal proceeds require a valid amount and exchange rate.')
+        if(item.assetClass==='preproduction')preOperatingVerified=false;else fixedInvestmentVerified=false
         continue
       }
       sales.push({
