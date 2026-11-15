@@ -215,7 +215,7 @@ export function validateStartingFixedAssetBalances(
     if (method !== 'none') {
       if (asset.status === 'active' && asset.remainingLife <= 0)
         issue(path + '.remainingLife', 'missing-starting-asset-remaining-life', 'An active depreciable asset requires positive remaining useful life.')
-      if (asset.depreciationLengthYears !== undefined && (!Number.isInteger(asset.depreciationLengthYears) || asset.depreciationLengthYears < 0))
+      if (asset.depreciationLengthYears !== undefined && (!Number.isFinite(asset.depreciationLengthYears) || asset.depreciationLengthYears < 0))
         issue(path + '.depreciationLengthYears', 'invalid-starting-asset-depreciation-length', 'Depreciation length in years must be a non-negative integer.')
       if (asset.depreciationLengthMonths !== undefined && (!Number.isInteger(asset.depreciationLengthMonths) || asset.depreciationLengthMonths < 0 || asset.depreciationLengthMonths > 11))
         issue(path + '.depreciationLengthMonths', 'invalid-starting-asset-depreciation-months', 'Additional depreciation life months must be from zero to 11.')
