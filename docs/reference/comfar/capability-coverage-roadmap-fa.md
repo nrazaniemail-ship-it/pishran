@@ -179,8 +179,16 @@ Technical Manual مرجع الگوریتم مالی نیست؛ اما برای �
 - اعتبارسنجی ساختاری برای کدهای تکراری ارز و مراکز هزینه، نرخ‌های نامعتبر، ارز محلی تعریف‌نشده و نرخ‌های مالیاتی/تورمی ناقص اضافه شده است.
 - داده‌های FX، Inflation، Cost Centre، Discounting و Taxation هنوز به تمام scheduleهای محاسباتی و گزارش‌های نهایی متصل نشده‌اند؛ ثبت و اعتبارسنجی فرم، به‌تنهایی به معنی تکمیل موتور آن بخش‌ها نیست.
 
+### دفتر عمومی Fixed Investment — وضعیت پیاده‌سازی
+- فرم مشترک Fixed Investment Register به مرحله CAPEX اضافه شده و در مدل پروژه ذخیره می‌شود؛ برای هر Fixed Investment Item طبقه دارایی، منشأ محلی/خارجی، ارز، Cost Centre، شرایط استهلاک، Starting at، Rate، Length، Scrap، چند نوبت تحصیل در دوره‌های مختلف و چند Sale of Asset قابل ثبت است.
+- برای خرید خارجی، Exchange Rate to Local Currency به تفکیک نوبت تحصیل اجباری است. ارز دارایی با منشأ آن کنترل می‌شود و هر ارز باید قبلاً در Project Foundation تعریف شده باشد.
+- فروش دارایی با انتخاب acquisition مربوط، Date/Period of Sale، Local/Foreign Market و Sale at book value یا Self-defined price ثبت می‌شود.
+- در حال حاضر جمع دفتر دارایی به CAPEX تجمیعی اضافه نمی‌شود تا دوباره‌شماری رخ ندهد. موتور استهلاک و اثر فروش/جایگزینی هنوز به Net Fixed Assets، Tax Allowances، Cash Flow، Net Income Statement و Balance Sheet متصل نشده است.
+- دفتر دارایی فعلاً در قالب جدید قابل استفاده است؛ برای یکسان‌سازی فرم Starting Balances در Expansion/Rehabilitation با همین ساختار، مرحله مهاجرت/اشتراک کامپوننت باقی مانده است.
+
 ### گام بعدی فونداسیون
-1. تکمیل فرم Fixed Investment به‌صورت دفتر دارایی عمومی و مستقل از صنعت: طبقه دارایی، ردیف‌های تحصیل در هر دوره، ارز و منشأ محلی/خارجی، شرایط استهلاک، Starting at، Cost Centre، Foreign Currency Component و فروش/جایگزینی دارایی.
-2. اتصال همان دفتر دارایی به CAPEX، Depreciation، Net Fixed Assets، Tax Allowances، Cash Flow و Balance Sheet.
+1. اتصال دفتر Fixed Investment به ردیف‌های CAPEX و برنامه مخارج هر دوره، با کنترل تطبیق جمع و جلوگیری از دوباره‌شماری.
+2. تکمیل و آزمون موتور Depreciation، شامل چهار روش، دوره ناقص، دارایی‌های چندنوبت تحصیل‌شده، فروش و جایگزینی، و تطبیق با خروجی COMFAR.
 3. تکمیل ساختار Production Costs، Sales Programme و Working Capital به‌صورت چندمحصولی و دوره‌ای.
-4. پس از تثبیت و آزمون فونداسیون خام، ورود داده‌های HRCR200 و تطبیق schedule به schedule با فایل‌های Excel و خروجی مرجع.
+4. یکسان‌سازی دفتر دارایی پروژه جدید با Starting Balances دارایی‌های ثابت در Expansion/Rehabilitation.
+5. پس از تثبیت و آزمون فونداسیون خام، ورود داده‌های HRCR200 و تطبیق schedule به schedule با فایل‌های Excel و خروجی مرجع.
