@@ -1010,6 +1010,7 @@ export type FixedInvestmentDepreciationBuild = {
   assets: ComfarDepreciationAssetInput[]
   sales: ComfarAssetSaleInput[]
   investmentSchedule: number[]
+  investmentScheduleVerified: boolean
   warnings: string[]
 }
 
@@ -1025,11 +1026,12 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   const sales: ComfarAssetSaleInput[] = []
   const investmentSchedule = Array.from({ length: Math.max(0, Math.min(120, periodCount || 0)) }, () => 0)
   const warnings: string[] = []
+  let investmentScheduleVerified = items.length > 0 && items.every(item => item.acquisitions.length > 0 && item.acquisitions.every(acquisition => acquisition.allocationBasis === 'source-period' || acquisition.allocationBasis === 'user-confirmed'))
   if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
-    return { assets, sales, investmentSchedule, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
+    return { assets, sales, investmentSchedule, investmentScheduleVerified: false, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
   }
   if (periodFrequency !== 'annual' && periodFrequency !== 'unspecified') {
-    return { assets, sales, investmentSchedule, warnings: ['موتور یکپارچه فعلی فقط برنامه سالانه را محاسبه می‌کند؛ برای دوره‌های نیم‌سالانه، فصلی یا ماهانه، موتور دوره‌ای متناظر باید فعال شود.'] }
+    return { assets, sales, investmentSchedule, investmentScheduleVerified: false, warnings: ['موتور یکپارچه فعلی فقط برنامه سالانه را محاسبه می‌کند؛ برای دوره‌های نیم‌سالانه، فصلی یا ماهانه، موتور دوره‌ای متناظر باید فعال شود.'] }
   }
   if (periodFrequency === 'unspecified') {
     warnings.push('تناوب دوره در فونداسیون تعیین نشده است؛ نگاشت سالانه فقط برای پیش‌نمایش استفاده می‌شود و نتیجه تا تعیین Annual تأییدشده نیست.')
@@ -1136,7 +1138,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       }
     }
   }
-  return { assets, sales, investmentSchedule, warnings }
+  return { assets, sales, investmentSchedule, investmentScheduleVerified, warnings }
 }
 
 export type FixedInvestmentRegisterReconciliation = {
