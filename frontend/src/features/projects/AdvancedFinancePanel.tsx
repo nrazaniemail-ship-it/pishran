@@ -315,7 +315,7 @@ export default function AdvancedFinancePanel(props: Props) {
       <p className="fw-hint">{tr('وضعیت تطبیق:','Benchmark status:')} {method.benchmarkStatus==='partial'?tr('تطبیق جزئی','Partially benchmarked'):method.benchmarkStatus==='verified'?tr('تطبیق‌شده','Benchmarked'):tr('تطبیق عددی نشده','Not numerically benchmarked')}</p>
       {method.limitations&&<p className="fw-hint">{tr('محدودیت‌ها:','Limitations:')} {method.limitations}</p>}
     </div>)}
-    <p className="fw-hint">{tr('نرخ‌های این فرم سالانه‌اند. محاسبه ماهانه/فصلی پس از تکمیل موتور دوره‌ای فعال می‌شود؛ نرخ سالانه به‌صورت خودکار به دوره‌های کوتاه‌تر تعمیم داده نمی‌شود.','Rates in this form are annual. Monthly/quarterly calculation will be enabled after the period engine is complete; annual rates are not silently extrapolated to shorter periods.')}</p>
+    <p className="fw-hint">{tr('نرخ سالانه در صورت نبود نرخ اختصاصی برای هر دوره، به دوره‌های همان سال مالی اعمال می‌شود. نرخ‌های واردشده در بخش «نرخ مالیات به تفکیک دوره» بر نرخ سالانه اولویت دارند.','Annual rates apply to periods in the corresponding fiscal year unless explicit period-specific rates are entered. Values in the period tax schedule override the annual rate.')}</p>
     {!props.useFixedInvestmentRegister&&<>
           <button className="secondary-button" onClick={syncAssets}><RefreshCw size={14}/> {tr('همگام‌سازی دارایی‌ها از CAPEX')}</button>
           {comfarLifecycle&&<div className="fw-validation">
