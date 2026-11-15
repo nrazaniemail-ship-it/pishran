@@ -1009,6 +1009,7 @@ export function calculateComfarAssetLifecycle(
 export type FixedInvestmentDepreciationBuild = {
   assets: ComfarDepreciationAssetInput[]
   sales: ComfarAssetSaleInput[]
+  investmentSchedule: number[]
   warnings: string[]
 }
 
@@ -1022,6 +1023,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
 ): FixedInvestmentDepreciationBuild {
   const assets: ComfarDepreciationAssetInput[] = []
   const sales: ComfarAssetSaleInput[] = []
+  const investmentSchedule = Array.from({ length: Math.max(0, Math.min(120, periodCount || 0)) }, () => 0)
   const warnings: string[] = []
   if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
     return { assets, sales, investmentSchedule, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
