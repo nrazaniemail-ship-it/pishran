@@ -1254,3 +1254,10 @@ input,select,textarea{color:var(--text)}
 :root:not([data-theme="dark"]) .calculator-display{
   background:#fff;
 }
+
+
+/* Blend the desktop main-navigation container into the page background. */
+:root:not([data-theme="dark"]) .main-nav{
+  background:#e8edf3;
+  border-color:#e8edf3;
+}
