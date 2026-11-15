@@ -742,3 +742,72 @@ const opportunityCostCase = engine.calculateIncrementalEnterpriseAnalysis(
 )
 near(opportunityCostCase.periods[0].incrementalCashFlow, -1200, 1e-9,
   'Existing asset opportunity cost must be charged to the with-project incremental case')
+
+const existingAnnuityLoan = engine.calculateExistingLoanSchedule({
+  openingBalance: 1000,
+  annualInterestRatePercent: 12,
+  startDate: '2026-01-31',
+  firstRepaymentDate: '2027-01-31',
+  repaymentFrequency: 'annual',
+  repaymentType: 'annuity',
+  numberOfRepayments: 2,
+  capitalizeGraceInterest: true,
+})
+assert.equal(existingAnnuityLoan.valid, true, 'Existing annuity loan schedule must be valid')
+near(existingAnnuityLoan.rows[0].capitalizedInterest, 120, 1e-9,
+  'COMFAR grace-period interest capitalization')
+near(existingAnnuityLoan.rows[0].openingBalance, 1120, 1e-9,
+  'Annuity schedule opening balance includes capitalized grace interest')
+near(existingAnnuityLoan.totalPrincipal, 1120, 1e-9,
+  'Annuity schedule must repay all principal')
+near(existingAnnuityLoan.closingBalance, 0, 1e-9,
+  'Annuity schedule must close at zero')
+
+const existingConstantLoan = engine.calculateExistingLoanSchedule({
+  openingBalance: 1200,
+  annualInterestRatePercent: 12,
+  startDate: '2026-01-31',
+  firstRepaymentDate: '2026-04-30',
+  repaymentFrequency: 'quarterly',
+  repaymentType: 'constant-principal',
+  numberOfRepayments: 4,
+  capitalizeGraceInterest: false,
+})
+assert.equal(existingConstantLoan.valid, true, 'Existing constant-principal loan schedule must be valid')
+near(existingConstantLoan.rows[0].interestPayable, 30, 1e-9,
+  'Quarterly opening grace interest must use annual rate × months / 12')
+near(existingConstantLoan.rows[0].principalRepayment, 300, 1e-9,
+  'Constant-principal schedule must divide principal evenly')
+near(existingConstantLoan.closingBalance, 0, 1e-9,
+  'Constant-principal schedule must close at zero')
+
+const existingProfileLoan = engine.calculateExistingLoanSchedule({
+  openingBalance: 1000,
+  annualInterestRatePercent: 10,
+  startDate: '2026-01-31',
+  firstRepaymentDate: '2026-04-30',
+  repaymentFrequency: 'quarterly',
+  repaymentType: 'profile',
+  numberOfRepayments: 2,
+  profileRepayments: [
+    { date: '2026-04-30', principal: 250 },
+    { date: '2026-10-31', principal: 750 },
+  ],
+})
+assert.equal(existingProfileLoan.valid, true, 'Existing profile loan must accept dated principal repayments')
+near(existingProfileLoan.totalPrincipal, 1000, 1e-9,
+  'Profile loan must aggregate user-defined principal repayments')
+assert.equal(engine.calculateExistingLoanSchedule({
+  openingBalance: 1000, annualInterestRatePercent: 10, startDate: '2026-01-31',
+  firstRepaymentDate: '2026-04-30', repaymentFrequency: 'quarterly',
+  repaymentType: 'annuity', numberOfRepayments: 0,
+}).valid, false, 'Existing loan must reject a zero repayment count')
+
+assert.ok(expansionPanelSource.includes('Annuity')
+  && expansionPanelSource.includes('Constant Principal')
+  && expansionPanelSource.includes('Profile')
+  && expansionPanelSource.includes('First Repayment Date')
+  && expansionPanelSource.includes('Number of Repayments')
+  && expansionPanelSource.includes('Repayment Schedule and Debt Service'),
+  'Expansion/Rehabilitation loan form must expose COMFAR loan types and repayment schedule')
+console.log('PASS: COMFAR-style existing-loan repayment schedules, grace-period capitalization and profile repayments')
