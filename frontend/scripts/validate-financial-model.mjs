@@ -661,11 +661,29 @@ near(incremental.periods[1].incrementalCashFlow, 1300, 1e-9, 'Expansion incremen
 near(incremental.incrementalNpv, 181.81818181818176, 1e-8, 'Expansion incremental NPV')
 near(incremental.incrementalIrr, 0.3, 1e-8, 'Expansion incremental IRR')
 assert.equal(incremental.periods.length, 2, 'Incremental analysis must preserve aligned period count')
+const invalidIncremental = engine.calculateIncrementalEnterpriseAnalysis(
+  [{ revenue: Number.NaN, cashOperatingCosts: 0, tax: 0, capex: 0, changeInWorkingCapital: 0 }],
+  [{ revenue: 100, cashOperatingCosts: 0, tax: 0, capex: 0, changeInWorkingCapital: 0 }],
+  0.1
+)
+assert.equal(invalidIncremental.periods.length, 0, 'Incremental analysis must reject non-finite source data rather than coerce it')
+const mismatchedIncremental = engine.calculateIncrementalEnterpriseAnalysis(
+  withoutEnterprise, withEnterprise.slice(0, 1), 0.1
+)
+assert.equal(mismatchedIncremental.periods.length, 0, 'Incremental analysis must reject non-aligned planning horizons')
 const expansionPanelSource = await readFile(new URL('../src/features/projects/ExpansionRehabilitationPanel.tsx', import.meta.url), 'utf8')
 const expansionWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 assert.ok(expansionWizardSource.includes("analysisMode: 'new'|'expansion'|'rehabilitation'|'combined'")
   && expansionWizardSource.includes("m.analysisMode!=='new'&&<ExpansionRehabilitationPanel"),
   'Project wizard must activate the existing-enterprise module only for expansion/rehabilitation classifications')
+assert.ok(expansionPanelSource.includes('Starting Balances')
+  && expansionPanelSource.includes('Incremental Analysis')
+  && expansionPanelSource.includes('Work in progress')
+  && expansionPanelSource.includes('Finished Product Inventory'),
+  'Expansion/rehabilitation English UI must use COMFAR Reference Manual terminology')
+assert.ok(expansionPanelSource.includes('Long-Term Finance')
+  && expansionPanelSource.includes('Opportunity Value'),
+  'Existing fixed assets and long-term finance must use consistent COMFAR vocabulary')
 assert.ok(expansionPanelSource.includes('calculateIncrementalEnterpriseAnalysis')
   && expansionPanelSource.includes('Opening Balance Difference')
   && expansionPanelSource.includes('opportunityValue')
