@@ -4,7 +4,7 @@ import {
 } from './projectFoundation'
 import { buildComfarDepreciationAssetsFromFixedInvestmentItems, calculateComfarAssetLifecycle, reconcileFixedInvestmentRegister } from '../steel/financialModel'
 
-type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; projectStartYear: number; periodCount: number; capexTotal: number; preOperatingCost?: number; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean }
+type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; projectStartYear: number; periodCount: number; capexTotal: number; preOperatingCost?: number; referenceDepreciationByYear?: ReadonlyArray<readonly [number, number]>; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean }
 const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
 const assetClasses: { value: FixedInvestmentItem['assetClass']; fa: string; en: string }[] = [
   { value: 'land', fa: 'زمین', en: 'Land' },
@@ -25,7 +25,7 @@ const methods: { value: FixedInvestmentItem['depreciation']['method']; fa: strin
   { value: 'sum-of-digits', fa: 'مجموع سنوات', en: 'Sum of years digits' },
 ]
 
-export default function FixedInvestmentPanel({ value, foundation, projectStartYear, periodCount, capexTotal, preOperatingCost = 0, onChange, language = 'fa', blankTemplate = false }: Props) {
+export default function FixedInvestmentPanel({ value, foundation, projectStartYear, periodCount, capexTotal, preOperatingCost = 0, referenceDepreciationByYear, onChange, language = 'fa', blankTemplate = false }: Props) {
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
   const issues = validateFixedInvestmentItems(value, foundation)
@@ -33,6 +33,13 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
   const assetLifecycle = calculateComfarAssetLifecycle(depreciationBuild.assets, depreciationBuild.sales, periodCount)
   const depreciationSchedule = assetLifecycle.depreciation
   const depreciationWarnings = [...depreciationBuild.warnings, ...assetLifecycle.warnings]
+  const referenceRows = foundation.planning.periodFrequency === 'annual'
+    ? (referenceDepreciationByYear ?? []).map(([year, reference]) => {
+        const row = depreciationSchedule.periods.find(period => projectStartYear + period.period - 1 === year)
+        return row ? { year, model: row.depreciation, reference, variance: row.depreciation - reference } : null
+      }).filter((row): row is { year: number; model: number; reference: number; variance: number } => row !== null)
+    : []
+  const maximumReferenceVariance = referenceRows.reduce((maximum, row) => Math.max(maximum, Math.abs(row.variance)), 0)
   const hasDepreciableAssets = value.some(item => item.acquisitions.length > 0)
   const issueMessages: Record<string, string> = {
     'duplicate-fixed-asset-id':'شناسه اقلام سرمایه‌گذاری ثابت باید یکتا باشد.', 'missing-fixed-asset-description':'شرح هر قلم دارایی را وارد کنید.',
@@ -112,6 +119,12 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       <p className="fw-hint">{t('این پیش‌نمایش از نوبت‌های تحصیل و فروش همین دفتر ساخته می‌شود و برنامه استهلاک/واگذاری آن به موتور مالی یکپارچه ارسال می‌شود. جمع خرید دارایی‌ها هنوز با CAPEX تجمیعی دوباره جمع نمی‌شود تا پس از تطبیق فایل مرجع از دوباره‌شماری جلوگیری شود.','This preview is built from acquisition and disposal vintages in this register and is passed to the integrated finance engine for depreciation and asset-sale treatment. Asset purchase totals are not yet added to aggregate CAPEX, preventing double-counting until the reference workbook is reconciled.')}</p>
       {depreciationWarnings.map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
       {periodCount > 0 && <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('استهلاک دوره','Depreciation')}</th><th>{t('ارزش دفتری پایان دوره','Closing Book Value')}</th><th>{t('عایدی فروش','Asset Sale Proceeds')}</th><th>{t('برگشت سرمایه','Return of Capital')}</th><th>{t('سایر درآمد/زیان','Other Income / Loss')}</th></tr></thead><tbody>{depreciationSchedule.periods.map(row=>{const sales=assetLifecycle.sales.filter(sale=>sale.period===row.period);const sum=(key:'saleProceeds'|'returnOfCapital'|'otherIncomeLoss')=>sales.reduce((total,sale)=>total+sale[key],0);return <tr key={row.period}><td>{projectStartYear+row.period-1}</td><td>{row.depreciation.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{row.closingBookValue.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{sum('saleProceeds').toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{sum('returnOfCapital').toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{sum('otherIncomeLoss').toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td></tr>})}</tbody></table></div>}
+      {referenceRows.length > 0 && <div className="fw-card">
+        <h4>{t('تطبیق استهلاک سالانه با خروجی مرجع','Annual Depreciation vs Reference Output')}</h4>
+        <p className="fw-hint">{t('اختلاف‌ها به‌صورت شفاف نمایش داده می‌شوند و هیچ نرخ یا عمر مفیدی برای نزدیک‌کردن مصنوعی نتایج تغییر نمی‌کند.','Variances are shown transparently; no rate or useful life is adjusted to force an artificial match.')}</p>
+        <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('سال','Year')}</th><th>{t('محاسبه پیشران','Pishran Calculation')}</th><th>{t('خروجی مرجع','Reference Output')}</th><th>{t('اختلاف','Variance')}</th></tr></thead><tbody>{referenceRows.map(row=><tr key={row.year}><td>{row.year}</td><td>{row.model.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{row.reference.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{row.variance.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td></tr>)}</tbody></table></div>
+        <div className="fw-validation"><span>{t('بیشترین اختلاف مطلق','Maximum Absolute Variance')}</span><b>{maximumReferenceVariance.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
+      </div>}
       {!assetLifecycle.valid && <p className="fw-hint">{t('برنامه استهلاک دارای هشدار است و نباید به‌عنوان خروجی تأییدشده استفاده شود.','The depreciation schedule has warnings and must not be treated as a validated output.')}</p>}
     </div>}
     <div className="fw-card">
