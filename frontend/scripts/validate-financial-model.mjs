@@ -1034,6 +1034,15 @@ assert.equal(registerBuild.assets[0].acquisitionPeriod,1,'Fixed-asset acquisitio
 assert.equal(registerBuild.assets[0].startingAtPeriod,1,'Starting at year must map to annual project period')
 assert.equal(engine.resolveComfarDepreciationStartPeriod(registerBuild.assets[0].acquisitionPeriod,registerBuild.assets[0].startingAtPeriod,registerBuild.assets[0].acquisitionDate,registerBuild.assets[0].startingAtDate),1,'Full acquisition date before Starting at must retain same-year depreciation')
 near(registerBuild.assets[0].originalValue,200,1e-9,'Fixed-asset acquisition amount must be converted to local currency')
+const soldRegisterAsset = { ...registerAsset, sales:[{id:'register-sale',acquisitionId:'register-acq',period:'1407',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}] }
+const soldRegisterBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([soldRegisterAsset],1405,12)
+assert.equal(soldRegisterBuild.assets.length,0,'An asset sold within the horizon must not be depreciated past disposal until disposal timing is implemented')
+assert.ok(soldRegisterBuild.warnings.some(warning=>warning.includes('فروش دارایی')),'A disposal inside the horizon must be explicitly flagged')
+const invalidBeforeAcquisition = engine.calculateComfarAssetDepreciationSchedule([{
+  id:'invalid-before-acquisition',name:'Invalid asset',originalValue:1000,initialBookValue:1000,scrapPercent:10,
+  lengthYears:5,method:'sum-of-years-digits',acquisitionPeriod:2,startingAtPeriod:1,firstDepreciationMonths:6
+}],4)
+near(invalidBeforeAcquisition.periods[0].closingBookValue,0,1e-9,'Invalid assets must not appear before acquisition period')
 const landDepreciation = { ...validAsset, id:'land-depreciation', assetClass:'land' }
 assert.ok(foundation.validateFixedInvestmentItems([landDepreciation], validFoundation).some(issue=>issue.code==='land-not-depreciable'),
   'Land must not be depreciated')
@@ -1081,6 +1090,6 @@ assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
   && fixedInvestmentPanel.includes('Linear to scrap')
   && fixedInvestmentPanel.includes('Accelerated')
   && fixedInvestmentPanel.includes('Sum of years digits')
-  && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX') && fixedInvestmentPanel.includes('first depreciation year'),
+  && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX') && fixedInvestmentPanel.includes('first depreciation year') && fixedInvestmentPanel.includes('Asset Depreciation Schedule Preview') && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems'),
   'Fixed investment foundation must capture acquisition periods, COMFAR depreciation conditions and asset disposals without double-counting CAPEX')
 console.log('PASS: industry-independent project foundation schema, blank defaults, validation and wizard persistence')
