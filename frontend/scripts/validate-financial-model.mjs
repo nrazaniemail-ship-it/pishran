@@ -125,6 +125,19 @@ assert.ok(rollingWorkspaceSource.includes("project.templateId==='hot-rolling-200
   'Only explicit hot-rolling template or legacy hot-rolling projects may load benchmark defaults')
 assert.ok(wizardSource.includes("project.templateId==='raw'"),
   'Raw template must initialize an empty feasibility model')
+assert.ok(wizardSource.includes("Opportunity Study")
+  && wizardSource.includes("Feasibility Study")
+  && wizardSource.includes("Joint-venture Project")
+  && wizardSource.includes("Economic Analysis")
+  && wizardSource.includes("Cost Centre Analysis")
+  && wizardSource.includes("Cost Allocation")
+  && wizardSource.includes("Value-added Analysis")
+  && wizardSource.includes("Foreign Exchange Effect")
+  && wizardSource.includes("Employment Effects"),
+  'Project identification must expose COMFAR study levels and analysis scope features')
+assert.ok(wizardSource.includes("costCentreAnalysis:e.target.checked||m.scope.costAllocation")
+  && wizardSource.includes("costAllocation:e.target.checked,costCentreAnalysis:e.target.checked?true:m.scope.costCentreAnalysis"),
+  'Cost Allocation must activate Cost Centre Analysis as in the COMFAR Tutorial workflow')
 assert.ok(appSource.includes("if(project.templateId==='raw') setPage('project-wizard')"),
   'Raw template must not be routed into the seeded hot-rolling workspace')
 assert.ok(rollingWorkspaceSource.includes('ممیزی جریان نقدی خام و اصلاح‌شده مرجع مالی')
