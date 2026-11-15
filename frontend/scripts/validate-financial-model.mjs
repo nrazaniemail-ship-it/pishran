@@ -644,11 +644,12 @@ near(comfarAccelerated.periods[6].closingBookValue,100,1e-8,'Accelerated depreci
 const comfarSumDigits = engine.calculateComfarAssetDepreciationSchedule([{
   id:'sum-digits',name:'Sum digits',originalValue:1000,initialBookValue:1000,scrapPercent:10,
   lengthYears:5,method:'sum-of-years-digits',
-  acquisitionPeriod:1,startingAtPeriod:1,firstDepreciationMonths:12
+  acquisitionPeriod:0,startingAtPeriod:1,firstDepreciationMonths:12
 }],5)
 near(comfarSumDigits.periods[0].depreciation,300,1e-9,'Sum of years digits first-year depreciation')
 near(comfarSumDigits.periods[4].depreciation,60,1e-9,'Sum of years digits final-year depreciation')
 assert.equal(engine.resolveComfarDepreciationStartPeriod(1,3),3,'Assets acquired before Starting at must commence at Starting at')
+assert.equal(engine.resolveComfarDepreciationStartPeriod(0,1),1,'Opening assets acquired before the model horizon must commence at Starting at')
 assert.equal(engine.resolveComfarDepreciationStartPeriod(3,3),4,'Assets acquired after Starting at must commence in the following period')
 const unsupportedSumPartial = engine.calculateComfarAssetDepreciationSchedule([{
   id:'sum-partial',name:'Sum digits partial',originalValue:1000,initialBookValue:1000,scrapPercent:10,
