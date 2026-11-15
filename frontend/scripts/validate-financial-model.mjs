@@ -83,7 +83,7 @@ for (const [year, expected] of reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seede
 const hrcr1414 = hrcrLifecycle.depreciation.periods.find(period=>1403+period.period-1===1414)?.depreciation ?? 0
 const comfar1414 = reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarDepreciationByYear.find(([year])=>year===1414)?.[1] ?? 0
 assert.ok(hrcr1414-comfar1414>300_000,'HRCR200 1414 depreciation mismatch must remain visible pending asset-level disposals and Starting at dates')
-near(hrcrLifecycle.depreciation.periods[2].depreciation-reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarFirstYear,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterFirstYearVarianceToComfar,0.02,'HRCR200 first-year seeded-register variance must remain visible')
+near(hrcrLifecycle.depreciation.periods[2].depreciation-reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarFirstYearDepreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterFirstYearVarianceToComfar,0.02,'HRCR200 first-year seeded-register variance must remain visible')
 near(hrcrLifecycle.depreciation.periods[2].depreciation-reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.opexScheduleAnnualDepreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterVsOpexScheduleVariance,0.02,'HRCR200 pre-production salvage assumption must explain the difference from the OPEX annual schedule')
 assert.ok(Math.abs(hrcrLifecycle.depreciation.periods[2].depreciation-rollingAudit.depreciationReconciliation.comfarFirstYear)>500,'HRCR200 depreciation reconciliation must remain open pending asset-level Starting at/disposal data')
 near(rollingAudit.capex.fixedInvestment + rollingAudit.capex.preproductionNet,
