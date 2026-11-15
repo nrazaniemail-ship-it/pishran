@@ -4,6 +4,8 @@ import { localStore } from '../../core/storage/localStore'
 import { calculateIncrementalEnterpriseAnalysis, type EnterpriseScenarioPeriodInput } from '../steel/financialModel'
 
 type Asset = { id:string; name:string; grossCost:number; accumulatedDepreciation:number; remainingLife:number; opportunityValue:number; residualValue?:number; commissioningDate?:string; depreciationMethod?:'straight-line'|'declining-balance'|'none'; costCentre?:string; foreignSharePercent?:number; status:'active'|'replace'|'idle'|'sell' }
+type ProductBalance = {id:string;productName:string;localValue:number;foreignValue:number}
+type FinishedProductBalance = {id:string;productName:string;quantity:number;unitPrice:number;foreignSharePercent:number}
 type LegacyLoan = { id:string; name:string; openingBalance:number; annualRate:number; annualDebtService:number; maturityYears?:number; graceYears?:number; repaymentFrequency?:'annual'|'semiannual'|'quarterly'|'monthly'; repaymentMethod?:'equal-principal'|'annuity'|'bullet'; nextPaymentDate?:string; accruedInterest?:number; fees?:number }
 type Opening = {
   rawMaterialsLocal:number; rawMaterialsForeign:number; suppliesLocal:number; suppliesForeign:number; wipLocal:number; wipForeign:number; finishedQuantity:number; finishedUnitPrice:number; finishedForeignShare:number
@@ -12,10 +14,10 @@ type Opening = {
   payablesLocal:number; payablesForeign:number; payableDaysLocal:number; payableDaysForeign:number
   otherAssetsLocal:number; otherLiabilitiesLocal:number; paidInCapital:number; retainedEarnings:number; accumulatedLosses:number; grants:number
 }
-type State = { baseDate:string; mode:'expansion'|'rehabilitation'|'combined'; opening:Opening; assets:Asset[]; loans:LegacyLoan[]; without:EnterpriseScenarioPeriodInput[]; with:EnterpriseScenarioPeriodInput[]; discountRate:number }
+type State = { baseDate:string; mode:'expansion'|'rehabilitation'|'combined'; opening:Opening; workInProgress:ProductBalance[]; finishedProducts:FinishedProductBalance[]; assets:Asset[]; loans:LegacyLoan[]; without:EnterpriseScenarioPeriodInput[]; with:EnterpriseScenarioPeriodInput[]; discountRate:number }
 const blankOpening:Opening={rawMaterialsLocal:0,rawMaterialsForeign:0,suppliesLocal:0,suppliesForeign:0,wipLocal:0,wipForeign:0,finishedQuantity:0,finishedUnitPrice:0,finishedForeignShare:0,receivablesLocal:0,receivablesForeign:0,receivableDaysLocal:0,receivableDaysForeign:0,cashLocal:0,cashForeign:0,shortTermDepositsLocal:0,cashSurplusLocal:0,cashSurplusForeign:0,payablesLocal:0,payablesForeign:0,payableDaysLocal:0,payableDaysForeign:0,otherAssetsLocal:0,otherLiabilitiesLocal:0,paidInCapital:0,retainedEarnings:0,accumulatedLosses:0,grants:0}
 const emptyPeriod=():EnterpriseScenarioPeriodInput=>({revenue:0,cashOperatingCosts:0,tax:0,capex:0,opportunityCost:0,changeInWorkingCapital:0,assetSaleProceeds:0,terminalValue:0})
-const initialState=(horizon:number):State=>({baseDate:'',mode:'expansion',opening:{...blankOpening},assets:[],loans:[],without:Array.from({length:horizon},emptyPeriod),with:Array.from({length:horizon},emptyPeriod),discountRate:25})
+const initialState=(horizon:number):State=>({baseDate:'',mode:'expansion',opening:{...blankOpening},workInProgress:[],finishedProducts:[],assets:[],loans:[],without:Array.from({length:horizon},emptyPeriod),with:Array.from({length:horizon},emptyPeriod),discountRate:25})
 const fmt=(v:number)=>Number.isFinite(v)?v.toLocaleString('fa-IR',{maximumFractionDigits:2}):'—'
 const comfarTermsEn:Record<string,string>={
  'موجودی مواد اولیه ـ ارز محلی':'Raw materials — local currency',
@@ -75,7 +77,7 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  const key='feasibility:expansion-rehabilitation:'+projectId
  const [state,setState]=useState<State>(()=>initialState(horizon))
  const [loaded,setLoaded]=useState(false)
- useEffect(()=>{let active=true;localStore.get<State>(key).then(saved=>{if(active){if(saved){const defaults=initialState(horizon);setState({...defaults,...saved,opening:{...blankOpening,...saved.opening},without:Array.from({length:horizon},(_,i)=>saved.without?.[i]??emptyPeriod()),with:Array.from({length:horizon},(_,i)=>saved.with?.[i]??emptyPeriod())})}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{active=false}},[key,horizon])
+ useEffect(()=>{let active=true;localStore.get<State>(key).then(saved=>{if(active){if(saved){const defaults=initialState(horizon);setState({...defaults,...saved,opening:{...blankOpening,...saved.opening},workInProgress:saved.workInProgress??((saved.opening?.wipLocal||saved.opening?.wipForeign)?[{id:'legacy-wip',productName:'محصول/کالای در جریان ساخت ـ طبقه‌بندی‌نشده',localValue:saved.opening?.wipLocal??0,foreignValue:saved.opening?.wipForeign??0}]:[]),finishedProducts:saved.finishedProducts??((saved.opening?.finishedQuantity||saved.opening?.finishedUnitPrice)?[{id:'legacy-finished',productName:'محصول نهایی ـ طبقه‌بندی‌نشده',quantity:saved.opening?.finishedQuantity??0,unitPrice:saved.opening?.finishedUnitPrice??0,foreignSharePercent:saved.opening?.finishedForeignShare??0}]:[]),without:Array.from({length:horizon},(_,i)=>saved.without?.[i]??emptyPeriod()),with:Array.from({length:horizon},(_,i)=>saved.with?.[i]??emptyPeriod())})}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{active=false}},[key,horizon])
  useEffect(()=>{if(loaded)void localStore.set(key,state)},[loaded,key,state])
  const updateOpening=(field:keyof Opening,value:number)=>setState(s=>({...s,opening:{...s.opening,[field]:field==='finishedForeignShare'?Math.max(0,Math.min(100,value)):Math.max(0,value)}}))
  const updatePeriod=(scenario:'without'|'with',index:number,field:keyof EnterpriseScenarioPeriodInput,value:number)=>setState(s=>({...s,[scenario]:s[scenario].map((row,i)=>i===index?{...row,[field]:value}:row)}))
@@ -84,8 +86,9 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  const fixedGross=state.assets.reduce((sum,a)=>sum+a.grossCost,0)
  const fixedAccum=state.assets.reduce((sum,a)=>sum+a.accumulatedDepreciation,0)
  const fixedNet=fixedGross-fixedAccum
- const finished=state.opening.finishedQuantity*state.opening.finishedUnitPrice
- const currentAssets=state.opening.rawMaterialsLocal+state.opening.rawMaterialsForeign+state.opening.suppliesLocal+state.opening.suppliesForeign+state.opening.wipLocal+state.opening.wipForeign+finished+state.opening.receivablesLocal+state.opening.receivablesForeign+state.opening.cashLocal+state.opening.cashForeign+state.opening.shortTermDepositsLocal+state.opening.cashSurplusLocal+state.opening.cashSurplusForeign+state.opening.otherAssetsLocal
+ const finished=state.finishedProducts.reduce((sum,item)=>sum+item.quantity*item.unitPrice,0)+((state.finishedProducts.length===0)?state.opening.finishedQuantity*state.opening.finishedUnitPrice:0)
+ const wipTotal=state.workInProgress.reduce((sum,item)=>sum+item.localValue+item.foreignValue,0)+((state.workInProgress.length===0)?state.opening.wipLocal+state.opening.wipForeign:0)
+ const currentAssets=state.opening.rawMaterialsLocal+state.opening.rawMaterialsForeign+state.opening.suppliesLocal+state.opening.suppliesForeign+wipTotal+finished+state.opening.receivablesLocal+state.opening.receivablesForeign+state.opening.cashLocal+state.opening.cashForeign+state.opening.shortTermDepositsLocal+state.opening.cashSurplusLocal+state.opening.cashSurplusForeign+state.opening.otherAssetsLocal
  const debt=state.loans.reduce((sum,l)=>sum+l.openingBalance,0)
  const liabilities=state.opening.payablesLocal+state.opening.payablesForeign+state.opening.otherLiabilitiesLocal+debt
  const equity=state.opening.paidInCapital+state.opening.retainedEarnings-state.opening.accumulatedLosses+state.opening.grants
@@ -105,9 +108,28 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   <p className="fw-hint">{t('تاریخ اثر مانده‌ها باید روز قبل از شروع نخستین دوره برنامه‌ریزی باشد. طبق ساختار COMFAR مبالغ مانده‌ها با واحد پول محلی تعریف می‌شوند و جزء ارز خارجی برای محاسبات اقتصادی جداگانه نگهداری می‌شود؛ اتصال این جزء به ارز مشخص و نرخ تبدیل آن در ماژول Currencies هنوز باید تکمیل شود. سپرده کوتاه‌مدت فقط جزء محلی دارد.','Starting balance amounts are defined in local currency. The foreign currency component is retained separately for economic calculations; linking each component to a defined foreign currency and its exchange rate in the Currencies module remains to be completed. Short-term deposits have only a local-currency field.')}</p>
   <div className="fw-grid">
    {moneyKeys.map(([field,label])=><label className="fw-field" key={field}><span>{t(label,comfarTermsEn[label]??label)}</span><input type="number" min="0" value={state.opening[field]} onChange={e=>updateOpening(field,Number(e.target.value))}/></label>)}
-   <label className="fw-field"><span>{t('مقدار موجودی محصول نهایی','Finished Product Inventory Quantity')}</span><input type="number" min="0" value={state.opening.finishedQuantity} onChange={e=>updateOpening('finishedQuantity',Number(e.target.value))}/></label>
-   <label className="fw-field"><span>{t('قیمت محصول نهایی موجودی','Finished Product Inventory Price')}</span><input type="number" min="0" value={state.opening.finishedUnitPrice} onChange={e=>updateOpening('finishedUnitPrice',Number(e.target.value))}/></label>
-   <label className="fw-field"><span>{t('سهم ارزی موجودی محصول (%)','Foreign Currency Share of Inventory (%)')}</span><input type="number" min="0" max="100" value={state.opening.finishedForeignShare} onChange={e=>updateOpening('finishedForeignShare',Number(e.target.value))}/></label>
+  </div>
+  <h5>{t('کالای در جریان ساخت ـ به تفکیک محصول','Work in Progress — by Product')}</h5>
+  <p className="fw-hint">{t('برای هر محصول، جزء محلی و خارجی جداگانه ثبت می‌شود؛ این تفکیک مطابق پنجره Starting Balance در Reference Manual است.','Enter local and foreign Work in Progress separately for each product, following the Starting Balance structure in the Reference Manual.')}</p>
+  {state.workInProgress.map(item=><div className="fw-grid" key={item.id}>
+   <label className="fw-field"><span>{t('محصول','Product')}</span><input value={item.productName} onChange={e=>setState(s=>({...s,workInProgress:s.workInProgress.map(x=>x.id===item.id?{...x,productName:e.target.value}:x)}))}/></label>
+   <label className="fw-field"><span>{t('ارزش محلی','Local Value')}</span><input type="number" min="0" value={item.localValue} onChange={e=>setState(s=>({...s,workInProgress:s.workInProgress.map(x=>x.id===item.id?{...x,localValue:Number(e.target.value)}:x)}))}/></label>
+   <label className="fw-field"><span>{t('ارزش جزء خارجی','Foreign Currency Component')}</span><input type="number" min="0" value={item.foreignValue} onChange={e=>setState(s=>({...s,workInProgress:s.workInProgress.map(x=>x.id===item.id?{...x,foreignValue:Number(e.target.value)}:x)}))}/></label>
+   <button className="secondary-button" onClick={()=>setState(s=>({...s,workInProgress:s.workInProgress.filter(x=>x.id!==item.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
+  </div>)}
+  <button className="secondary-button" onClick={()=>setState(s=>({...s,workInProgress:[...s.workInProgress,{id:'wip-'+Date.now(),productName:'',localValue:0,foreignValue:0}]}))}><Plus size={14}/>{t('افزودن ردیف کالای در جریان ساخت','Add Work in Progress Item')}</button>
+  <h5>{t('محصول نهایی موجود در انبار ـ به تفکیک محصول','Finished Product Inventory — by Product')}</h5>
+  <p className="fw-hint">{t('برای هر محصول، مقدار، قیمت واحد و سهم جزء ارز خارجی ثبت می‌شود. ارزش موجودی از حاصل‌ضرب مقدار در قیمت واحد محاسبه می‌شود.','For each product, enter quantity, unit price and foreign currency component percentage. Inventory value is calculated as quantity multiplied by unit price.')}</p>
+  {state.finishedProducts.map(item=><div className="fw-grid" key={item.id}>
+   <label className="fw-field"><span>{t('محصول','Product')}</span><input value={item.productName} onChange={e=>setState(s=>({...s,finishedProducts:s.finishedProducts.map(x=>x.id===item.id?{...x,productName:e.target.value}:x)}))}/></label>
+   <label className="fw-field"><span>{t('مقدار','Quantity')}</span><input type="number" min="0" value={item.quantity} onChange={e=>setState(s=>({...s,finishedProducts:s.finishedProducts.map(x=>x.id===item.id?{...x,quantity:Number(e.target.value)}:x)}))}/></label>
+   <label className="fw-field"><span>{t('قیمت واحد','Unit Price')}</span><input type="number" min="0" value={item.unitPrice} onChange={e=>setState(s=>({...s,finishedProducts:s.finishedProducts.map(x=>x.id===item.id?{...x,unitPrice:Number(e.target.value)}:x)}))}/></label>
+   <label className="fw-field"><span>{t('سهم جزء ارز خارجی (%)','Foreign Currency Component (%)')}</span><input type="number" min="0" max="100" value={item.foreignSharePercent} onChange={e=>setState(s=>({...s,finishedProducts:s.finishedProducts.map(x=>x.id===item.id?{...x,foreignSharePercent:Math.max(0,Math.min(100,Number(e.target.value)))}:x)}))}/></label>
+   <button className="secondary-button" onClick={()=>setState(s=>({...s,finishedProducts:s.finishedProducts.filter(x=>x.id!==item.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
+   <div className="fw-result">{t('ارزش کل موجودی','Total Inventory Value')}: <b>{fmt(item.quantity*item.unitPrice)} {currency}</b></div>
+  </div>)}
+  <button className="secondary-button" onClick={()=>setState(s=>({...s,finishedProducts:[...s.finishedProducts,{id:'finished-'+Date.now(),productName:'',quantity:0,unitPrice:0,foreignSharePercent:0}]}))}><Plus size={14}/>{t('افزودن محصول نهایی','Add Finished Product')}</button>
+  <div className="fw-result">{t('ارزش موجودی محصول نهایی','Finished Product Inventory Value')}: <b>{fmt(finished)} {currency}</b> · {t('ارزش کالای در جریان ساخت','Work in Progress Value')}: <b>{fmt(wipTotal)} {currency}</b></div>
    <label className="fw-field"><span>{t('دوره تسویه حساب‌های دریافتنی محلی (روز)','Local Accounts Receivable Liquidation Period (Days)')}</span><input type="number" min="0" value={state.opening.receivableDaysLocal} onChange={e=>updateOpening('receivableDaysLocal',Number(e.target.value))}/></label>
    <label className="fw-field"><span>{t('دوره تسویه حساب‌های دریافتنی ارزی (روز)','Foreign Accounts Receivable Liquidation Period (Days)')}</span><input type="number" min="0" value={state.opening.receivableDaysForeign} onChange={e=>updateOpening('receivableDaysForeign',Number(e.target.value))}/></label>
    <label className="fw-field"><span>{t('دوره پرداخت حساب‌های پرداختنی محلی (روز)','Local Accounts Payable Payout Period (Days)')}</span><input type="number" min="0" value={state.opening.payableDaysLocal} onChange={e=>updateOpening('payableDaysLocal',Number(e.target.value))}/></label>
