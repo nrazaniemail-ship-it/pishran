@@ -205,6 +205,12 @@ export function createBlankFixedInvestmentItem(): FixedInvestmentItem {
   }
 }
 
+function fixedInvestmentPeriodOrdinal(value: string): number | null {
+  const match = /^(\\d{3,4})(?:[-/](\\d{1,2})(?:[-/](\\d{1,2}))?)?$/.exec(value.trim())
+  if (!match) return null
+  return Number(match[1]) * 10000 + Number(match[2] ?? 0) * 100 + Number(match[3] ?? 0)
+}
+
 export function validateFixedInvestmentItems(items: FixedInvestmentItem[], foundation: ProjectFoundation): ProjectFoundationIssue[] {
   const issues: ProjectFoundationIssue[] = []
   const issue = (path: string, code: string, message: string) => issues.push({ path, severity: 'error', code, message })
@@ -222,10 +228,13 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
       issue(path + '.currencyCode', 'foreign-asset-currency-mismatch', 'A foreign-origin asset must use a currency defined as foreign in the project currency structure.')
     if (foundation.costCentres.active && (!item.costCentreId || !foundation.costCentres.items.some(centre => centre.id === item.costCentreId)))
       issue(path + '.costCentreId', 'missing-fixed-asset-cost-centre', 'Select a valid Cost Centre for this fixed investment item.')
+    if (item.assetClass === 'land' && item.depreciation.method !== 'none') issue(path + '.depreciation.method', 'land-not-depreciable', 'Land must not be assigned a depreciation method.')
     if (item.acquisitions.length === 0) issue(path + '.acquisitions', 'missing-asset-acquisition', 'At least one acquisition period is required for a fixed investment item.')
+    const acquisitionIds = item.acquisitions.map(acquisition => acquisition.id)
+    if (new Set(acquisitionIds).size !== acquisitionIds.length) issue(path + '.acquisitions', 'duplicate-asset-acquisition-id', 'Acquisition identifiers must be unique within an asset item.')
     item.acquisitions.forEach((acquisition, acquisitionIndex) => {
       const acquisitionPath = path + `.acquisitions[${acquisitionIndex}]`
-      if (!acquisition.period.trim() || !Number.isFinite(acquisition.quantity) || acquisition.quantity < 0 || !Number.isFinite(acquisition.unitPrice) || acquisition.unitPrice < 0)
+      if (!acquisition.period.trim() || !Number.isFinite(acquisition.quantity) || acquisition.quantity <= 0 || !Number.isFinite(acquisition.unitPrice) || acquisition.unitPrice < 0)
         issue(acquisitionPath, 'invalid-asset-acquisition', 'Acquisition period, quantity and unit price must be valid and non-negative.')
       if (acquisition.currencyCode.trim().toUpperCase() !== item.currencyCode.trim().toUpperCase())
         issue(acquisitionPath + '.currencyCode', 'asset-acquisition-currency-mismatch', 'Acquisition currency must match the fixed investment item currency.')
@@ -256,6 +265,15 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
         issue(salePath + '.acquisitionId', 'unknown-asset-sale-acquisition', 'An asset sale must refer to an existing acquisition.')
       if (!sale.period.trim() || !sale.currencyCode.trim() || !validCurrencyCodes.has(sale.currencyCode.trim().toUpperCase()))
         issue(salePath, 'invalid-asset-sale-period-currency', 'Asset sale requires a period and a defined currency.')
+      if (sale.market === 'local' && sale.currencyCode.trim().toUpperCase() !== foundation.currencies.localCurrencyCode.trim().toUpperCase())
+        issue(salePath + '.currencyCode', 'local-sale-currency-mismatch', 'A local-market asset sale must be denominated in the local currency.')
+      if (sale.market === 'foreign' && !foundation.currencies.foreignCurrencies.some(currency => currency.code.trim().toUpperCase() === sale.currencyCode.trim().toUpperCase()))
+        issue(salePath + '.currencyCode', 'foreign-sale-currency-mismatch', 'A foreign-market asset sale must use a defined foreign currency.')
+      const acquisition = item.acquisitions.find(row => row.id === sale.acquisitionId)
+      const acquisitionOrdinal = acquisition ? fixedInvestmentPeriodOrdinal(acquisition.period) : null
+      const saleOrdinal = fixedInvestmentPeriodOrdinal(sale.period)
+      if (acquisitionOrdinal !== null && saleOrdinal !== null && saleOrdinal < acquisitionOrdinal)
+        issue(salePath + '.period', 'asset-sale-before-acquisition', 'An asset cannot be sold before its acquisition period.')
       if (sale.priceMode === 'self-defined' && (!Number.isFinite(sale.selfDefinedPrice) || (sale.selfDefinedPrice ?? 0) < 0))
         issue(salePath + '.selfDefinedPrice', 'invalid-asset-sale-price', 'A self-defined sale price must be a non-negative number.')
     })
