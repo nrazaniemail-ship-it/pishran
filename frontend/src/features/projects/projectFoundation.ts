@@ -87,7 +87,7 @@ export function validateProjectFoundation(value: ProjectFoundation): ProjectFoun
     issues.push({ path, severity, code, message })
   const planning = value.planning
   const validIsoDate = (date: string) => {
-    const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(date)
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
     if (!match) return false
     const year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
     if (month < 1 || month > 12 || day < 1) return false
@@ -186,7 +186,7 @@ export type ProjectCalendarPeriod = {
 }
 
 function utcDateOnly(value: string): Date | null {
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(value)
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
   if (!match) return null
   const year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
   const date = new Date(Date.UTC(year, month - 1, day))
