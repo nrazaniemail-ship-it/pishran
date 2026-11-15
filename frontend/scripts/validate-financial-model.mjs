@@ -1119,4 +1119,14 @@ assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
   && fixedInvestmentPanel.includes('Sum of years digits')
   && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX') && fixedInvestmentPanel.includes('first depreciation year') && fixedInvestmentPanel.includes('Asset Depreciation Schedule Preview') && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems'),
   'Fixed investment foundation must capture acquisition periods, COMFAR depreciation conditions and asset disposals without double-counting CAPEX')
+const advancedFinanceSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+assert.ok(foundationWizard.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems')
+  && foundationWizard.includes('comfarDepreciationAssets={fixedInvestmentLifecycleInputs.assets}')
+  && foundationWizard.includes('comfarAssetSales={fixedInvestmentLifecycleInputs.sales}'),
+  'The fixed investment register must feed acquisition vintages and sale events into the project finance panel')
+assert.ok(advancedFinanceSource.includes('calculateComfarAssetLifecycle')
+  && advancedFinanceSource.includes('assetSaleSchedule')
+  && advancedFinanceSource.includes('Other income / loss')
+  && advancedFinanceSource.includes('depreciationValues'),
+  'The integrated finance panel must use COMFAR depreciation and asset sale results instead of the legacy two-method schedule when register assets are supplied')
 console.log('PASS: industry-independent project foundation schema, blank defaults, validation and wizard persistence')
