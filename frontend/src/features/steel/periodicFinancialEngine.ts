@@ -683,6 +683,7 @@ function depreciationForAnniversarySegments(
   segmentEnd: Date,
   lifeMonths: number,
   ratePercent: number | null,
+  annualOpeningBookValues: number[],
 ): number {
   let cursor = new Date(segmentStart.getTime())
   let bookValue = openingBookValue
@@ -701,9 +702,11 @@ function depreciationForAnniversarySegments(
     const segmentDays = Math.max(0, Math.round((endExclusive.getTime() - cursor.getTime()) / 86400000))
     if (segmentDays <= 0) break
     const remainingMonths = Math.max(1, lifeMonths - ageYear * 12)
+    if (annualOpeningBookValues[ageYear] == null) annualOpeningBookValues[ageYear] = bookValue
+    const annualOpeningBookValue = annualOpeningBookValues[ageYear]
     const annualDepreciation = method === 'sum-of-years-digits'
       ? depreciableBase * (lifeYears - ageYear) / sumYears
-      : Math.max(bookValue * ((ratePercent ?? 0) / 100), (bookValue - salvageValue) / (remainingMonths / 12))
+      : Math.max(annualOpeningBookValue * ((ratePercent ?? 0) / 100), (annualOpeningBookValue - salvageValue) / (remainingMonths / 12))
     const amount = Math.min(bookValue - salvageValue, annualDepreciation * segmentDays / yearDays)
     total += amount
     bookValue -= amount
@@ -798,6 +801,7 @@ export function calculatePeriodicComfarAssetLifecycle(
       continue
     }
     let bookValue=0
+    const annualOpeningBookValues:number[]=[]
     for(let index=0;index<periods.length;index++){
       const period=periods[index]
       const periodStart=parseIsoDateUtc(period.startDate)!
@@ -822,7 +826,7 @@ export function calculatePeriodicComfarAssetLifecycle(
             depreciation=Math.min(bookValue-salvageValue,depreciableBase*inclusiveDays(activeStart,effectiveEnd)/totalLifeDays)
           } else {
             depreciation=depreciationForAnniversarySegments(asset.method,bookValue,salvageValue,depreciableBase,
-              depreciationStartDate,lifeEndExclusive,activeStart,effectiveEnd,lifeMonths,asset.ratePercent)
+              depreciationStartDate,lifeEndExclusive,activeStart,effectiveEnd,lifeMonths,asset.ratePercent,annualOpeningBookValues)
             depreciation=Math.min(bookValue-salvageValue,depreciation)
           }
           bookValue=Math.max(salvageValue,bookValue-depreciation)
