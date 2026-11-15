@@ -59,7 +59,7 @@ Do not add capitalised interest to fixed CAPEX. COMFAR's financial cash-flow rul
 - Maintenance: **374,760**
 - Labour: **650,053**
 - Labour overhead: **130,011**
-- Depreciation in OPEX sheet: **1,580,327** (the COMFAR summary schedule displays year-dependent depreciation; do not force one annual figure across all periods)
+- Depreciation in OPEX sheet: **1,580,327** (the COMFAR detailed schedule reports **1,432,554.34** in 1405, **1,425,537.64** in 1408 and **1,365,962.59** in 1409; the asset-by-asset commissioning/start dates must be reconciled rather than forcing the OPEX full-year total into every period)
 - Coil sales: **61,400,000**
 - Scrap/by-product sales: **859,600**
 - Total sales at full capacity: **62,259,600**
@@ -106,7 +106,7 @@ The 135-page COMFAR output identifies a two-year construction phase (1403–1404
 | Dynamic payback | 5.02 years |
 | Valuation date | 12/1404 |
 
-The summary's tax line implies an effective tax burden of approximately 5% in the first and reference years, and 25% in the final year. This is not enough to infer the configured tax rate or allowance mechanics; read the annual tax conditions and allowances before attempting exact reconciliation.
+The summary's tax line implies an effective tax burden of approximately 5% in the first and reference years, and 25% in the final year. This is not enough to infer the configured tax rate or allowance mechanics; read the annual tax conditions and allowances before attempting exact reconciliation. The COMFAR detailed production-cost schedule reports 1405 operating costs of 30,534,338.52, while the summary sheet reports 30,130,083.97 for the first year; this 404,254.55 difference also needs a schedule-level bridge. The report's working-capital schedule starts with 3,309,144.53 in 1405, then records increases of 409,216.09, 441,167.49 and 441,167.49, followed by a release of 5,325.23 in 1409, reaching the full-capacity requirement of 4,595,370.36.
 
 ## 5. Conflicts that must remain visible
 
@@ -115,7 +115,9 @@ The summary's tax line implies an effective tax burden of approximately 5% in th
 3. **Tax:** the workbook narrative says 25%; COMFAR summary effective tax is about 5% in first/reference years and 25% in the last year. Verify annual tax conditions and allowances.
 4. **Interest:** OPEX general assumptions state 23%; the detailed repayment schedule states 26% nominal, with monthly rate 2.1667%, effective annual rate 29.3334% and quarterly rate 7.33335%. The schedule uses 20 quarterly annuity instalments over five years. Annual-rate approximation is not exact.
 5. **Depreciation basis:** the CAPEX fixed-investment summary lists infrastructure at 1,707,981.40, while the OPEX depreciation sheet uses 1,423,564.00. The difference, 284,417.40, requires asset-level reconciliation.
-6. **Marketing data age:** the competitor/slab data are historical and must be refreshed before an investment decision.
+6. **Depreciation timing and scrap:** OPEX full-year depreciation totals 1,580,327, but COMFAR's first-year detailed schedule is 1,432,554.34. OPEX row 9 assigns zero scrap to the 879,191 cost line and row 10 assigns 10% scrap to 239,826; reconcile these classifications to the CAPEX pre-production notes and actual commissioning dates.
+7. **First-year production costs:** COMFAR summary and detailed production-cost schedules differ by 404,254.55 for 1405; bridge the source lines before validating unit cost.
+8. **Marketing data age:** the competitor/slab data are historical and must be refreshed before an investment decision.
 
 ## 6. COMFAR modelling requirements for Pishran
 
