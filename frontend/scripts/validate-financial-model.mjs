@@ -613,6 +613,48 @@ near(assetSchedule[0].depreciation, 0, 1e-9, 'Asset depreciation before in-servi
 near(assetSchedule[1].depreciation, 300, 1e-9, 'Asset-by-asset straight-line depreciation')
 near(assetSchedule[4].depreciation, 0, 1e-9, 'Depreciation ends after useful life')
 near(assetSchedule[3].closingBookValue, 600, 1e-9, 'Asset book value at residual value')
+
+const comfarLinearZero = engine.calculateComfarAssetDepreciationSchedule([{
+  id:'linear-zero',name:'Linear zero',originalValue:1000,initialBookValue:1000,scrapPercent:10,
+  lengthYears:5,lengthMonths:0,ratePercent:20,method:'linear-to-zero',
+  acquisitionPeriod:1,startingAtPeriod:2,firstDepreciationMonths:6
+}],7)
+assert.equal(comfarLinearZero.valid,true,'COMFAR Linear to zero partial first-year schedule must validate')
+near(comfarLinearZero.periods[0].depreciation,0,1e-9,'Depreciation must not start before Starting at')
+near(comfarLinearZero.periods[1].depreciation,100,1e-9,'Linear to zero first partial-year depreciation')
+near(comfarLinearZero.periods[5].closingBookValue,100,1e-9,'Linear to zero must stop at salvage value')
+near(comfarLinearZero.periods[6].depreciation,0,1e-9,'Linear to zero must not depreciate after reaching salvage')
+const comfarLinearScrap = engine.calculateComfarAssetDepreciationSchedule([{
+  id:'linear-scrap',name:'Linear scrap',originalValue:1000,initialBookValue:1000,scrapPercent:10,
+  lengthYears:5,ratePercent:20,method:'linear-to-scrap',
+  acquisitionPeriod:2,startingAtPeriod:1,firstDepreciationMonths:12
+}],7)
+near(comfarLinearScrap.periods[2].depreciation,180,1e-9,'Linear to scrap annual depreciation')
+near(comfarLinearScrap.periods[6].closingBookValue,100,1e-9,'Linear to scrap must finish at salvage')
+const comfarAccelerated = engine.calculateComfarAssetDepreciationSchedule([{
+  id:'accelerated',name:'Accelerated',originalValue:1000,initialBookValue:1000,scrapPercent:10,
+  lengthYears:5,ratePercent:30,method:'accelerated',
+  acquisitionPeriod:1,startingAtPeriod:1,firstDepreciationMonths:12
+}],7)
+assert.equal(comfarAccelerated.periods[1].assets[0].methodApplied,'accelerated','Accelerated method must use declining balance while it exceeds linear-to-scrap')
+assert.equal(comfarAccelerated.periods[3].assets[0].methodApplied,'linear-to-scrap','Accelerated method must switch automatically when linear-to-scrap is greater')
+near(comfarAccelerated.periods[6].closingBookValue,100,1e-8,'Accelerated depreciation must stop at salvage')
+const comfarSumDigits = engine.calculateComfarAssetDepreciationSchedule([{
+  id:'sum-digits',name:'Sum digits',originalValue:1000,initialBookValue:1000,scrapPercent:10,
+  lengthYears:5,method:'sum-of-years-digits',
+  acquisitionPeriod:1,startingAtPeriod:1,firstDepreciationMonths:12
+}],5)
+near(comfarSumDigits.periods[0].depreciation,300,1e-9,'Sum of years digits first-year depreciation')
+near(comfarSumDigits.periods[4].depreciation,60,1e-9,'Sum of years digits final-year depreciation')
+assert.equal(engine.resolveComfarDepreciationStartPeriod(1,3),3,'Assets acquired before Starting at must commence at Starting at')
+assert.equal(engine.resolveComfarDepreciationStartPeriod(3,3),4,'Assets acquired after Starting at must commence in the following period')
+const unsupportedSumPartial = engine.calculateComfarAssetDepreciationSchedule([{
+  id:'sum-partial',name:'Sum digits partial',originalValue:1000,initialBookValue:1000,scrapPercent:10,
+  lengthYears:5,method:'sum-of-years-digits',
+  acquisitionPeriod:1,startingAtPeriod:1,firstDepreciationMonths:6
+}],5)
+assert.equal(unsupportedSumPartial.valid,false,'Sum of years digits partial-year schedule must fail closed until its month-overlap formula is independently benchmarked')
+
 const statements = engine.buildThreeFinancialStatements(integrated.years)
 assert.equal(statements.length, integrated.years.length, 'Three statements must cover the full model horizon')
 assert.ok(statements.every(row => row.balanceSheet.reconciled), 'Balance sheet must reconcile without a plug for the integrated reference case')
