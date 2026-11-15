@@ -600,3 +600,12 @@ input,select,textarea{color:var(--text)}
 .primary{background:var(--accent);color:var(--accent-text)}
 .primary:hover{background:color-mix(in srgb,var(--accent) 86%,var(--text));color:var(--accent-text)}
 :root[data-theme="dark"] .primary{background:var(--accent);color:var(--accent-text)}
+
+
+/* Persistent EN / FA language switch in the application header */
+.language-switch{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:38px;padding:0 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--navy);font-size:12px;font-weight:800;letter-spacing:.4px;cursor:pointer}
+.language-switch:hover{background:var(--surface-soft);border-color:var(--focus)}
+.language-switch:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 38%,transparent);outline-offset:2px}
+:root[lang="en"] body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+:root[lang="en"] .main-nav{direction:ltr}
+:root[lang="en"] .topbar,:root[lang="en"] .top-actions{direction:ltr}
