@@ -20,6 +20,19 @@ export default function SettingsView({ settings, storageInfo, onChange, onRestor
         <div className="settings-card-title"><span className="settings-symbol">◐</span><div><b>{en ? 'Display & Appearance' : 'نمایش و ظاهر'}</b><small>{en ? 'App theme and accent colour' : 'پوسته و رنگ محیط برنامه'}</small></div></div>
         <label className="setting-row"><span>{en ? 'Display mode' : 'حالت نمایش'}</span><select value={settings.themeMode} onChange={e => update('themeMode', e.target.value as AppSettings['themeMode'])}><option value="light">{en ? 'Light' : 'روشن'}</option><option value="dark">{en ? 'Dark' : 'تیره'}</option><option value="system">{en ? 'System' : 'مطابق دستگاه'}</option></select></label>
         <label className="setting-row"><span>{en ? 'Accent colour' : 'رنگ اصلی'}</span><select value={settings.accentTheme} onChange={e => update('accentTheme', e.target.value as AppSettings['accentTheme'])}><option value="navy">{en ? 'Soft teal (default)' : 'سبزآبی ملایم (پیش‌فرض)'}</option><option value="emerald">{en ? 'Sage green' : 'سبز مریم‌گلی'}</option><option value="gold">{en ? 'Warm sand' : 'شن روشن'}</option><option value="graphite">{en ? 'Slate grey' : 'خاکستری سنگی'}</option></select></label>
+        <label className="setting-row"><span>{en ? 'Font directory' : 'انتخاب فونت'}</span><select value={settings.fontTheme ?? 'vazirmatn'} onChange={e => update('fontTheme', e.target.value as AppSettings['fontTheme'])}>
+          <option value="vazirmatn">Vazirmatn — وزیرمتن</option>
+          <option value="tahoma">Tahoma — تاهوما</option>
+          <option value="arial">Arial — آریال</option>
+          <option value="system">{en ? 'System default' : 'فونت پیش‌فرض دستگاه'}</option>
+          <option value="noto">Noto Sans Arabic — نوتو نسخ عربی</option>
+          <option value="sahel">Sahel — ساحل</option>
+          <option value="shabnam">Shabnam — شبنم</option>
+          <option value="samim">Samim — صمیم</option>
+          <option value="serif">{en ? 'Serif' : 'سریف (با دندانه)'}</option>
+          <option value="mono">{en ? 'Monospace' : 'تک‌فاصله (Monospace)'}</option>
+        </select></label>
+        <p className="font-directory-note">{en ? 'The list includes common web and system font families. A font is displayed when it is available on the device or loaded by the browser.' : 'این فهرست خانواده‌های رایج فونت وب و سیستم را شامل می‌شود؛ نمایش هر فونت به موجود بودن آن روی دستگاه یا بارگذاری آن در مرورگر بستگی دارد.'}</p>
         <label className="setting-row"><span>{en ? 'Background palette' : 'رنگ زمینه'}</span><select value={settings.backgroundTheme ?? 'bluegray'} onChange={e => update('backgroundTheme', e.target.value as AppSettings['backgroundTheme'])}>
           <option value="bluegray">{en ? 'Blue grey' : 'آبی خاکستری'}</option>
           <option value="mist">{en ? 'Cool mist' : 'مه‌آلود روشن'}</option>
