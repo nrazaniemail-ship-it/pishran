@@ -4,9 +4,9 @@ import { localStore } from '../../core/storage/localStore'
 import { listFinancialMethods } from './financialMethodDirectory'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
-  calculateFinancialScenarios, buildThreeFinancialStatements, calculateComfarAssetLifecycle,
+  calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, calculateComfarAssetLifecycle,
   type IntegratedFinanceInput, type IntegratedFinanceResult, type IntegratedLoanInput, type DepreciationAssetInput,
-  type ComfarDepreciationAssetInput, type ComfarAssetSaleInput,
+  type ComfarDepreciationAssetInput, type ComfarAssetSaleInput, type OneWaySensitivityAnalysis,
 } from '../steel/financialModel'
 
 type CapexRow = { id: string; name: string; amount: number }
@@ -39,6 +39,7 @@ type Props = {
   mirrFinanceRate?: number
   mirrReinvestmentRate?: number
   onResult?: (result:IntegratedFinanceResult)=>void
+  onSensitivity?: (analysis:OneWaySensitivityAnalysis)=>void
   equityPercent: number
   costOfEquity: number
   costOfDebt: number
@@ -152,6 +153,8 @@ export default function AdvancedFinancePanel(props: Props) {
   }
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
+  const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
+  useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
