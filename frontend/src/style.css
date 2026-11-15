@@ -1365,3 +1365,48 @@ input,select,textarea{color:var(--text)}
 :root[data-font="serif"]{font-family:Georgia,'Times New Roman',serif}
 :root[data-font="mono"]{font-family:ui-monospace,'Courier New',monospace}
 .font-directory-note{color:var(--muted);font-size:11px;line-height:1.9;margin:4px 2px 12px}
+
+/* Extend the top navigation frame to contain the Pishran brand, menu and language switch. */
+@media(min-width:901px){
+  .topbar{
+    position:sticky;
+    top:0;
+    z-index:1100;
+    min-height:76px;
+    padding:10px 14px 10px 68px;
+    border:1px solid var(--workspace-border,var(--line));
+    border-radius:16px;
+    margin-top:10px;
+    background:color-mix(in srgb,var(--workspace-page,var(--page)) 94%,white);
+    box-shadow:0 5px 16px rgba(23,34,53,.06);
+  }
+  .topbar .brand{flex:0 0 auto;margin:0}
+  .main-nav{
+    flex:1 1 auto;
+    min-width:0;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    padding:4px 0;
+  }
+  .page-language-switch{
+    position:absolute;
+    left:12px;
+    top:50%;
+    transform:translateY(-50%);
+    z-index:2;
+  }
+}
+@media(max-width:900px){
+  .topbar{
+    border:1px solid var(--workspace-border,var(--line));
+    border-radius:14px;
+    padding:10px;
+    margin-top:8px;
+  }
+  .main-nav{
+    background:transparent;
+    border:0;
+    box-shadow:none;
+  }
+}
