@@ -24,6 +24,8 @@ type Props = {
   mirrEquity: number | null
   sensitivity: OneWaySensitivityAnalysis | null
   periodicResult: PeriodicProjectFinanceResult | null
+  periodicAssetScheduleVerified?: boolean
+  periodicAssetWarnings?: string[]
 }
 
 const referenceRows: [string,string,string,string][] = [
@@ -195,6 +197,8 @@ export default function ProjectReportVisuals(props: Props) {
     </div>
     {props.periodicResult?.valid&&<div className="fw-card">
       <h4>{t('خروجی‌های مدل مالی دوره‌ای','Periodic Financial Model Outputs',language)}</h4>
+      <p className="fw-hint">{props.periodicAssetScheduleVerified?t('CAPEX، هزینه‌های قبل از بهره‌برداری، استهلاک دارایی‌ها و فروش‌ها از دفتر دارایی دوره‌ای و تاریخ‌های دقیق تغذیه شده‌اند.','CAPEX, pre-production cost, asset depreciation and disposals are sourced from the date-specific periodic asset register.'):t('برای این گزارش، برنامه دارایی دوره‌ای به‌طور کامل تأیید نشده است؛ CAPEX و استهلاک از برنامه سالانه به دوره‌ها تخصیص یافته‌اند.','The periodic asset register is not fully verified for this report; CAPEX and depreciation are allocated from annual schedules.')}</p>
+      {props.periodicAssetWarnings?.length>0&&<ul className="fw-checklist">{props.periodicAssetWarnings.map((warning,i)=><li key={'asset-report-'+i}>{warning}</li>)}</ul>}
       <div className="fw-grid">
         <div className="fw-result">NPV · {fmtValue(props.periodicResult.npvProject)} {project.currency}</div>
         <div className="fw-result">IRR · {props.periodicResult.irrProject==null?'—':fmtValue(props.periodicResult.irrProject)+'%'}</div>
