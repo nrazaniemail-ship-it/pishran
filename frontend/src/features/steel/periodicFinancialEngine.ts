@@ -156,6 +156,8 @@ export type PeriodicLoanInput = {
   gracePeriods: number
   termPeriods: number
   capitalizeInterest: boolean
+  rateConversion?: 'effective-annual-by-actual-days' | 'effective-annual-divided-by-frequency'
+  periodsPerYear?: 1 | 2 | 4 | 12
 }
 
 export type PeriodicLoanRow = {
@@ -200,6 +202,12 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Unsupported periodic repayment method.')
   if (typeof input.capitalizeInterest !== 'boolean')
     issues.push('Capitalized-interest option must be explicitly true or false.')
+  const rateConversion = input.rateConversion ?? 'effective-annual-by-actual-days'
+  if (!['effective-annual-by-actual-days', 'effective-annual-divided-by-frequency'].includes(rateConversion))
+    issues.push('Unsupported period interest-rate conversion convention.')
+  if (rateConversion === 'effective-annual-divided-by-frequency' &&
+      ![1, 2, 4, 12].includes(input.periodsPerYear ?? 0))
+    issues.push('Frequency-based rate conversion requires 1, 2, 4 or 12 periods per year.')
   if (input.drawdowns.some(value => !validFinite(value) || value < 0))
     issues.push('Every period drawdown must be finite and non-negative.')
   if (input.drawdowns.slice(Math.max(0, firstPrincipalIndex)).some(value => value > 0))
@@ -219,8 +227,15 @@ export function calculatePeriodicLoanSchedule(
   }
   if (issues.length) return { rows: [], valid: false, issues }
 
-  const periodRates = periods.map(period =>
-    annualEffectiveRateToPeriodRate(input.annualRatePercent, period.days, dayCountBasis) / 100)
+  const periodRates = periods.map(period => {
+    if (rateConversion === 'effective-annual-divided-by-frequency') {
+      const periodsPerYear = input.periodsPerYear as 1 | 2 | 4 | 12
+      const fullPeriodRate = input.annualRatePercent / periodsPerYear
+      const partialFactor = period.partial ? period.days / (dayCountBasis / periodsPerYear) : 1
+      return fullPeriodRate * partialFactor / 100
+    }
+    return annualEffectiveRateToPeriodRate(input.annualRatePercent, period.days, dayCountBasis) / 100
+  })
   let balance = 0
   let annuityPayment: number | null = null
   let equalPrincipalAmount: number | null = null
