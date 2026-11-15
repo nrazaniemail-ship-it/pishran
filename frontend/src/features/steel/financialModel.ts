@@ -849,6 +849,111 @@ export function calculateComfarAssetDepreciationSchedule(
   return { valid: warnings.length === 0, warnings, periods }
 }
 
+
+export type ComfarAssetSaleInput = {
+  id: string
+  assetId: string
+  period: number
+  priceMode: 'book-value' | 'self-defined'
+  selfDefinedPrice?: number
+  exchangeRateToLocal?: number
+}
+
+export type ComfarAssetSaleResult = {
+  id: string
+  assetId: string
+  period: number
+  bookValueAtSale: number
+  saleProceeds: number
+  returnOfCapital: number
+  otherIncomeLoss: number
+}
+
+export type ComfarAssetLifecycle = {
+  valid: boolean
+  warnings: string[]
+  depreciation: ComfarDepreciationSchedule
+  sales: ComfarAssetSaleResult[]
+}
+
+/**
+ * COMFAR XI.H–XI.I asset lifecycle.
+ * Depreciation is charged through the sale balance date. The remaining book
+ * value is removed from fixed assets at disposal; proceeds up to book value
+ * are return of capital and the difference is Other income / loss.
+ */
+export function calculateComfarAssetLifecycle(
+  assets: ComfarDepreciationAssetInput[],
+  sales: ComfarAssetSaleInput[],
+  periodCount: number,
+): ComfarAssetLifecycle {
+  const depreciation = calculateComfarAssetDepreciationSchedule(assets, periodCount)
+  const warnings = [...depreciation.warnings]
+  const results: ComfarAssetSaleResult[] = []
+  const seenAssets = new Set<string>()
+  const saleByAsset = new Map<string, ComfarAssetSaleResult>()
+  for (const sale of sales) {
+    const asset = assets.find(item => item.id === sale.assetId)
+    if (!asset) {
+      warnings.push(`Sale ${sale.id}: linked acquisition vintage was not found.`)
+      continue
+    }
+    if (seenAssets.has(sale.assetId)) {
+      warnings.push(`${asset.name}: more than one sale is defined for the same acquisition vintage.`)
+      continue
+    }
+    seenAssets.add(sale.assetId)
+    if (!Number.isInteger(sale.period) || sale.period < Math.max(1, asset.acquisitionPeriod)
+      || sale.period > depreciation.periods.length) {
+      warnings.push(`${asset.name}: sale period must fall within the project horizon and after acquisition.`)
+      continue
+    }
+    if (sale.priceMode === 'self-defined' && (!Number.isFinite(sale.selfDefinedPrice)
+      || (sale.selfDefinedPrice ?? -1) < 0
+      || !Number.isFinite(sale.exchangeRateToLocal) || (sale.exchangeRateToLocal ?? 0) <= 0)) {
+      warnings.push(`${asset.name}: a non-negative sale price and positive exchange rate to local currency are required.`)
+      continue
+    }
+    const periodRow = depreciation.periods[sale.period - 1]
+    const assetRow = periodRow.assets.find(row => row.id === sale.assetId)
+    if (!assetRow) {
+      warnings.push(`${asset.name}: depreciation book value is unavailable in the sale period.`)
+      continue
+    }
+    const bookValueAtSale = assetRow.closingBookValue
+    const saleProceeds = sale.priceMode === 'book-value'
+      ? bookValueAtSale
+      : (sale.selfDefinedPrice ?? 0) * (sale.exchangeRateToLocal ?? 1)
+    const result: ComfarAssetSaleResult = {
+      id: sale.id,
+      assetId: sale.assetId,
+      period: sale.period,
+      bookValueAtSale,
+      saleProceeds,
+      returnOfCapital: bookValueAtSale,
+      otherIncomeLoss: saleProceeds - bookValueAtSale,
+    }
+    results.push(result)
+    saleByAsset.set(sale.assetId, result)
+  }
+
+  if (results.length > 0) {
+    for (const period of depreciation.periods) {
+      for (const row of period.assets) {
+        const sale = saleByAsset.get(row.id)
+        if (sale && period.period >= sale.period) {
+          row.depreciation = period.period === sale.period ? row.depreciation : 0
+          row.closingBookValue = 0
+          if (period.period > sale.period) row.methodApplied = null
+        }
+      }
+      period.depreciation = period.assets.reduce((sum, row) => sum + row.depreciation, 0)
+      period.closingBookValue = period.assets.reduce((sum, row) => sum + row.closingBookValue, 0)
+    }
+  }
+  return { valid: warnings.length === 0, warnings, depreciation, sales: results }
+}
+
 export type FinancialStatementYear = {
   year: number
   incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
