@@ -255,4 +255,7 @@ assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
 assert.ok(projectFoundationPanelSource.includes('Day-count Basis')
   && projectFoundationPanelSource.includes('Cash Flow Timing for Discounting'),
   'Project foundation must require a day-count basis and cash-flow timing before periodic valuation')
+assert.ok(advancedFinanceSource.includes('Values in the period tax schedule override the annual rate.')
+  && !advancedFinanceSource.includes('Monthly/quarterly calculation will be enabled after the period engine is complete'),
+  'Tax UI must explain period-specific overrides rather than claim monthly/quarterly support is unavailable')
 console.log('PASS: integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
