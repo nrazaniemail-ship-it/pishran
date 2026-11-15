@@ -18,7 +18,7 @@ export default function SettingsView({ settings, storageInfo, onChange, onRestor
       <article className="settings-card">
         <div className="settings-card-title"><span className="settings-symbol">◐</span><div><b>نمایش و ظاهر</b><small>پوسته و رنگ محیط برنامه</small></div></div>
         <label className="setting-row"><span>حالت نمایش</span><select value={settings.themeMode} onChange={e => update('themeMode', e.target.value as AppSettings['themeMode'])}><option value="light">روشن</option><option value="dark">تیره</option><option value="system">مطابق دستگاه</option></select></label>
-        <label className="setting-row"><span>رنگ اصلی</span><select value={settings.accentTheme} onChange={e => update('accentTheme', e.target.value as AppSettings['accentTheme'])}><option value="navy">آبی Word (پیش‌فرض)</option><option value="emerald">سبز Excel</option><option value="gold">نارنجی PowerPoint</option><option value="graphite">بنفش OneNote</option></select></label>
+        <label className="setting-row"><span>رنگ اصلی</span><select value={settings.accentTheme} onChange={e => update('accentTheme', e.target.value as AppSettings['accentTheme'])}><option value="navy">سبزآبی ملایم (پیش‌فرض)</option><option value="emerald">سبز مریم‌گلی</option><option value="gold">شن روشن</option><option value="graphite">خاکستری سنگی</option></select></label>
         <label className="setting-row"><span>چیدمان فشرده</span><input type="checkbox" checked={settings.compactMode} onChange={e => update('compactMode', e.target.checked)}/></label>
       </article>
 
