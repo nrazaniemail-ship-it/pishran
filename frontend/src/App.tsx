@@ -110,7 +110,7 @@ export default function App() {
         <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
         <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('settings')}><Settings size={17}/> {isEn ? "Settings" : "تنظیمات"}</button>
       </nav>
-      <div className="top-actions"><span className="connection"><i/> {isEn ? "Local storage active" : "ذخیره محلی فعال"}</span></div>
+      <div className="top-actions"></div>
     </header>
 
     {page === 'dashboard' && <>
