@@ -620,6 +620,31 @@ near(assetSchedule[3].closingBookValue, 600, 1e-9, 'Asset book value at residual
 
 
 
+
+const startingAssetBase = {
+  id:'opening-machine',name:'Existing machine',grossCost:1000,accumulatedDepreciation:400,
+  remainingLife:6,opportunityValue:700,residualValue:100,commissioningDate:'1400-01-01',
+  depreciationMethod:'linear-scrap',depreciationRatePercent:10,depreciationLengthYears:6,
+  depreciationLengthMonths:0,firstDepreciationMonths:12,salvagePercent:10,
+  depreciationStartDate:'1400-01-01',costCentre:'',foreignSharePercent:20,status:'active'
+}
+assert.equal(foundation.validateStartingFixedAssetBalances([startingAssetBase],foundation.createBlankProjectFoundation()).length,0,
+  'A complete existing fixed asset opening balance must pass foundation validation')
+const invalidStartingAsset = foundation.validateStartingFixedAssetBalances([{
+  ...startingAssetBase,accumulatedDepreciation:1200,remainingLife:0,foreignSharePercent:120,
+  commissioningDate:'1400-13-40',depreciationStartDate:'1399-01-01'
+}],foundation.createBlankProjectFoundation())
+assert.ok(invalidStartingAsset.some(issue=>issue.code==='invalid-starting-asset-accumulated-depreciation'),
+  'Accumulated depreciation cannot exceed gross cost')
+assert.ok(invalidStartingAsset.some(issue=>issue.code==='missing-starting-asset-remaining-life'),
+  'Active depreciable assets require remaining useful life')
+assert.ok(invalidStartingAsset.some(issue=>issue.code==='invalid-starting-asset-foreign-share'),
+  'Foreign currency component percentage must remain within 0-100')
+assert.ok(invalidStartingAsset.some(issue=>issue.code==='invalid-starting-asset-date'),
+  'Starting asset dates must use valid ISO date structure')
+assert.ok(invalidStartingAsset.some(issue=>issue.code==='depreciation-before-commissioning'),
+  'Depreciation cannot begin before commissioning')
+
 const duplicateSaleIssues = foundation.validateFixedInvestmentItems([{
   ...registerAsset,
   sales:[
