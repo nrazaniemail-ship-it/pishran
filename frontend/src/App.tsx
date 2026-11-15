@@ -3,7 +3,7 @@ import ReactECharts from 'echarts-for-react'
 import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Layers3, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
-import { createProject, deleteProject, ensureWorkbookProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
+import { createProject, deleteProject, removeSampleProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
 import ProjectsView from './features/projects/ProjectsView'
 import SettingsView from './features/settings/SettingsView'
 import RollingWorkspace from './features/steel/RollingWorkspace'
@@ -39,7 +39,7 @@ export default function App() {
   useEffect(() => {
     let alive = true
     Promise.all([localStore.remove('sample:plate-250k:v1'), localStore.remove('rolling:sample:v2')])
-      .then(() => Promise.all([loadSettings(), ensureWorkbookProjects(), localStore.info()]))
+      .then(() => Promise.all([loadSettings(), removeSampleProjects(), localStore.info()]))
       .then(([nextSettings, nextProjects, info]) => {
         if (!alive) return
         setSettings(nextSettings)
@@ -101,7 +101,7 @@ export default function App() {
   return <main className={`app-shell app-page-${page}`} dir={isEn?"ltr":"rtl"}>
     <BackupScheduler/>
     <header className="topbar">
-      <button className="brand" onClick={() => setPage('dashboard')} aria-label={isEn?"Pishran home":"صفحه اصلی پیشران"}><div className="brandmark">{isEn ? "P" : "پ"}</div><div><b>{isEn ? "Pishran" : "پیشران"}</b><small>INTELLIGENT FEASIBILITY PLATFORM</small></div></button>
+      <div className="brand"><button className="language-switch brand-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button><button className="brand-title" type="button" onClick={() => setPage('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b><small>INTELLIGENT FEASIBILITY PLATFORM</small></button></div>
       <nav className="main-nav" aria-label={isEn?"Primary navigation":"ناوبری اصلی"}>
         <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
@@ -109,7 +109,7 @@ export default function App() {
         <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
         <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('settings')}><Settings size={17}/> {isEn ? "Settings" : "تنظیمات"}</button>
       </nav>
-      <div className="top-actions"><span className="connection"><i/> {isEn ? "Local storage active" : "ذخیره محلی فعال"}</span><button className="language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button></div>
+      <div className="top-actions"><span className="connection"><i/> {isEn ? "Local storage active" : "ذخیره محلی فعال"}</span></div>
     </header>
 
     {page === 'dashboard' && <>

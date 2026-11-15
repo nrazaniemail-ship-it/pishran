@@ -113,7 +113,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const totalBalanceChecks=statements.filter(r=>r.balanceSheet.reconciled).length
 
   return <div className="fw-card" style={{marginTop:18}}>
-    <h3>{t('موتور مالی یکپارچه و کنترل COMFAR','Integrated Financial Engine & COMFAR Controls')}</h3>
+    <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
     <p className="fw-lead">{t('برنامه وام، CFADS، سرمایه در گردش دوره‌ای، مالیات با انتقال زیان، استهلاک دارایی‌به‌دارایی، سناریوها و سه صورت مالی در یک مدل مشترک محاسبه می‌شوند. ارقام این بخش از مفروضات همین پروژه استفاده می‌کنند.','Loan schedules, CFADS, periodic working capital, tax-loss carry-forward, asset-level depreciation, scenarios and three financial statements are calculated in one shared model using this project’s assumptions.')}</p>
 
     <h4>{t('۱. برنامه برداشت و بازپرداخت وام','1. Loan Drawdown & Repayment Schedule')}</h4>

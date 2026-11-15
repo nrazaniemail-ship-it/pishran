@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ArrowRight, Factory, Layers3, AlertTriangle, Calculator } from 'lucide-react'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
 import ProcessPlantWorkspace from './ProcessPlantWorkspace'
-import { INTEGRATED_COMFAR_REFERENCE as benchmark } from './integratedProjectBenchmark'
+import { INTEGRATED_reference_REFERENCE as benchmark } from './integratedProjectBenchmark'
 import { WORKBOOK_RECONCILIATION_FLAGS } from './workbookReconciliation'
 
 type Unit = 'dri' | 'steelmaking'
@@ -33,7 +33,7 @@ export default function IntegratedSteelComplexWorkspace({ project, onBack, langu
     <ProcessPlantWorkspace language={language} project={project} plantType={unit} onBack={onBack}/>
     <section className="analytics" style={{ marginTop: 24 }}>
       <article className="chart-card">
-        <div className="card-heading"><div><span className="eyebrow">COMFAR CONTROL TOTALS</span><h3>{t('مبنای تطبیق گزارش کامفار','COMFAR Report Reconciliation Basis')}</h3></div><span className="tag">{t('یورو','EUR')}</span></div>
+        <div className="card-heading"><div><span className="eyebrow">Reference CONTROL TOTALS</span><h3>{t('مبنای تطبیق گزارش مرجع مالی','Reference Report Reconciliation Basis')}</h3></div><span className="tag">{t('یورو','EUR')}</span></div>
         <div className="kpis">
           <div className="kpi"><span>{t('سرمایه‌گذاری کل','Total Investment')}</span><b>{money(benchmark.totalInvestment)}</b></div>
           <div className="kpi"><span>{t('کل منابع تأمین مالی','Total Funding Sources')}</span><b>{money(benchmark.totalSources)}</b></div>
@@ -45,8 +45,8 @@ export default function IntegratedSteelComplexWorkspace({ project, onBack, langu
       <article className="insight-card">
         <div className="module-icon gold"><Calculator size={22}/></div><span className="eyebrow">AUDIT FLAGS</span><h3>{t('موارد نیازمند اصلاح/تأیید','Items Requiring Correction / Confirmation')}</h3>
         <p><AlertTriangle size={15}/> {t('شکاف منابع','Funding Gap')} و مصارف برابر {money(benchmark.fundingGap)} {t('یورو','EUR')} است؛ پیش از تأیید مدل باید منبع پوشش آن مشخص شود.</p>
-        <p>{t('هزینه کارخانه‌ای کامفار، استهلاک را جداگانه گزارش می‌کند؛ مقایسه با OPEX اکسل باید بر مبنای هزینه نقدی و سپس استهلاک جداگانه انجام شود.','COMFAR reports depreciation separately from factory cost. Compare Excel OPEX on a cash-cost basis, then reconcile depreciation separately.')}</p>
-        <p>{t('نرخ مالیات دوره اول در خروجی کامفار ۵٪ و نرخ سال مرجع ۲۵٪ است؛ اعمال نرخ ثابت بدون بازسازی معافیت‌ها مجاز نیست.','The COMFAR output shows a 5% tax rate in the first period and 25% in the reference year. Do not apply a flat rate without reconstructing tax holidays.')}</p>
+        <p>{t('هزینه کارخانه‌ای مرجع مالی، استهلاک را جداگانه گزارش می‌کند؛ مقایسه با OPEX اکسل باید بر مبنای هزینه نقدی و سپس استهلاک جداگانه انجام شود.','Reference reports depreciation separately from factory cost. Compare Excel OPEX on a cash-cost basis, then reconcile depreciation separately.')}</p>
+        <p>{t('نرخ مالیات دوره اول در خروجی مرجع مالی ۵٪ و نرخ سال مرجع ۲۵٪ است؛ اعمال نرخ ثابت بدون بازسازی معافیت‌ها مجاز نیست.','The Reference output shows a 5% tax rate in the first period and 25% in the reference year. Do not apply a flat rate without reconstructing tax holidays.')}</p>
         <p>{t('این ارقام «مبنای کنترل گزارش» هستند، نه جایگزین مدل محاسباتی و نه تأیید صحت مفروضات مهندسی.','These figures are report-control benchmarks, not a replacement for the calculation model or confirmation of engineering assumptions.')}</p>
         {WORKBOOK_RECONCILIATION_FLAGS.slice(0,3).map((flag,index)=><p key={index}><AlertTriangle size={15}/> {flag}</p>) }
       </article>
