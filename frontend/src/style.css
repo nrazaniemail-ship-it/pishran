@@ -942,3 +942,103 @@ input,select,textarea{color:var(--text)}
   .project-form,.fw-content,.fw-card,.steel-chain-panel,.steel-stage-detail,.steel-integrations{border-radius:12px}
 }
 /* Keep dark mode's existing palette and contrast rules unchanged. */
+
+
+/* Warm beige workspace surfaces; reserve pure white for editable values. */
+:root:not([data-theme="dark"]){
+  --page:#f4ecdf;
+  --surface:#f8f2e8;
+  --line:#e6dac8;
+  --muted:#7c756b;
+  --text:#3d352c;
+}
+:root:not([data-theme="dark"]) body,
+:root:not([data-theme="dark"]) .app-shell{
+  background:#f4ecdf;
+}
+:root:not([data-theme="dark"]) .topbar{
+  background:color-mix(in srgb,#f4ecdf 95%,white);
+  border-color:#e6dac8;
+}
+:root:not([data-theme="dark"]) .main-nav,
+:root:not([data-theme="dark"]) .kpi,
+:root:not([data-theme="dark"]) .module,
+:root:not([data-theme="dark"]) .chart-card,
+:root:not([data-theme="dark"]) .insight-card,
+:root:not([data-theme="dark"]) .settings-card,
+:root:not([data-theme="dark"]) .project-card,
+:root:not([data-theme="dark"]) .project-form,
+:root:not([data-theme="dark"]) .empty-state,
+:root:not([data-theme="dark"]) .hr-panel,
+:root:not([data-theme="dark"]) .hr-project-panel,
+:root:not([data-theme="dark"]) .hr-progress-panel,
+:root:not([data-theme="dark"]) .steel-chain-panel,
+:root:not([data-theme="dark"]) .steel-stage-detail,
+:root:not([data-theme="dark"]) .steel-integrations,
+:root:not([data-theme="dark"]) .fw-content,
+:root:not([data-theme="dark"]) .fw-card,
+:root:not([data-theme="dark"]) .ppw-sheet,
+:root:not([data-theme="dark"]) .ppw-note,
+:root:not([data-theme="dark"]) .ppw-nav{
+  background:#f8f2e8;
+  border-color:#e6dac8;
+}
+:root:not([data-theme="dark"]) .hero{
+  background:linear-gradient(120deg,#eee2cf 0%,#f6eee2 72%,#fbf4e8 100%);
+  border-color:#e6dac8;
+}
+:root:not([data-theme="dark"]) .steel-stage-card,
+:root:not([data-theme="dark"]) .hr-tabs button,
+:root:not([data-theme="dark"]) .fw-steps button,
+:root:not([data-theme="dark"]) .ppw-nav button{
+  background:#f1e8da;
+  border-color:#e3d6c4;
+}
+:root:not([data-theme="dark"]) .steel-stage-card.selected,
+:root:not([data-theme="dark"]) .nav-item.active,
+:root:not([data-theme="dark"]) .fw-choice button.active{
+  background:#e9dfcf;
+  border-color:#cdbb9e;
+  color:#654f32;
+}
+:root:not([data-theme="dark"]) .steel-principle,
+:root:not([data-theme="dark"]) .steel-planned-note,
+:root:not([data-theme="dark"]) .steel-io-grid>div,
+:root:not([data-theme="dark"]) .steel-branch-flow span,
+:root:not([data-theme="dark"]) .ppw-table-wrap,
+:root:not([data-theme="dark"]) .hr-derived-strip,
+:root:not([data-theme="dark"]) .hr-material-summary div,
+:root:not([data-theme="dark"]) .hr-process-step,
+:root:not([data-theme="dark"]) .hr-econ-grid article,
+:root:not([data-theme="dark"]) .notice,
+:root:not([data-theme="dark"]) .settings-note{
+  background:#efe5d6;
+  border-color:#e2d4c0;
+}
+/* Editable / variable-value fields are the only pure-white surfaces. */
+:root:not([data-theme="dark"]) input:not([type="checkbox"]):not([type="radio"]),
+:root:not([data-theme="dark"]) select,
+:root:not([data-theme="dark"]) textarea,
+:root:not([data-theme="dark"]) .form-grid input,
+:root:not([data-theme="dark"]) .form-grid select,
+:root:not([data-theme="dark"]) .hr-field input,
+:root:not([data-theme="dark"]) .fw-field input,
+:root:not([data-theme="dark"]) .fw-field select,
+:root:not([data-theme="dark"]) .fw-field textarea,
+:root:not([data-theme="dark"]) .fw-row input,
+:root:not([data-theme="dark"]) .roll-row input,
+:root:not([data-theme="dark"]) .roll-row select{
+  background:#fff;
+  color:#3d352c;
+  border-color:#d9cbb7;
+}
+:root:not([data-theme="dark"]) .calculator-panel{
+  background:#f8f2e8;
+  border-color:#e6dac8;
+  color:#3d352c;
+}
+:root:not([data-theme="dark"]) .calculator-display{
+  background:#fff;
+  color:#3d352c;
+  border-color:#e1d5c5;
+}
