@@ -958,6 +958,25 @@ assert.ok(foundation.validateProjectFoundation(duplicateCurrencyFoundation).some
 const missingCurrencyFoundation = foundation.createBlankProjectFoundation()
 assert.ok(foundation.validateProjectFoundation(missingCurrencyFoundation).some(issue=>issue.code==='missing-local-currency'),
   'Project foundation must block calculation without a local currency')
+
+const blankAsset = foundation.createBlankFixedInvestmentItem()
+assert.equal(blankAsset.acquisitions.length, 0, 'Blank fixed investment item must not invent acquisition amounts')
+assert.equal(blankAsset.depreciation.method, 'none', 'Blank fixed investment item must not assume a depreciation method')
+const validAsset = {
+  ...blankAsset,
+  id:'asset-valid', description:'Production machinery', assetClass:'machinery', origin:'local', currencyCode:'IRR',
+  depreciation:{method:'linear-scrap',startingAt:'1405-01-01',ratePercent:10,lengthYears:10,lengthMonths:0,scrapPercent:10},
+  acquisitions:[{id:'acq-1',period:'1403',quantity:1,unitPrice:100,currencyCode:'IRR',exchangeRateToLocal:null}],
+  sales:[]
+}
+assert.equal(foundation.validateFixedInvestmentItems([validAsset], validFoundation).length, 0,
+  'A complete local fixed-asset record must pass register validation')
+const invalidForeignAsset = {
+  ...validAsset, id:'asset-foreign', origin:'foreign', currencyCode:'USD',
+  acquisitions:[{id:'acq-foreign',period:'1403',quantity:1,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:null}]
+}
+assert.ok(foundation.validateFixedInvestmentItems([invalidForeignAsset], validFoundation).some(issue=>issue.code==='missing-asset-exchange-rate'),
+  'Foreign-origin fixed-asset acquisitions must require an exchange rate to local currency')
 const foundationWizard = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 const foundationPanel = await readFile(new URL('../src/features/projects/ProjectFoundationPanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('ProjectFoundationPanel')
@@ -972,4 +991,18 @@ assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
   && foundationPanel.includes('Add Period Exchange Rate')
   && foundationPanel.includes('Add Period Inflation Rate'),
   'Common project foundation form must cover the base schedules without inventing unknown assumptions')
+const fixedInvestmentPanel = await readFile(new URL('../src/features/projects/FixedInvestmentPanel.tsx', import.meta.url), 'utf8')
+assert.ok(foundationWizard.includes('FixedInvestmentPanel')
+  && foundationWizard.includes('fixedInvestmentItems:v.fixedInvestmentItems??[]')
+  && foundationWizard.includes('fixedInvestmentItems:[]'),
+  'The reusable fixed investment register must be persisted in new and legacy project models')
+assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
+  && fixedInvestmentPanel.includes('Depreciation Conditions')
+  && fixedInvestmentPanel.includes('Sale of Asset')
+  && fixedInvestmentPanel.includes('Linear to zero')
+  && fixedInvestmentPanel.includes('Linear to scrap')
+  && fixedInvestmentPanel.includes('Accelerated')
+  && fixedInvestmentPanel.includes('Sum of years digits')
+  && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX'),
+  'Fixed investment foundation must capture acquisition periods, COMFAR depreciation conditions and asset disposals without double-counting CAPEX')
 console.log('PASS: industry-independent project foundation schema, blank defaults, validation and wizard persistence')
