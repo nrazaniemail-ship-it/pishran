@@ -1,3 +1,5 @@
+import type { FixedInvestmentItem, ProjectFoundation } from '../projects/projectFoundation'
+
 const source='OPEX-HRCR200.Kashan.1402.07.10. rev01.xlsx · 1402/07/10'
 const capexSource='CAPEX-HRCR200.Kashan.1402.07.10.rev01.xlsx · 1402/07/10'
 const row=(id:string,name:string,quantity:number,unit:string,unitPrice:number,period:string,costGroup?:string)=>({
@@ -123,7 +125,8 @@ export const EXCEL_HOT_ROLLING_200KT = {
     {...row('capex-site','محوطه‌سازی و آماده‌سازی سایت',1,'مجموع',430007.7606094665,'یک‌باره','محوطه‌سازی'),source:capexSource,origin:'داخلی'},
     {...row('capex-industrial-building','ساختمان‌های صنعتی',1,'مجموع',2016000,'یک‌باره','ساختمان و ابنیه'),source:capexSource,origin:'داخلی'},
     {...row('capex-nonindustrial-building','ساختمان‌های غیرصنعتی',1,'مجموع',381422.057,'یک‌باره','ساختمان و ابنیه'),source:capexSource,origin:'داخلی'},
-    {...row('capex-machinery','ماشین‌آلات و تجهیزات',1,'مجموع',10472740,'یک‌باره','ماشین‌آلات'),source:capexSource,origin:'داخلی'},
+    {...row('capex-machinery-foreign','ماشین‌آلات و تجهیزات ـ سهم خارجی',1,'مجموع',9502740,'یک‌باره','ماشین‌آلات'),source:capexSource,origin:'خارجی'},
+    {...row('capex-machinery-local','ماشین‌آلات و تجهیزات ـ سهم داخلی',1,'مجموع',970000,'یک‌باره','ماشین‌آلات'),source:capexSource,origin:'داخلی'},
     {...row('capex-utilities','تأسیسات زیربنایی',1,'مجموع',1707981.4,'یک‌باره','تأسیسات'),source:capexSource,origin:'داخلی'},
     {...row('capex-vehicles','وسائط نقلیه',1,'مجموع',490500,'یک‌باره','سایر'),source:capexSource,origin:'داخلی'},
     {...row('capex-office','تجهیزات اداری و خدماتی',1,'مجموع',70166.50296,'یک‌باره','سایر'),source:capexSource,origin:'داخلی'},
@@ -135,7 +138,7 @@ export const EXCEL_HOT_ROLLING_200KT = {
     row('opex-marketing','بازاریابی مستقیم (۰٫۱٪ فروش طبق فرمول سلول)',1,'تن محصول',0.311298,'به‌ازای هر تن','بازاریابی')
   ],
   market:[],
-  notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. ساختار تأمین مالی با تأیید حامی پروژه ۷۰٪ آورده و ۳۰٪ بدهی است؛ مبنای مبلغی آن سرمایه‌گذاری ساخت ۱۸٬۷۰۲٬۸۳۵٫۳۶ میلیون ریال است و مقادیر گزارش‌شده منابع به‌ترتیب ۱۳٬۰۹۱٬۹۸۵٫۲ و ۵٬۶۱۰٬۸۵۰٫۸ میلیون ریال‌اند. نرخ WACC بازحساب‌شده با هزینه حقوق صاحبان سهام ۳۰٪، هزینه بدهی ۲۶٪ و سپر مالیاتی ۲۵٪ برابر ۲۶٫۸۵٪ است. نرخ ۲۱٪ شیت IRR-NPV فقط به‌عنوان نرخ تاریخی گزارش منبع نگهداری شده و WACC ساختار تأییدشده نیست. منبع تأمین سرمایه در گردش در فایل صریح نیست و در تسهیلات مدل به‌عنوان بدهی جدید فرض نشده است. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ جداگانه نگهداری شده‌اند. جریان‌های نقدی مرجع reference در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند.'
+  notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. فایل اکسل دو مبنای متعارض تأمین مالی دارد: شیت مکانیزم تأمین منابع ۲۰٪ آورده/۸۰٪ بدهی را نشان می‌دهد، درحالی‌که شیت خلاصه و خروجی COMFAR بر مبنای ۷۰٪ آورده/۳۰٪ بدهی‌اند. سناریوی پروژه پیشران طبق درخواست حامی ۲۰/۸۰ باقی می‌ماند و سناریوی ۷۰/۳۰ فقط برای مقایسه با خروجی مرجع نگهداری می‌شود. نرخ WACC بازحساب‌شده با هزینه حقوق صاحبان سهام ۳۰٪، هزینه بدهی ۲۶٪ و سپر مالیاتی ۲۵٪ برابر ۲۶٫۸۵٪ است. نرخ ۲۱٪ شیت IRR-NPV فقط به‌عنوان نرخ تاریخی گزارش منبع نگهداری شده و WACC ساختار تأییدشده نیست. منبع تأمین سرمایه در گردش در فایل صریح نیست و در تسهیلات مدل به‌عنوان بدهی جدید فرض نشده است. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ جداگانه نگهداری شده‌اند. جریان‌های نقدی مرجع reference در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند.'
 } as const
 
 
@@ -200,3 +203,172 @@ export const PISHRAN_REFERENCE_MODEL_OUTPUT = {
   mirr:0.36645116868762795
 
 } as const
+
+/** Asset-level fixed-investment register seeded from the HRCR200 CAPEX/OPEX workbooks. */
+export const HOT_ROLLING_FIXED_ASSET_REFERENCE = {
+  fixedInvestmentTotal: 18_463_008.720569465,
+  foreignMachineryEur: 18_135_000,
+  foreignMachineryLocalEquivalent: 9_502_740,
+  localMachinery: 970_000,
+  depreciableInfrastructure: 1_423_564,
+  nonDepreciableInfrastructure: 284_417.4,
+  preProductionCostOutsideFixedInvestment: 239_826.63796,
+  conditionsTableFirstYearDepreciation: 1_432_000.0916753965,
+  opexScheduleAnnualDepreciation: 1_580_327,
+  comfarFirstYearDepreciation: 1_432_554.34,
+  comfarFirstYearVariance: 554.2483246035408,
+  comfarDepreciationByYear: [
+    [1405,1_432_554.34],[1406,1_432_554.34],[1407,1_432_554.34],
+    [1408,1_425_537.64],[1409,1_365_962.59],
+    [1410,1_316_912.59],[1411,1_316_912.59],[1412,1_316_912.59],[1413,1_316_912.59],
+    [1414,98_840.49],[1415,98_840.49],[1416,98_840.49],
+    [1417,94_540.41],[1418,60_745.69],[1419,52_751.46]
+  ] as const,
+  source: 'CAPEX/OPEX HRCR200 workbooks and COMFAR output pages 3–4 and 24–27',
+} as const
+
+export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[] {
+  const localAcquisition = (id: string, period: string, amount: number) => ({
+    id, period, quantity: 1, unitPrice: amount, currencyCode: 'IRR', exchangeRateToLocal: null
+  })
+  const foreignAcquisition = (id: string, period: string, eurAmount: number) => ({
+    id, period, quantity: 1, unitPrice: eurAmount, currencyCode: 'EUR', exchangeRateToLocal: 0.524
+  })
+  const depreciation = (ratePercent: number, scrapPercent: number) => ({
+    method: 'linear-scrap' as const, startingAt: '1405-01-01', ratePercent,
+    lengthYears: 100 / ratePercent, lengthMonths: 0, firstDepreciationMonths: 12, scrapPercent
+  })
+  const nonDepreciated = (scrapPercent = 0) => ({
+    method: 'none' as const, startingAt: '', ratePercent: null, lengthYears: null,
+    lengthMonths: 0, firstDepreciationMonths: 12, scrapPercent
+  })
+  const item = (
+    id: string, description: string, assetClass: FixedInvestmentItem['assetClass'],
+    origin: FixedInvestmentItem['origin'], currencyCode: string,
+    depreciationConditions: FixedInvestmentItem['depreciation'],
+    acquisitions: FixedInvestmentItem['acquisitions']
+  ): FixedInvestmentItem => ({
+    id, description, assetClass, origin, currencyCode, costCentreId: null,
+    depreciation: depreciationConditions, acquisitions, sales: []
+  })
+  const siteTotal = 430_007.7606094665
+  const buildingTotal = 2_397_422.057
+  const utilityComponents = {
+    infrastructureDepreciable: 1_423_564,
+    infrastructureNonDepreciable: 284_417.4,
+    vehicles: 490_500,
+    office: 70_166.50296,
+  }
+  const utilityComponentTotal = Object.values(utilityComponents).reduce((sum, amount) => sum + amount, 0)
+  const utilityFirstPeriodShare = 722_627.7 / utilityComponentTotal
+  const utilitySplit = (amount: number) => [amount * utilityFirstPeriodShare, amount * (1 - utilityFirstPeriodShare)]
+  const [infrastructureDep1403, infrastructureDep1404] = utilitySplit(utilityComponents.infrastructureDepreciable)
+  const [infrastructureNonDep1403, infrastructureNonDep1404] = utilitySplit(utilityComponents.infrastructureNonDepreciable)
+  const [vehicles1403, vehicles1404] = utilitySplit(utilityComponents.vehicles)
+  const [office1403, office1404] = utilitySplit(utilityComponents.office)
+  return [
+    item('hrcr-land','خرید زمین','land','local','IRR',nonDepreciated(100),[
+      localAcquisition('hrcr-land-1403','1403',2_015_000)
+    ]),
+    item('hrcr-site','محوطه‌سازی و آماده‌سازی سایت','site','local','IRR',depreciation(7,10),[
+      localAcquisition('hrcr-site-1403','1403',301_005.6),
+      localAcquisition('hrcr-site-1404','1404',siteTotal-301_005.6)
+    ]),
+    item('hrcr-buildings','ساختمان‌های صنعتی و غیرصنعتی','buildings','local','IRR',depreciation(7,10),[
+      localAcquisition('hrcr-buildings-1403','1403',1_084_284.4),
+      localAcquisition('hrcr-buildings-1404','1404',buildingTotal-1_084_284.4)
+    ]),
+    item('hrcr-machinery-foreign','ماشین‌آلات و تجهیزات ـ سهم خارجی','machinery','foreign','EUR',depreciation(10,10),[
+      foreignAcquisition('hrcr-machinery-foreign-1403','1403',14_508_000),
+      foreignAcquisition('hrcr-machinery-foreign-1404','1404',3_627_000)
+    ]),
+    item('hrcr-machinery-local','ماشین‌آلات و تجهیزات ـ سهم داخلی','machinery','local','IRR',depreciation(10,10),[
+      localAcquisition('hrcr-machinery-local-1403','1403',485_000),
+      localAcquisition('hrcr-machinery-local-1404','1404',485_000)
+    ]),
+    item('hrcr-infrastructure-depreciable','تأسیسات زیربنایی ـ بخش مشمول استهلاک','infrastructure','local','IRR',depreciation(10,10),[
+      localAcquisition('hrcr-infrastructure-dep-1403','1403',infrastructureDep1403),
+      localAcquisition('hrcr-infrastructure-dep-1404','1404',infrastructureDep1404)
+    ]),
+    item('hrcr-infrastructure-nondepreciable','تأسیسات زیربنایی ـ بخش غیرمشمول استهلاک','infrastructure','local','IRR',nonDepreciated(),[
+      localAcquisition('hrcr-infrastructure-nondep-1403','1403',infrastructureNonDep1403),
+      localAcquisition('hrcr-infrastructure-nondep-1404','1404',infrastructureNonDep1404)
+    ]),
+    item('hrcr-vehicles','وسائط نقلیه','vehicles','local','IRR',depreciation(20,10),[
+      localAcquisition('hrcr-vehicles-1403','1403',vehicles1403),
+      localAcquisition('hrcr-vehicles-1404','1404',vehicles1404)
+    ]),
+    item('hrcr-office','تجهیزات اداری و خدماتی','office','local','IRR',depreciation(25,10),[
+      localAcquisition('hrcr-office-1403','1403',office1403),
+      localAcquisition('hrcr-office-1404','1404',office1404)
+    ]),
+    item('hrcr-contingencies','هزینه‌های احتمالی سرمایه‌ای','other','local','IRR',depreciation(10,10),[
+      localAcquisition('hrcr-contingencies-1403','1403',439_595.5),
+      localAcquisition('hrcr-contingencies-1404','1404',439_595.5)
+    ])
+  ]
+}
+
+export function createHotRollingCoilProjectFoundation(): ProjectFoundation {
+  return {
+    schemaVersion: 1,
+    planning: {
+      periodFrequency: 'annual', balanceDateMonth: 12, balanceDateDay: null,
+      dayCountBasis: 360, valuationDate: '1404-12', cashFlowTiming: 'unspecified'
+    },
+    currencies: {
+      localCurrencyCode: 'IRR', localCurrencyName: 'میلیون ریال',
+      foreignCurrencies: [{
+        code: 'EUR', name: 'یورو',
+        exchangeRates: [{ period: '1403', rateToLocal: 0.524 }, { period: '1404', rateToLocal: 0.524 }]
+      }]
+    },
+    costCentres: { active: false, items: [] },
+    inflation: { active: false, indices: [] },
+    discounting: { method: 'manual', financialRatePercent: 25, economicRatePercent: null },
+    taxation: {
+      system: 'corporate', lossCarryForward: true, lossCarryForwardYears: null,
+      rates: Array.from({length:15},(_,index)=>({period:String(1405+index),ratePercent:25}))
+    }
+  }
+}
+
+export function mergeHotRollingCoilProjectFoundation(saved: unknown): ProjectFoundation {
+  const defaults = createHotRollingCoilProjectFoundation()
+  if (!saved || typeof saved !== 'object') return defaults
+  const value = saved as Partial<ProjectFoundation>
+  const planning = value.planning ?? defaults.planning
+  const currencies = value.currencies ?? defaults.currencies
+  const discounting = value.discounting ?? defaults.discounting
+  const taxation = value.taxation ?? defaults.taxation
+  return {
+    ...defaults, ...value,
+    planning: {
+      ...defaults.planning, ...planning,
+      periodFrequency: planning.periodFrequency === 'unspecified' ? defaults.planning.periodFrequency : planning.periodFrequency,
+      balanceDateMonth: planning.balanceDateMonth ?? defaults.planning.balanceDateMonth,
+      dayCountBasis: planning.dayCountBasis ?? defaults.planning.dayCountBasis,
+      valuationDate: planning.valuationDate || defaults.planning.valuationDate,
+      cashFlowTiming: planning.cashFlowTiming === 'unspecified' ? defaults.planning.cashFlowTiming : planning.cashFlowTiming
+    },
+    currencies: {
+      ...defaults.currencies, ...currencies,
+      localCurrencyCode: currencies.localCurrencyCode || defaults.currencies.localCurrencyCode,
+      localCurrencyName: currencies.localCurrencyName || defaults.currencies.localCurrencyName,
+      foreignCurrencies: currencies.foreignCurrencies?.length ? currencies.foreignCurrencies : defaults.currencies.foreignCurrencies
+    },
+    costCentres: { ...defaults.costCentres, ...value.costCentres, items: value.costCentres?.items ?? defaults.costCentres.items },
+    inflation: { ...defaults.inflation, ...value.inflation, indices: value.inflation?.indices ?? defaults.inflation.indices },
+    discounting: {
+      ...defaults.discounting, ...discounting,
+      method: discounting.method === 'unspecified' ? defaults.discounting.method : discounting.method,
+      financialRatePercent: discounting.financialRatePercent ?? defaults.discounting.financialRatePercent
+    },
+    taxation: {
+      ...defaults.taxation, ...taxation,
+      system: taxation.system === 'unspecified' ? defaults.taxation.system : taxation.system,
+      lossCarryForward: taxation.lossCarryForward ?? defaults.taxation.lossCarryForward,
+      rates: taxation.rates?.length ? taxation.rates : defaults.taxation.rates
+    }
+  }
+}
