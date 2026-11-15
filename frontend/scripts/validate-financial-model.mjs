@@ -657,9 +657,9 @@ const withEnterprise = [
 ]
 const incremental = engine.calculateIncrementalEnterpriseAnalysis(withoutEnterprise, withEnterprise, 0.1)
 near(incremental.periods[0].incrementalCashFlow, -1000, 1e-9, 'Expansion incremental construction outflow')
-near(incremental.periods[1].incrementalCashFlow, 1400, 1e-9, 'Expansion incremental operating cash flow')
-near(incremental.incrementalNpv, 272.72727272727275, 1e-8, 'Expansion incremental NPV')
-near(incremental.incrementalIrr, 0.4, 1e-8, 'Expansion incremental IRR')
+near(incremental.periods[1].incrementalCashFlow, 1300, 1e-9, 'Expansion incremental operating cash flow after incremental working capital')
+near(incremental.incrementalNpv, 181.81818181818176, 1e-8, 'Expansion incremental NPV')
+near(incremental.incrementalIrr, 0.3, 1e-8, 'Expansion incremental IRR')
 assert.equal(incremental.periods.length, 2, 'Incremental analysis must preserve aligned period count')
 const expansionPanelSource = await readFile(new URL('../src/features/projects/ExpansionRehabilitationPanel.tsx', import.meta.url), 'utf8')
 const expansionWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
