@@ -894,6 +894,9 @@ const addMonthsAtMonthEnd = (date: Date, months: number) => {
 const monthsBetween30Day = (from: Date, to: Date) => {
   const wholeMonths = (to.getUTCFullYear() - from.getUTCFullYear()) * 12 +
     to.getUTCMonth() - from.getUTCMonth()
+  const isMonthEnd = (date: Date) => date.getUTCDate() ===
+    new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate()
+  if (isMonthEnd(from) && isMonthEnd(to)) return wholeMonths
   return wholeMonths + (to.getUTCDate() - from.getUTCDate()) / 30
 }
 
