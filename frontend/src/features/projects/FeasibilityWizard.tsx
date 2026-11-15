@@ -209,7 +209,9 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
       m.foundation
     )
     :{assets:[],sales:[],investmentSchedule:Array.from({length:Math.max(1,Math.ceil(m.project.constructionYears||1)+Math.ceil(m.project.operatingYears||1))},()=>0),investmentScheduleVerified:false,warnings:[]}
-  const fixedInvestmentRegisterReconciliation=reconcileFixedInvestmentRegister(m.fixedInvestmentItems,capex,preOperatingCost)\n  const confirmedFixedInvestmentSchedule=fixedInvestmentLifecycleInputs.investmentScheduleVerified&&fixedInvestmentRegisterReconciliation.status==='matched'?fixedInvestmentLifecycleInputs.investmentSchedule:undefined\n  const hotRollingWorkingCapitalDefaults=isHotRollingCoil?{days:{raw:30,energy:15,spareParts:30,wip:3,finished:5,receivable:0,cash:60,payable:0},bases:{rawMaterials:40844287,energy:269580.1664,spareParts:176473.792,conversion:1759937.43,finishedGoods:42604224.43,cash:1313884.02,payables:0},wipCompletion:{material:100,conversion:100}}:undefined
+  const fixedInvestmentRegisterReconciliation=reconcileFixedInvestmentRegister(m.fixedInvestmentItems,capex,preOperatingCost)
+  const confirmedFixedInvestmentSchedule=fixedInvestmentLifecycleInputs.investmentScheduleVerified&&fixedInvestmentRegisterReconciliation.status==='matched'?fixedInvestmentLifecycleInputs.investmentSchedule:undefined
+  const hotRollingWorkingCapitalDefaults=isHotRollingCoil?{days:{raw:30,energy:15,spareParts:30,wip:3,finished:5,receivable:0,cash:60,payable:0},bases:{rawMaterials:40844287,energy:269580.1664,spareParts:176473.792,conversion:1759937.43,finishedGoods:42604224.43,cash:1313884.02,payables:0},wipCompletion:{material:100,conversion:100}}:undefined
  const wacc=(m.finance.equity/100)*(m.finance.equityCost/100)+(m.finance.debt/100)*(m.finance.debtCost/100)*(1-m.finance.tax/100)
  const rate=m.finance.method==='wacc'?wacc:m.finance.method==='manual'?m.finance.manualRate/100:0
  const marketSize=m.market.domesticProduction+m.market.imports-m.market.exports
