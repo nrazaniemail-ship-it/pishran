@@ -73,7 +73,7 @@ const mergedHrcrFoundation = reference.mergeHotRollingCoilProjectFoundation({...
 assert.equal(mergedHrcrFoundation.planning.periodFrequency,'annual','HRCR reference migration must restore annual source-model frequency when legacy state is unspecified')
 assert.equal(mergedHrcrFoundation.currencies.foreignCurrencies[0].code,'EUR','HRCR reference migration must retain the EUR basis required by imported machinery')
 const hrcrDepreciationBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(hrcrFixedAssets,1403,17,'annual',hrcrFoundation)
-assert.equal(hrcrDepreciationBuild.warnings.length,0,'HRCR200 reference fixed-asset vintages must map without unsupported dates or currencies')
+assert.equal(hrcrDepreciationBuild.warnings.filter(warning=>/تاریخ\/دوره تحصیل|بهای تحصیل پس از تبدیل|تاریخ Starting at|exchange rate|currency/i.test(warning)).length,0,'HRCR200 reference fixed-asset vintages must map without unsupported dates or currencies; source conflicts and estimated allocation warnings must remain visible')
 const hrcrLifecycle = engine.calculateComfarAssetLifecycle(hrcrDepreciationBuild.assets,hrcrDepreciationBuild.sales,17)
 near(hrcrLifecycle.depreciation.periods[2].depreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterFirstYearDepreciation,0.02,'HRCR200 first production-year depreciation from the seeded register')
 for (const [year, expected] of reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterEngineByYear) {
