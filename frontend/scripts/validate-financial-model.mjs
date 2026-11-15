@@ -680,41 +680,6 @@ assert.ok(invalidStartingAsset.some(issue=>issue.code==='invalid-starting-asset-
 assert.ok(invalidStartingAsset.some(issue=>issue.code==='depreciation-before-commissioning'),
   'Depreciation cannot begin before commissioning')
 
-const duplicateSaleIssues = foundation.validateFixedInvestmentItems([{
-  ...registerAsset,
-  sales:[
-    {id:'sale-one',acquisitionId:'register-acq',period:'1406-12-29',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null},
-    {id:'sale-two',acquisitionId:'register-acq',period:'1407-12-29',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}
-  ]
-}],foundation.createBlankProjectFoundation())
-assert.ok(duplicateSaleIssues.some(issue=>issue.code==='duplicate-acquisition-disposal'),'One acquisition vintage must not be disposed twice')
-
-const capexBridge = engine.reconcileFixedInvestmentRegister([registerAsset],200,0)
-near(capexBridge.registerTotal,200,1e-9,'Fixed investment register must sum acquisitions in local currency')
-near(capexBridge.capexFixedAssetTarget,200,1e-9,'CAPEX reconciliation target must exclude pre-operating costs')
-near(capexBridge.difference,0,1e-9,'Matching fixed investment register and CAPEX must reconcile')
-assert.equal(capexBridge.status,'matched','A fully reconciled fixed investment register must be marked matched')
-const capexBridgeWithPreop = engine.reconcileFixedInvestmentRegister([registerAsset],250,50)
-near(capexBridgeWithPreop.capexFixedAssetTarget,200,1e-9,'Pre-operating expenses must be excluded from fixed-asset reconciliation')
-const capexBridgeMismatch = engine.reconcileFixedInvestmentRegister([registerAsset],260,0)
-assert.equal(capexBridgeMismatch.status,'unreconciled','A difference between register and aggregate CAPEX must be flagged')
-assert.ok(capexBridgeMismatch.warnings.length>0,'Unreconciled CAPEX must produce an actionable warning')
-const capexBridgeNoRegister = engine.reconcileFixedInvestmentRegister([],260,0)
-assert.equal(capexBridgeNoRegister.status,'unreconciled','Aggregate CAPEX without asset-register coverage must be flagged')
-assert.ok(capexBridgeNoRegister.warnings.length>0,'Missing asset-register coverage must produce an actionable warning')
-const capexBridgeForeign = engine.reconcileFixedInvestmentRegister([{
-  ...registerAsset,origin:'foreign',
-  acquisitions:[{id:'fx-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:300}]
-}],60000,0)
-near(capexBridgeForeign.registerTotal,60000,1e-9,'Foreign fixed-asset acquisitions must be translated to local currency before reconciliation')
-const capexBridgeMissingFx = engine.reconcileFixedInvestmentRegister([{
-  ...registerAsset,origin:'foreign',
-  acquisitions:[{id:'fx-missing',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:null}]
-}],0,0)
-assert.equal(capexBridgeMissingFx.status,'unreconciled','Foreign acquisition without an exchange rate must not reconcile')
-
-
-
 const hrcrVersionOneSeed=reference.createHotRollingCoilFixedInvestmentItems()
   .filter(item=>item.assetClass!=='preproduction')
   .map(item=>({...item,depreciationBasis:undefined,acquisitions:item.acquisitions.map(row=>({...row,allocationBasis:undefined}))}))
@@ -1231,6 +1196,38 @@ const registerAsset = {
   acquisitions:[{id:'register-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'IRR',exchangeRateToLocal:null,allocationBasis:'source-period'}],
   sales:[]
 }
+const duplicateSaleIssues = foundation.validateFixedInvestmentItems([{
+  ...registerAsset,
+  sales:[
+    {id:'sale-one',acquisitionId:'register-acq',period:'1406-12-29',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null},
+    {id:'sale-two',acquisitionId:'register-acq',period:'1407-12-29',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}
+  ]
+}],foundation.createBlankProjectFoundation())
+assert.ok(duplicateSaleIssues.some(issue=>issue.code==='duplicate-acquisition-disposal'),'One acquisition vintage must not be disposed twice')
+
+const capexBridge = engine.reconcileFixedInvestmentRegister([registerAsset],200,0)
+near(capexBridge.registerTotal,200,1e-9,'Fixed investment register must sum acquisitions in local currency')
+near(capexBridge.capexFixedAssetTarget,200,1e-9,'CAPEX reconciliation target must exclude pre-operating costs')
+near(capexBridge.difference,0,1e-9,'Matching fixed investment register and CAPEX must reconcile')
+assert.equal(capexBridge.status,'matched','A fully reconciled fixed investment register must be marked matched')
+const capexBridgeWithPreop = engine.reconcileFixedInvestmentRegister([registerAsset],250,50)
+near(capexBridgeWithPreop.capexFixedAssetTarget,200,1e-9,'Pre-operating expenses must be excluded from fixed-asset reconciliation')
+const capexBridgeMismatch = engine.reconcileFixedInvestmentRegister([registerAsset],260,0)
+assert.equal(capexBridgeMismatch.status,'unreconciled','A difference between register and aggregate CAPEX must be flagged')
+assert.ok(capexBridgeMismatch.warnings.length>0,'Unreconciled CAPEX must produce an actionable warning')
+const capexBridgeNoRegister = engine.reconcileFixedInvestmentRegister([],260,0)
+assert.equal(capexBridgeNoRegister.status,'unreconciled','Aggregate CAPEX without asset-register coverage must be flagged')
+assert.ok(capexBridgeNoRegister.warnings.length>0,'Missing asset-register coverage must produce an actionable warning')
+const capexBridgeForeign = engine.reconcileFixedInvestmentRegister([{
+  ...registerAsset,origin:'foreign',
+  acquisitions:[{id:'fx-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:300}]
+}],60000,0)
+near(capexBridgeForeign.registerTotal,60000,1e-9,'Foreign fixed-asset acquisitions must be translated to local currency before reconciliation')
+const capexBridgeMissingFx = engine.reconcileFixedInvestmentRegister([{
+  ...registerAsset,origin:'foreign',
+  acquisitions:[{id:'fx-missing',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:null}]
+}],0,0)
+assert.equal(capexBridgeMissingFx.status,'unreconciled','Foreign acquisition without an exchange rate must not reconcile')
 const registerBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([registerAsset],1405,12)
 assert.equal(registerBuild.assets.length,1,'A valid fixed-asset acquisition must map to one depreciation vintage')
 assert.equal(registerBuild.assets[0].acquisitionPeriod,1,'Fixed-asset acquisition year must map to annual project period')
