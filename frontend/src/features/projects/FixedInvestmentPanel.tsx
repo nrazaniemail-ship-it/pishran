@@ -37,7 +37,8 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
   const issues = validateFixedInvestmentItems(value, foundation)
-  const depreciationBuild = buildComfarDepreciationAssetsFromFixedInvestmentItems(value, projectStartYear, periodCount, 'annual', foundation)
+  const annualProjectStartYear=dateBasedPeriodMode&&foundation.planning.projectStartDate?Number(foundation.planning.projectStartDate.slice(0,4)):projectStartYear
+  const depreciationBuild = buildComfarDepreciationAssetsFromFixedInvestmentItems(value, annualProjectStartYear, periodCount, 'annual', foundation)
   const assetLifecycle = calculateComfarAssetLifecycle(depreciationBuild.assets, depreciationBuild.sales, periodCount)
   const depreciationSchedule = assetLifecycle.depreciation
   const depreciationWarnings = [...depreciationBuild.warnings, ...assetLifecycle.warnings]
