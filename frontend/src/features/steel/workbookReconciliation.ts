@@ -118,6 +118,22 @@ export const HOT_ROLLING_200KT_AUDIT = {
     sourcesReported: 22_001_469.06,
     sourceUseDifference: 0.641470533
   },
+  depreciationReconciliation: {
+    comfarOutputByYear: [
+      [1405,1_432_554.34],[1406,1_432_554.34],[1407,1_432_554.34],
+      [1408,1_425_537.64],[1409,1_365_962.59],
+      [1410,1_316_912.59],[1411,1_316_912.59],[1412,1_316_912.59],[1413,1_316_912.59],
+      [1414,98_840.49],[1415,98_840.49],[1416,98_840.49],
+      [1417,94_540.41],[1418,60_745.69],[1419,52_751.46]
+    ],
+    conditionsTableFirstYear: 1_432_000.0916753965,
+    comfarFirstYear: 1_432_554.34,
+    conditionsTableVariance: 554.2483246035408,
+    opexWorkbookAnnual: 1_580_327,
+    opexWorkbookVariance: -147_772.66,
+    preProductionAmortisationNotIncludedInFixedAssetRegister: 239_826.63796,
+    status: 'open-asset-start-dates-and-disposals-not-yet-reconciled'
+  },
   annualOpex: {
     rawMaterials: 40_844_287,
     utilities: 269_580,
