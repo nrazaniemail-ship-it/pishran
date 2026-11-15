@@ -200,7 +200,13 @@ export function validateStartingFixedAssetBalances(
       issue(path + '.foreignSharePercent', 'invalid-starting-asset-foreign-share', 'Foreign currency component must be between zero and 100 percent.')
     if (foundation.costCentres.active && asset.costCentre && !foundation.costCentres.items.some(item => item.id === asset.costCentre || item.code === asset.costCentre))
       issue(path + '.costCentre', 'unknown-starting-asset-cost-centre', 'Select a defined Cost Centre for this existing fixed asset.')
-    const validDate = (value?: string) => {\n      if (!value) return true\n      const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(value)\n      if (!match) return false\n      const month = Number(match[2]), day = Number(match[3])\n      return month >= 1 && month <= 12 && day >= 1 && day <= 31\n    }
+    const validDate = (value?: string) => {
+      if (!value) return true
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+      if (!match) return false
+      const month = Number(match[2]), day = Number(match[3])
+      return month >= 1 && month <= 12 && day >= 1 && day <= 31
+    }
     if (!validDate(asset.commissioningDate) || !validDate(asset.depreciationStartDate))
       issue(path + '.dates', 'invalid-starting-asset-date', 'Commissioning date and depreciation start date must use YYYY-MM-DD.')
     if (asset.commissioningDate && asset.depreciationStartDate && asset.depreciationStartDate < asset.commissioningDate)
