@@ -274,8 +274,22 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
       const saleOrdinal = fixedInvestmentPeriodOrdinal(sale.period)
       if (acquisitionOrdinal !== null && saleOrdinal !== null && saleOrdinal < acquisitionOrdinal)
         issue(salePath + '.period', 'asset-sale-before-acquisition', 'An asset cannot be sold before its acquisition period.')
+      const saleMatch = /^(\\d{3,4})(?:[-/](\\d{1,2})(?:[-/](\\d{1,2}))?)?$/.exec(sale.period.trim())
+      if (!saleMatch) issue(salePath + '.period', 'invalid-asset-sale-period-format', 'Sale period must be a project year or a full date.')
+      else if (saleMatch[2] && saleMatch[3]) {
+        if (foundation.planning.balanceDateMonth === null || foundation.planning.balanceDateDay === null)
+          issue(salePath + '.period', 'missing-sale-balance-date', 'Define the project balance date before entering a full asset sale date.')
+        else if (Number(saleMatch[2]) !== foundation.planning.balanceDateMonth || Number(saleMatch[3]) !== foundation.planning.balanceDateDay)
+          issue(salePath + '.period', 'asset-sale-not-at-balance-date', 'COMFAR asset sales must be defined at a project balance date.')
+      }
       if (sale.priceMode === 'self-defined' && (!Number.isFinite(sale.selfDefinedPrice) || (sale.selfDefinedPrice ?? 0) < 0))
         issue(salePath + '.selfDefinedPrice', 'invalid-asset-sale-price', 'A self-defined sale price must be a non-negative number.')
+      if (sale.priceMode === 'self-defined' && sale.currencyCode.trim().toUpperCase() !== foundation.currencies.localCurrencyCode.trim().toUpperCase()) {
+        const currency = foundation.currencies.foreignCurrencies.find(row => row.code.trim().toUpperCase() === sale.currencyCode.trim().toUpperCase())
+        const year = saleMatch ? saleMatch[1] : ''
+        const hasRate = currency?.exchangeRates.some(rate => rate.period === sale.period || rate.period === year)
+        if (!hasRate) issue(salePath + '.currencyCode', 'missing-asset-sale-exchange-rate', 'A period exchange rate is required for a foreign-currency asset sale.')
+      }
     })
   })
   return issues
