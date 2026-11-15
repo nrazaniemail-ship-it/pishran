@@ -117,6 +117,15 @@
 | تعمیرات اساسی | Overhaul |
 | جایگزینی دارایی | Asset Replacement |
 | ارزش اسقاط | Salvage Value |
+| نوع استهلاک | Type of Depreciation |
+| خطی تا صفر | Linear to zero |
+| خطی تا ارزش اسقاط | Linear to scrap |
+| استهلاک شتاب‌یافته | Accelerated (declining balance) |
+| مجموع سنوات | Sum of years digits |
+| نرخ استهلاک سالانه | Rate (% per annum) |
+| مدت استهلاک | Length |
+| تاریخ شروع استهلاک | Starting at |
+| درصد ارزش اسقاط | Scrap (% of original value) |
 | ارزش دفتری خالص | Net Book Value |
 | استهلاک انباشته | Accumulated Depreciation |
 | ارزش فرصت | Opportunity Cost / Opportunity Value (با توجه به کاربرد) |
