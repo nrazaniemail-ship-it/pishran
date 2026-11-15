@@ -1261,3 +1261,65 @@ input,select,textarea{color:var(--text)}
   background:#e8edf3;
   border-color:#e8edf3;
 }
+
+
+/* User-selectable, restrained workspace background palettes (light mode). */
+:root:not([data-theme="dark"]){--workspace-page:#e8edf3;--workspace-surface:#eef2f6;--workspace-panel:#e2e9f0;--workspace-border:#d5dee8;--workspace-hero-a:#dce5ef;--workspace-hero-b:#f1f4f7}
+:root:not([data-theme="dark"])[data-background="mist"]{--workspace-page:#edf0f3;--workspace-surface:#f4f6f8;--workspace-panel:#e7ebef;--workspace-border:#dce2e8;--workspace-hero-a:#e3e9ef;--workspace-hero-b:#f7f8fa}
+:root:not([data-theme="dark"])[data-background="sage"]{--workspace-page:#e9efeb;--workspace-surface:#f0f5f1;--workspace-panel:#e1ebe4;--workspace-border:#d3e0d7;--workspace-hero-a:#dce9e0;--workspace-hero-b:#f2f6f2}
+:root:not([data-theme="dark"])[data-background="sand"]{--workspace-page:#f1eee7;--workspace-surface:#f7f4ed;--workspace-panel:#ebe5d9;--workspace-border:#e1d8c8;--workspace-hero-a:#e9e1d2;--workspace-hero-b:#faf7f0}
+:root:not([data-theme="dark"])[data-background="sky"]{--workspace-page:#e8f0f5;--workspace-surface:#f0f6fa;--workspace-panel:#e0ebf2;--workspace-border:#d0e0ea;--workspace-hero-a:#d9e9f3;--workspace-hero-b:#f2f7fa}
+:root:not([data-theme="dark"])[data-background="lavender"]{--workspace-page:#efedf4;--workspace-surface:#f6f4f9;--workspace-panel:#e9e5f0;--workspace-border:#ddd6e8;--workspace-hero-a:#e5deef;--workspace-hero-b:#f7f5fa}
+:root:not([data-theme="dark"]) body,
+:root:not([data-theme="dark"]) .app-shell{background:var(--workspace-page)}
+:root:not([data-theme="dark"]) .topbar{background:color-mix(in srgb,var(--workspace-page) 95%,white);border-color:var(--workspace-border)}
+:root:not([data-theme="dark"]) .main-nav,
+:root:not([data-theme="dark"]) .kpi,
+:root:not([data-theme="dark"]) .module,
+:root:not([data-theme="dark"]) .chart-card,
+:root:not([data-theme="dark"]) .insight-card,
+:root:not([data-theme="dark"]) .settings-card,
+:root:not([data-theme="dark"]) .project-card,
+:root:not([data-theme="dark"]) .project-form,
+:root:not([data-theme="dark"]) .empty-state,
+:root:not([data-theme="dark"]) .hr-panel,
+:root:not([data-theme="dark"]) .hr-project-panel,
+:root:not([data-theme="dark"]) .hr-progress-panel,
+:root:not([data-theme="dark"]) .steel-chain-panel,
+:root:not([data-theme="dark"]) .steel-stage-detail,
+:root:not([data-theme="dark"]) .steel-integrations,
+:root:not([data-theme="dark"]) .fw-content,
+:root:not([data-theme="dark"]) .fw-card,
+:root:not([data-theme="dark"]) .ppw-sheet,
+:root:not([data-theme="dark"]) .ppw-note,
+:root:not([data-theme="dark"]) .ppw-nav,
+:root:not([data-theme="dark"]) .calculator-panel{background:var(--workspace-surface);border-color:var(--workspace-border)}
+:root:not([data-theme="dark"]) .hero{background:linear-gradient(120deg,var(--workspace-hero-a),var(--workspace-page) 72%,var(--workspace-hero-b));border-color:var(--workspace-border)}
+:root:not([data-theme="dark"]) .steel-principle,
+:root:not([data-theme="dark"]) .steel-planned-note,
+:root:not([data-theme="dark"]) .steel-io-grid>div,
+:root:not([data-theme="dark"]) .steel-branch-flow span,
+:root:not([data-theme="dark"]) .ppw-table-wrap,
+:root:not([data-theme="dark"]) .hr-derived-strip,
+:root:not([data-theme="dark"]) .hr-material-summary div,
+:root:not([data-theme="dark"]) .hr-process-step,
+:root:not([data-theme="dark"]) .hr-econ-grid article,
+:root:not([data-theme="dark"]) .notice,
+:root:not([data-theme="dark"]) .settings-note{background:var(--workspace-panel);border-color:var(--workspace-border)}
+:root:not([data-theme="dark"]) .main-nav{background:var(--workspace-page);border-color:var(--workspace-border)}
+
+/* In dark mode, editable and variable-value fields stay white for legibility. */
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] [contenteditable="true"],
+:root[data-theme="dark"] .calculator-display,
+:root[data-theme="dark"] .value-field,
+:root[data-theme="dark"] .variable-value{
+  background:#fff!important;
+  color:#263445!important;
+  border-color:#cbd5e1!important;
+  caret-color:#263445;
+}
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder{color:#788697!important}
