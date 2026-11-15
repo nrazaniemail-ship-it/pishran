@@ -615,6 +615,25 @@ near(assetSchedule[1].depreciation, 300, 1e-9, 'Asset-by-asset straight-line dep
 near(assetSchedule[4].depreciation, 0, 1e-9, 'Depreciation ends after useful life')
 near(assetSchedule[3].closingBookValue, 600, 1e-9, 'Asset book value at residual value')
 
+
+const sameYearBeforeStart = engine.resolveComfarDepreciationStartPeriod(2,2,'1405-01-01','1405-06-01')
+const sameYearAfterStart = engine.resolveComfarDepreciationStartPeriod(2,2,'1405-07-01','1405-06-01')
+assert.equal(sameYearBeforeStart,2,'An acquisition before Starting at in the same year must start depreciation in that year')
+assert.equal(sameYearAfterStart,3,'An acquisition after Starting at in the same year must start depreciation in the following year')
+const registerAsset = {
+  ...validAsset,
+  id:'register-asset',
+  depreciation:{method:'linear-scrap',startingAt:'1405-06-01',ratePercent:10,lengthYears:10,lengthMonths:0,firstDepreciationMonths:6,scrapPercent:10},
+  acquisitions:[{id:'register-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'IRR',exchangeRateToLocal:null}],
+  sales:[]
+}
+const registerBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([registerAsset],1405,12)
+assert.equal(registerBuild.assets.length,1,'A valid fixed-asset acquisition must map to one depreciation vintage')
+assert.equal(registerBuild.assets[0].acquisitionPeriod,1,'Fixed-asset acquisition year must map to annual project period')
+assert.equal(registerBuild.assets[0].startingAtPeriod,1,'Starting at year must map to annual project period')
+assert.equal(engine.resolveComfarDepreciationStartPeriod(registerBuild.assets[0].acquisitionPeriod,registerBuild.assets[0].startingAtPeriod,registerBuild.assets[0].acquisitionDate,registerBuild.assets[0].startingAtDate),1,'Full acquisition date before Starting at must retain same-year depreciation')
+near(registerBuild.assets[0].originalValue,200,1e-9,'Fixed-asset acquisition amount must be converted to local currency')
+
 const comfarLinearZero = engine.calculateComfarAssetDepreciationSchedule([{
   id:'linear-zero',name:'Linear zero',originalValue:1000,initialBookValue:1000,scrapPercent:10,
   lengthYears:5,lengthMonths:0,ratePercent:20,method:'linear-to-zero',
