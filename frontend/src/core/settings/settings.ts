@@ -2,11 +2,13 @@ import { localStore } from '../storage/localStore'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type AccentTheme = 'navy' | 'emerald' | 'graphite' | 'gold'
+export type BackgroundTheme = 'bluegray' | 'mist' | 'sage' | 'sand' | 'sky' | 'lavender'
 export type AppLanguage = 'fa' | 'en'
 
 export interface AppSettings {
   themeMode: ThemeMode
   accentTheme: AccentTheme
+  backgroundTheme: BackgroundTheme
   language: AppLanguage
   compactMode: boolean
   confirmBeforeDelete: boolean
@@ -16,6 +18,7 @@ export interface AppSettings {
 export const DEFAULT_SETTINGS: AppSettings = {
   themeMode: 'light',
   accentTheme: 'navy',
+  backgroundTheme: 'bluegray',
   language: 'fa',
   compactMode: false,
   confirmBeforeDelete: true,
@@ -40,6 +43,7 @@ export function applySettings(settings: AppSettings) {
     : settings.themeMode
   root.dataset.theme = resolvedMode
   root.dataset.accent = settings.accentTheme
+  root.dataset.background = settings.backgroundTheme ?? 'bluegray'
   root.lang = settings.language
   root.dir = settings.language === 'fa' ? 'rtl' : 'ltr'
   root.dataset.density = settings.compactMode ? 'compact' : 'comfortable'
