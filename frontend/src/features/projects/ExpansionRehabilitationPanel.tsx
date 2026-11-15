@@ -3,8 +3,8 @@ import { Plus, Trash2 } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { calculateIncrementalEnterpriseAnalysis, type EnterpriseScenarioPeriodInput } from '../steel/financialModel'
 
-type Asset = { id:string; name:string; grossCost:number; accumulatedDepreciation:number; remainingLife:number; opportunityValue:number; status:'active'|'replace'|'idle'|'sell' }
-type LegacyLoan = { id:string; name:string; openingBalance:number; annualRate:number; annualDebtService:number }
+type Asset = { id:string; name:string; grossCost:number; accumulatedDepreciation:number; remainingLife:number; opportunityValue:number; residualValue?:number; commissioningDate?:string; depreciationMethod?:'straight-line'|'declining-balance'|'none'; costCentre?:string; foreignSharePercent?:number; status:'active'|'replace'|'idle'|'sell' }
+type LegacyLoan = { id:string; name:string; openingBalance:number; annualRate:number; annualDebtService:number; maturityYears?:number; graceYears?:number; repaymentFrequency?:'annual'|'semiannual'|'quarterly'|'monthly'; repaymentMethod?:'equal-principal'|'annuity'|'bullet'; nextPaymentDate?:string; accruedInterest?:number; fees?:number }
 type Opening = {
   rawMaterialsLocal:number; rawMaterialsForeign:number; suppliesLocal:number; suppliesForeign:number; wipLocal:number; wipForeign:number; finishedQuantity:number; finishedUnitPrice:number; finishedForeignShare:number
   receivablesLocal:number; receivablesForeign:number; receivableDaysLocal:number; receivableDaysForeign:number
@@ -40,6 +40,18 @@ const comfarTermsEn:Record<string,string>={
  'زیان انباشته':'Accumulated losses',
  'یارانه‌ها و کمک‌های بلاعوض':'Subsidies and grants',
  'شرح دارایی':'Fixed investment item',
+ 'ارزش اسقاط':'Residual / salvage value',
+ 'تاریخ بهره‌برداری':'Date put into operation',
+ 'روش استهلاک':'Depreciation method',
+ 'مرکز هزینه':'Cost Centre',
+ 'سهم جزء ارزی (%)':'Foreign Currency Component (%)',
+ 'مدت سررسید (سال)':'Maturity (years)',
+ 'دوره تنفس (سال)':'Grace Period (years)',
+ 'تناوب بازپرداخت':'Repayment Frequency',
+ 'روش بازپرداخت':'Repayment Method',
+ 'تاریخ قسط بعدی':'Next Instalment Date',
+ 'بهره معوق/پرداختنی':'Accrued / Payable Interest',
+ 'کارمزد و هزینه‌ها':'Fees and Charges',
  'بهای تمام‌شده':'Gross cost',
  'استهلاک انباشته':'Accumulated depreciation',
  'عمر مفید باقیمانده':'Remaining useful life',
@@ -67,8 +79,8 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  useEffect(()=>{if(loaded)void localStore.set(key,state)},[loaded,key,state])
  const updateOpening=(field:keyof Opening,value:number)=>setState(s=>({...s,opening:{...s.opening,[field]:field==='finishedForeignShare'?Math.max(0,Math.min(100,value)):Math.max(0,value)}}))
  const updatePeriod=(scenario:'without'|'with',index:number,field:keyof EnterpriseScenarioPeriodInput,value:number)=>setState(s=>({...s,[scenario]:s[scenario].map((row,i)=>i===index?{...row,[field]:value}:row)}))
- const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی موجود',grossCost:0,accumulatedDepreciation:0,remainingLife:10,opportunityValue:0,status:'active'}]}))
- const addLoan=()=>setState(s=>({...s,loans:[...s.loans,{id:'loan-'+Date.now(),name:'تسهیلات موجود',openingBalance:0,annualRate:0,annualDebtService:0}]}))
+ const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی موجود',grossCost:0,accumulatedDepreciation:0,remainingLife:10,opportunityValue:0,residualValue:0,commissioningDate:'',depreciationMethod:'straight-line',costCentre:'',foreignSharePercent:0,status:'active'}]}))
+ const addLoan=()=>setState(s=>({...s,loans:[...s.loans,{id:'loan-'+Date.now(),name:'تسهیلات موجود',openingBalance:0,annualRate:0,annualDebtService:0,maturityYears:0,graceYears:0,repaymentFrequency:'quarterly',repaymentMethod:'annuity',nextPaymentDate:'',accruedInterest:0,fees:0}]}))
  const fixedGross=state.assets.reduce((sum,a)=>sum+a.grossCost,0)
  const fixedAccum=state.assets.reduce((sum,a)=>sum+a.accumulatedDepreciation,0)
  const fixedNet=fixedGross-fixedAccum
@@ -90,7 +102,7 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
    <label className="fw-field"><span>{t('نرخ تنزیل (تحلیل افزایشی) (%)','Discount Rate (Incremental Analysis) (%)')}</span><input type="number" min="-99" value={state.discountRate} onChange={e=>setState(s=>({...s,discountRate:Number(e.target.value)}))}/></label>
   </div>
   <h4>{t('۱. مانده‌های افتتاحیه (دارایی‌ها و بدهی‌های جاری)','1. Starting Balances — Current Assets and Liabilities')}</h4>
-  <p className="fw-hint">{t('تاریخ اثر مانده‌ها باید روز قبل از شروع نخستین دوره برنامه‌ریزی باشد. مبالغ ارزی در این نسخه به‌صورت معادل واحد پول پایه ثبت می‌شوند؛ ارز اصلی و نرخ تسعیر باید در نسخه چندارزی تکمیل شود. سپرده کوتاه‌مدت فقط جزء محلی دارد.','Balances take effect on the day before the first planning period. Foreign amounts are currently entered as base-currency equivalents; source currency and FX translation are a separate multi-currency enhancement. Short-term deposits have only a local-currency field.')}</p>
+  <p className="fw-hint">{t('تاریخ اثر مانده‌ها باید روز قبل از شروع نخستین دوره برنامه‌ریزی باشد. طبق ساختار COMFAR مبالغ مانده‌ها با واحد پول محلی تعریف می‌شوند و جزء ارز خارجی برای محاسبات اقتصادی جداگانه نگهداری می‌شود؛ اتصال این جزء به ارز مشخص و نرخ تبدیل آن در ماژول Currencies هنوز باید تکمیل شود. سپرده کوتاه‌مدت فقط جزء محلی دارد.','Starting balance amounts are defined in local currency. The foreign currency component is retained separately for economic calculations; linking each component to a defined foreign currency and its exchange rate in the Currencies module remains to be completed. Short-term deposits have only a local-currency field.')}</p>
   <div className="fw-grid">
    {moneyKeys.map(([field,label])=><label className="fw-field" key={field}><span>{t(label,comfarTermsEn[label]??label)}</span><input type="number" min="0" value={state.opening[field]} onChange={e=>updateOpening(field,Number(e.target.value))}/></label>)}
    <label className="fw-field"><span>{t('مقدار موجودی محصول نهایی','Finished Product Inventory Quantity')}</span><input type="number" min="0" value={state.opening.finishedQuantity} onChange={e=>updateOpening('finishedQuantity',Number(e.target.value))}/></label>
@@ -105,7 +117,10 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   <h4>{t('۲. مانده‌های افتتاحیه دارایی‌های ثابت','2. Starting Balances — Fixed Investment Items')}</h4>
   {state.assets.map(asset=><div className="fw-grid" key={asset.id}>
    <label className="fw-field"><span>{t('شرح دارایی','Asset Description')}</span><input value={asset.name} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,name:e.target.value}:a)}))}/></label>
-   {([['grossCost','بهای تمام‌شده'],['accumulatedDepreciation','استهلاک انباشته'],['remainingLife','عمر مفید باقیمانده'],['opportunityValue','ارزش فرصت / بازار']] as [keyof Asset,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{t(label,comfarTermsEn[label]??label)}</span><input type="number" min="0" value={asset[field]} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,[field]:Number(e.target.value)}:a)}))}/></label>)}
+   {([['grossCost','بهای تمام‌شده'],['accumulatedDepreciation','استهلاک انباشته'],['remainingLife','عمر مفید باقیمانده'],['opportunityValue','ارزش فرصت / بازار'],['residualValue','ارزش اسقاط'],['foreignSharePercent','سهم جزء ارزی (%)']] as [keyof Asset,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{t(label,comfarTermsEn[label]??label)}</span><input type="number" min="0" value={Number(asset[field]??0)} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,[field]:Number(e.target.value)}:a)}))}/></label>)}
+   <label className="fw-field"><span>{t('تاریخ بهره‌برداری',comfarTermsEn['تاریخ بهره‌برداری'])}</span><input type="date" value={asset.commissioningDate??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,commissioningDate:e.target.value}:a)}))}/></label>
+   <label className="fw-field"><span>{t('روش استهلاک',comfarTermsEn['روش استهلاک'])}</span><select value={asset.depreciationMethod??'straight-line'} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,depreciationMethod:e.target.value as Asset['depreciationMethod']}:a)}))}><option value="straight-line">{t('خط مستقیم','Straight-line')}</option><option value="declining-balance">{t('مانده نزولی','Declining Balance')}</option><option value="none">{t('بدون استهلاک','No Depreciation')}</option></select></label>
+   <label className="fw-field"><span>{t('مرکز هزینه',comfarTermsEn['مرکز هزینه'])}</span><input value={asset.costCentre??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,costCentre:e.target.value}:a)}))}/></label>
    <label className="fw-field"><span>{t('وضعیت دارایی','Asset Status')}</span><select value={asset.status} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,status:e.target.value as Asset['status']}:a)}))}><option value="active">{t('فعال','Active')}</option><option value="replace">{t('جایگزین‌شونده','To Be Replaced')}</option><option value="idle">{t('بلااستفاده','Idle')}</option><option value="sell">{t('قابل فروش','For Sale')}</option></select></label>
    <button className="secondary-button" onClick={()=>setState(s=>({...s,assets:s.assets.filter(a=>a.id!==asset.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
   </div>)}
@@ -114,12 +129,15 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   <h4>{t('۳. مانده‌های افتتاحیه تأمین مالی بلندمدت','3. Starting Balances — Long-Term Debt and Equity Capital')}</h4>
   {state.loans.map(loan=><div className="fw-grid" key={loan.id}>
    <label className="fw-field"><span>{t('عنوان تسهیلات','Loan Name')}</span><input value={loan.name} onChange={e=>setState(s=>({...s,loans:s.loans.map(l=>l.id===loan.id?{...l,name:e.target.value}:l)}))}/></label>
-   {([['openingBalance','مانده اصل بدهی'],['annualRate','نرخ بهره سالانه (%)'],['annualDebtService','خدمت بدهی سالانه']] as [keyof LegacyLoan,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{t(label,comfarTermsEn[label]??label)}</span><input type="number" min="0" value={loan[field]} onChange={e=>setState(s=>({...s,loans:s.loans.map(l=>l.id===loan.id?{...l,[field]:Number(e.target.value)}:l)}))}/></label>)}
+   {([['openingBalance','مانده اصل بدهی'],['annualRate','نرخ بهره سالانه (%)'],['annualDebtService','خدمت بدهی سالانه'],['maturityYears','مدت سررسید (سال)'],['graceYears','دوره تنفس (سال)'],['accruedInterest','بهره معوق/پرداختنی'],['fees','کارمزد و هزینه‌ها']] as [keyof LegacyLoan,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{t(label,comfarTermsEn[label]??label)}</span><input type="number" min="0" value={Number(loan[field]??0)} onChange={e=>setState(s=>({...s,loans:s.loans.map(l=>l.id===loan.id?{...l,[field]:Number(e.target.value)}:l)}))}/></label>)}
+   <label className="fw-field"><span>{t('تناوب بازپرداخت',comfarTermsEn['تناوب بازپرداخت'])}</span><select value={loan.repaymentFrequency??'quarterly'} onChange={e=>setState(s=>({...s,loans:s.loans.map(l=>l.id===loan.id?{...l,repaymentFrequency:e.target.value as LegacyLoan['repaymentFrequency']}:l)}))}><option value="annual">{t('سالانه','Annual')}</option><option value="semiannual">{t('شش‌ماهه','Semi-annual')}</option><option value="quarterly">{t('فصلی','Quarterly')}</option><option value="monthly">{t('ماهانه','Monthly')}</option></select></label>
+   <label className="fw-field"><span>{t('روش بازپرداخت',comfarTermsEn['روش بازپرداخت'])}</span><select value={loan.repaymentMethod??'annuity'} onChange={e=>setState(s=>({...s,loans:s.loans.map(l=>l.id===loan.id?{...l,repaymentMethod:e.target.value as LegacyLoan['repaymentMethod']}:l)}))}><option value="equal-principal">{t('اقساط مساوی اصل','Equal Principal')}</option><option value="annuity">{t('اقساط مساوی','Annuity')}</option><option value="bullet">{t('یکجا در سررسید','Bullet')}</option></select></label>
+   <label className="fw-field"><span>{t('تاریخ قسط بعدی',comfarTermsEn['تاریخ قسط بعدی'])}</span><input type="date" value={loan.nextPaymentDate??''} onChange={e=>setState(s=>({...s,loans:s.loans.map(l=>l.id===loan.id?{...l,nextPaymentDate:e.target.value}:l)}))}/></label>
    <button className="secondary-button" onClick={()=>setState(s=>({...s,loans:s.loans.filter(l=>l.id!==loan.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
   </div>)}
   <button className="secondary-button" onClick={addLoan}><Plus size={14}/>{t('افزودن تسهیلات موجود','Add Existing Loan')}</button>
   <div className="fw-result">{t('جمع بدهی افتتاحیه','Opening Debt Total')}: <b>{fmt(debt)}</b> · {t('جمع بدهی و حقوق مالکانه','Liabilities & Equity')}: <b>{fmt(liabilities+equity)}</b> · {t('اختلاف تراز افتتاحیه','Opening Balance Difference')}: <b>{fmt(balanceDifference)} {currency}</b> {Math.abs(balanceDifference)<0.01?'✓':'⚠'}</div>
-  <p className="fw-hint">{t('کنترل تراز صرفاً اختلاف را نشان می‌دهد و هیچ رقم ترازکننده‌ای به سود انباشته یا حقوق مالکانه اضافه نمی‌کند. اقلام ارزی فعلاً با معادل پول پایه جمع می‌شوند؛ برای تصمیم نهایی باید جزئیات ارز، نرخ تسعیر و ثبت حسابداری هر مانده تکمیل شود.','The balance check reports the difference and never inserts a balancing plug into retained earnings or equity. Foreign items are currently summed as base-currency equivalents; currency denomination, FX rates and accounting entries must be completed before final appraisal.')}</p>
+  <p className="fw-hint">{t('کنترل تراز صرفاً اختلاف را نشان می‌دهد و هیچ رقم ترازکننده‌ای به سود انباشته یا حقوق مالکانه اضافه نمی‌کند. جزء ارز خارجی هنوز به ماژول Currencies و نرخ تبدیل/درمان اقتصادی آن متصل نشده است؛ بنابراین کنترل تراز تا تکمیل این اتصال و نگاشت حسابداری، مقدماتی است.','The balance check reports the difference and never inserts a balancing plug into retained earnings or equity. The foreign currency component is not yet linked to the Currencies module and its exchange-rate/economic treatment; treat this balance check as provisional until that link and the accounting mapping are completed.')}</p>
   <h4>{t('۴. تحلیل افزایشی ـ بدون طرح','4. Incremental Analysis — Without Project')}</h4>
   {inputFields('without',state.without)}
   <h4>{t('۵. تحلیل افزایشی ـ با طرح','5. Incremental Analysis — With Project')}</h4>
