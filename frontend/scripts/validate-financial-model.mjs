@@ -938,6 +938,7 @@ assert.equal(blankFoundation.planning.dayCountBasis, null, 'Blank template must 
 assert.equal(blankFoundation.discounting.method, 'unspecified', 'Blank template must not assume a discounting method')
 assert.equal(blankFoundation.taxation.system, 'unspecified', 'Blank template must not assume a tax system')
 assert.equal(blankFoundation.taxation.lossCarryForward, null, 'Blank template must not assume loss carry-forward treatment')
+assert.ok((await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')).includes("method:rawProject?'unspecified'") , 'Raw template must not assume a discounting method in the finance form')
 assert.equal(blankFoundation.currencies.foreignCurrencies.length, 0, 'Blank template must not invent foreign currencies or exchange rates')
 assert.equal(blankFoundation.discounting.financialRatePercent, null, 'Blank template must not assume a financial discount rate')
 assert.equal(blankFoundation.taxation.rates.length, 0, 'Blank template must not assume tax rates')
