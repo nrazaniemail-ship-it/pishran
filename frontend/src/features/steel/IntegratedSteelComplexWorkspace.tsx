@@ -26,11 +26,11 @@ export default function IntegratedSteelComplexWorkspace({ project, onBack, langu
         <button className={unit === 'dri' ? 'primary' : 'secondary-button'} onClick={() => setUnit('dri')}>{t('ورود به کارگاه DRI','Open DRI Workspace')}</button>
       </article>
       <article className="project-card">
-        <div className="module-icon"><Layers3 size={22}/></div><h3>{en?'Melting & Casting':'ذوب و ریخته‌گری'}</h3><p>{t('ظرفیت مرجع: ','Reference capacity: ')}{benchmark.slabCapacityTpy.toLocaleString('fa-IR')}{t(' تن تختال در سال',' tonnes of slab per year')}</p>
+        <div className="module-icon"><Layers3 size={22}/></div><h3>{en?'Melting & Casting':'ذوب و ریخته‌گری'}</h3><p>{t('ظرفیت مرجع: ','Reference capacity: ')}{benchmark.slabCapacityTpy.toLocaleString(en?'en-US':'fa-IR')}{t(' تن تختال در سال',' tonnes of slab per year')}</p>
         <button className={unit === 'steelmaking' ? 'primary' : 'secondary-button'} onClick={() => setUnit('steelmaking')}>{t('ورود به کارگاه فولادسازی','Open Steelmaking Workspace')}</button>
       </article>
     </div>
-    <div className="ppw-note"><b>{unit === 'dri' ? 'کارگاه {t('احیای مستقیم','Direct Reduction')}' : '{t('کارگاه فولادسازی و ریخته‌گری','Steelmaking & Casting Workspace')}'}</b><p>{t('هر دو کارگاه با شناسه همین پروژه ذخیره می‌شوند؛ داده‌های فنی مستقل می‌مانند و پروژه به دو پروژه جداگانه تکثیر نمی‌شود.','Both workspaces are saved under this project ID. Their technical data remain independent, without duplicating the project into two separate projects.')}</p></div>
+    <div className="ppw-note"><b>{unit==='dri'?t('کارگاه احیای مستقیم','Direct Reduction Workspace'):t('کارگاه فولادسازی و ریخته‌گری','Steelmaking & Casting Workspace')}</b><p>{t('هر دو کارگاه با شناسه همین پروژه ذخیره می‌شوند؛ داده‌های فنی مستقل می‌مانند و پروژه به دو پروژه جداگانه تکثیر نمی‌شود.','Both workspaces are saved under this project ID. Their technical data remain independent, without duplicating the project into two separate projects.')}</p></div>
     <ProcessPlantWorkspace project={project} plantType={unit} onBack={onBack}/>
     <section className="analytics" style={{ marginTop: 24 }}>
       <article className="chart-card">
