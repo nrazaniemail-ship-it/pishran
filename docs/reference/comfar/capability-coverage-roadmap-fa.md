@@ -160,3 +160,27 @@ Technical Manual مرجع الگوریتم مالی نیست؛ اما برای �
 - Incremental Analysis engine اکنون ورودی‌های غیرعددی و افق‌های ناهم‌تراز را رد می‌کند؛ آزمون‌های مرجع به validator اضافه شده‌اند.
 - موتور عمومی استهلاک دارایی به تفکیک acquisition vintage اضافه شده است: Linear to zero، Linear to scrap، Accelerated با تغییر خودکار به Linear to scrap، و Sum of years digits برای دوره‌های کامل سالانه. زمان شروع با قاعده Starting at و خریدهای بعد از آن تفکیک می‌شود؛ partial first-year برای دو روش خطی و Accelerated پشتیبانی شده است. برای Sum of years digits در حالت partial year یا عمر دارای ماه اضافه، موتور عمداً fail-closed است تا فرمول هم‌پوشانی ماه‌ها بدون آزمون عددی مستقل حدس زده نشود. این روش هنوز باید با یک فایل خروجی عددی COMFAR که Sum of years digits/partial-year دارد تطبیق داده شود. دارایی‌های موجود با accumulated depreciation نیز باید قبل از اتصال به موتور به book value و original gross value نگاشت شوند.
 - مرحله بعد: تکمیل فرمول تقویمی Sum of years digits با یک benchmark واقعی COMFAR، افزودن فروش/جایگزینی دارایی و Other income/loss و Return of capital، سپس اتصال استهلاک و دارایی‌ها به ترازنامه و With/Without Project؛ بعد از آن کارمزدهای وام، interest-payment dates و آزمون کامل Tutorial.
+
+
+## 12. فونداسیون مشترک فرم‌های خام — وضعیت پیاده‌سازی
+
+برای جلوگیری از طراحی جداگانه و ناسازگار فرم‌ها در هر صنعت، ساختار مستقل و نسخه‌بندی‌شده `ProjectFoundation` به مدل پروژه اضافه شده است. فرم مشترک آن در مرحله تعریف پروژه قرار گرفته و برای همه قالب‌ها قابل استفاده است.
+
+اجزای فرم پایه:
+- Planning Periods & Balance Date: تناوب سالانه/شش‌ماهه/فصلی/ماهانه، روز و ماه تراز، Valuation Date، Day-count Basis و Cash Flow Timing.
+- Currencies & Exchange Rates: ارز محلی با کد ISO، ارزهای خارجی و نرخ تبدیل دوره‌ای هر ارز به ارز محلی.
+- Cost Centres: فعال‌سازی تحلیل مراکز هزینه، کد و نام مرکز هزینه.
+- Inflation & Price Indices: شاخص‌های قیمت برحسب ارز و نرخ تورم دوره‌ای.
+- Discounting & Taxation: روش تنزیل، نرخ مالی و اقتصادی، نظام مالیاتی، انتقال زیان و نرخ مالیات به تفکیک دوره.
+
+قواعد مهم:
+- قالب خام هیچ نرخ ارز، نرخ تورم، نرخ مالیات یا نرخ تنزیل مالی را به‌صورت پیش‌فرض فرض نمی‌کند.
+- اطلاعات پایه در یک شیء نسخه‌بندی‌شده و با مهاجرت سازگار با پروژه‌های ذخیره‌شده قبلی نگهداری می‌شود.
+- اعتبارسنجی ساختاری برای کدهای تکراری ارز و مراکز هزینه، نرخ‌های نامعتبر، ارز محلی تعریف‌نشده و نرخ‌های مالیاتی/تورمی ناقص اضافه شده است.
+- داده‌های FX، Inflation، Cost Centre، Discounting و Taxation هنوز به تمام scheduleهای محاسباتی و گزارش‌های نهایی متصل نشده‌اند؛ ثبت و اعتبارسنجی فرم، به‌تنهایی به معنی تکمیل موتور آن بخش‌ها نیست.
+
+### گام بعدی فونداسیون
+1. تکمیل فرم Fixed Investment به‌صورت دفتر دارایی عمومی و مستقل از صنعت: طبقه دارایی، ردیف‌های تحصیل در هر دوره، ارز و منشأ محلی/خارجی، شرایط استهلاک، Starting at، Cost Centre، Foreign Currency Component و فروش/جایگزینی دارایی.
+2. اتصال همان دفتر دارایی به CAPEX، Depreciation، Net Fixed Assets، Tax Allowances، Cash Flow و Balance Sheet.
+3. تکمیل ساختار Production Costs، Sales Programme و Working Capital به‌صورت چندمحصولی و دوره‌ای.
+4. پس از تثبیت و آزمون فونداسیون خام، ورود داده‌های HRCR200 و تطبیق schedule به schedule با فایل‌های Excel و خروجی مرجع.
