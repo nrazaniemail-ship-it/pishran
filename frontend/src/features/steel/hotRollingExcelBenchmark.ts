@@ -373,8 +373,8 @@ export function createHotRollingCoilProjectFoundation(): ProjectFoundation {
   return {
     schemaVersion: 1,
     planning: {
-      periodFrequency: 'annual', balanceDateMonth: 12, balanceDateDay: null,
-      dayCountBasis: 360, valuationDate: '1404-12', cashFlowTiming: 'unspecified'
+      periodFrequency: 'annual', projectStartDate: '', projectEndDate: '', fiscalYearStartMonth: null,
+      balanceDateMonth: 12, balanceDateDay: null, dayCountBasis: 360, valuationDate: '1404-12', cashFlowTiming: 'unspecified'
     },
     currencies: {
       localCurrencyCode: 'IRR', localCurrencyName: 'میلیون ریال',
