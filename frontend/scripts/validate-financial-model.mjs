@@ -735,6 +735,10 @@ assert.ok(expansionPanelSource.includes('Residual / salvage value')
 assert.ok(expansionPanelSource.includes('Long-Term Debt and Equity Capital')
   && expansionPanelSource.includes('Opportunity Value'),
   'Existing fixed assets and long-term finance must use consistent COMFAR vocabulary')
+assert.ok(expansionPanelSource.includes('Existing Enterprise — Without Project')
+  && expansionPanelSource.includes('Existing Enterprise + Project')
+  && expansionPanelSource.includes('Incremental Project Effect'),
+  'Expansion/Rehabilitation workflow must explicitly model COMFAR stages 1, 2 and 3')
 assert.ok(expansionPanelSource.includes('calculateIncrementalEnterpriseAnalysis')
   && expansionPanelSource.includes('Opening Balance Difference')
   && expansionPanelSource.includes('opportunityValue')
