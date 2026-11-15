@@ -17,6 +17,43 @@ const blankOpening:Opening={rawMaterialsLocal:0,rawMaterialsForeign:0,suppliesLo
 const emptyPeriod=():EnterpriseScenarioPeriodInput=>({revenue:0,cashOperatingCosts:0,tax:0,capex:0,opportunityCost:0,changeInWorkingCapital:0,assetSaleProceeds:0,terminalValue:0})
 const initialState=(horizon:number):State=>({baseDate:'',mode:'expansion',opening:{...blankOpening},assets:[],loans:[],without:Array.from({length:horizon},emptyPeriod),with:Array.from({length:horizon},emptyPeriod),discountRate:25})
 const fmt=(v:number)=>Number.isFinite(v)?v.toLocaleString('fa-IR',{maximumFractionDigits:2}):'—'
+const comfarTermsEn:Record<string,string>={
+ 'موجودی مواد اولیه ـ ارز محلی':'Raw materials — local currency',
+ 'موجودی مواد اولیه ـ جزء ارز خارجی':'Raw materials — foreign currency component',
+ 'مواد و ملزومات ـ ارز محلی':'Supplies — local currency',
+ 'مواد و ملزومات ـ جزء ارز خارجی':'Supplies — foreign currency component',
+ 'کالای در جریان ساخت ـ ارز محلی':'Work in progress — local currency',
+ 'کالای در جریان ساخت ـ جزء ارز خارجی':'Work in progress — foreign currency component',
+ 'حساب‌های دریافتنی ـ ارز محلی':'Accounts receivable — local currency',
+ 'حساب‌های دریافتنی ـ جزء ارز خارجی':'Accounts receivable — foreign currency component',
+ 'وجه نقد ـ ارز محلی':'Cash-in-hand — local currency',
+ 'وجه نقد ـ جزء ارز خارجی':'Cash-in-hand — foreign currency component',
+ 'سپرده کوتاه‌مدت محلی':'Short-term deposits — local currency only',
+ 'مازاد نقدی محلی':'Cash surplus — local currency',
+ 'مازاد نقدی خارجی':'Cash surplus — foreign currency component',
+ 'حساب‌های پرداختنی ـ ارز محلی':'Accounts payable — local currency',
+ 'حساب‌های پرداختنی ـ جزء ارز خارجی':'Accounts payable — foreign currency component',
+ 'سایر دارایی‌های جاری محلی':'Other assets — local currency',
+ 'سایر بدهی‌های جاری محلی':'Other liabilities — local currency',
+ 'سرمایه پرداخت‌شده':'Equity capital — paid-in capital',
+ 'اندوخته و سود انباشته':'Reserves and retained earnings',
+ 'زیان انباشته':'Accumulated losses',
+ 'یارانه‌ها و کمک‌های بلاعوض':'Subsidies and grants',
+ 'شرح دارایی':'Fixed investment item',
+ 'بهای تمام‌شده':'Gross cost',
+ 'استهلاک انباشته':'Accumulated depreciation',
+ 'عمر مفید باقیمانده':'Remaining useful life',
+ 'ارزش فرصت / بازار':'Opportunity value / market value',
+ 'عنوان تسهیلات':'Long-term debt description',
+ 'مانده اصل بدهی':'Outstanding principal balance',
+ 'نرخ بهره سالانه (%)':'Annual interest rate (%)',
+ 'خدمت بدهی سالانه':'Annual debt service',
+ 'فعال':'In operation',
+ 'جایگزین‌شونده':'To be replaced',
+ 'بلااستفاده':'Idle',
+ 'قابل فروش':'For sale'
+}
+const labelText=(fa:string)=>t(fa,comfarTermsEn[fa]??fa)
 const moneyKeys:[keyof Opening,string][]=[
  ['rawMaterialsLocal','موجودی مواد اولیه ـ ارز محلی'],['rawMaterialsForeign','موجودی مواد اولیه ـ جزء ارز خارجی'],['suppliesLocal','مواد و ملزومات ـ ارز محلی'],['suppliesForeign','مواد و ملزومات ـ جزء ارز خارجی'],['wipLocal','کالای در جریان ساخت ـ ارز محلی'],['wipForeign','کالای در جریان ساخت ـ جزء ارز خارجی'],['receivablesLocal','حساب‌های دریافتنی ـ ارز محلی'],['receivablesForeign','حساب‌های دریافتنی ـ جزء ارز خارجی'],['cashLocal','وجه نقد ـ ارز محلی'],['cashForeign','وجه نقد ـ جزء ارز خارجی'],['shortTermDepositsLocal','سپرده کوتاه‌مدت محلی'],['cashSurplusLocal','مازاد نقدی محلی'],['cashSurplusForeign','مازاد نقدی ارزی'],['payablesLocal','حساب‌های پرداختنی ـ ارز محلی'],['payablesForeign','حساب‌های پرداختنی ـ جزء ارز خارجی'],['otherAssetsLocal','سایر دارایی‌های جاری محلی'],['otherLiabilitiesLocal','سایر بدهی‌های جاری محلی'],['paidInCapital','سرمایه پرداخت‌شده'],['retainedEarnings','اندوخته و سود انباشته'],['accumulatedLosses','زیان انباشته'],['grants','یارانه‌ها و کمک‌های بلاعوض']
 ]
@@ -46,17 +83,17 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  const result=useMemo(()=>calculateIncrementalEnterpriseAnalysis(state.without,state.with,state.discountRate/100),[state.without,state.with,state.discountRate])
  const inputFields=(scenario:'without'|'with',rows:EnterpriseScenarioPeriodInput[])=> <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('درآمد','Revenue')}</th><th>{t('هزینه نقدی','Cash OPEX')}</th><th>{t('مالیات','Tax')}</th><th>{t('CAPEX','CAPEX')}</th><th>{t('هزینه فرصت دارایی موجود','Existing Asset Opportunity Cost')}</th><th>{t('تغییر سرمایه در گردش','Δ Working Capital')}</th><th>{t('فروش دارایی','Asset Sale')}</th><th>{t('ارزش نهایی','Terminal Value')}</th></tr></thead><tbody>{rows.map((r,i)=><tr key={i}><th>{i+1}</th>{(['revenue','cashOperatingCosts','tax','capex','opportunityCost','changeInWorkingCapital','assetSaleProceeds','terminalValue'] as (keyof EnterpriseScenarioPeriodInput)[]).map(field=><td key={field}><input aria-label={String(field)+' '+(i+1)} style={{width:105,minWidth:85}} type="number" value={r[field]??0} onChange={e=>updatePeriod(scenario,i,field,Number(e.target.value))}/></td>)}</tr>)}</tbody></table></div>
  return <section className="fw-card" style={{marginTop:18}}>
-  <h3>{t('مدل توسعه، نوسازی و بازسازی واحد موجود','Existing Enterprise Expansion & Rehabilitation Model')}</h3>
+  <h3>{t('تحلیل توسعه/بازسازی بنگاه موجود','Expansion/Rehabilitation Project Analysis')}</h3>
   <p className="fw-lead">{t('این ماژول، بنگاه موجود را جدا از سرمایه‌گذاری جدید مدل می‌کند و سه خروجی مستقل «بدون طرح»، «با طرح» و «اثر افزایشی طرح» می‌سازد. ارقام این بخش در ذخیره محلی همین پروژه نگهداری می‌شوند.','This module models the existing enterprise separately from the new investment and produces distinct Without Project, With Project and Incremental views. Data is saved locally with this project.')}</p>
   <div className="fw-grid">
    <label className="fw-field"><span>{t('نوع پروژه','Project Type')}</span><select value={state.mode} onChange={e=>setState(s=>({...s,mode:e.target.value as State['mode']}))}><option value="expansion">{t('توسعه / Expansion','Expansion')}</option><option value="rehabilitation">{t('بازسازی / Rehabilitation','Rehabilitation')}</option><option value="combined">{t('توسعه همراه با بازسازی','Expansion / Rehabilitation')}</option></select></label>
    <label className="fw-field"><span>{t('تاریخ مبنای مانده افتتاحیه','Opening Balance Effective Date')}</span><input type="date" value={state.baseDate} onChange={e=>setState(s=>({...s,baseDate:e.target.value}))}/></label>
    <label className="fw-field"><span>{t('نرخ تنزیل (تحلیل افزایشی) (%)','Discount Rate (Incremental Analysis) (%)')}</span><input type="number" min="-99" value={state.discountRate} onChange={e=>setState(s=>({...s,discountRate:Number(e.target.value)}))}/></label>
   </div>
-  <h4>{t('۱. مانده‌های افتتاحیه (دارایی‌ها و بدهی‌های جاری)','1. Starting Balances — Current Assets & Liabilities')}</h4>
+  <h4>{t('۱. مانده‌های افتتاحیه (دارایی‌ها و بدهی‌های جاری)','1. Starting Balances — Current Assets and Liabilities')}</h4>
   <p className="fw-hint">{t('تاریخ اثر مانده‌ها باید روز قبل از شروع نخستین دوره برنامه‌ریزی باشد. مبالغ ارزی در این نسخه به‌صورت معادل واحد پول پایه ثبت می‌شوند؛ ارز اصلی و نرخ تسعیر باید در نسخه چندارزی تکمیل شود. سپرده کوتاه‌مدت فقط جزء محلی دارد.','Balances take effect on the day before the first planning period. Foreign amounts are currently entered as base-currency equivalents; source currency and FX translation are a separate multi-currency enhancement. Short-term deposits have only a local-currency field.')}</p>
   <div className="fw-grid">
-   {moneyKeys.map(([field,label])=><label className="fw-field" key={field}><span>{t(label,label)}</span><input type="number" min="0" value={state.opening[field]} onChange={e=>updateOpening(field,Number(e.target.value))}/></label>)}
+   {moneyKeys.map(([field,label])=><label className="fw-field" key={field}><span>{labelText(label)}</span><input type="number" min="0" value={state.opening[field]} onChange={e=>updateOpening(field,Number(e.target.value))}/></label>)}
    <label className="fw-field"><span>{t('مقدار موجودی محصول نهایی','Finished Product Inventory Quantity')}</span><input type="number" min="0" value={state.opening.finishedQuantity} onChange={e=>updateOpening('finishedQuantity',Number(e.target.value))}/></label>
    <label className="fw-field"><span>{t('قیمت محصول نهایی موجودی','Finished Product Inventory Price')}</span><input type="number" min="0" value={state.opening.finishedUnitPrice} onChange={e=>updateOpening('finishedUnitPrice',Number(e.target.value))}/></label>
    <label className="fw-field"><span>{t('سهم ارزی موجودی محصول (%)','Foreign Currency Share of Inventory (%)')}</span><input type="number" min="0" max="100" value={state.opening.finishedForeignShare} onChange={e=>updateOpening('finishedForeignShare',Number(e.target.value))}/></label>
@@ -66,19 +103,19 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
    <label className="fw-field"><span>{t('دوره پرداخت حساب‌های پرداختنی ارزی (روز)','Foreign Accounts Payable Payout Period (Days)')}</span><input type="number" min="0" value={state.opening.payableDaysForeign} onChange={e=>updateOpening('payableDaysForeign',Number(e.target.value))}/></label>
   </div>
   <div className="fw-result">{t('ارزش موجودی محصول نهایی','Finished Product Inventory Value')}: <b>{fmt(finished)} {currency}</b> · {t('جمع دارایی‌های جاری در مانده‌های افتتاحیه','Total Current Assets in Starting Balances')}: <b>{fmt(currentAssets)} {currency}</b></div>
-  <h4>{t('۲. مانده‌های افتتاحیه دارایی‌های ثابت','2. Starting Balances — Fixed Assets')}</h4>
+  <h4>{t('۲. مانده‌های افتتاحیه دارایی‌های ثابت','2. Starting Balances — Fixed Investment Items')}</h4>
   {state.assets.map(asset=><div className="fw-grid" key={asset.id}>
    <label className="fw-field"><span>{t('شرح دارایی','Asset Description')}</span><input value={asset.name} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,name:e.target.value}:a)}))}/></label>
-   {([['grossCost','بهای تمام‌شده'],['accumulatedDepreciation','استهلاک انباشته'],['remainingLife','عمر مفید باقیمانده'],['opportunityValue','ارزش فرصت / بازار']] as [keyof Asset,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{t(label,label)}</span><input type="number" min="0" value={asset[field]} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,[field]:Number(e.target.value)}:a)}))}/></label>)}
+   {([['grossCost','بهای تمام‌شده'],['accumulatedDepreciation','استهلاک انباشته'],['remainingLife','عمر مفید باقیمانده'],['opportunityValue','ارزش فرصت / بازار']] as [keyof Asset,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{labelText(label)}</span><input type="number" min="0" value={asset[field]} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,[field]:Number(e.target.value)}:a)}))}/></label>)}
    <label className="fw-field"><span>{t('وضعیت دارایی','Asset Status')}</span><select value={asset.status} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,status:e.target.value as Asset['status']}:a)}))}><option value="active">{t('فعال','Active')}</option><option value="replace">{t('جایگزین‌شونده','To Be Replaced')}</option><option value="idle">{t('بلااستفاده','Idle')}</option><option value="sell">{t('قابل فروش','For Sale')}</option></select></label>
    <button className="secondary-button" onClick={()=>setState(s=>({...s,assets:s.assets.filter(a=>a.id!==asset.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
   </div>)}
   <button className="secondary-button" onClick={addAsset}><Plus size={14}/>{t('افزودن دارایی موجود','Add Existing Asset')}</button>
   <div className="fw-result">{t('بهای تمام‌شده ناخالص','Gross Cost')}: <b>{fmt(fixedGross)}</b> · {t('استهلاک انباشته','Accumulated Depreciation')}: <b>{fmt(fixedAccum)}</b> · {t('ارزش دفتری خالص','Net Book Value')}: <b>{fmt(fixedNet)}</b> · {t('ارزش فرصت مجموع','Total Opportunity Value')}: <b>{fmt(state.assets.reduce((sum,a)=>sum+a.opportunityValue,0))}</b></div>
-  <h4>{t('۳. مانده‌های افتتاحیه تأمین مالی بلندمدت','3. Starting Balances — Long-Term Finance')}</h4>
+  <h4>{t('۳. مانده‌های افتتاحیه تأمین مالی بلندمدت','3. Starting Balances — Long-Term Debt and Equity Capital')}</h4>
   {state.loans.map(loan=><div className="fw-grid" key={loan.id}>
    <label className="fw-field"><span>{t('عنوان تسهیلات','Loan Name')}</span><input value={loan.name} onChange={e=>setState(s=>({...s,loans:s.loans.map(l=>l.id===loan.id?{...l,name:e.target.value}:l)}))}/></label>
-   {([['openingBalance','مانده اصل بدهی'],['annualRate','نرخ بهره سالانه (%)'],['annualDebtService','خدمت بدهی سالانه']] as [keyof LegacyLoan,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{t(label,label)}</span><input type="number" min="0" value={loan[field]} onChange={e=>setState(s=>({...s,loans:s.loans.map(l=>l.id===loan.id?{...l,[field]:Number(e.target.value)}:l)}))}/></label>)}
+   {([['openingBalance','مانده اصل بدهی'],['annualRate','نرخ بهره سالانه (%)'],['annualDebtService','خدمت بدهی سالانه']] as [keyof LegacyLoan,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{labelText(label)}</span><input type="number" min="0" value={loan[field]} onChange={e=>setState(s=>({...s,loans:s.loans.map(l=>l.id===loan.id?{...l,[field]:Number(e.target.value)}:l)}))}/></label>)}
    <button className="secondary-button" onClick={()=>setState(s=>({...s,loans:s.loans.filter(l=>l.id!==loan.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
   </div>)}
   <button className="secondary-button" onClick={addLoan}><Plus size={14}/>{t('افزودن تسهیلات موجود','Add Existing Loan')}</button>
