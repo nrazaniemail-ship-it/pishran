@@ -26,11 +26,11 @@ export function ValidationPanel({issues,title='کنترل هوشمند اطلا�
  const [expanded,setExpanded]=useState(true)
  const errors=issues.filter(x=>x.severity==='error'),warnings=issues.filter(x=>x.severity==='warning'),infos=issues.filter(x=>x.severity==='info')
  const hasIssues=errors.length+warnings.length>0
- return <section className={'smart-validation '+(errors.length?'has-errors':warnings.length?'has-warnings':'is-valid')} dir="rtl">
+ return <section className={'smart-validation '+(errors.length?'has-errors':warnings.length?'has-warnings':'is-valid')} dir={en?"ltr":"rtl"}>
   <button type="button" className="smart-validation-head" onClick={()=>setExpanded(v=>!v)} aria-expanded={expanded}>
    <span className="smart-validation-icon">{errors.length?<AlertTriangle size={18}/>:hasIssues?<Info size={18}/>:<ShieldCheck size={18}/>}</span>
    <span className="smart-validation-title"><b>{title==='کنترل هوشمند اطلاعات'?t(title,'Smart Data Validation'):title}</b><small>{errors.length?errors.length+' '+t('خطای مهم','critical errors'):warnings.length?warnings.length+' '+t('هشدار قابل بررسی','warnings to review'):t('خطای بحرانی شناسایی نشد','No critical errors')} · {infos.length} {t('نکته تکمیلی','additional notes')}</small></span>
-   <span className="smart-validation-counts"><em className="sv-error">{errors.length.toLocaleString(en?'en-US':'fa-IR')}</em><em className="sv-warning">{warnings.length.toLocaleString('fa-IR')}</em><em className="sv-info">{infos.length.toLocaleString('fa-IR')}</em></span>
+   <span className="smart-validation-counts"><em className="sv-error">{errors.length.toLocaleString(en?'en-US':'fa-IR')}</em><em className="sv-warning">{warnings.length.toLocaleString(en?'en-US':'fa-IR')}</em><em className="sv-info">{infos.length.toLocaleString(en?'en-US':'fa-IR')}</em></span>
    {expanded?<ChevronUp size={17}/>:<ChevronDown size={17}/>}
   </button>
   {expanded&&<div className="smart-validation-body">
