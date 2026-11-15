@@ -147,3 +147,130 @@ export function allocateAnnualFlowsToPeriods(
     return allocated
   })
 }
+
+export type PeriodicLoanInput = {
+  annualRatePercent: number
+  drawdowns: number[]
+  repaymentMethod: 'equal-principal' | 'annuity' | 'bullet'
+  repaymentStartPeriod: number
+  gracePeriods: number
+  termPeriods: number
+  capitalizeInterest: boolean
+}
+
+export type PeriodicLoanRow = {
+  period: number
+  drawdown: number
+  openingBalance: number
+  periodRatePercent: number
+  interestExpense: number
+  capitalizedInterest: number
+  principal: number
+  closingBalance: number
+  debtService: number
+}
+
+export type PeriodicLoanScheduleResult = {
+  rows: PeriodicLoanRow[]
+  valid: boolean
+  issues: string[]
+}
+
+/** Build a period-by-period loan schedule from actual period lengths and staged drawdowns. */
+export function calculatePeriodicLoanSchedule(
+  input: PeriodicLoanInput,
+  periods: ProjectCalendarPeriod[],
+  dayCountBasis: 360 | 365,
+): PeriodicLoanScheduleResult {
+  const issues: string[] = []
+  const firstPrincipalIndex = input.repaymentStartPeriod - 1 + input.gracePeriods
+  if (!periods.length || input.drawdowns.length !== periods.length)
+    issues.push('Drawdown schedule must contain one amount for every financial period.')
+  if (!validFinite(input.annualRatePercent) || input.annualRatePercent < 0)
+    issues.push('Annual loan interest rate must be a finite non-negative percentage.')
+  if (dayCountBasis !== 360 && dayCountBasis !== 365)
+    issues.push('Day-count basis must be 360 or 365.')
+  if (!Number.isInteger(input.repaymentStartPeriod) || input.repaymentStartPeriod < 1 ||
+      !Number.isInteger(input.gracePeriods) || input.gracePeriods < 0 ||
+      !Number.isInteger(input.termPeriods) || input.termPeriods < 1 ||
+      !Number.isInteger(firstPrincipalIndex) ||
+      firstPrincipalIndex < 0 || firstPrincipalIndex + input.termPeriods > periods.length)
+    issues.push('Repayment start, grace period and loan term exceed the available project periods.')
+  if (!['equal-principal', 'annuity', 'bullet'].includes(input.repaymentMethod))
+    issues.push('Unsupported periodic repayment method.')
+  if (typeof input.capitalizeInterest !== 'boolean')
+    issues.push('Capitalized-interest option must be explicitly true or false.')
+  if (input.drawdowns.some(value => !validFinite(value) || value < 0))
+    issues.push('Every period drawdown must be finite and non-negative.')
+  if (input.drawdowns.slice(Math.max(0, firstPrincipalIndex)).some(value => value > 0))
+    issues.push('Loan drawdowns after principal repayment begins are not supported in this schedule.')
+  const dates = periods.map(period => ({
+    start: parseIsoDateUtc(period.startDate),
+    end: parseIsoDateUtc(period.endDate),
+  }))
+  if (dates.some(({ start, end }, index) => !start || !end ||
+      !Number.isInteger(periods[index].days) || periods[index].days <= 0 ||
+      (end as Date).getTime() < (start as Date).getTime() ||
+      Math.round(((end as Date).getTime() - (start as Date).getTime()) / 86400000) + 1 !== periods[index].days))
+    issues.push('Financial periods must have valid inclusive dates and matching day counts.')
+  for (let index = 1; index < dates.length; index++) {
+    if ((dates[index].start as Date).getTime() !== (dates[index - 1].end as Date).getTime() + 86400000)
+      issues.push('Financial periods must be contiguous and non-overlapping.')
+  }
+  if (issues.length) return { rows: [], valid: false, issues }
+
+  const periodRates = periods.map(period =>
+    annualEffectiveRateToPeriodRate(input.annualRatePercent, period.days, dayCountBasis) / 100)
+  let balance = 0
+  let annuityPayment: number | null = null
+  let equalPrincipalAmount: number | null = null
+  const rows: PeriodicLoanRow[] = []
+  for (let index = 0; index < periods.length; index++) {
+    const drawdown = input.drawdowns[index]
+    const openingBalance = balance
+    const interestBase = openingBalance + drawdown * 0.5
+    const interestAccrued = interestBase * periodRates[index]
+    const beforePrincipal = index < firstPrincipalIndex
+    const capitalizedInterest = beforePrincipal && input.capitalizeInterest ? interestAccrued : 0
+    const interestExpense = capitalizedInterest > 0 ? 0 : interestAccrued
+    const availableBalance = openingBalance + drawdown + capitalizedInterest
+    let principal = 0
+    const repaymentIndex = index - firstPrincipalIndex
+    if (repaymentIndex >= 0 && repaymentIndex < input.termPeriods) {
+      if (input.repaymentMethod === 'bullet') {
+        principal = repaymentIndex === input.termPeriods - 1 ? availableBalance : 0
+      } else if (input.repaymentMethod === 'equal-principal') {
+        if (equalPrincipalAmount === null) equalPrincipalAmount = availableBalance / input.termPeriods
+        principal = repaymentIndex === input.termPeriods - 1
+          ? availableBalance
+          : Math.min(availableBalance, equalPrincipalAmount)
+      } else {
+        if (annuityPayment === null) {
+          let discountFactor = 1
+          let paymentFactor = 0
+          for (let future = firstPrincipalIndex; future < firstPrincipalIndex + input.termPeriods; future++) {
+            discountFactor *= 1 + periodRates[future]
+            paymentFactor += 1 / discountFactor
+          }
+          annuityPayment = paymentFactor > 0 ? availableBalance / paymentFactor : availableBalance / input.termPeriods
+        }
+        principal = repaymentIndex === input.termPeriods - 1
+          ? availableBalance
+          : Math.min(availableBalance, Math.max(0, annuityPayment - interestAccrued))
+      }
+    }
+    balance = Math.max(0, availableBalance - principal)
+    rows.push({
+      period: index + 1,
+      drawdown,
+      openingBalance,
+      periodRatePercent: periodRates[index] * 100,
+      interestExpense,
+      capitalizedInterest,
+      principal,
+      closingBalance: balance,
+      debtService: interestExpense + principal,
+    })
+  }
+  return { rows, valid: true, issues: [] }
+}
