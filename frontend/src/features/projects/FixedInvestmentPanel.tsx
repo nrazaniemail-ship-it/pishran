@@ -35,7 +35,7 @@ export default function FixedInvestmentPanel({ value, foundation, onChange, lang
     'missing-asset-acquisition':'برای هر قلم دارایی حداقل یک دوره تحصیل لازم است.', 'invalid-asset-acquisition':'دوره، مقدار و قیمت تحصیل باید معتبر و نامنفی باشند.',
     'asset-acquisition-currency-mismatch':'ارز نوبت تحصیل باید با ارز قلم دارایی یکسان باشد.', 'missing-asset-exchange-rate':'برای تحصیل دارایی با منشأ خارجی، نرخ تبدیل مثبت به ارز محلی لازم است.',
     'missing-depreciation-start':'برای دارایی مستهلک‌شونده، Starting at را تعیین کنید.', 'invalid-depreciation-length':'مدت استهلاک باید مثبت و ماه‌ها بین صفر تا ۱۱ باشد.',
-    'invalid-scrap-percent':'ارزش اسقاط باید بین صفر تا ۱۰۰ درصد بهای اولیه باشد.', 'invalid-depreciation-rate':'نرخ استهلاک باید بیشتر از صفر و حداکثر ۱۰۰ درصد در سال باشد.',
+    'invalid-scrap-percent':'ارزش اسقاط باید بین صفر تا ۱۰۰ درصد بهای اولیه باشد.', 'invalid-depreciation-rate':'نرخ استهلاک باید بیشتر از صفر و حداکثر ۱۰۰ درصد در سال باشد.', 'invalid-first-depreciation-months':'ماه‌های سال اول استهلاک باید عدد صحیحی بین ۱ تا ۱۲ باشد.', 'sum-of-years-partial-period-not-benchmarked':'روش مجموع سنوات برای سال ناقص یا ماه اضافه تا زمان تطبیق عددی مستقل فعال نمی‌شود.', 'depreciation-rate-length-mismatch':'نرخ و مدت استهلاک خطی با یکدیگر سازگار نیستند.',
     'unknown-asset-sale-acquisition':'فروش دارایی باید به یک نوبت تحصیل موجود مرتبط باشد.', 'invalid-asset-sale-period-currency':'برای فروش دارایی، دوره و ارز معتبر لازم است.',
     'invalid-asset-sale-price':'قیمت فروش تعریف‌شده باید عددی نامنفی باشد.'
   }
@@ -72,7 +72,9 @@ export default function FixedInvestmentPanel({ value, foundation, onChange, lang
         {field(t('نرخ استهلاک (% در سال)','Rate (% per annum)'), item.depreciation.ratePercent ?? '', v => updateDepreciation(item.id, { ratePercent: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none' || item.depreciation.method === 'sum-of-digits')}
         {field(t('مدت استهلاک ـ سال','Length — Years'), item.depreciation.lengthYears ?? '', v => updateDepreciation(item.id, { lengthYears: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none')}
         {field(t('مدت استهلاک ـ ماه','Length — Months'), item.depreciation.lengthMonths, v => updateDepreciation(item.id, { lengthMonths: Number(v) }), 'number', 0, 11, item.depreciation.method === 'none')}
+        {field(t('ماه‌های مشمول استهلاک در سال اول','Months in first depreciation year'), item.depreciation.firstDepreciationMonths, v => updateDepreciation(item.id, { firstDepreciationMonths: Number(v) }), 'number', 1, 12, item.depreciation.method === 'none')}
         {field(t('ارزش اسقاط (% از بهای اولیه)','Scrap (% of original value)'), item.depreciation.scrapPercent, v => updateDepreciation(item.id, { scrapPercent: Number(v) }), 'number', 0, 100, item.depreciation.method === 'none')}
+        {item.depreciation.method === 'sum-of-digits' && (item.depreciation.lengthMonths > 0 || item.depreciation.firstDepreciationMonths !== 12) && <p className="fw-hint">{t('برای حفظ دقت، محاسبه مجموع سنوات در دوره ناقص فعلاً مسدود است.','Sum of years digits with a partial period is held to avoid unverified depreciation results.')}</p>}
       </div>
 
       <h4>{t('هزینه تحصیل دارایی به تفکیک دوره','Costs of Assets by Period')}</h4>
