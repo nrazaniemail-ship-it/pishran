@@ -1024,10 +1024,10 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   const sales: ComfarAssetSaleInput[] = []
   const warnings: string[] = []
   if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
-    return { assets, sales, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
+    return { assets, sales, investmentSchedule, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
   }
   if (periodFrequency !== 'annual' && periodFrequency !== 'unspecified') {
-    return { assets, sales, warnings: ['موتور یکپارچه فعلی فقط برنامه سالانه را محاسبه می‌کند؛ برای دوره‌های نیم‌سالانه، فصلی یا ماهانه، موتور دوره‌ای متناظر باید فعال شود.'] }
+    return { assets, sales, investmentSchedule, warnings: ['موتور یکپارچه فعلی فقط برنامه سالانه را محاسبه می‌کند؛ برای دوره‌های نیم‌سالانه، فصلی یا ماهانه، موتور دوره‌ای متناظر باید فعال شود.'] }
   }
   if (periodFrequency === 'unspecified') {
     warnings.push('تناوب دوره در فونداسیون تعیین نشده است؛ نگاشت سالانه فقط برای پیش‌نمایش استفاده می‌شود و نتیجه تا تعیین Annual تأییدشده نیست.')
@@ -1079,6 +1079,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       if (acquisitionPeriod > periodCount) continue
       const exchangeRate = item.origin === 'foreign' ? (acquisition.exchangeRateToLocal ?? 0) : 1
       const originalValue = acquisition.quantity * acquisition.unitPrice * exchangeRate
+      if (acquisitionPeriod >= 1 && acquisitionPeriod <= investmentSchedule.length) investmentSchedule[acquisitionPeriod - 1] += originalValue
       if (!Number.isFinite(originalValue) || originalValue < 0) {
         warnings.push(`${item.description || item.id}: بهای تحصیل پس از تبدیل به ارز محلی معتبر نیست.`)
         continue
