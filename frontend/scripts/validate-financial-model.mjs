@@ -59,7 +59,7 @@ near(rollingAudit.annualOpex.totalIncludingDepreciation - rollingAudit.annualOpe
   rollingAudit.annualOpex.totalExcludingDepreciation, 0.01, 'HRCR200 OPEX excluding depreciation')
 assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabDebtSharePercent, 80,
   'HRCR200 mechanism-tab financing split must remain visible')
-assert.equal(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingSourceExplicit, false,
+assert.equal(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingSourceConflict, true,
   'HRCR200 working-capital source must remain flagged as unconfirmed')
 assert.equal(rollingAudit.financingAlternativesInWorkbook.fundingSummaryTabEquitySharePercent, 70,
   'HRCR200 alternative financing split must remain visible')
@@ -134,10 +134,10 @@ assert.equal(model.discountMode, 'wacc', 'Hot-rolling template must use the spon
 
 const output = expected.capacity
 const currency = model.currency
-assert.equal(model.equity, 70, 'HRCR200 active model equity share must follow sponsor confirmation')
-assert.equal(model.debt, 30, 'HRCR200 active model debt share must follow sponsor confirmation')
-assert.equal(model.loans.length, 1, 'HRCR200 active model must not assume an unconfirmed working-capital loan')
-near(model.loans[0].amount, 5610850.8, 0.01, 'HRCR200 active fixed loan amount under 30/70 financing')
+assert.equal(model.equity, 70, 'HRCR200 Excel reference benchmark must preserve the COMFAR 70/30 construction funding split')
+assert.equal(model.debt, 30, 'HRCR200 Excel reference benchmark must preserve the COMFAR 70/30 construction funding split')
+assert.equal(model.loans.length, 1, 'HRCR200 COMFAR reference benchmark must not assume an unconfirmed working-capital loan')
+near(model.loans[0].amount, 5610850.8, 0.01, 'HRCR200 COMFAR-reference fixed loan amount under 70/30 construction financing')
 
 const integratedreference19 = [...integratedReference.INTEGRATED_reference_PROJECT_CASH_FLOWS]
 const integratedControls = integratedReference.INTEGRATED_reference_REFERENCE
@@ -203,7 +203,7 @@ const wacc = engine.calculateWacc({
   taxRate: model.waccTax
 })
 assert.equal(wacc.valid, true, 'WACC inputs must be valid')
-near(wacc.value, 0.2685, 1e-12, 'Sponsor-confirmed 70/30 WACC')
+near(wacc.value, 0.2685, 1e-12, 'Historical COMFAR-reference 70/30 WACC')
 near(expected.wacc, 0.21284299025331596, 1e-12, 'Historical workbook WACC remains a source-only benchmark')
 
 const factoryRows = model.opex.filter(row => row.costGroup === 'سربار کارخانه')
