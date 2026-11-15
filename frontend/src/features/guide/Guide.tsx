@@ -145,6 +145,78 @@ export default function Guide({language='fa'}:{language?:'fa'|'en'}) {
  }
  const topicData=(topic:Topic):Topic=>en?{...topic,...topicDetailsEn[topic.title]}:topic
 
+ '۷-۱. صورت سود و زیان پیش‌بینی‌شده':{
+ inputs:['Sales volume and net selling price by product','Cash operating costs, depreciation and financing costs','Tax rules, exemptions and loss carry-forward','Accounting period and currency basis'],
+ method:['Forecast revenue by product and sales channel.','Classify production, selling, administrative and financing costs consistently.','Calculate EBITDA, depreciation, EBIT, finance costs, tax and net income.','Apply tax exemptions and loss carry-forward by year where applicable.'],
+ formulas:['Revenue = Σ (sales quantity × net selling price)','EBIT = EBITDA − depreciation','Net income = profit before tax − income tax'],
+ example:'Depreciation reduces accounting profit but is not itself a cash payment. It may affect taxable income and must be reconciled separately in the cash-flow model.',
+ checks:['Revenue matches the sales and production plan.','Depreciation matches the asset register.','Tax is calculated on the applicable taxable base.'],
+ pitfalls:['Deducting depreciation as a cash OPEX item.','Applying tax before using eligible loss carry-forwards.']},
+ '۷-۲. جریان نقدی پروژه و سهامدار':{
+ inputs:['Project operating cash flows before financing','Construction CAPEX and maintenance CAPEX','Tax, working-capital changes and terminal recovery','Equity contributions, loan drawdowns, interest and principal'],
+ method:['Build unlevered project cash flow separately from financing.','Calculate equity cash flow after debt drawdowns, interest and principal.','Include working-capital investment and justified terminal release.','Keep construction and operating periods and timing conventions explicit.'],
+ formulas:['FCFF = operating cash flow after tax + depreciation − CAPEX − change in working capital','FCFE = FCFF − after-tax interest + net borrowing (subject to the selected convention)','Project cash flow excludes financing drawdowns and repayments'],
+ example:'A loan drawdown increases cash available to shareholders but does not improve the underlying project’s unlevered operating economics. Report project and equity returns separately.',
+ checks:['Project cash flow excludes loan drawdowns and debt service.','Equity cash flow includes financing flows exactly once.','Terminal working-capital recovery is not duplicated.'],
+ pitfalls:['Using one cash-flow series for both project and shareholder returns.','Including loan proceeds as project revenue.']},
+ '۷-۳. NPV، IRR، PI و دوره بازگشت':{
+ inputs:['Periodic project or equity cash-flow series','Discount rate consistent with the selected cash flow','Period length, timing and initial investment convention','Finance and reinvestment rates for MIRR, where used'],
+ method:['Confirm the cash-flow perspective before calculating metrics.','Apply the discount rate to the matching cash-flow series.','Check that IRR has a valid sign change and interpret multiple-IRR risk.','Calculate discounted payback when time value of money matters.','Report assumptions, units and period timing with each metric.'],
+ formulas:['NPV = Σ CFt / (1 + r)^t','IRR is the rate r for which NPV = 0','PI = present value of future inflows / initial investment','MIRR uses separate finance and reinvestment rates'],
+ example:'A positive NPV at the project’s risk-adjusted discount rate indicates value creation under the stated assumptions; it does not prove that the project can meet each year’s debt payments.',
+ checks:['NPV rate and cash-flow basis are consistent.','IRR is not reported when the series has no valid solution.','MIRR finance and reinvestment rates are shown.'],
+ pitfalls:['Comparing IRRs calculated on different cash-flow definitions.','Treating payback period as a substitute for NPV or risk analysis.']},
+ '۷-۴. تحلیل حساسیت و سناریو':{
+ inputs:['Key drivers: selling price, feed cost, energy, capacity, yield and CAPEX','Base, downside and upside assumptions','One-way sensitivities and combined scenarios','Decision thresholds and break-even values'],
+ method:['Identify variables with material influence on value.','Change one variable at a time for sensitivity analysis.','Build coherent combined scenarios for correlated risks.','Calculate NPV, IRR, DSCR and break-even thresholds for each case.','Rank risks by impact and likelihood, then define mitigation actions.'],
+ formulas:['Sensitivity impact = metric under scenario − base-case metric','Break-even value is the input at which the selected decision metric reaches its threshold'],
+ example:'A 10% energy-price increase may have a limited effect for one process route and a large effect for an electricity-intensive route. Sensitivity must use the project’s actual consumption structure.',
+ checks:['Only the intended driver changes in one-way sensitivity.','Scenario assumptions are internally consistent.','The model recalculates all dependent cash flows and debt metrics.'],
+ pitfalls:['Changing several inputs in a one-variable sensitivity.','Presenting arbitrary best/worst cases without evidence.']},
+ '۸-۱. جمع‌بندی شاخص‌ها و شروط تصمیم':{
+ inputs:['NPV, IRR, MIRR, PI and payback','Project and equity cash-flow perspectives','DSCR, funding gap and key operating constraints','Data quality, unresolved assumptions and risk exposure'],
+ method:['Summarize technical, market, investment and financial findings together.','Separate base-case attractiveness from downside resilience.','List conditions that must be met before final investment approval.','State clearly which inputs remain estimates or require validation.'],
+ formulas:['Decision dashboard = financial returns + debt capacity + technical feasibility + market evidence + risk conditions'],
+ example:'A project may show a positive NPV but fail a minimum DSCR test in early repayment years. The recommendation should identify the financing or phasing conditions needed to resolve this gap.',
+ checks:['All headline metrics use the same model version and assumptions.','Project and equity returns are separately labelled.','Critical conditions and unresolved risks are visible.'],
+ pitfalls:['Recommending investment from IRR alone.','Hiding weak data quality behind a single headline score.']},
+ '۸-۲. برنامه اقدام و شکاف اطلاعاتی':{
+ inputs:['Open technical and engineering items','Pending vendor quotations and market evidence','Permits, land, utilities and connection agreements','Financing terms, tax opinions and implementation schedule'],
+ method:['Convert each gap into a specific action and deliverable.','Assign an accountable owner and due date.','Prioritize items that can change project scope, CAPEX, capacity or returns.','Define evidence required to close each item.','Update the model and decision record when evidence arrives.'],
+ formulas:['Readiness = completed critical deliverables / total critical deliverables'],
+ example:'A preliminary furnace cost estimate should be replaced by a scope-aligned vendor quotation that states exclusions, delivery terms, performance guarantees and commissioning scope.',
+ checks:['Every material gap has an owner, due date and closure evidence.','Critical-path items are identified.','Model changes are version-controlled.'],
+ pitfalls:['Treating a preliminary study as final investment approval without closing critical gaps.']},
+ '۹-۱. جریان نقدی برنامه‌ریزی مالی در برابر جریان نقدی ارزیابی':{
+ inputs:['Corporate cash budget and funding plan','Project asset-level cash flow before financing','Loan drawdowns, interest, principal and shareholder contributions','Working-capital and treasury movements'],
+ method:['Identify the purpose of each cash-flow report.','Separate corporate liquidity planning from project economic evaluation.','Reconcile financing cash movements without adding them to project operating value.','Label each output by perspective and included transactions.'],
+ formulas:['Project FCFF excludes financing flows','Financing cash flow includes equity, debt drawdowns, interest and principal','Corporate cash budget may include balances and transfers outside the project boundary'],
+ example:'A debt drawdown appears in a financing or treasury cash budget, but not as project operating revenue or unlevered project inflow.',
+ checks:['Each report states its perspective and boundary.','Financing flows are not double-counted in project value.','Corporate and project balances are reconciled through documented transfers.'],
+ pitfalls:['Comparing a financing cash budget directly with COMFAR project evaluation cash flow.']},
+ '۹-۲. NPV، IRR و MIRR و قرارداد نرخ‌ها':{
+ inputs:['Cash-flow perspective: total investment or equity','Discount rate, finance rate and reinvestment rate','Currency, inflation basis and period frequency','Timing convention for initial and subsequent cash flows'],
+ method:['Document the exact cash-flow series used for every metric.','Match WACC to project FCFF and cost of equity to equity cash flow.','State whether rates and cash flows are nominal or real and pre-tax or post-tax.','Keep annual, mid-year and monthly timing assumptions explicit.','Do not tune inputs solely to force agreement with a reference result.'],
+ formulas:['NPV(project) = NPV(FCFF, WACC)','NPV(equity) = NPV(FCFE, cost of equity)','MIRR = function of separate finance and reinvestment rates'],
+ example:'A project NPV calculated at WACC cannot be compared directly with an equity NPV discounted at the cost of equity, even when both are labelled NPV.',
+ checks:['Metric labels identify the cash-flow perspective.','Rate conventions match the currency and inflation basis.','Reference comparisons use aligned timing and tax assumptions.'],
+ pitfalls:['Mixing total-investment and shareholder metrics.','Changing tax or discount rates to force a numerical match.']},
+ '۹-۳. خروجی‌ها، صورت‌های مالی و کنترل تطبیق':{
+ inputs:['Source schedules for production, CAPEX, OPEX and financing','Income statement, cash-flow statement and balance sheet','Asset depreciation, debt balances and working capital','Reference outputs and reconciliation checks'],
+ method:['Trace every report figure back to its source schedule.','Reconcile opening and closing cash, debt, fixed assets and working capital.','Check that the balance sheet balances without artificial plugs.','Compare reference outputs only after aligning definitions and periods.','Document every unresolved variance and its likely driver.'],
+ formulas:['Closing cash = opening cash + net cash movement','Closing debt = opening debt + drawdowns + capitalized interest − principal','Balance difference = total assets − (total liabilities + equity)'],
+ example:'If the balance sheet does not balance, investigate CAPEX, equity contributions, debt movements, depreciation and working capital rather than inserting an unexplained balancing item.',
+ checks:['Three statements use consistent periods and assumptions.','Debt and asset roll-forwards reconcile.','All reference variances are explained or clearly flagged.'],
+ pitfalls:['Using an artificial equity plug to hide a statement mismatch.','Comparing annual outputs with a differently timed reference series.']},
+ '۹-۴. تحلیل اقتصادی، آثار توسعه‌ای و پایداری':{
+ inputs:['Financial prices and resource costs','Economic opportunity costs and shadow prices, where justified','Employment, regional supply chain and infrastructure effects','Environmental, energy, water and emissions indicators'],
+ method:['Keep private financial profitability separate from wider economic value.','Identify externalities and avoid double-counting transfers such as taxes and subsidies.','Quantify employment and local procurement using traceable assumptions.','Assess environmental and resource impacts over the project life.','Report limitations and avoid unsupported claims of social benefit.'],
+ formulas:['Economic value = social benefits − economic opportunity costs (with consistent shadow pricing)','Emissions intensity = annual emissions / saleable production'],
+ example:'A project may be financially attractive while facing material water or emissions constraints. These effects should be assessed separately and reflected in permitting, mitigation and scenario analysis.',
+ checks:['Financial and economic analyses are clearly distinguished.','Externalities are quantified only where defensible data exist.','Environmental assumptions and boundaries are disclosed.'],
+ pitfalls:['Treating taxes or subsidies as net social benefits without economic adjustment.','Claiming development impact without measurable evidence.']}
+
+
  '۵-۱. سرمایه‌گذاری ثابت (CAPEX)':{
  inputs:['Land, site preparation, buildings and civil works','Process equipment, utilities, electrical and control systems','Engineering, procurement, construction, transport, installation and commissioning','Contingency, owner’s costs, duties and pre-operating costs'],
  method:['Build a work-breakdown structure aligned with the project scope.','Separate equipment supply from installation and construction costs.','Record quantities, unit rates, currency, quotation date and source for each major item.','Classify shared infrastructure and allocate it transparently.','Time-phase CAPEX across construction periods and apply escalation consistently.'],
@@ -242,7 +314,7 @@ export default function Guide({language='fa'}:{language?:'fa'|'en'}) {
  const total=chapters.reduce((n,c)=>n+c.topics.length,0)
  return <main className="guide-page" dir={en?"ltr":"rtl"}>
   <header className="guide-hero"><div className="guide-icon"><BookOpen size={28}/></div><div><span className="eyebrow">PISHRAN KNOWLEDGE CENTER</span><h1>{en?"Comprehensive Project Feasibility Guide":"راهنمای جامع امکان‌سنجی پروژه"}</h1><p>{en?"A step-by-step reference for methods, formulas, data entry and quality control, inspired by professional feasibility software.":"راهنمای گام‌به‌گام، فرمول‌ها، روش ورود اطلاعات و کنترل کیفیت؛ با رویکردی مشابه راهنماهای نرم‌افزارهای حرفه‌ای امکان‌سنجی."}</p></div><div className="guide-count"><b>{chapters.length}</b><small>{en?"Main chapters":"گام اصلی"}</small><b>{total}</b><small>{en?"Topics":"موضوع آموزشی"}</small></div></header>
-  {en&&<div className="guide-method-note">Chapter headings, topic summaries and detailed guidance for Chapters 1–6 are translated. Remaining chapters are still being translated from the Persian source.</div>}
+  {en&&<div className="guide-method-note">Chapter headings, topic summaries and detailed guidance for all nine chapters are translated. The English version still needs a full screen-by-screen review and correction of any untranslated labels.</div>}
   <section className="guide-search"><div className="guide-search-box"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={en?"Search the guide: WACC, material balance, capacity, NPV, working capital...":"جست‌وجو در راهنما؛ مثال: WACC، موازنه مواد، ظرفیت، NPV، سرمایه در گردش..."} aria-label={en?"Search the guide":"جست‌وجو در راهنما"}/>{query&&<button onClick={()=>setQuery('')}>{en?"Clear":"پاک‌کردن"}</button>}</div><label className="guide-filter"><input type="checkbox" checked={onlyFormula} onChange={e=>setOnlyFormula(e.target.checked)}/> {en?"Only topics with formulas":"فقط موضوعات دارای فرمول"}</label><span className="guide-results">{results.length.toLocaleString(en?'en-US':'fa-IR')} {en?'topics':'موضوع'}</span></section>
   <div className="guide-layout"><aside className="guide-index"><b>{en?"Chapter Index":"فهرست گام‌ها"}</b>{chapters.map(ch=><button key={ch.id} onClick={()=>{setQuery('');setOnlyFormula(false);setOpen(`${ch.id}-${ch.topics[0].title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`);document.getElementById(`guide-ch-${ch.id}`)?.scrollIntoView({behavior:'smooth',block:'start'})}}><span>{String(ch.id).padStart(2,'0')}</span>{chTitle(ch.title)}</button>)}</aside>
    <section className="guide-content">{chapters.map(ch=>{const visible=results.filter(x=>x.ch.id===ch.id);if(!visible.length)return null;return <section className="guide-chapter" id={`guide-ch-${ch.id}`} key={ch.id}><div className="guide-chapter-head"><span>{en?'Chapter':'گام'} {ch.id.toLocaleString(en?'en-US':'fa-IR')}</span><h2>{chTitle(ch.title)}</h2><p>{chObjective(ch.objective)}</p></div>{visible.map(({t})=>{const topic=topicData(t);const id=`${ch.id}-${t.title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`;const expanded=open===id||Boolean(normalized);return <article className="guide-topic" key={t.title}><button className="guide-topic-toggle" onClick={()=>setOpen(open===id?'':id)}><span><b>{topicTitle(t.title)}</b><small>{topicPurpose(t.purpose)}</small></span>{expanded?<ChevronUp size={18}/>:<ChevronDown size={18}/>}</button>{expanded&&<div className="guide-topic-body">
