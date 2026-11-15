@@ -1,4 +1,5 @@
 import {useEffect,useState} from 'react'
+import type { AppSettings } from '../../core/settings/settings'
 import {CloudDownload,CloudUpload,FolderOpen,RotateCcw,ShieldCheck,Clock,AlertTriangle} from 'lucide-react'
 import {backupFolderStatus,backupIntervalMs,canUndoRestore,chooseBackupFolder,getBackupPreferences,parseBackup,restoreBackup,saveBackupFile,saveBackupPreferences,undoLastRestore,updateBackupMeta,type BackupPreferences,type BackupInterval} from '../../core/storage/backupService'
 
@@ -6,7 +7,7 @@ const intervals:{value:BackupInterval;fa:string;en:string}[]=[{value:'15m',fa:'�
 const formatDate=(v:string,en:boolean)=>v?new Intl.DateTimeFormat(en?'en-US':'fa-IR',{dateStyle:'long',timeStyle:'short'}).format(new Date(v)):(en?'No backup created yet':'هنوز پشتیبانی ساخته نشده است')
 const formatSize=(n:number,en:boolean)=>n?new Intl.NumberFormat(en?'en-US':'fa-IR',{maximumFractionDigits:1}).format(n/1024)+' KB':'—'
 
-export default function BackupSettings({onRestored,language='fa'}:{onRestored:()=>Promise<void>|void;language?:'fa'|'en'}){
+export default function BackupSettings({onRestored,language='fa',settings,onChange}:{onRestored:()=>Promise<void>|void;language?:'fa'|'en';settings:AppSettings;onChange:(next:AppSettings)=>void}){
  const en=language==='en'
  const t=(fa:string,english:string)=>en?english:fa
  const [prefs,setPrefs]=useState<BackupPreferences|null>(null)
@@ -35,6 +36,11 @@ export default function BackupSettings({onRestored,language='fa'}:{onRestored:()
  const lastLabel=prefs.lastAt?formatDate(prefs.lastAt,en):t('هنوز پشتیبانی ساخته نشده است','No backup created yet')
  return <article className="settings-card storage-card backup-manager">
   <div className="settings-card-title"><span className="settings-symbol"><ShieldCheck size={20}/></span><div><b>{t('پشتیبان‌گیری و بازیابی داده‌ها','Data Backup & Restore')}</b><small>{t("پشتیبان کامل اطلاعات محلی پروژه‌های پیشران","Complete backup of Pishran's local project data")}</small></div></div>
+  <div className="backup-behaviour-settings">
+   <div className="backup-auto-heading"><span><ShieldCheck size={17}/></span><div><b>{t('رفتار برنامه','App Behaviour')}</b><small>{t('گزینه‌های عمومی و ایمنی','General and safety options')}</small></div></div>
+   <label className="setting-row"><span>{t('تأیید پیش از حذف اطلاعات','Confirm before deleting data')}</span><input type="checkbox" checked={settings.confirmBeforeDelete} onChange={e=>onChange({...settings,confirmBeforeDelete:e.target.checked})}/></label>
+   <label className="setting-row"><span>{t('پشتیبان‌گیری خودکار هنگام خروجی گرفتن','Back up automatically when exporting')}</span><input type="checkbox" checked={settings.autoBackup} onChange={e=>onChange({...settings,autoBackup:e.target.checked})}/></label>
+  </div>
   <p className="backup-description">{t('پشتیبان شامل تمام رکوردهای ذخیره‌شده برنامه است: پروژه‌ها، فرم‌های مهندسی و تولید، موازنه مواد، یوتیلیتی‌ها، هزینه‌های سرمایه‌گذاری و بهره‌برداری، مفروضات مالی، تسهیلات، جریان نقدی، تنظیمات و سایر داده‌های محلی.','The backup includes all app records: projects, engineering and production forms, material balances, utilities, CAPEX and OPEX, financial assumptions, loans, cash flows, settings and other local data.')}</p>
   <div className="backup-action-grid">
    <label className="backup-action"><span className="backup-action-icon"><CloudDownload size={21}/></span><span><b>{t('بازیابی فایل پشتیبان','Restore Backup File')}</b><small>{t('وارد کردن و جایگزینی داده‌های برنامه','Import and replace app data')}</small></span><input type="file" accept="application/json,.json" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void restoreFile(f);e.currentTarget.value=''}}/></label>
