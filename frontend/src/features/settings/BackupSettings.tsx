@@ -24,7 +24,7 @@ export default function BackupSettings({onRestored,language='fa'}:{onRestored:()
   window.addEventListener('pishran-backup-complete',complete)
   window.addEventListener('pishran-backup-error',failed)
   return()=>{window.removeEventListener('pishran-backup-complete',complete);window.removeEventListener('pishran-backup-error',failed)}
- },[])
+ },[en])
 
  async function update(next:Partial<BackupPreferences>){if(!prefs)return;const p={...prefs,...next};setPrefs(p);await saveBackupPreferences(p)}
  async function pickFolder(){setBusy(true);setError('');setMessage('');try{await chooseBackupFolder();await refresh();setMessage(t('پوشه پشتیبان با موفقیت انتخاب شد.','Backup folder selected successfully.'))}catch(e){setError(e instanceof Error?e.message:t('انتخاب پوشه ناموفق بود.','Could not select the folder.'))}finally{setBusy(false)}}
