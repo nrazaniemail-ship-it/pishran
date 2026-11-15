@@ -629,6 +629,9 @@ near(capexBridgeWithPreop.capexFixedAssetTarget,200,1e-9,'Pre-operating expenses
 const capexBridgeMismatch = engine.reconcileFixedInvestmentRegister([registerAsset],260,0)
 assert.equal(capexBridgeMismatch.status,'unreconciled','A difference between register and aggregate CAPEX must be flagged')
 assert.ok(capexBridgeMismatch.warnings.length>0,'Unreconciled CAPEX must produce an actionable warning')
+const capexBridgeNoRegister = engine.reconcileFixedInvestmentRegister([],260,0)
+assert.equal(capexBridgeNoRegister.status,'unreconciled','Aggregate CAPEX without asset-register coverage must be flagged')
+assert.ok(capexBridgeNoRegister.warnings.length>0,'Missing asset-register coverage must produce an actionable warning')
 const capexBridgeForeign = engine.reconcileFixedInvestmentRegister([{
   ...registerAsset,origin:'foreign',
   acquisitions:[{id:'fx-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:300}]
