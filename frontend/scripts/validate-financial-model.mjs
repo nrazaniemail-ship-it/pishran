@@ -173,6 +173,7 @@ assert.ok(appSource.includes("if(project.templateId==='raw') setPage('project-wi
 assert.ok(rollingWorkspaceSource.includes('ممیزی جریان نقدی خام و اصلاح‌شده مرجع مالی')
   && rollingWorkspaceSource.includes('HOT_ROLLING_reference_CASHFLOW_AUDIT'),
   'Active rolling workspace must expose the reference cash-flow audit')
+assert.ok(wizardSource.includes('useFixedInvestmentRegister={m.fixedInvestmentItems.length>0}'), 'The asset register must be the primary depreciation source, with legacy reference assumptions used only while it is empty')
 assert.equal(model.discountMode, 'wacc', 'Hot-rolling template must use the sponsor-confirmed WACC by default')
 
 const output = expected.capacity
