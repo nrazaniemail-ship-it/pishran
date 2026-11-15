@@ -1760,7 +1760,7 @@ export function buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(
   }
   const acquisitionIds=new Set<string>()
   for(const item of activeItems){
-    if(item.depreciationBasis==='unresolved'){warnings.push((item.description||item.id)+': depreciation basis is unresolved; periodic depreciation is provisional.');if(item.assetClass==='preproduction')preOperatingVerified=false;else fixedInvestmentVerified=false}
+    if(!item.depreciationBasis||item.depreciationBasis==='unresolved'){warnings.push((item.description||item.id)+': depreciation basis is unresolved; periodic depreciation is provisional.');if(item.assetClass==='preproduction')preOperatingVerified=false;else fixedInvestmentVerified=false}
     if(item.depreciationBasis==='source-conflict'){warnings.push((item.description||item.id)+': source documents conflict on depreciation; periodic depreciation is provisional.');if(item.assetClass==='preproduction')preOperatingVerified=false;else fixedInvestmentVerified=false}
     if(!item.acquisitions.length){
       warnings.push((item.description||item.id)+': no acquisition date/value is assigned in the fixed-investment register.')
