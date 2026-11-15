@@ -16,7 +16,7 @@ export default function IntegratedSteelComplexWorkspace({ project, onBack, langu
   const [unit, setUnit] = useState<Unit>('dri')
   return <section className="projects-page" dir={en?"ltr":"rtl"}>
     <div className="page-heading">
-      <div><span className="eyebrow">INTEGRATED STEEL COMPLEX / DRI + MELTING + CASTING</span><h1>{project.name}</h1><p>{t('یک پروژه، دو کارگاه فرایندی مستقل و یک مبنای مشترک برای کنترل سرمایه‌گذاری','One project, two independent process units and a shared investment-control basis')}</p></div>
+      <div><h1>{project.name}</h1><p>{t('یک پروژه، دو کارگاه فرایندی مستقل و یک مبنای مشترک برای کنترل سرمایه‌گذاری','One project, two independent process units and a shared investment-control basis')}</p></div>
       <button className="secondary-button" onClick={onBack}><ArrowRight size={16}/> {t('بازگشت به پروژه‌ها','Back to Projects')}</button>
     </div>
     <div className="project-grid">
@@ -33,7 +33,7 @@ export default function IntegratedSteelComplexWorkspace({ project, onBack, langu
     <ProcessPlantWorkspace language={language} project={project} plantType={unit} onBack={onBack}/>
     <section className="analytics" style={{ marginTop: 24 }}>
       <article className="chart-card">
-        <div className="card-heading"><div><span className="eyebrow">Reference CONTROL TOTALS</span><h3>{t('مبنای تطبیق گزارش مرجع مالی','Reference Report Reconciliation Basis')}</h3></div><span className="tag">{t('یورو','EUR')}</span></div>
+        <div className="card-heading"><div><h3>{t('مبنای تطبیق گزارش مرجع مالی','Reference Report Reconciliation Basis')}</h3></div><span className="tag">{t('یورو','EUR')}</span></div>
         <div className="kpis">
           <div className="kpi"><span>{t('سرمایه‌گذاری کل','Total Investment')}</span><b>{money(benchmark.totalInvestment)}</b></div>
           <div className="kpi"><span>{t('کل منابع تأمین مالی','Total Funding Sources')}</span><b>{money(benchmark.totalSources)}</b></div>
@@ -43,7 +43,7 @@ export default function IntegratedSteelComplexWorkspace({ project, onBack, langu
         <div className="notice">{t('فروش سال مرجع: ','Reference-year revenue: ')}{money(benchmark.referenceRevenue)} · {t('هزینه کارخانه‌ای: ','Factory cost: ')}{money(benchmark.referenceFactoryCost)} · {t('استهلاک: ','Depreciation: ')}{money(benchmark.referenceDepreciation)} · IRR پروژه: {benchmark.projectIrr}% · IRR حقوق صاحبان سهام: {benchmark.equityIrr}%</div>
       </article>
       <article className="insight-card">
-        <div className="module-icon gold"><Calculator size={22}/></div><span className="eyebrow">AUDIT FLAGS</span><h3>{t('موارد نیازمند اصلاح/تأیید','Items Requiring Correction / Confirmation')}</h3>
+        <div className="module-icon gold"><Calculator size={22}/></div><h3>{t('موارد نیازمند اصلاح/تأیید','Items Requiring Correction / Confirmation')}</h3>
         <p><AlertTriangle size={15}/> {t('شکاف منابع','Funding Gap')} و مصارف برابر {money(benchmark.fundingGap)} {t('یورو','EUR')} است؛ پیش از تأیید مدل باید منبع پوشش آن مشخص شود.</p>
         <p>{t('هزینه کارخانه‌ای مرجع مالی، استهلاک را جداگانه گزارش می‌کند؛ مقایسه با OPEX اکسل باید بر مبنای هزینه نقدی و سپس استهلاک جداگانه انجام شود.','Reference reports depreciation separately from factory cost. Compare Excel OPEX on a cash-cost basis, then reconcile depreciation separately.')}</p>
         <p>{t('نرخ مالیات دوره اول در خروجی مرجع مالی ۵٪ و نرخ سال مرجع ۲۵٪ است؛ اعمال نرخ ثابت بدون بازسازی معافیت‌ها مجاز نیست.','The Reference output shows a 5% tax rate in the first period and 25% in the reference year. Do not apply a flat rate without reconstructing tax holidays.')}</p>
