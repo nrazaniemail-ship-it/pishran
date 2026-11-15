@@ -286,6 +286,7 @@ function fixedInvestmentPeriodOrdinal(value: string): number | null {
 export function validateFixedInvestmentItems(items: FixedInvestmentItem[], foundation: ProjectFoundation): ProjectFoundationIssue[] {
   const issues: ProjectFoundationIssue[] = []
   const issue = (path: string, code: string, message: string) => issues.push({ path, severity: 'error', code, message })
+  const warn = (path: string, code: string, message: string) => issues.push({ path, severity: 'warning', code, message })
   const itemIds = items.map(item => item.id)
   if (new Set(itemIds).size !== itemIds.length) issue('fixedInvestmentItems', 'duplicate-fixed-asset-id', 'Fixed investment item identifiers must be unique.')
   const validCurrencyCodes = new Set([foundation.currencies.localCurrencyCode, ...foundation.currencies.foreignCurrencies.map(currency => currency.code)].map(code => code.trim().toUpperCase()).filter(Boolean))
@@ -308,6 +309,8 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
       const acquisitionPath = path + `.acquisitions[${acquisitionIndex}]`
       if (!acquisition.period.trim() || !Number.isFinite(acquisition.quantity) || acquisition.quantity <= 0 || !Number.isFinite(acquisition.unitPrice) || acquisition.unitPrice < 0)
         issue(acquisitionPath, 'invalid-asset-acquisition', 'Acquisition period, quantity and unit price must be valid and non-negative.')
+      if (!acquisition.allocationBasis || acquisition.allocationBasis === 'unallocated') warn(acquisitionPath + '.allocationBasis', 'asset-acquisition-period-unallocated', 'Acquisition period has not been supported by a source or confirmed by the user.')
+      else if (acquisition.allocationBasis === 'proportional-estimate') warn(acquisitionPath + '.allocationBasis', 'asset-acquisition-period-estimated', 'Acquisition period is a proportional estimate and must not be used as a verified investment cash-flow schedule.')
       if (acquisition.currencyCode.trim().toUpperCase() !== item.currencyCode.trim().toUpperCase())
         issue(acquisitionPath + '.currencyCode', 'asset-acquisition-currency-mismatch', 'Acquisition currency must match the fixed investment item currency.')
       if (item.origin === 'foreign' && (!Number.isFinite(acquisition.exchangeRateToLocal) || (acquisition.exchangeRateToLocal ?? 0) <= 0))
