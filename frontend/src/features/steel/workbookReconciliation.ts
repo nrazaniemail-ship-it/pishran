@@ -131,7 +131,7 @@ export const HOT_ROLLING_200KT_AUDIT = {
     conditionsTableVariance: 554.2483246035408,
     opexWorkbookAnnual: 1_580_327,
     opexWorkbookVariance: -147_772.66,
-    preProductionAmortisationNotIncludedInFixedAssetRegister: 239_826.63796,
+    preProductionExpenditureTrackedSeparatelyInAssetRegister: 239_826.63796,
     status: 'open-asset-start-dates-and-disposals-not-yet-reconciled'
   },
   annualOpex: {
