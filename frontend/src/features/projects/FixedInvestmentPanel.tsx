@@ -41,13 +41,13 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
   const assetLifecycle = calculateComfarAssetLifecycle(depreciationBuild.assets, depreciationBuild.sales, periodCount)
   const depreciationSchedule = assetLifecycle.depreciation
   const depreciationWarnings = [...depreciationBuild.warnings, ...assetLifecycle.warnings]
+  const dateBasedPeriodMode=foundation.planning.periodFrequency==='monthly'||foundation.planning.periodFrequency==='quarterly'||foundation.planning.periodFrequency==='semiannual'
   const projectPeriods=foundation.planning.projectStartDate&&foundation.planning.projectEndDate&&foundation.planning.periodFrequency!=='unspecified'&&foundation.planning.fiscalYearStartMonth!==null
     ?buildProjectCalendarPeriods(foundation.planning.projectStartDate,foundation.planning.projectEndDate,foundation.planning.periodFrequency,foundation.planning.fiscalYearStartMonth)
     :[]
-  const periodicDepreciationBuild=projectPeriods.length?buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(value,projectPeriods,foundation):null
+  const periodicDepreciationBuild=dateBasedPeriodMode&&projectPeriods.length?buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(value,projectPeriods,foundation):null
   const periodicAssetLifecycle=periodicDepreciationBuild?calculatePeriodicComfarAssetLifecycle(periodicDepreciationBuild.assets,periodicDepreciationBuild.sales,projectPeriods):null
   const periodicDepreciationWarnings=[...(periodicDepreciationBuild?.warnings??[]),...(periodicAssetLifecycle?.warnings??[])]
-  const dateBasedPeriodMode=foundation.planning.periodFrequency==='monthly'||foundation.planning.periodFrequency==='quarterly'||foundation.planning.periodFrequency==='semiannual'
   const capexReconciliation = reconcileFixedInvestmentRegister(value, capexTotal, preOperatingCost)
   const referenceRows = foundation.planning.periodFrequency === 'annual'
     ? (referenceDepreciationByYear ?? []).map(([year, reference]) => {
