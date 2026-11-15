@@ -214,6 +214,9 @@ export const HOT_ROLLING_FIXED_ASSET_REFERENCE = {
   nonDepreciableInfrastructure: 284_417.4,
   preProductionCostOutsideFixedInvestment: 239_826.63796,
   conditionsTableFirstYearDepreciation: 1_432_000.0916753965,
+  seededRegisterFirstYearDepreciation: 1_582_725.9696743963,
+  seededRegisterFirstYearVarianceToComfar: 150_171.6296743963,
+  seededRegisterVsOpexScheduleVariance: 2_398.9696743963,
   opexScheduleAnnualDepreciation: 1_580_327,
   comfarFirstYearDepreciation: 1_432_554.34,
   comfarFirstYearVariance: 554.2483246035408,
@@ -221,6 +224,14 @@ export const HOT_ROLLING_FIXED_ASSET_REFERENCE = {
     [1405,1_432_000.0916754],[1406,1_432_000.0916754],[1407,1_432_000.0916754],[1408,1_432_000.0916754],
     [1409,1_416_212.6285094],
     [1410,1_327_922.6285094],[1411,1_327_922.6285094],[1412,1_327_922.6285094],[1413,1_327_922.6285094],[1414,1_327_922.6285094],
+    [1415,178_128.0785094],[1416,178_128.0785094],[1417,178_128.0785094],[1418,178_128.0785094],
+    [1419,50_893.73671697]
+  ] as const,
+  seededRegisterEngineByYear: [
+    [1405,1_582_725.9696744],[1406,1_582_725.9696744],[1407,1_582_725.9696744],[1408,1_582_725.9696744],
+    [1409,1_566_938.5065],
+    [1410,1_478_648.5065],[1411,1_478_648.5065],[1412,1_478_648.5065],
+    [1413,1_376_151.8985],[1414,401_632.072478],
     [1415,178_128.0785094],[1416,178_128.0785094],[1417,178_128.0785094],[1418,178_128.0785094],
     [1419,50_893.73671697]
   ] as const,
@@ -276,15 +287,15 @@ export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[
   const [office1403, office1404] = utilitySplit(utilityComponents.office)
   return [
     item('hrcr-land','خرید زمین','land','local','IRR',nonDepreciated(100),[
-      localAcquisition('hrcr-land-1403','1403',2_015_000)
+      localAcquisition('hrcr-land-1403','1403',2_015_000,'source-period')
     ]),
     item('hrcr-site','محوطه‌سازی و آماده‌سازی سایت','site','local','IRR',depreciation(7,10),[
       localAcquisition('hrcr-site-1403','1403',126_360.2406094665,'source-period'),
       localAcquisition('hrcr-site-1404','1404',siteTotal-126_360.2406094665,'source-period')
     ]),
     item('hrcr-buildings','ساختمان‌های صنعتی و غیرصنعتی','buildings','local','IRR',depreciation(7,10),[
-      localAcquisition('hrcr-buildings-1403','1403',1_084_284.4),
-      localAcquisition('hrcr-buildings-1404','1404',buildingTotal-1_084_284.4)
+      localAcquisition('hrcr-buildings-1403','1403',1_084_284.4,'source-period'),
+      localAcquisition('hrcr-buildings-1404','1404',buildingTotal-1_084_284.4,'source-period')
     ]),
     item('hrcr-machinery-foreign','ماشین‌آلات و تجهیزات ـ سهم خارجی','machinery','foreign','EUR',depreciation(10.97955,10),[
       foreignAcquisition('hrcr-machinery-foreign-1403','1403',14_508_000),
@@ -311,8 +322,8 @@ export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[
       localAcquisition('hrcr-office-1404','1404',office1404)
     ]),
     item('hrcr-contingencies','هزینه‌های احتمالی سرمایه‌ای ـ مبنای استهلاک نیازمند تطبیق','other','local','IRR',depreciation(10,0),[
-      localAcquisition('hrcr-contingencies-1403','1403',439_595.5),
-      localAcquisition('hrcr-contingencies-1404','1404',439_595.5)
+      localAcquisition('hrcr-contingencies-1403','1403',439_595.5,'source-period'),
+      localAcquisition('hrcr-contingencies-1404','1404',439_595.5,'source-period')
     ],'source-conflict'),
     item('hrcr-preproduction','هزینه‌های قبل از بهره‌برداری','preproduction','local','IRR',depreciation(10,0),[
       localAcquisition('hrcr-preproduction-1403','1403',119_913.31898),
