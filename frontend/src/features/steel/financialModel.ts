@@ -890,6 +890,8 @@ const parseIsoDate = (value: string) => {
   const date = new Date(value + 'T00:00:00.000Z')
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? date : null
 }
+const isMonthEndDate = (date: Date) => date.getUTCDate() ===
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate()
 const addMonthsAtMonthEnd = (date: Date, months: number) => {
   const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months + 1, 0))
   return target.toISOString().slice(0, 10)
@@ -920,6 +922,7 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
   const first = profile ? null : parseIsoDate(input.firstRepaymentDate)
   if (!profile && !first) return invalid('A valid first repayment date is required.')
   if (first && first <= start) return invalid('The first repayment date must be after the opening date.')
+  if (first && !isMonthEndDate(first)) return invalid('Annuity and constant-principal repayments must fall on the last day of a month.')
   if (!Number.isFinite(input.openingBalance) || input.openingBalance < 0 ||
       !Number.isFinite(input.openingAccruedInterest ?? 0) || (input.openingAccruedInterest ?? 0) < 0 ||
       !Number.isFinite(input.annualInterestRatePercent) || input.annualInterestRatePercent < 0)
