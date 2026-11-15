@@ -667,6 +667,174 @@ export function calculateAssetDepreciationSchedule(assets: DepreciationAssetInpu
   return rows
 }
 
+
+export type ComfarDepreciationMethod = 'linear-to-zero' | 'linear-to-scrap' | 'accelerated' | 'sum-of-years-digits'
+
+/**
+ * One acquisition vintage / asset cohort. For an existing asset, initialBookValue is
+ * its book value at the start of this schedule; originalValue remains the historical
+ * gross cost used to calculate the COMFAR scrap percentage.
+ */
+export type ComfarDepreciationAssetInput = {
+  id: string
+  name: string
+  originalValue: number
+  initialBookValue: number
+  scrapPercent: number
+  lengthYears: number
+  lengthMonths?: number
+  ratePercent?: number
+  method: ComfarDepreciationMethod
+  acquisitionPeriod: number
+  startingAtPeriod: number
+  firstDepreciationMonths?: number
+}
+
+export type ComfarAssetDepreciationRow = {
+  id: string
+  name: string
+  methodApplied: ComfarDepreciationMethod | null
+  openingBookValue: number
+  depreciation: number
+  closingBookValue: number
+}
+
+export type ComfarDepreciationPeriod = {
+  period: number
+  depreciation: number
+  closingBookValue: number
+  assets: ComfarAssetDepreciationRow[]
+}
+
+export type ComfarDepreciationSchedule = {
+  valid: boolean
+  warnings: string[]
+  periods: ComfarDepreciationPeriod[]
+}
+
+/** COMFAR VII.N: pre-existing assets start at Starting at; later acquisitions start in the following production period. */
+export function resolveComfarDepreciationStartPeriod(acquisitionPeriod: number, startingAtPeriod: number): number | null {
+  if (!Number.isInteger(acquisitionPeriod) || acquisitionPeriod < 1 || !Number.isInteger(startingAtPeriod) || startingAtPeriod < 1) return null
+  return acquisitionPeriod < startingAtPeriod ? startingAtPeriod : acquisitionPeriod + 1
+}
+
+/**
+ * COMFAR III Expert XI.H depreciation algorithms.
+ * Each input row represents one acquisition vintage. The caller supplies the
+ * first-year month count derived from the project's balance-date calendar.
+ */
+export function calculateComfarAssetDepreciationSchedule(
+  assets: ComfarDepreciationAssetInput[],
+  periodCount: number,
+): ComfarDepreciationSchedule {
+  const count = Number.isInteger(periodCount) ? Math.max(0, Math.min(120, periodCount)) : 0
+  const warnings: string[] = []
+  const perAsset = new Map<number, ComfarAssetDepreciationRow[]>()
+  for (let period = 1; period <= count; period += 1) perAsset.set(period, [])
+
+  for (const asset of assets) {
+    const months = asset.lengthMonths ?? 0
+    const firstMonths = asset.firstDepreciationMonths ?? 12
+    const length = asset.lengthYears + months / 12
+    const scrapValue = asset.originalValue * asset.scrapPercent / 100
+    const startPeriod = resolveComfarDepreciationStartPeriod(asset.acquisitionPeriod, asset.startingAtPeriod)
+    const valid = [asset.originalValue, asset.initialBookValue, asset.scrapPercent, asset.lengthYears, months, firstMonths].every(Number.isFinite)
+      && asset.originalValue >= 0 && asset.initialBookValue >= 0 && scrapValue <= asset.initialBookValue + 1e-8
+      && asset.scrapPercent >= 0 && asset.scrapPercent <= 100
+      && Number.isInteger(asset.lengthYears) && asset.lengthYears >= 0
+      && Number.isInteger(months) && months >= 0 && months <= 11
+      && length > 0 && Number.isInteger(firstMonths) && firstMonths >= 1 && firstMonths <= 12
+      && startPeriod !== null
+      && (asset.method === 'sum-of-years-digits'
+        ? months === 0 && firstMonths === 12
+        : Number.isFinite(asset.ratePercent) && (asset.ratePercent ?? 0) > 0 && (asset.ratePercent ?? 0) <= 100)
+      && (asset.method !== 'accelerated' || (asset.ratePercent ?? 0) < 100)
+    if (!valid) {
+      warnings.push(`${asset.name}: داده‌های استهلاک معتبر نیست یا حالت تقویمی این روش هنوز با فرمول مرجع قابل محاسبه نیست.`)
+      for (let period = 1; period <= count; period += 1) {
+        perAsset.get(period)!.push({ id: asset.id, name: asset.name, methodApplied: null, openingBookValue: asset.initialBookValue, depreciation: 0, closingBookValue: asset.initialBookValue })
+      }
+      continue
+    }
+
+    const annualRateFromLength = 100 / length
+    if ((asset.method === 'linear-to-zero' || asset.method === 'linear-to-scrap')
+      && Math.abs((asset.ratePercent ?? 0) - annualRateFromLength) > 0.02) {
+      warnings.push(`${asset.name}: نرخ سالانه با مدت استهلاک سازگار نیست؛ نرخ و مدت را مطابق هم تنظیم کنید.`)
+    }
+
+    const depreciationByPeriod = new Map<number, { amount: number; method: ComfarDepreciationMethod }>()
+    let bookValue = asset.initialBookValue
+    const salvage = scrapValue
+    const m1 = firstMonths
+    const maxAge = Math.min(120, Math.ceil(length + (12 - m1) / 12) + 2)
+
+    if (asset.method === 'linear-to-zero' || asset.method === 'linear-to-scrap') {
+      const depreciableBase = asset.method === 'linear-to-zero' ? asset.initialBookValue : asset.initialBookValue - salvage
+      const m = asset.method === 'linear-to-zero'
+        ? Math.floor(((asset.initialBookValue - salvage) * length / Math.max(asset.initialBookValue, 1e-12)) - m1 / 12 + 1)
+        : Math.floor(length)
+      const first = depreciableBase / length * m1 / 12
+      for (let age = 1; age <= Math.max(1, m + 1) && age <= maxAge; age += 1) {
+        const amount = age === 1 ? first : age <= m ? depreciableBase / length : Math.max(0, bookValue - salvage)
+        const depreciation = Math.min(Math.max(0, bookValue - salvage), Math.max(0, amount))
+        const period = startPeriod! + age - 1
+        depreciationByPeriod.set(period, { amount: depreciation, method: asset.method })
+        bookValue = Math.max(salvage, bookValue - depreciation)
+      }
+    } else if (asset.method === 'accelerated') {
+      const rate = (asset.ratePercent ?? 0) / 100
+      for (let age = 1; age <= maxAge && bookValue > salvage + 1e-8; age += 1) {
+        const remainingLife = length - (age - 1) - m1 / 12
+        if (remainingLife <= 0) break
+        const periodFraction = age === 1 ? m1 / 12 : 1
+        const acceleratedAnnual = bookValue * rate
+        const linearAnnual = (bookValue - salvage) / remainingLife
+        const useAccelerated = acceleratedAnnual > linearAnnual
+        const amount = (useAccelerated ? acceleratedAnnual : linearAnnual) * periodFraction
+        const depreciation = Math.min(bookValue - salvage, Math.max(0, amount))
+        const period = startPeriod! + age - 1
+        depreciationByPeriod.set(period, { amount: depreciation, method: useAccelerated ? 'accelerated' : 'linear-to-scrap' })
+        bookValue = Math.max(salvage, bookValue - depreciation)
+      }
+    } else {
+      const years = asset.lengthYears
+      const divisor = years * (years + 1) / 2
+      for (let age = 1; age <= years; age += 1) {
+        const amount = (years - age + 1) / divisor * (asset.initialBookValue - salvage)
+        const depreciation = Math.min(Math.max(0, bookValue - salvage), amount)
+        const period = startPeriod! + age - 1
+        depreciationByPeriod.set(period, { amount: depreciation, method: asset.method })
+        bookValue = Math.max(salvage, bookValue - depreciation)
+      }
+    }
+
+    let rollingBookValue = asset.initialBookValue
+    for (let period = 1; period <= count; period += 1) {
+      const scheduled = depreciationByPeriod.get(period)
+      const openingBookValue = rollingBookValue
+      const depreciation = scheduled?.amount ?? 0
+      rollingBookValue = Math.max(salvage, rollingBookValue - depreciation)
+      perAsset.get(period)!.push({
+        id: asset.id, name: asset.name, methodApplied: scheduled?.method ?? null,
+        openingBookValue, depreciation, closingBookValue: rollingBookValue,
+      })
+    }
+  }
+
+  const periods = Array.from({ length: count }, (_, index) => {
+    const period = index + 1
+    const rows = perAsset.get(period) ?? []
+    return {
+      period,
+      depreciation: rows.reduce((sum, row) => sum + row.depreciation, 0),
+      closingBookValue: rows.reduce((sum, row) => sum + row.closingBookValue, 0),
+      assets: rows,
+    }
+  })
+  return { valid: warnings.length === 0, warnings, periods }
+}
+
 export type FinancialStatementYear = {
   year: number
   incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
