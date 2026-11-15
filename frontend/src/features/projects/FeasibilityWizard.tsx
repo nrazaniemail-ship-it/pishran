@@ -4,6 +4,7 @@ import { localStore } from '../../core/storage/localStore'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
 import { calculateNpv as npv, calculateIrr as irr, calculateMirr as mirr, type IntegratedFinanceResult } from '../steel/financialModel'
 import AdvancedFinancePanel from './AdvancedFinancePanel'
+import { HOT_ROLLING_COIL_REFERENCE as HR, type HotRollingCompetitor, type HotRollingExpansion, type HotRollingSlabBalance } from './hotRollingCoilReference'
 
 type Row = { id:string; name:string; quantity:number; unit:string; unitPrice:number; source:string }
 type Model = {
@@ -15,7 +16,7 @@ type Model = {
   technical: Row[]
   balance: Row[]
   utilities: Row[]
-  market: { demand:number; domesticProduction:number; imports:number; exports:number; targetShare:number; domesticPrice:number; exportPrice:number; domesticShare:number; growth:number }
+  market: { demand:number; domesticProduction:number; imports:number; exports:number; targetShare:number; domesticPrice:number; exportPrice:number; domesticShare:number; growth:number; competitors:HotRollingCompetitor[]; expansions:HotRollingExpansion[]; slabBalance:HotRollingSlabBalance[] }
   capex: Row[]
   opex: Row[]
   finance: { equity:number; debt:number; equityCost:number; debtCost:number; tax:number; manualRate:number; method:'manual'|'wacc'; depreciationYears:number; workingCapital:number; financeRate:number; reinvestmentRate:number }
@@ -44,17 +45,18 @@ const makeRow=(name:string,unit='تن',quantity=0,unitPrice=0,source='فرض ک�
 function baseModel(project:FeasibilityProject):Model {
  const rawProject=project.templateId==='raw'||project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
  const coldRollingProject=!rawProject&&project.steelStage?.includes('نورد سرد')
+ const hotRollingCoilProject=!rawProject&&/نورد.*گرم.*کلاف|گرم.*نورد.*کلاف/.test((project.steelStage+' '+project.name).replace(/\s/g,''))
  const selectedStage=rawProject?stageOptions[10]:(stageOptions.find(s=>project.steelStage?.includes(s.name))??stageOptions[5])
  return {
-  project:{name:project.name,location:project.location,owner:coldRollingProject?'نورد و لوله گالوانیزه فجر کویر کاشان':'',startYear:1403,constructionYears:coldRollingProject?1.5:2,operatingYears:coldRollingProject?15:10,currency:coldRollingProject?'میلیون ریال':'میلیون ریال',fxRate:1},
+  project:{name:project.name,location:project.location,owner:coldRollingProject?'نورد و لوله گالوانیزه فجر کویر کاشان':'',startYear:hotRollingCoilProject?HR.startYear:1403,constructionYears:hotRollingCoilProject?HR.constructionYears:(coldRollingProject?1.5:2),operatingYears:hotRollingCoilProject?HR.operatingYears:(coldRollingProject?15:10),currency:'میلیون ریال',fxRate:1},
   stage:selectedStage.id,
-  products:rawProject?[]:coldRollingProject?[makeRow('کلاف سرد','تن/سال',200000,0,'گزارش فنی-اقتصادی نورد سرد، مهر ۱۴۰۲')]:[makeRow('محصول اصلی','تن/سال',Number(project.capacity.replace(/[^0-9.]/g,''))||250000,0)],
-  capacity:{nameplate:rawProject?0:(coldRollingProject?200000:(Number(project.capacity.replace(/[^0-9.]/g,''))||250000)),operatingDays:rawProject?0:330,hoursPerDay:rawProject?0:24,availability:rawProject?0:100,yield:rawProject?0:100,ramp:rawProject?[]:(coldRollingProject?[80,90,100]:[70,80,90,100])},
+  products:rawProject?[]:hotRollingCoilProject?[makeRow('ورق کویل فولادی','تن/سال',200000,307,'OPEX › قیمت فروش › ردیف 2'),makeRow('محصولات فرعی و ضایعات قابل فروش','تن/سال',4000,214.9,'OPEX › قیمت فروش › ردیف 3')]:coldRollingProject?[makeRow('کلاف سرد','تن/سال',200000,0,'گزارش فنی-اقتصادی نورد سرد، مهر ۱۴۰۲')]:[makeRow('محصول اصلی','تن/سال',Number(project.capacity.replace(/[^0-9.]/g,''))||250000,0)],
+  capacity:{nameplate:rawProject?0:(hotRollingCoilProject?HR.capacity:(coldRollingProject?200000:(Number(project.capacity.replace(/[^0-9.]/g,''))||250000))),operatingDays:rawProject?0:330,hoursPerDay:rawProject?0:24,availability:rawProject?0:100,yield:rawProject?0:100,ramp:rawProject?[]:(hotRollingCoilProject?[...HR.ramp]:(coldRollingProject?[80,90,100]:[70,80,90,100]))},
   process:{technology:'',route:'',equipment:'',bottleneck:0,notes:''},
   technical:rawProject?[]:selectedStage.fields.map(field=>makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',field.includes('نیروی انسانی')&&coldRollingProject?250:0,0,coldRollingProject?'نیازمند تکمیل مهندسی؛ گزارش فقط اشتغال مستقیم را مشخص کرده':'برآورد مهندسی')),
   balance:rawProject?[]:hotRollingCoilProject?HR.materials.map(r=>makeRow(r[0],r[2],r[1],r[3],'OPEX › مواد خام › داده‌های مصرف ویژه و قیمت‌های مبنای 1402')):coldRollingProject?[makeRow('کلاف گرم (ماده اولیه اصلی)','تن/تن محصول',1,0,'گزارش: نیاز سالانه ۲۰۰ هزار تن برای تولید ۲۰۰ هزار تن کلاف سرد'),makeRow('ضایعات، افت و برگشتی خط','درصد',0,0,'نیازمند موازنه تفصیلی')]:[makeRow('ماده اولیه اصلی','تن/تن محصول',1.125),makeRow('ضایعات و برگشتی','درصد',3)],
   utilities:rawProject?[]:hotRollingCoilProject?HR.utilities.map(r=>makeRow(r[0],r[2],r[1],r[3],'OPEX › انرژی › داده‌های مصرف ویژه و تعرفه‌های مبنای 1402')):coldRollingProject?[makeRow('برق مصرفی خط','kWh/تن',0,0,'نیازمند طراحی مهندسی؛ گزارش فقط هزینه انشعاب و تأمین را دارد'),makeRow('گاز طبیعی','Nm³/تن',0,0,'نیازمند طراحی مهندسی'),makeRow('آب صنعتی و خنک‌کاری','m³/تن',0,0,'نیازمند طراحی مهندسی'),makeRow('اسیدشویی و مواد شیمیایی','kg/تن',0,0,'نیازمند طراحی مهندسی'),makeRow('روغن نورد و روانکار','kg/تن',0,0,'نیازمند طراحی مهندسی')]:[makeRow('برق','kWh/تن',120),makeRow('گاز طبیعی','Nm³/تن',45),makeRow('آب صنعتی','m³/تن',0.8)],
-  market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:10,domesticPrice:0,exportPrice:0,domesticShare:85,growth:0},
+  market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:10,domesticPrice:hotRollingCoilProject?HR.pricePerTonne:0,exportPrice:hotRollingCoilProject?HR.pricePerTonne:0,domesticShare:hotRollingCoilProject?100:85,growth:0,competitors:hotRollingCoilProject?HR.competitors.map((r,i)=>({id:'hr-competitor-'+i,name:r[0],installedCapacity:r[1],actualProduction:r[2],marketableCapacity:r[3],domesticSupply:r[4],thickness:r[5],width:r[6]})):[],expansions:hotRollingCoilProject?HR.expansions.map((r,i)=>({id:'hr-expansion-'+i,name:r[0],capacity:r[1]})):[],slabBalance:hotRollingCoilProject?HR.slabBalance.map((r,i)=>({id:'hr-slab-'+i,year:r[0],production:r[1],domesticConsumption:r[2],exports:r[3],imports:r[4]})):[]},
   capex:rawProject?[]:hotRollingCoilProject?HR.capex.map(r=>makeRow(r[0],'میلیون ریال',r[1],1,r[2])):coldRollingProject?[
    makeRow('خرید زمین (۱۳ هکتار؛ ۱۳۰٬۰۰۰ مترمربع)','میلیون ریال',2015000,1,'جدول ۱-۱ گزارش'),
    makeRow('محوطه‌سازی و آماده‌سازی سایت','میلیون ریال',1092344,1,'جدول ۲-۱ گزارش'),
