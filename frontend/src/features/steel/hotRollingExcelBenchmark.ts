@@ -255,7 +255,7 @@ export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[
     depreciationConditions: FixedInvestmentItem['depreciation'],
     acquisitions: FixedInvestmentItem['acquisitions']
   ): FixedInvestmentItem => ({
-    id, description, assetClass, origin, currencyCode, costCentreId: null,
+    id, description, assetClass, origin, currencyCode, costCentreId: '',
     depreciation: depreciationConditions, acquisitions, sales: []
   })
   const siteTotal = 430_007.7606094665
@@ -285,15 +285,15 @@ export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[
       localAcquisition('hrcr-buildings-1403','1403',1_084_284.4),
       localAcquisition('hrcr-buildings-1404','1404',buildingTotal-1_084_284.4)
     ]),
-    item('hrcr-machinery-foreign','ماشین‌آلات و تجهیزات ـ سهم خارجی','machinery','foreign','EUR',depreciation(10,10),[
+    item('hrcr-machinery-foreign','ماشین‌آلات و تجهیزات ـ سهم خارجی','machinery','foreign','EUR',depreciation(10.97955,10),[
       foreignAcquisition('hrcr-machinery-foreign-1403','1403',14_508_000),
       foreignAcquisition('hrcr-machinery-foreign-1404','1404',3_627_000)
     ]),
-    item('hrcr-machinery-local','ماشین‌آلات و تجهیزات ـ سهم داخلی','machinery','local','IRR',depreciation(10,10),[
+    item('hrcr-machinery-local','ماشین‌آلات و تجهیزات ـ سهم داخلی','machinery','local','IRR',depreciation(10.97955,10),[
       localAcquisition('hrcr-machinery-local-1403','1403',485_000),
       localAcquisition('hrcr-machinery-local-1404','1404',485_000)
     ]),
-    item('hrcr-infrastructure-depreciable','تأسیسات زیربنایی ـ بخش مشمول استهلاک','infrastructure','local','IRR',depreciation(10,10),[
+    item('hrcr-infrastructure-depreciable','تأسیسات زیربنایی ـ بخش مشمول استهلاک','infrastructure','local','IRR',depreciation(12,10),[
       localAcquisition('hrcr-infrastructure-dep-1403','1403',infrastructureDep1403),
       localAcquisition('hrcr-infrastructure-dep-1404','1404',infrastructureDep1404)
     ]),
@@ -309,9 +309,13 @@ export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[
       localAcquisition('hrcr-office-1403','1403',office1403),
       localAcquisition('hrcr-office-1404','1404',office1404)
     ]),
-    item('hrcr-contingencies','هزینه‌های احتمالی سرمایه‌ای','other','local','IRR',depreciation(10,10),[
+    item('hrcr-contingencies','هزینه‌های احتمالی سرمایه‌ای ـ مبنای استهلاک نیازمند تطبیق','other','local','IRR',depreciation(10,0),[
       localAcquisition('hrcr-contingencies-1403','1403',439_595.5),
       localAcquisition('hrcr-contingencies-1404','1404',439_595.5)
+    ]),
+    item('hrcr-preproduction','هزینه‌های قبل از بهره‌برداری','preproduction','local','IRR',depreciation(10,0),[
+      localAcquisition('hrcr-preproduction-1403','1403',119_913.31898),
+      localAcquisition('hrcr-preproduction-1404','1404',119_913.31898)
     ])
   ]
 }
