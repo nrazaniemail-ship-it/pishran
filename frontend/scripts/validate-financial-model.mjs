@@ -732,6 +732,8 @@ assert.ok(hrcrAssetBuild.assets.length>=18,'HRCR reference must create asset acq
 near(hrcrAssetBuild.investmentSchedule.reduce((sum,value)=>sum+value,0),
   workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.fixedInvestment,0.01,
   'HRCR asset acquisition schedule must exclude preproduction costs and reconcile to fixed investment')
+near(hrcrAssetBuild.preOperatingSchedule.reduce((sum,value)=>sum+value,0),workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.preproductionNet,0.01,'HRCR preproduction timing schedule must retain the separately reconciled amount')
+assert.equal(hrcrAssetBuild.preOperatingScheduleVerified,false,'HRCR preproduction acquisition dates remain estimated')
 assert.equal(hrcrAssetBuild.investmentScheduleVerified,false,
   'HRCR construction timing estimates must not be treated as verified investment cash flows')
 assert.ok(hrcrAssetBuild.warnings.some(warning=>warning.includes('proportional estimate')),
@@ -1212,6 +1214,8 @@ near(preproductionBridge.preproductionTotal,50,1e-9,'Pre-production expenditure 
 assert.equal(preproductionBridge.status,'matched','Fixed assets and pre-production expenditures must reconcile to separate CAPEX targets')
 const preproductionSchedule=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([registerAsset,preproductionRegisterItem],1405,12)
 near(preproductionSchedule.investmentSchedule[0],200,1e-9,'Pre-production costs must not be double-counted in fixed asset investment cash-flow schedule')
+near(preproductionSchedule.preOperatingSchedule[0],50,1e-9,'Pre-production expenditures must have a separate periodised cash-flow schedule')
+assert.equal(preproductionSchedule.preOperatingScheduleVerified,false,'Estimated pre-production timing must remain provisional')
 
 const landRegisterAsset = {
   ...registerAsset,id:'land-register',assetClass:'land',
