@@ -331,6 +331,7 @@ const advancedFinanceSource = await readFile(new URL('../src/features/projects/A
 const feasibilityWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 const projectReportSource = await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx', import.meta.url), 'utf8')
 const projectFoundationPanelSource = await readFile(new URL('../src/features/projects/ProjectFoundationPanel.tsx', import.meta.url), 'utf8')
+const fixedInvestmentPanelSource = await readFile(new URL('../src/features/projects/FixedInvestmentPanel.tsx', import.meta.url), 'utf8')
 assert.ok(advancedFinanceSource.includes('calculateIntegratedPeriodicFinance')
   && advancedFinanceSource.includes('periodicFinanceResult')
   && advancedFinanceSource.includes('periodDrawdowns')
@@ -354,4 +355,19 @@ assert.ok(projectFoundationPanelSource.includes('Day-count Basis')
 assert.ok(advancedFinanceSource.includes('Values in the period tax schedule override the annual rate.')
   && !advancedFinanceSource.includes('Monthly/quarterly calculation will be enabled after the period engine is complete'),
   'Tax UI must explain period-specific overrides rather than claim monthly/quarterly support is unavailable')
+assert.ok(fixedInvestmentPanelSource.includes('buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems')
+  && fixedInvestmentPanelSource.includes('calculatePeriodicComfarAssetLifecycle')
+  && fixedInvestmentPanelSource.includes("dateBasedPeriodMode?'date':'text'),
+  'Fixed-investment register must expose exact acquisition, depreciation-start and disposal dates for periodic asset schedules')
+assert.ok(advancedFinanceSource.includes('periodicDepreciationByPeriod')
+  && advancedFinanceSource.includes('assetSaleProceedsByPeriod')
+  && advancedFinanceSource.includes('periodicAssetWarnings'),
+  'Integrated finance panel must consume verified period-level asset depreciation, CAPEX and disposal schedules')
+assert.ok(feasibilityWizardSource.includes('periodicAssetScheduleVerified')
+  && feasibilityWizardSource.includes('periodicFixedInvestmentByPeriod')
+  && feasibilityWizardSource.includes('periodicAssetWarnings'),
+  'Project wizard must only pass verified fixed-asset period schedules into the finance engine')
+assert.ok(projectReportSource.includes('periodicAssetScheduleVerified')
+  && projectReportSource.includes('Asset Sale Proceeds'),
+  'Project report must disclose asset schedule verification and disposal proceeds')
 console.log('PASS: asset-level monthly/quarterly depreciation, disposals and integrated asset cash flows, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
