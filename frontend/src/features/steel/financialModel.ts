@@ -1083,7 +1083,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       if (acquisitionPeriod > periodCount) continue
       const exchangeRate = item.origin === 'foreign' ? (acquisition.exchangeRateToLocal ?? 0) : 1
       const originalValue = acquisition.quantity * acquisition.unitPrice * exchangeRate
-      if (acquisitionPeriod >= 1 && acquisitionPeriod <= investmentSchedule.length) investmentSchedule[acquisitionPeriod - 1] += originalValue
+      if (item.assetClass !== 'preproduction' && acquisitionPeriod >= 1 && acquisitionPeriod <= investmentSchedule.length) investmentSchedule[acquisitionPeriod - 1] += originalValue
       if (!Number.isFinite(originalValue) || originalValue < 0) {
         warnings.push(`${item.description || item.id}: بهای تحصیل پس از تبدیل به ارز محلی معتبر نیست.`)
         continue
@@ -1145,6 +1145,9 @@ export type FixedInvestmentRegisterReconciliation = {
   registerTotal: number
   capexFixedAssetTarget: number
   difference: number
+  preproductionTotal: number
+  preOperatingTarget: number
+  preproductionDifference: number
   status: 'not-entered' | 'matched' | 'unreconciled'
   warnings: string[]
 }
@@ -1162,7 +1165,9 @@ export function reconcileFixedInvestmentRegister(
 ): FixedInvestmentRegisterReconciliation {
   const warnings: string[] = []
   const target = Math.max(0, Number(capexTotal) - Math.max(0, Number(preOperatingCost) || 0))
+  const preOperatingTarget = Math.max(0, Number(preOperatingCost) || 0)
   let registerTotal = 0
+  let preproductionTotal = 0
   for (const item of items) {
     for (const acquisition of item.acquisitions) {
       const quantity = Number(acquisition.quantity)
@@ -1172,23 +1177,27 @@ export function reconcileFixedInvestmentRegister(
         warnings.push(`${item.description || item.id}: acquisition cannot be reconciled without a valid quantity, price and exchange rate to local currency.`)
         continue
       }
-      registerTotal += quantity * unitPrice * rate
+      const amount = quantity * unitPrice * rate
+      if (item.assetClass === 'preproduction') preproductionTotal += amount
+      else registerTotal += amount
     }
   }
   if (!Number.isFinite(capexTotal) || capexTotal < 0 || !Number.isFinite(preOperatingCost) || preOperatingCost < 0) {
     warnings.push('Aggregate CAPEX and pre-operating cost must be finite non-negative local-currency amounts.')
   }
   const difference = registerTotal - target
-  const hasRegister = items.some(item => item.acquisitions.length > 0)
-  const status = !hasRegister && target === 0
+  const preproductionDifference = preproductionTotal - preOperatingTarget
+  const hasRegister = items.some(item => item.acquisitions.length > 0 && item.assetClass !== 'preproduction')
+  const hasPreproduction = items.some(item => item.acquisitions.length > 0 && item.assetClass === 'preproduction')
+  const status = !hasRegister && !hasPreproduction && target === 0 && preOperatingTarget === 0
     ? 'not-entered'
-    : Math.abs(difference) <= Math.max(0, tolerance) && warnings.length === 0
+    : Math.abs(difference) <= Math.max(0, tolerance) && Math.abs(preproductionDifference) <= Math.max(0, tolerance) && warnings.length === 0
       ? 'matched'
       : 'unreconciled'
   if (status === 'unreconciled') {
-    warnings.push('Fixed Investment Register acquisitions do not reconcile to aggregate CAPEX excluding pre-operating expenses. Review unallocated CAPEX, non-depreciable assets and duplicate entries before using the register as a cash-investment source.')
+    warnings.push('Fixed Investment Register and Pre-production Expenditure do not reconcile to their separate CAPEX targets. Review unallocated CAPEX, non-depreciable assets, pre-production items and duplicate entries before using register-derived investment timing.')
   }
-  return { registerTotal, capexFixedAssetTarget: target, difference, status, warnings }
+  return { registerTotal, capexFixedAssetTarget: target, difference, preproductionTotal, preOperatingTarget, preproductionDifference, status, warnings }
 }
 
 export type FinancialStatementYear = {
