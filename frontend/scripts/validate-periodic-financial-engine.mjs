@@ -179,6 +179,12 @@ const integratedPeriodic = engine.calculateIntegratedPeriodicFinance({
 })
 assert.equal(integratedPeriodic.valid, true, 'Integrated period model must accept valid quarterly inputs')
 assert.equal(integratedPeriodic.rows.length, 4)
+assert.ok(Math.abs(integratedPeriodic.rows.reduce((sum,row)=>sum+row.revenue,0)-4800)<1e-7,
+  'Quarterly revenue must reconcile to the source annual total')
+assert.ok(Math.abs(integratedPeriodic.rows.reduce((sum,row)=>sum+row.variableCost,0)-1600)<1e-7,
+  'Quarterly variable costs must reconcile to the source annual total')
+assert.ok(Math.abs(integratedPeriodic.rows.reduce((sum,row)=>sum+row.fixedInvestment,0)-3000)<1e-7,
+  'Quarterly CAPEX must reconcile to the source annual total')
 assert.equal(integratedPeriodic.rows[1].changeInWorkingCapital, 10)
 assert.equal(integratedPeriodic.rows[2].changeInWorkingCapital, 10)
 assert.equal(integratedPeriodic.rows[3].changeInWorkingCapital, -5)
