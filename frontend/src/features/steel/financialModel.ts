@@ -681,7 +681,7 @@ export function calculateAssetDepreciationSchedule(assets: DepreciationAssetInpu
 }
 
 
-export type ComfarDepreciationMethod = 'linear-to-zero' | 'linear-to-scrap' | 'accelerated' | 'sum-of-years-digits'
+export type ComfarDepreciationMethod = 'none' | 'linear-to-zero' | 'linear-to-scrap' | 'accelerated' | 'sum-of-years-digits'
 
 /**
  * One acquisition vintage / asset cohort. For an existing asset, initialBookValue is
@@ -778,11 +778,12 @@ export function calculateComfarAssetDepreciationSchedule(
       && asset.scrapPercent >= 0 && asset.scrapPercent <= 100
       && Number.isInteger(asset.lengthYears) && asset.lengthYears >= 0
       && Number.isInteger(months) && months >= 0 && months <= 11
-      && length > 0 && Number.isInteger(firstMonths) && firstMonths >= 1 && firstMonths <= 12
+      && (asset.method === 'none' || length > 0) && Number.isInteger(firstMonths) && firstMonths >= 1 && firstMonths <= 12
       && startPeriod !== null
-      && (asset.method === 'sum-of-years-digits'
-        ? months === 0 && firstMonths === 12
-        : Number.isFinite(asset.ratePercent) && (asset.ratePercent ?? 0) > 0 && (asset.ratePercent ?? 0) <= 100)
+      && (asset.method === 'none'
+        || (asset.method === 'sum-of-years-digits'
+          ? months === 0 && firstMonths === 12
+          : Number.isFinite(asset.ratePercent) && (asset.ratePercent ?? 0) > 0 && (asset.ratePercent ?? 0) <= 100))
       && (asset.method !== 'accelerated' || (asset.ratePercent ?? 0) < 100)
     if (!valid) {
       warnings.push(`${asset.name}: داده‌های استهلاک معتبر نیست یا حالت تقویمی این روش هنوز با فرمول مرجع قابل محاسبه نیست.`)
@@ -806,7 +807,9 @@ export function calculateComfarAssetDepreciationSchedule(
     const m1 = firstMonths
     const maxAge = Math.min(120, Math.ceil(length + (12 - m1) / 12) + 2)
 
-    if (asset.method === 'linear-to-zero' || asset.method === 'linear-to-scrap') {
+    if (asset.method === 'none') {
+      // Land and other non-depreciated assets remain at book value until disposal.
+    } else if (asset.method === 'linear-to-zero' || asset.method === 'linear-to-scrap') {
       const depreciableBase = asset.method === 'linear-to-zero' ? asset.initialBookValue : asset.initialBookValue - salvage
       const m = asset.method === 'linear-to-zero'
         ? Math.floor(((asset.initialBookValue - salvage) * length / Math.max(asset.initialBookValue, 1e-12)) - m1 / 12 + 1)
@@ -840,7 +843,7 @@ export function calculateComfarAssetDepreciationSchedule(
         depreciationByPeriod.set(period, { amount: depreciation, method: useAccelerated ? 'accelerated' : 'linear-to-scrap' })
         bookValue = Math.max(salvage, bookValue - depreciation)
       }
-    } else {
+    } else if (asset.method === 'sum-of-years-digits') {
       const years = asset.lengthYears
       const divisor = years * (years + 1) / 2
       for (let age = 1; age <= years; age += 1) {
@@ -903,6 +906,8 @@ export type ComfarAssetSaleResult = {
   bookValueAtSale: number
   saleProceeds: number
   returnOfCapital: number
+  extraordinaryIncome: number
+  extraordinaryLoss: number
   otherIncomeLoss: number
 }
 
@@ -961,14 +966,18 @@ export function calculateComfarAssetLifecycle(
     const saleProceeds = sale.priceMode === 'book-value'
       ? bookValueAtSale
       : (sale.selfDefinedPrice ?? 0) * (sale.exchangeRateToLocal ?? 1)
+    const extraordinaryIncome = Math.max(0, saleProceeds - bookValueAtSale)
+    const extraordinaryLoss = Math.max(0, bookValueAtSale - saleProceeds)
     const result: ComfarAssetSaleResult = {
       id: sale.id,
       assetId: sale.assetId,
       period: sale.period,
       bookValueAtSale,
       saleProceeds,
-      returnOfCapital: bookValueAtSale,
-      otherIncomeLoss: saleProceeds - bookValueAtSale,
+      returnOfCapital: Math.min(saleProceeds, bookValueAtSale),
+      extraordinaryIncome,
+      extraordinaryLoss,
+      otherIncomeLoss: extraordinaryIncome - extraordinaryLoss,
     }
     results.push(result)
     saleByAsset.set(sale.assetId, result)
@@ -978,10 +987,14 @@ export function calculateComfarAssetLifecycle(
     for (const period of depreciation.periods) {
       for (const row of period.assets) {
         const sale = saleByAsset.get(row.id)
-        if (sale && period.period >= sale.period) {
-          row.depreciation = period.period === sale.period ? row.depreciation : 0
+        if (sale && period.period === sale.period) {
+          // Depreciation is charged through the sale balance date; the asset is then derecognised.
           row.closingBookValue = 0
-          if (period.period > sale.period) row.methodApplied = null
+        } else if (sale && period.period > sale.period) {
+          row.openingBookValue = 0
+          row.depreciation = 0
+          row.closingBookValue = 0
+          row.methodApplied = null
         }
       }
       period.depreciation = period.assets.reduce((sum, row) => sum + row.depreciation, 0)
@@ -1019,8 +1032,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     const date = match[2] && match[3] ? value.trim().replace(/\\//g, '-') : undefined
     return { year: Number(match[1]), date }
   }
-  const methodMap: Record<FixedInvestmentItem['depreciation']['method'], ComfarDepreciationMethod | null> = {
-    none: null,
+  const methodMap: Record<FixedInvestmentItem['depreciation']['method'], ComfarDepreciationMethod> = {
+    none: 'none',
     'linear-zero': 'linear-to-zero',
     'linear-scrap': 'linear-to-scrap',
     accelerated: 'accelerated',
@@ -1028,13 +1041,12 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   }
   for (const item of items) {
     const method = methodMap[item.depreciation.method]
-    if (!method) continue
-    const starting = parsePeriod(item.depreciation.startingAt)
-    if (!starting) {
+    const starting = method === 'none' ? null : parsePeriod(item.depreciation.startingAt)
+    if (method !== 'none' && !starting) {
       warnings.push(`${item.description || item.id}: تاریخ Starting at باید به‌صورت سال یا YYYY-MM-DD وارد شود.`)
       continue
     }
-    const startingAtPeriod = Math.max(1, starting.year - projectStartYear + 1)
+    const startingAtPeriod = method === 'none' ? 1 : Math.max(1, starting!.year - projectStartYear + 1)
     for (const acquisition of item.acquisitions) {
       const acquired = parsePeriod(acquisition.period)
       if (!acquired) {
@@ -1084,7 +1096,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
         startingAtPeriod,
         firstDepreciationMonths: item.depreciation.firstDepreciationMonths,
         acquisitionDate: acquired.date,
-        startingAtDate: starting.date,
+        startingAtDate: starting?.date,
       })
       for (const sale of relatedSales) {
         const sold = parsePeriod(sale.period)
