@@ -287,7 +287,7 @@ export function createBlankFixedInvestmentItem(): FixedInvestmentItem {
 }
 
 function fixedInvestmentPeriodOrdinal(value: string): number | null {
-  const match = /^(\\d{3,4})(?:[-/](\\d{1,2})(?:[-/](\\d{1,2}))?)?$/.exec(value.trim())
+  const match = /^(\d{3,4})(?:[-/](\d{1,2})(?:[-/](\d{1,2}))?)?$/.exec(value.trim())
   if (!match) return null
   return Number(match[1]) * 10000 + Number(match[2] ?? 0) * 100 + Number(match[3] ?? 0)
 }
@@ -366,7 +366,7 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
       const saleOrdinal = fixedInvestmentPeriodOrdinal(sale.period)
       if (acquisitionOrdinal !== null && saleOrdinal !== null && saleOrdinal < acquisitionOrdinal)
         issue(salePath + '.period', 'asset-sale-before-acquisition', 'An asset cannot be sold before its acquisition period.')
-      const saleMatch = /^(\\d{3,4})(?:[-/](\\d{1,2})(?:[-/](\\d{1,2}))?)?$/.exec(sale.period.trim())
+      const saleMatch = /^(\d{3,4})(?:[-/](\d{1,2})(?:[-/](\d{1,2}))?)?$/.exec(sale.period.trim())
       if (!saleMatch) issue(salePath + '.period', 'invalid-asset-sale-period-format', 'Sale period must be a project year or a full date.')
       else if (saleMatch[2] && saleMatch[3]) {
         if (foundation.planning.balanceDateMonth === null || foundation.planning.balanceDateDay === null)

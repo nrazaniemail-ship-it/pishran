@@ -590,8 +590,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   const mirrEquity = calculateMirr(equityFlows, Math.max(-99, input.equityMirrFinanceRate ?? input.costOfEquity) / 100, Math.max(-99, input.equityMirrReinvestmentRate ?? input.costOfEquity) / 100)
   const peakWorkingCapital = Math.max(0, ...annualRows.map(row => row.workingCapital))
   const fundingGap = totalInvestment + peakWorkingCapital - totalFunding
-  if (input.assetSaleSchedule?.some(row => ![row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(Number.isFinite) || row.saleProceeds < 0 || row.returnOfCapital < 0 || row.bookValueDisposed < 0 || Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss)>0.01)) warnings.push('برنامه فروش دارایی باید عواید فروش را با Return of capital و Other income/loss تطبیق دهد و ارزش‌ها معتبر باشند.')
   const warnings: string[] = []
+  if (input.assetSaleSchedule?.some(row => ![row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(Number.isFinite) || row.saleProceeds < 0 || row.returnOfCapital < 0 || row.bookValueDisposed < 0 || Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss)>0.01)) warnings.push('برنامه فروش دارایی باید عواید فروش را با Return of capital و Other income/loss تطبیق دهد و ارزش‌ها معتبر باشند.')
   if (totalFunding <= 0) warnings.push('ساختار تأمین مالی ثبت نشده است؛ WACC محاسبه نمی‌شود.')
   if (totalEquityContribution <= 0 && totalDebtDrawdown > 0) warnings.push('آورده نقدی سهامدار ثبت نشده است؛ وزن حقوق صاحبان سهام صفر است.')
   if (totalFunding + 1 < totalInvestment + peakWorkingCapital) warnings.push('منابع مالی ثبت‌شده برای سرمایه‌گذاری و سرمایه در گردش کافی نیست.')
@@ -730,7 +730,7 @@ export type ComfarDepreciationSchedule = {
 /** COMFAR VII.N: pre-existing assets start at Starting at; later acquisitions start in the following production period. */
 function comparableComfarDate(value?: string): number | null {
   if (!value) return null
-  const match = /^(\\d{3,4})[-/](\\d{1,2})[-/](\\d{1,2})$/.exec(value.trim())
+  const match = /^(\d{3,4})[-/](\d{1,2})[-/](\d{1,2})$/.exec(value.trim())
   if (!match) return null
   const year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
   if (month < 1 || month > 12 || day < 1 || day > 31) return null
@@ -1045,9 +1045,9 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     warnings.push('تناوب دوره در فونداسیون تعیین نشده است؛ نگاشت سالانه فقط برای پیش‌نمایش استفاده می‌شود و نتیجه تا تعیین Annual تأییدشده نیست.')
   }
   const parsePeriod = (value: string): { year: number; date: string | undefined } | null => {
-    const match = /^(\\d{3,4})(?:[-/](\\d{1,2})(?:[-/](\\d{1,2}))?)?$/.exec(value.trim())
+    const match = /^(\d{3,4})(?:[-/](\d{1,2})(?:[-/](\d{1,2}))?)?$/.exec(value.trim())
     if (!match) return null
-    const date = match[2] && match[3] ? value.trim().replace(/\\//g, '-') : undefined
+    const date = match[2] && match[3] ? value.trim().replace(/\//g, '-') : undefined
     return { year: Number(match[1]), date }
   }
   const methodMap: Record<FixedInvestmentItem['depreciation']['method'], ComfarDepreciationMethod> = {

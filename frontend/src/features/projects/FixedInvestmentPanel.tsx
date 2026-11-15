@@ -34,6 +34,7 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
   const assetLifecycle = calculateComfarAssetLifecycle(depreciationBuild.assets, depreciationBuild.sales, periodCount)
   const depreciationSchedule = assetLifecycle.depreciation
   const depreciationWarnings = [...depreciationBuild.warnings, ...assetLifecycle.warnings]
+  const capexReconciliation = reconcileFixedInvestmentRegister(value, capexTotal, preOperatingCost)
   const referenceRows = foundation.planning.periodFrequency === 'annual'
     ? (referenceDepreciationByYear ?? []).map(([year, reference]) => {
         const row = depreciationSchedule.periods.find(period => projectStartYear + period.period - 1 === year)

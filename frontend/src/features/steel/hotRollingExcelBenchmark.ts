@@ -17,7 +17,7 @@ export function migrateHotRollingCoilFixedInvestmentItems(
   const defaults = createHotRollingCoilFixedInvestmentItems()
   if (savedSeedVersion < 1 && savedItems.length === 0) return defaults
   const defaultById = new Map(defaults.map(item => [item.id, item]))
-  const migrated = savedItems.map(saved => {
+  const migrated: FixedInvestmentItem[] = savedItems.map(saved => {
     const baseline = defaultById.get(saved.id)
     return {
       ...saved,
@@ -40,7 +40,7 @@ export function migrateHotRollingCoilFixedInvestmentItems(
   const containsFullSeed = originalFixedAssetIds.every(id => migrated.some(item => item.id === id))
   if (savedSeedVersion < 2 && containsFullSeed && !migrated.some(item => item.assetClass === 'preproduction')) {
     const preproduction = defaults.find(item => item.assetClass === 'preproduction')
-    if (preproduction) migrated.push(preproduction)
+    if (preproduction) migrated.push({ ...preproduction, depreciationBasis: preproduction.depreciationBasis ?? 'unresolved' })
   }
   return migrated
 }
@@ -379,7 +379,7 @@ export function createHotRollingCoilProjectFoundation(): ProjectFoundation {
     currencies: {
       localCurrencyCode: 'IRR', localCurrencyName: 'میلیون ریال',
       foreignCurrencies: [{
-        code: 'EUR', name: 'یورو',
+        id: 'currency-eur', code: 'EUR', name: 'یورو',
         exchangeRates: [{ period: '1403', rateToLocal: 0.524 }, { period: '1404', rateToLocal: 0.524 }]
       }]
     },
@@ -388,7 +388,7 @@ export function createHotRollingCoilProjectFoundation(): ProjectFoundation {
     discounting: { method: 'manual', financialRatePercent: 25, economicRatePercent: null },
     taxation: {
       system: 'corporate', lossCarryForward: true, lossCarryForwardYears: null,
-      rates: Array.from({length:15},(_,index)=>({period:String(1405+index),ratePercent:25}))
+      rates: Array.from({length:15},(_,index)=>({id:`tax-${1405+index}`,period:String(1405+index),ratePercent:25}))
     }
   }
 }

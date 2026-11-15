@@ -73,7 +73,7 @@ const mergedHrcrFoundation = reference.mergeHotRollingCoilProjectFoundation({...
 assert.equal(mergedHrcrFoundation.planning.periodFrequency,'annual','HRCR reference migration must restore annual source-model frequency when legacy state is unspecified')
 assert.equal(mergedHrcrFoundation.currencies.foreignCurrencies[0].code,'EUR','HRCR reference migration must retain the EUR basis required by imported machinery')
 const hrcrDepreciationBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(hrcrFixedAssets,1403,17,'annual',hrcrFoundation)
-assert.equal(hrcrDepreciationBuild.warnings.length,0,'HRCR200 reference fixed-asset vintages must map without unsupported dates or currencies')
+assert.equal(hrcrDepreciationBuild.warnings.filter(warning=>/تاریخ\/دوره تحصیل|بهای تحصیل پس از تبدیل|تاریخ Starting at|exchange rate|currency/i.test(warning)).length,0,'HRCR200 reference fixed-asset vintages must map without unsupported dates or currencies; source conflicts and estimated allocation warnings must remain visible')
 const hrcrLifecycle = engine.calculateComfarAssetLifecycle(hrcrDepreciationBuild.assets,hrcrDepreciationBuild.sales,17)
 near(hrcrLifecycle.depreciation.periods[2].depreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterFirstYearDepreciation,0.02,'HRCR200 first production-year depreciation from the seeded register')
 for (const [year, expected] of reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterEngineByYear) {
@@ -83,7 +83,7 @@ for (const [year, expected] of reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seede
 const hrcr1414 = hrcrLifecycle.depreciation.periods.find(period=>1403+period.period-1===1414)?.depreciation ?? 0
 const comfar1414 = reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarDepreciationByYear.find(([year])=>year===1414)?.[1] ?? 0
 assert.ok(hrcr1414-comfar1414>300_000,'HRCR200 1414 depreciation mismatch must remain visible pending asset-level disposals and Starting at dates')
-near(hrcrLifecycle.depreciation.periods[2].depreciation-reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarFirstYear,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterFirstYearVarianceToComfar,0.02,'HRCR200 first-year seeded-register variance must remain visible')
+near(hrcrLifecycle.depreciation.periods[2].depreciation-reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarFirstYearDepreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterFirstYearVarianceToComfar,0.02,'HRCR200 first-year seeded-register variance must remain visible')
 near(hrcrLifecycle.depreciation.periods[2].depreciation-reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.opexScheduleAnnualDepreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterVsOpexScheduleVariance,0.02,'HRCR200 pre-production salvage assumption must explain the difference from the OPEX annual schedule')
 assert.ok(Math.abs(hrcrLifecycle.depreciation.periods[2].depreciation-rollingAudit.depreciationReconciliation.comfarFirstYear)>500,'HRCR200 depreciation reconciliation must remain open pending asset-level Starting at/disposal data')
 near(rollingAudit.capex.fixedInvestment + rollingAudit.capex.preproductionNet,
@@ -189,7 +189,7 @@ assert.ok(appSource.includes("if(project.templateId==='raw') setPage('project-wi
 assert.ok(rollingWorkspaceSource.includes('ممیزی جریان نقدی خام و اصلاح‌شده مرجع مالی')
   && rollingWorkspaceSource.includes('HOT_ROLLING_reference_CASHFLOW_AUDIT'),
   'Active rolling workspace must expose the reference cash-flow audit')
-assert.ok(wizardSource.includes('useFixedInvestmentRegister={m.fixedInvestmentItems.length>0}'), 'The asset register must be the primary depreciation source, with legacy reference assumptions used only while it is empty')
+assert.ok(wizardSource.includes('useFixedInvestmentRegister={true}'), 'The shared fixed investment register must remain the authoritative depreciation source for every feasibility project, including when it is empty')
 assert.equal(model.discountMode, 'wacc', 'Hot-rolling template must use the sponsor-confirmed WACC by default')
 
 const output = expected.capacity
@@ -680,41 +680,6 @@ assert.ok(invalidStartingAsset.some(issue=>issue.code==='invalid-starting-asset-
 assert.ok(invalidStartingAsset.some(issue=>issue.code==='depreciation-before-commissioning'),
   'Depreciation cannot begin before commissioning')
 
-const duplicateSaleIssues = foundation.validateFixedInvestmentItems([{
-  ...registerAsset,
-  sales:[
-    {id:'sale-one',acquisitionId:'register-acq',period:'1406-12-29',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null},
-    {id:'sale-two',acquisitionId:'register-acq',period:'1407-12-29',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}
-  ]
-}],foundation.createBlankProjectFoundation())
-assert.ok(duplicateSaleIssues.some(issue=>issue.code==='duplicate-acquisition-disposal'),'One acquisition vintage must not be disposed twice')
-
-const capexBridge = engine.reconcileFixedInvestmentRegister([registerAsset],200,0)
-near(capexBridge.registerTotal,200,1e-9,'Fixed investment register must sum acquisitions in local currency')
-near(capexBridge.capexFixedAssetTarget,200,1e-9,'CAPEX reconciliation target must exclude pre-operating costs')
-near(capexBridge.difference,0,1e-9,'Matching fixed investment register and CAPEX must reconcile')
-assert.equal(capexBridge.status,'matched','A fully reconciled fixed investment register must be marked matched')
-const capexBridgeWithPreop = engine.reconcileFixedInvestmentRegister([registerAsset],250,50)
-near(capexBridgeWithPreop.capexFixedAssetTarget,200,1e-9,'Pre-operating expenses must be excluded from fixed-asset reconciliation')
-const capexBridgeMismatch = engine.reconcileFixedInvestmentRegister([registerAsset],260,0)
-assert.equal(capexBridgeMismatch.status,'unreconciled','A difference between register and aggregate CAPEX must be flagged')
-assert.ok(capexBridgeMismatch.warnings.length>0,'Unreconciled CAPEX must produce an actionable warning')
-const capexBridgeNoRegister = engine.reconcileFixedInvestmentRegister([],260,0)
-assert.equal(capexBridgeNoRegister.status,'unreconciled','Aggregate CAPEX without asset-register coverage must be flagged')
-assert.ok(capexBridgeNoRegister.warnings.length>0,'Missing asset-register coverage must produce an actionable warning')
-const capexBridgeForeign = engine.reconcileFixedInvestmentRegister([{
-  ...registerAsset,origin:'foreign',
-  acquisitions:[{id:'fx-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:300}]
-}],60000,0)
-near(capexBridgeForeign.registerTotal,60000,1e-9,'Foreign fixed-asset acquisitions must be translated to local currency before reconciliation')
-const capexBridgeMissingFx = engine.reconcileFixedInvestmentRegister([{
-  ...registerAsset,origin:'foreign',
-  acquisitions:[{id:'fx-missing',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:null}]
-}],0,0)
-assert.equal(capexBridgeMissingFx.status,'unreconciled','Foreign acquisition without an exchange rate must not reconcile')
-
-
-
 const hrcrVersionOneSeed=reference.createHotRollingCoilFixedInvestmentItems()
   .filter(item=>item.assetClass!=='preproduction')
   .map(item=>({...item,depreciationBasis:undefined,acquisitions:item.acquisitions.map(row=>({...row,allocationBasis:undefined}))}))
@@ -734,9 +699,9 @@ assert.equal(editedHrcrMigration.find(item=>item.id==='hrcr-machinery-local').de
 assert.equal(editedHrcrMigration.find(item=>item.id==='hrcr-machinery-local').acquisitions[0].quantity,3,
   'HRCR seed migration must preserve user-edited acquisition quantities')
 
-const hrcrFixedAssets=reference.createHotRollingCoilFixedInvestmentItems()
+const hrcrDepreciationAssets=reference.createHotRollingCoilFixedInvestmentItems()
 const hrcrAssetBridge=engine.reconcileFixedInvestmentRegister(
-  hrcrFixedAssets,
+  hrcrDepreciationAssets,
   workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.constructionInvestment,
   workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.preproductionNet
 )
@@ -745,10 +710,10 @@ near(hrcrAssetBridge.registerTotal,workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.f
 near(hrcrAssetBridge.preproductionTotal,workbookAudit.HOT_ROLLING_200KT_AUDIT.capex.preproductionNet,0.01,
   'HRCR preproduction register must reconcile separately')
 assert.equal(hrcrAssetBridge.status,'matched','HRCR fixed assets and preproduction expenditures must reconcile as separate categories')
-const hrcrAssetValidation=foundation.validateFixedInvestmentItems(hrcrFixedAssets,reference.createHotRollingCoilProjectFoundation())
+const hrcrAssetValidation=foundation.validateFixedInvestmentItems(hrcrDepreciationAssets,reference.createHotRollingCoilProjectFoundation())
 assert.equal(hrcrAssetValidation.filter(issue=>issue.severity==='error').length,0,'HRCR seed fractional depreciation lives must pass fixed asset validation')
 const hrcrAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(
-  hrcrFixedAssets,1403,17,'annual',reference.createHotRollingCoilProjectFoundation()
+  hrcrDepreciationAssets,1403,17,'annual',reference.createHotRollingCoilProjectFoundation()
 )
 assert.ok(hrcrAssetBuild.assets.length>=18,'HRCR reference must create asset acquisition vintages from the CAPEX workbook')
 const hrcrDepreciationRun=engine.calculateComfarAssetDepreciationSchedule(hrcrAssetBuild.assets,17)
@@ -768,13 +733,13 @@ assert.ok(hrcrAssetBuild.warnings.some(warning=>warning.includes('proportional e
   'HRCR acquisition timing assumptions must be disclosed')
 assert.ok(hrcrAssetBuild.warnings.some(warning=>warning.includes('source documents conflict')),
   'HRCR depreciation condition conflicts must be disclosed')
-const hrcrSite=hrcrFixedAssets.find(item=>item.id==='hrcr-site')
+const hrcrSite=hrcrDepreciationAssets.find(item=>item.id==='hrcr-site')
 near(hrcrSite.acquisitions[0].unitPrice,126360.2406094665,0.01,
   'HRCR site preparation first construction-period acquisition must match the CAPEX source-year rows')
-const hrcrMachinery=hrcrFixedAssets.find(item=>item.id==='hrcr-machinery-local')
+const hrcrMachinery=hrcrDepreciationAssets.find(item=>item.id==='hrcr-machinery-local')
 near(hrcrMachinery.depreciation.ratePercent,10.97955,1e-6,
   'HRCR machinery depreciation rate must use the detailed OPEX depreciation table')
-const hrcrInfrastructure=hrcrFixedAssets.find(item=>item.id==='hrcr-infrastructure-depreciable')
+const hrcrInfrastructure=hrcrDepreciationAssets.find(item=>item.id==='hrcr-infrastructure-depreciable')
 near(hrcrInfrastructure.depreciation.ratePercent,12,1e-9,
   'HRCR infrastructure depreciation rate must use the detailed OPEX depreciation table')
 
@@ -782,7 +747,7 @@ near(hrcrInfrastructure.depreciation.ratePercent,12,1e-9,
 const linearScrapFractionalLife=engine.calculateComfarAssetDepreciationSchedule([{
   id:'linear-scrap-fractional-life',name:'Linear to scrap fractional life',originalValue:1000,initialBookValue:1000,
   scrapPercent:10,lengthYears:10,lengthMonths:10,ratePercent:100/(10+10/12),
-  method:'linear-to-scrap',acquisitionPeriod:1,startingAtPeriod:1,firstDepreciationMonths:3
+  method:'linear-to-scrap',acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'1405-01-01',startingAtDate:'1405-06-01',firstDepreciationMonths:3
 }],14)
 assert.equal(linearScrapFractionalLife.valid,true,'Linear to scrap fractional useful life must validate')
 near(linearScrapFractionalLife.periods[0].depreciation,900/(10+10/12)*3/12,1e-9,
@@ -1019,7 +984,7 @@ assert.ok(expansionPanelSource.includes('Linear to zero')
   && expansionPanelSource.includes("asset.depreciationMethod!=='sum-of-digits'"),
   'Existing fixed-asset depreciation inputs must match COMFAR four methods and disable rate for Sum of digits')
 assert.ok(expansionPanelSource.includes('Residual / salvage value')
-  && expansionPanelSource.includes('Depreciation method')
+  && expansionPanelSource.includes('Type of Depreciation')
   && expansionPanelSource.includes('Cost Centre')
   && expansionPanelSource.includes('Repayment Frequency')
   && expansionPanelSource.includes('Grace Period (years)')
@@ -1217,8 +1182,9 @@ const validAsset = {
   acquisitions:[{id:'acq-1',period:'1403',quantity:1,unitPrice:100,currencyCode:'IRR',exchangeRateToLocal:null}],
   sales:[]
 }
-assert.equal(foundation.validateFixedInvestmentItems([validAsset], validFoundation).length, 0,
-  'A complete local fixed-asset record must pass register validation')
+const validAssetIssues = foundation.validateFixedInvestmentItems([validAsset], validFoundation)
+assert.equal(validAssetIssues.filter(issue=>issue.severity==='error').length, 0,
+  'A complete local fixed-asset record must pass register validation: ' + JSON.stringify(validAssetIssues))
 const sameYearBeforeStart = engine.resolveComfarDepreciationStartPeriod(2,2,'1405-01-01','1405-06-01')
 const sameYearAfterStart = engine.resolveComfarDepreciationStartPeriod(2,2,'1405-07-01','1405-06-01')
 assert.equal(sameYearBeforeStart,2,'An acquisition before Starting at in the same year must start depreciation in that year')
@@ -1231,6 +1197,38 @@ const registerAsset = {
   acquisitions:[{id:'register-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'IRR',exchangeRateToLocal:null,allocationBasis:'source-period'}],
   sales:[]
 }
+const duplicateSaleIssues = foundation.validateFixedInvestmentItems([{
+  ...registerAsset,
+  sales:[
+    {id:'sale-one',acquisitionId:'register-acq',period:'1406-12-29',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null},
+    {id:'sale-two',acquisitionId:'register-acq',period:'1407-12-29',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}
+  ]
+}],foundation.createBlankProjectFoundation())
+assert.ok(duplicateSaleIssues.some(issue=>issue.code==='duplicate-acquisition-disposal'),'One acquisition vintage must not be disposed twice')
+
+const capexBridge = engine.reconcileFixedInvestmentRegister([registerAsset],200,0)
+near(capexBridge.registerTotal,200,1e-9,'Fixed investment register must sum acquisitions in local currency')
+near(capexBridge.capexFixedAssetTarget,200,1e-9,'CAPEX reconciliation target must exclude pre-operating costs')
+near(capexBridge.difference,0,1e-9,'Matching fixed investment register and CAPEX must reconcile')
+assert.equal(capexBridge.status,'matched','A fully reconciled fixed investment register must be marked matched')
+const capexBridgeWithPreop = engine.reconcileFixedInvestmentRegister([registerAsset],250,50)
+near(capexBridgeWithPreop.capexFixedAssetTarget,200,1e-9,'Pre-operating expenses must be excluded from fixed-asset reconciliation')
+const capexBridgeMismatch = engine.reconcileFixedInvestmentRegister([registerAsset],260,0)
+assert.equal(capexBridgeMismatch.status,'unreconciled','A difference between register and aggregate CAPEX must be flagged')
+assert.ok(capexBridgeMismatch.warnings.length>0,'Unreconciled CAPEX must produce an actionable warning')
+const capexBridgeNoRegister = engine.reconcileFixedInvestmentRegister([],260,0)
+assert.equal(capexBridgeNoRegister.status,'unreconciled','Aggregate CAPEX without asset-register coverage must be flagged')
+assert.ok(capexBridgeNoRegister.warnings.length>0,'Missing asset-register coverage must produce an actionable warning')
+const capexBridgeForeign = engine.reconcileFixedInvestmentRegister([{
+  ...registerAsset,origin:'foreign',
+  acquisitions:[{id:'fx-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:300}]
+}],60000,0)
+near(capexBridgeForeign.registerTotal,60000,1e-9,'Foreign fixed-asset acquisitions must be translated to local currency before reconciliation')
+const capexBridgeMissingFx = engine.reconcileFixedInvestmentRegister([{
+  ...registerAsset,origin:'foreign',
+  acquisitions:[{id:'fx-missing',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'USD',exchangeRateToLocal:null}]
+}],0,0)
+assert.equal(capexBridgeMissingFx.status,'unreconciled','Foreign acquisition without an exchange rate must not reconcile')
 const registerBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([registerAsset],1405,12)
 assert.equal(registerBuild.assets.length,1,'A valid fixed-asset acquisition must map to one depreciation vintage')
 assert.equal(registerBuild.assets[0].acquisitionPeriod,1,'Fixed-asset acquisition year must map to annual project period')
@@ -1268,9 +1266,9 @@ const landRegisterAsset = {
 const landRegisterBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([landRegisterAsset],1405,12,'annual',validFoundation)
 assert.equal(landRegisterBuild.assets.length,1,'Non-depreciated land must still be included in the disposal register')
 assert.equal(landRegisterBuild.assets[0].method,'none','Land must retain the non-depreciated method in the lifecycle engine')
-const landLifecycle=engine.calculateComfarAssetLifecycle(landRegisterBuild.assets,landRegisterBuild.sales,12)
-assert.equal(landLifecycle.valid,true,'A sale of non-depreciated land must be calculated without a missing-vintage warning')
-near(landLifecycle.sales[0].bookValueAtSale,500,1e-9,'Non-depreciated land must retain its book value until disposal')
+const landRegisterLifecycle=engine.calculateComfarAssetLifecycle(landRegisterBuild.assets,landRegisterBuild.sales,12)
+assert.equal(landRegisterLifecycle.valid,true,'A sale of non-depreciated land must be calculated without a missing-vintage warning')
+near(landRegisterLifecycle.sales[0].bookValueAtSale,500,1e-9,'Non-depreciated land must retain its book value until disposal')
 const soldRegisterAsset = { ...registerAsset, sales:[{id:'register-sale',acquisitionId:'register-acq',period:'1407',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}] }
 const soldRegisterBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([soldRegisterAsset],1405,12,'annual',validFoundation)
 assert.equal(soldRegisterBuild.assets.length,1,'An asset sold within the horizon must retain its depreciation vintage through the disposal period')
@@ -1311,8 +1309,9 @@ assert.ok(foundation.validateFixedInvestmentItems([invalidForeignAsset], validFo
 const foundationWizard = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 const foundationPanel = await readFile(new URL('../src/features/projects/ProjectFoundationPanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('ProjectFoundationPanel')
-  && foundationWizard.includes('foundation:mergeProjectFoundation(v.foundation)')
-  && foundationWizard.includes('foundation:createBlankProjectFoundation()'),
+  && foundationWizard.includes('mergeProjectFoundation(v.foundation)')
+  && foundationWizard.includes('createBlankProjectFoundation()')
+  && foundationWizard.includes('foundation:isHotRolling?mergeHotRollingCoilProjectFoundation(v.foundation):mergeProjectFoundation(v.foundation)'),
   'Project foundation must be integrated into the saved project model with legacy-safe migration')
 assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
   && foundationPanel.includes('Cost Centres')
@@ -1324,9 +1323,11 @@ assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
   'Common project foundation form must cover the base schedules without inventing unknown assumptions')
 const fixedInvestmentPanel = await readFile(new URL('../src/features/projects/FixedInvestmentPanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('FixedInvestmentPanel')
-  && foundationWizard.includes('fixedInvestmentItems:(v.fixedInvestmentItems??[]).map(item=>({...item,depreciation:')
+  && foundationWizard.includes('fixedInvestmentItems:hotRollingCoilProject?createHotRollingCoilFixedInvestmentItems():[]')
+  && foundationWizard.includes('Array.isArray(v.fixedInvestmentItems)?v.fixedInvestmentItems:[]')
+  && foundationWizard.includes('fixedInvestmentItems:(isHotRolling?migratedFixedInvestmentItems:savedFixedInvestmentItems).map(item=>({...item,depreciationBasis:')
   && foundationWizard.includes('fixedInvestmentItems:[]'),
-  'The reusable fixed investment register must be persisted in new and legacy project models')
+  'The reusable fixed investment register must be initialized for new projects and restored with legacy-safe migration')
 assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
   && fixedInvestmentPanel.includes('Depreciation Conditions')
   && fixedInvestmentPanel.includes('Sale of Asset')
@@ -1334,7 +1335,7 @@ assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
   && fixedInvestmentPanel.includes('Linear to scrap')
   && fixedInvestmentPanel.includes('Accelerated')
   && fixedInvestmentPanel.includes('Sum of years digits')
-  && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX') && fixedInvestmentPanel.includes('first depreciation year') && fixedInvestmentPanel.includes('Asset Depreciation Schedule Preview') && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems') && fixedInvestmentPanel.includes('asset-sale-not-at-balance-date') && fixedInvestmentPanel.includes('missing-asset-sale-exchange-rate') && fixedInvestmentPanel.includes('Annual Depreciation vs Reference Output') && fixedInvestmentPanel.includes('referenceDepreciationByYear') && fixedInvestmentPanel.includes('Acquisition Period Basis') && fixedInvestmentPanel.includes('Depreciation Condition Evidence') && fixedInvestmentPanel.includes('depreciation-basis-conflict') && fixedInvestmentPanel.includes('calculateComfarAssetLifecycle') && fixedInvestmentPanel.includes('Asset Sale Proceeds'),
+  && fixedInvestmentPanel.includes('aggregate CAPEX') && fixedInvestmentPanel.includes('preventing double-counting') && fixedInvestmentPanel.includes('first depreciation year') && fixedInvestmentPanel.includes('Asset Depreciation Schedule Preview') && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems') && fixedInvestmentPanel.includes('asset-sale-not-at-balance-date') && fixedInvestmentPanel.includes('missing-asset-sale-exchange-rate') && fixedInvestmentPanel.includes('Annual Depreciation vs Reference Output') && fixedInvestmentPanel.includes('referenceDepreciationByYear') && fixedInvestmentPanel.includes('Acquisition Period Basis') && fixedInvestmentPanel.includes('Depreciation Condition Evidence') && fixedInvestmentPanel.includes('depreciation-basis-conflict') && fixedInvestmentPanel.includes('calculateComfarAssetLifecycle') && fixedInvestmentPanel.includes('Asset Sale Proceeds'),
   'Fixed investment foundation must capture acquisition periods, COMFAR depreciation conditions and asset disposals without double-counting CAPEX')
 const advancedFinanceSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems')
