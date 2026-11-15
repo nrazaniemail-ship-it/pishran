@@ -348,6 +348,7 @@ export type IntegratedFinanceInput = {
   equityMirrFinanceRate?: number
   equityMirrReinvestmentRate?: number
   salvageValue?: number
+  assetSaleSchedule?: { saleProceeds: number; returnOfCapital: number; otherIncomeLoss: number; bookValueDisposed: number }[]
 }
 
 export type IntegratedLoanYear = {
@@ -384,6 +385,10 @@ export type IntegratedFinanceYear = {
   closingWorkingCapital: number
   workingCapitalBreakdown: WorkingCapitalBreakdown
   salvageProceeds: number
+  assetSaleProceeds: number
+  assetReturnOfCapital: number
+  assetSaleOtherIncomeLoss: number
+  assetBookValueDisposed: number
   terminalValue: number
   changeInWorkingCapital: number
   projectFreeCashFlow: number
@@ -531,7 +536,12 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const interest = loanRows.reduce((sum, row) => sum + row.interestExpense, 0)
     const capitalizedInterest = loanRows.reduce((sum, row) => sum + row.capitalizedInterest, 0)
     const debtBalance = loanRows.reduce((sum, row) => sum + row.closingBalance, 0)
-    const ebit = revenue - variableCashCost - fixedCashCost - depreciation
+    const assetSale = input.assetSaleSchedule?.[index]
+    const assetSaleProceeds = Math.max(0, Number(assetSale?.saleProceeds) || 0)
+    const assetReturnOfCapital = Math.max(0, Number(assetSale?.returnOfCapital) || 0)
+    const assetSaleOtherIncomeLoss = Number.isFinite(assetSale?.otherIncomeLoss) ? Number(assetSale?.otherIncomeLoss) : 0
+    const assetBookValueDisposed = Math.max(0, Number(assetSale?.bookValueDisposed) || 0)
+    const ebit = revenue - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss
 
     const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
     const taxableProfit = ebit - interest - taxLoss
@@ -544,9 +554,9 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : Math.max(0, unleveredTaxLoss - ebit)
 
     const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
-    const terminalValue = salvageProceeds
+    const terminalValue = salvageProceeds + assetSaleProceeds
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
-    const projectFreeCashFlow = ebit - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
+    const projectFreeCashFlow = ebit - assetSaleOtherIncomeLoss - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
     const equityFreeCashFlow = -equityContribution + revenue - variableCashCost - fixedCashCost - tax - interest - principal - maintenanceCapex - changeInWorkingCapital + terminalValue
     const debtService = principal + interest
     const cfads = revenue - variableCashCost - fixedCashCost - tax - maintenanceCapex - changeInWorkingCapital
@@ -565,7 +575,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
-      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, terminalValue, changeInWorkingCapital,
+      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
     })
   }
@@ -580,6 +590,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   const mirrEquity = calculateMirr(equityFlows, Math.max(-99, input.equityMirrFinanceRate ?? input.costOfEquity) / 100, Math.max(-99, input.equityMirrReinvestmentRate ?? input.costOfEquity) / 100)
   const peakWorkingCapital = Math.max(0, ...annualRows.map(row => row.workingCapital))
   const fundingGap = totalInvestment + peakWorkingCapital - totalFunding
+  if (input.assetSaleSchedule?.some(row => ![row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(Number.isFinite) || row.saleProceeds < 0 || row.returnOfCapital < 0 || row.bookValueDisposed < 0 || Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss)>0.01)) warnings.push('برنامه فروش دارایی باید عواید فروش را با Return of capital و Other income/loss تطبیق دهد و ارزش‌ها معتبر باشند.')
   const warnings: string[] = []
   if (totalFunding <= 0) warnings.push('ساختار تأمین مالی ثبت نشده است؛ WACC محاسبه نمی‌شود.')
   if (totalEquityContribution <= 0 && totalDebtDrawdown > 0) warnings.push('آورده نقدی سهامدار ثبت نشده است؛ وزن حقوق صاحبان سهام صفر است.')
@@ -1071,7 +1082,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
 
 export type FinancialStatementYear = {
   year: number
-  incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
+  incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; otherIncomeLoss: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
   cashFlowStatement: { operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number; netChangeInCash: number; closingCash: number }
   balanceSheet: { cash: number; workingCapitalAssets: number; netFixedAssets: number; deferredPreOperatingAssets: number; totalAssets: number; tradePayables: number; debt: number; totalLiabilities: number; paidInCapital: number; retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number; balanceDifference: number; reconciled: boolean }
 }
@@ -1083,6 +1094,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
   let cumulativeGrossFixedAssets = 0
   let cumulativePreOperatingAssets = 0
   let accumulatedDepreciation = 0
+  let cumulativeBookValueDisposed = 0
   return years.map(row => {
     const cashOperatingCosts = row.variableCashCost + row.fixedCashCost
     const ebitda = row.revenue - cashOperatingCosts
@@ -1094,23 +1106,24 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     cumulativeGrossFixedAssets += row.fixedInvestment + row.maintenanceCapex
     cumulativePreOperatingAssets += row.preOperatingCost + row.capitalizedInterest
     accumulatedDepreciation += row.depreciation
+    cumulativeBookValueDisposed += row.assetBookValueDisposed ?? 0
     const currentAssets = row.workingCapitalBreakdown.rawMaterials + (row.workingCapitalBreakdown.energy ?? 0) + (row.workingCapitalBreakdown.spareParts ?? 0) + row.workingCapitalBreakdown.workInProgress
       + row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables + row.workingCapitalBreakdown.minimumCash
     const tradePayables = row.workingCapitalBreakdown.payables
-    const netFixedAssets = Math.max(0, cumulativeGrossFixedAssets - accumulatedDepreciation - row.salvageProceeds)
+    const netFixedAssets = Math.max(0, cumulativeGrossFixedAssets - accumulatedDepreciation - cumulativeBookValueDisposed - row.salvageProceeds)
     const deferredPreOperatingAssets = cumulativePreOperatingAssets
     const totalAssets = row.cashBalance + currentAssets + netFixedAssets + deferredPreOperatingAssets
     const totalLiabilities = row.debtBalance + tradePayables
     const totalEquity = paidInCapital + retainedEarnings
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
-    const operatingCashFlow = netIncome + row.depreciation - row.changeInWorkingCapital
-    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex + row.salvageProceeds
+    const operatingCashFlow = netIncome + row.depreciation - (row.assetSaleOtherIncomeLoss ?? 0) - row.changeInWorkingCapital
+    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex + row.salvageProceeds + (row.assetSaleProceeds ?? 0)
     const financingCashFlow = row.debtDrawdown + row.equityContribution - row.principal
     const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
     return {
       year: row.year,
-      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation, ebit, interest: row.interest, profitBeforeTax, tax: row.tax, taxLossCarryForward: row.taxLossCarryForward, netIncome },
+      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation, otherIncomeLoss: row.assetSaleOtherIncomeLoss ?? 0, ebit, interest: row.interest, profitBeforeTax, tax: row.tax, taxLossCarryForward: row.taxLossCarryForward, netIncome },
       cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash, closingCash: row.cashBalance },
       balanceSheet: {
         cash: row.cashBalance, workingCapitalAssets: currentAssets, netFixedAssets, deferredPreOperatingAssets,
