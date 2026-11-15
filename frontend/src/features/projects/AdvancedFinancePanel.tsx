@@ -4,9 +4,9 @@ import { localStore } from '../../core/storage/localStore'
 import { listFinancialMethods } from './financialMethodDirectory'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
-  calculateFinancialScenarios, buildThreeFinancialStatements, calculateComfarAssetLifecycle,
+  calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, calculateComfarAssetLifecycle,
   type IntegratedFinanceInput, type IntegratedFinanceResult, type IntegratedLoanInput, type DepreciationAssetInput,
-  type ComfarDepreciationAssetInput, type ComfarAssetSaleInput,
+  type ComfarDepreciationAssetInput, type ComfarAssetSaleInput, type OneWaySensitivityAnalysis,
 } from '../steel/financialModel'
 
 type CapexRow = { id: string; name: string; amount: number }
@@ -39,6 +39,7 @@ type Props = {
   mirrFinanceRate?: number
   mirrReinvestmentRate?: number
   onResult?: (result:IntegratedFinanceResult)=>void
+  onSensitivity?: (analysis:OneWaySensitivityAnalysis)=>void
   equityPercent: number
   costOfEquity: number
   costOfDebt: number
