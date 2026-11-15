@@ -547,9 +547,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const projectFreeCashFlow = ebit - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + terminalSalvage
-    const equityFreeCashFlow = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
-      - interestExpense - principal - fixedInvestment[index] - preOperatingCost[index]
-      - maintenanceCapex[index] - changeInWorkingCapital + debtDrawdown + equityContribution[index] + terminalSalvage
+    const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
+      - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
+      - changeInWorkingCapital + terminalSalvage
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
       revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
