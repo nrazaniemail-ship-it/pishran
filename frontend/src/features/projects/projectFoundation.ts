@@ -266,6 +266,7 @@ export type FixedInvestmentItem = {
     firstDepreciationMonths: number
     scrapPercent: number
   }
+  depreciationBasis?: 'source-table' | 'user-confirmed' | 'source-conflict' | 'unresolved'
   acquisitions: FixedInvestmentAcquisition[]
   sales: FixedInvestmentSale[]
 }
@@ -279,6 +280,7 @@ export function createBlankFixedInvestmentItem(): FixedInvestmentItem {
     currencyCode: '',
     costCentreId: '',
     depreciation: { method: 'none', startingAt: '', ratePercent: null, lengthYears: null, lengthMonths: 0, firstDepreciationMonths: 12, scrapPercent: 0 },
+    depreciationBasis: 'unresolved',
     acquisitions: [],
     sales: [],
   }
@@ -300,6 +302,8 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
   items.forEach((item, index) => {
     const path = `fixedInvestmentItems[${index}]`
     if (!item.description.trim()) issue(path + '.description', 'missing-fixed-asset-description', 'Enter a description for each fixed investment item.')
+    if (!item.depreciationBasis || item.depreciationBasis === 'unresolved') warn(path + '.depreciationBasis', 'depreciation-basis-unresolved', 'Depreciation conditions are not supported by a source or confirmed by the user.')
+    else if (item.depreciationBasis === 'source-conflict') warn(path + '.depreciationBasis', 'depreciation-basis-conflict', 'Source documents contain conflicting depreciation conditions; confirm the applicable rate or scrap value.')
     if (!item.currencyCode.trim() || !validCurrencyCodes.has(item.currencyCode.trim().toUpperCase()))
       issue(path + '.currencyCode', 'unknown-fixed-asset-currency', 'The asset currency must be defined in the project currency structure.')
     if (item.origin === 'local' && item.currencyCode.trim().toUpperCase() !== foundation.currencies.localCurrencyCode.trim().toUpperCase())
