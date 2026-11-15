@@ -227,7 +227,9 @@ assert.ok(advancedFinanceSource.includes('calculateIntegratedPeriodicFinance')
   && advancedFinanceSource.includes('periodRateConversion')
   && advancedFinanceSource.includes('calculateOperatingCycleWorkingCapital')
   && advancedFinanceSource.includes('taxRatesByPeriod')
-  && advancedFinanceSource.includes('updatePeriodTaxRate'),
+  && advancedFinanceSource.includes('updatePeriodTaxRate')
+  && advancedFinanceSource.includes('periodDrawdownDates')
+  && advancedFinanceSource.includes('periodTaxRateDates'),
   'Advanced finance panel must connect period schedules, rate conventions, working capital and the integrated periodic engine')
 assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
   && feasibilityWizardSource.includes('projectPeriods={projectCalendarPeriods}')
