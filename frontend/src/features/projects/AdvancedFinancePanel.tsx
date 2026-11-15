@@ -23,6 +23,7 @@ type Props = {
   fixedInvestment: number
   preOperatingCost: number
   fixedInvestmentSchedule?: number[]
+  preOperatingSchedule?: number[]
   initialWorkingCapital?: number
   loanTermYears?: number
   depreciationAssets?: Asset[]
@@ -74,8 +75,10 @@ export default function AdvancedFinancePanel(props: Props) {
   const opYears = Math.max(1, years - construction)
   const storageKey = 'feasibility:advanced-finance:' + props.projectId + (props.referenceVersion ? ':' + props.referenceVersion : '')
   const fallbackFixedInvestmentSchedule = Array.from({length:years},(_,i)=>i<construction?props.fixedInvestment/construction:0)
+  const fallbackPreOperatingSchedule = Array.from({length:years},(_,i)=>i<construction?props.preOperatingCost/construction:0)
   const activeFixedInvestmentSchedule = props.fixedInvestmentSchedule?.length===years ? props.fixedInvestmentSchedule : fallbackFixedInvestmentSchedule
-  const initialCapexSchedule = activeFixedInvestmentSchedule.map((amount,i)=>amount+(i<construction?props.preOperatingCost/construction:0))
+  const activePreOperatingSchedule = props.preOperatingSchedule?.length===years ? props.preOperatingSchedule : fallbackPreOperatingSchedule
+  const initialCapexSchedule = activeFixedInvestmentSchedule.map((amount,i)=>amount+activePreOperatingSchedule[i])
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
     loans:[{id:'loan-1',label:'تسهیلات اصلی و سرمایه در گردش',drawdowns:initialCapexSchedule.map((v,i)=>v*initialDebtShare+(i===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0)),annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
@@ -135,7 +138,7 @@ export default function AdvancedFinancePanel(props: Props) {
     fullCapacityVariableCashCost:props.fullCapacityVariableCashCost,fullCapacityFixedCashCost:props.fullCapacityFixedCashCost,
     annualDepreciation:0,depreciationSchedule:depreciationValues,assetSaleSchedule,
     maintenanceCapexSchedule,fixedInvestment:props.fixedInvestment,preOperatingCost:props.preOperatingCost,
-    fixedInvestmentSchedule,preOperatingSchedule:Array.from({length:years},(_,i)=>i<construction?props.preOperatingCost/construction:0),utilization,equityContributions,
+    fixedInvestmentSchedule,preOperatingSchedule:activePreOperatingSchedule,utilization,equityContributions,
     loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
     taxRate:props.taxRate,taxRateSchedule:taxRates,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
     workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:state.salesEscalationPercent,opexEscalationPercent:state.opexEscalationPercent,
@@ -153,9 +156,13 @@ export default function AdvancedFinancePanel(props: Props) {
 
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
-    {props.fixedInvestmentSchedule?.length===years
-      ? <p className="fw-hint">{t('زمان‌بندی CAPEX از نوبت‌های تحصیل تأییدشده در دفتر دارایی استخراج شده است.','CAPEX timing is derived from source-supported or user-confirmed acquisition vintages in the Fixed Investment Register.')}</p>
-      : <p className="fw-hint">{t('زمان‌بندی دفتر دارایی هنوز تأیید نشده است؛ CAPEX تجمیعی به‌طور موقت بین سال‌های ساخت تقسیم می‌شود. این تخصیص تا تأیید تاریخ تحصیل اقلام، مبنای نهایی جریان نقدی نیست.','Asset acquisition timing is not yet verified; aggregate CAPEX is temporarily spread across construction years. This allocation is not a final cash-flow basis until acquisition dates are confirmed.')}</p>}
+    {props.fixedInvestmentSchedule?.length===years && props.preOperatingSchedule?.length===years
+      ? <p className="fw-hint">{t('زمان‌بندی CAPEX دارایی‌های ثابت و هزینه‌های قبل از بهره‌برداری از نوبت‌های تحصیل مستند یا تأییدشده استخراج شده است.','Fixed-asset CAPEX and pre-production timing both use source-supported or user-confirmed acquisition vintages.')}</p>
+      : props.fixedInvestmentSchedule?.length===years
+        ? <p className="fw-hint">{t('زمان‌بندی دارایی‌های ثابت از دفتر تأیید شده است؛ هزینه‌های قبل از بهره‌برداری هنوز به‌طور موقت بین سال‌های ساخت تقسیم می‌شوند.','Fixed-asset CAPEX timing is verified; pre-production expenditures are still temporarily spread across construction years.')}</p>
+        : props.preOperatingSchedule?.length===years
+          ? <p className="fw-hint">{t('زمان‌بندی هزینه‌های قبل از بهره‌برداری تأیید شده است؛ CAPEX دارایی‌های ثابت هنوز به‌طور موقت بین سال‌های ساخت تقسیم می‌شود.','Pre-production timing is verified; fixed-asset CAPEX is still temporarily spread across construction years.')}</p>
+          : <p className="fw-hint">{t('زمان‌بندی دفتر دارایی هنوز تأیید نشده است؛ CAPEX و هزینه‌های قبل از بهره‌برداری به‌طور موقت بین سال‌های ساخت تقسیم می‌شوند. این تخصیص تا تأیید تاریخ تحصیل اقلام، مبنای نهایی جریان نقدی نیست.','Asset acquisition timing is not yet verified; aggregate CAPEX and pre-production expenditures are temporarily spread across construction years. This is not a final cash-flow basis until acquisition dates are confirmed.')}</p>}
 
     {!props.useFixedInvestmentRegister&&props.depreciationAssets?.length ? <p className="fw-hint">{t('دفتر دارایی هنوز ثبت نشده است؛ برای جلوگیری از صفر شدن استهلاک، فعلاً از مفروضات تجمیعی مرجع پروژه استفاده می‌شود. این حالت فقط مبنای مقایسه اولیه است و تا تکمیل دفتر دارایی و تطبیق برنامه سالانه با خروجی مرجع، نتیجه نهایی تأییدشده نیست.','The Fixed Investment Register is empty. Aggregate project-reference depreciation assumptions are temporarily used to avoid zero depreciation. This is a preliminary comparison basis only; results are not validated until the asset register and annual depreciation schedule are reconciled to the reference output.')}</p> : null}
 
