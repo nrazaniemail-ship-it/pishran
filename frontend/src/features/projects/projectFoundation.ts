@@ -1,4 +1,4 @@
-export type ProjectPeriodFrequency = 'annual' | 'semiannual' | 'quarterly' | 'monthly'
+export type ProjectPeriodFrequency = 'unspecified' | 'annual' | 'semiannual' | 'quarterly' | 'monthly'
 export type ProjectCurrency = { id: string; code: string; name: string; exchangeRates: { period: string; rateToLocal: number }[] }
 export type ProjectCostCentre = { id: string; code: string; name: string; parentId?: string }
 export type ProjectInflationIndex = { id: string; name: string; currencyCode: string; rates: { period: string; ratePercent: number }[] }
@@ -8,11 +8,11 @@ export type ProjectFoundation = {
   schemaVersion: 1
   planning: {
     periodFrequency: ProjectPeriodFrequency
-    balanceDateMonth: number
-    balanceDateDay: number
-    dayCountBasis: 360 | 365
+    balanceDateMonth: number | null
+    balanceDateDay: number | null
+    dayCountBasis: 360 | 365 | null
     valuationDate: string
-    cashFlowTiming: 'period-end' | 'mid-period'
+    cashFlowTiming: 'unspecified' | 'period-end' | 'mid-period'
   }
   currencies: {
     localCurrencyCode: string
@@ -22,13 +22,13 @@ export type ProjectFoundation = {
   costCentres: { active: boolean; items: ProjectCostCentre[] }
   inflation: { active: boolean; indices: ProjectInflationIndex[] }
   discounting: {
-    method: 'manual' | 'wacc'
+    method: 'unspecified' | 'manual' | 'wacc'
     financialRatePercent: number | null
     economicRatePercent: number | null
   }
   taxation: {
-    system: 'corporate' | 'none' | 'custom'
-    lossCarryForward: boolean
+    system: 'unspecified' | 'corporate' | 'none' | 'custom'
+    lossCarryForward: boolean | null
     lossCarryForwardYears: number | null
     rates: ProjectTaxRate[]
   }
@@ -45,18 +45,18 @@ export function createBlankProjectFoundation(): ProjectFoundation {
   return {
     schemaVersion: 1,
     planning: {
-      periodFrequency: 'annual',
-      balanceDateMonth: 12,
-      balanceDateDay: 31,
-      dayCountBasis: 360,
+      periodFrequency: 'unspecified',
+      balanceDateMonth: null,
+      balanceDateDay: null,
+      dayCountBasis: null,
       valuationDate: '',
-      cashFlowTiming: 'period-end',
+      cashFlowTiming: 'unspecified',
     },
     currencies: { localCurrencyCode: '', localCurrencyName: '', foreignCurrencies: [] },
     costCentres: { active: false, items: [] },
     inflation: { active: false, indices: [] },
-    discounting: { method: 'manual', financialRatePercent: null, economicRatePercent: null },
-    taxation: { system: 'corporate', lossCarryForward: true, lossCarryForwardYears: null, rates: [] },
+    discounting: { method: 'unspecified', financialRatePercent: null, economicRatePercent: null },
+    taxation: { system: 'unspecified', lossCarryForward: null, lossCarryForwardYears: null, rates: [] },
   }
 }
 
@@ -80,10 +80,20 @@ export function validateProjectFoundation(value: ProjectFoundation): ProjectFoun
   const issue = (path: string, severity: ProjectFoundationIssue['severity'], code: string, message: string) =>
     issues.push({ path, severity, code, message })
   const planning = value.planning
-  if (!Number.isInteger(planning.balanceDateMonth) || planning.balanceDateMonth < 1 || planning.balanceDateMonth > 12)
+  if (planning.periodFrequency === 'unspecified')
+    issue('planning.periodFrequency', 'warning', 'missing-period-frequency', 'Financial period frequency has not been defined.')
+  if (planning.balanceDateMonth === null)
+    issue('planning.balanceDateMonth', 'warning', 'missing-balance-month', 'Balance date month has not been defined.')
+  else if (!Number.isInteger(planning.balanceDateMonth) || planning.balanceDateMonth < 1 || planning.balanceDateMonth > 12)
     issue('planning.balanceDateMonth', 'error', 'invalid-balance-month', 'Balance date month must be an integer from 1 to 12.')
-  if (!Number.isInteger(planning.balanceDateDay) || planning.balanceDateDay < 1 || planning.balanceDateDay > 31)
+  if (planning.balanceDateDay === null)
+    issue('planning.balanceDateDay', 'warning', 'missing-balance-day', 'Balance date day has not been defined.')
+  else if (!Number.isInteger(planning.balanceDateDay) || planning.balanceDateDay < 1 || planning.balanceDateDay > 31)
     issue('planning.balanceDateDay', 'error', 'invalid-balance-day', 'Balance date day must be an integer from 1 to 31.')
+  if (planning.dayCountBasis === null)
+    issue('planning.dayCountBasis', 'warning', 'missing-day-count-basis', 'Day-count basis has not been defined.')
+  if (planning.cashFlowTiming === 'unspecified')
+    issue('planning.cashFlowTiming', 'warning', 'missing-cash-flow-timing', 'Cash-flow timing for discounting has not been defined.')
   if (!planning.valuationDate) issue('planning.valuationDate', 'warning', 'missing-valuation-date', 'Valuation date has not been defined.')
   if (!value.currencies.localCurrencyCode.trim()) issue('currencies.localCurrencyCode', 'error', 'missing-local-currency', 'Define the local currency code before calculating the project.')
   const currencyCodes = [value.currencies.localCurrencyCode, ...value.currencies.foreignCurrencies.map(c => c.code)]
@@ -123,15 +133,21 @@ export function validateProjectFoundation(value: ProjectFoundation): ProjectFoun
     if (rate !== null && (!Number.isFinite(rate) || rate <= -100))
       issue(`discounting.${key}`, 'error', 'invalid-discount-rate', 'Discount rates must be greater than -100%.')
   }
+  if (value.discounting.method === 'unspecified')
+    issue('discounting.method', 'warning', 'missing-discounting-method', 'Discounting method has not been selected.')
   if (value.discounting.method === 'manual' && value.discounting.financialRatePercent === null)
     issue('discounting.financialRatePercent', 'warning', 'missing-financial-discount-rate', 'A manual financial discount rate has not been defined.')
+  if (value.taxation.system === 'unspecified')
+    issue('taxation.system', 'warning', 'missing-tax-system', 'Tax system has not been selected.')
+  if (value.taxation.system !== 'none' && value.taxation.system !== 'unspecified' && value.taxation.lossCarryForward === null)
+    issue('taxation.lossCarryForward', 'warning', 'missing-loss-carryforward-setting', 'Loss carry-forward treatment has not been specified.')
   if (value.taxation.lossCarryForwardYears !== null && (!Number.isInteger(value.taxation.lossCarryForwardYears) || value.taxation.lossCarryForwardYears < 0))
     issue('taxation.lossCarryForwardYears', 'error', 'invalid-loss-carryforward-period', 'Loss carry-forward years must be a non-negative integer.')
   value.taxation.rates.forEach((rate, index) => {
     if (!rate.period.trim() || !Number.isFinite(rate.ratePercent) || rate.ratePercent < 0 || rate.ratePercent > 100)
       issue(`taxation.rates[${index}]`, 'error', 'invalid-tax-rate', 'Each tax rate requires a period and a percentage from 0 to 100.')
   })
-  if (value.taxation.system !== 'none' && value.taxation.rates.length === 0)
+  if (value.taxation.system !== 'none' && value.taxation.system !== 'unspecified' && value.taxation.rates.length === 0)
     issue('taxation.rates', 'warning', 'missing-tax-rates', 'The tax system is selected but no period-specific tax rates have been entered.')
   return issues
 }
