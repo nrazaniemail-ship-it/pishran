@@ -15,6 +15,7 @@ const assetClasses: { value: FixedInvestmentItem['assetClass']; fa: string; en: 
   { value: 'vehicles', fa: 'وسائط نقلیه', en: 'Vehicles' },
   { value: 'office', fa: 'تجهیزات اداری و خدماتی', en: 'Office and service equipment' },
   { value: 'intangible', fa: 'دارایی نامشهود', en: 'Intangible assets' },
+  { value: 'preproduction', fa: 'هزینه‌های قبل از بهره‌برداری', en: 'Pre-production expenditures' },
   { value: 'other', fa: 'سایر دارایی‌های ثابت', en: 'Other fixed assets' },
 ]
 const methods: { value: FixedInvestmentItem['depreciation']['method']; fa: string; en: string }[] = [
@@ -93,6 +94,12 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       <h4>{t('هزینه تحصیل دارایی به تفکیک دوره','Costs of Assets by Period')}</h4>
       {item.acquisitions.map(acquisition => <div className="fw-grid" key={acquisition.id}>
         {field(t('دوره تحصیل','Acquisition Period'), acquisition.period, v => updateAcquisition(item.id, acquisition.id, { period: v }))}
+        <label className="fw-field"><span>{t('مبنای تعیین دوره تحصیل','Acquisition Period Evidence')}</span><select value={acquisition.allocationBasis??'unallocated'} onChange={e=>updateAcquisition(item.id,acquisition.id,{allocationBasis:e.target.value as FixedInvestmentAcquisition['allocationBasis']})}>
+          <option value="source-period">{t('مستند به منبع','Source-period')}</option>
+          <option value="user-confirmed">{t('تأییدشده توسط کاربر','User-confirmed')}</option>
+          <option value="proportional-estimate">{t('برآورد نسبتی','Proportional estimate')}</option>
+          <option value="unallocated">{t('تخصیص‌نیافته','Unallocated')}</option>
+        </select></label>
         {field(t('مقدار','Quantity'), acquisition.quantity, v => updateAcquisition(item.id, acquisition.id, { quantity: Number(v) }), 'number', 0)}
         {field(t('قیمت واحد','Price'), acquisition.unitPrice, v => updateAcquisition(item.id, acquisition.id, { unitPrice: Number(v) }), 'number', 0)}
         {field(t('نرخ تبدیل به ارز محلی','Exchange Rate to Local Currency'), acquisition.exchangeRateToLocal ?? '', v => updateAcquisition(item.id, acquisition.id, { exchangeRateToLocal: v === '' ? null : Number(v) }), 'number', 0, undefined, item.origin === 'local')}
@@ -132,6 +139,9 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       <p className="fw-hint">{t('این کنترل، جمع نوبت‌های تحصیل را پس از تبدیل به ارز محلی با CAPEX منهای هزینه‌های قبل از بهره‌برداری مقایسه می‌کند. ارقام دفتر دوباره به CAPEX اضافه نمی‌شوند؛ تا زمان رفع اختلاف، برنامه سرمایه‌گذاری تجمیعی منبع جریان نقدی باقی می‌ماند.','This control compares acquisition vintages converted to local currency with aggregate CAPEX less pre-operating expenses. Register amounts are not added again to CAPEX; until the difference is resolved, aggregate CAPEX remains the cash-flow source.')}</p>
       <div className="fw-validation"><span>{t('جمع نوبت‌های تحصیل به ارز محلی','Register Acquisitions in Local Currency')}</span><b>{depreciationBuild.assets.length || value.some(item=>item.acquisitions.length>0) ? capexReconciliation.registerTotal.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2}) : '—'}</b></div>
       <div className="fw-validation"><span>{t('CAPEX هدف پس از کسر هزینه‌های قبل از بهره‌برداری','CAPEX Target Excluding Pre-operating Expenses')}</span><b>{capexReconciliation.capexFixedAssetTarget.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
+      <div className="fw-validation"><span>{t('جمع هزینه‌های قبل از بهره‌برداری در دفتر','Pre-production Expenditures in Register')}</span><b>{capexReconciliation.preproductionTotal.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
+      <div className="fw-validation"><span>{t('هدف هزینه‌های قبل از بهره‌برداری','Pre-production Expenditure Target')}</span><b>{capexReconciliation.preOperatingTarget.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
+      <div className="fw-validation"><span>{t('اختلاف هزینه‌های قبل از بهره‌برداری','Pre-production Reconciliation Difference')}</span><b>{capexReconciliation.preproductionDifference.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
       <div className="fw-validation"><span>{t('اختلاف تطبیق','Reconciliation Difference')}</span><b>{capexReconciliation.difference.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
       <div className="fw-validation"><span>{t('وضعیت تطبیق','Reconciliation Status')}</span><b>{capexReconciliation.status==='matched'?t('منطبق','Matched'):capexReconciliation.status==='not-entered'?t('ثبت نشده','Not entered'):t('نیازمند تطبیق','Unreconciled')}</b></div>
       {capexReconciliation.warnings.map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
