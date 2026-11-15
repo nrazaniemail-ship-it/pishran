@@ -43,7 +43,8 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
   const maximumReferenceVariance = referenceRows.reduce((maximum, row) => Math.max(maximum, Math.abs(row.variance)), 0)
   const hasDepreciableAssets = value.some(item => item.acquisitions.length > 0)
   const issueMessages: Record<string, string> = {
-    'duplicate-fixed-asset-id':'شناسه اقلام سرمایه‌گذاری ثابت باید یکتا باشد.', 'missing-fixed-asset-description':'شرح هر قلم دارایی را وارد کنید.',
+    'duplicate-fixed-asset-id':'شناسه اقلام سرمایه‌گذاری ثابت باید یکتا باشد.'
+    'depreciation-basis-unresolved':'مبنای شرایط استهلاک هنوز مستند یا تأیید نشده است.', 'depreciation-basis-conflict':'منابع درباره نرخ یا ارزش اسقاط استهلاک اختلاف دارند و باید تعیین تکلیف شوند.',, 'missing-fixed-asset-description':'شرح هر قلم دارایی را وارد کنید.',
     'unknown-fixed-asset-currency':'ارز دارایی باید در ساختار ارزهای پروژه تعریف شده باشد.', 'local-asset-currency-mismatch':'دارایی با منشأ محلی باید به ارز محلی ثبت شود.',
     'foreign-asset-currency-mismatch':'دارایی با منشأ خارجی باید به یکی از ارزهای خارجی تعریف‌شده ثبت شود.', 'missing-fixed-asset-cost-centre':'برای این قلم دارایی یک مرکز هزینه معتبر انتخاب کنید.',
     'missing-asset-acquisition':'برای هر قلم دارایی حداقل یک دوره تحصیل لازم است.', 'invalid-asset-acquisition':'دوره، مقدار و قیمت تحصیل باید معتبر و نامنفی باشند.',
@@ -82,6 +83,12 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       <h4>{t('شرایط استهلاک','Depreciation Conditions')}</h4>
       <div className="fw-grid">
         <label className="fw-field"><span>{t('نوع استهلاک','Type of Depreciation')}</span><select value={item.depreciation.method} onChange={e => updateDepreciation(item.id, { method: e.target.value as FixedInvestmentItem['depreciation']['method'] })}>{methods.map(option => <option key={option.value} value={option.value}>{en ? option.en : option.fa}</option>)}</select></label>
+        <label className="fw-field"><span>{t('مبنای شرایط استهلاک','Depreciation Condition Evidence')}</span><select value={item.depreciationBasis??'unresolved'} onChange={e=>updateItem(item.id,{depreciationBasis:e.target.value as FixedInvestmentItem['depreciationBasis']})}>
+          <option value="source-table">{t('مستند به جدول منبع','Source-table')}</option>
+          <option value="user-confirmed">{t('تأییدشده توسط کاربر','User-confirmed')}</option>
+          <option value="source-conflict">{t('تعارض بین منابع','Source conflict')}</option>
+          <option value="unresolved">{t('تعیین‌نشده','Unresolved')}</option>
+        </select></label>
         {field(t('شروع استهلاک','Starting at'), item.depreciation.startingAt, v => updateDepreciation(item.id, { startingAt: v }), 'text')}
         {field(t('نرخ استهلاک (% در سال)','Rate (% per annum)'), item.depreciation.ratePercent ?? '', v => updateDepreciation(item.id, { ratePercent: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none' || item.depreciation.method === 'sum-of-digits')}
         {field(t('مدت استهلاک ـ سال','Length — Years'), item.depreciation.lengthYears ?? '', v => updateDepreciation(item.id, { lengthYears: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none')}
