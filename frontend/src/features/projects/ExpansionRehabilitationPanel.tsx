@@ -96,7 +96,7 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  const debt=state.loans.reduce((sum,l)=>sum+l.openingBalance,0)
  const accruedLoanInterest=state.loans.reduce((sum,l)=>sum+(l.accruedInterest??0),0)
  const liabilities=state.opening.payablesLocal+state.opening.payablesForeign+state.opening.otherLiabilitiesLocal+debt+accruedLoanInterest
- const equity=(state.equityCapital.length?state.equityCapital.reduce((sum,item)=>sum+item.paidIn-item.paidOut,0):state.opening.paidInCapital)+state.opening.retainedEarnings-state.opening.accumulatedLosses+state.opening.grants
+ const equity=state.equityCapital.reduce((sum,item)=>sum+item.paidIn-item.paidOut,0)+state.opening.retainedEarnings-state.opening.accumulatedLosses+state.opening.grants
  const totalAssets=currentAssets+fixedNet
  const balanceDifference=totalAssets-liabilities-equity
  const result=useMemo(()=>calculateIncrementalEnterpriseAnalysis(state.without,state.with,state.discountRate/100),[state.without,state.with,state.discountRate])
@@ -184,11 +184,11 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   <div className="fw-result">{t('خالص سرمایه پرداخت‌شده','Net Paid-in Equity Capital')}: <b>{fmt(state.equityCapital.reduce((sum,item)=>sum+item.paidIn-item.paidOut,0))} {currency}</b></div>
   <div className="fw-result">{t('اصل بدهی افتتاحیه','Opening Debt Principal')}: <b>{fmt(debt)}</b> · {t('بهره معوق پرداختنی','Accrued Interest Payable')}: <b>{fmt(accruedLoanInterest)}</b> · {t('جمع بدهی و حقوق مالکانه','Liabilities & Equity')}: <b>{fmt(liabilities+equity)}</b> · {t('اختلاف تراز افتتاحیه','Opening Balance Difference')}: <b>{fmt(balanceDifference)} {currency}</b> {Math.abs(balanceDifference)<0.01?'✓':'⚠'}</div>
   <p className="fw-hint">{t('کنترل تراز صرفاً اختلاف را نشان می‌دهد و هیچ رقم ترازکننده‌ای به سود انباشته یا حقوق مالکانه اضافه نمی‌کند. جزء ارز خارجی هنوز به ماژول Currencies و نرخ تبدیل/درمان اقتصادی آن متصل نشده است؛ بنابراین کنترل تراز تا تکمیل این اتصال و نگاشت حسابداری، مقدماتی است.','The balance check reports the difference and never inserts a balancing plug into retained earnings or equity. The foreign currency component is not yet linked to the Currencies module and its exchange-rate/economic treatment; treat this balance check as provisional until that link and the accounting mapping are completed.')}</p>
-  <h4>{t('۴. تحلیل افزایشی ـ بدون طرح','4. Incremental Analysis — Without Project')}</h4>
+  <h4>{t('۴. تحلیل افزایشی ـ بدون طرح','5. Incremental Analysis — Without Project')}</h4>
   {inputFields('without',state.without)}
-  <h4>{t('۵. تحلیل افزایشی ـ با طرح','5. Incremental Analysis — With Project')}</h4>
+  <h4>{t('۵. تحلیل افزایشی ـ با طرح','6. Incremental Analysis — With Project')}</h4>
   {inputFields('with',state.with)}
-  <h4>{t('۶. نتایج تحلیل افزایشی','6. Incremental Analysis Results')}</h4>
+  <h4>{t('۶. نتایج تحلیل افزایشی','7. Incremental Analysis Results')}</h4>
   <div className="fw-grid">
    <article className="fw-result"><small>{t('NPV بدون طرح','Without-Project NPV')}</small><b>{fmt(result.withoutProjectNpv)} {currency}</b></article>
    <article className="fw-result"><small>{t('NPV با طرح','With-Project NPV')}</small><b>{fmt(result.withProjectNpv)} {currency}</b></article>
