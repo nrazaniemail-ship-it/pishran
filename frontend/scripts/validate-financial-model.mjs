@@ -714,6 +714,26 @@ const capexBridgeMissingFx = engine.reconcileFixedInvestmentRegister([{
 assert.equal(capexBridgeMissingFx.status,'unreconciled','Foreign acquisition without an exchange rate must not reconcile')
 
 
+
+const hrcrVersionOneSeed=reference.createHotRollingCoilFixedInvestmentItems()
+  .filter(item=>item.assetClass!=='preproduction')
+  .map(item=>({...item,depreciationBasis:undefined,acquisitions:item.acquisitions.map(row=>({...row,allocationBasis:undefined}))}))
+const hrcrMigratedSeed=reference.migrateHotRollingCoilFixedInvestmentItems(hrcrVersionOneSeed,1)
+assert.ok(hrcrMigratedSeed.some(item=>item.assetClass==='preproduction'),'HRCR seed v2 migration must add separately classified preproduction expenditures')
+assert.equal(hrcrMigratedSeed.find(item=>item.id==='hrcr-machinery-local').depreciationBasis,'source-conflict',
+  'HRCR seed migration must disclose source-conflicting depreciation conditions')
+assert.equal(hrcrMigratedSeed.find(item=>item.id==='hrcr-site').acquisitions[0].allocationBasis,'source-period',
+  'HRCR seed migration must restore documented acquisition-period evidence')
+const editedHrcrItems=hrcrVersionOneSeed.map(item=>item.id==='hrcr-machinery-local'?{
+  ...item,depreciation:{...item.depreciation,ratePercent:8},
+  acquisitions:item.acquisitions.map((row,index)=>index===0?{...row,quantity:3}:row)
+}:item)
+const editedHrcrMigration=reference.migrateHotRollingCoilFixedInvestmentItems(editedHrcrItems,1)
+assert.equal(editedHrcrMigration.find(item=>item.id==='hrcr-machinery-local').depreciation.ratePercent,8,
+  'HRCR seed migration must preserve user-edited depreciation rates')
+assert.equal(editedHrcrMigration.find(item=>item.id==='hrcr-machinery-local').acquisitions[0].quantity,3,
+  'HRCR seed migration must preserve user-edited acquisition quantities')
+
 const hrcrFixedAssets=reference.createHotRollingCoilFixedInvestmentItems()
 const hrcrAssetBridge=engine.reconcileFixedInvestmentRegister(
   hrcrFixedAssets,
