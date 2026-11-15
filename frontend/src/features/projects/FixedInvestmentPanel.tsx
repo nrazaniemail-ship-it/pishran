@@ -3,7 +3,7 @@ import {
   type FixedInvestmentItem, type FixedInvestmentAcquisition, type FixedInvestmentSale, type ProjectFoundation,
 } from './projectFoundation'
 
-type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en' }
+type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean }
 const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
 const assetClasses: { value: FixedInvestmentItem['assetClass']; fa: string; en: string }[] = [
   { value: 'land', fa: 'زمین', en: 'Land' },
@@ -24,7 +24,7 @@ const methods: { value: FixedInvestmentItem['depreciation']['method']; fa: strin
   { value: 'sum-of-digits', fa: 'مجموع سنوات', en: 'Sum of years digits' },
 ]
 
-export default function FixedInvestmentPanel({ value, foundation, onChange, language = 'fa' }: Props) {
+export default function FixedInvestmentPanel({ value, foundation, onChange, language = 'fa', blankTemplate = false }: Props) {
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
   const issues = validateFixedInvestmentItems(value, foundation)
@@ -47,10 +47,10 @@ export default function FixedInvestmentPanel({ value, foundation, onChange, lang
   const updateDepreciation = (id: string, patch: Partial<FixedInvestmentItem['depreciation']>) => onChange(value.map(item => item.id === id ? { ...item, depreciation: { ...item.depreciation, ...patch } } : item))
   const updateAcquisition = (id: string, acquisitionId: string, patch: Partial<FixedInvestmentAcquisition>) => onChange(value.map(item => item.id === id ? { ...item, acquisitions: item.acquisitions.map(row => row.id === acquisitionId ? { ...row, ...patch } : row) } : item))
   const updateSale = (id: string, saleId: string, patch: Partial<FixedInvestmentSale>) => onChange(value.map(item => item.id === id ? { ...item, sales: item.sales.map(row => row.id === saleId ? { ...row, ...patch } : row) } : item))
-  const addAcquisition = (id: string) => onChange(value.map(item => item.id === id ? { ...item, acquisitions: [...item.acquisitions, { id: makeId('acq'), period: '', quantity: 1, unitPrice: 0, currencyCode: item.currencyCode, exchangeRateToLocal: null }] } : item))
+  const addAcquisition = (id: string) => onChange(value.map(item => item.id === id ? { ...item, acquisitions: [...item.acquisitions, { id: makeId('acq'), period: '', quantity: blankTemplate ? 0 : 1, unitPrice: 0, currencyCode: item.currencyCode, exchangeRateToLocal: null }] } : item))
   const addSale = (id: string) => onChange(value.map(item => item.id === id ? { ...item, sales: [...item.sales, { id: makeId('sale'), acquisitionId: item.acquisitions[0]?.id ?? '', period: '', market: 'local', priceMode: 'book-value', currencyCode: item.currencyCode, selfDefinedPrice: null }] } : item))
   const field = (label: string, valueText: string | number, onValue: (value: string) => void, type = 'text', min?: number, max?: number, disabled = false) =>
-    <label className="fw-field"><span>{label}</span><input type={type} value={valueText} min={min} max={max} disabled={disabled} onChange={e => onValue(e.target.value)} /></label>
+    <label className="fw-field"><span>{label}</span><input type={type} value={blankTemplate && type === 'number' && valueText === 0 ? '' : valueText} min={min} max={max} disabled={disabled} onChange={e => onValue(e.target.value)} /></label>
 
   return <section className="fw-card" style={{ marginTop: 18 }}>
     <h3>{t('دفتر عمومی هزینه‌های سرمایه‌گذاری ثابت','Fixed Investment Register')}</h3>
