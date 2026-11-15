@@ -185,6 +185,35 @@ export function HotRollingReferenceForms({section,projectId,language='fa'}:{sect
   'جمع کل':'Grand Total','مجموع':'Total','شرح':'Description','واحد':'Unit','سال':'Year','منبع':'Source',
   'توضیحات':'Notes','وضعیت':'Status','قیمت':'Price','میانگین':'Average','حداقل':'Minimum','حداکثر':'Maximum'
  });
+ Object.assign(labelEn,{
+  'نیزار پارس مرصاد':'Nizar Pars Marsad','امیر فولاد قهستان':'Amir Foolad Ghaestan',
+  'نورد شهدای کرمانشاه':'Kermanshah Martyrs Rolling Mill','فولاد آتیه خاورمیانه':'Atieh Middle East Steel',
+  'مجتمع فولاد خرم‌آباد':'Khorramabad Steel Complex','فولاد جهان‌آرا اروند':'Jahan Ara Arvand Steel',
+  'ساختار جداول بازار مطابق فایل Marketing-HRCR200؛ ارقام تاریخی مرجع هستند و باید با سال مبنای مطالعه و منابع جدید به‌روزرسانی شوند.':'The market tables follow the Marketing-HRCR200 workbook. Historical reference figures must be updated to the study base year and supported by current sources.',
+  'جدول انرژی و دیماند با ساختار فایل «مصارف ویژه و انرژی خط نورد کلاف گرم». واحد مصرف ویژه، واحد دیماند و واحد هزینه از یکدیگر جدا هستند.':'The energy and demand table follows the Hot-Rolled Coil Mill Specific Consumption & Energy workbook. Specific-consumption, demand and cost units are kept separate.',
+  'واحد/تن محصول':'Unit/tonne of product','ریال/واحد':'IRR/unit','واحد سالیانه':'Annual unit',
+  'مترمکعب/تن':'m³/tonne','مترمکعب/ساعت، فشار 4 بار':'m³/hour, 4 bar pressure',
+  'کیلووات‌ساعت/تن':'kWh/tonne','مگاوات، 33 کیلوولت':'MW, 33 kV',
+  'نرمال‌مترمکعب/تن':'Nm³/tonne','نرمال‌مترمکعب/ساعت، فشار 16 بار':'Nm³/hour, 16 bar pressure',
+  'kWh/تن':'kWh/tonne','Nm³/تن':'Nm³/tonne','فولاد مبارکه - خط جدید 4.2 میلیون تن':'Mobarakeh Steel — New 4.2 Million-Tonne Line',
+  'ریال/kWh':'IRR/kWh','اوج بار':'Peak Load','میان‌باری':'Mid-Peak Load','کم‌باری':'Off-Peak Load',
+  'سرفصل‌ها و ستون‌های هزینه‌ای مطابق فایل CAPEX-HRCR200. مقادیر نمونه فقط برای نمایش ساختارند و باید برای پروژه جاری بازبینی شوند.':'Cost headings and columns follow the CAPEX-HRCR200 workbook. Sample values only illustrate the structure and must be reviewed for the current project.',
+  'قیمت روز یورو':'Current Euro Price','ریال/یورو':'IRR/EUR','قیمت روز دلار':'Current US Dollar Price',
+  'ریال/دلار':'IRR/USD','نسبت یورو به دلار':'EUR/USD Ratio','یورو/دلار':'EUR/USD',
+  'قیمت روز یوآن چین':'Current Chinese Yuan Price','ریال/یوآن':'IRR/CNY','نسبت یوان به یورو':'CNY/EUR Ratio',
+  'یورو/یوآن':'EUR/CNY','ضریب تعدیل نسبت به دی ۱۳۹۶':'Adjustment Factor vs. Dey 1396',
+  'دی ۱۳۹۶':'Dey 1396','ساختمان‌های صنعتی':'Industrial Buildings','ساختمان‌های غیرصنعتی':'Non-Industrial Buildings',
+  'تجهیزات اداری و خدماتی':'Office & Service Equipment','هزینه‌های احتمالی متفرقه':'Miscellaneous & Contingency Costs',
+  'جمع هزینه‌های ثابت':'Total Fixed Costs','سرمایه ثابت مورد نیاز':'Required Fixed Investment',
+  'وام بلندمدت سرمایه ثابت':'Long-Term Fixed-Investment Loan','آورده سهامدار':'Shareholder Equity',
+  'سرمایه در گردش سال اول':'Year 1 Working Capital','جمع سرمایه مورد نیاز':'Total Funding Requirement',
+  'هزینه‌های طرح':'Project Costs','هزینه‌های ثابت سرمایه‌گذاری':'Fixed Investment Costs',
+  'آورده سرمایه‌گذار (Equity)':'Investor Equity Contribution','وام بلندمدت سرمایه در گردش':'Long-Term Working-Capital Loan',
+  'جمع کل / WACC':'Total / WACC','ریال/مترمربع':'IRR/m²','متر مربع':'m²','یورو/واحد':'EUR/unit',
+  'سال ساخت':'Construction Year','مقطوع':'Lump Sum','مترمکعب':'m³','یورو/مترمربع':'EUR/m²',
+  'ساختمان صنعتی':'Industrial Building','مهندسی':'Engineering','ماشین‌آلات و تجهیزات شامل جرثقیل‌ها':'Machinery & Equipment, Including Cranes',
+  'کارهای سیویل':'Civil Works','نصب تجهیزات و اسکلت فلزی':'Equipment Installation & Steel Structure'
+ });
  const tr=(v:string)=>en?(labelEn[v]??v):v
  const def=definitions[section]
  const storageKey='pishran:hotrolling-reference:'+projectId+':'+section+':v1'
