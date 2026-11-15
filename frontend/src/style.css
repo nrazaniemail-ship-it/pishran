@@ -612,10 +612,10 @@ input,select,textarea{color:var(--text)}
 
 
 /* Explicit per-section save controls; auto-save remains enabled as a safety net. */
-.fw-card-save-row{display:flex;justify-content:flex-start;margin:0 0 10px;}
+.fw-card-save-row{display:flex;direction:ltr;justify-content:flex-start;margin:0 0 10px;}
 .fw-save-button{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:6px 12px;border:1px solid var(--line);background:var(--surface-soft);color:var(--navy);font-size:12px;font-weight:700;border-radius:9px;cursor:pointer;}
 .fw-save-button:hover{background:var(--accent);color:var(--accent-text);border-color:var(--focus);}
 
-.hr-ref-table-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.hr-ref-table-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}.fw-table-save-row{display:flex;direction:ltr;justify-content:flex-start;margin:0 0 10px}
 
 .brand-title{border:0;background:none;color:inherit;text-align:start;padding:0;min-width:0}.language-switch{display:inline-flex;align-items:center;justify-content:center;min-width:43px;height:43px;padding:0 10px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text);font-weight:800;letter-spacing:.3px;box-shadow:0 2px 8px #17223512}.language-switch:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
