@@ -1167,3 +1167,90 @@ input,select,textarea{color:var(--text)}
     margin-right:0;
   }
 }
+
+
+/* Replace the light-beige base with a calm blue-gray workspace palette. */
+:root:not([data-theme="dark"]){
+  --page:#e8edf3;
+  --surface:#eef2f6;
+  --line:#d5dee8;
+  --muted:#687789;
+  --text:#344253;
+  --brand-beige:#e8edf3;
+  --brand-panel:#eef2f6;
+  --brand-border:#d5dee8;
+}
+:root:not([data-theme="dark"]) body,
+:root:not([data-theme="dark"]) .app-shell{
+  background:#e8edf3;
+}
+:root:not([data-theme="dark"]) .topbar{
+  background:color-mix(in srgb,#e8edf3 95%,white);
+  border-color:#d5dee8;
+}
+:root:not([data-theme="dark"]) .main-nav,
+:root:not([data-theme="dark"]) .kpi,
+:root:not([data-theme="dark"]) .module,
+:root:not([data-theme="dark"]) .chart-card,
+:root:not([data-theme="dark"]) .insight-card,
+:root:not([data-theme="dark"]) .settings-card,
+:root:not([data-theme="dark"]) .project-card,
+:root:not([data-theme="dark"]) .project-form,
+:root:not([data-theme="dark"]) .empty-state,
+:root:not([data-theme="dark"]) .hr-panel,
+:root:not([data-theme="dark"]) .hr-project-panel,
+:root:not([data-theme="dark"]) .hr-progress-panel,
+:root:not([data-theme="dark"]) .steel-chain-panel,
+:root:not([data-theme="dark"]) .steel-stage-detail,
+:root:not([data-theme="dark"]) .steel-integrations,
+:root:not([data-theme="dark"]) .fw-content,
+:root:not([data-theme="dark"]) .fw-card,
+:root:not([data-theme="dark"]) .ppw-sheet,
+:root:not([data-theme="dark"]) .ppw-note,
+:root:not([data-theme="dark"]) .ppw-nav{
+  background:#eef2f6;
+  border-color:#d5dee8;
+}
+:root:not([data-theme="dark"]) .hero{
+  background:linear-gradient(120deg,#dce5ef 0%,#e8edf3 72%,#f1f4f7 100%);
+  border-color:#d2dce7;
+}
+:root:not([data-theme="dark"]) .steel-stage-card,
+:root:not([data-theme="dark"]) .hr-tabs button,
+:root:not([data-theme="dark"]) .fw-steps button,
+:root:not([data-theme="dark"]) .ppw-nav button{
+  background:#e3eaf1;
+  border-color:#d1dbe6;
+}
+:root:not([data-theme="dark"]) .steel-stage-card.selected,
+:root:not([data-theme="dark"]) .nav-item.active,
+:root:not([data-theme="dark"]) .fw-choice button.active{
+  background:#d5e0ec;
+  border-color:#b9c9da;
+  color:#355675;
+}
+:root:not([data-theme="dark"]) .steel-principle,
+:root:not([data-theme="dark"]) .steel-planned-note,
+:root:not([data-theme="dark"]) .steel-io-grid>div,
+:root:not([data-theme="dark"]) .steel-branch-flow span,
+:root:not([data-theme="dark"]) .ppw-table-wrap,
+:root:not([data-theme="dark"]) .hr-derived-strip,
+:root:not([data-theme="dark"]) .hr-material-summary div,
+:root:not([data-theme="dark"]) .hr-process-step,
+:root:not([data-theme="dark"]) .hr-econ-grid article,
+:root:not([data-theme="dark"]) .notice,
+:root:not([data-theme="dark"]) .settings-note{
+  background:#e2e9f0;
+  border-color:#d0dae5;
+}
+:root:not([data-theme="dark"]) .main-nav{
+  background:#e5eaf1;
+  border-color:#d5dde7;
+}
+/* Editable values remain white; the warm-gold accent cards are retained. */
+:root:not([data-theme="dark"]) input:not([type="checkbox"]):not([type="radio"]),
+:root:not([data-theme="dark"]) select,
+:root:not([data-theme="dark"]) textarea,
+:root:not([data-theme="dark"]) .calculator-display{
+  background:#fff;
+}
