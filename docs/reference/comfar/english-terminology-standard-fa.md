@@ -66,6 +66,7 @@
 | مرحله بازپرداخت | Repayment Phase |
 | تاریخ اولین بازپرداخت | First Repayment Date |
 | تعداد بازپرداخت‌ها | Number of Repayments |
+| ماه پرداخت بهره (وام پروفایل) | Month Interest Paid |
 | دوره بازپرداخت | Period of Repayment |
 | بازپرداخت سالانه | Yearly Repayment |
 | بازپرداخت شش‌ماهه | Half-yearly Repayment |
