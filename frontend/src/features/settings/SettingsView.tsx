@@ -13,13 +13,13 @@ export default function SettingsView({ settings, storageInfo, onChange, onRestor
   const en = settings.language === 'en'
 
   return <section className="settings-page">
-    <div className="page-heading"><div><span className="eyebrow">PREFERENCES & LOCAL DATA</span><h1>{en ? 'Pishran Settings' : 'تنظیمات پیشران'}</h1><p>{en ? 'Appearance, app behaviour and on-device data management' : 'ظاهر، {en ? 'App Behaviour' : 'رفتار برنامه'} و مدیریت اطلاعات روی همین دستگاه'}</p></div></div>
+    <div className="page-heading"><div><span className="eyebrow">PREFERENCES & LOCAL DATA</span><h1>{en ? 'Pishran Settings' : 'تنظیمات پیشران'}</h1><p>{en ? 'Appearance, app behaviour and on-device data management' : 'ظاهر، رفتار برنامه و مدیریت اطلاعات روی همین دستگاه'}</p></div></div>
 
     <div className="settings-grid">
       <article className="settings-card">
         <div className="settings-card-title"><span className="settings-symbol">◐</span><div><b>{en ? 'Display & Appearance' : 'نمایش و ظاهر'}</b><small>{en ? 'App theme and accent colour' : 'پوسته و رنگ محیط برنامه'}</small></div></div>
         <label className="setting-row"><span>{en ? 'Display mode' : 'حالت نمایش'}</span><select value={settings.themeMode} onChange={e => update('themeMode', e.target.value as AppSettings['themeMode'])}><option value="light">{en ? 'Light' : 'روشن'}</option><option value="dark">{en ? 'Dark' : 'تیره'}</option><option value="system">{en ? 'System' : 'مطابق دستگاه'}</option></select></label>
-        <label className="setting-row"><span>{en ? 'Accent colour' : 'رنگ اصلی'}</span><select value={settings.accentTheme} onChange={e => update('accentTheme', e.target.value as AppSettings['accentTheme'])}><option value="navy">{en ? 'Soft teal (default)' : 'سبزآبی ملایم (پیش‌فرض)'}</option><option value="emerald">{en ? 'Sage green' : 'سبز مریم‌گلی'}</option><option value="gold">شن {en ? 'Light' : 'روشن'}</option><option value="graphite">{en ? 'Slate grey' : 'خاکستری سنگی'}</option></select></label>
+        <label className="setting-row"><span>{en ? 'Accent colour' : 'رنگ اصلی'}</span><select value={settings.accentTheme} onChange={e => update('accentTheme', e.target.value as AppSettings['accentTheme'])}><option value="navy">{en ? 'Soft teal (default)' : 'سبزآبی ملایم (پیش‌فرض)'}</option><option value="emerald">{en ? 'Sage green' : 'سبز مریم‌گلی'}</option><option value="gold">{en ? 'Warm sand' : 'شن روشن'}</option><option value="graphite">{en ? 'Slate grey' : 'خاکستری سنگی'}</option></select></label>
         <label className="setting-row"><span>{en ? 'Compact layout' : 'چیدمان فشرده'}</span><input type="checkbox" checked={settings.compactMode} onChange={e => update('compactMode', e.target.checked)}/></label>
       </article>
 
