@@ -19,7 +19,7 @@ export default function BackupScheduler(){
     await updateBackupMeta('automatic',result.size)
     window.dispatchEvent(new CustomEvent('pishran-backup-complete',{detail:{at:new Date().toISOString(),size:result.size}}))
    }catch(error){
-    window.dispatchEvent(new CustomEvent('pishran-backup-error',{detail:error instanceof Error?error.message:'پشتیبان‌گیری خودکار ناموفق بود'}))
+    window.dispatchEvent(new CustomEvent('pishran-backup-error',{detail:error instanceof Error?error.message:(document.documentElement.lang==='en'?'Automatic backup failed':'پشتیبان‌گیری خودکار ناموفق بود')}))
    }finally{running=false}
   }
   void check()

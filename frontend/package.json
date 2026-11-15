@@ -10,6 +10,8 @@
     "android:add": "cap add android",
     "android:sync": "npm run build && cap sync android",
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "ios:add": "cap add ios",
+    "ios:sync": "npm run build && cap sync ios",
     "test:financial": "node scripts/validate-financial-model.mjs"
   },
   "dependencies": {
@@ -22,6 +24,7 @@
     "echarts": "latest",
     "echarts-for-react": "latest",
     "@capacitor/android": "^7.4.3",
+    "@capacitor/ios": "^7.4.3",
     "@capacitor/core": "^7.4.3",
     "@capacitor/filesystem": "^7.0.0",
     "@capacitor/share": "^7.0.0"

@@ -1,4 +1,4 @@
-name: Build Pishran Android APK
+name: Build Pishran Android APK and iOS IPA
 
 on:
   workflow_dispatch:
@@ -7,12 +7,16 @@ on:
     paths:
       - "frontend/**"
       - ".github/workflows/build-android.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/build-android.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: pishran-android-apk
+  group: pishran-mobile-build
   cancel-in-progress: true
 
 jobs:
@@ -52,7 +56,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Validate Excel financial benchmark
+      - name: Validate financial model
         run: npm run test:financial
 
       - name: Build web app for Capacitor
@@ -82,5 +86,63 @@ jobs:
         with:
           name: Pishran-Android-APK
           path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  build-ipa:
+    runs-on: macos-15
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app for Capacitor
+        run: CAPACITOR_BUILD=true npm run build
+
+      - name: Generate Capacitor iOS project
+        run: |
+          npx cap add ios
+          npx cap sync ios
+          xcodebuild -version
+
+      # This produces a correctly packaged but unsigned IPA. Device installation
+      # requires Apple code signing and a matching provisioning profile.
+      - name: Archive iOS app (unsigned)
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Pishran.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            archive
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$RUNNER_TEMP/Pishran.xcarchive/Products/Applications/App.app" "$RUNNER_TEMP/ipa/Payload/App.app"
+          cd "$RUNNER_TEMP/ipa"
+          /usr/bin/zip -qry "$GITHUB_WORKSPACE/frontend/Pishran-unsigned.ipa" Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pishran-iOS-IPA-unsigned
+          path: frontend/Pishran-unsigned.ipa
           if-no-files-found: error
           retention-days: 14

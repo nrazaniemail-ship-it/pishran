@@ -38,6 +38,15 @@ export async function createProject(input: Pick<FeasibilityProject, 'name' | 'in
   return project
 }
 
+export async function updateProject(id: string, patch: Partial<Pick<FeasibilityProject, 'name' | 'location'>>): Promise<FeasibilityProject> {
+  const projects = await listProjects()
+  const existing = projects.find(project => project.id === id)
+  if (!existing) throw new Error('Project not found')
+  const updated: FeasibilityProject = { ...existing, ...patch, updatedAt: new Date().toISOString() }
+  await localStore.set(PROJECTS_KEY, projects.map(project => project.id === id ? updated : project))
+  return updated
+}
+
 export async function deleteProject(id: string): Promise<void> {
   const projects = await listProjects()
   await localStore.set(PROJECTS_KEY, projects.filter(project => project.id !== id))

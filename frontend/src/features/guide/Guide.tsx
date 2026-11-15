@@ -54,27 +54,273 @@ const chapters:Chapter[] = [
 
 ]
 
-export default function Guide() {
+export default function Guide({language='fa'}:{language?:'fa'|'en'}) {
+ const en=language==='en'
+ const chapterEn:Record<string,[string,string]>={
+ 'تعریف پروژه و بازار':['Project Definition & Market','Establish the study basis, project scope, location, target product and investment rationale.'],
+ 'محصول و ظرفیت تولید':['Products & Production Capacity','Define the product mix, nameplate and operating capacity, production plan, and quality and market constraints.'],
+ 'فرآیند و موازنه مواد':['Process & Material Balance','Describe the production route, key equipment capacity, mass balance and performance controls.'],
+ 'مصارف زیربنایی و فرآیندی':['Utilities & Process Consumables','Estimate water, power, gas, other utilities and consumables by type and unit.'],
+ 'هزینه‌های ساخت و بهره‌برداری':['Capital & Operating Costs','Develop a complete, traceable and time-phased CAPEX and OPEX estimate in the project base currency.'],
+ 'تأمین مالی و نرخ تنزیل':['Financing & Discount Rates','Define the capital structure, loans, cost of capital and discounting method consistent with the cash flow.'],
+ 'جریان نقدی و شاخص‌های مالی':['Cash Flow & Financial Indicators','Convert technical and economic assumptions into periodic cash flows and decision metrics.'],
+ 'نتیجه نهایی و توصیه تصمیم‌گیری':['Conclusions & Decision Recommendation','Turn technical, market, financial and risk findings into a clear, conditional recommendation.'],
+ 'استاندارد خروجی‌ها و قواعد محاسباتی COMFAR':['COMFAR Outputs & Calculation Standards','Distinguish financial planning cash flow, total investment return and equity return; check consistency with COMFAR III reference guidance.']}
+ const topicEn:Record<string,[string,string]>={
+ '۱-۱. شناسنامه و محدوده پروژه':['1.1 Project Identity & Scope','Define clear technical and economic boundaries, including in-scope and out-of-scope units and infrastructure interfaces.'],
+ '۱-۲. تحلیل بازار و فروش':['1.2 Market & Sales Analysis','Demonstrate that products can be sold at defensible prices and mix; installed capacity alone does not prove feasibility.'],
+ '۱-۳. منابع داده و قابلیت اتکا':['1.3 Data Sources & Reliability','Make assumptions traceable and distinguish documented data from estimates.'],
+ '۲-۱. تعریف سبد محصول و مشخصات':['2.1 Product Mix & Specifications','Define products using specifications that can be produced and sold.'],
+ '۲-۲. ظرفیت اسمی، عملی و تولید قابل فروش':['2.2 Nameplate, Operating & Saleable Capacity','Distinguish design capacity from achievable production under real operating conditions.'],
+ '۲-۳. ضریب مصرف و بازده محصول':['2.3 Consumption Factors & Yield','Connect saleable output to feed requirements and process losses.'],
+ '۳-۱. انتخاب مسیر فرآیندی و فناوری':['3.1 Process Route & Technology Selection','Select technology consistent with product, capacity, quality, feed and lifecycle cost.'],
+ '۳-۲. موازنه جرم':['3.2 Mass Balance','Reconcile inputs, outputs, losses, inventory and recycling across each process stage.'],
+ '۳-۳. تراز ظرفیت و گلوگاه':['3.3 Capacity Balance & Bottlenecks','Confirm that all key equipment can support the production plan.'],
+ '۴-۱. یوتیلیتی‌های زیربنایی':['4.1 Site Utilities','Estimate connection capacity and consumption costs for water, power, gas and common infrastructure.'],
+ '۴-۲. مواد و اقلام مصرفی فرآیندی':['4.2 Process Materials & Consumables','Calculate direct production materials and tonnage-linked costs.'],
+ '۴-۳. تعرفه و هزینه تأمین':['4.3 Tariffs & Supply Costs','Convert technical consumption into forecastable costs and assess supply risks.'],
+ '۵-۱. سرمایه‌گذاری ثابت (CAPEX)':['5.1 Fixed Investment (CAPEX)','Estimate the cost of establishing assets required to reach operating readiness.'],
+ '۵-۲. هزینه‌های بهره‌برداری (OPEX)':['5.2 Operating Expenditure (OPEX)','Estimate steady-state annual costs and separate fixed from variable costs.'],
+ '۵-۳. سرمایه در گردش و استهلاک':['5.3 Working Capital & Depreciation','Calculate operating cash requirements and depreciation expense.'],
+ '۶-۱. ساختار سرمایه و منابع تأمین':['6.1 Capital Structure & Funding Sources','Separate shareholder equity, loans, foreign-currency facilities, grants and other funding.'],
+ '۶-۲. نرخ تنزیل دستی و WACC':['6.2 Manual Discount Rate & WACC','Select a discount rate consistent with cash-flow definition and project risk.'],
+ '۶-۳. برنامه بازپرداخت و توان خدمت بدهی':['6.3 Debt Repayment & Debt-Service Capacity','Assess the project’s ability to pay interest and principal when due.'],
+ '۷-۱. صورت سود و زیان پیش‌بینی‌شده':['7.1 Forecast Income Statement','Calculate operating profit, tax and net income using correct cost classifications.'],
+ '۷-۲. جریان نقدی پروژه و سهامدار':['7.2 Project & Equity Cash Flow','Assess asset-level economics separately from investor returns after financing.'],
+ '۷-۳. NPV، IRR، PI و دوره بازگشت':['7.3 NPV, IRR, PI & Payback','Measure value creation, return and capital recovery period.'],
+ '۷-۴. تحلیل حساسیت و سناریو':['7.4 Sensitivity & Scenario Analysis','Identify key value drivers and economic breakpoints.'],
+ '۸-۱. جمع‌بندی شاخص‌ها و شروط تصمیم':['8.1 KPI Summary & Decision Conditions','Present a consistent view of economic attractiveness, repayment capacity and information quality.'],
+ '۸-۲. برنامه اقدام و شکاف اطلاعاتی':['8.2 Action Plan & Information Gaps','Turn the study into trackable actions for detailed feasibility or final investment decisions.'],
+ '۹-۱. جریان نقدی برنامه‌ریزی مالی در برابر جریان نقدی ارزیابی':['9.1 Financial Planning vs. Evaluation Cash Flow','Financing and corporate liquidity cash flow is not the same as the project asset’s economic cash flow.'],
+ '۹-۲. NPV، IRR و MIRR و قرارداد نرخ‌ها':['9.2 NPV, IRR, MIRR & Rate Conventions','Each metric must be tied to the matching cash flow, discount rate, currency, period and timing.'],
+ '۹-۳. خروجی‌ها، صورت‌های مالی و کنترل تطبیق':['9.3 Outputs, Financial Statements & Reconciliation','Ensure traceability from input schedules through financial statements to evaluation metrics.'],
+ '۹-۴. تحلیل اقتصادی، آثار توسعه‌ای و پایداری':['9.4 Economic Analysis, Development Impact & Sustainability','Separate investor financial feasibility from the project’s economic and social value.']}
+ const chTitle=(v:string)=>en?(chapterEn[v]?.[0]??v):v
+ const chObjective=(v:string)=>en?(chapterEn[v]?.[1]??v):v
+ const topicTitle=(v:string)=>en?(topicEn[v]?.[0]??v):v
+
+ const topicDetailsEn:Record<string,Partial<Topic>>={
+'۱-۱. شناسنامه و محدوده پروژه':{
+ inputs:['Project name and ID, investor and legal entity','Project location, land ownership and site access','Project type: new build, expansion, upgrade or debottlenecking','In-scope and out-of-scope units (battery limits)','Price base year, study date and analysis horizon'],
+ method:['State the investment objective in one sentence.','Define the final product and nameplate capacity.','Record project boundaries in a block diagram or unit list.','Identify essential off-site items such as substations, gas pipelines, roads and warehouses.','Express all amounts in one price base year or document time adjustments.'],
+ formulas:['Design capacity = main unit nameplate capacity × number of lines','Price base year = year in which all CAPEX and OPEX are expressed'],
+ example:'For a flat-steel rolling line, the boundary may start at slab receipt and end at packing and dispatch of finished sheet. If slabs are not produced on site, steelmaking is outside the project boundary, while slab purchases, internal handling and storage remain project costs.',
+ checks:['Capacity and product definitions are consistent across all report sections.','Interfaces with power, gas, water and other suppliers are defined.','Currency and price base year are consistent throughout the model.'],
+ pitfalls:['Combining a standalone rolling mill with steelmaking or DRI without defining their scope and investment costs.','Mixing prices from different years without escalation or source-date records.']},
+'۱-۲. تحلیل بازار و فروش':{
+ inputs:['Apparent consumption = domestic production + imports − exports','Competitor capacity and actual output, imports and exports','Demand by grade, thickness, width and product form','Ex-works selling prices, freight and delivery terms','Target customers, achievable market share and sales contracts'],
+ method:['Segment the market by product family and technical specification.','Collect production, trade and consumption data from independent sources.','Normalize prices for date, currency, tax, freight and delivery terms.','Separate existing competitors and announced projects from realizable supply.','Constrain achievable market share by sales capacity, distribution and product quality.'],
+ formulas:['Apparent consumption (tonnes) = domestic production + imports − exports ± inventory change','CAGR = (ending value / starting value)^(1/n) − 1','Realizable sales = minimum of saleable output, target demand and market absorption','Sales revenue = Σ (sales volume of product i × net selling price of product i)'],
+ example:'If annual saleable capacity is 250,000 tonnes but the target market can absorb only 180,000 tonnes of the required specification, the model must not assume full-capacity sales without contracts or a substantiated export analysis.',
+ checks:['Prices include source, date, currency and delivery terms.','Imports and exports are not double-counted.','Competitors’ nameplate capacity is not confused with actual output.'],
+ pitfalls:['Assuming 100% capacity sales from year one without a ramp-up analysis.','Using quoted market prices instead of the project’s achievable net selling price.']},
+'۱-۳. منابع داده و قابلیت اتکا':{
+ inputs:['Source type: published report, actual data, vendor quotation, engineering estimate or user assumption','Reference name, page number or URL, and date received','Unit, currency, technical scope and confidence level'],
+ method:['Record a source and date for every key input.','When sources conflict, retain both values and document the selection rationale.','For sensitive inputs, define low, base and high cases.','Assign an owner and validation due date to provisional assumptions.'],
+ formulas:['Weighted estimate = Σ (source weight i × source value i) / Σ source weights','Confidence weighting is an internal ranking aid, not a substitute for source quality or statistical analysis.'],
+ example:'Record capacity from the vendor datasheet, energy use from the performance guarantee, equipment price from a dated quotation and installation cost from an engineering estimate. These should not all be classified as actual data.',
+ checks:['Major CAPEX items and specific energy consumption have traceable sources.','Source dates and units are recorded.'],
+ pitfalls:['Presenting an estimate or assumption as a confirmed fact in the report.']},
+'۲-۱. تعریف سبد محصول و مشخصات':{
+ inputs:['Product family and commercial name or standard','Steel grade and chemical composition range','Thickness, width, length or diameter and unit weight','Share of each product in the production mix','Selling price and sales unit for each product'],
+ method:['Separate products into individual rows with technical specifications.','Record the permitted dimensional and grade range for each product.','Set product mix percentages so that they total 100%.','Check actual line capability and product-change constraints.'],
+ formulas:['Σ product share i = 100%','Production of product i = total production × product share i','Weighted-average selling price = Σ (product share i × product price i)'],
+ example:'In a flat-steel mill, sheet in the 8–20 mm range and thicker plate may be separate products with different speed, yield, price and market. Dimensional ranges must match the mill design.',
+ checks:['Product shares total exactly 100%.','Dimensions remain within the equipment’s guaranteed range.'],
+ pitfalls:['Defining the product only as “sheet” without grade, thickness and dimensional detail.']},
+'۲-۲. ظرفیت اسمی، عملی و تولید قابل فروش':{
+ inputs:['Line nameplate capacity (tonnes/hour or tonnes/year)','Calendar hours, planned downtime and unplanned downtime','Availability, performance and product quality/yield','Number of shifts and operating days','Commissioning period and capacity ramp-up curve'],
+ method:['Define hourly capacity and available operating hours.','Record planned and unplanned downtime separately.','Apply material throughput efficiency and saleable product yield.','Define the ramp-up plan for the first operating years separately.'],
+ formulas:['Available hours = calendar hours − planned downtime − unplanned downtime','Operating capacity = hourly capacity × available hours','Saleable output = operating capacity × utilization × quality yield','Output in year t = operating capacity × ramp-up factor in year t'],
+ example:'A line rated at 50 tonnes/hour with 6,200 available hours has a pre-yield capacity of 310,000 tonnes. This is not necessarily equal to saleable output or sales.',
+ checks:['Annual hours match the shift calendar and maintenance plan.','Availability and yield are not double-counted.','Ramp-up factors from 0% to 100% are documented.'],
+ pitfalls:['Deducting downtime from available hours and then applying availability again without a clear definition.','Treating design capacity, good output and sales as the same quantity.']},
+'۲-۳. ضریب مصرف و بازده محصول':{
+ inputs:['Specific consumption of slab, billet or bloom','Rolling yield, scale, crop ends and cutting losses','Scrap recovery and return-to-process rate'],
+ method:['Define the measurement boundary: furnace input, mill input or finished product.','Record losses at each process step separately.','Separate saleable scrap from scrap returned to the process.'],
+ formulas:['Mass yield = good product weight / feed weight','Required feed = good product / mass yield','Losses = feed − good product'],
+ example:'To produce 100,000 tonnes of product at 90% yield, required feed is approximately 111,111 tonnes and losses are 11,111 tonnes before any scrap recovery value.',
+ checks:['Yield is between 0% and 100%.','The consumption-factor basis matches the material balance in Chapter 3.'],
+ pitfalls:['Entering a specific consumption of 1.1 tonnes per tonne and applying the same 10% loss a second time.']},
+'۷-۱. صورت سود و زیان پیش‌بینی‌شده':{
+ inputs:['Sales volume and net selling price by product','Cash operating costs, depreciation and financing costs','Tax rules, exemptions and loss carry-forward','Accounting period and currency basis'],
+ method:['Forecast revenue by product and sales channel.','Classify production, selling, administrative and financing costs consistently.','Calculate EBITDA, depreciation, EBIT, finance costs, tax and net income.','Apply tax exemptions and loss carry-forward by year where applicable.'],
+ formulas:['Revenue = Σ (sales quantity × net selling price)','EBIT = EBITDA − depreciation','Net income = profit before tax − income tax'],
+ example:'Depreciation reduces accounting profit but is not itself a cash payment. It may affect taxable income and must be reconciled separately in the cash-flow model.',
+ checks:['Revenue matches the sales and production plan.','Depreciation matches the asset register.','Tax is calculated on the applicable taxable base.'],
+ pitfalls:['Deducting depreciation as a cash OPEX item.','Applying tax before using eligible loss carry-forwards.']},
+'۷-۲. جریان نقدی پروژه و سهامدار':{
+ inputs:['Project operating cash flows before financing','Construction CAPEX and maintenance CAPEX','Tax, working-capital changes and terminal recovery','Equity contributions, loan drawdowns, interest and principal'],
+ method:['Build unlevered project cash flow separately from financing.','Calculate equity cash flow after debt drawdowns, interest and principal.','Include working-capital investment and justified terminal release.','Keep construction and operating periods and timing conventions explicit.'],
+ formulas:['FCFF = operating cash flow after tax + depreciation − CAPEX − change in working capital','FCFE = FCFF − after-tax interest + net borrowing (subject to the selected convention)','Project cash flow excludes financing drawdowns and repayments'],
+ example:'A loan drawdown increases cash available to shareholders but does not improve the underlying project’s unlevered operating economics. Report project and equity returns separately.',
+ checks:['Project cash flow excludes loan drawdowns and debt service.','Equity cash flow includes financing flows exactly once.','Terminal working-capital recovery is not duplicated.'],
+ pitfalls:['Using one cash-flow series for both project and shareholder returns.','Including loan proceeds as project revenue.']},
+'۷-۳. NPV، IRR، PI و دوره بازگشت':{
+ inputs:['Periodic project or equity cash-flow series','Discount rate consistent with the selected cash flow','Period length, timing and initial investment convention','Finance and reinvestment rates for MIRR, where used'],
+ method:['Confirm the cash-flow perspective before calculating metrics.','Apply the discount rate to the matching cash-flow series.','Check that IRR has a valid sign change and interpret multiple-IRR risk.','Calculate discounted payback when time value of money matters.','Report assumptions, units and period timing with each metric.'],
+ formulas:['NPV = Σ CFt / (1 + r)^t','IRR is the rate r for which NPV = 0','PI = present value of future inflows / initial investment','MIRR uses separate finance and reinvestment rates'],
+ example:'A positive NPV at the project’s risk-adjusted discount rate indicates value creation under the stated assumptions; it does not prove that the project can meet each year’s debt payments.',
+ checks:['NPV rate and cash-flow basis are consistent.','IRR is not reported when the series has no valid solution.','MIRR finance and reinvestment rates are shown.'],
+ pitfalls:['Comparing IRRs calculated on different cash-flow definitions.','Treating payback period as a substitute for NPV or risk analysis.']},
+'۷-۴. تحلیل حساسیت و سناریو':{
+ inputs:['Key drivers: selling price, feed cost, energy, capacity, yield and CAPEX','Base, downside and upside assumptions','One-way sensitivities and combined scenarios','Decision thresholds and break-even values'],
+ method:['Identify variables with material influence on value.','Change one variable at a time for sensitivity analysis.','Build coherent combined scenarios for correlated risks.','Calculate NPV, IRR, DSCR and break-even thresholds for each case.','Rank risks by impact and likelihood, then define mitigation actions.'],
+ formulas:['Sensitivity impact = metric under scenario − base-case metric','Break-even value is the input at which the selected decision metric reaches its threshold'],
+ example:'A 10% energy-price increase may have a limited effect for one process route and a large effect for an electricity-intensive route. Sensitivity must use the project’s actual consumption structure.',
+ checks:['Only the intended driver changes in one-way sensitivity.','Scenario assumptions are internally consistent.','The model recalculates all dependent cash flows and debt metrics.'],
+ pitfalls:['Changing several inputs in a one-variable sensitivity.','Presenting arbitrary best/worst cases without evidence.']},
+'۸-۱. جمع‌بندی شاخص‌ها و شروط تصمیم':{
+ inputs:['NPV, IRR, MIRR, PI and payback','Project and equity cash-flow perspectives','DSCR, funding gap and key operating constraints','Data quality, unresolved assumptions and risk exposure'],
+ method:['Summarize technical, market, investment and financial findings together.','Separate base-case attractiveness from downside resilience.','List conditions that must be met before final investment approval.','State clearly which inputs remain estimates or require validation.'],
+ formulas:['Decision dashboard = financial returns + debt capacity + technical feasibility + market evidence + risk conditions'],
+ example:'A project may show a positive NPV but fail a minimum DSCR test in early repayment years. The recommendation should identify the financing or phasing conditions needed to resolve this gap.',
+ checks:['All headline metrics use the same model version and assumptions.','Project and equity returns are separately labelled.','Critical conditions and unresolved risks are visible.'],
+ pitfalls:['Recommending investment from IRR alone.','Hiding weak data quality behind a single headline score.']},
+'۸-۲. برنامه اقدام و شکاف اطلاعاتی':{
+ inputs:['Open technical and engineering items','Pending vendor quotations and market evidence','Permits, land, utilities and connection agreements','Financing terms, tax opinions and implementation schedule'],
+ method:['Convert each gap into a specific action and deliverable.','Assign an accountable owner and due date.','Prioritize items that can change project scope, CAPEX, capacity or returns.','Define evidence required to close each item.','Update the model and decision record when evidence arrives.'],
+ formulas:['Readiness = completed critical deliverables / total critical deliverables'],
+ example:'A preliminary furnace cost estimate should be replaced by a scope-aligned vendor quotation that states exclusions, delivery terms, performance guarantees and commissioning scope.',
+ checks:['Every material gap has an owner, due date and closure evidence.','Critical-path items are identified.','Model changes are version-controlled.'],
+ pitfalls:['Treating a preliminary study as final investment approval without closing critical gaps.']},
+'۹-۱. جریان نقدی برنامه‌ریزی مالی در برابر جریان نقدی ارزیابی':{
+ inputs:['Corporate cash budget and funding plan','Project asset-level cash flow before financing','Loan drawdowns, interest, principal and shareholder contributions','Working-capital and treasury movements'],
+ method:['Identify the purpose of each cash-flow report.','Separate corporate liquidity planning from project economic evaluation.','Reconcile financing cash movements without adding them to project operating value.','Label each output by perspective and included transactions.'],
+ formulas:['Project FCFF excludes financing flows','Financing cash flow includes equity, debt drawdowns, interest and principal','Corporate cash budget may include balances and transfers outside the project boundary'],
+ example:'A debt drawdown appears in a financing or treasury cash budget, but not as project operating revenue or unlevered project inflow.',
+ checks:['Each report states its perspective and boundary.','Financing flows are not double-counted in project value.','Corporate and project balances are reconciled through documented transfers.'],
+ pitfalls:['Comparing a financing cash budget directly with COMFAR project evaluation cash flow.']},
+'۹-۲. NPV، IRR و MIRR و قرارداد نرخ‌ها':{
+ inputs:['Cash-flow perspective: total investment or equity','Discount rate, finance rate and reinvestment rate','Currency, inflation basis and period frequency','Timing convention for initial and subsequent cash flows'],
+ method:['Document the exact cash-flow series used for every metric.','Match WACC to project FCFF and cost of equity to equity cash flow.','State whether rates and cash flows are nominal or real and pre-tax or post-tax.','Keep annual, mid-year and monthly timing assumptions explicit.','Do not tune inputs solely to force agreement with a reference result.'],
+ formulas:['NPV(project) = NPV(FCFF, WACC)','NPV(equity) = NPV(FCFE, cost of equity)','MIRR = function of separate finance and reinvestment rates'],
+ example:'A project NPV calculated at WACC cannot be compared directly with an equity NPV discounted at the cost of equity, even when both are labelled NPV.',
+ checks:['Metric labels identify the cash-flow perspective.','Rate conventions match the currency and inflation basis.','Reference comparisons use aligned timing and tax assumptions.'],
+ pitfalls:['Mixing total-investment and shareholder metrics.','Changing tax or discount rates to force a numerical match.']},
+'۹-۳. خروجی‌ها، صورت‌های مالی و کنترل تطبیق':{
+ inputs:['Source schedules for production, CAPEX, OPEX and financing','Income statement, cash-flow statement and balance sheet','Asset depreciation, debt balances and working capital','Reference outputs and reconciliation checks'],
+ method:['Trace every report figure back to its source schedule.','Reconcile opening and closing cash, debt, fixed assets and working capital.','Check that the balance sheet balances without artificial plugs.','Compare reference outputs only after aligning definitions and periods.','Document every unresolved variance and its likely driver.'],
+ formulas:['Closing cash = opening cash + net cash movement','Closing debt = opening debt + drawdowns + capitalized interest − principal','Balance difference = total assets − (total liabilities + equity)'],
+ example:'If the balance sheet does not balance, investigate CAPEX, equity contributions, debt movements, depreciation and working capital rather than inserting an unexplained balancing item.',
+ checks:['Three statements use consistent periods and assumptions.','Debt and asset roll-forwards reconcile.','All reference variances are explained or clearly flagged.'],
+ pitfalls:['Using an artificial equity plug to hide a statement mismatch.','Comparing annual outputs with a differently timed reference series.']},
+'۹-۴. تحلیل اقتصادی، آثار توسعه‌ای و پایداری':{
+ inputs:['Financial prices and resource costs','Economic opportunity costs and shadow prices, where justified','Employment, regional supply chain and infrastructure effects','Environmental, energy, water and emissions indicators'],
+ method:['Keep private financial profitability separate from wider economic value.','Identify externalities and avoid double-counting transfers such as taxes and subsidies.','Quantify employment and local procurement using traceable assumptions.','Assess environmental and resource impacts over the project life.','Report limitations and avoid unsupported claims of social benefit.'],
+ formulas:['Economic value = social benefits − economic opportunity costs (with consistent shadow pricing)','Emissions intensity = annual emissions / saleable production'],
+ example:'A project may be financially attractive while facing material water or emissions constraints. These effects should be assessed separately and reflected in permitting, mitigation and scenario analysis.',
+ checks:['Financial and economic analyses are clearly distinguished.','Externalities are quantified only where defensible data exist.','Environmental assumptions and boundaries are disclosed.'],
+ pitfalls:['Treating taxes or subsidies as net social benefits without economic adjustment.','Claiming development impact without measurable evidence.']},
+'۵-۱. سرمایه‌گذاری ثابت (CAPEX)':{
+ inputs:['Land, site preparation, buildings and civil works','Process equipment, utilities, electrical and control systems','Engineering, procurement, construction, transport, installation and commissioning','Contingency, owner’s costs, duties and pre-operating costs'],
+ method:['Build a work-breakdown structure aligned with the project scope.','Separate equipment supply from installation and construction costs.','Record quantities, unit rates, currency, quotation date and source for each major item.','Classify shared infrastructure and allocate it transparently.','Time-phase CAPEX across construction periods and apply escalation consistently.'],
+ formulas:['Fixed investment = land + site + buildings + equipment + infrastructure + pre-operating costs','Installed cost = equipment supply + freight + duties + installation + commissioning'],
+ example:'A furnace package quotation may exclude foundations, electrical connections, gas trains, refractory installation, freight and commissioning. These interfaces must be included before the investment total is treated as complete.',
+ checks:['All items inside the project boundary are covered.','No cost is duplicated across vendor packages and civil/electrical schedules.','Currency, price date, tax and contingency basis are explicit.'],
+ pitfalls:['Using equipment purchase price as the total installed cost.','Omitting owner’s costs, spare parts, start-up materials or off-site connections.']},
+'۵-۲. هزینه‌های بهره‌برداری (OPEX)':{
+ inputs:['Raw materials and direct consumables','Energy, water, gas and other utilities','Staffing, salaries, benefits and personnel overheads','Maintenance, spare parts, insurance, administration and logistics'],
+ method:['Separate fixed, variable and semi-variable costs.','Link variable costs to production volume or operating hours.','Build staffing from shifts, departments and operating coverage.','Separate cash operating costs from depreciation and financing costs.','Document escalation, tariff assumptions and annual ramp-up.'],
+ formulas:['Variable cost = production volume × specific consumption × unit price','Annual OPEX = fixed cash cost + variable cash cost + separately reported depreciation','Unit cash cost = annual cash OPEX / saleable production'],
+ example:'If a material is consumed at 1.08 tonnes per tonne of good output, the annual purchase quantity must follow the production plan and yield assumptions rather than nameplate capacity alone.',
+ checks:['OPEX is consistent with process capacity and material balance.','Depreciation is not included in cash OPEX and then deducted again.','Labour and maintenance costs match the operating schedule.'],
+ pitfalls:['Mixing CAPEX, depreciation, interest and cash OPEX.','Applying full-capacity costs during ramp-up without scaling variable costs.']},
+'۵-۳. سرمایه در گردش و استهلاک':{
+ inputs:['Raw-material, work-in-progress and finished-goods inventory days','Receivable and payable days and minimum operating cash','Annual cost bases for each working-capital component','Asset cost, residual value, useful life, start date and depreciation method'],
+ method:['Define working-capital components and use a consistent day-count basis.','Calculate inventory, receivables and payables from their relevant annual cost or revenue bases.','Model the annual change in net working capital as a cash flow.','Define depreciation by asset class, useful life, residual value and in-service date.','Recover working capital at the end of the project only when the assumption is justified.'],
+ formulas:['Net working capital = inventory + receivables + operating cash − trade payables','Working capital requirement = annual basis × days / day-count basis','Straight-line depreciation = (asset cost − residual value) / useful life'],
+ example:'With a 360-day convention, 30 days of raw-material inventory equals one-twelfth of the relevant annual raw-material cost. Receivables use sales revenue, while payables use eligible procurement costs.',
+ checks:['A 360- or 365-day basis is applied consistently.','No working-capital component is double-counted.','Depreciation begins when the asset is available for use.','Terminal recovery is shown separately from annual working-capital needs.'],
+ pitfalls:['Using revenue as the basis for all inventory components.','Treating depreciation as a cash payment or recovering working capital twice.']},
+'۶-۱. ساختار سرمایه و منابع تأمین':{
+ inputs:['Shareholder equity and contribution timing','Loan facilities, drawdowns, interest, fees and repayment terms','Grants, subsidies, supplier credit and foreign-currency funding','Currency, security, covenants and funding availability dates'],
+ method:['Prepare sources and uses by period.','Separate equity contributions from debt drawdowns.','Match funding timing to construction CAPEX and working-capital needs.','Model each loan separately when terms differ.','Check that total sources reconcile to total uses in every period.'],
+ formulas:['Funding gap = total uses − committed funding sources','Equity share + debt share + other funding shares = 100% (where defined on the same basis)'],
+ example:'A project may have an 80% debt target but still require equity during early construction if loan drawdowns start later. The funding schedule must reflect actual timing rather than only final percentages.',
+ checks:['Sources and uses balance by period.','Loan drawdowns do not exceed approved facilities.','Currency and repayment assumptions are documented.'],
+ pitfalls:['Assuming the full debt amount is available at the start of construction.','Applying one blended repayment schedule to loans with different terms.']},
+'۶-۲. نرخ تنزیل دستی و WACC':{
+ inputs:['Equity weight and cost of equity','Debt weight and cost of debt','Applicable tax rate for the interest tax shield','Manual discount-rate assumption and cash-flow definition'],
+ method:['Choose whether the valuation uses project cash flow or equity cash flow.','Select a discount rate consistent with that cash-flow basis.','Calculate WACC from market or justified capital weights and after-tax debt cost.','Keep the operating tax rate separate from the WACC tax-shield assumption where they differ.','Document nominal/real, pre-tax/post-tax and currency consistency.'],
+ formulas:['WACC = E/(D+E) × Ke + D/(D+E) × Kd × (1 − Tax rate)','Project FCFF is generally discounted at WACC; equity cash flow at cost of equity'],
+ example:'A 30% cost of equity, 26% debt cost, 16.99% equity weight, 83.01% debt weight and 25% tax shield produce a WACC of about 21.28%.',
+ checks:['Discount rate and cash flow are on the same nominal/real and currency basis.','Tax shield is applied only to eligible debt interest.','Equity and project metrics are not mixed.'],
+ pitfalls:['Discounting equity cash flow at WACC or project cash flow at cost of equity.','Using the corporate tax rate as a tax shield without checking tax deductibility.']},
+'۶-۳. برنامه بازپرداخت و توان خدمت بدهی':{
+ inputs:['Loan drawdown schedule and annual interest rate','Grace period, repayment start year and loan tenor','Principal repayment method and capitalized-interest terms','Cash flow available for debt service (CFADS) and fees'],
+ method:['Model each facility’s drawdowns and outstanding balance by period.','Apply the contractual grace period and repayment method.','Separate cash interest from capitalized interest.','Calculate principal and interest due in each year.','Compare scheduled debt service with CFADS and identify shortfalls.'],
+ formulas:['Debt service = cash interest + principal repayment + applicable fees','DSCR = CFADS / debt service','Closing debt = opening debt + drawdowns + capitalized interest − principal repaid'],
+ example:'A loan with a two-year principal grace period may still accrue interest during construction. If interest is capitalized, it increases the debt balance but should not also be counted as a cash interest payment in the same period.',
+ checks:['Loan balance reconciles from opening to closing each year.','Principal repayments start only when contractually due.','Capitalized interest is not double-counted as cash debt service.','DSCR is assessed for each repayment period.'],
+ pitfalls:['Ignoring interest during construction.','Treating capitalized interest as both CAPEX and a cash payment in the same year.']},
+'۳-۱. انتخاب مسیر فرآیندی و فناوری':{
+ inputs:['Process Flow Diagram (PFD) and process description','Technology, line configuration, major equipment and rated capacity','Feed and product conditions and process interfaces','Automation level, quality control and safety requirements'],
+ method:['Map the process from feed receipt to final product.','List bottleneck equipment and its rated capacity.','Compare technology options for quality, energy, maintenance, capital cost and service support.','Record design assumptions and vendor performance guarantees.'],
+ formulas:['Capacity of a continuous process route = minimum effective capacity of series equipment','Capacity of parallel equipment = sum of effective capacities of parallel units'],
+ example:'In a flat-steel mill, the reheating furnace, descaler, rolling stands, cooling table, leveler and cutting line may each be a bottleneck. Overall capacity cannot be inferred from rolling-stand capacity alone.',
+ checks:['The process diagram matches the equipment list and material balance.','Essential auxiliary equipment is included.'],
+ pitfalls:['Selecting technology solely on the basis of the lowest purchase price.']},
+'۳-۲. موازنه جرم':{
+ inputs:['Feed by type and quality','Main products and by-products','Scrap, scale, turnings and recycle streams','Inventory changes between the start and end of the period'],
+ method:['Set the balance period: hourly, daily or annual.','Record inputs and outputs for each process unit.','Count recycle streams only once at the appropriate boundary.','Calculate the balance difference and explain its cause.'],
+ formulas:['Input + internal generation = output + internal use + losses + inventory change','Balance error (%) = (input − net output) / input × 100','Specific feed consumption = feed quantity / good product quantity'],
+ example:'An annual balance with 112,000 tonnes of slab input may yield 100,000 tonnes of good sheet, 8,000 tonnes of recyclable scrap and 4,000 tonnes of scale and other losses. These figures are illustrative.',
+ checks:['Inputs and outputs close within an acceptable engineering tolerance.','Returned scrap is not counted again as external feed.'],
+ pitfalls:['Ignoring inventory changes or recycle streams.']},
+'۳-۳. تراز ظرفیت و گلوگاه':{
+ inputs:['Nameplate and effective capacity of each equipment item','Cycle time, downtime, product changeover and dimensional limits','Storage, handling and packaging capacity'],
+ method:['Calculate effective equipment capacity under actual operating conditions, not only catalogue ratings.','Separate shared downtime from equipment-specific downtime.','Test bottlenecks across product mix and operating scenarios.'],
+ formulas:['Effective equipment capacity = nameplate capacity × availability × performance factor','Process-route capacity = minimum effective capacity of series equipment'],
+ example:'If the effective capacities of the furnace, rolling mill and packaging line are 300,000, 270,000 and 280,000 tonnes, respectively, the route is limited to 270,000 tonnes.',
+ checks:['Equipment capacities use a consistent feed or product basis.','Warehouse and logistics capacities are also checked.'],
+ pitfalls:['Adding the capacities of series equipment instead of identifying the minimum.']},
+'۴-۱. یوتیلیتی‌های زیربنایی':{
+ inputs:['Electricity: peak demand (MW), energy (kWh/year) and load factor','Gas: peak flow and annual consumption (Nm³/year)','Raw, industrial, cooling and treated water (m³/year)','Air, steam, oxygen and other common services, where applicable'],
+ method:['Determine connected load and operating hours for each consumer.','Separate instantaneous/peak demand from annual consumption.','Account for network losses, coincidence factor and reserve capacity.','Record energy, subscription, demand and treatment charges separately.'],
+ formulas:['Annual energy (kWh) = average power (kW) × operating hours','Average power = peak power × load factor','Specific utility consumption = annual utility consumption / tonnes of good product','Electricity cost = energy charge + demand charge + fixed charges'],
+ example:'At 120 kWh per tonne and 200,000 tonnes of good output, annual electricity use is 24 million kWh. Peak demand and demand charges must be assessed separately.',
+ checks:['Power units (kW/MW) are not confused with energy units (kWh/MWh).','Peak demand is used for connection sizing and annual energy for OPEX.'],
+ pitfalls:['Converting MW to kWh without considering operating hours.','Ignoring demand, treatment and transmission charges.']},
+'۴-۲. مواد و اقلام مصرفی فرآیندی':{
+ inputs:['Slab, billet or other main feedstock','Rolls, oils, grease, refractories, electrodes, chemicals and consumable parts','Specific consumption rate, price, unit and consumption frequency','Safety stock and process losses'],
+ method:['Separate direct materials from common utilities.','Record each item’s consumption per tonne of product or operating hour.','Document price currency, date, freight and delivery terms.','Do not classify capital spares as routine consumables.'],
+ formulas:['Annual quantity of item i = specific consumption rate i × activity basis','Annual cost of item i = annual quantity i × unit price','Process OPEX = Σ annual cost of process consumables'],
+ example:'At lubricant consumption of 0.08 kg per tonne and annual output of 200,000 tonnes, annual use is 16,000 kg. Actual rates should come from design, operating references or vendor guarantees.',
+ checks:['Specific-consumption and price units are consistent.','Slab cost is not double-counted in both material balance and feedstock cost.'],
+ pitfalls:['Recording strategic spare parts as annual consumables without a replacement basis.']},
+'۴-۳. تعرفه و هزینه تأمین':{
+ inputs:['Base and tiered tariffs, season and peak periods','Connection and network expansion costs','Contract price or energy/material price scenarios','Supply interruptions, quotas and reliability constraints'],
+ method:['Record each carrier’s tariff and validity date.','Separate fixed, variable, demand and connection investment costs.','Reflect supply shortages or energy restrictions in production capacity scenarios.'],
+ formulas:['Utility cost = Σ (period consumption × applicable period tariff) + fixed charges','Specific utility cost = total utility cost / tonnes of good product'],
+ example:'If winter gas restrictions reduce operating hours, the impact is not limited to a higher gas price. Lower production, sales and working-capital needs must also be reflected in the scenario.',
+ checks:['Tariffs are current and applicable to the correct industrial customer class.','Connection costs are not mixed with operating consumption costs.'],
+ pitfalls:['Assuming uninterrupted 24-hour access to all energy carriers.']}
+ }
+ const topicData=(topic:Topic):Topic=>en?{...topic,...topicDetailsEn[topic.title]}:topic
+
+ const topicPurpose=(v:string)=>en?(topicEn[v]?.[1]??v):v
  const [query,setQuery]=useState('')
  const [open,setOpen]=useState('1-1')
  const [onlyFormula,setOnlyFormula]=useState(false)
- const normalized=query.trim().toLocaleLowerCase('fa')
- const results=useMemo(()=>chapters.flatMap(ch=>ch.topics.map(t=>({ch,t,key:`${ch.id}-${t.title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`})).filter(({ch,t})=>!normalized||[ch.title,ch.objective,t.title,t.purpose,...t.inputs,...t.method,...t.formulas,...t.checks,...t.pitfalls].join(' ').toLocaleLowerCase('fa').includes(normalized)).filter(({t})=>!onlyFormula||t.formulas.length>0)),[normalized,onlyFormula])
+ const normalized=query.trim().toLocaleLowerCase(en?'en':'fa')
+ const results=useMemo(()=>chapters.flatMap(ch=>ch.topics.map(t=>({ch,t,key:`${ch.id}-${t.title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`})).filter(({ch,t})=>!normalized||[chTitle(ch.title),chObjective(ch.objective),topicTitle(t.title),topicPurpose(t.purpose),ch.title,ch.objective,t.title,t.purpose,...topicData(t).inputs,...topicData(t).method,...topicData(t).formulas,...topicData(t).checks,...topicData(t).pitfalls].join(' ').toLocaleLowerCase(en?'en':'fa').includes(normalized)).filter(({t})=>!onlyFormula||t.formulas.length>0)),[normalized,onlyFormula])
  const total=chapters.reduce((n,c)=>n+c.topics.length,0)
- return <main className="guide-page" dir="rtl">
-  <header className="guide-hero"><div className="guide-icon"><BookOpen size={28}/></div><div><span className="eyebrow">PISHRAN KNOWLEDGE CENTER</span><h1>راهنمای جامع امکان‌سنجی پروژه</h1><p>راهنمای گام‌به‌گام، فرمول‌ها، روش ورود اطلاعات و کنترل کیفیت؛ با رویکردی مشابه راهنماهای نرم‌افزارهای حرفه‌ای امکان‌سنجی.</p></div><div className="guide-count"><b>{chapters.length}</b><small>گام اصلی</small><b>{total}</b><small>موضوع آموزشی</small></div></header>
-  <section className="guide-search"><div className="guide-search-box"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="جست‌وجو در راهنما؛ مثال: WACC، موازنه مواد، ظرفیت، NPV، سرمایه در گردش..." aria-label="جست‌وجو در راهنما"/>{query&&<button onClick={()=>setQuery('')}>پاک‌کردن</button>}</div><label className="guide-filter"><input type="checkbox" checked={onlyFormula} onChange={e=>setOnlyFormula(e.target.checked)}/> فقط موضوعات دارای فرمول</label><span className="guide-results">{results.length.toLocaleString('fa-IR')} موضوع</span></section>
-  <div className="guide-layout"><aside className="guide-index"><b>فهرست گام‌ها</b>{chapters.map(ch=><button key={ch.id} onClick={()=>{setQuery('');setOnlyFormula(false);setOpen(`${ch.id}-${ch.topics[0].title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`);document.getElementById(`guide-ch-${ch.id}`)?.scrollIntoView({behavior:'smooth',block:'start'})}}><span>{String(ch.id).padStart(2,'0')}</span>{ch.title}</button>)}</aside>
-   <section className="guide-content">{chapters.map(ch=>{const visible=results.filter(x=>x.ch.id===ch.id);if(!visible.length)return null;return <section className="guide-chapter" id={`guide-ch-${ch.id}`} key={ch.id}><div className="guide-chapter-head"><span>گام {ch.id.toLocaleString('fa-IR')}</span><h2>{ch.title}</h2><p>{ch.objective}</p></div>{visible.map(({t})=>{const id=`${ch.id}-${t.title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`;const expanded=open===id||Boolean(normalized);return <article className="guide-topic" key={t.title}><button className="guide-topic-toggle" onClick={()=>setOpen(open===id?'':id)}><span><b>{t.title}</b><small>{t.purpose}</small></span>{expanded?<ChevronUp size={18}/>:<ChevronDown size={18}/>}</button>{expanded&&<div className="guide-topic-body">
-    <div className="guide-subsection"><h4>اطلاعات موردنیاز</h4><ul>{t.inputs.map(x=><li key={x}>{x}</li>)}</ul></div>
-    <div className="guide-subsection"><h4>روش انجام کار، مرحله به مرحله</h4><ol>{t.method.map(x=><li key={x}>{x}</li>)}</ol></div>
-    <div className="guide-formulas"><h4><Calculator size={16}/> فرمول‌ها و روابط محاسباتی</h4>{t.formulas.map(x=><code key={x}>{x}</code>)}</div>
-    <div className="guide-example"><h4><Lightbulb size={16}/> مثال و تفسیر</h4><p>{t.example}</p></div>
-    <div className="guide-subsection"><h4><ClipboardCheck size={16}/> کنترل‌های صحت و تکمیل</h4><ul>{t.checks.map(x=><li key={x}>{x}</li>)}</ul></div>
-    <div className="guide-warning"><h4><AlertTriangle size={16}/> خطاهای متداول</h4><ul>{t.pitfalls.map(x=><li key={x}>{x}</li>)}</ul></div>
+ return <main className="guide-page" dir={en?"ltr":"rtl"}>
+  <header className="guide-hero"><div className="guide-icon"><BookOpen size={28}/></div><div><span className="eyebrow">PISHRAN KNOWLEDGE CENTER</span><h1>{en?"Comprehensive Project Feasibility Guide":"راهنمای جامع امکان‌سنجی پروژه"}</h1><p>{en?"A step-by-step reference for methods, formulas, data entry and quality control, inspired by professional feasibility software.":"راهنمای گام‌به‌گام، فرمول‌ها، روش ورود اطلاعات و کنترل کیفیت؛ با رویکردی مشابه راهنماهای نرم‌افزارهای حرفه‌ای امکان‌سنجی."}</p></div><div className="guide-count"><b>{chapters.length}</b><small>{en?"Main chapters":"گام اصلی"}</small><b>{total}</b><small>{en?"Topics":"موضوع آموزشی"}</small></div></header>
+  {en&&<div className="guide-method-note">Chapter headings, topic summaries and detailed guidance for all nine chapters are translated. The English version still needs a full screen-by-screen review and correction of any untranslated labels.</div>}
+  <section className="guide-search"><div className="guide-search-box"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={en?"Search the guide: WACC, material balance, capacity, NPV, working capital...":"جست‌وجو در راهنما؛ مثال: WACC، موازنه مواد، ظرفیت، NPV، سرمایه در گردش..."} aria-label={en?"Search the guide":"جست‌وجو در راهنما"}/>{query&&<button onClick={()=>setQuery('')}>{en?"Clear":"پاک‌کردن"}</button>}</div><label className="guide-filter"><input type="checkbox" checked={onlyFormula} onChange={e=>setOnlyFormula(e.target.checked)}/> {en?"Only topics with formulas":"فقط موضوعات دارای فرمول"}</label><span className="guide-results">{results.length.toLocaleString(en?'en-US':'fa-IR')} {en?'topics':'موضوع'}</span></section>
+  <div className="guide-layout"><aside className="guide-index"><b>{en?"Chapter Index":"فهرست گام‌ها"}</b>{chapters.map(ch=><button key={ch.id} onClick={()=>{setQuery('');setOnlyFormula(false);setOpen(`${ch.id}-${ch.topics[0].title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`);document.getElementById(`guide-ch-${ch.id}`)?.scrollIntoView({behavior:'smooth',block:'start'})}}><span>{String(ch.id).padStart(2,'0')}</span>{chTitle(ch.title)}</button>)}</aside>
+   <section className="guide-content">{chapters.map(ch=>{const visible=results.filter(x=>x.ch.id===ch.id);if(!visible.length)return null;return <section className="guide-chapter" id={`guide-ch-${ch.id}`} key={ch.id}><div className="guide-chapter-head"><span>{en?'Chapter':'گام'} {ch.id.toLocaleString(en?'en-US':'fa-IR')}</span><h2>{chTitle(ch.title)}</h2><p>{chObjective(ch.objective)}</p></div>{visible.map(({t})=>{const topic=topicData(t);const id=`${ch.id}-${t.title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`;const expanded=open===id||Boolean(normalized);return <article className="guide-topic" key={t.title}><button className="guide-topic-toggle" onClick={()=>setOpen(open===id?'':id)}><span><b>{topicTitle(t.title)}</b><small>{topicPurpose(t.purpose)}</small></span>{expanded?<ChevronUp size={18}/>:<ChevronDown size={18}/>}</button>{expanded&&<div className="guide-topic-body">
+    <div className="guide-subsection"><h4>{en?"Required Information":"اطلاعات موردنیاز"}</h4><ul>{topic.inputs.map(x=><li key={x}>{x}</li>)}</ul></div>
+    <div className="guide-subsection"><h4>{en?"Step-by-Step Method":"روش انجام کار، مرحله به مرحله"}</h4><ol>{topic.method.map(x=><li key={x}>{x}</li>)}</ol></div>
+    <div className="guide-formulas"><h4><Calculator size={16}/> {en?"Formulas & Calculation Relationships":"فرمول‌ها و روابط محاسباتی"}</h4>{topic.formulas.map(x=><code key={x}>{x}</code>)}</div>
+    <div className="guide-example"><h4><Lightbulb size={16}/> {en?"Example & Interpretation":"مثال و تفسیر"}</h4><p>{topic.example}</p></div>
+    <div className="guide-subsection"><h4><ClipboardCheck size={16}/> {en?"Validation & Completeness Checks":"کنترل‌های صحت و تکمیل"}</h4><ul>{topic.checks.map(x=><li key={x}>{x}</li>)}</ul></div>
+    <div className="guide-warning"><h4><AlertTriangle size={16}/> {en?"Common Pitfalls":"خطاهای متداول"}</h4><ul>{topic.pitfalls.map(x=><li key={x}>{x}</li>)}</ul></div>
    </div>}</article>})}</section>})}
-   {!results.length&&<div className="guide-empty"><Search size={28}/><h3>نتیجه‌ای پیدا نشد</h3><p>عبارت دیگری جست‌وجو کنید؛ مانند «هزینه سرمایه»، «بازده»، «اسلب» یا «دوره بازگشت».</p></div>}
-   <div className="guide-disclaimer"><b>یادداشت روش‌شناسی</b><p>فرمول‌ها چارچوب عمومی مطالعات امکان‌سنجی‌اند. مبنای مالیاتی، تعرفه‌ها، استانداردهای طراحی، قواعد استهلاک و تعهدات وام‌دهنده باید با مقررات و قراردادهای معتبر پروژه تطبیق داده شوند. مثال‌های عددی آموزشی‌اند و داده واقعی پروژه محسوب نمی‌شوند.</p></div>
+   {!results.length&&<div className="guide-empty"><Search size={28}/><h3>{en?"No results found":"نتیجه‌ای پیدا نشد"}</h3><p>{en?"Try another term, such as cost of capital, return, slab or payback.":"عبارت دیگری جست‌وجو کنید؛ مانند «هزینه سرمایه»، «بازده»، «اسلب» یا «دوره بازگشت»."}</p></div>}
+   <div className="guide-disclaimer"><b>{en?"Methodology Note":"یادداشت روش‌شناسی"}</b><p>{en?"These formulas are general feasibility-study frameworks. Tax bases, tariffs, design standards, depreciation rules and lender covenants must be checked against applicable regulations and project agreements. Numerical examples are illustrative, not actual project data.":"فرمول‌ها چارچوب عمومی مطالعات امکان‌سنجی‌اند. مبنای مالیاتی، تعرفه‌ها، استانداردهای طراحی، قواعد استهلاک و تعهدات وام‌دهنده باید با مقررات و قراردادهای معتبر پروژه تطبیق داده شوند. مثال‌های عددی آموزشی‌اند و داده واقعی پروژه محسوب نمی‌شوند."}</p></div>
    </section>
   </div>
  </main>
