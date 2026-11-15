@@ -29,7 +29,7 @@ export default function FixedInvestmentPanel({ value, foundation, onChange, lang
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
   const issues = validateFixedInvestmentItems(value, foundation)
-  const depreciationBuild = buildComfarDepreciationAssetsFromFixedInvestmentItems(value, projectStartYear, periodCount)
+  const depreciationBuild = buildComfarDepreciationAssetsFromFixedInvestmentItems(value, projectStartYear, periodCount, foundation.planning.periodFrequency)
   const depreciationSchedule = calculateComfarAssetDepreciationSchedule(depreciationBuild.assets, periodCount)
   const depreciationWarnings = [...depreciationBuild.warnings, ...depreciationSchedule.warnings]
   const hasDepreciableAssets = value.some(item => item.depreciation.method !== 'none')
