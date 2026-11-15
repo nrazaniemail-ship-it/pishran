@@ -186,7 +186,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
   const projectCalendarPeriods=m.foundation.planning.projectStartDate&&m.foundation.planning.projectEndDate&&m.foundation.planning.periodFrequency!=='unspecified'&&m.foundation.planning.fiscalYearStartMonth!==null
     ?buildProjectCalendarPeriods(m.foundation.planning.projectStartDate,m.foundation.planning.projectEndDate,m.foundation.planning.periodFrequency,m.foundation.planning.fiscalYearStartMonth)
     :[]
-  const periodicAssetBuild=useMemo(()=>projectCalendarPeriods.length?buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(m.fixedInvestmentItems??[],projectCalendarPeriods,m.foundation):null,[JSON.stringify(m.fixedInvestmentItems??[]),JSON.stringify(projectCalendarPeriods),m.foundation])
+  const periodicAssetBuild=useMemo(()=>projectCalendarPeriods.length&&m.foundation.planning.periodFrequency!=='annual'?buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(m.fixedInvestmentItems??[],projectCalendarPeriods,m.foundation):null,[JSON.stringify(m.fixedInvestmentItems??[]),JSON.stringify(projectCalendarPeriods),m.foundation])
   const periodicAssetLifecycle=useMemo(()=>periodicAssetBuild?calculatePeriodicComfarAssetLifecycle(periodicAssetBuild.assets,periodicAssetBuild.sales,projectCalendarPeriods):null,[JSON.stringify(periodicAssetBuild),JSON.stringify(projectCalendarPeriods)])
   const periodicAssetScheduleVerified=!!periodicAssetBuild&&!!periodicAssetLifecycle?.valid&&periodicAssetBuild.warnings.length===0&&periodicAssetBuild.fixedInvestmentVerified&&periodicAssetBuild.preOperatingVerified
   const periodicAssetWarnings=[...(periodicAssetBuild?.warnings??[]),...(periodicAssetLifecycle?.warnings??[])]
