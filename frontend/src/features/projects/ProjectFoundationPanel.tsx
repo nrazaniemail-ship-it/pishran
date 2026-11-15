@@ -1,10 +1,11 @@
-import type { ProjectFoundation, ProjectCurrency, ProjectCostCentre, ProjectInflationIndex, ProjectTaxRate } from './projectFoundation'
+import { validateProjectFoundation, type ProjectFoundation, type ProjectCurrency, type ProjectCostCentre, type ProjectInflationIndex, type ProjectTaxRate } from './projectFoundation'
 
 type Props = { value: ProjectFoundation; onChange: (value: ProjectFoundation) => void; language?: 'fa' | 'en' }
 const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
 
 export default function ProjectFoundationPanel({ value, onChange, language = 'fa' }: Props) {
   const en = language === 'en'
+  const issues = validateProjectFoundation(value)
   const t = (fa: string, english: string) => en ? english : fa
   const update = (patch: Partial<ProjectFoundation>) => onChange({ ...value, ...patch })
   const updatePlanning = (patch: Partial<ProjectFoundation['planning']>) => update({ planning: { ...value.planning, ...patch } })
@@ -100,5 +101,9 @@ export default function ProjectFoundationPanel({ value, onChange, language = 'fa
       <button type="button" className="secondary-button" onClick={() => updateTax({ rates: value.taxation.rates.filter(row => row.id !== rate.id) })}>{t('حذف نرخ','Remove Rate')}</button>
     </div>)}
     <button type="button" className="secondary-button" onClick={addTaxRate}>{t('افزودن نرخ مالیاتی دوره‌ای','Add Period-specific Tax Rate')}</button>
+
+    <h4>{t('کنترل کامل بودن فونداسیون','Foundation Validation')}</h4>
+    <div className="fw-validation"><span>{t('خطاهای مانع محاسبه','Calculation-blocking errors')}</span><b>{issues.filter(issue => issue.severity === 'error').length}</b><span>{t('هشدارها','Warnings')}</span><b>{issues.filter(issue => issue.severity === 'warning').length}</b></div>
+    {issues.map((issue, index) => <div className="fw-hint" key={issue.path + issue.code + index}><b>{issue.severity === 'error' ? t('خطا','Error') : t('هشدار','Warning')} · {issue.path}</b> — {issue.message}</div>)}
   </section>
 }
