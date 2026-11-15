@@ -36,6 +36,9 @@ export default defineConfig({
       workbox: {
         // Force installed PWAs to discard stale pre-removal bundles and claim updated clients.
         cacheId: 'pishran-1-0-1-office-refresh',
+        // The integrated feasibility and financial modules are bundled into one offline-first app shell.
+        // Keep the full production entry point precached instead of silently omitting it above Workbox's 2 MiB default.
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
