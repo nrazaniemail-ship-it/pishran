@@ -1,10 +1,11 @@
 import {
-  createBlankFixedInvestmentItem, validateFixedInvestmentItems,
+  buildProjectCalendarPeriods, createBlankFixedInvestmentItem, validateFixedInvestmentItems,
   type FixedInvestmentItem, type FixedInvestmentAcquisition, type FixedInvestmentSale, type ProjectFoundation,
   type FixedInvestmentDepreciationMethod,
 } from './projectFoundation'
 import { listFinancialMethods, type FinancialMethodDefinition } from './financialMethodDirectory'
-import { buildComfarDepreciationAssetsFromFixedInvestmentItems, calculateComfarAssetLifecycle, reconcileFixedInvestmentRegister } from '../steel/financialModel'
+import { buildComfarDepreciationAssetsFromFixedInvestmentItems, buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems, calculateComfarAssetLifecycle, reconcileFixedInvestmentRegister } from '../steel/financialModel'
+import { calculatePeriodicComfarAssetLifecycle } from '../steel/periodicFinancialEngine'
 
 type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; projectStartYear: number; periodCount: number; capexTotal: number; preOperatingCost?: number; referenceDepreciationByYear?: ReadonlyArray<readonly [number, number]>; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean }
 const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
@@ -36,10 +37,17 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
   const issues = validateFixedInvestmentItems(value, foundation)
-  const depreciationBuild = buildComfarDepreciationAssetsFromFixedInvestmentItems(value, projectStartYear, periodCount, foundation.planning.periodFrequency, foundation)
+  const depreciationBuild = buildComfarDepreciationAssetsFromFixedInvestmentItems(value, projectStartYear, periodCount, 'annual', foundation)
   const assetLifecycle = calculateComfarAssetLifecycle(depreciationBuild.assets, depreciationBuild.sales, periodCount)
   const depreciationSchedule = assetLifecycle.depreciation
   const depreciationWarnings = [...depreciationBuild.warnings, ...assetLifecycle.warnings]
+  const projectPeriods=foundation.planning.projectStartDate&&foundation.planning.projectEndDate&&foundation.planning.periodFrequency!=='unspecified'&&foundation.planning.fiscalYearStartMonth!==null
+    ?buildProjectCalendarPeriods(foundation.planning.projectStartDate,foundation.planning.projectEndDate,foundation.planning.periodFrequency,foundation.planning.fiscalYearStartMonth)
+    :[]
+  const periodicDepreciationBuild=projectPeriods.length?buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(value,projectPeriods,foundation):null
+  const periodicAssetLifecycle=periodicDepreciationBuild?calculatePeriodicComfarAssetLifecycle(periodicDepreciationBuild.assets,periodicDepreciationBuild.sales,projectPeriods):null
+  const periodicDepreciationWarnings=[...(periodicDepreciationBuild?.warnings??[]),...(periodicAssetLifecycle?.warnings??[])]
+  const dateBasedPeriodMode=foundation.planning.periodFrequency==='monthly'||foundation.planning.periodFrequency==='quarterly'||foundation.planning.periodFrequency==='semiannual'
   const capexReconciliation = reconcileFixedInvestmentRegister(value, capexTotal, preOperatingCost)
   const referenceRows = foundation.planning.periodFrequency === 'annual'
     ? (referenceDepreciationByYear ?? []).map(([year, reference]) => {
@@ -132,7 +140,7 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
           <option value="source-conflict">{t('تعارض بین منابع','Source conflict')}</option>
           <option value="unresolved">{t('تعیین‌نشده','Unresolved')}</option>
         </select></label>
-        {field(t('شروع استهلاک','Starting at'), item.depreciation.startingAt, v => updateDepreciation(item.id, { startingAt: v }), 'text')}
+        {field(t('شروع استهلاک','Starting at'), item.depreciation.startingAt, v => updateDepreciation(item.id, { startingAt: v }), dateBasedPeriodMode?'date':'text')}
         {field(t('نرخ استهلاک (% در سال)','Rate (% per annum)'), item.depreciation.ratePercent ?? '', v => updateDepreciation(item.id, { ratePercent: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none' || item.depreciation.method === 'sum-of-digits')}
         {field(t('مدت استهلاک ـ سال','Length — Years'), item.depreciation.lengthYears ?? '', v => updateDepreciation(item.id, { lengthYears: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none', 0.001)}
         {field(t('مدت استهلاک ـ ماه','Length — Months'), item.depreciation.lengthMonths, v => updateDepreciation(item.id, { lengthMonths: Number(v) }), 'number', 0, 11, item.depreciation.method === 'none')}
@@ -143,7 +151,7 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
 
       <h4>{t('هزینه تحصیل دارایی به تفکیک دوره','Costs of Assets by Period')}</h4>
       {item.acquisitions.map(acquisition => <div className="fw-grid" key={acquisition.id}>
-        {field(t('دوره تحصیل','Acquisition Period'), acquisition.period, v => updateAcquisition(item.id, acquisition.id, { period: v }))}
+        {field(t('تاریخ تحصیل','Acquisition Date'), acquisition.period, v => updateAcquisition(item.id, acquisition.id, { period: v }), dateBasedPeriodMode?'date':'text')}
         <label className="fw-field"><span>{t('مبنای دوره تحصیل','Acquisition Period Basis')}</span><select value={acquisition.allocationBasis ?? 'unallocated'} onChange={e=>updateAcquisition(item.id,acquisition.id,{allocationBasis:e.target.value as FixedInvestmentAcquisition['allocationBasis']})}><option value="source-period">{t('مستند به فایل منبع','Source-period evidence')}</option><option value="user-confirmed">{t('تأییدشده توسط کاربر','User-confirmed')}</option><option value="proportional-estimate">{t('برآورد تناسبی','Proportional estimate')}</option><option value="unallocated">{t('تخصیص‌نیافته','Unallocated')}</option></select></label>
         {field(t('مقدار','Quantity'), acquisition.quantity, v => updateAcquisition(item.id, acquisition.id, { quantity: Number(v) }), 'number', 0)}
         {field(t('قیمت واحد','Price'), acquisition.unitPrice, v => updateAcquisition(item.id, acquisition.id, { unitPrice: Number(v) }), 'number', 0)}
@@ -156,7 +164,7 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       <h4>{t('فروش و واگذاری دارایی','Sale of Asset')}</h4>
       {item.sales.map(sale => <div className="fw-grid" key={sale.id}>
         <label className="fw-field"><span>{t('نوبت تحصیل مرتبط','Related Acquisition')}</span><select value={sale.acquisitionId} onChange={e => updateSale(item.id, sale.id, { acquisitionId: e.target.value })}><option value="">{t('انتخاب نوبت','Select Acquisition')}</option>{item.acquisitions.map(acquisition => <option key={acquisition.id} value={acquisition.id}>{acquisition.period}</option>)}</select></label>
-        {field(t('تاریخ/دوره فروش','Date/Period of Sale'), sale.period, v => updateSale(item.id, sale.id, { period: v }))}
+        {field(t('تاریخ فروش','Disposal Date'), sale.period, v => updateSale(item.id, sale.id, { period: v }), dateBasedPeriodMode?'date':'text')}
         <label className="fw-field"><span>{t('بازار فروش','Sale Market')}</span><select value={sale.market} onChange={e => updateSale(item.id, sale.id, { market: e.target.value as FixedInvestmentSale['market'] })}><option value="local">{t('محلی','Local')}</option><option value="foreign">{t('خارجی','Foreign')}</option></select></label>
         <label className="fw-field"><span>{t('روش تعیین قیمت فروش','Asset Liquidation Price')}</span><select value={sale.priceMode} onChange={e => updateSale(item.id, sale.id, { priceMode: e.target.value as FixedInvestmentSale['priceMode'] })}><option value="book-value">{t('به ارزش دفتری','Sale at book value')}</option><option value="self-defined">{t('قیمت تعریف‌شده توسط کاربر','Self-defined price')}</option></select></label>
         <label className="fw-field"><span>{t('ارز فروش','Sale Currency')}</span><select value={sale.currencyCode} onChange={e => updateSale(item.id, sale.id, { currencyCode: e.target.value })}>{currencies.map(currency => <option key={currency.code} value={currency.code}>{currency.code} — {currency.name}</option>)}</select></label>
@@ -170,6 +178,15 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       <h4>{t('پیش‌نمایش برنامه استهلاک دارایی‌ها','Asset Depreciation Schedule Preview')}</h4>
       <p className="fw-hint">{t('این پیش‌نمایش از نوبت‌های تحصیل و فروش همین دفتر ساخته می‌شود و برنامه استهلاک/واگذاری آن به موتور مالی یکپارچه ارسال می‌شود. جمع دفتر با CAPEX تجمیعی تطبیق داده می‌شود؛ زمان‌بندی دفتر فقط در صورت تأیید دوره‌های تحصیل و انطباق جمع، جایگزین تخصیص موقت CAPEX می‌شود و هیچ مبلغی دوباره به سرمایه‌گذاری اضافه نمی‌گردد.','This preview is built from acquisition and disposal vintages in this register and is passed to the integrated finance engine for depreciation and asset-sale treatment. Register totals are reconciled to aggregate CAPEX; register timing replaces the provisional CAPEX allocation only when acquisition periods are verified and totals match. Register amounts are never added a second time.')}</p>
       {depreciationWarnings.map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
+      {projectPeriods.length>0&&periodicAssetLifecycle&&<div className="fw-card">
+        <h4>{t('برنامه استهلاک و فروش دارایی‌ها به تفکیک دوره','Asset Depreciation and Disposal by Project Period')}</h4>
+        <p className="fw-hint">{t('برای تناوب ماهانه/فصلی/شش‌ماهه، تاریخ دقیق تحصیل و شروع استهلاک وارد می‌شود. استهلاک از دوره بعد از تحصیل آغاز می‌شود؛ دارایی‌های پیش از شروع پروژه باید در مانده‌های افتتاحیه ثبت شوند.','For monthly/quarterly/semiannual periods, enter exact acquisition and depreciation-start dates. Depreciation begins in the period after acquisition; pre-project assets must be entered in opening balances.')}</p>
+        <div style={{overflowX:'auto',maxHeight:420}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ','Dates')}</th><th>CAPEX</th><th>{t('قبل از بهره‌برداری','Pre-production')}</th><th>{t('استهلاک','Depreciation')}</th><th>{t('عایدی فروش','Sale Proceeds')}</th><th>{t('سود/زیان فروش','Gain/Loss')}</th><th>{t('ارزش دفتری پایان','Closing Book Value')}</th></tr></thead><tbody>{periodicAssetLifecycle.periods.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.startDate} – {row.endDate}</td><td>{row.fixedInvestment.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{row.preOperatingCost.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{row.depreciation.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{row.saleProceeds.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{row.saleGainLoss.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{row.closingBookValue.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td></tr>)}</tbody></table></div>
+        <h5>{t('جزئیات استهلاک هر دارایی','Asset-Level Depreciation Detail')}</h5>
+        <div style={{overflowX:'auto',maxHeight:360}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('دارایی','Asset')}</th><th>{t('ارزش اول دوره','Opening Book Value')}</th><th>{t('استهلاک دوره','Period Depreciation')}</th><th>{t('ارزش پایان دوره','Closing Book Value')}</th><th>{t('روش','Method')}</th></tr></thead><tbody>{periodicAssetLifecycle.periods.flatMap(period=>period.assets.map(asset=><tr key={period.period+'-'+asset.assetId}><td>{period.period}</td><td>{asset.assetName}</td><td>{asset.openingBookValue.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{asset.depreciation.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{asset.closingBookValue.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{asset.methodApplied??'—'}</td></tr>))}</tbody></table></div>
+        <p className="fw-hint">{periodicDepreciationBuild?.fixedInvestmentVerified?t('زمان‌بندی CAPEX ثابت تأیید شده است.','Fixed CAPEX timing is verified.'):t('زمان‌بندی CAPEX ثابت هنوز نیازمند تأیید منبع/کاربر است.','Fixed CAPEX timing still requires source/user confirmation.')} · {periodicDepreciationBuild?.preOperatingVerified?t('هزینه‌های قبل از بهره‌برداری تأیید شده‌اند.','Pre-production timing is verified.'):t('زمان‌بندی هزینه‌های قبل از بهره‌برداری نیازمند تأیید است.','Pre-production timing requires confirmation.')}</p>
+        {periodicDepreciationWarnings.length>0&&<ul className="fw-checklist">{periodicDepreciationWarnings.map((warning,i)=><li key={i}>{warning}</li>)}</ul>}
+      </div>}
       {periodCount > 0 && <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('استهلاک دوره','Depreciation')}</th><th>{t('ارزش دفتری پایان دوره','Closing Book Value')}</th><th>{t('عایدی فروش','Asset Sale Proceeds')}</th><th>{t('برگشت سرمایه','Return of Capital')}</th><th>{t('سایر درآمد/زیان','Other Income / Loss')}</th></tr></thead><tbody>{depreciationSchedule.periods.map(row=>{const sales=assetLifecycle.sales.filter(sale=>sale.period===row.period);const sum=(key:'saleProceeds'|'returnOfCapital'|'otherIncomeLoss')=>sales.reduce((total,sale)=>total+sale[key],0);return <tr key={row.period}><td>{projectStartYear+row.period-1}</td><td>{row.depreciation.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{row.closingBookValue.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{sum('saleProceeds').toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{sum('returnOfCapital').toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{sum('otherIncomeLoss').toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td></tr>})}</tbody></table></div>}
       {referenceRows.length > 0 && <div className="fw-card">
         <h4>{t('تطبیق استهلاک سالانه با خروجی مرجع','Annual Depreciation vs Reference Output')}</h4>
