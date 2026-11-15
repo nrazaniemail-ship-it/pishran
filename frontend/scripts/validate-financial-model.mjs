@@ -774,7 +774,7 @@ const existingConstantLoan = engine.calculateExistingLoanSchedule({
   capitalizeGraceInterest: false,
 })
 assert.equal(existingConstantLoan.valid, true, 'Existing constant-principal loan schedule must be valid')
-near(existingConstantLoan.rows[0].interestPayable, 30, 1e-9,
+near(existingConstantLoan.rows[0].interestPayable, 36, 1e-9,
   'Quarterly opening grace interest must use annual rate × months / 12')
 near(existingConstantLoan.rows[0].principalRepayment, 300, 1e-9,
   'Constant-principal schedule must divide principal evenly')
@@ -811,3 +811,22 @@ assert.ok(expansionPanelSource.includes('Annuity')
   && expansionPanelSource.includes('Repayment Schedule and Debt Service'),
   'Expansion/Rehabilitation loan form must expose COMFAR loan types and repayment schedule')
 console.log('PASS: COMFAR-style existing-loan repayment schedules, grace-period capitalization and profile repayments')
+
+const accruedInterestLoan = engine.calculateExistingLoanSchedule({
+  openingBalance: 1000,
+  openingAccruedInterest: 20,
+  annualInterestRatePercent: 12,
+  startDate: '2026-01-31',
+  firstRepaymentDate: '2026-04-30',
+  repaymentFrequency: 'quarterly',
+  repaymentType: 'annuity',
+  numberOfRepayments: 4,
+  capitalizeGraceInterest: true,
+})
+assert.equal(accruedInterestLoan.valid, true, 'Existing accrued interest must not invalidate an annuity schedule')
+near(accruedInterestLoan.rows[0].capitalizedInterest, 30, 1e-9,
+  'Quarterly grace interest is capitalized when selected')
+near(accruedInterestLoan.rows[0].interestPayable, 20, 1e-9,
+  'Previously accrued interest remains payable, not capitalized again')
+near(accruedInterestLoan.rows[0].totalDebtService, accruedInterestLoan.regularPayment + 20, 1e-7,
+  'Opening accrued interest is paid in addition to the regular annuity instalment')
