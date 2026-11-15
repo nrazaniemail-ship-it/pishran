@@ -341,6 +341,10 @@ export type IntegratedFinanceInput = {
   opexEscalationPercent: number
   discountMode: 'wacc' | 'manual'
   manualDiscountRate: number
+  mirrFinanceRate?: number
+  mirrReinvestmentRate?: number
+  equityMirrFinanceRate?: number
+  equityMirrReinvestmentRate?: number
   salvageValue?: number
 }
 
@@ -569,8 +573,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   const irrProject = calculateIrr(projectFlows)
   const npvEquity = calculateNpv(equityFlows, Math.max(0, input.costOfEquity) / 100)
   const irrEquity = calculateIrr(equityFlows)
-  const mirrProject = discountRate === null ? null : calculateMirr(projectFlows, discountRate, discountRate)
-  const mirrEquity = calculateMirr(equityFlows, Math.max(0, input.costOfEquity) / 100, Math.max(0, input.costOfEquity) / 100)
+  const mirrProject = discountRate === null ? null : calculateMirr(projectFlows, Math.max(-99, input.mirrFinanceRate ?? discountRate * 100) / 100, Math.max(-99, input.mirrReinvestmentRate ?? discountRate * 100) / 100)
+  const mirrEquity = calculateMirr(equityFlows, Math.max(-99, input.equityMirrFinanceRate ?? input.costOfEquity) / 100, Math.max(-99, input.equityMirrReinvestmentRate ?? input.costOfEquity) / 100)
   const peakWorkingCapital = Math.max(0, ...annualRows.map(row => row.workingCapital))
   const fundingGap = totalInvestment + peakWorkingCapital - totalFunding
   const warnings: string[] = []
