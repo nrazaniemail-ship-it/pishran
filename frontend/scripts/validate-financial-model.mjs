@@ -135,6 +135,27 @@ for (const [year, expected] of reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seede
 const hrcr1414 = hrcrLifecycle.depreciation.periods.find(period=>1403+period.period-1===1414)?.depreciation ?? 0
 const comfar1414 = reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarDepreciationByYear.find(([year])=>year===1414)?.[1] ?? 0
 assert.ok(hrcr1414-comfar1414>300_000,'HRCR200 1414 depreciation mismatch must remain visible pending asset-level disposals and Starting at dates')
+
+const periodicAssetFoundation={...hrcrFoundation,planning:{...hrcrFoundation.planning,projectStartDate:'2024-01-01',projectEndDate:'2025-02-28',periodFrequency:'monthly',fiscalYearStartMonth:1}}
+const periodicAssetCalendar=foundation.buildProjectCalendarPeriods('2024-01-01','2025-02-28','monthly',1)
+const periodicAssetItems=[{
+  id:'periodic-asset-fixture',description:'Periodic asset fixture',assetClass:'machinery',
+  origin:'local',currencyCode:periodicAssetFoundation.currencies.localCurrencyCode,costCentreId:'main',
+  depreciation:{method:'linear-scrap',startingAt:'2024-01-01',ratePercent:null,lengthYears:1,lengthMonths:0,firstDepreciationMonths:12,scrapPercent:0},
+  depreciationBasis:'user-confirmed',
+  acquisitions:[{id:'vintage-1',period:'2024-01-15',quantity:1,unitPrice:1200,currencyCode:periodicAssetFoundation.currencies.localCurrencyCode,exchangeRateToLocal:1,allocationBasis:'user-confirmed'}],
+  sales:[{id:'sale-1',acquisitionId:'vintage-1',period:'2024-10-15',market:'local',priceMode:'self-defined',currencyCode:periodicAssetFoundation.currencies.localCurrencyCode,selfDefinedPrice:1500}]
+}]
+const periodicAssetBuild=engine.buildPeriodicComfarDepreciationAssetsFromFixedInvestmentItems(periodicAssetItems,periodicAssetCalendar,periodicAssetFoundation)
+assert.equal(periodicAssetBuild.warnings.length,0,'Explicit ISO acquisition and disposal dates must build without unresolved timing warnings')
+assert.equal(periodicAssetBuild.fixedInvestmentSchedule[0],1200)
+assert.equal(periodicAssetBuild.preOperatingSchedule.reduce((sum,value)=>sum+value,0),0)
+const periodicAssetLifecycle=integratedReference.calculatePeriodicComfarAssetLifecycle(periodicAssetBuild.assets,periodicAssetBuild.sales,periodicAssetCalendar)
+assert.equal(periodicAssetLifecycle.valid,true)
+assert.equal(periodicAssetLifecycle.sales.length,1)
+assert.equal(periodicAssetLifecycle.sales[0].saleProceeds,1500)
+assert.ok(periodicAssetLifecycle.sales[0].gainLoss>0)
+assert.equal(periodicAssetLifecycle.periods[9].closingBookValue,0)
 near(hrcrLifecycle.depreciation.periods[2].depreciation-reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarFirstYearDepreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterFirstYearVarianceToComfar,0.02,'HRCR200 first-year seeded-register variance must remain visible')
 near(hrcrLifecycle.depreciation.periods[2].depreciation-reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.opexScheduleAnnualDepreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterVsOpexScheduleVariance,0.02,'HRCR200 pre-production salvage assumption must explain the difference from the OPEX annual schedule')
 assert.ok(Math.abs(hrcrLifecycle.depreciation.periods[2].depreciation-rollingAudit.depreciationReconciliation.comfarFirstYear)>500,'HRCR200 depreciation reconciliation must remain open pending asset-level Starting at/disposal data')
