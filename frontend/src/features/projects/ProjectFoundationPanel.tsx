@@ -27,7 +27,7 @@ export default function ProjectFoundationPanel({ value, onChange, language = 'fa
   const updateDiscounting = (patch: Partial<ProjectFoundation['discounting']>) => update({ discounting: { ...value.discounting, ...patch } })
   const updateTax = (patch: Partial<ProjectFoundation['taxation']>) => update({ taxation: { ...value.taxation, ...patch } })
   const input = (label: string, valueText: string | number, onValue: (value: string) => void, type = 'text', min?: number, max?: number) =>
-    <label className="fw-field"><span>{label}</span><input type={type} value={valueText} min={min} max={max} onChange={e => onValue(e.target.value)} /></label>
+    <label className="fw-field"><span>{label}</span><input type={type} value={type === 'number' && valueText === 0 ? '' : valueText} min={min} max={max} onChange={e => onValue(e.target.value)} /></label>
 
   const addCurrency = () => updateCurrencies({ foreignCurrencies: [...value.currencies.foreignCurrencies, { id: makeId('currency'), code: '', name: '', exchangeRates: [] }] })
   const updateCurrency = (id: string, patch: Partial<ProjectCurrency>) => updateCurrencies({ foreignCurrencies: value.currencies.foreignCurrencies.map(row => row.id === id ? { ...row, ...patch } : row) })
