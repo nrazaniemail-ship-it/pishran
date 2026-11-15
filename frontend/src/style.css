@@ -274,7 +274,7 @@ footer{border-top-color:var(--line)}
 .hr-tabs button.active{background:#107c41;border-color:#107c41;color:#fff}
 .hr-tabs button:hover:not(.active){border-color:#107c41;color:#107c41;background:#e8f5ed}
 .fw-steps button.active,.isw-steps button.active{background:#e8f5ed;border-color:#107c41;color:#107c41}
-.fw-steps button.active span,.isw-steps button.active span{background:#107c41;color:#fff}
+.isw-steps button.active span{background:#107c41;color:#fff}
 .fw-content,.fw-card,.hr-panel,.hr-project-panel,.hr-progress-panel{border-radius:12px;box-shadow:var(--card-shadow)}
 .fw-content h2,.fw-report-meta h4{color:var(--text)}
 .fw-field>div:focus-within,.fw-field input:focus,.fw-field select:focus{border-color:#107c41;box-shadow:0 0 0 3px rgba(16,124,65,.12)}
@@ -611,11 +611,14 @@ input,select,textarea{color:var(--text)}
 :root[lang="en"] .topbar,:root[lang="en"] .top-actions{direction:ltr}
 
 
-/* Explicit per-section save controls; auto-save remains enabled as a safety net. */
-.fw-card-save-row{display:flex;direction:ltr;justify-content:flex-start;margin:0 0 10px;}
-.fw-save-button{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:6px 12px;border:1px solid var(--line);background:var(--surface-soft);color:var(--navy);font-size:12px;font-weight:700;border-radius:9px;cursor:pointer;}
-.fw-save-button:hover{background:var(--accent);color:var(--accent-text);border-color:var(--focus);}
 
 .hr-ref-table-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}.fw-table-save-row{display:flex;direction:ltr;justify-content:flex-start;margin:0 0 10px}
 
 .brand-title{border:0;background:none;color:inherit;text-align:start;padding:0;min-width:0}.language-switch{display:inline-flex;align-items:center;justify-content:center;min-width:43px;height:43px;padding:0 10px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text);font-weight:800;letter-spacing:.3px;box-shadow:0 2px 8px #17223512}.language-switch:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+
+
+/* Keep the language control anchored to the page's upper-left corner. */
+.topbar{position:relative}
+.page-language-switch{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:2}
+.topbar .brand{margin-left:58px}
+@media(max-width:650px){.page-language-switch{top:18px;transform:none}.topbar .brand{margin-left:58px}}
