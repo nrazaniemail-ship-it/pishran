@@ -1,4 +1,4 @@
-import type { FixedInvestmentItem } from '../projects/projectFoundation'
+import type { FixedInvestmentItem, ProjectPeriodFrequency } from '../projects/projectFoundation'
 
 export type CapitalStructureInput = {
   equityWeight: number
@@ -1002,9 +1002,11 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   items: FixedInvestmentItem[],
   projectStartYear: number,
   periodCount: number,
+  periodFrequency: ProjectPeriodFrequency = 'annual',
 ): FixedInvestmentDepreciationBuild {
   const assets: ComfarDepreciationAssetInput[] = []
   const warnings: string[] = []
+  if (periodFrequency !== 'annual') return { assets, warnings: ['پیش‌نمایش استهلاک فعلی فقط برای دوره‌بندی سالانه اعتبارسنجی شده است؛ برای دوره‌بندی شش‌ماهه، فصلی یا ماهانه موتور دوره‌ای جداگانه لازم است.'] }
   if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
     return { assets, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
   }
@@ -1042,16 +1044,30 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       }
       const acquisitionPeriod = acquired.year - projectStartYear + 1
       if (acquisitionPeriod > periodCount) continue
-      const saleWithinHorizon = item.sales.some(sale => sale.acquisitionId === acquisition.id && (() => {
+      const relatedSales = item.sales.filter(sale => sale.acquisitionId === acquisition.id)
+      const invalidSaleDate = relatedSales.some(sale => parsePeriod(sale.period) === null)
+      if (invalidSaleDate) {
+        warnings.push(`${item.description || item.id}: تاریخ فروش دارایی قابل تشخیص نیست؛ این نوبت از برنامه استهلاک کنار گذاشته شد.`)
+        continue
+      }
+      const saleWithinHorizon = relatedSales.some(sale => {
         const sold = parsePeriod(sale.period)
         return sold !== null && sold.year <= projectStartYear + periodCount - 1
-      })())
+      })
       if (saleWithinHorizon) {
         warnings.push(`${item.description || item.id}: فروش دارایی در افق مدل ثبت شده است؛ تا تکمیل محاسبه استهلاک تا تاریخ فروش و سود/زیان واگذاری، این نوبت وارد برنامه استهلاک نمی‌شود.`)
         continue
       }
       if (acquired.year === starting.year && (!acquired.date || !starting.date)) {
         warnings.push(`${item.description || item.id}: برای تحصیل و Starting at در یک سال، تاریخ کامل هر دو لازم است؛ در نبود تاریخ کامل، شروع استهلاک به دوره بعد موکول می‌شود.`)
+      }
+      if (item.origin === 'foreign' && (!Number.isFinite(acquisition.exchangeRateToLocal) || (acquisition.exchangeRateToLocal ?? 0) <= 0)) {
+        warnings.push(`${item.description || item.id}: نرخ تبدیل مثبت به ارز محلی برای نوبت تحصیل خارجی لازم است.`)
+        continue
+      }
+      if (!Number.isFinite(acquisition.quantity) || acquisition.quantity <= 0 || !Number.isFinite(acquisition.unitPrice) || acquisition.unitPrice < 0) {
+        warnings.push(`${item.description || item.id}: مقدار و قیمت نوبت تحصیل معتبر نیست.`)
+        continue
       }
       const exchangeRate = item.origin === 'foreign' ? (acquisition.exchangeRateToLocal ?? 0) : 1
       const originalValue = acquisition.quantity * acquisition.unitPrice * exchangeRate
