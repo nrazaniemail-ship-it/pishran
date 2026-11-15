@@ -4,11 +4,13 @@ export type ThemeMode = 'light' | 'dark' | 'system'
 export type AccentTheme = 'navy' | 'emerald' | 'graphite' | 'gold'
 export type BackgroundTheme = 'bluegray' | 'mist' | 'sage' | 'sand' | 'sky' | 'lavender'
 export type AppLanguage = 'fa' | 'en'
+export type FontTheme = 'vazirmatn' | 'tahoma' | 'arial' | 'system' | 'noto' | 'sahel' | 'shabnam' | 'samim' | 'serif' | 'mono'
 
 export interface AppSettings {
   themeMode: ThemeMode
   accentTheme: AccentTheme
   backgroundTheme: BackgroundTheme
+  fontTheme: FontTheme
   language: AppLanguage
   compactMode: boolean
   confirmBeforeDelete: boolean
@@ -19,6 +21,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   themeMode: 'light',
   accentTheme: 'navy',
   backgroundTheme: 'bluegray',
+  fontTheme: 'vazirmatn',
   language: 'fa',
   compactMode: false,
   confirmBeforeDelete: true,
@@ -44,6 +47,7 @@ export function applySettings(settings: AppSettings) {
   root.dataset.theme = resolvedMode
   root.dataset.accent = settings.accentTheme
   root.dataset.background = settings.backgroundTheme ?? 'bluegray'
+  root.dataset.font = settings.fontTheme ?? 'vazirmatn'
   root.lang = settings.language
   root.dir = settings.language === 'fa' ? 'rtl' : 'ltr'
   root.dataset.density = settings.compactMode ? 'compact' : 'comfortable'
