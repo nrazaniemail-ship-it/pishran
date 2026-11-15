@@ -454,9 +454,9 @@ function integratedLoanSchedule(loan: IntegratedLoanInput, years: number, constr
   return result
 }
 
-/** Integrated 20-year project model. All monetary inputs must use the same base currency. */
+/** Integrated project model with a 60-period planning horizon. All monetary inputs must use the same base currency. */
 export function calculateIntegratedFinance(input: IntegratedFinanceInput): IntegratedFinanceResult {
-  const years = Math.max(1, Math.min(40, Math.floor(input.years || 20)))
+  const years = Math.max(1, Math.min(60, Math.floor(input.years || 20)))
   const constructionYears = Math.max(1, Math.min(years, Math.floor(input.constructionYears || 4)))
   const loanSchedules: Record<string, IntegratedLoanYear[]> = {}
   input.loans.forEach(loan => { loanSchedules[loan.id] = integratedLoanSchedule(loan, years, constructionYears) })
