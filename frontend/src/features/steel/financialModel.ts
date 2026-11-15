@@ -1011,6 +1011,8 @@ export type FixedInvestmentDepreciationBuild = {
   sales: ComfarAssetSaleInput[]
   investmentSchedule: number[]
   investmentScheduleVerified: boolean
+  preOperatingSchedule: number[]
+  preOperatingScheduleVerified: boolean
   warnings: string[]
 }
 
@@ -1025,17 +1027,21 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   const assets: ComfarDepreciationAssetInput[] = []
   const sales: ComfarAssetSaleInput[] = []
   const investmentSchedule = Array.from({ length: Math.max(0, Math.min(120, periodCount || 0)) }, () => 0)
+  const preOperatingSchedule = Array.from({ length: Math.max(0, Math.min(120, periodCount || 0)) }, () => 0)
   const warnings: string[] = []
   const investmentItems = items.filter(item => item.assetClass !== 'preproduction')
+  const preproductionItems = items.filter(item => item.assetClass === 'preproduction')
   let investmentScheduleVerified = investmentItems.length > 0 && investmentItems.every(item => item.acquisitions.length > 0 && item.acquisitions.every(acquisition => acquisition.allocationBasis === 'source-period' || acquisition.allocationBasis === 'user-confirmed'))
+  let preOperatingScheduleVerified = preproductionItems.length === 0 || preproductionItems.every(item => item.acquisitions.length > 0 && item.acquisitions.every(acquisition => acquisition.allocationBasis === 'source-period' || acquisition.allocationBasis === 'user-confirmed'))
   if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
-    return { assets, sales, investmentSchedule, investmentScheduleVerified: false, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
+    return { assets, sales, investmentSchedule, investmentScheduleVerified: false, preOperatingSchedule, preOperatingScheduleVerified: false, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
   }
   if (periodFrequency !== 'annual' && periodFrequency !== 'unspecified') {
-    return { assets, sales, investmentSchedule, investmentScheduleVerified: false, warnings: ['موتور یکپارچه فعلی فقط برنامه سالانه را محاسبه می‌کند؛ برای دوره‌های نیم‌سالانه، فصلی یا ماهانه، موتور دوره‌ای متناظر باید فعال شود.'] }
+    return { assets, sales, investmentSchedule, investmentScheduleVerified: false, preOperatingSchedule, preOperatingScheduleVerified: false, warnings: ['موتور یکپارچه فعلی فقط برنامه سالانه را محاسبه می‌کند؛ برای دوره‌های نیم‌سالانه، فصلی یا ماهانه، موتور دوره‌ای متناظر باید فعال شود.'] }
   }
   if (periodFrequency === 'unspecified') {
     investmentScheduleVerified = false
+    preOperatingScheduleVerified = false
     warnings.push('تناوب دوره در فونداسیون تعیین نشده است؛ نگاشت سالانه فقط برای پیش‌نمایش استفاده می‌شود و نتیجه تا تعیین Annual تأییدشده نیست.')
   }
   const parsePeriod = (value: string): { year: number; date: string | undefined } | null => {
@@ -1074,8 +1080,13 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     }
     const startingAtPeriod = starting ? Math.max(1, starting.year - projectStartYear + 1) : 1
     for (const acquisition of item.acquisitions) {
-      if (item.assetClass !== 'preproduction' && (!acquisition.allocationBasis || acquisition.allocationBasis === 'unallocated')) warnings.push(`${item.description || item.id}: acquisition period is unallocated; the register cash-flow schedule is not verified.`)
-      else if (item.assetClass !== 'preproduction' && acquisition.allocationBasis === 'proportional-estimate') warnings.push(`${item.description || item.id}: acquisition period is a proportional estimate; confirm it before using register-derived cash flows.`)
+      if (!acquisition.allocationBasis || acquisition.allocationBasis === 'unallocated') {
+        warnings.push(`${item.description || item.id}: acquisition period is unallocated; the register cash-flow schedule is not verified.`)
+        if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+      } else if (acquisition.allocationBasis === 'proportional-estimate') {
+        warnings.push(`${item.description || item.id}: acquisition period is a proportional estimate; confirm it before using register-derived cash flows.`)
+        if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+      }
       const acquired = parsePeriod(acquisition.period)
       if (!acquired) {
         warnings.push(`${item.description || item.id}: تاریخ/دوره تحصیل «${acquisition.period}» قابل تشخیص نیست.`)
@@ -1089,7 +1100,10 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       if (acquisitionPeriod > periodCount) continue
       const exchangeRate = item.origin === 'foreign' ? (acquisition.exchangeRateToLocal ?? 0) : 1
       const originalValue = acquisition.quantity * acquisition.unitPrice * exchangeRate
-      if (item.assetClass !== 'preproduction' && acquisitionPeriod >= 1 && acquisitionPeriod <= investmentSchedule.length) investmentSchedule[acquisitionPeriod - 1] += originalValue
+      if (acquisitionPeriod >= 1 && acquisitionPeriod <= investmentSchedule.length) {
+        if (item.assetClass === 'preproduction') preOperatingSchedule[acquisitionPeriod - 1] += originalValue
+        else investmentSchedule[acquisitionPeriod - 1] += originalValue
+      }
       if (!Number.isFinite(originalValue) || originalValue < 0) {
         warnings.push(`${item.description || item.id}: بهای تحصیل پس از تبدیل به ارز محلی معتبر نیست.`)
         continue
@@ -1144,7 +1158,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       }
     }
   }
-  return { assets, sales, investmentSchedule, investmentScheduleVerified, warnings }
+  return { assets, sales, investmentSchedule, investmentScheduleVerified, preOperatingSchedule, preOperatingScheduleVerified, warnings }
 }
 
 export type FixedInvestmentRegisterReconciliation = {
