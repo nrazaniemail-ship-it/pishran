@@ -492,6 +492,33 @@ const taxSeparationInput = {
   discountMode: 'wacc', manualDiscountRate: 25
 }
 const taxBase = engine.calculateIntegratedFinance(taxSeparationInput)
+const reportSensitivityInput = {
+  ...taxSeparationInput,
+  workingCapitalPolicy: {
+    dayBasis: 360, rawMaterialDays: 30, workInProgressDays: 2,
+    workInProgressMaterialCompletionPercent: 100, workInProgressConversionCompletionPercent: 100,
+    finishedGoodsDays: 5, receivableDays: 0, cashDays: 10, payableDays: 0,
+    annualRawMaterialCost: 100, energyDays: 15, annualEnergyCost: 20,
+    sparePartsDays: 30, annualSparePartsCost: 10, annualConversionCost: 80,
+    annualFinishedGoodsCost: 180, annualRevenue: 1000, annualCashOperatingCost: 300
+  }
+}
+const reportSensitivity = engine.calculateOneWaySensitivity(reportSensitivityInput, 20)
+assert.equal(reportSensitivity.factors.length, 4, 'One-way report sensitivity must include price, fixed investment, operating cost and energy')
+assert.ok(reportSensitivity.factors.every(factor => factor.available && factor.lowNpv !== null && factor.highNpv !== null),
+  'All four report sensitivity factors must be recalculated from the integrated model when energy cost is available')
+assert.ok(reportSensitivity.factors[0].lowNpv < reportSensitivity.baseNpv
+  && reportSensitivity.factors[0].highNpv > reportSensitivity.baseNpv,
+  'Selling-price sensitivity must move NPV in the expected direction')
+assert.ok(reportSensitivity.factors[1].lowNpv > reportSensitivity.baseNpv
+  && reportSensitivity.factors[1].highNpv < reportSensitivity.baseNpv,
+  'Fixed-investment sensitivity must move NPV in the expected direction')
+assert.ok(reportSensitivity.factors[2].lowNpv > reportSensitivity.baseNpv
+  && reportSensitivity.factors[2].highNpv < reportSensitivity.baseNpv,
+  'Operating-cost sensitivity must move NPV in the expected direction')
+assert.ok(reportSensitivity.factors[3].lowNpv > reportSensitivity.baseNpv
+  && reportSensitivity.factors[3].highNpv < reportSensitivity.baseNpv,
+  'Energy-cost sensitivity must move NPV in the expected direction')
 const lowerOperatingTax = engine.calculateIntegratedFinance({ ...taxSeparationInput, taxRate: 5 })
 const lowerWaccTaxShield = engine.calculateIntegratedFinance({ ...taxSeparationInput, waccTaxRate: 20 })
 near(lowerOperatingTax.wacc, taxBase.wacc, 1e-12, 'Operating tax must not change WACC tax shield')
@@ -1412,4 +1439,16 @@ assert.ok(advancedFinanceSource.includes('calculateComfarAssetLifecycle')
   && advancedFinanceSource.includes('Other income / loss')
   && advancedFinanceSource.includes('depreciationValues'),
   'The integrated finance panel must use COMFAR depreciation and asset sale results instead of the legacy two-method schedule when register assets are supplied')
+const reportWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+const reportVisualsSource = await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx', import.meta.url), 'utf8')
+assert.ok(reportWizardSource.includes('ProjectReportVisuals')
+  && reportWizardSource.includes('onSensitivity={setReportSensitivity}')
+  && reportWizardSource.includes("display:step==='cashflow'?'block':'none'"),
+  'Project reports must receive live integrated sensitivity analysis even when the report tab is opened directly')
+assert.ok(reportVisualsSource.includes('Sensitivity Analysis Chart')
+  && reportVisualsSource.includes('Break-Even Chart')
+  && reportVisualsSource.includes('General Project Specification')
+  && reportVisualsSource.includes('24,675.80')
+  && reportVisualsSource.includes('12.15'),
+  'Project report must include sensitivity, break-even and source-backed OPEX specification outputs with conflicts preserved')
 console.log('PASS: industry-independent project foundation schema, blank defaults, validation and wizard persistence')
