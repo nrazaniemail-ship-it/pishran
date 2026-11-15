@@ -253,10 +253,11 @@ export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[
     id: string, description: string, assetClass: FixedInvestmentItem['assetClass'],
     origin: FixedInvestmentItem['origin'], currencyCode: string,
     depreciationConditions: FixedInvestmentItem['depreciation'],
-    acquisitions: FixedInvestmentItem['acquisitions']
+    acquisitions: FixedInvestmentItem['acquisitions'],
+    depreciationBasis: NonNullable<FixedInvestmentItem['depreciationBasis']> = 'source-table'
   ): FixedInvestmentItem => ({
     id, description, assetClass, origin, currencyCode, costCentreId: '',
-    depreciation: depreciationConditions, acquisitions, sales: []
+    depreciation: depreciationConditions, depreciationBasis, acquisitions, sales: []
   })
   const siteTotal = 430_007.7606094665
   const buildingTotal = 2_397_422.057
@@ -288,19 +289,19 @@ export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[
     item('hrcr-machinery-foreign','ماشین‌آلات و تجهیزات ـ سهم خارجی','machinery','foreign','EUR',depreciation(10.97955,10),[
       foreignAcquisition('hrcr-machinery-foreign-1403','1403',14_508_000),
       foreignAcquisition('hrcr-machinery-foreign-1404','1404',3_627_000)
-    ]),
+    ],'source-conflict'),
     item('hrcr-machinery-local','ماشین‌آلات و تجهیزات ـ سهم داخلی','machinery','local','IRR',depreciation(10.97955,10),[
       localAcquisition('hrcr-machinery-local-1403','1403',485_000),
       localAcquisition('hrcr-machinery-local-1404','1404',485_000)
-    ]),
+    ],'source-conflict'),
     item('hrcr-infrastructure-depreciable','تأسیسات زیربنایی ـ بخش مشمول استهلاک','infrastructure','local','IRR',depreciation(12,10),[
       localAcquisition('hrcr-infrastructure-dep-1403','1403',infrastructureDep1403),
       localAcquisition('hrcr-infrastructure-dep-1404','1404',infrastructureDep1404)
-    ]),
-    item('hrcr-infrastructure-nondepreciable','تأسیسات زیربنایی ـ بخش غیرمشمول استهلاک','infrastructure','local','IRR',nonDepreciated(),[
+    ],'source-conflict'),
+    item('hrcr-infrastructure-nondepreciable','تأسیسات زیربنایی ـ سهم نیازمند طبقه‌بندی استهلاک','infrastructure','local','IRR',nonDepreciated(),[
       localAcquisition('hrcr-infrastructure-nondep-1403','1403',infrastructureNonDep1403),
       localAcquisition('hrcr-infrastructure-nondep-1404','1404',infrastructureNonDep1404)
-    ]),
+    ],'unresolved'),
     item('hrcr-vehicles','وسائط نقلیه','vehicles','local','IRR',depreciation(20,10),[
       localAcquisition('hrcr-vehicles-1403','1403',vehicles1403),
       localAcquisition('hrcr-vehicles-1404','1404',vehicles1404)
@@ -312,11 +313,11 @@ export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[
     item('hrcr-contingencies','هزینه‌های احتمالی سرمایه‌ای ـ مبنای استهلاک نیازمند تطبیق','other','local','IRR',depreciation(10,0),[
       localAcquisition('hrcr-contingencies-1403','1403',439_595.5),
       localAcquisition('hrcr-contingencies-1404','1404',439_595.5)
-    ]),
+    ],'source-conflict'),
     item('hrcr-preproduction','هزینه‌های قبل از بهره‌برداری','preproduction','local','IRR',depreciation(10,0),[
       localAcquisition('hrcr-preproduction-1403','1403',119_913.31898),
       localAcquisition('hrcr-preproduction-1404','1404',119_913.31898)
-    ])
+    ],'source-conflict')
   ]
 }
 
