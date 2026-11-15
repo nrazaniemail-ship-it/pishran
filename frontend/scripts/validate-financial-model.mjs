@@ -68,6 +68,13 @@ const hrcrDepreciationBuild = engine.buildComfarDepreciationAssetsFromFixedInves
 assert.equal(hrcrDepreciationBuild.warnings.length,0,'HRCR200 reference fixed-asset vintages must map without unsupported dates or currencies')
 const hrcrLifecycle = engine.calculateComfarAssetLifecycle(hrcrDepreciationBuild.assets,hrcrDepreciationBuild.sales,17)
 near(hrcrLifecycle.depreciation.periods[2].depreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.conditionsTableFirstYearDepreciation,0.01,'HRCR200 first production-year depreciation from detailed conditions table')
+for (const [year, expected] of reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.conditionsTableEngineByYear) {
+  const actual = hrcrLifecycle.depreciation.periods.find(period=>1403+period.period-1===year)?.depreciation
+  near(actual,expected,0.02,'HRCR200 annual seeded-register depreciation '+year)
+}
+const hrcr1414 = hrcrLifecycle.depreciation.periods.find(period=>1403+period.period-1===1414)?.depreciation ?? 0
+const comfar1414 = reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarDepreciationByYear.find(([year])=>year===1414)?.[1] ?? 0
+assert.ok(hrcr1414-comfar1414>1_000_000,'HRCR200 1414 depreciation mismatch must remain visible pending asset-level disposals and Starting at dates')
 near(reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarFirstYear-hrcrLifecycle.depreciation.periods[2].depreciation,554.2483246,0.01,'HRCR200 first-year COMFAR depreciation variance must remain visible, not be tuned away')
 assert.ok(Math.abs(hrcrLifecycle.depreciation.periods[2].depreciation-rollingAudit.depreciationReconciliation.comfarFirstYear)>500,'HRCR200 depreciation reconciliation must remain open pending asset-level Starting at/disposal data')
 near(rollingAudit.capex.fixedInvestment + rollingAudit.capex.preproductionNet,
@@ -1219,7 +1226,7 @@ assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
   && fixedInvestmentPanel.includes('Linear to scrap')
   && fixedInvestmentPanel.includes('Accelerated')
   && fixedInvestmentPanel.includes('Sum of years digits')
-  && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX') && fixedInvestmentPanel.includes('first depreciation year') && fixedInvestmentPanel.includes('Asset Depreciation Schedule Preview') && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems') && fixedInvestmentPanel.includes('asset-sale-not-at-balance-date') && fixedInvestmentPanel.includes('missing-asset-sale-exchange-rate') && fixedInvestmentPanel.includes('calculateComfarAssetLifecycle') && fixedInvestmentPanel.includes('Asset Sale Proceeds'),
+  && fixedInvestmentPanel.includes('not yet added to aggregate CAPEX') && fixedInvestmentPanel.includes('first depreciation year') && fixedInvestmentPanel.includes('Asset Depreciation Schedule Preview') && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems') && fixedInvestmentPanel.includes('asset-sale-not-at-balance-date') && fixedInvestmentPanel.includes('missing-asset-sale-exchange-rate') && fixedInvestmentPanel.includes('Annual Depreciation vs Reference Output') && fixedInvestmentPanel.includes('referenceDepreciationByYear') && fixedInvestmentPanel.includes('calculateComfarAssetLifecycle') && fixedInvestmentPanel.includes('Asset Sale Proceeds'),
   'Fixed investment foundation must capture acquisition periods, COMFAR depreciation conditions and asset disposals without double-counting CAPEX')
 const advancedFinanceSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems')
