@@ -14,11 +14,12 @@ const near = (actual, expected, tolerance, label) => {
   assert.ok(Math.abs(actual - expected) <= tolerance,
     label + ': expected ' + expected + ', got ' + actual + ', delta ' + (actual - expected))
 }
-const [engine, reference, integratedReference, workbookAudit] = await Promise.all([
+const [engine, reference, integratedReference, workbookAudit, foundation] = await Promise.all([
   loadTypeScriptModule('../src/features/steel/financialModel.ts'),
   loadTypeScriptModule('../src/features/steel/hotRollingExcelBenchmark.ts'),
   loadTypeScriptModule('../src/features/steel/integratedProjectBenchmark.ts'),
-  loadTypeScriptModule('../src/features/steel/workbookReconciliation.ts')
+  loadTypeScriptModule('../src/features/steel/workbookReconciliation.ts'),
+  loadTypeScriptModule('../src/features/projects/projectFoundation.ts')
 ])
 
 const driAudit = workbookAudit.DRI_STEELMAKING_AUDIT
@@ -924,3 +925,47 @@ assert.equal(engine.calculateExistingLoanSchedule({
   firstRepaymentDate: '2026-04-15', repaymentFrequency: 'quarterly',
   repaymentType: 'annuity', numberOfRepayments: 4,
 }).valid, false, 'Annuity and constant-principal repayments must use month-end dates')
+
+
+const blankFoundation = foundation.createBlankProjectFoundation()
+assert.equal(blankFoundation.schemaVersion, 1, 'Project foundation must be versioned')
+assert.equal(blankFoundation.currencies.localCurrencyCode, '', 'Blank template must not assume a local currency')
+assert.equal(blankFoundation.currencies.foreignCurrencies.length, 0, 'Blank template must not invent foreign currencies or exchange rates')
+assert.equal(blankFoundation.discounting.financialRatePercent, null, 'Blank template must not assume a financial discount rate')
+assert.equal(blankFoundation.taxation.rates.length, 0, 'Blank template must not assume tax rates')
+assert.equal(blankFoundation.inflation.indices.length, 0, 'Blank template must not assume inflation indices')
+assert.equal(blankFoundation.costCentres.items.length, 0, 'Blank template must not invent cost centres')
+const validFoundation = foundation.mergeProjectFoundation({
+  planning: { valuationDate: '2026-12-31' },
+  currencies: { localCurrencyCode: 'IRR', localCurrencyName: 'Iranian Rial', foreignCurrencies: [
+    { id:'usd', code:'USD', name:'US Dollar', exchangeRates:[{period:'1405',rateToLocal:1000000}] }
+  ] },
+  discounting: { method:'manual', financialRatePercent:25, economicRatePercent:12 },
+  taxation: { system:'corporate', lossCarryForward:true, lossCarryForwardYears:5, rates:[{id:'tax-1405',period:'1405',ratePercent:25}] }
+})
+assert.equal(foundation.validateProjectFoundation(validFoundation).filter(issue=>issue.severity==='error').length, 0,
+  'A complete project foundation must pass structural validation')
+const duplicateCurrencyFoundation = foundation.mergeProjectFoundation({
+  currencies: { localCurrencyCode:'IRR', localCurrencyName:'Iranian Rial', foreignCurrencies:[
+    {id:'usd-1',code:'USD',name:'US Dollar',exchangeRates:[]},
+    {id:'usd-2',code:'USD',name:'Duplicate US Dollar',exchangeRates:[]}
+  ]}
+})
+assert.ok(foundation.validateProjectFoundation(duplicateCurrencyFoundation).some(issue=>issue.code==='duplicate-currency-code'),
+  'Project foundation must reject duplicate currency codes')
+const missingCurrencyFoundation = foundation.createBlankProjectFoundation()
+assert.ok(foundation.validateProjectFoundation(missingCurrencyFoundation).some(issue=>issue.code==='missing-local-currency'),
+  'Project foundation must block calculation without a local currency')
+const foundationWizard = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+const foundationPanel = await readFile(new URL('../src/features/projects/ProjectFoundationPanel.tsx', import.meta.url), 'utf8')
+assert.ok(foundationWizard.includes('ProjectFoundationPanel')
+  && foundationWizard.includes('foundation:mergeProjectFoundation(v.foundation)')
+  && foundationWizard.includes('foundation:createBlankProjectFoundation()'),
+  'Project foundation must be integrated into the saved project model with legacy-safe migration')
+assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
+  && foundationPanel.includes('Cost Centres')
+  && foundationPanel.includes('Inflation & Price Indices')
+  && foundationPanel.includes('Discounting & Taxation')
+  && foundationPanel.includes('No exchange rate, inflation, tax or discount rate is assumed'),
+  'Common project foundation form must cover the base schedules without inventing unknown assumptions')
+console.log('PASS: industry-independent project foundation schema, blank defaults, validation and wizard persistence')
