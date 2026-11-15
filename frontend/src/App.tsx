@@ -74,7 +74,10 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<FeasibilityProject | null>(null)
   const [activePlantType, setActivePlantType] = useState<'dri'|'steelmaking'>('dri')
   const [storageInfo, setStorageInfo] = useState({ backend: 'در حال بررسی', items: 0 })
-  const [ready, setReady] = useState(false)\n  const [calculatorOpen, setCalculatorOpen] = useState(false)\n  const [calculatorExpression, setCalculatorExpression] = useState('')\n  const [calculatorError, setCalculatorError] = useState('')
+  const [ready, setReady] = useState(false)
+  const [calculatorOpen, setCalculatorOpen] = useState(false)
+  const [calculatorExpression, setCalculatorExpression] = useState('')
+  const [calculatorError, setCalculatorError] = useState('')
   const isEn = settings.language === 'en'
   const toggleLanguage = () => setSettings(current => ({ ...current, language: current.language === 'fa' ? 'en' : 'fa' }))
 
