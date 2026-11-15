@@ -146,6 +146,8 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       <div className="fw-validation"><span>{t('اختلاف هزینه‌های قبل از بهره‌برداری','Pre-production Reconciliation Difference')}</span><b>{capexReconciliation.preproductionDifference.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
       <div className="fw-validation"><span>{t('اختلاف تطبیق','Reconciliation Difference')}</span><b>{capexReconciliation.difference.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
       <div className="fw-validation"><span>{t('وضعیت تطبیق','Reconciliation Status')}</span><b>{capexReconciliation.status==='matched'?t('منطبق','Matched'):capexReconciliation.status==='not-entered'?t('ثبت نشده','Not entered'):t('نیازمند تطبیق','Unreconciled')}</b></div>
+      <div className="fw-validation"><span>{t('تأیید زمان‌بندی تحصیل دارایی‌های ثابت','Fixed Asset Acquisition Timing')}</span><b>{depreciationBuild.investmentScheduleVerified?t('تأییدشده','Verified'):t('موقت / نیازمند تأیید','Provisional / Requires confirmation')}</b></div>
+      <div className="fw-validation"><span>{t('تأیید زمان‌بندی هزینه‌های قبل از بهره‌برداری','Pre-production Timing')}</span><b>{depreciationBuild.preOperatingScheduleVerified?t('تأییدشده','Verified'):t('موقت / نیازمند تأیید','Provisional / Requires confirmation')}</b></div>
       {capexReconciliation.warnings.map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
     </div>
     <h4>{t('کنترل کامل بودن دفتر دارایی','Fixed Investment Register Validation')}</h4>
