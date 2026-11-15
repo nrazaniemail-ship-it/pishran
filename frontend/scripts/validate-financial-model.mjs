@@ -1451,4 +1451,10 @@ assert.ok(reportVisualsSource.includes('Sensitivity Analysis Chart')
   && reportVisualsSource.includes('24,675.80')
   && reportVisualsSource.includes('12.15'),
   'Project report must include sensitivity, break-even and source-backed OPEX specification outputs with conflicts preserved')
+assert.ok(foundationPanel.includes('Project Start Date')
+  && foundationPanel.includes('Project End Date')
+  && foundationPanel.includes('Fiscal Year Start Month')
+  && foundationPanel.includes('buildProjectCalendarPeriods')
+  && foundationPanel.includes('Generated Financial Calendar'),
+  'Project foundation must expose project dates, fiscal-year start month and generated-period preview')
 console.log('PASS: industry-independent project foundation schema, blank defaults, validation and wizard persistence')

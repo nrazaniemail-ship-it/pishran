@@ -1,4 +1,4 @@
-import { validateProjectFoundation, type ProjectFoundation, type ProjectCurrency, type ProjectCostCentre, type ProjectInflationIndex, type ProjectTaxRate } from './projectFoundation'
+import { buildProjectCalendarPeriods, validateProjectFoundation, type ProjectFoundation, type ProjectCurrency, type ProjectCostCentre, type ProjectInflationIndex, type ProjectTaxRate } from './projectFoundation'
 
 type Props = { value: ProjectFoundation; onChange: (value: ProjectFoundation) => void; language?: 'fa' | 'en' }
 const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
@@ -6,6 +6,11 @@ const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random
 export default function ProjectFoundationPanel({ value, onChange, language = 'fa' }: Props) {
   const en = language === 'en'
   const issues = validateProjectFoundation(value)
+  const calendarPeriods = value.planning.projectStartDate && value.planning.projectEndDate &&
+    value.planning.periodFrequency !== 'unspecified' && value.planning.fiscalYearStartMonth !== null
+    ? buildProjectCalendarPeriods(value.planning.projectStartDate, value.planning.projectEndDate,
+      value.planning.periodFrequency, value.planning.fiscalYearStartMonth)
+    : []
   const t = (fa: string, english: string) => en ? english : fa
   const issueMessages: Record<string, string> = {
     'invalid-balance-month':'ماه تاریخ تراز باید عدد صحیحی بین ۱ تا ۱۲ باشد.', 'invalid-balance-day':'روز تاریخ تراز باید عدد صحیحی بین ۱ تا ۳۱ باشد.', 'missing-period-frequency':'تناوب دوره مالی را انتخاب کنید.', 'missing-balance-month':'ماه تاریخ تراز را مشخص کنید.', 'missing-balance-day':'روز تاریخ تراز را مشخص کنید.', 'missing-day-count-basis':'مبنای شمارش روز را مشخص کنید.', 'missing-cash-flow-timing':'زمان‌بندی جریان نقدی برای تنزیل را انتخاب کنید.', 'missing-discounting-method':'روش تنزیل را انتخاب کنید.', 'missing-tax-system':'نظام مالیاتی را انتخاب کنید.', 'missing-loss-carryforward-setting':'وضعیت انتقال زیان مالیاتی را مشخص کنید.',
@@ -49,12 +54,23 @@ export default function ProjectFoundationPanel({ value, onChange, language = 'fa
     <h4>{t('۱. دوره‌بندی و تاریخ مبنا','1. Planning Periods & Balance Date')}</h4>
     <div className="fw-grid">
       <label className="fw-field"><span>{t('تناوب دوره مالی','Financial Period Frequency')}</span><select value={value.planning.periodFrequency} onChange={e => updatePlanning({ periodFrequency: e.target.value as ProjectFoundation['planning']['periodFrequency'] })}><option value="unspecified">{t('انتخاب تناوب','Select frequency')}</option><option value="annual">{t('سالانه','Annual')}</option><option value="semiannual">{t('شش‌ماهه','Semiannual')}</option><option value="quarterly">{t('فصلی','Quarterly')}</option><option value="monthly">{t('ماهانه','Monthly')}</option></select></label>
+      {input(t('تاریخ شروع پروژه','Project Start Date'), value.planning.projectStartDate, v => updatePlanning({ projectStartDate: v }), 'date')}
+      {input(t('تاریخ پایان پروژه','Project End Date'), value.planning.projectEndDate, v => updatePlanning({ projectEndDate: v }), 'date')}
+      {input(t('ماه آغاز سال مالی','Fiscal Year Start Month'), value.planning.fiscalYearStartMonth ?? '', v => updatePlanning({ fiscalYearStartMonth: v === '' ? null : Number(v) }), 'number', 1, 12)}
       <label className="fw-field"><span>{t('مبنای شمارش روز','Day-count Basis')}</span><select value={value.planning.dayCountBasis ?? ''} onChange={e => updatePlanning({ dayCountBasis: e.target.value === '' ? null : Number(e.target.value) as 360 | 365 })}><option value="">{t('انتخاب مبنا','Select basis')}</option><option value={360}>360</option><option value={365}>365</option></select></label>
       {input(t('ماه تاریخ تراز','Balance Date Month'), value.planning.balanceDateMonth ?? '', v => updatePlanning({ balanceDateMonth: v === '' ? null : Number(v) }), 'number', 1, 12)}
       {input(t('روز تاریخ تراز','Balance Date Day'), value.planning.balanceDateDay ?? '', v => updatePlanning({ balanceDateDay: v === '' ? null : Number(v) }), 'number', 1, 31)}
       {input(t('تاریخ ارزش‌گذاری','Valuation Date'), value.planning.valuationDate, v => updatePlanning({ valuationDate: v }), 'date')}
       <label className="fw-field"><span>{t('زمان‌بندی جریان نقدی برای تنزیل','Cash Flow Timing for Discounting')}</span><select value={value.planning.cashFlowTiming} onChange={e => updatePlanning({ cashFlowTiming: e.target.value as ProjectFoundation['planning']['cashFlowTiming'] })}><option value="unspecified">{t('انتخاب زمان‌بندی','Select timing')}</option><option value="period-end">{t('پایان دوره','Period-end')}</option><option value="mid-period">{t('میانه دوره','Mid-period')}</option></select></label>
     </div>
+     {calendarPeriods.length > 0 && <div className="fw-validation" style={{ marginTop: 10 }}>
+       <b>{t('تقویم مالی تولیدشده','Generated Financial Calendar')}: {calendarPeriods.length} {t('دوره','periods')}</b>
+       <p className="fw-hint">{t('دوره‌های ناقص ابتدا و انتهای پروژه جداگانه محاسبه می‌شوند.','Partial first and last project periods are calculated separately.')}</p>
+       <div className="fw-grid">{calendarPeriods.slice(0, 6).map(period => <div key={period.index} className="fw-hint">
+         {t('دوره','Period')} {period.index}: {period.startDate} تا {period.endDate} · {period.days} {t('روز','days')} {period.partial ? '· ' + t('ناقص','Partial') : ''}
+       </div>)}</div>
+       {calendarPeriods.length > 6 && <p className="fw-hint">{t('و','and')} {calendarPeriods.length - 6} {t('دوره دیگر','more periods')}</p>}
+     </div>}
 
     <h4>{t('۲. ارزها و نرخ‌های تبدیل','2. Currencies & Exchange Rates')}</h4>
     <div className="fw-grid">
