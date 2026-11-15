@@ -199,3 +199,10 @@ Technical Manual مرجع الگوریتم مالی نیست؛ اما برای �
 - وضعیت‌های `Not entered`، `Matched` و `Unreconciled` در فرم نمایش داده می‌شوند. اختلاف، نرخ ارز مفقود و موارد غیرقابل‌تطبیق هشدار دارند.
 - این کنترل عمداً دفتر دارایی را به CAPEX اضافه نمی‌کند؛ CAPEX تجمیعی همچنان منبع جریان نقدی است تا زمانی که تطبیق کامل و نگاشت دوره‌ای همه اقلام (از جمله هزینه‌های سرمایه‌ای غیرقابل‌استهلاک و هزینه‌های احتمالی) تأیید شود.
 - این گام، کنترل جمع کل است؛ تطبیق ردیف‌به‌ردیف و دوره‌به‌دوره CAPEX با نوبت‌های تحصیل و تخصیص باقی‌مانده‌های بدون طبقه‌بندی هنوز لازم است.
+
+
+### Starting Balances — Fixed Investment Items: shared schema
+- ساختار دارایی‌های موجود در مانده افتتاحیه از نوع محلی پنل توسعه/بازسازی خارج و به نوع مشترک `StartingFixedAssetBalance` در فونداسیون پروژه منتقل شد.
+- اعتبارسنجی شامل یکتایی شناسه، شرح دارایی، کنترل Gross Cost در برابر Accumulated Depreciation، Remaining Useful Life، Opportunity Value، Residual Value، Foreign Currency Component، Cost Centre و توالی تاریخ Commissioning / Depreciation Start است.
+- روش `Not depreciated` نیز برای دارایی‌های غیرمستهلک‌شونده در فرم مانده افتتاحیه قابل انتخاب است.
+- این گام فقط schema و validation را یکسان می‌کند؛ محاسبه استهلاک دارایی افتتاحیه با Gross Cost، Accumulated Depreciation و Remaining Useful Life هنوز باید با قواعد XI.H و نمونه خروجی واقعی تطبیق داده و سپس به Incremental Cash Flow متصل شود.
