@@ -259,6 +259,12 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
           issue(path + '.depreciation.ratePercent', 'depreciation-rate-length-mismatch', 'For linear depreciation, Rate and Length must be mathematically consistent.')
       }
     }
+    const saleIds = item.sales.map(sale => sale.id)
+    if (new Set(saleIds).size !== saleIds.length)
+      issue(path + '.sales', 'duplicate-asset-sale-id', 'Asset sale identifiers must be unique within a fixed investment item.')
+    const soldAcquisitionIds = item.sales.map(sale => sale.acquisitionId).filter(Boolean)
+    if (new Set(soldAcquisitionIds).size !== soldAcquisitionIds.length)
+      issue(path + '.sales', 'duplicate-acquisition-disposal', 'Each acquisition vintage can be disposed only once.')
     item.sales.forEach((sale, saleIndex) => {
       const salePath = path + `.sales[${saleIndex}]`
       if (!sale.acquisitionId || !item.acquisitions.some(acquisition => acquisition.id === sale.acquisitionId))
