@@ -86,6 +86,31 @@ function SensitivityChart({ analysis, language, currency }: { analysis: OneWaySe
   </div>
 }
 
+
+function ReferenceSensitivityChart({ language }: { language:'fa'|'en' }) {
+  const shocks=[-20,-16,-12,-8,-4,0,4,8,12,16,20]
+  const series=[
+    {nameFa:'قیمت فروش',nameEn:'Selling price',values:[19.45,25.98,32.06,37.77,43.17,48.31,53.24,57.96,62.52,66.92,71.18],color:'#2f9676'},
+    {nameFa:'سرمایه‌گذاری ثابت',nameEn:'Fixed investment',values:[56.91,54.93,53.10,51.40,49.80,48.31,46.92,45.60,44.36,43.19,42.08],color:'#c28b36'},
+    {nameFa:'هزینه‌های عملیاتی',nameEn:'Operating costs',values:[64.47,61.40,58.26,55.03,51.72,48.31,44.80,41.18,37.42,33.53,29.48],color:'#547baf'}
+  ]
+  const x=(value:number)=>64+(value+20)/40*620
+  const y=(value:number)=>258-(value-15)/60*210
+  return <div>
+    <p className="fw-hint">{language==='en'?'Source workbook IRR response to ±20% one-way changes in selling price, fixed investment and operating costs.':'واکنش IRR در فایل مرجع OPEX به تغییر مستقل ±۲۰٪ قیمت فروش، سرمایه‌گذاری ثابت و هزینه‌های عملیاتی.'}</p>
+    <svg viewBox="0 0 740 300" role="img" aria-label={language==='en'?'Reference IRR sensitivity':'تحلیل حساسیت IRR مرجع'} style={{width:'100%',height:'auto',minHeight:220}}>
+      {[20,30,40,50,60,70].map(v=><g key={v}><line x1="64" x2="684" y1={y(v)} y2={y(v)} stroke="currentColor" strokeOpacity=".12"/><text x="56" y={y(v)+4} textAnchor="end" fontSize="10" fill="currentColor">{v}%</text></g>)}
+      {shocks.map(v=><text key={v} x={x(v)} y="280" textAnchor="middle" fontSize="9" fill="currentColor">{v>0?'+':''}{v}%</text>)}
+      {series.map(s=><g key={s.nameEn}><polyline points={s.values.map((v,i)=>`${x(shocks[i])},${y(v)}`).join(' ')} fill="none" stroke={s.color} strokeWidth="2.5"/>{s.values.map((v,i)=><circle key={i} cx={x(shocks[i])} cy={y(v)} r="3" fill={s.color}/>)}</g>)}
+    </svg>
+    <div className="fw-grid" style={{gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8}}>
+      {series.map(s=><div className="fw-hint" key={s.nameEn}><span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:s.color,marginInlineEnd:6}}/>{language==='en'?s.nameEn:s.nameFa}</div>)}
+    </div>
+    <p className="fw-hint">{language==='en'?'Energy tariff sensitivity is a separate workbook case: a −80% to +80% energy-cost change moves IRR from 47.65% to 46.01%, with 46.83% at the base case.':'حساسیت نرخ انرژی در شیت جداگانه بررسی شده است: تغییر هزینه انرژی از ۸۰٪ کاهش تا ۸۰٪ افزایش، IRR را از ۴۷٫۶۵٪ به ۴۶٫۰۱٪ می‌رساند؛ مقدار پایه این شیت ۴۶٫۸۳٪ است.'}</p>
+    <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{language==='en'?'Energy cost change':'تغییر هزینه انرژی'}</th><th>IRR</th></tr></thead><tbody>{[-80,-60,-40,-20,0,20,40,60,80].map((v,i)=><tr key={v}><td>{v>0?'+':''}{v}%</td><td>{[47.65,47.45,47.24,47.04,46.83,46.63,46.42,46.21,46.01][i].toFixed(2)}%</td></tr>)}</tbody></table></div>
+  </div>
+}
+
 function BreakEvenChart({ capacity, price, variable, fixed, breakEven, currency, language }: { capacity:number; price:number; variable:number; fixed:number; breakEven:number; currency:string; language:'fa'|'en' }) {
   const valid = capacity > 0 && price >= 0 && variable >= 0 && fixed >= 0
   if (!valid) return <p className="fw-hint">{t('برای ترسیم نمودار، ظرفیت، قیمت فروش و هزینه‌ها را تکمیل کنید.','Enter capacity, selling price and costs to draw the chart.',language)}</p>
@@ -143,9 +168,12 @@ export default function ProjectReportVisuals(props: Props) {
     <div className="fw-card">
       <h4>{t('نمودار تحلیل حساسیت','Sensitivity Analysis Chart',language)}</h4>
       <SensitivityChart analysis={props.sensitivity} language={language} currency={project.currency}/>
+      {isHotRollingCoil&&<div className="fw-card"><h4>{t('نمودار حساسیت مرجع OPEX','OPEX Reference Sensitivity Charts',language)}</h4><ReferenceSensitivityChart language={language}/></div>}
     </div>
     <div className="fw-card">
       <h4>{t('نمودار نقطه سربه‌سر','Break-Even Chart',language)}</h4>
+      {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ مقادیر مستقل از مفروضات جاری نگهداری می‌شوند.','Reconstructed from the OPEX “Break-even Analysis” sheet; these source values remain separate from current model assumptions.',language)}</p><BreakEvenChart capacity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language}/></>}
+      <h4>{t('نقطه سربه‌سر بر اساس مفروضات جاری پروژه','Break-even Based on Current Project Assumptions',language)}</h4>
       <BreakEvenChart capacity={props.capacity} price={props.sellingPrice} variable={props.variableCostPerUnit} fixed={props.fixedAnnualCost} breakEven={props.breakEvenQuantity} currency={project.currency} language={language}/>
     </div>
     <div className="fw-card">
