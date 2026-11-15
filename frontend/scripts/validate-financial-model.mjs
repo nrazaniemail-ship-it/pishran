@@ -1138,8 +1138,9 @@ assert.equal(sameYearAfterStart,3,'An acquisition after Starting at in the same 
 const registerAsset = {
   ...validAsset,
   id:'register-asset',
+  depreciationBasis:'source-table',
   depreciation:{method:'linear-scrap',startingAt:'1405-06-01',ratePercent:10,lengthYears:10,lengthMonths:0,firstDepreciationMonths:6,scrapPercent:10},
-  acquisitions:[{id:'register-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'IRR',exchangeRateToLocal:null}],
+  acquisitions:[{id:'register-acq',period:'1405-01-01',quantity:2,unitPrice:100,currencyCode:'IRR',exchangeRateToLocal:null,allocationBasis:'source-period'}],
   sales:[]
 }
 const registerBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([registerAsset],1405,12)
@@ -1151,6 +1152,21 @@ assert.equal(quarterlyRegisterBuild.assets.length,0,'The annual depreciation eng
 assert.ok(quarterlyRegisterBuild.warnings.some(warning=>warning.includes('سالانه')),'Non-annual depreciation preview must explain the unsupported period frequency')
 assert.equal(engine.resolveComfarDepreciationStartPeriod(registerBuild.assets[0].acquisitionPeriod,registerBuild.assets[0].startingAtPeriod,registerBuild.assets[0].acquisitionDate,registerBuild.assets[0].startingAtDate),1,'Full acquisition date before Starting at must retain same-year depreciation')
 near(registerBuild.assets[0].originalValue,200,1e-9,'Fixed-asset acquisition amount must be converted to local currency')
+assert.equal(registerBuild.investmentSchedule[0],200,'Confirmed asset acquisitions must create a periodised investment cash-flow schedule')
+assert.equal(registerBuild.investmentScheduleVerified,true,'Source-supported acquisition periods must verify register-based CAPEX timing')
+const estimatedRegisterBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([{
+  ...registerAsset,acquisitions:registerAsset.acquisitions.map(row=>({...row,allocationBasis:'proportional-estimate'}))
+}],1405,12,'annual',validFoundation)
+assert.equal(estimatedRegisterBuild.investmentScheduleVerified,false,'Estimated acquisition timing must not be treated as a verified cash-flow schedule')
+assert.ok(estimatedRegisterBuild.warnings.some(warning=>warning.includes('proportional estimate')),'Estimated acquisition timing must be disclosed')
+const preproductionRegisterItem={...registerAsset,id:'preproduction-register',assetClass:'preproduction',acquisitions:[{id:'preproduction-acq',period:'1405',quantity:1,unitPrice:50,currencyCode:'IRR',exchangeRateToLocal:null,allocationBasis:'proportional-estimate'}]}
+const preproductionBridge=engine.reconcileFixedInvestmentRegister([registerAsset,preproductionRegisterItem],250,50)
+near(preproductionBridge.registerTotal,200,1e-9,'Pre-production expenditures must not be included in fixed asset CAPEX total')
+near(preproductionBridge.preproductionTotal,50,1e-9,'Pre-production expenditure must be reconciled separately')
+assert.equal(preproductionBridge.status,'matched','Fixed assets and pre-production expenditures must reconcile to separate CAPEX targets')
+const preproductionSchedule=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([registerAsset,preproductionRegisterItem],1405,12)
+near(preproductionSchedule.investmentSchedule[0],200,1e-9,'Pre-production costs must not be double-counted in fixed asset investment cash-flow schedule')
+
 const landRegisterAsset = {
   ...registerAsset,id:'land-register',assetClass:'land',
   depreciation:{method:'none',startingAt:'',ratePercent:null,lengthYears:null,lengthMonths:0,firstDepreciationMonths:12,scrapPercent:100},
