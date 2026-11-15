@@ -681,7 +681,7 @@ assert.ok(expansionPanelSource.includes('Starting Balances')
   && expansionPanelSource.includes('Work in progress')
   && expansionPanelSource.includes('Finished Product Inventory'),
   'Expansion/rehabilitation English UI must use COMFAR Reference Manual terminology')
-assert.ok(expansionPanelSource.includes('Long-Term Finance')
+assert.ok(expansionPanelSource.includes('Long-Term Debt and Equity Capital')
   && expansionPanelSource.includes('Opportunity Value'),
   'Existing fixed assets and long-term finance must use consistent COMFAR vocabulary')
 assert.ok(expansionPanelSource.includes('calculateIncrementalEnterpriseAnalysis')
