@@ -20,12 +20,15 @@ The original binary files are retained under `/Pishran-References/HRCR200/` in t
 ## Reconciliation cautions
 
 Do not silently combine conflicting source assumptions:
-- Financing: user's current requested case is 20% equity / 80% debt; workbook and COMFAR output show 70% / 30%.
-- Tax: current requested baseline is 25%; COMFAR output uses 5%.
-- Interest: general OPEX assumptions show 23%; loan repayment schedule shows 26%.
-- Debt service: source schedule has 20 instalments over five years; annual model aggregation is not an exact quarterly reconciliation.
+- Financing: user's requested case is 20% equity / 80% debt. The workbook's descriptive labels mention 80/20, but the periodised amounts and COMFAR report indicate about 70% equity / 30% debt during construction; the workbook's annual funding summary and working-capital funding labels also conflict.
+- Tax: workbook baseline is 25%; COMFAR summary shows an effective burden around 5% in the first/reference years and 25% in the last year. Annual tax conditions/allowances need inspection.
+- Interest: general OPEX assumptions show 23%; detailed repayment schedule shows 26% nominal with quarterly instalments. Its periodic effective rates must be modelled rather than approximated as a simple annual 26%.
+- Debt service: source schedule has 20 quarterly annuity instalments over five years; annual model aggregation is not an exact quarterly reconciliation.
 - Capitalised interest is reported separately and must not be added again to fixed CAPEX.
+- CAPEX infrastructure total (1,707,981.40) differs from the OPEX depreciation base (1,423,564.00) by 284,417.40 and needs asset-level reconciliation.
 - Marketing inputs refer to historical years 1399 and 1401 and require updating before an investment decision.
+
+See [the workbook-to-model mapping and reconciliation notes](./source-map.md) for sheet-level mappings, COMFAR output anchors, and unresolved source conflicts.
 
 ## Reference values currently encoded in the app
 
