@@ -24,4 +24,17 @@ assert.ok(directory.validateFinancialMethodParameters('depreciation.straight-lin
 }).length >= 3, 'Invalid depreciation parameters must fail closed')
 assert.ok(directory.validateFinancialMethodParameters('valuation.mirr', { financeRate: 25 }).some(issue => issue.parameter === 'reinvestmentRate'))
 assert.ok(directory.validateFinancialMethodParameters('missing.method', {}).some(issue => issue.code === 'unknown-method'))
+
+const financePanel = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+assert.ok(financePanel.includes("listFinancialMethods('financing')")
+  && financePanel.includes("'financing.equal-principal': 'equal-principal'")
+  && financePanel.includes("'financing.annuity': 'annuity'")
+  && financePanel.includes("'financing.bullet': 'bullet'")
+  && financePanel.includes('m.definition.nameFa')
+  && financePanel.includes('m.definition.nameEn')
+  && financePanel.includes('definition.formula')
+  && financePanel.includes('definition.validity')
+  && financePanel.includes('definition.source')
+  && financePanel.includes('definition.benchmarkStatus'),
+  'Loan repayment selector must be sourced from the financing method directory and expose its method evidence')
 console.log('PASS: extensible financial method directory metadata, domain coverage and parameter validation')
