@@ -758,7 +758,7 @@ export function calculatePeriodicComfarAssetLifecycle(
     warnings.push('Periodic depreciation requires valid contiguous project periods with inclusive day counts.')
     return empty()
   }
-  if (new Set(assets.map(asset=>asset.id)).size!==assets.length || new Set(sales.map(sale=>sale.id)).size!==sales.length) {
+  if (new Set(assets.map(asset=>asset.id)).size!==assets.length || new Set(sales.map(sale=>sale.id)).size!==sales.length || new Set(sales.map(sale=>sale.assetId)).size!==sales.length) {
     warnings.push('Periodic depreciation asset and sale identifiers must be unique.')
     return empty()
   }
@@ -808,7 +808,7 @@ export function calculatePeriodicComfarAssetLifecycle(
     const depreciableBase=Math.max(0,asset.initialBookValue-salvageValue)
     const sale=sales.find(row=>row.assetId===asset.id)
     const saleDate=sale?parseIsoDateUtc(sale.saleDate):null
-    if(sale&&(!saleDate||saleDate.getTime()<acquisitionDate.getTime()||
+    if(sale&&(!saleDate||saleDate.getTime()<acquisitionDate.getTime()||!['book-value','self-defined'].includes(sale.priceMode)||
       (sale.priceMode==='self-defined'&&(!validFinite(sale.selfDefinedPrice)||sale.selfDefinedPrice!<0||
        !validFinite(sale.exchangeRateToLocal)||sale.exchangeRateToLocal<=0)))) {
       warnings.push(asset.name+': periodic disposal date or proceeds are invalid.')
