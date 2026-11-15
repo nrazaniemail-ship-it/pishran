@@ -130,6 +130,7 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   </div>)}
   <button className="secondary-button" onClick={()=>setState(s=>({...s,finishedProducts:[...s.finishedProducts,{id:'finished-'+Date.now(),productName:'',quantity:0,unitPrice:0,foreignSharePercent:0}]}))}><Plus size={14}/>{t('افزودن محصول نهایی','Add Finished Product')}</button>
   <div className="fw-result">{t('ارزش موجودی محصول نهایی','Finished Product Inventory Value')}: <b>{fmt(finished)} {currency}</b> · {t('ارزش کالای در جریان ساخت','Work in Progress Value')}: <b>{fmt(wipTotal)} {currency}</b></div>
+  <div className="fw-grid">
    <label className="fw-field"><span>{t('دوره تسویه حساب‌های دریافتنی محلی (روز)','Local Accounts Receivable Liquidation Period (Days)')}</span><input type="number" min="0" value={state.opening.receivableDaysLocal} onChange={e=>updateOpening('receivableDaysLocal',Number(e.target.value))}/></label>
    <label className="fw-field"><span>{t('دوره تسویه حساب‌های دریافتنی ارزی (روز)','Foreign Accounts Receivable Liquidation Period (Days)')}</span><input type="number" min="0" value={state.opening.receivableDaysForeign} onChange={e=>updateOpening('receivableDaysForeign',Number(e.target.value))}/></label>
    <label className="fw-field"><span>{t('دوره پرداخت حساب‌های پرداختنی محلی (روز)','Local Accounts Payable Payout Period (Days)')}</span><input type="number" min="0" value={state.opening.payableDaysLocal} onChange={e=>updateOpening('payableDaysLocal',Number(e.target.value))}/></label>
