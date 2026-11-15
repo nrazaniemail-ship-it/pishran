@@ -192,6 +192,23 @@ assert.ok(Number.isFinite(integratedPeriodic.irrProject), 'Periodic project IRR 
 assert.ok(Number.isFinite(integratedPeriodic.mirrProject), 'Periodic project MIRR must use actual period dates')
 assert.ok(Number.isFinite(integratedPeriodic.npvEquity))
 assert.ok(Number.isFinite(integratedPeriodic.peakWorkingCapital))
+const periodTaxSchedule = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400], annualDepreciation: [400],
+  annualFixedInvestment: [0], annualPreOperatingCost: [0], annualMaintenanceCapex: [0],
+  annualTaxRates: [25], taxRatesByPeriod: [0, 5, 10, 25], annualEquityContributions: [0],
+  workingCapitalByPeriod: [0, 0, 0, 0], loans: [], discountRatePercent: 25
+})
+assert.deepEqual(periodTaxSchedule.rows.map(row => row.taxRatePercent), [0, 5, 10, 25],
+  'Explicit tax rates must override the annual rate by project period')
+const invalidPeriodTaxSchedule = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [100], annualVariableCost: [10], annualFixedCost: [10], annualDepreciation: [10],
+  annualFixedInvestment: [10], annualPreOperatingCost: [0], annualMaintenanceCapex: [0],
+  annualTaxRates: [25], taxRatesByPeriod: [25, 25, 101, 25], annualEquityContributions: [0],
+  workingCapitalByPeriod: [0, 0, 0, 0], loans: []
+})
+assert.equal(invalidPeriodTaxSchedule.valid, false, 'Out-of-range period tax rates must fail closed')
 const invalidIntegratedPeriodic = engine.calculateIntegratedPeriodicFinance({
   periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
   annualRevenue: [100], annualVariableCost: [10], annualFixedCost: [10], annualDepreciation: [10],
