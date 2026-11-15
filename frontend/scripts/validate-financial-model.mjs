@@ -43,6 +43,37 @@ assert.ok(fractionalLifeIssues.some(issue => issue.code === 'invalid-starting-as
   'Depreciation life in years must be an integer')
 console.log('PASS: raw foundation rejects impossible calendar dates and fractional asset useful lives')
 
+const blankCalendarFoundation = foundation.createBlankProjectFoundation()
+assert.equal(blankCalendarFoundation.planning.projectStartDate, '')
+assert.equal(blankCalendarFoundation.planning.projectEndDate, '')
+const validCalendarFoundation = foundation.mergeProjectFoundation({
+  planning: { ...blankCalendarFoundation.planning, projectStartDate: '2026-10-15', projectEndDate: '2027-02-10', fiscalYearStartMonth: 4, periodFrequency: 'monthly' },
+  currencies: { ...blankCalendarFoundation.currencies, localCurrencyCode: 'USD', localCurrencyName: 'US dollar' }
+})
+assert.equal(foundation.validateProjectFoundation(validCalendarFoundation).filter(issue => issue.severity === 'error').length, 0,
+  'Valid project calendar dates and fiscal-year start month must pass foundation validation')
+for (const invalidDate of ['2026-02-29', '2026-13-01', '2026-04-31']) {
+  const invalid = foundation.mergeProjectFoundation({ planning: { ...blankCalendarFoundation.planning, projectStartDate: invalidDate } })
+  assert.ok(foundation.validateProjectFoundation(invalid).some(issue => issue.code === 'invalid-project-start-date'),
+    'Invalid project start date must be rejected: ' + invalidDate)
+}
+const monthlyPeriods = foundation.buildProjectCalendarPeriods('2026-10-15', '2027-02-10', 'monthly', 4)
+assert.deepEqual(monthlyPeriods.map(period => [period.startDate, period.endDate, period.days, period.partial]), [
+  ['2026-10-15', '2026-10-31', 17, true],
+  ['2026-11-01', '2026-11-30', 30, false],
+  ['2026-12-01', '2026-12-31', 31, false],
+  ['2027-01-01', '2027-01-31', 31, false],
+  ['2027-02-01', '2027-02-10', 10, true],
+], 'Monthly periods must preserve mid-month project start and partial first/last periods')
+const quarterlyPeriods = foundation.buildProjectCalendarPeriods('2026-10-15', '2027-02-10', 'quarterly', 4)
+assert.deepEqual(quarterlyPeriods.map(period => [period.startDate, period.endDate, period.days, period.partial]), [
+  ['2026-10-15', '2026-12-31', 78, true],
+  ['2027-01-01', '2027-02-10', 41, true],
+], 'Quarterly periods must align to the fiscal-year start month')
+assert.equal(foundation.buildProjectCalendarPeriods('2027-02-10', '2026-10-15', 'monthly', 1).length, 0,
+  'A reversed project date range must not produce periods')
+console.log('PASS: project calendar validates dates and generates fiscal monthly/quarterly periods with partial periods')
+
 const driAudit = workbookAudit.DRI_STEELMAKING_AUDIT
 near(driAudit.capexCategories.reduce((sum,row)=>sum+row.amount,0),
   driAudit.capex.fixedInvestment, 0.01, 'DRI CAPEX category roll-up')
