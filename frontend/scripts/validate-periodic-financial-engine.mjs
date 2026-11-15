@@ -219,6 +219,7 @@ assert.equal(invalidIntegratedPeriodic.valid, false, 'Invalid period tax-rate ma
 
 const advancedFinanceSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 const feasibilityWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+const projectReportSource = await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx', import.meta.url), 'utf8')
 assert.ok(advancedFinanceSource.includes('calculateIntegratedPeriodicFinance')
   && advancedFinanceSource.includes('periodicFinanceResult')
   && advancedFinanceSource.includes('periodDrawdowns')
@@ -231,4 +232,7 @@ assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
   && feasibilityWizardSource.includes('projectPeriods={projectCalendarPeriods}')
   && feasibilityWizardSource.includes('cashFlowTiming={m.foundation.planning.cashFlowTiming}'),
   'Project calendar dates and discount timing must flow from the project foundation into the periodic finance engine')
+assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
+  && projectReportSource.includes('periodicResult.rows.map'),
+  'Project report must include the period-level financial schedule and key output metrics')
 console.log('PASS: integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
