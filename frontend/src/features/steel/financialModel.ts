@@ -355,6 +355,7 @@ export type IntegratedLoanYear = {
   capitalizedInterest: number
   principal: number
   closingBalance: number
+  accruedInterestBalance?: number
 }
 
 export type IntegratedFinanceYear = {
@@ -856,6 +857,7 @@ export type ExistingLoanScheduleInput = {
   repaymentFrequency: ExistingLoanRepaymentFrequency
   repaymentType: ExistingLoanRepaymentType
   numberOfRepayments: number
+  interestPaymentMonth?: number
   capitalizeGraceInterest?: boolean
   profileRepayments?: { date: string; principal: number }[]
 }
@@ -912,23 +914,97 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
     closingBalance: Number.NaN, rows: [],
   })
   const start = parseIsoDate(input.startDate)
-  const first = parseIsoDate(input.firstRepaymentDate)
-  if (!start || !first) return invalid('A valid opening date and first repayment date are required.')
-  if (first <= start) return invalid('The first repayment date must be after the opening date.')
+  if (!start) return invalid('A valid opening date is required.')
+  const profile = input.repaymentType === 'profile'
+  const first = profile ? null : parseIsoDate(input.firstRepaymentDate)
+  if (!profile && !first) return invalid('A valid first repayment date is required.')
+  if (first && first <= start) return invalid('The first repayment date must be after the opening date.')
   if (!Number.isFinite(input.openingBalance) || input.openingBalance < 0 ||
       !Number.isFinite(input.openingAccruedInterest ?? 0) || (input.openingAccruedInterest ?? 0) < 0 ||
       !Number.isFinite(input.annualInterestRatePercent) || input.annualInterestRatePercent < 0)
     return invalid('Opening balance and annual interest rate must be non-negative finite values.')
-  if (!Number.isInteger(input.numberOfRepayments) || input.numberOfRepayments < 1 || input.numberOfRepayments > 1200)
+  if (!profile && (!Number.isInteger(input.numberOfRepayments) || input.numberOfRepayments < 1 || input.numberOfRepayments > 1200))
     return invalid('Number of repayments must be an integer between 1 and 1200.')
-  const intervalMonths = loanIntervalMonths[input.repaymentFrequency]
-  if (!intervalMonths) return invalid('Unsupported repayment frequency.')
   const annualRate = input.annualInterestRatePercent / 100
-  const periodicRate = annualRate * intervalMonths / 12
-  const graceMonths = monthsBetween30Day(start, first)
+  const intervalMonths = loanIntervalMonths[input.repaymentFrequency]
+  if (!profile && !intervalMonths) return invalid('Unsupported repayment frequency.')
+  let balance = input.openingBalance
+  const rows: ExistingLoanScheduleRow[] = []
+
+  if (profile) {
+    const repayments = input.profileRepayments
+    if (!repayments?.length || repayments.some(item =>
+      !parseIsoDate(item.date) || !Number.isFinite(item.principal) || item.principal < 0))
+      return invalid('Profile loans require dated, non-negative principal repayments.')
+    if (repayments.some((item, index) => index > 0 && item.date <= repayments[index - 1].date))
+      return invalid('Profile repayment dates must be strictly increasing.')
+    if (repayments.some(item => parseIsoDate(item.date)! <= start))
+      return invalid('Profile repayment dates must be after the opening date.')
+    const interestMonth = input.interestPaymentMonth
+    if (!Number.isInteger(interestMonth) || (interestMonth as number) < 1 || (interestMonth as number) > 12)
+      return invalid('Profile loans require a valid Month Interest Paid (1–12).')
+    const lastRepaymentDate = repayments[repayments.length - 1].date
+    const events = new Map<string, { principal: number; interestPayment: boolean }>()
+    repayments.forEach(item => {
+      const event = events.get(item.date) ?? { principal: 0, interestPayment: false }
+      event.principal += item.principal
+      events.set(item.date, event)
+    })
+    const lastDate = parseIsoDate(lastRepaymentDate)!
+    for (let year = start.getUTCFullYear(); year <= lastDate.getUTCFullYear(); year += 1) {
+      const date = new Date(Date.UTC(year, (interestMonth as number), 0))
+      const dateString = date.toISOString().slice(0, 10)
+      if (date > start && date <= lastDate) {
+        const event = events.get(dateString) ?? { principal: 0, interestPayment: false }
+        event.interestPayment = true
+        events.set(dateString, event)
+      }
+    }
+    const sortedEvents = [...events.entries()].sort(([a], [b]) => a.localeCompare(b))
+    const finalEventDate = sortedEvents[sortedEvents.length - 1]?.[0]
+    let previousDate = start
+    let accruedInterest = input.openingAccruedInterest ?? 0
+    let totalInterest = 0
+    let totalPrincipal = 0
+    for (const [dateString, event] of sortedEvents) {
+      const date = parseIsoDate(dateString)!
+      const openingBalance = balance
+      const interval = monthsBetween30Day(previousDate, date)
+      accruedInterest += balance * annualRate * interval / 12
+      let interestPayable = 0
+      if (event.interestPayment) {
+        interestPayable = accruedInterest
+        accruedInterest = 0
+      }
+      if (event.principal > balance + 1e-7)
+        return invalid('Profile principal repayments exceed the outstanding loan balance.')
+      const principal = Math.min(balance, event.principal)
+      balance = Math.max(0, balance - principal)
+      if (balance <= 1e-7 && accruedInterest > 0) {
+        interestPayable += accruedInterest
+        accruedInterest = 0
+      }
+      totalInterest += interestPayable
+      totalPrincipal += principal
+      rows.push({
+        date: dateString, openingBalance, capitalizedInterest: 0,
+        interestPayable, principalRepayment: principal,
+        totalDebtService: principal + interestPayable, closingBalance: balance,
+        accruedInterestBalance: accruedInterest,
+      })
+      previousDate = date
+    }
+    totalInterest += accruedInterest
+    return {
+      valid: true, periodicRate: Number.NaN, regularPayment: 0,
+      totalInterest, totalPrincipal, closingBalance: balance, rows,
+    }
+  }
+
+  const firstDate = first!
+  const graceMonths = monthsBetween30Day(start, firstDate)
   if (!(graceMonths > 0)) return invalid('The opening grace interval must be positive.')
   const graceInterest = input.openingBalance * annualRate * graceMonths / 12
-  let balance = input.openingBalance
   let capitalizedGraceInterest = 0
   let firstGraceInterestPayable = graceInterest
   let firstInterestPayable = graceInterest + (input.openingAccruedInterest ?? 0)
@@ -938,39 +1014,22 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
     firstGraceInterestPayable = 0
     firstInterestPayable = input.openingAccruedInterest ?? 0
   }
-  const profile = input.repaymentType === 'profile'
-  if (profile && (!input.profileRepayments?.length ||
-      input.profileRepayments.some(item => !parseIsoDate(item.date) || !Number.isFinite(item.principal) || item.principal < 0)))
-    return invalid('Profile loans require dated, non-negative principal repayments.')
-  if (profile && input.profileRepayments!.some((item, index, rows) =>
-      index > 0 && item.date <= rows[index - 1].date))
-    return invalid('Profile repayment dates must be strictly increasing.')
-  if (profile && input.profileRepayments![0].date !== input.firstRepaymentDate)
-    return invalid('First repayment date must match the first profile repayment date.')
-  const count = profile ? input.profileRepayments!.length : input.numberOfRepayments
-  const regularPayment = profile ? 0 : periodicRate === 0
-    ? balance / count
-    : balance * periodicRate / (1 - Math.pow(1 + periodicRate, -count))
-  const rows: ExistingLoanScheduleRow[] = []
+  const periodicRate = annualRate * intervalMonths! / 12
+  const regularPayment = periodicRate === 0
+    ? balance / input.numberOfRepayments
+    : balance * periodicRate / (1 - Math.pow(1 + periodicRate, -input.numberOfRepayments))
   let previousDate = start
-  for (let index = 0; index < count; index += 1) {
-    const dateString = profile
-      ? input.profileRepayments![index].date
-      : addMonthsAtMonthEnd(first, index * intervalMonths)
+  for (let index = 0; index < input.numberOfRepayments; index += 1) {
+    const dateString = addMonthsAtMonthEnd(firstDate, index * intervalMonths!)
     const date = parseIsoDate(dateString)!
     if (date <= previousDate) return invalid('Repayment dates must be after the preceding date.')
     const interval = monthsBetween30Day(previousDate, date)
     const intervalInterest = index === 0 ? firstInterestPayable : balance * annualRate * interval / 12
     const openingBalance = balance
-    let principal = profile
-      ? input.profileRepayments![index].principal
-      : input.repaymentType === 'constant-principal'
-        ? balance / count
-        : regularPayment - intervalInterest
-    if (input.repaymentType === 'annuity' && index === 0 && !input.capitalizeGraceInterest) {
-      principal = regularPayment - firstGraceInterestPayable
-    }
-    if (index === count - 1 && !profile) principal = balance
+    let principal = input.repaymentType === 'constant-principal'
+      ? balance / (input.numberOfRepayments - index)
+      : regularPayment - (index === 0 ? firstGraceInterestPayable : intervalInterest)
+    if (index === input.numberOfRepayments - 1) principal = balance
     if (!Number.isFinite(principal) || principal < -1e-7 || principal > balance + 1e-7)
       return invalid('The selected repayment terms do not amortize the opening balance.')
     principal = Math.min(balance, Math.max(0, principal))
@@ -980,6 +1039,7 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
       date: dateString, openingBalance, capitalizedInterest,
       interestPayable: intervalInterest, principalRepayment: principal,
       totalDebtService: principal + intervalInterest, closingBalance: balance,
+      accruedInterestBalance: 0,
     })
     previousDate = date
   }
