@@ -1,4 +1,4 @@
-import type { FixedInvestmentItem, ProjectPeriodFrequency } from '../projects/projectFoundation'
+import type { FixedInvestmentItem, ProjectFoundation, ProjectPeriodFrequency } from '../projects/projectFoundation'
 
 export type CapitalStructureInput = {
   equityWeight: number
@@ -994,6 +994,7 @@ export function calculateComfarAssetLifecycle(
 
 export type FixedInvestmentDepreciationBuild = {
   assets: ComfarDepreciationAssetInput[]
+  sales: ComfarAssetSaleInput[]
   warnings: string[]
 }
 
@@ -1003,12 +1004,14 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   projectStartYear: number,
   periodCount: number,
   periodFrequency: ProjectPeriodFrequency = 'annual',
+  foundation?: ProjectFoundation,
 ): FixedInvestmentDepreciationBuild {
   const assets: ComfarDepreciationAssetInput[] = []
+  const sales: ComfarAssetSaleInput[] = []
   const warnings: string[] = []
-  if (periodFrequency !== 'annual') return { assets, warnings: ['پیش‌نمایش استهلاک فعلی فقط برای دوره‌بندی سالانه اعتبارسنجی شده است؛ برای دوره‌بندی شش‌ماهه، فصلی یا ماهانه موتور دوره‌ای جداگانه لازم است.'] }
+  if (periodFrequency !== 'annual') return { assets, sales, warnings: ['پیش‌نمایش استهلاک فعلی فقط برای دوره‌بندی سالانه اعتبارسنجی شده است؛ برای دوره‌بندی شش‌ماهه، فصلی یا ماهانه موتور دوره‌ای جداگانه لازم است.'] }
   if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
-    return { assets, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
+    return { assets, sales, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
   }
   const parsePeriod = (value: string): { year: number; date: string | undefined } | null => {
     const match = /^(\\d{3,4})(?:[-/](\\d{1,2})(?:[-/](\\d{1,2}))?)?$/.exec(value.trim())
@@ -1050,14 +1053,6 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
         warnings.push(`${item.description || item.id}: تاریخ فروش دارایی قابل تشخیص نیست؛ این نوبت از برنامه استهلاک کنار گذاشته شد.`)
         continue
       }
-      const saleWithinHorizon = relatedSales.some(sale => {
-        const sold = parsePeriod(sale.period)
-        return sold !== null && sold.year <= projectStartYear + periodCount - 1
-      })
-      if (saleWithinHorizon) {
-        warnings.push(`${item.description || item.id}: فروش دارایی در افق مدل ثبت شده است؛ تا تکمیل محاسبه استهلاک تا تاریخ فروش و سود/زیان واگذاری، این نوبت وارد برنامه استهلاک نمی‌شود.`)
-        continue
-      }
       if (acquired.year === starting.year && (!acquired.date || !starting.date)) {
         warnings.push(`${item.description || item.id}: برای تحصیل و Starting at در یک سال، تاریخ کامل هر دو لازم است؛ در نبود تاریخ کامل، شروع استهلاک به دوره بعد موکول می‌شود.`)
       }
@@ -1091,9 +1086,43 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
         acquisitionDate: acquired.date,
         startingAtDate: starting.date,
       })
+      for (const sale of relatedSales) {
+        const sold = parsePeriod(sale.period)
+        if (!sold) continue
+        const salePeriod = sold.year - projectStartYear + 1
+        if (salePeriod < acquisitionPeriod) {
+          warnings.push(`${item.description || item.id}: تاریخ فروش نمی‌تواند پیش از دوره تحصیل باشد.`)
+          continue
+        }
+        if (salePeriod > periodCount) continue
+        let exchangeRateToLocal = 1
+        if (sale.priceMode === 'self-defined') {
+          const localCode = foundation?.currencies.localCurrencyCode.trim().toUpperCase() ?? ''
+          const saleCode = sale.currencyCode.trim().toUpperCase()
+          if (saleCode && saleCode !== localCode) {
+            const currency = foundation?.currencies.foreignCurrencies.find(row => row.code.trim().toUpperCase() === saleCode)
+            const exactRate = currency?.exchangeRates.find(row => row.period === sale.period)?.rateToLocal
+            const annualRate = currency?.exchangeRates.find(row => row.period === String(sold.year))?.rateToLocal
+            const rate = exactRate ?? annualRate
+            if (!Number.isFinite(rate) || (rate ?? 0) <= 0) {
+              warnings.push(`${item.description || item.id}: نرخ تبدیل ارز فروش برای ${sale.period} تعریف نشده است.`)
+              continue
+            }
+            exchangeRateToLocal = rate!
+          }
+        }
+        sales.push({
+          id: sale.id,
+          assetId: `${item.id}:${acquisition.id}`,
+          period: salePeriod,
+          priceMode: sale.priceMode,
+          selfDefinedPrice: sale.selfDefinedPrice ?? undefined,
+          exchangeRateToLocal,
+        })
+      }
     }
   }
-  return { assets, warnings }
+  return { assets, sales, warnings }
 }
 
 export type FinancialStatementYear = {
