@@ -1412,4 +1412,10 @@ assert.ok(advancedFinanceSource.includes('calculateComfarAssetLifecycle')
   && advancedFinanceSource.includes('Other income / loss')
   && advancedFinanceSource.includes('depreciationValues'),
   'The integrated finance panel must use COMFAR depreciation and asset sale results instead of the legacy two-method schedule when register assets are supplied')
+assert.ok(foundationPanel.includes('Project Start Date')
+  && foundationPanel.includes('Project End Date')
+  && foundationPanel.includes('Fiscal Year Start Month')
+  && foundationPanel.includes('buildProjectCalendarPeriods')
+  && foundationPanel.includes('Generated Financial Calendar'),
+  'Project foundation must expose project dates, fiscal-year start month and generated-period preview')
 console.log('PASS: industry-independent project foundation schema, blank defaults, validation and wizard persistence')
