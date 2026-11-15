@@ -3,7 +3,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { calculateIncrementalEnterpriseAnalysis, calculateExistingLoanSchedule, type ExistingLoanRepaymentType, type EnterpriseScenarioPeriodInput } from '../steel/financialModel'
 
-type Asset = { id:string; name:string; grossCost:number; accumulatedDepreciation:number; remainingLife:number; opportunityValue:number; residualValue?:number; commissioningDate?:string; depreciationMethod?:'straight-line'|'declining-balance'|'none'; costCentre?:string; foreignSharePercent?:number; status:'active'|'replace'|'idle'|'sell' }
+type Asset = { id:string; name:string; grossCost:number; accumulatedDepreciation:number; remainingLife:number; opportunityValue:number; residualValue?:number; commissioningDate?:string; depreciationMethod?:'linear-zero'|'linear-scrap'|'accelerated'|'sum-of-digits'; depreciationRatePercent?:number; depreciationLengthYears?:number; salvagePercent?:number; depreciationStartDate?:string; costCentre?:string; foreignSharePercent?:number; status:'active'|'replace'|'idle'|'sell' }
 type ProductBalance = {id:string;productName:string;localValue:number;foreignValue:number}
 type EquityCapitalBalance = {id:string;partnerName:string;capitalClass:'ordinary'|'preference';origin:'local'|'foreign';paidIn:number;paidOut:number;preferredDividendPercent:number;profitExportPercent:number}
 type FinishedProductBalance = {id:string;productName:string;quantity:number;unitPrice:number;foreignSharePercent:number}
@@ -45,7 +45,11 @@ const comfarTermsEn:Record<string,string>={
  'شرح دارایی':'Fixed investment item',
  'ارزش اسقاط':'Residual / salvage value',
  'تاریخ بهره‌برداری':'Date put into operation',
- 'روش استهلاک':'Depreciation method',
+ 'روش استهلاک':'Type of Depreciation',
+ 'نرخ استهلاک سالانه (%)':'Rate (% per annum)',
+ 'مدت استهلاک (سال)':'Length (years)',
+ 'درصد ارزش اسقاط':'Scrap (% of original value)',
+ 'تاریخ شروع استهلاک':'Starting at',
  'مرکز هزینه':'Cost Centre',
  'سهم جزء ارزی (%)':'Foreign Currency Component (%)',
  'مدت سررسید (سال)':'Maturity (years)',
@@ -85,7 +89,7 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  useEffect(()=>{if(loaded)void localStore.set(key,state)},[loaded,key,state])
  const updateOpening=(field:keyof Opening,value:number)=>setState(s=>({...s,opening:{...s.opening,[field]:field==='finishedForeignShare'?Math.max(0,Math.min(100,value)):Math.max(0,value)}}))
  const updatePeriod=(scenario:'without'|'with',index:number,field:keyof EnterpriseScenarioPeriodInput,value:number)=>setState(s=>({...s,[scenario]:s[scenario].map((row,i)=>i===index?{...row,[field]:value}:row)}))
- const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی موجود',grossCost:0,accumulatedDepreciation:0,remainingLife:10,opportunityValue:0,residualValue:0,commissioningDate:'',depreciationMethod:'straight-line',costCentre:'',foreignSharePercent:0,status:'active'}]}))
+ const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی موجود',grossCost:0,accumulatedDepreciation:0,remainingLife:10,opportunityValue:0,residualValue:0,commissioningDate:'',depreciationMethod:'linear-scrap',depreciationRatePercent:10,depreciationLengthYears:10,salvagePercent:10,depreciationStartDate:'',costCentre:'',foreignSharePercent:0,status:'active'}]}))
  const addLoan=()=>setState(s=>({...s,loans:[...s.loans,{id:'loan-'+Date.now(),name:'تسهیلات موجود',openingBalance:0,annualRate:0,annualDebtService:0,maturityYears:0,graceYears:0,repaymentFrequency:'quarterly',repaymentMethod:'annuity',repaymentType:'annuity',numberOfRepayments:20,capitalizeGraceInterest:true,profileRepayments:[],interestPaymentMonth:12,nextPaymentDate:'',accruedInterest:0,fees:0}]}))
  const fixedGross=state.assets.reduce((sum,a)=>sum+a.grossCost,0)
  const fixedAccum=state.assets.reduce((sum,a)=>sum+a.accumulatedDepreciation,0)
@@ -152,7 +156,9 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
    <label className="fw-field"><span>{t('شرح دارایی','Asset Description')}</span><input value={asset.name} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,name:e.target.value}:a)}))}/></label>
    {([['grossCost','بهای تمام‌شده'],['accumulatedDepreciation','استهلاک انباشته'],['remainingLife','عمر مفید باقیمانده'],['opportunityValue','ارزش فرصت / بازار'],['residualValue','ارزش اسقاط'],['foreignSharePercent','سهم جزء ارزی (%)']] as [keyof Asset,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{t(label,comfarTermsEn[label]??label)}</span><input type="number" min="0" value={Number(asset[field]??0)} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,[field]:Number(e.target.value)}:a)}))}/></label>)}
    <label className="fw-field"><span>{t('تاریخ بهره‌برداری',comfarTermsEn['تاریخ بهره‌برداری'])}</span><input type="date" value={asset.commissioningDate??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,commissioningDate:e.target.value}:a)}))}/></label>
-   <label className="fw-field"><span>{t('روش استهلاک',comfarTermsEn['روش استهلاک'])}</span><select value={asset.depreciationMethod??'straight-line'} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,depreciationMethod:e.target.value as Asset['depreciationMethod']}:a)}))}><option value="straight-line">{t('خط مستقیم','Straight-line')}</option><option value="declining-balance">{t('مانده نزولی','Declining Balance')}</option><option value="none">{t('بدون استهلاک','No Depreciation')}</option></select></label>
+   <label className="fw-field"><span>{t('روش استهلاک',comfarTermsEn['روش استهلاک'])}</span><select value={asset.depreciationMethod??'linear-scrap'} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,depreciationMethod:e.target.value as Asset['depreciationMethod']}:a)}))}><option value="linear-zero">{t('خطی تا صفر','Linear to zero')}</option><option value="linear-scrap">{t('خطی تا ارزش اسقاط','Linear to scrap')}</option><option value="accelerated">{t('استهلاک شتاب‌یافته','Accelerated')}</option><option value="sum-of-digits">{t('مجموع سنوات','Sum of digits')}</option></select></label>
+   {([['depreciationRatePercent','نرخ استهلاک سالانه (%)'],['depreciationLengthYears','مدت استهلاک (سال)'],['salvagePercent','درصد ارزش اسقاط']] as [keyof Asset,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{t(label,comfarTermsEn[label]??label)}</span><input type="number" min="0" max={field==='salvagePercent'?100:undefined} value={Number(asset[field]??0)} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,[field]:Number(e.target.value)}:a)}))}/></label>)}
+   <label className="fw-field"><span>{t('تاریخ شروع استهلاک',comfarTermsEn['تاریخ شروع استهلاک'])}</span><input type="date" value={asset.depreciationStartDate??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,depreciationStartDate:e.target.value}:a)}))}/></label>
    <label className="fw-field"><span>{t('مرکز هزینه',comfarTermsEn['مرکز هزینه'])}</span><input value={asset.costCentre??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,costCentre:e.target.value}:a)}))}/></label>
    <label className="fw-field"><span>{t('وضعیت دارایی','Asset Status')}</span><select value={asset.status} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,status:e.target.value as Asset['status']}:a)}))}><option value="active">{t('فعال','Active')}</option><option value="replace">{t('جایگزین‌شونده','To Be Replaced')}</option><option value="idle">{t('بلااستفاده','Idle')}</option><option value="sell">{t('قابل فروش','For Sale')}</option></select></label>
    <button className="secondary-button" onClick={()=>setState(s=>({...s,assets:s.assets.filter(a=>a.id!==asset.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
