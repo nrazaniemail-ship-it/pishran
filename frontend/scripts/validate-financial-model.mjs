@@ -658,6 +658,41 @@ const unsupportedSumPartial = engine.calculateComfarAssetDepreciationSchedule([{
 }],5)
 assert.equal(unsupportedSumPartial.valid,false,'Sum of years digits partial-year schedule must fail closed until its month-overlap formula is independently benchmarked')
 
+
+const lifecycle = engine.calculateComfarAssetLifecycle([{
+  id:'sold-machine',name:'Sold machine',originalValue:1000,initialBookValue:1000,scrapPercent:10,
+  lengthYears:5,ratePercent:20,method:'linear-to-scrap',
+  acquisitionPeriod:0,startingAtPeriod:1,firstDepreciationMonths:12
+}],[
+  {id:'sale-above-book',assetId:'sold-machine',period:2,priceMode:'self-defined',selfDefinedPrice:900,exchangeRateToLocal:1}
+],5)
+assert.equal(lifecycle.valid,true,'A valid asset disposal must produce a complete lifecycle')
+near(lifecycle.depreciation.periods[1].assets[0].closingBookValue,0,1e-9,'Asset book value must be removed at the sale balance date')
+near(lifecycle.depreciation.periods[2].assets[0].depreciation,0,1e-9,'Depreciation must stop after the sale period')
+near(lifecycle.sales[0].bookValueAtSale,640,1e-9,'Sale book value must include depreciation through the sale period')
+near(lifecycle.sales[0].returnOfCapital,640,1e-9,'Book value at disposal is return of capital')
+near(lifecycle.sales[0].otherIncomeLoss,260,1e-9,'Sale proceeds above book value are Other income')
+near(lifecycle.sales[0].saleProceeds,lifecycle.sales[0].returnOfCapital+lifecycle.sales[0].otherIncomeLoss,1e-9,'Disposal cash proceeds must reconcile to return of capital plus Other income/loss')
+const lifecycleLoss = engine.calculateComfarAssetLifecycle([{
+  id:'loss-machine',name:'Loss machine',originalValue:1000,initialBookValue:1000,scrapPercent:10,
+  lengthYears:5,ratePercent:20,method:'linear-to-scrap',
+  acquisitionPeriod:0,startingAtPeriod:1,firstDepreciationMonths:12
+}],[
+  {id:'sale-below-book',assetId:'loss-machine',period:2,priceMode:'self-defined',selfDefinedPrice:500,exchangeRateToLocal:1}
+],5)
+near(lifecycleLoss.sales[0].otherIncomeLoss,-140,1e-9,'Sale proceeds below book value are Other loss')
+const lifecycleForeign = engine.calculateComfarAssetLifecycle([{
+  id:'foreign-machine',name:'Foreign machine',originalValue:1000,initialBookValue:1000,scrapPercent:10,
+  lengthYears:5,ratePercent:20,method:'linear-to-scrap',
+  acquisitionPeriod:0,startingAtPeriod:1,firstDepreciationMonths:12
+}],[
+  {id:'foreign-sale',assetId:'foreign-machine',period:2,priceMode:'self-defined',selfDefinedPrice:2,exchangeRateToLocal:300}
+],5)
+near(lifecycleForeign.sales[0].saleProceeds,600,1e-9,'Foreign sale proceeds must convert to local currency at the sale-period rate')
+assert.equal(engine.calculateComfarAssetLifecycle([],[
+  {id:'orphan-sale',assetId:'missing',period:1,priceMode:'book-value'}
+],2).valid,false,'Asset disposal must reject a sale without a linked acquisition vintage')
+
 const statements = engine.buildThreeFinancialStatements(integrated.years)
 assert.equal(statements.length, integrated.years.length, 'Three statements must cover the full model horizon')
 assert.ok(statements.every(row => row.balanceSheet.reconciled), 'Balance sheet must reconcile without a plug for the integrated reference case')
