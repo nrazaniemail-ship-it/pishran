@@ -9,10 +9,9 @@ type Unit = 'dri' | 'steelmaking'
 
 
 
-const money = (value: number) => new Intl.NumberFormat('en-GB', { maximumFractionDigits: 2 }).format(value)
-
 export default function IntegratedSteelComplexWorkspace({ project, onBack, language='fa' }: { project: FeasibilityProject; onBack: () => void; language?: 'fa'|'en' }) {
   const en=language==='en'
+  const money=(value:number)=>new Intl.NumberFormat(en?'en-GB':'fa-IR',{maximumFractionDigits:2}).format(value)
   const t=(fa:string,english:string)=>en?english:fa
   const [unit, setUnit] = useState<Unit>('dri')
   return <section className="projects-page" dir={en?"ltr":"rtl"}>
