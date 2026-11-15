@@ -1373,6 +1373,12 @@ assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
   && foundationPanel.includes('Add Period Exchange Rate')
   && foundationPanel.includes('Add Period Inflation Rate'),
   'Common project foundation form must cover the base schedules without inventing unknown assumptions')
+assert.ok(foundationPanel.includes('Project Start Date')
+  && foundationPanel.includes('Project End Date')
+  && foundationPanel.includes('Fiscal Year Start Month')
+  && foundationPanel.includes('buildProjectCalendarPeriods')
+  && foundationPanel.includes('Generated Financial Calendar'),
+  'Project foundation must expose start/end dates, fiscal-year start month and a generated-period preview')
 const fixedInvestmentPanel = await readFile(new URL('../src/features/projects/FixedInvestmentPanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('FixedInvestmentPanel')
   && foundationWizard.includes('fixedInvestmentItems:hotRollingCoilProject?createHotRollingCoilFixedInvestmentItems():[]')
