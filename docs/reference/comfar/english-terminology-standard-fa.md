@@ -220,3 +220,34 @@
 - Chapter XIV: Incremental Analysis.
 - Tutorial Manual: گردش‌کار نمونه و ورود داده تا گزارش.
 - Technical Manual: نصب، پیکربندی، استقرار و الزامات فنی؛ نه مرجع اصلی تعریف محاسبات مالی.
+
+
+## فونداسیون عمومی پروژه — Project Foundation
+
+| فارسی | English term |
+|---|---|
+| دوره مالی | Financial Period |
+| تناوب دوره مالی | Financial Period Frequency |
+| سالانه | Annual |
+| شش‌ماهه | Semiannual |
+| فصلی | Quarterly |
+| ماهانه | Monthly |
+| تاریخ تراز | Balance Date |
+| تاریخ ارزش‌گذاری | Valuation Date |
+| ارز محلی | Local Currency |
+| ارز خارجی | Foreign Currency |
+| کد ارز | Currency Code |
+| نرخ تبدیل ارز | Exchange Rate |
+| نرخ تبدیل به ارز محلی | Exchange Rate to Local Currency |
+| مرکز هزینه | Cost Centre |
+| ساختار مراکز هزینه | Cost Centre Structure |
+| شاخص تورم | Inflation Index |
+| نرخ تورم | Inflation Rate |
+| تنزیل | Discounting |
+| نرخ تنزیل مالی | Financial Discount Rate |
+| نرخ تنزیل اقتصادی | Economic Discount Rate |
+| زمان‌بندی جریان نقدی | Cash Flow Timing |
+| نظام مالیاتی | Tax System |
+| انتقال زیان | Loss Carry-forward |
+| نرخ مالیات دوره‌ای | Period-specific Tax Rate |
+| مبنای شمارش روز | Day-count Basis |
