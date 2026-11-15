@@ -143,4 +143,96 @@ assert.equal(invalidDrawdownLoan.valid, false)
 assert.ok(invalidDrawdownLoan.issues.some(issue => issue.includes('after principal repayment')))
 
 
-console.log('PASS: periodic loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
+
+const integratedPeriodic = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter,
+  fiscalYearStartMonth: 1,
+  dayCountBasis: 365,
+  cashFlowTiming: 'period-end',
+  annualRevenue: [4800],
+  annualVariableCost: [1600],
+  annualFixedCost: [400],
+  annualDepreciation: [400],
+  annualFixedInvestment: [3000],
+  annualPreOperatingCost: [0],
+  annualMaintenanceCapex: [0],
+  annualTaxRates: [25],
+  annualEquityContributions: [1200],
+  workingCapitalByPeriod: [0, 10, 20, 15],
+  openingWorkingCapital: 0,
+  loans: [{
+    id: 'integrated-periodic-loan',
+    input: {
+      annualRatePercent: 12,
+      drawdowns: [1800, 0, 0, 0],
+      repaymentMethod: 'equal-principal',
+      repaymentStartPeriod: 3,
+      gracePeriods: 0,
+      termPeriods: 2,
+      capitalizeInterest: true,
+    }
+  }],
+  discountRatePercent: 25,
+  mirrFinanceRatePercent: 10,
+  mirrReinvestmentRatePercent: 12,
+  salvageValue: 1500,
+})
+assert.equal(integratedPeriodic.valid, true, 'Integrated period model must accept valid quarterly inputs')
+assert.equal(integratedPeriodic.rows.length, 4)
+assert.equal(integratedPeriodic.rows[1].changeInWorkingCapital, 10)
+assert.equal(integratedPeriodic.rows[2].changeInWorkingCapital, 10)
+assert.equal(integratedPeriodic.rows[3].changeInWorkingCapital, -5)
+assert.ok(integratedPeriodic.rows[0].capitalizedInterest > 0, 'Grace-period interest must be capitalized')
+assert.ok(integratedPeriodic.rows[2].principal > 0 && integratedPeriodic.rows[3].closingWorkingCapital === 15)
+assert.ok(integratedPeriodic.rows[2].dscr !== null && Number.isFinite(integratedPeriodic.rows[2].dscr))
+assert.ok(Math.abs(integratedPeriodic.totalDebtDrawdown - 1800) < 1e-9)
+assert.ok(Math.abs(integratedPeriodic.totalEquityContribution - 1200) < 1e-9)
+assert.ok(Number.isFinite(integratedPeriodic.npvProject))
+assert.ok(Number.isFinite(integratedPeriodic.irrProject), 'Periodic project IRR must use actual period dates')
+assert.ok(Number.isFinite(integratedPeriodic.mirrProject), 'Periodic project MIRR must use actual period dates')
+assert.ok(Number.isFinite(integratedPeriodic.npvEquity))
+assert.ok(Number.isFinite(integratedPeriodic.peakWorkingCapital))
+const periodTaxSchedule = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400], annualDepreciation: [400],
+  annualFixedInvestment: [0], annualPreOperatingCost: [0], annualMaintenanceCapex: [0],
+  annualTaxRates: [25], taxRatesByPeriod: [0, 5, 10, 25], annualEquityContributions: [0],
+  workingCapitalByPeriod: [0, 0, 0, 0], loans: [], discountRatePercent: 25
+})
+assert.deepEqual(periodTaxSchedule.rows.map(row => row.taxRatePercent), [0, 5, 10, 25],
+  'Explicit tax rates must override the annual rate by project period')
+const invalidPeriodTaxSchedule = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [100], annualVariableCost: [10], annualFixedCost: [10], annualDepreciation: [10],
+  annualFixedInvestment: [10], annualPreOperatingCost: [0], annualMaintenanceCapex: [0],
+  annualTaxRates: [25], taxRatesByPeriod: [25, 25, 101, 25], annualEquityContributions: [0],
+  workingCapitalByPeriod: [0, 0, 0, 0], loans: []
+})
+assert.equal(invalidPeriodTaxSchedule.valid, false, 'Out-of-range period tax rates must fail closed')
+const invalidIntegratedPeriodic = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [100], annualVariableCost: [10], annualFixedCost: [10], annualDepreciation: [10],
+  annualFixedInvestment: [10], annualPreOperatingCost: [0], annualMaintenanceCapex: [0],
+  annualTaxRates: [101], annualEquityContributions: [0], workingCapitalByPeriod: [0, 0, 0, 0], loans: []
+})
+assert.equal(invalidIntegratedPeriodic.valid, false, 'Invalid period tax-rate mapping must fail closed')
+
+const advancedFinanceSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+const feasibilityWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+const projectReportSource = await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx', import.meta.url), 'utf8')
+assert.ok(advancedFinanceSource.includes('calculateIntegratedPeriodicFinance')
+  && advancedFinanceSource.includes('periodicFinanceResult')
+  && advancedFinanceSource.includes('periodDrawdowns')
+  && advancedFinanceSource.includes('periodRateConversion')
+  && advancedFinanceSource.includes('calculateOperatingCycleWorkingCapital')
+  && advancedFinanceSource.includes('taxRatesByPeriod')
+  && advancedFinanceSource.includes('updatePeriodTaxRate'),
+  'Advanced finance panel must connect period schedules, rate conventions, working capital and the integrated periodic engine')
+assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
+  && feasibilityWizardSource.includes('projectPeriods={projectCalendarPeriods}')
+  && feasibilityWizardSource.includes('cashFlowTiming={m.foundation.planning.cashFlowTiming}'),
+  'Project calendar dates and discount timing must flow from the project foundation into the periodic finance engine')
+assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
+  && projectReportSource.includes('periodicResult.rows.map'),
+  'Project report must include the period-level financial schedule and key output metrics')
+console.log('PASS: integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
