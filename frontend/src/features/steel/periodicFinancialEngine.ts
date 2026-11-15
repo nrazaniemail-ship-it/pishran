@@ -308,6 +308,7 @@ export type PeriodicProjectFinanceInput = {
   annualPreOperatingCost: number[]
   annualMaintenanceCapex: number[]
   annualTaxRates: number[]
+  taxRatesByPeriod?: number[]
   annualEquityContributions: number[]
   workingCapitalByPeriod: number[]
   openingWorkingCapital?: number
@@ -473,13 +474,18 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Annual flow arrays, tax rates, working-capital balances or loan definitions are invalid.')
     return empty()
   }
+  if (input.taxRatesByPeriod && (input.taxRatesByPeriod.length !== periods.length ||
+      input.taxRatesByPeriod.some(rate => !validFinite(rate) || rate < 0 || rate > 100))) {
+    warnings.push('Period-specific tax-rate schedule must contain one rate from 0% to 100% for every project period.')
+    return empty()
+  }
   const allocated = annualSeries.map(series => allocateAnnualFlowsToPeriods(series, periods, fiscalYearStartMonth))
   if (allocated.some(series => series.length !== periods.length || series.some(value => !validFinite(value)))) {
     warnings.push('Annual model horizon does not cover every project fiscal period; annual flows cannot be allocated.')
     return empty()
   }
   const [revenue, variableCost, fixedCost, depreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution] = allocated
-  const taxRates = periods.map(period => {
+  const taxRates = input.taxRatesByPeriod ? [...input.taxRatesByPeriod] : periods.map(period => {
     const index = fiscalYearIndexForPeriod(period, periods, fiscalYearStartMonth)
     return index >= 0 ? input.annualTaxRates[index] : Number.NaN
   })
