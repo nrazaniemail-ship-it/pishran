@@ -570,7 +570,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     : calculatePeriodicMirr(projectFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
   const mirrEquity = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
     : calculatePeriodicMirr(equityFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
-  const signChanges = (flows: number[]) => flows.filter((value,index)=>value!==0 && index>0 && flows.slice(0,index).some(previous=>previous!==0 && Math.sign(previous)!==Math.sign(value))).length
+  const signChanges = (flows: number[]) => { const nonZero=flows.filter(value=>value!==0); let changes=0; for(let index=1;index<nonZero.length;index++) if(Math.sign(nonZero[index])!==Math.sign(nonZero[index-1])) changes++; return changes }
   if (signChanges(projectFlows) > 1 || signChanges(equityFlows) > 1)
     warnings.push('Non-conventional cash-flow signs may produce multiple IRR roots; the reported IRR is one numerical root only.')
   const totalDebtDrawdown = rows.reduce((sum,row)=>sum+row.debtDrawdown,0)
