@@ -22,9 +22,9 @@ const initialState=(horizon:number):State=>({baseDate:'',mode:'expansion',openin
 const fmt=(v:number)=>Number.isFinite(v)?v.toLocaleString('fa-IR',{maximumFractionDigits:2}):'—'
 const comfarTermsEn:Record<string,string>={
  'موجودی مواد اولیه ـ ارز محلی':'Raw materials — local currency',
- 'موجودی مواد اولیه ـ جزء ارز خارجی':'Raw materials — foreign currency component',
+ 'موجودی مواد اولیه ـ جزء ارز خارجی (به ارز محلی)':'Raw materials — foreign currency component (local-currency value)',
  'مواد و ملزومات ـ ارز محلی':'Supplies — local currency',
- 'مواد و ملزومات ـ جزء ارز خارجی':'Supplies — foreign currency component',
+ 'مواد و ملزومات ـ جزء ارز خارجی (به ارز محلی)':'Supplies — foreign currency component (local-currency value)',
  'کالای در جریان ساخت ـ ارز محلی':'Work in progress — local currency',
  'کالای در جریان ساخت ـ جزء ارز خارجی':'Work in progress — foreign currency component',
  'حساب‌های دریافتنی ـ ارز محلی':'Accounts receivable — local currency',
@@ -115,11 +115,11 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
    {moneyKeys.map(([field,label])=><label className="fw-field" key={field}><span>{t(label,comfarTermsEn[label]??label)}</span><input type="number" min="0" value={state.opening[field]} onChange={e=>updateOpening(field,Number(e.target.value))}/></label>)}
   </div>
   <h5>{t('کالای در جریان ساخت ـ به تفکیک محصول','Work in Progress — by Product')}</h5>
-  <p className="fw-hint">{t('برای هر محصول، جزء محلی و خارجی جداگانه ثبت می‌شود؛ این تفکیک مطابق پنجره Starting Balance در Reference Manual است.','Enter local and foreign Work in Progress separately for each product, following the Starting Balance structure in the Reference Manual.')}</p>
+  <p className="fw-hint">{t('برای هر محصول، جزء محلی و جزء منتسب به ارز خارجی جداگانه ثبت می‌شود؛ هر دو مبلغ به ارز محلی وارد می‌شوند و جزء خارجی فقط برای محاسبات اقتصادی/اثر ارز خارجی به کار می‌رود.','Enter the local component and the foreign-currency component separately for each product. Both amounts are entered in local currency; the foreign component is used for economic analysis and foreign-exchange effects, as specified in the Reference Manual.')}</p>
   {state.workInProgress.map(item=><div className="fw-grid" key={item.id}>
    <label className="fw-field"><span>{t('محصول','Product')}</span><input value={item.productName} onChange={e=>setState(s=>({...s,workInProgress:s.workInProgress.map(x=>x.id===item.id?{...x,productName:e.target.value}:x)}))}/></label>
    <label className="fw-field"><span>{t('ارزش محلی','Local Value')}</span><input type="number" min="0" value={item.localValue} onChange={e=>setState(s=>({...s,workInProgress:s.workInProgress.map(x=>x.id===item.id?{...x,localValue:Number(e.target.value)}:x)}))}/></label>
-   <label className="fw-field"><span>{t('ارزش جزء خارجی','Foreign Currency Component')}</span><input type="number" min="0" value={item.foreignValue} onChange={e=>setState(s=>({...s,workInProgress:s.workInProgress.map(x=>x.id===item.id?{...x,foreignValue:Number(e.target.value)}:x)}))}/></label>
+   <label className="fw-field"><span>{t('ارزش جزء ارزی (به ارز محلی)','Foreign Currency Component (local-currency value)')}</span><input type="number" min="0" value={item.foreignValue} onChange={e=>setState(s=>({...s,workInProgress:s.workInProgress.map(x=>x.id===item.id?{...x,foreignValue:Number(e.target.value)}:x)}))}/></label>
    <button className="secondary-button" onClick={()=>setState(s=>({...s,workInProgress:s.workInProgress.filter(x=>x.id!==item.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
   </div>)}
   <button className="secondary-button" onClick={()=>setState(s=>({...s,workInProgress:[...s.workInProgress,{id:'wip-'+Date.now(),productName:'',localValue:0,foreignValue:0}]}))}><Plus size={14}/>{t('افزودن ردیف کالای در جریان ساخت','Add Work in Progress Item')}</button>
