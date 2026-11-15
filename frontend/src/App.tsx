@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Layers3, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Calculator, X, Delete } from 'lucide-react'
+import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Layers3, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Calculator, X } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
 import { createProject, deleteProject, removeSampleProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
@@ -27,7 +27,7 @@ const modules = [
 
 
 function calculateExpression(expression: string): number {
-  const tokens = expression.replace(/×/g, '*').replace(/÷/g, '/').match(/(?:\\d+\\.?\\d*|\\.\\d+)|[()+\\-*/%]/g) ?? []
+  const tokens = expression.replace(/×/g, '*').replace(/÷/g, '/').match(/(?:\d+\.?\d*|\.\d+)|[()+\-*/%]/g) ?? []
   let index = 0
   const parsePrimary = (): number => {
     const token = tokens[index++]
