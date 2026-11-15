@@ -809,8 +809,16 @@ export function calculateComfarAssetDepreciationSchedule(
       }
     }
 
-    let rollingBookValue = asset.initialBookValue
+    let rollingBookValue = 0
     for (let period = 1; period <= count; period += 1) {
+      if (period < asset.acquisitionPeriod) {
+        perAsset.get(period)!.push({
+          id: asset.id, name: asset.name, methodApplied: null,
+          openingBookValue: 0, depreciation: 0, closingBookValue: 0,
+        })
+        continue
+      }
+      if (period === asset.acquisitionPeriod) rollingBookValue = asset.initialBookValue
       const scheduled = depreciationByPeriod.get(period)
       const openingBookValue = rollingBookValue
       const depreciation = scheduled?.amount ?? 0
