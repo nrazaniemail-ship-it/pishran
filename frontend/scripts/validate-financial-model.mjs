@@ -967,6 +967,8 @@ assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
   && foundationPanel.includes('Cost Centres')
   && foundationPanel.includes('Inflation & Price Indices')
   && foundationPanel.includes('Discounting & Taxation')
-  && foundationPanel.includes('No exchange rate, inflation, tax or discount rate is assumed'),
+  && foundationPanel.includes('no exchange rate, inflation, tax or discount rate is assumed')
+  && foundationPanel.includes('Add Period Exchange Rate')
+  && foundationPanel.includes('Add Period Inflation Rate'),
   'Common project foundation form must cover the base schedules without inventing unknown assumptions')
 console.log('PASS: industry-independent project foundation schema, blank defaults, validation and wizard persistence')
