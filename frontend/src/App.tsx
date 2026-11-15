@@ -17,12 +17,12 @@ import BackupScheduler from './features/settings/BackupScheduler'
 type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'split-integrated' | 'integrated-plant' | 'process-plant' | 'guide'
 
 const modules = [
-  { icon: Factory, title: 'مهندسی و طراحی فرآیند', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', status: 'در نقشه راه' },
-  { icon: Globe2, title: 'هوشمندی بازار', sub: 'عرضه، تقاضا، قیمت و رقبا', status: 'در نقشه راه' },
-  { icon: TrendingUp, title: 'مدل مالی و اقتصادی', sub: 'NPV، IRR، جریان نقدی و تأمین مالی', status: 'نمونه اولیه' },
-  { icon: Activity, title: 'ریسک و سناریو', sub: 'حساسیت، سناریو و مونت‌کارلو', status: 'در نقشه راه' },
-  { icon: Bot, title: 'دستیار هوش مصنوعی', sub: 'تحلیل مستند و پاسخ‌گویی به سرمایه‌گذار', status: 'در نقشه راه' },
-  { icon: FileChartColumn, title: 'گزارش سرمایه‌گذاری', sub: 'گزارش مدیریتی، بانکی و سرمایه‌گذار', status: 'در نقشه راه' },
+  { icon: Factory, title: 'مهندسی و طراحی فرآیند', enTitle: 'Process Engineering & Design', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', enSub: 'Capacity, material balance, energy and equipment', status: 'در نقشه راه', enStatus: 'Roadmap' },
+  { icon: Globe2, title: 'هوشمندی بازار', enTitle: 'Market Intelligence', sub: 'عرضه، تقاضا، قیمت و رقبا', enSub: 'Supply, demand, pricing and competitors', status: 'در نقشه راه', enStatus: 'Roadmap' },
+  { icon: TrendingUp, title: 'مدل مالی و اقتصادی', enTitle: 'Financial & Economic Model', sub: 'NPV، IRR، جریان نقدی و تأمین مالی', enSub: 'NPV, IRR, cash flow and financing', status: 'نمونه اولیه', enStatus: 'Prototype' },
+  { icon: Activity, title: 'ریسک و سناریو', enTitle: 'Risk & Scenarios', sub: 'حساسیت، سناریو و مونت‌کارلو', enSub: 'Sensitivity, scenarios and Monte Carlo', status: 'در نقشه راه', enStatus: 'Roadmap' },
+  { icon: Bot, title: 'دستیار هوش مصنوعی', enTitle: 'AI Assistant', sub: 'تحلیل مستند و پاسخ‌گویی به سرمایه‌گذار', enSub: 'Evidence-based analysis for investors', status: 'در نقشه راه', enStatus: 'Roadmap' },
+  { icon: FileChartColumn, title: 'گزارش سرمایه‌گذاری', enTitle: 'Investment Reports', sub: 'گزارش مدیریتی، بانکی و سرمایه‌گذار', enSub: 'Management, banking and investor reports', status: 'در نقشه راه', enStatus: 'Roadmap' },
 ]
 
 export default function App() {
@@ -121,10 +121,10 @@ export default function App() {
       </section>
 
       <section className="section-head"><div><span className="eyebrow">PLATFORM MODULES</span><h2>{isEn ? "Pishran Modules" : "ماژول‌های پیشران"}</h2></div><span className="muted">معماری لایه‌ای و توسعه‌پذیر</span></section>
-      <section className="module-grid">{modules.map(({icon: Icon,title,sub,status})=><article className="module" key={title}><div className="module-icon"><Icon size={21}/></div><div className="module-text"><b>{title}</b><p>{sub}</p><small>{status}</small></div></article>)}</section>
+      <section className="module-grid">{modules.map(({icon: Icon,title,sub,status,enTitle,enSub,enStatus})=><article className="module" key={title}><div className="module-icon"><Icon size={21}/></div><div className="module-text"><b>{isEn ? enTitle : title}</b><p>{isEn ? enSub : sub}</p><small>{isEn ? enStatus : status}</small></div></article>)}</section>
 
       <section className="analytics">
-        <article className="chart-card"><div className="card-heading"><div><span className="eyebrow">ILLUSTRATIVE DATA</span><h3>نمای نمونه روند بازده</h3></div><span className="tag">داده نمایشی</span></div><ReactECharts option={chart} style={{height:250}}/></article>
+        <article className="chart-card"><div className="card-heading"><div><span className="eyebrow">ILLUSTRATIVE DATA</span><h3>{isEn ? "Illustrative return trend" : "نمای نمونه روند بازده"}</h3></div><span className="tag">{isEn ? "Sample data" : "داده نمایشی"}</span></div><ReactECharts option={chart} style={{height:250}}/></article>
         <article className="insight-card"><div className="module-icon gold"><Bot size={23}/></div><span className="eyebrow">PISHRAN AI COPILOT</span><h3>{isEn ? "Investment Decision Assistant" : "دستیار تصمیم‌یار سرمایه‌گذاری"}</h3><p>در نسخه‌های بعدی، پیشران می‌تواند مفروضات را بررسی کند، ریسک‌ها را توضیح دهد و نتایج را با ارجاع به منابع داده تحلیل کند.</p><div className="notice">خروجی‌های این نسخه نمایشی هستند و مبنای تصمیم واقعی سرمایه‌گذاری نیستند.</div></article>
       </section>
     </>}
