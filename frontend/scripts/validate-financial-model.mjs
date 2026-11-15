@@ -47,7 +47,8 @@ const blankCalendarFoundation = foundation.createBlankProjectFoundation()
 assert.equal(blankCalendarFoundation.planning.projectStartDate, '')
 assert.equal(blankCalendarFoundation.planning.projectEndDate, '')
 const validCalendarFoundation = foundation.mergeProjectFoundation({
-  planning: { ...blankCalendarFoundation.planning, projectStartDate: '2026-10-15', projectEndDate: '2027-02-10', fiscalYearStartMonth: 4, periodFrequency: 'monthly' }
+  planning: { ...blankCalendarFoundation.planning, projectStartDate: '2026-10-15', projectEndDate: '2027-02-10', fiscalYearStartMonth: 4, periodFrequency: 'monthly' },
+  currencies: { ...blankCalendarFoundation.currencies, localCurrencyCode: 'USD', localCurrencyName: 'US dollar' }
 })
 assert.equal(foundation.validateProjectFoundation(validCalendarFoundation).filter(issue => issue.severity === 'error').length, 0,
   'Valid project calendar dates and fiscal-year start month must pass foundation validation')
