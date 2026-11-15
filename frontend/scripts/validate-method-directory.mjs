@@ -24,4 +24,6 @@ assert.ok(directory.validateFinancialMethodParameters('depreciation.straight-lin
 }).length >= 3, 'Invalid depreciation parameters must fail closed')
 assert.ok(directory.validateFinancialMethodParameters('valuation.mirr', { financeRate: 25 }).some(issue => issue.parameter === 'reinvestmentRate'))
 assert.ok(directory.validateFinancialMethodParameters('missing.method', {}).some(issue => issue.code === 'unknown-method'))
+
+
 console.log('PASS: extensible financial method directory metadata, domain coverage and parameter validation')
