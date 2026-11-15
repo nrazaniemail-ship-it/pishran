@@ -235,11 +235,11 @@ export const HOT_ROLLING_FIXED_ASSET_REFERENCE = {
 } as const
 
 export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[] {
-  const localAcquisition = (id: string, period: string, amount: number) => ({
-    id, period, quantity: 1, unitPrice: amount, currencyCode: 'IRR', exchangeRateToLocal: null
+  const localAcquisition = (id: string, period: string, amount: number, allocationBasis: 'source-period' | 'user-confirmed' | 'proportional-estimate' = 'proportional-estimate') => ({
+    id, period, quantity: 1, unitPrice: amount, currencyCode: 'IRR', exchangeRateToLocal: null, allocationBasis
   })
-  const foreignAcquisition = (id: string, period: string, eurAmount: number) => ({
-    id, period, quantity: 1, unitPrice: eurAmount, currencyCode: 'EUR', exchangeRateToLocal: 0.524
+  const foreignAcquisition = (id: string, period: string, eurAmount: number, allocationBasis: 'source-period' | 'user-confirmed' | 'proportional-estimate' = 'proportional-estimate') => ({
+    id, period, quantity: 1, unitPrice: eurAmount, currencyCode: 'EUR', exchangeRateToLocal: 0.524, allocationBasis
   })
   const depreciation = (ratePercent: number, scrapPercent: number) => ({
     method: 'linear-scrap' as const, startingAt: '1405-01-01', ratePercent,
@@ -278,8 +278,8 @@ export function createHotRollingCoilFixedInvestmentItems(): FixedInvestmentItem[
       localAcquisition('hrcr-land-1403','1403',2_015_000)
     ]),
     item('hrcr-site','محوطه‌سازی و آماده‌سازی سایت','site','local','IRR',depreciation(7,10),[
-      localAcquisition('hrcr-site-1403','1403',301_005.6),
-      localAcquisition('hrcr-site-1404','1404',siteTotal-301_005.6)
+      localAcquisition('hrcr-site-1403','1403',126_360.2406094665,'source-period'),
+      localAcquisition('hrcr-site-1404','1404',siteTotal-126_360.2406094665,'source-period')
     ]),
     item('hrcr-buildings','ساختمان‌های صنعتی و غیرصنعتی','buildings','local','IRR',depreciation(7,10),[
       localAcquisition('hrcr-buildings-1403','1403',1_084_284.4),
