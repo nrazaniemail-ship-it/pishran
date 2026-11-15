@@ -17,7 +17,7 @@ export function migrateHotRollingCoilFixedInvestmentItems(
   const defaults = createHotRollingCoilFixedInvestmentItems()
   if (savedSeedVersion < 1 && savedItems.length === 0) return defaults
   const defaultById = new Map(defaults.map(item => [item.id, item]))
-  const migrated = savedItems.map(saved => {
+  const migrated: FixedInvestmentItem[] = savedItems.map(saved => {
     const baseline = defaultById.get(saved.id)
     return {
       ...saved,
