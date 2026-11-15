@@ -930,10 +930,12 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
   const graceInterest = input.openingBalance * annualRate * graceMonths / 12
   let balance = input.openingBalance
   let capitalizedGraceInterest = 0
+  let firstGraceInterestPayable = graceInterest
   let firstInterestPayable = graceInterest + (input.openingAccruedInterest ?? 0)
   if (input.capitalizeGraceInterest) {
     capitalizedGraceInterest = graceInterest
     balance += graceInterest
+    firstGraceInterestPayable = 0
     firstInterestPayable = input.openingAccruedInterest ?? 0
   }
   const profile = input.repaymentType === 'profile'
@@ -966,7 +968,7 @@ export function calculateExistingLoanSchedule(input: ExistingLoanScheduleInput):
         ? balance / count
         : regularPayment - intervalInterest
     if (input.repaymentType === 'annuity' && index === 0 && !input.capitalizeGraceInterest) {
-      principal = regularPayment - firstInterestPayable
+      principal = regularPayment - firstGraceInterestPayable
     }
     if (index === count - 1 && !profile) principal = balance
     if (!Number.isFinite(principal) || principal < -1e-7 || principal > balance + 1e-7)
