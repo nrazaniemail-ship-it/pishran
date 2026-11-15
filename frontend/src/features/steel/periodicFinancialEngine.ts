@@ -367,7 +367,7 @@ export type PeriodicProjectFinanceResult = {
   warnings: string[]
 }
 
-function fiscalIndexForPeriod(period: ProjectCalendarPeriod, periods: ProjectCalendarPeriod[], fiscalYearStartMonth: number): number {
+export function fiscalYearIndexForPeriod(period: ProjectCalendarPeriod, periods: ProjectCalendarPeriod[], fiscalYearStartMonth: number): number {
   const first = parseIsoDateUtc(periods[0]?.startDate ?? '')
   const current = parseIsoDateUtc(period.startDate)
   if (!first || !current || !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12) return -1
@@ -480,7 +480,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   }
   const [revenue, variableCost, fixedCost, depreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution] = allocated
   const taxRates = periods.map(period => {
-    const index = fiscalIndexForPeriod(period, periods, fiscalYearStartMonth)
+    const index = fiscalYearIndexForPeriod(period, periods, fiscalYearStartMonth)
     return index >= 0 ? input.annualTaxRates[index] : Number.NaN
   })
   if (taxRates.some(rate => !validFinite(rate))) {
