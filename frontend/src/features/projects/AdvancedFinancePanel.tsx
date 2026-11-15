@@ -22,6 +22,7 @@ type Props = {
   fullCapacityFixedCashCost: number
   fixedInvestment: number
   preOperatingCost: number
+  fixedInvestmentSchedule?: number[]
   initialWorkingCapital?: number
   loanTermYears?: number
   depreciationAssets?: Asset[]
@@ -72,7 +73,9 @@ export default function AdvancedFinancePanel(props: Props) {
   const construction = Math.max(1, Math.ceil(props.constructionYears))
   const opYears = Math.max(1, years - construction)
   const storageKey = 'feasibility:advanced-finance:' + props.projectId + (props.referenceVersion ? ':' + props.referenceVersion : '')
-  const initialCapexSchedule = Array.from({length:years},(_,i)=>i<construction?(props.fixedInvestment+props.preOperatingCost)/construction:0)
+  const fallbackFixedInvestmentSchedule = Array.from({length:years},(_,i)=>i<construction?props.fixedInvestment/construction:0)
+  const activeFixedInvestmentSchedule = props.fixedInvestmentSchedule?.length===years ? props.fixedInvestmentSchedule : fallbackFixedInvestmentSchedule
+  const initialCapexSchedule = activeFixedInvestmentSchedule.map((amount,i)=>amount+(i<construction?props.preOperatingCost/construction:0))
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
     loans:[{id:'loan-1',label:'تسهیلات اصلی و سرمایه در گردش',drawdowns:initialCapexSchedule.map((v,i)=>v*initialDebtShare+(i===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0)),annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
@@ -86,7 +89,7 @@ export default function AdvancedFinancePanel(props: Props) {
   useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved)setState({...state,...saved});setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
-  const capexSchedule = useMemo(()=>Array.from({length:years},(_,i)=>i<construction?props.fixedInvestment/construction:0),[years,construction,props.fixedInvestment])
+  const capexSchedule = activeFixedInvestmentSchedule
   const updateLoan=(id:string,patch:Partial<Loan>)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,...patch}:l)}))
   const updateDraw=(id:string,index:number,value:number)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,drawdowns:l.drawdowns.map((v,i)=>i===index?Math.max(0,value):v)}:l)}))
   const syncAssets=()=>setState(s=>({...s,assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20}))}))
@@ -150,6 +153,10 @@ export default function AdvancedFinancePanel(props: Props) {
 
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
+    {props.fixedInvestmentSchedule?.length===years
+      ? <p className="fw-hint">{t('زمان‌بندی CAPEX از نوبت‌های تحصیل تأییدشده در دفتر دارایی استخراج شده است.','CAPEX timing is derived from source-supported or user-confirmed acquisition vintages in the Fixed Investment Register.')}</p>
+      : <p className="fw-hint">{t('زمان‌بندی دفتر دارایی هنوز تأیید نشده است؛ CAPEX تجمیعی به‌طور موقت بین سال‌های ساخت تقسیم می‌شود. این تخصیص تا تأیید تاریخ تحصیل اقلام، مبنای نهایی جریان نقدی نیست.','Asset acquisition timing is not yet verified; aggregate CAPEX is temporarily spread across construction years. This allocation is not a final cash-flow basis until acquisition dates are confirmed.')}</p>}
+
     {!props.useFixedInvestmentRegister&&props.depreciationAssets?.length ? <p className="fw-hint">{t('دفتر دارایی هنوز ثبت نشده است؛ برای جلوگیری از صفر شدن استهلاک، فعلاً از مفروضات تجمیعی مرجع پروژه استفاده می‌شود. این حالت فقط مبنای مقایسه اولیه است و تا تکمیل دفتر دارایی و تطبیق برنامه سالانه با خروجی مرجع، نتیجه نهایی تأییدشده نیست.','The Fixed Investment Register is empty. Aggregate project-reference depreciation assumptions are temporarily used to avoid zero depreciation. This is a preliminary comparison basis only; results are not validated until the asset register and annual depreciation schedule are reconciled to the reference output.')}</p> : null}
 
     <p className="fw-lead">{t('برنامه وام، CFADS، سرمایه در گردش دوره‌ای، مالیات با انتقال زیان، استهلاک دارایی‌به‌دارایی، سناریوها و سه صورت مالی در یک مدل مشترک محاسبه می‌شوند. ارقام این بخش از مفروضات همین پروژه استفاده می‌کنند.','Loan schedules, CFADS, periodic working capital, tax-loss carry-forward, asset-level depreciation, scenarios and three financial statements are calculated in one shared model using this project’s assumptions.')}</p>
