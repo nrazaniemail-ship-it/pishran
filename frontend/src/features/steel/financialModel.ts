@@ -813,7 +813,7 @@ export function calculateComfarAssetDepreciationSchedule(
       const depreciableBase = asset.method === 'linear-to-zero' ? asset.initialBookValue : asset.initialBookValue - salvage
       const m = asset.method === 'linear-to-zero'
         ? Math.floor(((asset.initialBookValue - salvage) * length / Math.max(asset.initialBookValue, 1e-12)) - m1 / 12 + 1)
-        : Math.floor(length)
+        : Math.floor(length - m1 / 12 + 1)
       const first = depreciableBase / length * m1 / 12
       for (let age = 1; age <= Math.max(1, m + 1) && age <= maxAge; age += 1) {
         const amount = age === 1 ? first : age <= m ? depreciableBase / length : Math.max(0, bookValue - salvage)
