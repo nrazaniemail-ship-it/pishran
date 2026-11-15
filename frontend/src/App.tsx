@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Layers3, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen } from 'lucide-react'
+import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Layers3, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Calculator, X, Delete } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
 import { createProject, deleteProject, removeSampleProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
@@ -25,6 +25,48 @@ const modules = [
   { icon: FileChartColumn, title: 'گزارش سرمایه‌گذاری', enTitle: 'Investment Reports', sub: 'گزارش مدیریتی، بانکی و سرمایه‌گذار', enSub: 'Management, banking and investor reports', status: 'در نقشه راه', enStatus: 'Roadmap' },
 ]
 
+
+function calculateExpression(expression: string): number {
+  const tokens = expression.replace(/×/g, '*').replace(/÷/g, '/').match(/(?:\\d+\\.?\\d*|\\.\\d+)|[()+\\-*/%]/g) ?? []
+  let index = 0
+  const parsePrimary = (): number => {
+    const token = tokens[index++]
+    if (token === '(') {
+      const value = parseSum()
+      if (tokens[index++] !== ')') throw new Error('پرانتز نامعتبر')
+      return value
+    }
+    if (token === '-') return -parsePrimary()
+    if (token === '+') return parsePrimary()
+    const value = Number(token)
+    if (!Number.isFinite(value)) throw new Error('عبارت نامعتبر')
+    return value
+  }
+  const parseProduct = (): number => {
+    let value = parsePrimary()
+    while (tokens[index] === '*' || tokens[index] === '/' || tokens[index] === '%') {
+      const op = tokens[index++]
+      const next = parsePrimary()
+      if ((op === '/' || op === '%') && next === 0) throw new Error('تقسیم بر صفر')
+      value = op === '*' ? value * next : op === '/' ? value / next : value % next
+    }
+    return value
+  }
+  const parseSum = (): number => {
+    let value = parseProduct()
+    while (tokens[index] === '+' || tokens[index] === '-') {
+      const op = tokens[index++]
+      const next = parseProduct()
+      value = op === '+' ? value + next : value - next
+    }
+    return value
+  }
+  if (!tokens.length) return 0
+  const result = parseSum()
+  if (index !== tokens.length || !Number.isFinite(result)) throw new Error('عبارت نامعتبر')
+  return result
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
@@ -32,7 +74,7 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<FeasibilityProject | null>(null)
   const [activePlantType, setActivePlantType] = useState<'dri'|'steelmaking'>('dri')
   const [storageInfo, setStorageInfo] = useState({ backend: 'در حال بررسی', items: 0 })
-  const [ready, setReady] = useState(false)
+  const [ready, setReady] = useState(false)\n  const [calculatorOpen, setCalculatorOpen] = useState(false)\n  const [calculatorExpression, setCalculatorExpression] = useState('')\n  const [calculatorError, setCalculatorError] = useState('')
   const isEn = settings.language === 'en'
   const toggleLanguage = () => setSettings(current => ({ ...current, language: current.language === 'fa' ? 'en' : 'fa' }))
 
@@ -173,6 +215,28 @@ export default function App() {
     {page === 'integrated-plant' && activeProject && <IntegratedSteelComplexWorkspace language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'process-plant' && activeProject && <ProcessPlantWorkspace language={settings.language} project={activeProject} plantType={activePlantType} onBack={() => setPage('projects')}/>} 
 
+    <div className="floating-calculator" dir="ltr">
+      {calculatorOpen && <section className="calculator-panel" aria-label={isEn ? 'Calculator' : 'ماشین حساب'}>
+        <div className="calculator-heading"><b>{isEn ? 'Calculator' : 'ماشین حساب'}</b><button type="button" aria-label={isEn ? 'Close calculator' : 'بستن ماشین حساب'} onClick={() => setCalculatorOpen(false)}><X size={18}/></button></div>
+        <div className="calculator-display" aria-live="polite"><span>{calculatorExpression || '0'}</span>{calculatorError && <small>{calculatorError}</small>}</div>
+        <div className="calculator-keys">
+          {['C','(',')','⌫','7','8','9','÷','4','5','6','×','1','2','3','−','0','.','%','+','='].map(key => <button key={key} type="button" className={['÷','×','−','+','='].includes(key) ? 'operator' : key === 'C' ? 'clear' : ''} onClick={() => {
+            setCalculatorError('')
+            if (key === 'C') { setCalculatorExpression(''); return }
+            if (key === '⌫') { setCalculatorExpression(value => value.slice(0, -1)); return }
+            if (key === '=') {
+              try { setCalculatorExpression(String(Number(calculateExpression(calculatorExpression).toPrecision(12)))) }
+              catch (error) { setCalculatorError(error instanceof Error ? error.message : (isEn ? 'Invalid expression' : 'عبارت نامعتبر')) }
+              return
+            }
+            setCalculatorExpression(value => value + key)
+          }}>{key}</button>)}
+        </div>
+      </section>}
+      <button className="calculator-launcher" type="button" onClick={() => setCalculatorOpen(value => !value)} aria-label={isEn ? 'Open calculator' : 'باز کردن ماشین حساب'} aria-expanded={calculatorOpen}>
+        {calculatorOpen ? <X size={21}/> : <Calculator size={21}/>}<span>{isEn ? 'Calculator' : 'ماشین حساب'}</span>
+      </button>
+    </div>
     <footer>{isEn ? "Pishran · Intelligent Feasibility & Investment Assessment Platform" : "پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری"} <span>{isEn ? "Version 1.0.1 · No sign-in required" : "نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری"}</span></footer>
   </main>
 }
