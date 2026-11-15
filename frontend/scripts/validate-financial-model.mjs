@@ -1268,9 +1268,9 @@ const landRegisterAsset = {
 const landRegisterBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([landRegisterAsset],1405,12,'annual',validFoundation)
 assert.equal(landRegisterBuild.assets.length,1,'Non-depreciated land must still be included in the disposal register')
 assert.equal(landRegisterBuild.assets[0].method,'none','Land must retain the non-depreciated method in the lifecycle engine')
-const landLifecycle=engine.calculateComfarAssetLifecycle(landRegisterBuild.assets,landRegisterBuild.sales,12)
-assert.equal(landLifecycle.valid,true,'A sale of non-depreciated land must be calculated without a missing-vintage warning')
-near(landLifecycle.sales[0].bookValueAtSale,500,1e-9,'Non-depreciated land must retain its book value until disposal')
+const landRegisterLifecycle=engine.calculateComfarAssetLifecycle(landRegisterBuild.assets,landRegisterBuild.sales,12)
+assert.equal(landRegisterLifecycle.valid,true,'A sale of non-depreciated land must be calculated without a missing-vintage warning')
+near(landRegisterLifecycle.sales[0].bookValueAtSale,500,1e-9,'Non-depreciated land must retain its book value until disposal')
 const soldRegisterAsset = { ...registerAsset, sales:[{id:'register-sale',acquisitionId:'register-acq',period:'1407',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}] }
 const soldRegisterBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([soldRegisterAsset],1405,12,'annual',validFoundation)
 assert.equal(soldRegisterBuild.assets.length,1,'An asset sold within the horizon must retain its depreciation vintage through the disposal period')
