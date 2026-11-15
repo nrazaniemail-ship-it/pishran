@@ -53,4 +53,59 @@ assert.ok(Math.abs(splitFiscalYears[0] - 91000) < 1e-9)
 assert.ok(Math.abs(splitFiscalYears[1] - 91000) < 1e-9)
 assert.deepEqual(engine.allocateAnnualFlowsToPeriods([100], [{ index: 1, startDate: '2025-01-01', endDate: '2025-01-31', days: 30, partial: true }], 1), [])
 
-console.log('PASS: periodic financial primitives, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
+const equalPrincipalLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100000, 100000, 0, 0],
+  repaymentMethod: 'equal-principal',
+  repaymentStartPeriod: 3,
+  gracePeriods: 0,
+  termPeriods: 2,
+  capitalizeInterest: true,
+}, quarter, 365)
+assert.equal(equalPrincipalLoan.valid, true)
+assert.ok(equalPrincipalLoan.rows[0].capitalizedInterest > 0)
+assert.equal(equalPrincipalLoan.rows[0].interestExpense, 0)
+assert.ok(equalPrincipalLoan.rows[2].principal > 0)
+assert.ok(equalPrincipalLoan.rows[3].principal > 0)
+assert.ok(Math.abs(equalPrincipalLoan.rows[3].closingBalance) < 1e-8)
+const annuityLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100000, 100000, 0, 0],
+  repaymentMethod: 'annuity',
+  repaymentStartPeriod: 3,
+  gracePeriods: 0,
+  termPeriods: 2,
+  capitalizeInterest: false,
+}, quarter, 365)
+assert.equal(annuityLoan.valid, true)
+assert.ok(annuityLoan.rows[0].interestExpense > 0)
+assert.ok(annuityLoan.rows[2].principal > 0)
+assert.ok(Math.abs(annuityLoan.rows[3].closingBalance) < 1e-8)
+const bulletLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100000, 100000, 0, 0],
+  repaymentMethod: 'bullet',
+  repaymentStartPeriod: 3,
+  gracePeriods: 0,
+  termPeriods: 2,
+  capitalizeInterest: true,
+}, quarter, 365)
+assert.equal(bulletLoan.valid, true)
+assert.equal(bulletLoan.rows[2].principal, 0)
+assert.ok(bulletLoan.rows[3].principal > 0)
+assert.ok(Math.abs(bulletLoan.rows[3].closingBalance) < 1e-8)
+const invalidDrawdownLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100000, 0, 10000, 0],
+  repaymentMethod: 'bullet',
+  repaymentStartPeriod: 2,
+  gracePeriods: 0,
+  termPeriods: 2,
+  capitalizeInterest: false,
+}, quarter, 365)
+assert.equal(invalidDrawdownLoan.valid, false)
+assert.ok(invalidDrawdownLoan.issues.some(issue => issue.includes('after principal repayment')))
+
+
+
+console.log('PASS: periodic loan schedules and financial primitives, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
