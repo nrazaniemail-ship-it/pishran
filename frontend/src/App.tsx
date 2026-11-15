@@ -144,7 +144,7 @@ export default function App() {
     <BackupScheduler/>
     <header className="topbar">
       <button className="language-switch page-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button>
-      <div className="brand"><button className="brand-title" type="button" onClick={() => setPage('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b><small>INTELLIGENT FEASIBILITY PLATFORM</small></button></div>
+      <div className="brand"><button className="brand-title" type="button" onClick={() => setPage('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
       <nav className="main-nav" aria-label={isEn?"Primary navigation":"ناوبری اصلی"}>
         <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
@@ -158,7 +158,7 @@ export default function App() {
     {page === 'dashboard' && <>
       <section className="hero">
         <div className="hero-copy">
-          <span className="eyebrow">INVESTMENT DECISION INTELLIGENCE</span>
+          
           <h1>{isEn ? <>From idea to investment decision, <em>with greater confidence.</em></> : <><em> ... با اطمینان بیشتر.</em></>}</h1>
           <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
           <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
@@ -181,7 +181,7 @@ export default function App() {
         </div>
       </section>
 
-      <section className="section-head"><div><span className="eyebrow">WORKSPACE</span><h2>{isEn ? "Investment Control Center" : "مرکز کنترل سرمایه‌گذاری"}</h2></div><span className="muted">{isEn ? 'Version 1.0.1' : 'نسخه ۱.۰.۱'}</span></section>
+      <section className="section-head"><div><h2>{isEn ? "Investment Control Center" : "مرکز کنترل سرمایه‌گذاری"}</h2></div><span className="muted">{isEn ? 'Version 1.0.1' : 'نسخه ۱.۰.۱'}</span></section>
       <section className="kpis">
         <article className="kpi"><span>{isEn ? 'Registered projects' : 'پروژه‌های ثبت‌شده'}</span><b>{projects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</b><small>{isEn ? 'Stored on this device' : 'ذخیره‌شده روی این دستگاه'}</small></article>
         <article className="kpi"><span>{isEn ? 'Financial models' : 'مدل‌های مالی'}</span><b>{isEn ? '0' : '۰'}</b><small>{isEn ? 'Traceable and versioned calculations' : 'محاسبات قابل ثبت و نسخه‌بندی'}</small></article>
@@ -189,12 +189,12 @@ export default function App() {
         <article className="kpi"><span>{isEn ? 'Storage status' : 'وضعیت ذخیره‌سازی'}</span><b className="live">{isEn&&storageInfo.backend==='در حال بررسی'?'Checking...':storageInfo.backend}</b><small>{isEn ? 'Data is kept on this device' : 'اطلاعات روی دستگاه نگهداری می‌شود'}</small></article>
       </section>
 
-      <section className="section-head"><div><span className="eyebrow">PLATFORM MODULES</span><h2>{isEn ? "Pishran Modules" : "ماژول‌های پیشران"}</h2></div><span className="muted">{isEn ? 'Layered and extensible architecture' : 'معماری لایه‌ای و توسعه‌پذیر'}</span></section>
+      <section className="section-head"><div><h2>{isEn ? "Pishran Modules" : "ماژول‌های پیشران"}</h2></div><span className="muted">{isEn ? 'Layered and extensible architecture' : 'معماری لایه‌ای و توسعه‌پذیر'}</span></section>
       <section className="module-grid">{modules.map(({icon: Icon,title,sub,status,enTitle,enSub,enStatus})=><article className="module" key={title}><div className="module-icon"><Icon size={21}/></div><div className="module-text"><b>{isEn ? enTitle : title}</b><p>{isEn ? enSub : sub}</p><small>{isEn ? enStatus : status}</small></div></article>)}</section>
 
       <section className="analytics">
-        <article className="chart-card"><div className="card-heading"><div><span className="eyebrow">ILLUSTRATIVE DATA</span><h3>{isEn ? "Illustrative return trend" : "نمای نمونه روند بازده"}</h3></div><span className="tag">{isEn ? "Sample data" : "داده نمایشی"}</span></div><ReactECharts option={chart} style={{height:250}}/></article>
-        <article className="insight-card"><div className="module-icon gold"><Bot size={23}/></div><span className="eyebrow">PISHRAN AI COPILOT</span><h3>{isEn ? "Investment Decision Assistant" : "دستیار تصمیم‌یار سرمایه‌گذاری"}</h3><p>{isEn ? 'Future versions of Pishran will review assumptions, explain risks and analyse results with references to source data.' : 'در نسخه‌های بعدی، پیشران می‌تواند مفروضات را بررسی کند، ریسک‌ها را توضیح دهد و نتایج را با ارجاع به منابع داده تحلیل کند.'}</p><div className="notice">{isEn ? 'This version contains illustrative outputs. Do not use them as the basis for actual investment decisions.' : 'خروجی‌های این نسخه نمایشی هستند و مبنای تصمیم واقعی سرمایه‌گذاری نیستند.'}</div></article>
+        <article className="chart-card"><div className="card-heading"><div><h3>{isEn ? "Illustrative return trend" : "نمای نمونه روند بازده"}</h3></div><span className="tag">{isEn ? "Sample data" : "داده نمایشی"}</span></div><ReactECharts option={chart} style={{height:250}}/></article>
+        <article className="insight-card"><div className="module-icon gold"><Bot size={23}/></div><h3>{isEn ? "Investment Decision Assistant" : "دستیار تصمیم‌یار سرمایه‌گذاری"}</h3><p>{isEn ? 'Future versions of Pishran will review assumptions, explain risks and analyse results with references to source data.' : 'در نسخه‌های بعدی، پیشران می‌تواند مفروضات را بررسی کند، ریسک‌ها را توضیح دهد و نتایج را با ارجاع به منابع داده تحلیل کند.'}</p><div className="notice">{isEn ? 'This version contains illustrative outputs. Do not use them as the basis for actual investment decisions.' : 'خروجی‌های این نسخه نمایشی هستند و مبنای تصمیم واقعی سرمایه‌گذاری نیستند.'}</div></article>
       </section>
     </>}
 
@@ -205,7 +205,7 @@ export default function App() {
     {page === 'hot-rolling' && <RollingWorkspace language={settings.language} project={activeProject ?? undefined} onUpdateProject={handleUpdateProject} onBack={() => setPage('projects')}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'split-integrated' && activeProject && <section className="projects-page split-integrated-page" dir={isEn?"ltr":"rtl"}>
-      <div className="page-heading"><div><span className="eyebrow">PISHRAN / PROJECT SEPARATION</span><h1>{isEn?"Split Integrated Steel Project":"تفکیک پروژه مجتمع فولادی"}</h1><p>{activeProject.name}</p></div><button className="secondary-button" onClick={() => setPage('projects')}>{isEn?"Back to Projects":"بازگشت به پروژه‌ها"}</button></div>
+      <div className="page-heading"><div><h1>{isEn?"Split Integrated Steel Project":"تفکیک پروژه مجتمع فولادی"}</h1><p>{activeProject.name}</p></div><button className="secondary-button" onClick={() => setPage('projects')}>{isEn?"Back to Projects":"بازگشت به پروژه‌ها"}</button></div>
       <div className="ppw-note"><b>{isEn?"This legacy project was defined as an integrated facility.":"این پروژه قدیمی به‌صورت یکپارچه تعریف شده است."}</b><p>{isEn?"To preserve study independence, two separate projects will be created. Each unit’s capacity is intentionally left blank so you can enter its independent DRI and steelmaking capacity. Technical and financial data from the integrated project will not be copied automatically.":"برای رعایت استقلال مطالعات، دو پروژه جداگانه ایجاد می‌شوند. ظرفیت هر واحد عمداً خالی می‌ماند تا ظرفیت مستقل احیاء و فولادسازی را جداگانه وارد کنید. اطلاعات مالی یا فنی پروژه یکپارچه به‌طور خودکار بین دو پروژه کپی نمی‌شود."}</p></div>
       <div className="project-grid">
         <article className="project-card"><div className="module-icon"><Factory size={22}/></div><h3>{isEn?"Standalone Direct Reduction (DRI) Project":"پروژه مستقل احیاء مستقیم (DRI)"}</h3><p>{isEn?"Pellet feed, sponge iron capacity, DRI-specific materials and energy, staffing and unit CAPEX.":"خوراک گندله، ظرفیت تولید آهن اسفنجی، مواد و انرژی مختص احیاء، نیروی انسانی و CAPEX واحد احیاء."}</p><button className="primary" onClick={async()=>{const created=await createProject({name:activeProject.name+(isEn?' — Direct Reduction':' — احیاء مستقیم'),industry:activeProject.industry,steelStage:'احیای مستقیم',capacity:'',location:activeProject.location});setProjects(await listProjects());setActiveProject(created);setActivePlantType('dri');setPage('process-plant');await refreshStorage()}}>{isEn?"Create & Open DRI Project":"ایجاد و ورود به پروژه احیاء"}</button></article>
