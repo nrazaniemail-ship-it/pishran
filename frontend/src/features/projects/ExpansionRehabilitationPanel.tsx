@@ -92,6 +92,26 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  const updatePeriod=(scenario:'without'|'with',index:number,field:keyof EnterpriseScenarioPeriodInput,value:number)=>setState(s=>({...s,[scenario]:s[scenario].map((row,i)=>i===index?{...row,[field]:value}:row)}))
  const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی موجود',grossCost:0,accumulatedDepreciation:0,remainingLife:10,opportunityValue:0,residualValue:0,commissioningDate:'',depreciationMethod:'linear-scrap',depreciationRatePercent:10,depreciationLengthYears:10,depreciationLengthMonths:0,firstDepreciationMonths:12,salvagePercent:10,depreciationStartDate:'',costCentre:'',foreignSharePercent:0,status:'active'}]}))
  const addLoan=()=>setState(s=>({...s,loans:[...s.loans,{id:'loan-'+Date.now(),name:'تسهیلات موجود',openingBalance:0,annualRate:0,annualDebtService:0,maturityYears:0,graceYears:0,repaymentFrequency:'quarterly',repaymentMethod:'annuity',repaymentType:'annuity',numberOfRepayments:20,capitalizeGraceInterest:true,profileRepayments:[],interestPaymentMonth:12,nextPaymentDate:'',accruedInterest:0,fees:0}]}))
+ const assetIssues=validateStartingFixedAssetBalances(state.assets,foundation)
+ const assetIssueMessages:Record<string,string>={
+  'duplicate-starting-asset-id':'شناسه دارایی‌های افتتاحیه باید یکتا باشد.',
+  'missing-starting-asset-name':'شرح دارایی موجود را وارد کنید.',
+  'invalid-starting-asset-gross-cost':'بهای ناخالص باید عددی نامنفی باشد.',
+  'invalid-starting-asset-accumulated-depreciation':'استهلاک انباشته باید بین صفر و بهای ناخالص باشد.',
+  'invalid-starting-asset-remaining-life':'عمر مفید باقیمانده باید عددی نامنفی باشد.',
+  'missing-starting-asset-remaining-life':'برای دارایی فعالِ مستهلک‌شونده عمر مفید باقیمانده مثبت لازم است.',
+  'invalid-starting-asset-opportunity-value':'ارزش فرصت باید عددی نامنفی باشد.',
+  'invalid-starting-asset-residual-value':'ارزش اسقاط باید بین صفر و بهای ناخالص باشد.',
+  'invalid-starting-asset-foreign-share':'سهم جزء ارزی باید بین صفر تا صد درصد باشد.',
+  'unknown-starting-asset-cost-centre':'مرکز هزینه انتخاب‌شده در فونداسیون تعریف نشده است.',
+  'invalid-starting-asset-date':'تاریخ‌ها باید به صورت YYYY-MM-DD وارد شوند.',
+  'depreciation-before-commissioning':'تاریخ شروع استهلاک نمی‌تواند قبل از تاریخ بهره‌برداری باشد.',
+  'invalid-starting-asset-depreciation-length':'مدت استهلاک باید عدد صحیح نامنفی باشد.',
+  'invalid-starting-asset-depreciation-months':'ماه‌های اضافه عمر استهلاک باید بین صفر تا ۱۱ باشد.',
+  'invalid-starting-asset-first-months':'ماه‌های مشمول استهلاک در سال اول باید بین ۱ تا ۱۲ باشد.',
+  'invalid-starting-asset-depreciation-rate':'نرخ استهلاک باید بیشتر از صفر و حداکثر ۱۰۰ درصد باشد.',
+  'starting-asset-sum-of-years-partial-not-benchmarked':'روش مجموع سنوات برای دوره ناقص تا تطبیق عددی فعال نمی‌شود.'
+ }
  const fixedGross=state.assets.reduce((sum,a)=>sum+a.grossCost,0)
  const fixedAccum=state.assets.reduce((sum,a)=>sum+a.accumulatedDepreciation,0)
  const fixedNet=fixedGross-fixedAccum
@@ -168,25 +188,7 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
    <button className="secondary-button" onClick={()=>setState(s=>({...s,assets:s.assets.filter(a=>a.id!==asset.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
   </div>)}
   <button className="secondary-button" onClick={addAsset}><Plus size={14}/>{t('افزودن دارایی موجود','Add Existing Asset')}</button>
-  const assetIssueMessages:Record<string,string>={
-   'duplicate-starting-asset-id':'شناسه دارایی‌های افتتاحیه باید یکتا باشد.',
-   'missing-starting-asset-name':'شرح دارایی موجود را وارد کنید.',
-   'invalid-starting-asset-gross-cost':'بهای ناخالص باید عددی نامنفی باشد.',
-   'invalid-starting-asset-accumulated-depreciation':'استهلاک انباشته باید بین صفر و بهای ناخالص باشد.',
-   'invalid-starting-asset-remaining-life':'عمر مفید باقیمانده باید عددی نامنفی باشد.',
-   'missing-starting-asset-remaining-life':'برای دارایی فعالِ مستهلک‌شونده عمر مفید باقیمانده مثبت لازم است.',
-   'invalid-starting-asset-opportunity-value':'ارزش فرصت باید عددی نامنفی باشد.',
-   'invalid-starting-asset-residual-value':'ارزش اسقاط باید بین صفر و بهای ناخالص باشد.',
-   'invalid-starting-asset-foreign-share':'سهم جزء ارزی باید بین صفر تا صد درصد باشد.',
-   'unknown-starting-asset-cost-centre':'مرکز هزینه انتخاب‌شده در فونداسیون تعریف نشده است.',
-   'invalid-starting-asset-date':'تاریخ‌ها باید به صورت YYYY-MM-DD وارد شوند.',
-   'depreciation-before-commissioning':'تاریخ شروع استهلاک نمی‌تواند قبل از تاریخ بهره‌برداری باشد.',
-   'invalid-starting-asset-depreciation-length':'مدت استهلاک باید عدد صحیح نامنفی باشد.',
-   'invalid-starting-asset-depreciation-months':'ماه‌های اضافه عمر استهلاک باید بین صفر تا ۱۱ باشد.',
-   'invalid-starting-asset-first-months':'ماه‌های مشمول استهلاک در سال اول باید بین ۱ تا ۱۲ باشد.',
-   'invalid-starting-asset-depreciation-rate':'نرخ استهلاک باید بیشتر از صفر و حداکثر ۱۰۰ درصد باشد.',
-   'starting-asset-sum-of-years-partial-not-benchmarked':'روش مجموع سنوات برای دوره ناقص تا تطبیق عددی فعال نمی‌شود.'
-  }
+
   <div className="fw-validation"><span>{t('خطاهای مانده افتتاحیه دارایی ثابت','Starting Fixed Asset Validation Errors')}</span><b>{assetIssues.length}</b></div>
   {assetIssues.map((issue,index)=><p className="fw-hint" key={issue.path+issue.code+index}><b>{issue.path}</b> — {en?(issue.message):(assetIssueMessages[issue.code]??issue.message)}</p>)}
   <div className="fw-result">{t('بهای تمام‌شده ناخالص','Gross Cost')}: <b>{fmt(fixedGross)}</b> · {t('استهلاک انباشته','Accumulated Depreciation')}: <b>{fmt(fixedAccum)}</b> · {t('ارزش دفتری خالص','Net Book Value')}: <b>{fmt(fixedNet)}</b> · {t('ارزش فرصت مجموع','Total Opportunity Value')}: <b>{fmt(state.assets.reduce((sum,a)=>sum+a.opportunityValue,0))}</b></div>
