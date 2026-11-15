@@ -1380,6 +1380,13 @@ assert.ok(foundationWizard.includes('FixedInvestmentPanel')
   && foundationWizard.includes('fixedInvestmentItems:(isHotRolling?migratedFixedInvestmentItems:savedFixedInvestmentItems).map(item=>({...item,depreciationBasis:')
   && foundationWizard.includes('fixedInvestmentItems:[]'),
   'The reusable fixed investment register must be initialized for new projects and restored with legacy-safe migration')
+assert.ok(fixedInvestmentPanel.includes("listFinancialMethods('depreciation')")
+  && fixedInvestmentPanel.includes('directoryMethodToAssetMethod')
+  && fixedInvestmentPanel.includes('Depreciation Method Directory')
+  && fixedInvestmentPanel.includes('Benchmark verified')
+  && fixedInvestmentPanel.includes('Not numerically benchmarked')
+  && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems'),
+  'The asset depreciation selector must be directory-driven, expose method evidence/benchmark status and remain connected to the existing calculation engine')
 assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
   && fixedInvestmentPanel.includes('Depreciation Conditions')
   && fixedInvestmentPanel.includes('Sale of Asset')
