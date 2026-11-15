@@ -1051,6 +1051,9 @@ const registerBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentIte
 assert.equal(registerBuild.assets.length,1,'A valid fixed-asset acquisition must map to one depreciation vintage')
 assert.equal(registerBuild.assets[0].acquisitionPeriod,1,'Fixed-asset acquisition year must map to annual project period')
 assert.equal(registerBuild.assets[0].startingAtPeriod,1,'Starting at year must map to annual project period')
+const quarterlyRegisterBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([registerAsset],1405,48,'quarterly')
+assert.equal(quarterlyRegisterBuild.assets.length,0,'The annual depreciation engine must not silently process quarterly periods')
+assert.ok(quarterlyRegisterBuild.warnings.some(warning=>warning.includes('سالانه')),'Non-annual depreciation preview must explain the unsupported period frequency')
 assert.equal(engine.resolveComfarDepreciationStartPeriod(registerBuild.assets[0].acquisitionPeriod,registerBuild.assets[0].startingAtPeriod,registerBuild.assets[0].acquisitionDate,registerBuild.assets[0].startingAtDate),1,'Full acquisition date before Starting at must retain same-year depreciation')
 near(registerBuild.assets[0].originalValue,200,1e-9,'Fixed-asset acquisition amount must be converted to local currency')
 const soldRegisterAsset = { ...registerAsset, sales:[{id:'register-sale',acquisitionId:'register-acq',period:'1407',market:'local',priceMode:'book-value',currencyCode:'IRR',selfDefinedPrice:null}] }
