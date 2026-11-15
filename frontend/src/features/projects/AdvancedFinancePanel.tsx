@@ -162,6 +162,46 @@ export default function AdvancedFinancePanel(props: Props) {
     discountMode:state.discountMode,manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.mirrFinanceRate??props.costOfEquity,equityMirrReinvestmentRate:props.mirrReinvestmentRate??props.costOfEquity
   }
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
+  const periodicFinanceResult=useMemo<PeriodicProjectFinanceResult|null>(()=>{
+    const periods=props.projectPeriods??[]
+    if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
+    const fiscalMonth=props.fiscalYearStartMonth
+    const periodLoans=state.loans.map(loan=>{
+      const annualDrawdowns=loan.drawdowns.length===years?loan.drawdowns:Array(years).fill(0)
+      const drawdowns=loan.drawdownMode==='period-manual'&&loan.periodDrawdowns?.length===periods.length
+        ? loan.periodDrawdowns
+        : allocateAnnualFlowsToPeriods(annualDrawdowns,periods,fiscalMonth)
+      const firstFiscalIndex=Math.max(0,loan.repaymentStartYear-1)
+      const derivedStart=periods.findIndex(period=>fiscalYearIndexForPeriod(period,periods,fiscalMonth)>=firstFiscalIndex)
+      return {id:loan.id,input:{
+        annualRatePercent:loan.annualRate,drawdowns,repaymentMethod:loan.repaymentMethod,
+        repaymentStartPeriod:loan.periodRepaymentStart??(derivedStart>=0?derivedStart+1:periods.length+1),
+        gracePeriods:loan.periodGracePeriods??loan.graceYears*periodsPerYear,
+        termPeriods:loan.periodTerm??loan.termYears*periodsPerYear,
+        capitalizeInterest:loan.capitalizeInterest,
+        rateConversion:loan.periodRateConversion??'effective-annual-by-actual-days',periodsPerYear
+      } as PeriodicLoanInput}
+    })
+    const workingCapitalByPeriod=periods.map(period=>{
+      const fiscalIndex=fiscalYearIndexForPeriod(period,periods,fiscalMonth)
+      const annualRow=result.years[fiscalIndex]
+      if(!annualRow) return 0
+      const operatingYear=Math.max(0,fiscalIndex-construction)
+      const salesFactor=Math.pow(1+state.salesEscalationPercent/100,operatingYear)
+      const opexFactor=Math.pow(1+state.opexEscalationPercent/100,operatingYear)
+      return calculateOperatingCycleWorkingCapital(workingCapitalPolicy,annualRow.utilization,salesFactor,opexFactor).netWorkingCapital
+    })
+    return calculateIntegratedPeriodicFinance({
+      periods,fiscalYearStartMonth:fiscalMonth,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
+      annualRevenue:result.years.map(row=>row.revenue),annualVariableCost:result.years.map(row=>row.variableCashCost),
+      annualFixedCost:result.years.map(row=>row.fixedCashCost),annualDepreciation:depreciationValues,
+      annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
+      annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:taxRates,annualEquityContributions:equityContributions,
+      workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
+      discountRatePercent:result.discountRate==null?null:result.discountRate*100,
+      mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
+    })
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,JSON.stringify(state.loans),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule)])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
