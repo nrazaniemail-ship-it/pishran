@@ -69,6 +69,7 @@ type SavedState = {
   maintenancePercent: number
   salesEscalationPercent: number
   opexEscalationPercent: number
+  periodTaxRates?: number[]
 }
 const money = (v: number) => Number.isFinite(v) ? v.toLocaleString(typeof document!=='undefined'&&document.documentElement.lang==='en'?'en-US':'fa-IR',{maximumFractionDigits:1}) : '—'
 const directoryRepaymentMethod: Record<string, Loan['repaymentMethod']> = {
@@ -112,6 +113,14 @@ export default function AdvancedFinancePanel(props: Props) {
   const updateLoan=(id:string,patch:Partial<Loan>)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,...patch}:l)}))
   const updateDraw=(id:string,index:number,value:number)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,drawdowns:l.drawdowns.map((v,i)=>i===index?Math.max(0,value):v),drawdownMode:'annual-day-weighted',periodDrawdowns:undefined}:l)}))
   const updatePeriodDraw=(id:string,index:number,value:number)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,periodDrawdowns:Array.from({length:props.projectPeriods?.length??0},(_,i)=>i===index?Math.max(0,value):Math.max(0,l.periodDrawdowns?.[i]??0))}:l)}))
+  const updatePeriodTaxRate=(index:number,value:number)=>setState(s=>{
+    const periods=props.projectPeriods??[]
+    const base=s.periodTaxRates?.length===periods.length?s.periodTaxRates:periods.map(period=>{
+      const fiscalIndex=props.fiscalYearStartMonth==null?0:fiscalYearIndexForPeriod(period,periods,props.fiscalYearStartMonth)
+      return s.taxRates[fiscalIndex]??props.taxRate
+    })
+    return {...s,periodTaxRates:base.map((rate,i)=>i===index?Math.max(0,Math.min(100,value)):rate)}
+  })
   const defaultPeriodRepaymentStart=(loan:Loan)=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null) return 1
@@ -206,6 +215,7 @@ export default function AdvancedFinancePanel(props: Props) {
       annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
       annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:taxRates,annualEquityContributions:equityContributions,
       workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
+      taxRatesByPeriod:state.periodTaxRates?.length===periods.length?state.periodTaxRates:undefined,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     })
@@ -288,6 +298,7 @@ export default function AdvancedFinancePanel(props: Props) {
     <h4>{t('۳. استهلاک دارایی‌به‌دارایی و مالیات','3. Asset-Level Depreciation & Tax')}</h4>
     <p className="fw-hint">{tr('دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.')}</p>
     <div className="fw-grid">{taxRates.map((v,i)=><label className="fw-field" key={i}><span>{tr('نرخ مالیات سال')} {i+1} (%)</span><input type="number" min="0" max="100" value={v} onChange={e=>setState(s=>({...s,taxRates:taxRates.map((rate,j)=>j===i?Number(e.target.value):rate)}))}/></label>)}</div>
+    {props.projectPeriods?.length>0&&<div className="fw-card"><h4>{t('نرخ مالیات به تفکیک دوره','Tax Rate by Project Period')}</h4><p className="fw-hint">{t('در صورت عدم ورود نرخ دوره‌ای، نرخ سال مالی متناظر اعمال می‌شود. با ویرایش هر خانه، برنامه مالیاتی مستقل دوره‌ای فعال می‌شود.','If no period-specific rate is entered, the corresponding fiscal-year rate is applied. Editing any cell activates the independent period tax schedule.')}</p><div className="fw-grid">{props.projectPeriods.map((period,index)=>{const fiscalIndex=props.fiscalYearStartMonth==null?0:fiscalYearIndexForPeriod(period,props.projectPeriods??[],props.fiscalYearStartMonth);const defaultRate=taxRates[fiscalIndex]??props.taxRate;return <label className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} (%)</span><input type="number" min="0" max="100" value={state.periodTaxRates?.length===props.projectPeriods?.length?state.periodTaxRates[index]:defaultRate} onChange={e=>updatePeriodTaxRate(index,Number(e.target.value))}/></label>})}</div></div>}
     {listFinancialMethods('taxation').map(method=><div className="fw-validation" key={method.id}>
       <b>{tr(method.nameFa,method.nameEn)} · {method.calculationStatus==='implemented'?tr('محاسبه پیاده‌سازی‌شده','Calculation implemented'):method.calculationStatus}</b>
       <p className="fw-hint">{tr('فرمول:','Formula:')} {method.formula}</p>
