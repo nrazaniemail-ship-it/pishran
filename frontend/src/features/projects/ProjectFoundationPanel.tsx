@@ -18,10 +18,14 @@ export default function ProjectFoundationPanel({ value, onChange, language = 'fa
 
   const addCurrency = () => updateCurrencies({ foreignCurrencies: [...value.currencies.foreignCurrencies, { id: makeId('currency'), code: '', name: '', exchangeRates: [] }] })
   const updateCurrency = (id: string, patch: Partial<ProjectCurrency>) => updateCurrencies({ foreignCurrencies: value.currencies.foreignCurrencies.map(row => row.id === id ? { ...row, ...patch } : row) })
+  const addExchangeRate = (id: string) => updateCurrencies({ foreignCurrencies: value.currencies.foreignCurrencies.map(row => row.id === id ? { ...row, exchangeRates: [...row.exchangeRates, { period: '', rateToLocal: 0 }] } : row) })
+  const updateExchangeRate = (id: string, index: number, patch: Partial<ProjectCurrency['exchangeRates'][number]>) => updateCurrencies({ foreignCurrencies: value.currencies.foreignCurrencies.map(row => row.id === id ? { ...row, exchangeRates: row.exchangeRates.map((rate, i) => i === index ? { ...rate, ...patch } : rate) } : row) })
   const addCostCentre = () => updateCentres({ items: [...value.costCentres.items, { id: makeId('centre'), code: '', name: '' }] })
   const updateCostCentre = (id: string, patch: Partial<ProjectCostCentre>) => updateCentres({ items: value.costCentres.items.map(row => row.id === id ? { ...row, ...patch } : row) })
   const addInflationIndex = () => updateInflation({ indices: [...value.inflation.indices, { id: makeId('index'), name: '', currencyCode: value.currencies.localCurrencyCode, rates: [] }] })
   const updateIndex = (id: string, patch: Partial<ProjectInflationIndex>) => updateInflation({ indices: value.inflation.indices.map(row => row.id === id ? { ...row, ...patch } : row) })
+  const addInflationRate = (id: string) => updateInflation({ indices: value.inflation.indices.map(row => row.id === id ? { ...row, rates: [...row.rates, { period: '', ratePercent: 0 }] } : row) })
+  const updateInflationRate = (id: string, index: number, patch: Partial<ProjectInflationIndex['rates'][number]>) => updateInflation({ indices: value.inflation.indices.map(row => row.id === id ? { ...row, rates: row.rates.map((rate, i) => i === index ? { ...rate, ...patch } : rate) } : row) })
   const addTaxRate = () => updateTax({ rates: [...value.taxation.rates, { id: makeId('tax'), period: '', ratePercent: 0 }] })
   const updateTaxRate = (id: string, patch: Partial<ProjectTaxRate>) => updateTax({ rates: value.taxation.rates.map(row => row.id === id ? { ...row, ...patch } : row) })
 
@@ -48,6 +52,12 @@ export default function ProjectFoundationPanel({ value, onChange, language = 'fa
       {input(t('کد ارز خارجی','Foreign Currency Code'), currency.code, v => updateCurrency(currency.id, { code: v.toUpperCase() }))}
       {input(t('نام ارز خارجی','Foreign Currency Name'), currency.name, v => updateCurrency(currency.id, { name: v }))}
       <button type="button" className="secondary-button" onClick={() => updateCurrencies({ foreignCurrencies: value.currencies.foreignCurrencies.filter(row => row.id !== currency.id) })}>{t('حذف ارز','Remove Currency')}</button>
+      {currency.exchangeRates.map((rate, index) => <div className="fw-grid" key={index}>
+        {input(t('دوره نرخ ارز','Exchange-rate Period'), rate.period, v => updateExchangeRate(currency.id, index, { period: v }))}
+        {input(t('نرخ تبدیل به ارز محلی','Rate to Local Currency'), rate.rateToLocal, v => updateExchangeRate(currency.id, index, { rateToLocal: Number(v) }), 'number', 0)}
+        <button type="button" className="secondary-button" onClick={() => updateCurrency(currency.id, { exchangeRates: currency.exchangeRates.filter((_, i) => i !== index) })}>{t('حذف نرخ','Remove Rate')}</button>
+      </div>)}
+      <button type="button" className="secondary-button" onClick={() => addExchangeRate(currency.id)}>{t('افزودن نرخ ارز برای دوره','Add Period Exchange Rate')}</button>
     </div>)}
     <button type="button" className="secondary-button" onClick={addCurrency}>{t('افزودن ارز خارجی','Add Foreign Currency')}</button>
 
@@ -66,7 +76,12 @@ export default function ProjectFoundationPanel({ value, onChange, language = 'fa
       {input(t('نام شاخص','Index Name'), index.name, v => updateIndex(index.id, { name: v }))}
       {input(t('کد ارز شاخص','Index Currency Code'), index.currencyCode, v => updateIndex(index.id, { currencyCode: v.toUpperCase() }))}
       <button type="button" className="secondary-button" onClick={() => updateInflation({ indices: value.inflation.indices.filter(row => row.id !== index.id) })}>{t('حذف شاخص','Remove Index')}</button>
-      <div className="fw-hint">{t('نرخ‌های تورم دوره‌ای در مرحله بعد به ردیف‌های قیمت و هزینه متصل می‌شوند.','Period-specific inflation rates will be linked to price and cost rows in the next implementation step.')}</div>
+      {index.rates.map((rate, rateIndex) => <div className="fw-grid" key={rateIndex}>
+        {input(t('دوره تورم','Inflation Period'), rate.period, v => updateInflationRate(index.id, rateIndex, { period: v }))}
+        {input(t('نرخ تورم (%)','Inflation Rate (%)'), rate.ratePercent, v => updateInflationRate(index.id, rateIndex, { ratePercent: Number(v) }), 'number', -99, 1000)}
+        <button type="button" className="secondary-button" onClick={() => updateIndex(index.id, { rates: index.rates.filter((_, i) => i !== rateIndex) })}>{t('حذف نرخ','Remove Rate')}</button>
+      </div>)}
+      <button type="button" className="secondary-button" onClick={() => addInflationRate(index.id)}>{t('افزودن نرخ تورم دوره‌ای','Add Period Inflation Rate')}</button>
     </div>)}
     <button type="button" className="secondary-button" onClick={addInflationIndex}>{t('افزودن شاخص قیمت','Add Price Index')}</button>
 
