@@ -696,6 +696,25 @@ assert.equal(engine.calculateComfarAssetLifecycle([],[
   {id:'orphan-sale',assetId:'missing',period:1,priceMode:'book-value'}
 ],2).valid,false,'Asset disposal must reject a sale without a linked acquisition vintage')
 
+
+const saleIntegrated = engine.calculateIntegratedFinance({
+  years:3,constructionYears:1,capacity:100,fullCapacityRevenue:2000,fullCapacityVariableCashCost:600,
+  fullCapacityFixedCashCost:400,annualDepreciation:100,depreciationSchedule:[0,100,100],
+  fixedInvestment:1000,preOperatingCost:0,fixedInvestmentSchedule:[1000,0,0],preOperatingSchedule:[0,0,0],
+  utilization:[0,1,1],equityContributions:[1000,0,0],loans:[],taxRate:25,costOfEquity:20,
+  workingCapitalPercent:0,salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:15,
+  assetSaleSchedule:[{saleProceeds:900,returnOfCapital:640,otherIncomeLoss:260,bookValueDisposed:640},{saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0},{saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0}]
+})
+near(saleIntegrated.years[0].assetSaleProceeds,900,1e-9,'Asset disposal proceeds must enter the matching model period')
+near(saleIntegrated.years[0].assetSaleOtherIncomeLoss,260,1e-9,'Asset disposal gain/loss must be separately reported')
+near(saleIntegrated.years[0].ebit,1260,1e-9,'Asset disposal gain/loss must affect taxable income')
+near(saleIntegrated.years[0].projectFreeCashFlow,900,1e-9,'Asset sale proceeds must enter project cash flow once, without double-counting the gain')
+const saleStatements=engine.buildThreeFinancialStatements(saleIntegrated.years)
+near(saleStatements[0].incomeStatement.otherIncomeLoss,260,1e-9,'Income statement must show disposal Other income/loss')
+near(saleStatements[0].cashFlowStatement.investingCashFlow,-100,1e-9,'Cash flow statement must classify disposal proceeds as investing cash flow')
+near(saleStatements[0].balanceSheet.netFixedAssets,360,1e-9,'Balance sheet must remove disposed book value from fixed assets')
+assert.ok(saleStatements[0].balanceSheet.reconciled,'Asset disposal must reconcile all three financial statements')
+
 const statements = engine.buildThreeFinancialStatements(integrated.years)
 assert.equal(statements.length, integrated.years.length, 'Three statements must cover the full model horizon')
 assert.ok(statements.every(row => row.balanceSheet.reconciled), 'Balance sheet must reconcile without a plug for the integrated reference case')
