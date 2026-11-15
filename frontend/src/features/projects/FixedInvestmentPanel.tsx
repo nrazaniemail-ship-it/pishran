@@ -2,9 +2,9 @@ import {
   createBlankFixedInvestmentItem, validateFixedInvestmentItems,
   type FixedInvestmentItem, type FixedInvestmentAcquisition, type FixedInvestmentSale, type ProjectFoundation,
 } from './projectFoundation'
-import { buildComfarDepreciationAssetsFromFixedInvestmentItems, calculateComfarAssetLifecycle } from '../steel/financialModel'
+import { buildComfarDepreciationAssetsFromFixedInvestmentItems, calculateComfarAssetLifecycle, reconcileFixedInvestmentRegister } from '../steel/financialModel'
 
-type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; projectStartYear: number; periodCount: number; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean }
+type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; projectStartYear: number; periodCount: number; capexTotal: number; preOperatingCost?: number; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean }
 const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
 const assetClasses: { value: FixedInvestmentItem['assetClass']; fa: string; en: string }[] = [
   { value: 'land', fa: 'زمین', en: 'Land' },
@@ -25,7 +25,7 @@ const methods: { value: FixedInvestmentItem['depreciation']['method']; fa: strin
   { value: 'sum-of-digits', fa: 'مجموع سنوات', en: 'Sum of years digits' },
 ]
 
-export default function FixedInvestmentPanel({ value, foundation, projectStartYear, periodCount, onChange, language = 'fa', blankTemplate = false }: Props) {
+export default function FixedInvestmentPanel({ value, foundation, projectStartYear, periodCount, capexTotal, preOperatingCost = 0, onChange, language = 'fa', blankTemplate = false }: Props) {
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
   const issues = validateFixedInvestmentItems(value, foundation)
@@ -114,6 +114,15 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       {periodCount > 0 && <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('استهلاک دوره','Depreciation')}</th><th>{t('ارزش دفتری پایان دوره','Closing Book Value')}</th><th>{t('عایدی فروش','Asset Sale Proceeds')}</th><th>{t('برگشت سرمایه','Return of Capital')}</th><th>{t('سایر درآمد/زیان','Other Income / Loss')}</th></tr></thead><tbody>{depreciationSchedule.periods.map(row=>{const sales=assetLifecycle.sales.filter(sale=>sale.period===row.period);const sum=(key:'saleProceeds'|'returnOfCapital'|'otherIncomeLoss')=>sales.reduce((total,sale)=>total+sale[key],0);return <tr key={row.period}><td>{projectStartYear+row.period-1}</td><td>{row.depreciation.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{row.closingBookValue.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{sum('saleProceeds').toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{sum('returnOfCapital').toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td><td>{sum('otherIncomeLoss').toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td></tr>})}</tbody></table></div>}
       {!assetLifecycle.valid && <p className="fw-hint">{t('برنامه استهلاک دارای هشدار است و نباید به‌عنوان خروجی تأییدشده استفاده شود.','The depreciation schedule has warnings and must not be treated as a validated output.')}</p>}
     </div>}
+    <div className="fw-card">
+      <h4>{t('تطبیق دفتر دارایی با CAPEX تجمیعی','Fixed Investment Register to Aggregate CAPEX Reconciliation')}</h4>
+      <p className="fw-hint">{t('این کنترل، جمع نوبت‌های تحصیل را پس از تبدیل به ارز محلی با CAPEX منهای هزینه‌های قبل از بهره‌برداری مقایسه می‌کند. ارقام دفتر دوباره به CAPEX اضافه نمی‌شوند؛ تا زمان رفع اختلاف، برنامه سرمایه‌گذاری تجمیعی منبع جریان نقدی باقی می‌ماند.','This control compares acquisition vintages converted to local currency with aggregate CAPEX less pre-operating expenses. Register amounts are not added again to CAPEX; until the difference is resolved, aggregate CAPEX remains the cash-flow source.')}</p>
+      <div className="fw-validation"><span>{t('جمع نوبت‌های تحصیل به ارز محلی','Register Acquisitions in Local Currency')}</span><b>{depreciationBuild.assets.length || value.some(item=>item.acquisitions.length>0) ? capexReconciliation.registerTotal.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2}) : '—'}</b></div>
+      <div className="fw-validation"><span>{t('CAPEX هدف پس از کسر هزینه‌های قبل از بهره‌برداری','CAPEX Target Excluding Pre-operating Expenses')}</span><b>{capexReconciliation.capexFixedAssetTarget.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
+      <div className="fw-validation"><span>{t('اختلاف تطبیق','Reconciliation Difference')}</span><b>{capexReconciliation.difference.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
+      <div className="fw-validation"><span>{t('وضعیت تطبیق','Reconciliation Status')}</span><b>{capexReconciliation.status==='matched'?t('منطبق','Matched'):capexReconciliation.status==='not-entered'?t('ثبت نشده','Not entered'):t('نیازمند تطبیق','Unreconciled')}</b></div>
+      {capexReconciliation.warnings.map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
+    </div>
     <h4>{t('کنترل کامل بودن دفتر دارایی','Fixed Investment Register Validation')}</h4>
     <div className="fw-validation"><span>{t('خطاهای ثبت','Input errors')}</span><b>{issues.length}</b></div>
     {issues.map((issue, index) => <div className="fw-hint" key={issue.path + issue.code + index}><b>{issue.path}</b> — {en ? issue.message : (issueMessages[issue.code] ?? issue.message)}</div>)}
