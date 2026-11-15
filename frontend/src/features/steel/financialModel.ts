@@ -1026,7 +1026,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   const sales: ComfarAssetSaleInput[] = []
   const investmentSchedule = Array.from({ length: Math.max(0, Math.min(120, periodCount || 0)) }, () => 0)
   const warnings: string[] = []
-  let investmentScheduleVerified = items.length > 0 && items.every(item => item.acquisitions.length > 0 && item.acquisitions.every(acquisition => acquisition.allocationBasis === 'source-period' || acquisition.allocationBasis === 'user-confirmed'))
+  const investmentItems = items.filter(item => item.assetClass !== 'preproduction')
+  let investmentScheduleVerified = investmentItems.length > 0 && investmentItems.every(item => item.acquisitions.length > 0 && item.acquisitions.every(acquisition => acquisition.allocationBasis === 'source-period' || acquisition.allocationBasis === 'user-confirmed'))
   if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
     return { assets, sales, investmentSchedule, investmentScheduleVerified: false, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
   }
@@ -1070,6 +1071,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     }
     const startingAtPeriod = starting ? Math.max(1, starting.year - projectStartYear + 1) : 1
     for (const acquisition of item.acquisitions) {
+      if (item.assetClass !== 'preproduction' && (!acquisition.allocationBasis || acquisition.allocationBasis === 'unallocated')) warnings.push(`${item.description || item.id}: acquisition period is unallocated; the register cash-flow schedule is not verified.`)
+      else if (item.assetClass !== 'preproduction' && acquisition.allocationBasis === 'proportional-estimate') warnings.push(`${item.description || item.id}: acquisition period is a proportional estimate; confirm it before using register-derived cash flows.`)
       const acquired = parsePeriod(acquisition.period)
       if (!acquired) {
         warnings.push(`${item.description || item.id}: تاریخ/دوره تحصیل «${acquisition.period}» قابل تشخیص نیست.`)
