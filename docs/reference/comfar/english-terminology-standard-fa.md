@@ -124,6 +124,11 @@
 | مجموع سنوات | Sum of years digits |
 | نرخ استهلاک سالانه | Rate (% per annum) |
 | مدت استهلاک | Length |
+| ماه‌های اضافه عمر استهلاک | Additional months of depreciation life |
+| ماه‌های سال اول استهلاک | Months in first depreciation year |
+| ارزش دفتری در ابتدای محاسبه | Initial Book Value |
+| بهای تاریخی ناخالص دارایی | Original Asset Value |
+| دوره شروع استهلاک | Depreciation Start Period |
 | تاریخ شروع استهلاک | Starting at |
 | درصد ارزش اسقاط | Scrap (% of original value) |
 | ارزش دفتری خالص | Net Book Value |
