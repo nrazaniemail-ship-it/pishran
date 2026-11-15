@@ -1038,8 +1038,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     const date = match[2] && match[3] ? value.trim().replace(/\\//g, '-') : undefined
     return { year: Number(match[1]), date }
   }
-  const methodMap: Record<FixedInvestmentItem['depreciation']['method'], ComfarDepreciationMethod | null> = {
-    none: null,
+  const methodMap: Record<FixedInvestmentItem['depreciation']['method'], ComfarDepreciationMethod> = {
+    none: 'none',
     'linear-zero': 'linear-to-zero',
     'linear-scrap': 'linear-to-scrap',
     accelerated: 'accelerated',
@@ -1060,7 +1060,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   for (const item of items) {
     const method = methodMap[item.depreciation.method]
     const starting = parsePeriod(item.depreciation.startingAt)
-    if (method && !starting) {
+    if (method !== 'none' && !starting) {
       warnings.push(`${item.description || item.id}: تاریخ Starting at باید به‌صورت سال یا YYYY-MM-DD وارد شود.`)
       continue
     }
@@ -1091,7 +1091,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
           originalValue,
           initialBookValue: originalValue,
           scrapPercent: item.depreciation.scrapPercent,
-          lengthYears: item.depreciation.lengthYears ?? 0,
+          lengthYears: method === 'none' ? 0 : (item.depreciation.lengthYears ?? 0),
           lengthMonths: item.depreciation.lengthMonths,
           ratePercent: item.depreciation.ratePercent ?? undefined,
           method,
