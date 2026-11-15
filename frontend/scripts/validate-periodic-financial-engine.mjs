@@ -231,6 +231,74 @@ const invalidIntegratedPeriodic = engine.calculateIntegratedPeriodicFinance({
 })
 assert.equal(invalidIntegratedPeriodic.valid, false, 'Invalid period tax-rate mapping must fail closed')
 
+
+function buildMonthlyPeriods(startYear,startMonth,endYear,endMonth) {
+  const periods=[]
+  let cursor=new Date(Date.UTC(startYear,startMonth-1,1))
+  const final=new Date(Date.UTC(endYear,endMonth-1,1))
+  while(cursor<=final){
+    const next=new Date(Date.UTC(cursor.getUTCFullYear(),cursor.getUTCMonth()+1,1))
+    const end=new Date(next.getTime()-86400000)
+    periods.push({index:periods.length+1,startDate:cursor.toISOString().slice(0,10),endDate:end.toISOString().slice(0,10),days:Math.round((end-cursor)/86400000)+1,partial:false})
+    cursor=next
+  }
+  return periods
+}
+const monthlyDepreciationPeriods=buildMonthlyPeriods(2024,1,2026,1)
+const straightLineAsset=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-sl-01',name:'Monthly straight-line asset',assetClass:'fixed',
+  originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:1,lengthMonths:0,
+  firstDepreciationMonths:12,ratePercent:null,method:'linear-to-scrap',
+  acquisitionDate:'2024-01-15',startingAtDate:'2024-01-01'
+}],[],monthlyDepreciationPeriods)
+assert.equal(straightLineAsset.valid,true)
+assert.equal(straightLineAsset.fixedInvestmentByPeriod[0],1200)
+assert.equal(straightLineAsset.depreciationByPeriod[0],0,'New asset depreciation must begin in the period after acquisition')
+assert.ok(Math.abs(straightLineAsset.depreciationByPeriod.reduce((sum,value)=>sum+value,0)-1200)<1e-7,
+  'Monthly straight-line depreciation must exhaust the depreciable base over the exact useful-life dates')
+assert.ok(Math.abs(straightLineAsset.periods.at(-1).closingBookValue)<1e-7)
+const sydAsset=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-syd-01',name:'Two-year SYD asset',assetClass:'fixed',
+  originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
+  firstDepreciationMonths:12,ratePercent:null,method:'sum-of-years-digits',
+  acquisitionDate:'2024-01-15',startingAtDate:'2024-01-01'
+}],[],monthlyDepreciationPeriods)
+assert.equal(sydAsset.valid,true)
+assert.ok(Math.abs(sydAsset.depreciationByPeriod.slice(1,13).reduce((sum,value)=>sum+value,0)-800)<1e-7,
+  'Sum-of-years-digits first depreciation year must equal two-thirds of the depreciable base')
+assert.ok(Math.abs(sydAsset.depreciationByPeriod.slice(13,25).reduce((sum,value)=>sum+value,0)-400)<1e-7,
+  'Sum-of-years-digits second depreciation year must equal one-third of the depreciable base')
+const acceleratedAsset=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-acc-01',name:'Accelerated asset',assetClass:'fixed',
+  originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
+  firstDepreciationMonths:12,ratePercent:60,method:'accelerated',
+  acquisitionDate:'2024-01-15',startingAtDate:'2024-01-01'
+}],[],monthlyDepreciationPeriods)
+assert.equal(acceleratedAsset.valid,true)
+assert.ok(Math.abs(acceleratedAsset.depreciationByPeriod.slice(1,13).reduce((sum,value)=>sum+value,0)-720)<1e-7,
+  'Accelerated depreciation must apply the higher declining-balance amount in year one')
+assert.ok(Math.abs(acceleratedAsset.depreciationByPeriod.slice(13,25).reduce((sum,value)=>sum+value,0)-480)<1e-7,
+  'Accelerated depreciation must switch to straight-line when it exceeds declining balance in the final year')
+const soldAsset=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-sale-01',name:'Disposed asset',assetClass:'fixed',
+  originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
+  firstDepreciationMonths:12,ratePercent:null,method:'linear-to-scrap',
+  acquisitionDate:'2024-01-15',startingAtDate:'2024-01-01'
+}],[{id:'sale-01',assetId:'asset-sale-01',saleDate:'2024-10-15',priceMode:'self-defined',selfDefinedPrice:1500,exchangeRateToLocal:1}],monthlyDepreciationPeriods)
+assert.equal(soldAsset.valid,true)
+assert.equal(soldAsset.sales.length,1)
+assert.equal(soldAsset.sales[0].saleProceeds,1500)
+assert.ok(soldAsset.sales[0].gainLoss>0)
+assert.equal(soldAsset.periods[9].closingBookValue,0)
+assert.ok(soldAsset.periods.slice(10).every(period=>period.closingBookValue===0))
+const invalidPeriodicAsset=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-invalid-date',name:'Invalid date asset',assetClass:'fixed',
+  originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
+  firstDepreciationMonths:12,ratePercent:null,method:'linear-to-scrap',
+  acquisitionDate:'1403/01/01',startingAtDate:'2024-01-01'
+}],[],monthlyDepreciationPeriods)
+assert.equal(invalidPeriodicAsset.valid,false,'Non-ISO acquisition dates must fail closed until explicitly converted')
+
 const advancedFinanceSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 const feasibilityWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 const projectReportSource = await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx', import.meta.url), 'utf8')
@@ -258,4 +326,4 @@ assert.ok(projectFoundationPanelSource.includes('Day-count Basis')
 assert.ok(advancedFinanceSource.includes('Values in the period tax schedule override the annual rate.')
   && !advancedFinanceSource.includes('Monthly/quarterly calculation will be enabled after the period engine is complete'),
   'Tax UI must explain period-specific overrides rather than claim monthly/quarterly support is unavailable')
-console.log('PASS: integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
+console.log('PASS: asset-level monthly/quarterly depreciation, disposals and integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
