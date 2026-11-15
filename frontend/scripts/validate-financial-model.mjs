@@ -984,7 +984,7 @@ assert.ok(expansionPanelSource.includes('Linear to zero')
   && expansionPanelSource.includes("asset.depreciationMethod!=='sum-of-digits'"),
   'Existing fixed-asset depreciation inputs must match COMFAR four methods and disable rate for Sum of digits')
 assert.ok(expansionPanelSource.includes('Residual / salvage value')
-  && expansionPanelSource.includes('Depreciation method')
+  && expansionPanelSource.includes('Type of Depreciation')
   && expansionPanelSource.includes('Cost Centre')
   && expansionPanelSource.includes('Repayment Frequency')
   && expansionPanelSource.includes('Grace Period (years)')
