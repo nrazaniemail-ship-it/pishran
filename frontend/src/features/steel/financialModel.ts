@@ -1063,6 +1063,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     return Number.isFinite(rate) && (rate ?? 0) > 0 ? rate! : null
   }
   for (const item of items) {
+    if (!item.depreciationBasis || item.depreciationBasis === 'unresolved') warnings.push(`${item.description || item.id}: depreciation conditions are unresolved; this schedule is preliminary.`)
+    else if (item.depreciationBasis === 'source-conflict') warnings.push(`${item.description || item.id}: source documents conflict on depreciation conditions; this schedule is preliminary.`)
     const method = methodMap[item.depreciation.method]
     const starting = parsePeriod(item.depreciation.startingAt)
     if (method !== 'none' && !starting) {
