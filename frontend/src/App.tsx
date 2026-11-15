@@ -3,7 +3,7 @@ import ReactECharts from 'echarts-for-react'
 import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Layers3, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
-import { createProject, deleteProject, ensureWorkbookProjects, listProjects, type FeasibilityProject } from './core/projects/projectRepository'
+import { createProject, deleteProject, ensureWorkbookProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
 import ProjectsView from './features/projects/ProjectsView'
 import SettingsView from './features/settings/SettingsView'
 import RollingWorkspace from './features/steel/RollingWorkspace'
@@ -80,6 +80,12 @@ export default function App() {
     await refreshStorage()
   }
 
+  async function handleUpdateProject(id: string, patch: Partial<Pick<FeasibilityProject, 'name' | 'location'>>) {
+    const updated = await updateProject(id, patch)
+    setProjects(await listProjects())
+    setActiveProject(current => current?.id === id ? updated : current)
+  }
+
   async function handleDeleteProject(id: string) {
     await deleteProject(id)
     setProjects(await listProjects())
@@ -138,7 +144,7 @@ export default function App() {
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language} onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}
-    {page === 'hot-rolling' && <RollingWorkspace language={settings.language} project={activeProject ?? undefined} onBack={() => setPage('projects')}/>}
+    {page === 'hot-rolling' && <RollingWorkspace language={settings.language} project={activeProject ?? undefined} onUpdateProject={handleUpdateProject} onBack={() => setPage('projects')}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'split-integrated' && activeProject && <section className="projects-page split-integrated-page" dir={isEn?"ltr":"rtl"}>
       <div className="page-heading"><div><span className="eyebrow">PISHRAN / PROJECT SEPARATION</span><h1>{isEn?"Split Integrated Steel Project":"تفکیک پروژه مجتمع فولادی"}</h1><p>{activeProject.name}</p></div><button className="secondary-button" onClick={() => setPage('projects')}>{isEn?"Back to Projects":"بازگشت به پروژه‌ها"}</button></div>
