@@ -233,6 +233,7 @@ export type FixedInvestmentAcquisition = {
   unitPrice: number
   currencyCode: string
   exchangeRateToLocal: number | null
+  allocationBasis?: 'source-period' | 'user-confirmed' | 'proportional-estimate' | 'unallocated'
 }
 export type FixedInvestmentSale = {
   id: string
