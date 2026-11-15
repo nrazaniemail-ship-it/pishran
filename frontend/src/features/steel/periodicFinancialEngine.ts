@@ -289,3 +289,278 @@ export function calculatePeriodicLoanSchedule(
   }
   return { rows, valid: true, issues: [] }
 }
+
+
+export type PeriodicProjectLoan = {
+  id: string
+  input: PeriodicLoanInput
+}
+export type PeriodicProjectFinanceInput = {
+  periods: ProjectCalendarPeriod[]
+  fiscalYearStartMonth: number
+  dayCountBasis: 360 | 365
+  cashFlowTiming: PeriodCashFlowTiming
+  annualRevenue: number[]
+  annualVariableCost: number[]
+  annualFixedCost: number[]
+  annualDepreciation: number[]
+  annualFixedInvestment: number[]
+  annualPreOperatingCost: number[]
+  annualMaintenanceCapex: number[]
+  annualTaxRates: number[]
+  annualEquityContributions: number[]
+  workingCapitalByPeriod: number[]
+  openingWorkingCapital?: number
+  openingTaxLoss?: number
+  openingUnleveredTaxLoss?: number
+  loans: PeriodicProjectLoan[]
+  discountRatePercent?: number | null
+  mirrFinanceRatePercent?: number | null
+  mirrReinvestmentRatePercent?: number | null
+  salvageValue?: number
+}
+export type PeriodicProjectFinanceRow = {
+  period: number
+  startDate: string
+  endDate: string
+  days: number
+  revenue: number
+  variableCost: number
+  fixedCost: number
+  depreciation: number
+  ebit: number
+  interestExpense: number
+  capitalizedInterest: number
+  principal: number
+  debtDrawdown: number
+  debtService: number
+  taxRatePercent: number
+  tax: number
+  unleveredTax: number
+  taxLossCarryForward: number
+  fixedInvestment: number
+  preOperatingCost: number
+  maintenanceCapex: number
+  closingWorkingCapital: number
+  changeInWorkingCapital: number
+  equityContribution: number
+  salvageValue: number
+  cfads: number
+  dscr: number | null
+  projectFreeCashFlow: number
+  equityFreeCashFlow: number
+}
+export type PeriodicProjectFinanceResult = {
+  valid: boolean
+  rows: PeriodicProjectFinanceRow[]
+  loanSchedules: Record<string, PeriodicLoanRow[]>
+  npvProject: number | null
+  irrProject: number | null
+  mirrProject: number | null
+  npvEquity: number | null
+  irrEquity: number | null
+  mirrEquity: number | null
+  totalDebtDrawdown: number
+  totalEquityContribution: number
+  totalCapitalizedInterest: number
+  peakWorkingCapital: number
+  warnings: string[]
+}
+
+function fiscalIndexForPeriod(period: ProjectCalendarPeriod, periods: ProjectCalendarPeriod[], fiscalYearStartMonth: number): number {
+  const first = parseIsoDateUtc(periods[0]?.startDate ?? '')
+  const current = parseIsoDateUtc(period.startDate)
+  if (!first || !current || !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12) return -1
+  return fiscalYearStartFor(current, fiscalYearStartMonth).getUTCFullYear()
+    - fiscalYearStartFor(first, fiscalYearStartMonth).getUTCFullYear()
+}
+
+/** Annual effective IRR expressed as a percentage, discounted on actual period dates. */
+export function calculatePeriodicIrr(
+  cashFlows: number[],
+  periods: ProjectCalendarPeriod[],
+  dayCountBasis: 360 | 365,
+  timing: PeriodCashFlowTiming = 'period-end',
+): number | null {
+  if (cashFlows.length !== periods.length || !cashFlows.length ||
+      !cashFlows.some(value => value < 0) || !cashFlows.some(value => value > 0)) return null
+  const npvAt = (rate: number) => calculatePeriodicNpv(cashFlows, periods, rate, dayCountBasis, timing)
+  let low = -99.999999
+  let high = 100
+  let lowValue = npvAt(low)
+  let highValue = npvAt(high)
+  while (Number.isFinite(lowValue) && Number.isFinite(highValue) &&
+      lowValue * highValue > 0 && high < 100000000) {
+    high = high * 2 + 100
+    highValue = npvAt(high)
+  }
+  if (!Number.isFinite(lowValue) || !Number.isFinite(highValue) || lowValue * highValue > 0) return null
+  for (let iteration = 0; iteration < 240; iteration++) {
+    const mid = (low + high) / 2
+    const value = npvAt(mid)
+    if (!Number.isFinite(value)) return null
+    if (Math.abs(value) < 1e-8) return mid
+    if (lowValue * value <= 0) {
+      high = mid
+      highValue = value
+    } else {
+      low = mid
+      lowValue = value
+    }
+  }
+  return (low + high) / 2
+}
+
+/** Period-aware MIRR using actual elapsed days and annual effective finance/reinvestment rates. */
+export function calculatePeriodicMirr(
+  cashFlows: number[],
+  periods: ProjectCalendarPeriod[],
+  financeRatePercent: number,
+  reinvestmentRatePercent: number,
+  dayCountBasis: 360 | 365,
+  timing: PeriodCashFlowTiming = 'period-end',
+): number | null {
+  if (cashFlows.length !== periods.length || !cashFlows.length ||
+      !validFinite(financeRatePercent) || !validFinite(reinvestmentRatePercent) ||
+      financeRatePercent <= -100 || reinvestmentRatePercent <= -100) return null
+  const totalDays = periods.reduce((sum, period) => sum + period.days, 0)
+  if (!Number.isFinite(totalDays) || totalDays <= 0) return null
+  let elapsedDays = 0
+  let presentValueNegative = 0
+  let futureValuePositive = 0
+  for (let index = 0; index < cashFlows.length; index++) {
+    const period = periods[index]
+    const timingDays = elapsedDays + (timing === 'mid-period' ? period.days / 2 : period.days)
+    const value = cashFlows[index]
+    if (value < 0) presentValueNegative += value / Math.pow(1 + financeRatePercent / 100, timingDays / dayCountBasis)
+    if (value > 0) futureValuePositive += value * Math.pow(1 + reinvestmentRatePercent / 100, (totalDays - timingDays) / dayCountBasis)
+    elapsedDays += period.days
+  }
+  if (presentValueNegative >= 0 || futureValuePositive <= 0) return null
+  return (Math.pow(futureValuePositive / -presentValueNegative, dayCountBasis / totalDays) - 1) * 100
+}
+
+/**
+ * Integrated period-by-period project, debt, tax and cash-flow calculation.
+ * Annual operating assumptions are allocated to actual project periods by fiscal-year
+ * overlap days; working-capital inputs are closing balance targets for each period.
+ */
+export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinanceInput): PeriodicProjectFinanceResult {
+  const warnings: string[] = []
+  const { periods, fiscalYearStartMonth, dayCountBasis, cashFlowTiming } = input
+  const empty = (): PeriodicProjectFinanceResult => ({
+    valid: false, rows: [], loanSchedules: {}, npvProject: null, irrProject: null, mirrProject: null,
+    npvEquity: null, irrEquity: null, mirrEquity: null, totalDebtDrawdown: 0,
+    totalEquityContribution: 0, totalCapitalizedInterest: 0, peakWorkingCapital: 0, warnings
+  })
+  if (!periods.length || (dayCountBasis !== 360 && dayCountBasis !== 365) ||
+      !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12 ||
+      !['period-end','mid-period'].includes(cashFlowTiming)) {
+    warnings.push('Project periods, fiscal-year start month, day-count basis or cash-flow timing are invalid.')
+    return empty()
+  }
+  const annualSeries = [
+    input.annualRevenue, input.annualVariableCost, input.annualFixedCost, input.annualDepreciation,
+    input.annualFixedInvestment, input.annualPreOperatingCost, input.annualMaintenanceCapex,
+    input.annualTaxRates, input.annualEquityContributions,
+  ]
+  if (annualSeries.some(series => !Array.isArray(series) || !series.length || series.some(value => !validFinite(value))) ||
+      annualSeries.slice(0,7).some(series => series.some(value => value < 0)) ||
+      input.annualTaxRates.some(value => value < 0 || value > 100) ||
+      !Array.isArray(input.workingCapitalByPeriod) || input.workingCapitalByPeriod.length !== periods.length ||
+      input.workingCapitalByPeriod.some(value => !validFinite(value) || value < 0) ||
+      input.loans.some(loan => !loan.id || !loan.input)) {
+    warnings.push('Annual flow arrays, tax rates, working-capital balances or loan definitions are invalid.')
+    return empty()
+  }
+  const allocated = annualSeries.map(series => allocateAnnualFlowsToPeriods(series, periods, fiscalYearStartMonth))
+  if (allocated.some(series => series.length !== periods.length || series.some(value => !validFinite(value)))) {
+    warnings.push('Annual model horizon does not cover every project fiscal period; annual flows cannot be allocated.')
+    return empty()
+  }
+  const [revenue, variableCost, fixedCost, depreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution] = allocated
+  const taxRates = periods.map(period => {
+    const index = fiscalIndexForPeriod(period, periods, fiscalYearStartMonth)
+    return index >= 0 ? input.annualTaxRates[index] : Number.NaN
+  })
+  if (taxRates.some(rate => !validFinite(rate))) {
+    warnings.push('Annual tax-rate schedule does not cover every project fiscal period.')
+    return empty()
+  }
+  const loanSchedules: Record<string, PeriodicLoanRow[]> = {}
+  for (const loan of input.loans) {
+    const schedule = calculatePeriodicLoanSchedule(loan.input, periods, dayCountBasis)
+    if (!schedule.valid) {
+      warnings.push(...schedule.issues.map(issue => loan.id + ': ' + issue))
+      return empty()
+    }
+    loanSchedules[loan.id] = schedule.rows
+  }
+  const openingLoss = input.openingTaxLoss ?? 0
+  const openingUnleveredLoss = input.openingUnleveredTaxLoss ?? 0
+  if (!validFinite(openingLoss) || openingLoss < 0 || !validFinite(openingUnleveredLoss) || openingUnleveredLoss < 0) {
+    warnings.push('Opening tax-loss balances must be finite and non-negative.')
+    return empty()
+  }
+  const rows: PeriodicProjectFinanceRow[] = []
+  let taxLoss = openingLoss
+  let unleveredTaxLoss = openingUnleveredLoss
+  let priorWorkingCapital = Math.max(0, input.openingWorkingCapital ?? 0)
+  for (let index = 0; index < periods.length; index++) {
+    const loanRows = Object.values(loanSchedules).map(schedule => schedule[index])
+    const interestExpense = loanRows.reduce((sum,row)=>sum+row.interestExpense,0)
+    const capitalizedInterest = loanRows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
+    const principal = loanRows.reduce((sum,row)=>sum+row.principal,0)
+    const debtDrawdown = loanRows.reduce((sum,row)=>sum+row.drawdown,0)
+    const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index]
+    const periodTax = calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
+    const unleveredPeriodTax = calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
+    if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
+      warnings.push('Tax calculation failed in project period ' + (index + 1) + '.')
+      return empty()
+    }
+    taxLoss = periodTax.closingLossCarryForward
+    unleveredTaxLoss = unleveredPeriodTax.closingLossCarryForward
+    const closingWorkingCapital = input.workingCapitalByPeriod[index]
+    const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
+    const terminalSalvage = index === periods.length - 1 ? Math.max(0,input.salvageValue ?? 0) : 0
+    const cfads = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
+      - maintenanceCapex[index] - changeInWorkingCapital
+    const debtService = interestExpense + principal
+    const dscr = debtService > 0 ? cfads / debtService : null
+    const projectFreeCashFlow = ebit - unleveredPeriodTax.tax + depreciation[index]
+      - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
+      - changeInWorkingCapital + terminalSalvage
+    const equityFreeCashFlow = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
+      - interestExpense - principal - fixedInvestment[index] - preOperatingCost[index]
+      - maintenanceCapex[index] - changeInWorkingCapital + debtDrawdown + equityContribution[index] + terminalSalvage
+    rows.push({
+      period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
+      revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
+      interestExpense,capitalizedInterest,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
+      tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
+      fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
+      closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
+      salvageValue:terminalSalvage,cfads,dscr,projectFreeCashFlow,equityFreeCashFlow
+    })
+    priorWorkingCapital = closingWorkingCapital
+  }
+  const projectFlows = rows.map(row=>row.projectFreeCashFlow)
+  const equityFlows = rows.map(row=>row.equityFreeCashFlow)
+  const discountRate = input.discountRatePercent
+  const npvProject = discountRate == null ? null : calculatePeriodicNpv(projectFlows,periods,discountRate,dayCountBasis,cashFlowTiming)
+  const npvEquity = discountRate == null ? null : calculatePeriodicNpv(equityFlows,periods,discountRate,dayCountBasis,cashFlowTiming)
+  const mirrProject = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
+    : calculatePeriodicMirr(projectFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
+  const mirrEquity = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
+    : calculatePeriodicMirr(equityFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
+  const totalDebtDrawdown = rows.reduce((sum,row)=>sum+row.debtDrawdown,0)
+  const totalEquityContribution = rows.reduce((sum,row)=>sum+row.equityContribution,0)
+  const totalCapitalizedInterest = rows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
+  return {
+    valid:true,rows,loanSchedules,npvProject,irrProject:calculatePeriodicIrr(projectFlows,periods,dayCountBasis,cashFlowTiming),
+    mirrProject,npvEquity,irrEquity:calculatePeriodicIrr(equityFlows,periods,dayCountBasis,cashFlowTiming),mirrEquity,
+    totalDebtDrawdown,totalEquityContribution,totalCapitalizedInterest,
+    peakWorkingCapital:Math.max(0,...input.workingCapitalByPeriod),warnings
+  }
+}
