@@ -10,7 +10,7 @@ export const HOT_ROLLING_COIL_REFERENCE = {
   loanTermYears:5, loanInstallments:20, loanGraceMonths:0, loanFeePercent:5,
   workingCapitalAtFullCapacity:4595370.4572, fixedInvestment:18463008.720569465,
   preOperatingCost:239826.63796, capitalizedInterestReference:3298633.06,
-  salesAtFullCapacity:62259600, referenceTaxInComfarReport:5,
+  salesAtFullCapacity:62259600, referenceTaxEffectiveRatesInComfarReport:{firstYear:5,referenceYear:5,lastYear:25},
   referenceEquityPercentInComfarReport:70, referenceDebtPercentInComfarReport:30,
   capex:[
     ['خرید زمین',2015000,'CAPEX › خرید زمین › ردیف 3'],
