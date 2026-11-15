@@ -54,27 +54,71 @@ const chapters:Chapter[] = [
 
 ]
 
-export default function Guide() {
+export default function Guide({language='fa'}:{language?:'fa'|'en'}) {
+ const en=language==='en'
+ const chapterEn:Record<string,[string,string]>={
+ 'تعریف پروژه و بازار':['Project Definition & Market','Establish the study basis, project scope, location, target product and investment rationale.'],
+ 'محصول و ظرفیت تولید':['Products & Production Capacity','Define the product mix, nameplate and operating capacity, production plan, and quality and market constraints.'],
+ 'فرآیند و موازنه مواد':['Process & Material Balance','Describe the production route, key equipment capacity, mass balance and performance controls.'],
+ 'مصارف زیربنایی و فرآیندی':['Utilities & Process Consumables','Estimate water, power, gas, other utilities and consumables by type and unit.'],
+ 'هزینه‌های ساخت و بهره‌برداری':['Capital & Operating Costs','Develop a complete, traceable and time-phased CAPEX and OPEX estimate in the project base currency.'],
+ 'تأمین مالی و نرخ تنزیل':['Financing & Discount Rates','Define the capital structure, loans, cost of capital and discounting method consistent with the cash flow.'],
+ 'جریان نقدی و شاخص‌های مالی':['Cash Flow & Financial Indicators','Convert technical and economic assumptions into periodic cash flows and decision metrics.'],
+ 'نتیجه نهایی و توصیه تصمیم‌گیری':['Conclusions & Decision Recommendation','Turn technical, market, financial and risk findings into a clear, conditional recommendation.'],
+ 'استاندارد خروجی‌ها و قواعد محاسباتی COMFAR':['COMFAR Outputs & Calculation Standards','Distinguish financial planning cash flow, total investment return and equity return; check consistency with COMFAR III reference guidance.']}
+ const topicEn:Record<string,[string,string]>={
+ '۱-۱. شناسنامه و محدوده پروژه':['1.1 Project Identity & Scope','Define clear technical and economic boundaries, including in-scope and out-of-scope units and infrastructure interfaces.'],
+ '۱-۲. تحلیل بازار و فروش':['1.2 Market & Sales Analysis','Demonstrate that products can be sold at defensible prices and mix; installed capacity alone does not prove feasibility.'],
+ '۱-۳. منابع داده و قابلیت اتکا':['1.3 Data Sources & Reliability','Make assumptions traceable and distinguish documented data from estimates.'],
+ '۲-۱. تعریف سبد محصول و مشخصات':['2.1 Product Mix & Specifications','Define products using specifications that can be produced and sold.'],
+ '۲-۲. ظرفیت اسمی، عملی و تولید قابل فروش':['2.2 Nameplate, Operating & Saleable Capacity','Distinguish design capacity from achievable production under real operating conditions.'],
+ '۲-۳. ضریب مصرف و بازده محصول':['2.3 Consumption Factors & Yield','Connect saleable output to feed requirements and process losses.'],
+ '۳-۱. انتخاب مسیر فرآیندی و فناوری':['3.1 Process Route & Technology Selection','Select technology consistent with product, capacity, quality, feed and lifecycle cost.'],
+ '۳-۲. موازنه جرم':['3.2 Mass Balance','Reconcile inputs, outputs, losses, inventory and recycling across each process stage.'],
+ '۳-۳. تراز ظرفیت و گلوگاه':['3.3 Capacity Balance & Bottlenecks','Confirm that all key equipment can support the production plan.'],
+ '۴-۱. یوتیلیتی‌های زیربنایی':['4.1 Site Utilities','Estimate connection capacity and consumption costs for water, power, gas and common infrastructure.'],
+ '۴-۲. مواد و اقلام مصرفی فرآیندی':['4.2 Process Materials & Consumables','Calculate direct production materials and tonnage-linked costs.'],
+ '۴-۳. تعرفه و هزینه تأمین':['4.3 Tariffs & Supply Costs','Convert technical consumption into forecastable costs and assess supply risks.'],
+ '۵-۱. سرمایه‌گذاری ثابت (CAPEX)':['5.1 Fixed Investment (CAPEX)','Estimate the cost of establishing assets required to reach operating readiness.'],
+ '۵-۲. هزینه‌های بهره‌برداری (OPEX)':['5.2 Operating Expenditure (OPEX)','Estimate steady-state annual costs and separate fixed from variable costs.'],
+ '۵-۳. سرمایه در گردش و استهلاک':['5.3 Working Capital & Depreciation','Calculate operating cash requirements and depreciation expense.'],
+ '۶-۱. ساختار سرمایه و منابع تأمین':['6.1 Capital Structure & Funding Sources','Separate shareholder equity, loans, foreign-currency facilities, grants and other funding.'],
+ '۶-۲. نرخ تنزیل دستی و WACC':['6.2 Manual Discount Rate & WACC','Select a discount rate consistent with cash-flow definition and project risk.'],
+ '۶-۳. برنامه بازپرداخت و توان خدمت بدهی':['6.3 Debt Repayment & Debt-Service Capacity','Assess the project’s ability to pay interest and principal when due.'],
+ '۷-۱. صورت سود و زیان پیش‌بینی‌شده':['7.1 Forecast Income Statement','Calculate operating profit, tax and net income using correct cost classifications.'],
+ '۷-۲. جریان نقدی پروژه و سهامدار':['7.2 Project & Equity Cash Flow','Assess asset-level economics separately from investor returns after financing.'],
+ '۷-۳. NPV، IRR، PI و دوره بازگشت':['7.3 NPV, IRR, PI & Payback','Measure value creation, return and capital recovery period.'],
+ '۷-۴. تحلیل حساسیت و سناریو':['7.4 Sensitivity & Scenario Analysis','Identify key value drivers and economic breakpoints.'],
+ '۸-۱. جمع‌بندی شاخص‌ها و شروط تصمیم':['8.1 KPI Summary & Decision Conditions','Present a consistent view of economic attractiveness, repayment capacity and information quality.'],
+ '۸-۲. برنامه اقدام و شکاف اطلاعاتی':['8.2 Action Plan & Information Gaps','Turn the study into trackable actions for detailed feasibility or final investment decisions.'],
+ '۹-۱. جریان نقدی برنامه‌ریزی مالی در برابر جریان نقدی ارزیابی':['9.1 Financial Planning vs. Evaluation Cash Flow','Financing and corporate liquidity cash flow is not the same as the project asset’s economic cash flow.'],
+ '۹-۲. NPV، IRR و MIRR و قرارداد نرخ‌ها':['9.2 NPV, IRR, MIRR & Rate Conventions','Each metric must be tied to the matching cash flow, discount rate, currency, period and timing.'],
+ '۹-۳. خروجی‌ها، صورت‌های مالی و کنترل تطبیق':['9.3 Outputs, Financial Statements & Reconciliation','Ensure traceability from input schedules through financial statements to evaluation metrics.'],
+ '۹-۴. تحلیل اقتصادی، آثار توسعه‌ای و پایداری':['9.4 Economic Analysis, Development Impact & Sustainability','Separate investor financial feasibility from the project’s economic and social value.']}
+ const chTitle=(v:string)=>en?(chapterEn[v]?.[0]??v):v
+ const chObjective=(v:string)=>en?(chapterEn[v]?.[1]??v):v
+ const topicTitle=(v:string)=>en?(topicEn[v]?.[0]??v):v
+ const topicPurpose=(v:string)=>en?(topicEn[v]?.[1]??v):v
  const [query,setQuery]=useState('')
  const [open,setOpen]=useState('1-1')
  const [onlyFormula,setOnlyFormula]=useState(false)
- const normalized=query.trim().toLocaleLowerCase('fa')
- const results=useMemo(()=>chapters.flatMap(ch=>ch.topics.map(t=>({ch,t,key:`${ch.id}-${t.title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`})).filter(({ch,t})=>!normalized||[ch.title,ch.objective,t.title,t.purpose,...t.inputs,...t.method,...t.formulas,...t.checks,...t.pitfalls].join(' ').toLocaleLowerCase('fa').includes(normalized)).filter(({t})=>!onlyFormula||t.formulas.length>0)),[normalized,onlyFormula])
+ const normalized=query.trim().toLocaleLowerCase(en?'en':'fa')
+ const results=useMemo(()=>chapters.flatMap(ch=>ch.topics.map(t=>({ch,t,key:`${ch.id}-${t.title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`})).filter(({ch,t})=>!normalized||[ch.title,ch.objective,t.title,t.purpose,...t.inputs,...t.method,...t.formulas,...t.checks,...t.pitfalls].join(' ').toLocaleLowerCase(en?'en':'fa').includes(normalized)).filter(({t})=>!onlyFormula||t.formulas.length>0)),[normalized,onlyFormula])
  const total=chapters.reduce((n,c)=>n+c.topics.length,0)
- return <main className="guide-page" dir="rtl">
-  <header className="guide-hero"><div className="guide-icon"><BookOpen size={28}/></div><div><span className="eyebrow">PISHRAN KNOWLEDGE CENTER</span><h1>راهنمای جامع امکان‌سنجی پروژه</h1><p>راهنمای گام‌به‌گام، فرمول‌ها، روش ورود اطلاعات و کنترل کیفیت؛ با رویکردی مشابه راهنماهای نرم‌افزارهای حرفه‌ای امکان‌سنجی.</p></div><div className="guide-count"><b>{chapters.length}</b><small>گام اصلی</small><b>{total}</b><small>موضوع آموزشی</small></div></header>
-  <section className="guide-search"><div className="guide-search-box"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="جست‌وجو در راهنما؛ مثال: WACC، موازنه مواد، ظرفیت، NPV، سرمایه در گردش..." aria-label="جست‌وجو در راهنما"/>{query&&<button onClick={()=>setQuery('')}>پاک‌کردن</button>}</div><label className="guide-filter"><input type="checkbox" checked={onlyFormula} onChange={e=>setOnlyFormula(e.target.checked)}/> فقط موضوعات دارای فرمول</label><span className="guide-results">{results.length.toLocaleString('fa-IR')} موضوع</span></section>
-  <div className="guide-layout"><aside className="guide-index"><b>فهرست گام‌ها</b>{chapters.map(ch=><button key={ch.id} onClick={()=>{setQuery('');setOnlyFormula(false);setOpen(`${ch.id}-${ch.topics[0].title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`);document.getElementById(`guide-ch-${ch.id}`)?.scrollIntoView({behavior:'smooth',block:'start'})}}><span>{String(ch.id).padStart(2,'0')}</span>{ch.title}</button>)}</aside>
-   <section className="guide-content">{chapters.map(ch=>{const visible=results.filter(x=>x.ch.id===ch.id);if(!visible.length)return null;return <section className="guide-chapter" id={`guide-ch-${ch.id}`} key={ch.id}><div className="guide-chapter-head"><span>گام {ch.id.toLocaleString('fa-IR')}</span><h2>{ch.title}</h2><p>{ch.objective}</p></div>{visible.map(({t})=>{const id=`${ch.id}-${t.title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`;const expanded=open===id||Boolean(normalized);return <article className="guide-topic" key={t.title}><button className="guide-topic-toggle" onClick={()=>setOpen(open===id?'':id)}><span><b>{t.title}</b><small>{t.purpose}</small></span>{expanded?<ChevronUp size={18}/>:<ChevronDown size={18}/>}</button>{expanded&&<div className="guide-topic-body">
-    <div className="guide-subsection"><h4>اطلاعات موردنیاز</h4><ul>{t.inputs.map(x=><li key={x}>{x}</li>)}</ul></div>
-    <div className="guide-subsection"><h4>روش انجام کار، مرحله به مرحله</h4><ol>{t.method.map(x=><li key={x}>{x}</li>)}</ol></div>
-    <div className="guide-formulas"><h4><Calculator size={16}/> فرمول‌ها و روابط محاسباتی</h4>{t.formulas.map(x=><code key={x}>{x}</code>)}</div>
-    <div className="guide-example"><h4><Lightbulb size={16}/> مثال و تفسیر</h4><p>{t.example}</p></div>
-    <div className="guide-subsection"><h4><ClipboardCheck size={16}/> کنترل‌های صحت و تکمیل</h4><ul>{t.checks.map(x=><li key={x}>{x}</li>)}</ul></div>
-    <div className="guide-warning"><h4><AlertTriangle size={16}/> خطاهای متداول</h4><ul>{t.pitfalls.map(x=><li key={x}>{x}</li>)}</ul></div>
+ return <main className="guide-page" dir={en?"ltr":"rtl"}>
+  <header className="guide-hero"><div className="guide-icon"><BookOpen size={28}/></div><div><span className="eyebrow">PISHRAN KNOWLEDGE CENTER</span><h1>{en?"Comprehensive Project Feasibility Guide":"راهنمای جامع امکان‌سنجی پروژه"}</h1><p>{en?"A step-by-step reference for methods, formulas, data entry and quality control, inspired by professional feasibility software.":"راهنمای گام‌به‌گام، فرمول‌ها، روش ورود اطلاعات و کنترل کیفیت؛ با رویکردی مشابه راهنماهای نرم‌افزارهای حرفه‌ای امکان‌سنجی."}</p></div><div className="guide-count"><b>{chapters.length}</b><small>{en?"Main chapters":"گام اصلی"}</small><b>{total}</b><small>{en?"Topics":"موضوع آموزشی"}</small></div></header>
+  <section className="guide-search"><div className="guide-search-box"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={en?"Search the guide: WACC, material balance, capacity, NPV, working capital...":"جست‌وجو در راهنما؛ مثال: WACC، موازنه مواد، ظرفیت، NPV، سرمایه در گردش..."} aria-label={en?"Search the guide":"جست‌وجو در راهنما"}/>{query&&<button onClick={()=>setQuery('')}>{en?"Clear":"پاک‌کردن"}</button>}</div><label className="guide-filter"><input type="checkbox" checked={onlyFormula} onChange={e=>setOnlyFormula(e.target.checked)}/> {en?"Only topics with formulas":"{en?"Only topics with formulas":"فقط موضوعات دارای فرمول"}"}</label><span className="guide-results">{results.length.toLocaleString(en?'en-US':'fa-IR')} {en?'topics':'موضوع'}</span></section>
+  <div className="guide-layout"><aside className="guide-index"><b>{en?"Chapter Index":"{en?"Chapter Index":"فهرست گام‌ها"}"}</b>{chapters.map(ch=><button key={ch.id} onClick={()=>{setQuery('');setOnlyFormula(false);setOpen(`${ch.id}-${ch.topics[0].title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`);document.getElementById(`guide-ch-${ch.id}`)?.scrollIntoView({behavior:'smooth',block:'start'})}}><span>{String(ch.id).padStart(2,'0')}</span>{chTitle(ch.title)}</button>)}</aside>
+   <section className="guide-content">{chapters.map(ch=>{const visible=results.filter(x=>x.ch.id===ch.id);if(!visible.length)return null;return <section className="guide-chapter" id={`guide-ch-${ch.id}`} key={ch.id}><div className="guide-chapter-head"><span>{en?'Chapter':'گام'} {ch.id.toLocaleString(en?'en-US':'fa-IR')}</span><h2>{chTitle(ch.title)}</h2><p>{chObjective(ch.objective)}</p></div>{visible.map(({t})=>{const id=`${ch.id}-${t.title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`;const expanded=open===id||Boolean(normalized);return <article className="guide-topic" key={t.title}><button className="guide-topic-toggle" onClick={()=>setOpen(open===id?'':id)}><span><b>{topicTitle(t.title)}</b><small>{topicPurpose(t.purpose)}</small></span>{expanded?<ChevronUp size={18}/>:<ChevronDown size={18}/>}</button>{expanded&&<div className="guide-topic-body">
+    <div className="guide-subsection"><h4>{en?"Required Information":"اطلاعات موردنیاز"}</h4><ul>{t.inputs.map(x=><li key={x}>{x}</li>)}</ul></div>
+    <div className="guide-subsection"><h4>{en?"Step-by-Step Method":"روش انجام کار، مرحله به مرحله"}</h4><ol>{t.method.map(x=><li key={x}>{x}</li>)}</ol></div>
+    <div className="guide-formulas"><h4><Calculator size={16}/> {en?"Formulas & Calculation Relationships":"فرمول‌ها و روابط محاسباتی"}</h4>{t.formulas.map(x=><code key={x}>{x}</code>)}</div>
+    <div className="guide-example"><h4><Lightbulb size={16}/> {en?"Example & Interpretation":"مثال و تفسیر"}</h4><p>{t.example}</p></div>
+    <div className="guide-subsection"><h4><ClipboardCheck size={16}/> {en?"Validation & Completeness Checks":"کنترل‌های صحت و تکمیل"}</h4><ul>{t.checks.map(x=><li key={x}>{x}</li>)}</ul></div>
+    <div className="guide-warning"><h4><AlertTriangle size={16}/> {en?"Common Pitfalls":"خطاهای متداول"}</h4><ul>{t.pitfalls.map(x=><li key={x}>{x}</li>)}</ul></div>
    </div>}</article>})}</section>})}
-   {!results.length&&<div className="guide-empty"><Search size={28}/><h3>نتیجه‌ای پیدا نشد</h3><p>عبارت دیگری جست‌وجو کنید؛ مانند «هزینه سرمایه»، «بازده»، «اسلب» یا «دوره بازگشت».</p></div>}
-   <div className="guide-disclaimer"><b>یادداشت روش‌شناسی</b><p>فرمول‌ها چارچوب عمومی مطالعات امکان‌سنجی‌اند. مبنای مالیاتی، تعرفه‌ها، استانداردهای طراحی، قواعد استهلاک و تعهدات وام‌دهنده باید با مقررات و قراردادهای معتبر پروژه تطبیق داده شوند. مثال‌های عددی آموزشی‌اند و داده واقعی پروژه محسوب نمی‌شوند.</p></div>
+   {!results.length&&<div className="guide-empty"><Search size={28}/><h3>{en?"No results found":"نتیجه‌ای پیدا نشد"}</h3><p>{en?"Try another term, such as cost of capital, return, slab or payback.":"عبارت دیگری جست‌وجو کنید؛ مانند «هزینه سرمایه»، «بازده»، «اسلب» یا «دوره بازگشت»."}</p></div>}
+   <div className="guide-disclaimer"><b>{en?"Methodology Note":"یادداشت روش‌شناسی"}</b><p>{en?"These formulas are general feasibility-study frameworks. Tax bases, tariffs, design standards, depreciation rules and lender covenants must be checked against applicable regulations and project agreements. Numerical examples are illustrative, not actual project data.":"فرمول‌ها چارچوب عمومی مطالعات امکان‌سنجی‌اند. مبنای مالیاتی، تعرفه‌ها، استانداردهای طراحی، قواعد استهلاک و تعهدات وام‌دهنده باید با مقررات و قراردادهای معتبر پروژه تطبیق داده شوند. مثال‌های عددی آموزشی‌اند و داده واقعی پروژه محسوب نمی‌شوند."}</p></div>
    </section>
   </div>
  </main>
