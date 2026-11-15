@@ -197,6 +197,14 @@ assert.ok(Number.isFinite(integratedPeriodic.npvProject))
 assert.ok(Number.isFinite(integratedPeriodic.irrProject), 'Periodic project IRR must use actual period dates')
 assert.ok(Number.isFinite(integratedPeriodic.mirrProject), 'Periodic project MIRR must use actual period dates')
 assert.ok(Number.isFinite(integratedPeriodic.npvEquity))
+const expectedEquityFlow = -integratedPeriodic.rows[0].equityContribution
+  + integratedPeriodic.rows[0].revenue - integratedPeriodic.rows[0].variableCost
+  - integratedPeriodic.rows[0].fixedCost - integratedPeriodic.rows[0].tax
+  - integratedPeriodic.rows[0].interestExpense - integratedPeriodic.rows[0].principal
+  - integratedPeriodic.rows[0].maintenanceCapex - integratedPeriodic.rows[0].changeInWorkingCapital
+  + integratedPeriodic.rows[0].salvageValue
+assert.ok(Math.abs(integratedPeriodic.rows[0].equityFreeCashFlow - expectedEquityFlow) < 1e-8,
+  'Equity cash flow must treat shareholder contributions as investor outflows and exclude project CAPEX/debt drawdown double counting')
 assert.ok(Number.isFinite(integratedPeriodic.peakWorkingCapital))
 const periodTaxSchedule = engine.calculateIntegratedPeriodicFinance({
   periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
