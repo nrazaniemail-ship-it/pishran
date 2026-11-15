@@ -329,7 +329,7 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
     })
     if (item.depreciation.method !== 'none') {
       if (!item.depreciation.startingAt.trim()) issue(path + '.depreciation.startingAt', 'missing-depreciation-start', 'Define Starting at for depreciable assets.')
-      if (!Number.isInteger(item.depreciation.lengthYears) || (item.depreciation.lengthYears ?? 0) < 0 || !Number.isInteger(item.depreciation.lengthMonths) || item.depreciation.lengthMonths < 0 || item.depreciation.lengthMonths > 11 || ((item.depreciation.lengthYears ?? 0) + item.depreciation.lengthMonths / 12) <= 0)
+      if (!Number.isFinite(item.depreciation.lengthYears) || (item.depreciation.lengthYears ?? 0) < 0 || !Number.isInteger(item.depreciation.lengthMonths) || item.depreciation.lengthMonths < 0 || item.depreciation.lengthMonths > 11 || ((item.depreciation.lengthYears ?? 0) + item.depreciation.lengthMonths / 12) <= 0)
         issue(path + '.depreciation.length', 'invalid-depreciation-length', 'Depreciation Length must be greater than zero and months must be from 0 to 11.')
       if (!Number.isFinite(item.depreciation.scrapPercent) || item.depreciation.scrapPercent < 0 || item.depreciation.scrapPercent > 100)
         issue(path + '.depreciation.scrapPercent', 'invalid-scrap-percent', 'Scrap must be between 0 and 100 percent of original value.')
