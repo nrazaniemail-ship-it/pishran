@@ -1136,7 +1136,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       }
     }
   }
-  return { assets, sales, warnings }
+  return { assets, sales, investmentSchedule, warnings }
 }
 
 export type FixedInvestmentRegisterReconciliation = {
