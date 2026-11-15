@@ -1078,8 +1078,8 @@ input,select,textarea{color:var(--text)}
 }
 :root:not([data-theme="dark"]) .kpi:nth-child(3),
 :root:not([data-theme="dark"]) .dashboard-kpi:nth-child(3){
-  background:#eee7f2;
-  border-color:#dfd4e8;
+  background:var(--brand-beige);
+  border-color:var(--brand-border);
 }
 :root:not([data-theme="dark"]) .kpi:nth-child(4),
 :root:not([data-theme="dark"]) .dashboard-kpi:nth-child(4){
