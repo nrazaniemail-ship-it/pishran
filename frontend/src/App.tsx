@@ -96,7 +96,7 @@ export default function App() {
         <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('guide')}><BookOpen size={17}/> راهنما</button>
         <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('settings')}><Settings size={17}/> تنظیمات</button>
       </nav>
-      <div className="top-actions"><span className="connection"><i/> ذخیره محلی فعال</span><button className="avatar" onClick={() => setPage('settings')}>P</button></div>
+      <div className="top-actions"><span className="connection"><i/> ذخیره محلی فعال</span></div>
     </header>
 
     {page === 'dashboard' && <>
