@@ -204,8 +204,9 @@ export function validateStartingFixedAssetBalances(
       if (!value) return true
       const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
       if (!match) return false
-      const month = Number(match[2]), day = Number(match[3])
-      return month >= 1 && month <= 12 && day >= 1 && day <= 31
+      const year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
+      if (month < 1 || month > 12 || day < 1) return false
+      return day <= new Date(Date.UTC(year, month, 0)).getUTCDate()
     }
     if (!validDate(asset.commissioningDate) || !validDate(asset.depreciationStartDate))
       issue(path + '.dates', 'invalid-starting-asset-date', 'Commissioning date and depreciation start date must use YYYY-MM-DD.')
@@ -215,7 +216,7 @@ export function validateStartingFixedAssetBalances(
     if (method !== 'none') {
       if (asset.status === 'active' && asset.remainingLife <= 0)
         issue(path + '.remainingLife', 'missing-starting-asset-remaining-life', 'An active depreciable asset requires positive remaining useful life.')
-      if (asset.depreciationLengthYears !== undefined && (!Number.isFinite(asset.depreciationLengthYears) || asset.depreciationLengthYears < 0))
+      if (asset.depreciationLengthYears !== undefined && (!Number.isInteger(asset.depreciationLengthYears) || asset.depreciationLengthYears < 0))
         issue(path + '.depreciationLengthYears', 'invalid-starting-asset-depreciation-length', 'Depreciation length in years must be a non-negative integer.')
       if (asset.depreciationLengthMonths !== undefined && (!Number.isInteger(asset.depreciationLengthMonths) || asset.depreciationLengthMonths < 0 || asset.depreciationLengthMonths > 11))
         issue(path + '.depreciationLengthMonths', 'invalid-starting-asset-depreciation-months', 'Additional depreciation life months must be from zero to 11.')

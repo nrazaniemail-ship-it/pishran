@@ -22,6 +22,27 @@ const [engine, reference, integratedReference, workbookAudit, foundation] = awai
   loadTypeScriptModule('../src/features/projects/projectFoundation.ts')
 ])
 
+const validStartingAsset = {
+  id: 'validation-asset', name: 'Validation asset', grossCost: 1000,
+  accumulatedDepreciation: 0, remainingLife: 5, opportunityValue: 1000,
+  commissioningDate: '2024-02-29', depreciationStartDate: '2024-03-01',
+  depreciationMethod: 'linear-scrap', depreciationLengthYears: 5,
+  depreciationLengthMonths: 0, firstDepreciationMonths: 12,
+  status: 'active'
+}
+assert.equal(foundation.validateStartingFixedAssetBalances([validStartingAsset], foundation.createBlankProjectFoundation()).length, 0,
+  'A valid leap-day commissioning date and integer asset life must pass')
+for (const invalidDate of ['2023-02-29', '2024-04-31', '2024-13-01', '2024-00-10']) {
+  const issues = foundation.validateStartingFixedAssetBalances([{...validStartingAsset, commissioningDate: invalidDate}], foundation.createBlankProjectFoundation())
+  assert.ok(issues.some(issue => issue.code === 'invalid-starting-asset-date'),
+    'Impossible calendar date must be rejected: ' + invalidDate)
+}
+const fractionalLifeIssues = foundation.validateStartingFixedAssetBalances(
+  [{...validStartingAsset, depreciationLengthYears: 2.5}], foundation.createBlankProjectFoundation())
+assert.ok(fractionalLifeIssues.some(issue => issue.code === 'invalid-starting-asset-depreciation-length'),
+  'Depreciation life in years must be an integer')
+console.log('PASS: raw foundation rejects impossible calendar dates and fractional asset useful lives')
+
 const driAudit = workbookAudit.DRI_STEELMAKING_AUDIT
 near(driAudit.capexCategories.reduce((sum,row)=>sum+row.amount,0),
   driAudit.capex.fixedInvestment, 0.01, 'DRI CAPEX category roll-up')
