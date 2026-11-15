@@ -31,9 +31,6 @@ const methods: { value: FixedInvestmentDepreciationMethod; definition: Financial
   listFinancialMethods('depreciation')
     .filter(definition => directoryMethodToAssetMethod[definition.id] !== undefined)
     .map(definition => ({ value: directoryMethodToAssetMethod[definition.id], definition }))
-const depreciationMethodIds: Record<FixedInvestmentDepreciationMethod, string> = Object.fromEntries(
-  Object.entries(directoryMethodToAssetMethod).map(([id, method]) => [method, id]),
-) as Record<FixedInvestmentDepreciationMethod, string>
 
 export default function FixedInvestmentPanel({ value, foundation, projectStartYear, periodCount, capexTotal, preOperatingCost = 0, referenceDepreciationByYear, onChange, language = 'fa', blankTemplate = false }: Props) {
   const en = language === 'en'
