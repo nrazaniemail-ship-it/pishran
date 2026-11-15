@@ -145,6 +145,50 @@ export default function Guide({language='fa'}:{language?:'fa'|'en'}) {
  }
  const topicData=(topic:Topic):Topic=>en?{...topic,...topicDetailsEn[topic.title]}:topic
 
+ '۳-۱. انتخاب مسیر فرآیندی و فناوری':{
+ inputs:['Process Flow Diagram (PFD) and process description','Technology, line configuration, major equipment and rated capacity','Feed and product conditions and process interfaces','Automation level, quality control and safety requirements'],
+ method:['Map the process from feed receipt to final product.','List bottleneck equipment and its rated capacity.','Compare technology options for quality, energy, maintenance, capital cost and service support.','Record design assumptions and vendor performance guarantees.'],
+ formulas:['Capacity of a continuous process route = minimum effective capacity of series equipment','Capacity of parallel equipment = sum of effective capacities of parallel units'],
+ example:'In a flat-steel mill, the reheating furnace, descaler, rolling stands, cooling table, leveler and cutting line may each be a bottleneck. Overall capacity cannot be inferred from rolling-stand capacity alone.',
+ checks:['The process diagram matches the equipment list and material balance.','Essential auxiliary equipment is included.'],
+ pitfalls:['Selecting technology solely on the basis of the lowest purchase price.']},
+ '۳-۲. موازنه جرم':{
+ inputs:['Feed by type and quality','Main products and by-products','Scrap, scale, turnings and recycle streams','Inventory changes between the start and end of the period'],
+ method:['Set the balance period: hourly, daily or annual.','Record inputs and outputs for each process unit.','Count recycle streams only once at the appropriate boundary.','Calculate the balance difference and explain its cause.'],
+ formulas:['Input + internal generation = output + internal use + losses + inventory change','Balance error (%) = (input − net output) / input × 100','Specific feed consumption = feed quantity / good product quantity'],
+ example:'An annual balance with 112,000 tonnes of slab input may yield 100,000 tonnes of good sheet, 8,000 tonnes of recyclable scrap and 4,000 tonnes of scale and other losses. These figures are illustrative.',
+ checks:['Inputs and outputs close within an acceptable engineering tolerance.','Returned scrap is not counted again as external feed.'],
+ pitfalls:['Ignoring inventory changes or recycle streams.']},
+ '۳-۳. تراز ظرفیت و گلوگاه':{
+ inputs:['Nameplate and effective capacity of each equipment item','Cycle time, downtime, product changeover and dimensional limits','Storage, handling and packaging capacity'],
+ method:['Calculate effective equipment capacity under actual operating conditions, not only catalogue ratings.','Separate shared downtime from equipment-specific downtime.','Test bottlenecks across product mix and operating scenarios.'],
+ formulas:['Effective equipment capacity = nameplate capacity × availability × performance factor','Process-route capacity = minimum effective capacity of series equipment'],
+ example:'If the effective capacities of the furnace, rolling mill and packaging line are 300,000, 270,000 and 280,000 tonnes, respectively, the route is limited to 270,000 tonnes.',
+ checks:['Equipment capacities use a consistent feed or product basis.','Warehouse and logistics capacities are also checked.'],
+ pitfalls:['Adding the capacities of series equipment instead of identifying the minimum.']},
+ '۴-۱. یوتیلیتی‌های زیربنایی':{
+ inputs:['Electricity: peak demand (MW), energy (kWh/year) and load factor','Gas: peak flow and annual consumption (Nm³/year)','Raw, industrial, cooling and treated water (m³/year)','Air, steam, oxygen and other common services, where applicable'],
+ method:['Determine connected load and operating hours for each consumer.','Separate instantaneous/peak demand from annual consumption.','Account for network losses, coincidence factor and reserve capacity.','Record energy, subscription, demand and treatment charges separately.'],
+ formulas:['Annual energy (kWh) = average power (kW) × operating hours','Average power = peak power × load factor','Specific utility consumption = annual utility consumption / tonnes of good product','Electricity cost = energy charge + demand charge + fixed charges'],
+ example:'At 120 kWh per tonne and 200,000 tonnes of good output, annual electricity use is 24 million kWh. Peak demand and demand charges must be assessed separately.',
+ checks:['Power units (kW/MW) are not confused with energy units (kWh/MWh).','Peak demand is used for connection sizing and annual energy for OPEX.'],
+ pitfalls:['Converting MW to kWh without considering operating hours.','Ignoring demand, treatment and transmission charges.']},
+ '۴-۲. مواد و اقلام مصرفی فرآیندی':{
+ inputs:['Slab, billet or other main feedstock','Rolls, oils, grease, refractories, electrodes, chemicals and consumable parts','Specific consumption rate, price, unit and consumption frequency','Safety stock and process losses'],
+ method:['Separate direct materials from common utilities.','Record each item’s consumption per tonne of product or operating hour.','Document price currency, date, freight and delivery terms.','Do not classify capital spares as routine consumables.'],
+ formulas:['Annual quantity of item i = specific consumption rate i × activity basis','Annual cost of item i = annual quantity i × unit price','Process OPEX = Σ annual cost of process consumables'],
+ example:'At lubricant consumption of 0.08 kg per tonne and annual output of 200,000 tonnes, annual use is 16,000 kg. Actual rates should come from design, operating references or vendor guarantees.',
+ checks:['Specific-consumption and price units are consistent.','Slab cost is not double-counted in both material balance and feedstock cost.'],
+ pitfalls:['Recording strategic spare parts as annual consumables without a replacement basis.']},
+ '۴-۳. تعرفه و هزینه تأمین':{
+ inputs:['Base and tiered tariffs, season and peak periods','Connection and network expansion costs','Contract price or energy/material price scenarios','Supply interruptions, quotas and reliability constraints'],
+ method:['Record each carrier’s tariff and validity date.','Separate fixed, variable, demand and connection investment costs.','Reflect supply shortages or energy restrictions in production capacity scenarios.'],
+ formulas:['Utility cost = Σ (period consumption × applicable period tariff) + fixed charges','Specific utility cost = total utility cost / tonnes of good product'],
+ example:'If winter gas restrictions reduce operating hours, the impact is not limited to a higher gas price. Lower production, sales and working-capital needs must also be reflected in the scenario.',
+ checks:['Tariffs are current and applicable to the correct industrial customer class.','Connection costs are not mixed with operating consumption costs.'],
+ pitfalls:['Assuming uninterrupted 24-hour access to all energy carriers.']}
+
+
  const topicPurpose=(v:string)=>en?(topicEn[v]?.[1]??v):v
  const [query,setQuery]=useState('')
  const [open,setOpen]=useState('1-1')
@@ -154,7 +198,7 @@ export default function Guide({language='fa'}:{language?:'fa'|'en'}) {
  const total=chapters.reduce((n,c)=>n+c.topics.length,0)
  return <main className="guide-page" dir={en?"ltr":"rtl"}>
   <header className="guide-hero"><div className="guide-icon"><BookOpen size={28}/></div><div><span className="eyebrow">PISHRAN KNOWLEDGE CENTER</span><h1>{en?"Comprehensive Project Feasibility Guide":"راهنمای جامع امکان‌سنجی پروژه"}</h1><p>{en?"A step-by-step reference for methods, formulas, data entry and quality control, inspired by professional feasibility software.":"راهنمای گام‌به‌گام، فرمول‌ها، روش ورود اطلاعات و کنترل کیفیت؛ با رویکردی مشابه راهنماهای نرم‌افزارهای حرفه‌ای امکان‌سنجی."}</p></div><div className="guide-count"><b>{chapters.length}</b><small>{en?"Main chapters":"گام اصلی"}</small><b>{total}</b><small>{en?"Topics":"موضوع آموزشی"}</small></div></header>
-  {en&&<div className="guide-method-note">Chapter headings, topic summaries and the first two chapters’ detailed guidance are translated. Remaining chapters are still being translated from the Persian source.</div>}
+  {en&&<div className="guide-method-note">Chapter headings, topic summaries and detailed guidance for Chapters 1–4 are translated. Remaining chapters are still being translated from the Persian source.</div>}
   <section className="guide-search"><div className="guide-search-box"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={en?"Search the guide: WACC, material balance, capacity, NPV, working capital...":"جست‌وجو در راهنما؛ مثال: WACC، موازنه مواد، ظرفیت، NPV، سرمایه در گردش..."} aria-label={en?"Search the guide":"جست‌وجو در راهنما"}/>{query&&<button onClick={()=>setQuery('')}>{en?"Clear":"پاک‌کردن"}</button>}</div><label className="guide-filter"><input type="checkbox" checked={onlyFormula} onChange={e=>setOnlyFormula(e.target.checked)}/> {en?"Only topics with formulas":"فقط موضوعات دارای فرمول"}</label><span className="guide-results">{results.length.toLocaleString(en?'en-US':'fa-IR')} {en?'topics':'موضوع'}</span></section>
   <div className="guide-layout"><aside className="guide-index"><b>{en?"Chapter Index":"فهرست گام‌ها"}</b>{chapters.map(ch=><button key={ch.id} onClick={()=>{setQuery('');setOnlyFormula(false);setOpen(`${ch.id}-${ch.topics[0].title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`);document.getElementById(`guide-ch-${ch.id}`)?.scrollIntoView({behavior:'smooth',block:'start'})}}><span>{String(ch.id).padStart(2,'0')}</span>{chTitle(ch.title)}</button>)}</aside>
    <section className="guide-content">{chapters.map(ch=>{const visible=results.filter(x=>x.ch.id===ch.id);if(!visible.length)return null;return <section className="guide-chapter" id={`guide-ch-${ch.id}`} key={ch.id}><div className="guide-chapter-head"><span>{en?'Chapter':'گام'} {ch.id.toLocaleString(en?'en-US':'fa-IR')}</span><h2>{chTitle(ch.title)}</h2><p>{chObjective(ch.objective)}</p></div>{visible.map(({t})=>{const topic=topicData(t);const id=`${ch.id}-${t.title.split(' ')[0].replace(/[۰-۹0-9-]/g,'')}`;const expanded=open===id||Boolean(normalized);return <article className="guide-topic" key={t.title}><button className="guide-topic-toggle" onClick={()=>setOpen(open===id?'':id)}><span><b>{topicTitle(t.title)}</b><small>{topicPurpose(t.purpose)}</small></span>{expanded?<ChevronUp size={18}/>:<ChevronDown size={18}/>}</button>{expanded&&<div className="guide-topic-body">
