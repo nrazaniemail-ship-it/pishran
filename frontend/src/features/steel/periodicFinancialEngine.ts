@@ -449,7 +449,7 @@ export type PeriodicProjectFinanceInput = {
   annualTaxRates: number[]
   taxRatesByPeriod?: number[]
   annualEquityContributions: number[]
-  /** Shareholder-funded portion of each period's increase in net working capital. */
+  /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
   workingCapitalByPeriod: number[]
   openingWorkingCapital?: number
