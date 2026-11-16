@@ -66,7 +66,7 @@ export function calculateProjectFinancialModelFromDrafts(
     })
     return matches.length===1?matches[0]:-1
   }
-  const taxDraft=input.drafts.tax
+  const taxDraft=input.drafts.tax??{system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null}
   if(taxDraft.system==='none') {
     finance={...finance,taxRatesByPeriod:finance.periods.map(()=>0),taxAllowancesByPeriod:finance.periods.map(()=>0),
       openingTaxLoss:0,openingUnleveredTaxLoss:0,taxLossCarryForwardEnabled:false}
