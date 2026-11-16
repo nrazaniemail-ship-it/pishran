@@ -68,6 +68,7 @@ try {
  assert.ok(h.validateHelpDrivenProjectForms(economicItems).includes('economic-item:invalid-trade-category:input:local:imported'))
  let products=h.addHelpFormRow(draft.helpDriven,'products','product-1')
  products=h.updateHelpFormRow(products,'products','product-1','name','Product A')
+ products=h.updateHelpFormRow(products,'products','product-1','unit','tonne')
  products=h.updateHelpFormRow(products,'products','product-1','productionIntervalMode','user-defined')
  assert.ok(h.validateHelpDrivenProjectForms(products).includes('product:user-defined-production-interval-requires-start-and-end'))
  products=h.updateHelpFormRow(products,'products','product-1','productionIntervalStart','2026-01-01')
@@ -80,6 +81,7 @@ try {
  grants=h.updateHelpFormRow(grants,'equity-grants','grant-1','sourceName','Capital grant')
  grants=h.updateHelpFormRow(grants,'equity-grants','grant-1','period','1')
  grants=h.updateHelpFormRow(grants,'equity-grants','grant-1','paidIn',100)
+ grants=h.updateHelpFormRow(grants,'equity-grants','grant-1','currency','IRR')
  assert.equal(h.validateHelpDrivenProjectForms(grants).length,0)
  let incremental=h.addHelpFormRow(draft.helpDriven,'incremental-analysis','inc-1')
  incremental=h.updateHelpFormRow(incremental,'incremental-analysis','inc-1','alternative','Option A')
@@ -99,6 +101,7 @@ try {
 
  let linkedProducts=h.addHelpFormRow(draft.helpDriven,'products','product-1')
  linkedProducts=h.updateHelpFormRow(linkedProducts,'products','product-1','name','Steel')
+ linkedProducts=h.updateHelpFormRow(linkedProducts,'products','product-1','unit','tonne')
  let sales=h.addHelpFormRow(linkedProducts,'sales-programme','sale-1')
  sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','productId','Unknown')
  assert.ok(h.validateHelpDrivenProjectForms(sales).includes('sales-programme:0:unknown-product-reference:Unknown'))
