@@ -58,6 +58,8 @@ assert.equal(partnerAllocation.periods[1].partnerNetCashFlow,100)
 assert.equal(partnerAllocation.periods[1].retainedPositiveCashFlow,100)
 assert.equal(partnerAllocation.periods[1].reconciliationVariance,0)
 assert.equal(partnerAllocation.periods[2].reconciliationVariance,0)
+assert.equal(partnerAllocation.periods[1].distributedPositiveCashFlow,100)
+assert.equal(partnerAllocation.periods[1].retainedPositiveCashFlow,100)
 assert.equal(partnerAllocation.rows.reduce((sum,row)=>sum+row.netCashFlow,0)+partnerAllocation.retainedPositiveCashFlow,200,
   'Partner net cash flows plus retained cash must reconcile to total project equity cash flow')
 const invalidPartnerAllocation=partnerFinance.allocateJointVentureCashFlows({
@@ -710,6 +712,9 @@ assert.ok(feasibilityWizardSource.includes('resolveProjectStage')
   'Steel-chain aliases must resolve to their correct specialist form, including saved projects')
 assert.ok(feasibilityWizardSource.includes('hasPricedRows')
   && feasibilityWizardSource.includes('hasTechnicalInputs')
+  && feasibilityWizardSource.includes('technicalParametersComplete')
+  && feasibilityWizardSource.includes('TechnicalParameterEditor')
+  && feasibilityWizardSource.includes("language={language}")
   && feasibilityWizardSource.includes('periodicModelValid')
   && feasibilityWizardSource.includes('opex:sum(m.opex)>0'),
   'Completion indicators must require populated engineering, utility, OPEX and valid periodic finance inputs')
