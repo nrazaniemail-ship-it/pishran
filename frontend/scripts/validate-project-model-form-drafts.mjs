@@ -34,6 +34,13 @@ try {
  assert.equal(forms.deriveWorkingCapitalTurnover(30,90),3)
  assert.equal(forms.deriveWorkingCapitalTurnover(0,90),null)
  assert.equal(forms.createBlankWorkingCapitalComponentFormDraft().minimumDaysCoverage,null)
+ const blankWorkingCapital=forms.createBlankWorkingCapitalComponentFormDraft()
+ assert.equal(blankWorkingCapital.openingBalance,null,'Raw working-capital opening balance must remain unspecified')
+ assert.equal(blankWorkingCapital.category,null,'Raw working-capital category must remain unspecified')
+ const blankSales=forms.createBlankSalesProductFormDraft()
+ assert.equal(blankSales.openingFinishedGoodsQuantity,null,'Raw opening finished-goods quantity must not be silently assumed to be zero')
+ assert.deepEqual(blankSales.periods,[])
+
 
  const loan=forms.createBlankLoanFacilityFormDraft()
  assert.equal(loan.loanType,null)
