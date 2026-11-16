@@ -1,7 +1,7 @@
 import { localStore } from '../storage/localStore'
 
 export type ProjectStatus = 'draft' | 'active' | 'archived'
-export type ProjectTemplateId = 'raw' | 'hot-rolling-200kt'
+export type ProjectTemplateId = 'raw'
 
 export interface FeasibilityProject {
   id: string
@@ -70,6 +70,7 @@ export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
     'واحد احیاء مستقیم'
   ])
   const isSample = (project: FeasibilityProject) => {
+    if (project.templateId === 'hot-rolling-200kt') return true
     if (sampleNames.has(project.name.trim())) return true
     if (project.steelStage === 'نورد گرم / ورق'
       && project.capacity === '۲۰۰٬۰۰۰ تن ورق در سال (مبنای فایل HRCR200)') return true
