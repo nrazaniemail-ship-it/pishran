@@ -380,9 +380,12 @@ assert.ok(wizardSource.includes("خرید زمین (۱۳ هکتار؛ ۱۳۰٬۰
   && wizardSource.includes("حقوق و دستمزد ۲۵۰ نفر")
   && wizardSource.includes("کلاف گرم (ماده اولیه اصلی)"),
   'Existing cold-rolling source-based CAPEX, payroll and material-balance fields must be preserved')
-assert.ok(wizardSource.includes("unit={project.industry==='انرژی و نیروگاه'?'مگاوات':project.industry==='فولاد و صنایع معدنی'?'تن/سال':'واحد/سال'}")
-  && projectsViewSource.includes('inputMode="numeric" pattern="[0-9]*"'),
-  'Capacity must use MW for energy projects and tonnes/year for steel/mining with numeric-only entry')
+assert.ok(wizardSource.includes("unit={project.industry==='انرژی و نیروگاه'?'مگاوات':'واحد/سال'}")
+  && projectsViewSource.includes("const INDUSTRY_OPTIONS")
+  && !projectsViewSource.includes('inputMode="numeric" pattern="[0-9]*"')
+  && projectsViewSource.includes("capacity: '',")
+  && projectsViewSource.includes("location: '',"),
+  'Raw project creation stays industry-neutral and defers capacity and location inputs to the blank model form')
 assert.ok(wizardSource.includes("value=\"industrial\"")
   && wizardSource.includes("value=\"maritime\"")
   && wizardSource.includes("value=\"agricultural\"")
@@ -407,8 +410,8 @@ assert.ok(wizardSource.includes("Opportunity Study")
 assert.ok(wizardSource.includes("costCentreAnalysis:e.target.checked||m.scope.costAllocation")
   && wizardSource.includes("costAllocation:e.target.checked,costCentreAnalysis:e.target.checked?true:m.scope.costCentreAnalysis"),
   'Cost Allocation must activate Cost Centre Analysis as in the COMFAR Tutorial workflow')
-assert.ok(appSource.includes("if(project.templateId==='raw') setPage('project-wizard')"),
-  'Raw template must not be routed into the seeded hot-rolling workspace')
+assert.ok(appSource.includes("onOpenProject={project => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard') }}"),
+  'All projects must route to the single raw model form')
 assert.ok(rollingWorkspaceSource.includes('ممیزی جریان نقدی خام و اصلاح‌شده مرجع مالی')
   && rollingWorkspaceSource.includes('HOT_ROLLING_reference_CASHFLOW_AUDIT'),
   'Active rolling workspace must expose the reference cash-flow audit')
