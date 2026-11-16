@@ -20,7 +20,7 @@ import {
 
 export type ProjectFinancialModelOrchestrationInput={
   finance:PeriodicProjectFinanceInput
-  drafts:Pick<ProjectModelFinancialFormDrafts,'sales'|'productionCosts'|'workingCapital'|'assets'|'loans'> & Partial<Pick<ProjectModelFinancialFormDrafts,'openingBalanceSheet'>>
+  drafts:Pick<ProjectModelFinancialFormDrafts,'sales'|'productionCosts'|'workingCapital'|'assets'|'loans'|'tax'> & Partial<Pick<ProjectModelFinancialFormDrafts,'openingBalanceSheet'>>
   foundation:ProjectFoundation
   productionStartDate:string
   openingFinishedGoodsByProduct?:Record<string,number>
@@ -58,6 +58,46 @@ export function calculateProjectFinancialModelFromDrafts(
     valid:false,issues,financeInput:null,productionSales,workingCapital,fixedAssets,finalRun:null,
   })
   const openingDraft=input.drafts.openingBalanceSheet
+  const resolveTaxPeriod=(key:string):number=>{
+    const matches:number[]=[]
+    finance.periods.forEach((period,index)=>{
+      if(key===String(index+1)||key===String(period.index)||key===period.startDate||key===period.endDate||
+        (key.length===7&&key===period.startDate.slice(0,7)&&key===period.endDate.slice(0,7)))matches.push(index)
+    })
+    return matches.length===1?matches[0]:-1
+  }
+  const taxDraft=input.drafts.tax
+  if(taxDraft.system==='none') {
+    finance={...finance,taxRatesByPeriod:finance.periods.map(()=>0),taxAllowancesByPeriod:finance.periods.map(()=>0),
+      openingTaxLoss:0,openingUnleveredTaxLoss:0}
+  } else {
+    if(taxDraft.rates.length) {
+      const rates=Array(finance.periods.length).fill(Number.NaN) as number[]
+      for(const row of taxDraft.rates) {
+        const index=resolveTaxPeriod(row.period)
+        if(index<0||row.ratePercent===null||!Number.isFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100)
+          return fail(['Tax rate rows must identify one project period and contain a rate from 0 to 100%.'])
+        if(Number.isFinite(rates[index]))return fail(['Only one tax rate may be assigned to each project period.'])
+        rates[index]=row.ratePercent
+      }
+      if(rates.some(rate=>!Number.isFinite(rate)))return fail(['The tax form must provide a rate for every project period when period rates are used.'])
+      finance={...finance,taxRatesByPeriod:rates}
+    }
+    if(taxDraft.allowances.length) {
+      const allowances=Array(finance.periods.length).fill(0) as number[]
+      for(const allowance of taxDraft.allowances)for(const row of allowance.periodAmounts) {
+        const index=resolveTaxPeriod(row.period)
+        if(index<0||row.amount===null||!Number.isFinite(row.amount)||row.amount<0)
+          return fail(['Every tax allowance amount must have a valid project-period key and a non-negative amount.'])
+        allowances[index]+=row.amount
+      }
+      finance={...finance,taxAllowancesByPeriod:allowances}
+    }
+    if(taxDraft.lossCarryForward===false)finance={...finance,openingTaxLoss:0,openingUnleveredTaxLoss:0}
+    if(taxDraft.lossCarryForward===true&&taxDraft.lossCarryForwardYears!==null&&
+      (!Number.isInteger(taxDraft.lossCarryForwardYears)||taxDraft.lossCarryForwardYears<1))
+      return fail(['Tax-loss carry-forward duration must be a positive whole number of years.'])
+  }
   const detailedOpeningNwc=openingDraft?.enabled
     ?openingDraft.inventory!+openingDraft.workInProgress!+openingDraft.finishedGoods!+openingDraft.receivables!+
       openingDraft.otherCurrentAssets!-openingDraft.tradePayables!-openingDraft.otherCurrentLiabilities!
