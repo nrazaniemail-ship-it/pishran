@@ -8,6 +8,7 @@ import type { ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import { calculateProjectFinancialModelFromDrafts } from './projectFinancialModelOrchestrator'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
 import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
+import { calculatePeriodicSensitivity, type PeriodicSensitivityVariable } from '../steel/periodicSensitivity'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
   calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
@@ -17,6 +18,7 @@ import {
 } from '../steel/financialModel'
 
 type CapexRow = { id: string; name: string; amount: number }
+type PeriodicFinanceResultWithSensitivityInput=PeriodicProjectFinanceResult & {sensitivityInput?:PeriodicProjectFinanceInput}
 type Asset = DepreciationAssetInput
 type Loan = IntegratedLoanInput & {
   periodDrawdowns?: number[]
@@ -266,7 +268,7 @@ export default function AdvancedFinancePanel(props: Props) {
     discountMode:state.discountMode,manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.mirrFinanceRate??props.costOfEquity,equityMirrReinvestmentRate:props.mirrReinvestmentRate??props.costOfEquity
   }
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
-  const periodicFinanceResult=useMemo<PeriodicProjectFinanceResult|null>(()=>{
+  const periodicFinanceResult=useMemo<PeriodicFinanceResultWithSensitivityInput|null>(()=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
     const fiscalMonth=props.fiscalYearStartMonth
@@ -341,9 +343,9 @@ export default function AdvancedFinancePanel(props: Props) {
         npvEquity:null,irrEquity:null,mirrEquity:null,totalDebtDrawdown:0,totalEquityContribution:0,
         totalCapitalizedInterest:0,peakWorkingCapital:0,warnings:orchestration.issues,
       }
-      return orchestration.finalRun.finance
+      return Object.assign(orchestration.finalRun.finance,{sensitivityInput:orchestration.financeInput??financeInput})
     }
-    return calculateIntegratedPeriodicFinance(financeInput)
+    return Object.assign(calculateIntegratedPeriodicFinance(financeInput),{sensitivityInput:financeInput})
   },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.financialForms??null),JSON.stringify(props.foundation??null),props.productionStartDate,props.greenfield])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
@@ -355,6 +357,15 @@ export default function AdvancedFinancePanel(props: Props) {
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
   const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult):[],[periodicFinanceResult])
+  const periodicSensitivityResult=useMemo(()=>{
+    const sensitivityInput=periodicFinanceResult?.sensitivityInput
+    if(!periodicFinanceResult?.valid||!sensitivityInput)return null
+    const variables:PeriodicSensitivityVariable[]=['revenue','variable-cost','fixed-cost','investment','working-capital','tax-rate','discount-rate']
+    // Do not present a rate shock when the loan form supplies an already-built
+    // schedule; the schedule must be rebuilt from its source terms first.
+    if(!Object.keys(sensitivityInput.precomputedLoanSchedules??{}).length)variables.push('loan-interest-rate')
+    return calculatePeriodicSensitivity(sensitivityInput,variables,10,'npvProject')
+  },[periodicFinanceResult])
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
   useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
@@ -542,7 +553,15 @@ export default function AdvancedFinancePanel(props: Props) {
     {result.warnings.length>0&&<ul className="fw-checklist">{result.warnings.map((w,i)=><li key={i}>{tr(w)}</li>)}</ul>}
 
     <h4>{t('۵. تحلیل حساسیت چندمتغیره','5. Multivariable Sensitivity Analysis')}</h4>
-    <p className="fw-hint">{tr('ردیف‌ها تغییر حجم/ظرفیت و ستون‌ها تغییر قیمت فروش را نشان می‌دهند. مقادیر NPV پروژه با همان برنامه وام، مالیات و سرمایه در گردش دوباره محاسبه می‌شوند.')}</p>
+    <p className="fw-hint">{tr('جدول پایهٔ حجم/قیمت در کنار تحلیل دوره‌ای مدل یکپارچه نمایش داده می‌شود؛ شوک‌ها روی جریان‌های دوره‌ایِ پس از اتصال فرم‌ها اعمال می‌شوند.')}</p>
+    {periodicSensitivityResult?.valid&&<div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('متغیر')}</th><th>{tr('کاهش ۱۰٪')}</th><th>{tr('مبنا')}</th><th>{tr('افزایش ۱۰٪')}</th></tr></thead><tbody>{(['revenue','variable-cost','fixed-cost','investment','working-capital','tax-rate','discount-rate','loan-interest-rate'] as PeriodicSensitivityVariable[]).filter(variable=>periodicSensitivityResult.points.some(point=>point.variable===variable)).map(variable=>{
+      const points=periodicSensitivityResult.points.filter(point=>point.variable===variable)
+      const down=points.find(point=>point.variationPercent===-10)
+      const up=points.find(point=>point.variationPercent===10)
+      const labels:Record<PeriodicSensitivityVariable,string>={revenue:tr('درآمد'), 'variable-cost':tr('هزینه متغیر'),'fixed-cost':tr('هزینه ثابت'),investment:tr('سرمایه‌گذاری'),'working-capital':tr('سرمایه در گردش'),'tax-rate':tr('نرخ مالیات'),'discount-rate':tr('نرخ تنزیل'),'loan-interest-rate':tr('نرخ بهره تسهیلات')}
+      return <tr key={variable}><th>{labels[variable]}</th><td>{down?.metric==null?'—':money(down.metric)}</td><td>{money(periodicSensitivityResult.baseline.npvProject??NaN)}</td><td>{up?.metric==null?'—':money(up.metric)}</td></tr>
+    })}</tbody></table></div>}
+    {periodicSensitivityResult&&!periodicSensitivityResult.valid&&<p className="fw-hint">{tr(periodicSensitivityResult.issues.join('; '))}</p>}
     <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('حجم \\ قیمت')}</th>{[-20,-10,0,10,20].map(v=><th key={v}>{v}%</th>)}</tr></thead><tbody>{sensitivity.map((row,i)=><tr key={i}><th>{[-20,-10,0,10,20][i]}%</th>{row.map((cell,j)=><td key={j}>{cell.npv==null?'—':money(cell.npv)}</td>)}</tr>)}</tbody></table></div>
     <h4>{t('۶. سناریوهای خوش‌بینانه و بدبینانه','6. Optimistic & Pessimistic Scenarios')}</h4>
     <div className="fw-grid">
