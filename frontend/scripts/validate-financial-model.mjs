@@ -216,6 +216,7 @@ near(comfarValuationNpv(0.25), reference.HOT_ROLLING_COMFAR_OUTPUT_AUDIT.project
 near(engine.calculateIrr(comfarReferenceFlows),
   reference.HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectIrrPercent / 100, 0.0001,
   'HRCR200 COMFAR project IRR remains independent of the discount-rate scenario')
+// Compare total funding bases consistently: COMFAR 30/70 keeps working capital as equity; Excel 20/80 funds it with a separate loan.
 const discountOnlyNpv20_80 = comfarValuationNpv(workbook20_80Wacc.value)
 const discountOnlyNpv30_70 = comfarValuationNpv(comfar30_70Wacc.value)
 near(discountOnlyNpv20_80, 41119481.85, 0.02,
