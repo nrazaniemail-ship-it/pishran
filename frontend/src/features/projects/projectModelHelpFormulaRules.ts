@@ -445,3 +445,37 @@ export function calculateDatedMirr(input:{cashFlows:{date:string;amount:number}[
  if(negativePresent===0)return null
  return Math.pow(positiveFuture/negativePresent,1/input.planningHorizonYears)-1
 }
+
+
+export type EconomicNumeraire='local-domestic-prices'|'local-border-prices'|'foreign-border-prices'
+export function calculateForeignExchangeAdjustment(adjustedMarketValue:number,foreignCurrencyExposurePercent:number,standardConversionFactor:number,numeraire:EconomicNumeraire){
+ if(!finite(adjustedMarketValue)||!nonNegative(foreignCurrencyExposurePercent)||foreignCurrencyExposurePercent>100||!nonNegative(standardConversionFactor)||standardConversionFactor===0)throw new Error('invalid-foreign-exchange-adjustment')
+ const exposure=foreignCurrencyExposurePercent/100
+ return numeraire==='local-domestic-prices'
+  ? adjustedMarketValue*exposure*(1/standardConversionFactor-1)
+  : adjustedMarketValue*(1-exposure)*(standardConversionFactor-1)
+}
+export function calculateEconomicNumeraireValue(localCurrencyValue:number,officialNumeraireToLocalRate:number){
+ if(!finite(localCurrencyValue)||!nonNegative(officialNumeraireToLocalRate)||officialNumeraireToLocalRate===0)throw new Error('invalid-numeraire-conversion')
+ return localCurrencyValue/officialNumeraireToLocalRate
+}
+export function calculateIndirectEffectInLocalCurrency(amount:number,marketOrigin:'local'|'foreign',numeraire:EconomicNumeraire,shadowExchangeRate:number,standardConversionFactor:number){
+ if(!finite(amount)||!nonNegative(shadowExchangeRate)||!nonNegative(standardConversionFactor))throw new Error('invalid-indirect-effect-conversion')
+ if(marketOrigin==='local')return amount
+ return numeraire==='local-domestic-prices'?amount*shadowExchangeRate:amount*standardConversionFactor
+}
+export function calculateEconomicCalculationSupport(input:{direction:'input'|'output';tradeCategory:'exported'|'exportable'|'imported'|'importable'|'non-traded';borderPriceLocal:number;transportAdjustedValue:number;transportForeignExposurePercent:number;otherAdjustedValue:number;otherForeignExposurePercent:number;nonTradedPriceLocal?:number}){
+ const vals=[input.borderPriceLocal,input.transportAdjustedValue,input.transportForeignExposurePercent,input.otherAdjustedValue,input.otherForeignExposurePercent]
+ if(!vals.every(finite)||input.transportForeignExposurePercent<0||input.transportForeignExposurePercent>100||input.otherForeignExposurePercent<0||input.otherForeignExposurePercent>100)throw new Error('invalid-economic-calculation-support')
+ if(input.tradeCategory==='non-traded'){
+  if(input.nonTradedPriceLocal===undefined||!finite(input.nonTradedPriceLocal)||input.nonTradedPriceLocal<0)throw new Error('non-traded-price-required')
+  return {adjustedMarketValue:input.nonTradedPriceLocal,foreignCurrencyExposurePercent:0,adjustmentFactor:null}
+ }
+ const subtract=input.direction==='output'&&(input.tradeCategory==='exported'||input.tradeCategory==='exportable')||input.direction==='input'&&input.tradeCategory==='exportable'
+ const sign=subtract?-1:1
+ const adjustedMarketValue=input.borderPriceLocal+sign*(input.transportAdjustedValue+input.otherAdjustedValue)
+ if(adjustedMarketValue===0)throw new Error('zero-economic-adjusted-market-value')
+ const foreignPart=input.borderPriceLocal+sign*(input.transportAdjustedValue*input.transportForeignExposurePercent/100+input.otherAdjustedValue*input.otherForeignExposurePercent/100)
+ const foreignCurrencyExposurePercent=Math.max(0,Math.min(100,foreignPart/adjustedMarketValue*100))
+ return {adjustedMarketValue,foreignCurrencyExposurePercent,adjustmentFactor:null}
+}
