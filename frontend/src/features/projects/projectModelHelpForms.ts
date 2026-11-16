@@ -221,7 +221,7 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
  }
  const costCentres=value.sections?.['cost-centres']??[]
  const centreNames=costCentres.map(row=>row.values.name).filter((name):name is string=>typeof name==='string'&&name.trim()!=='')
- if(new Set(centreNames).size!==centreNames.length)errors.push('cost-centres:duplicate-name')
+ if(new Set(centreNames.map(name=>name.trim().toLocaleLowerCase())).size!==centreNames.length)errors.push('cost-centres:duplicate-name')
  const centreSet=new Set(centreNames)
  for(const row of costCentres){
   const parent=row.values.parentId
@@ -230,7 +230,7 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
  for(const row of value.sections?.['cost-allocation']??[]){
   const v=row.values
   if(typeof v.allocationPercent==='number'&&(!Number.isFinite(v.allocationPercent)||v.allocationPercent<0||v.allocationPercent>100))errors.push('cost-allocation:invalid-percent')
-  if(typeof v.costCentreId==='string'&&v.costCentreId.trim()&&!centreSet.has(v.costCentreId))errors.push('cost-allocation:unknown-cost-centre:'+v.costCentreId)
+  if(typeof v.costCentreId==='string'&&v.costCentreId.trim()&&!centreIds.has(v.costCentreId))errors.push('cost-allocation:unknown-cost-centre:'+v.costCentreId)
  }
  for(const row of value.sections?.['equity-grants']??[]){
   const v=row.values
