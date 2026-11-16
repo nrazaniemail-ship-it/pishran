@@ -1028,7 +1028,7 @@ near(quarterlySale.depreciation.periods[3].assets[0].closingBookValue,0,1e-9,
 
 const zeroMethodAsset={id:'linear-zero-salvage-check',name:'Linear to zero asset',originalValue:1000,initialBookValue:1000,
   scrapPercent:10,lengthYears:2,lengthMonths:0,ratePercent:50,method:'linear-to-zero',
-  acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'2025-01-01',startingAtDate:'2025-01-01'}
+  acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'2024-12-31',startingAtDate:'2025-01-01'}
 const annualZeroMethod=engine.calculateComfarAssetDepreciationSchedule([zeroMethodAsset],3)
 near(annualZeroMethod.periods[0].depreciation,500,1e-9,'Linear-to-zero must depreciate full original cost in year one, ignoring scrap')
 near(annualZeroMethod.periods[1].depreciation,500,1e-9,'Linear-to-zero must depreciate full original cost in year two')
