@@ -74,6 +74,51 @@ export const HRCR200_COMFAR_OUTPUT_REFERENCE = {
       { year: 1419, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 }
     ]
   },
+  depreciationSchedule: [
+    { year: 1405, depreciation: 1_432_554.34 },
+    { year: 1406, depreciation: 1_432_554.34 },
+    { year: 1407, depreciation: 1_432_554.34 },
+    { year: 1408, depreciation: 1_425_537.64 },
+    { year: 1409, depreciation: 1_365_962.59 },
+    { year: 1410, depreciation: 1_316_912.59 },
+    { year: 1411, depreciation: 1_316_912.59 },
+    { year: 1412, depreciation: 1_316_912.59 },
+    { year: 1413, depreciation: 1_316_912.59 },
+    { year: 1414, depreciation: 98_840.49 },
+    { year: 1415, depreciation: 98_840.49 },
+    { year: 1416, depreciation: 98_840.49 },
+    { year: 1417, depreciation: 94_540.41 },
+    { year: 1418, depreciation: 60_745.69 },
+    { year: 1419, depreciation: 52_751.46 }
+  ],
+  constructionSchedule: [
+    { year: 1403, fixedInvestment: 12_649_705.20, preOperatingCost: 0, capitalizedInterest: 1_258_099.83, cashLoanDrawdown: 3_744_547.90, equityContribution: 8_905_157.30 },
+    { year: 1404, fixedInvestment: 5_813_303.80, preOperatingCost: 239_827.00, capitalizedInterest: 2_040_533.23, cashLoanDrawdown: 1_866_303.10, equityContribution: 4_186_827.70 },
+    { year: 1405, fixedInvestment: 0, preOperatingCost: 0, capitalizedInterest: 0, cashLoanDrawdown: 0, equityContribution: 3_309_144.53 }
+  ],
+  workingCapitalSchedule: [
+    { year: 1405, inventory: 3_108_516.19, minimumCash: 200_628.34, currentAssets: 3_309_144.53, changeInWorkingCapital: 3_309_144.53 },
+    { year: 1406, inventory: 3_511_936.83, minimumCash: 206_423.78, currentAssets: 3_718_360.61, changeInWorkingCapital: 409_216.09 },
+    { year: 1407, inventory: 3_946_782.02, minimumCash: 212_746.09, currentAssets: 4_159_528.11, changeInWorkingCapital: 441_167.49 },
+    { year: 1408, inventory: 4_381_627.22, minimumCash: 219_068.38, currentAssets: 4_600_695.60, changeInWorkingCapital: 441_167.49 },
+    { year: 1409, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: -5_325.23 },
+    { year: 1410, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: 0 },
+    { year: 1411, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: 0 },
+    { year: 1412, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: 0 },
+    { year: 1413, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: 0 },
+    { year: 1414, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: 0 },
+    { year: 1415, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: 0 },
+    { year: 1416, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: 0 },
+    { year: 1417, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: 0 },
+    { year: 1418, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: 0 },
+    { year: 1419, inventory: 4_376_389.79, minimumCash: 218_980.57, currentAssets: 4_595_370.36, changeInWorkingCapital: 0 }
+  ],
+  terminalRecovery: {
+    year: 1420,
+    remainingNetFixedAssets: 9_140_096.46,
+    workingCapitalRecovery: 4_595_370.36,
+    totalTerminalInflows: 13_735_466.82
+  },
   incomeStatement: [
     { year: 1405, revenue: 43_581_720, variableCosts: 29_106_327.74, fixedCosts: 2_518_570.57, financingCosts: 2_399_043.44, profitBeforeTax: 9_557_778.26, tax: 477_888.91, netProfit: 9_079_889.35 },
     { year: 1406, revenue: 49_807_680, variableCosts: 33_264_374.56, fixedCosts: 2_518_570.57, financingCosts: 2_099_148.40, profitBeforeTax: 11_925_586.47, tax: 596_279.32, netProfit: 11_329_307.15 },
