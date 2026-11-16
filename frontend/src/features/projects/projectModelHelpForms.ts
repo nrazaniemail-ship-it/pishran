@@ -124,6 +124,50 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
     if((field.type==='number'||field.type==='percent')&&v!==null&&v!==''&&(typeof v!=='number'||!Number.isFinite(v)))errors.push(section.id+':'+i+':invalid-number:'+field.key)
     if(field.type==='percent'&&typeof v==='number'&&(v<0||v>100))errors.push(section.id+':'+i+':percent-out-of-range:'+field.key)
     if(field.type==='select'&&v!==null&&v!==''&&field.options&&!field.options.includes(String(v)))errors.push(section.id+':'+i+':invalid-option:'+field.key)
+    if(field.type==='date'&&typeof v==='string'&&v&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(v))errors.push(section.id+':'+i+':invalid-date:'+field.key)
+    if(field.type==='date'&&typeof v==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(v)){
+     const [year,month,day]=v.split('-').map(Number)
+     const date=new Date(Date.UTC(year,month-1,day))
+     if(date.getUTCFullYear()!==year||date.getUTCMonth()!==month-1||date.getUTCDate()!==day)errors.push(section.id+':'+i+':invalid-date:'+field.key)
+    }
+   }
+   const nonNegativeBySection:Record<string,string[]>={
+    'fixed-investment':['quantity','unitPrice','total','ratePercent','lengthYears','salePrice'],
+    'preproduction-expenditure':['quantity','unitPrice','total','amortizationLength'],
+    'production-costs':['nominalCapacity','standardQuantity','standardUnitPrice','standardTotal','adjustmentQuantity','adjustmentUnitPrice','adjustmentTotal','initialStockQuantity','initialStockValue'],
+    'sales-programme':['salesQuantity','netUnitPrice','grossUnitPrice','subsidyAmount','openingFinishedGoods','closingFinishedGoods','futureSalesQuantity'],
+    'working-capital':['daysCoverage','turnover','periodMonths','requiredQuantity','requiredValue','initialStockQuantity','initialStockValue','startingBalance','depositRate'],
+    'loan-conditions':['numberOfRepayments','graceMonths','openingDebt'],
+    'loan-disbursements':['amount'],
+    'loan-interest':['annualRate','capitalizePercent','capitalizedInterestRate','capitalizedInterestLength'],
+    'loan-fees':['rate','depreciationRate','depreciationLength'],
+    'tax-brackets':['lowerLimit'],
+    'tax-allowances':['amount'],
+    'starting-balances':['quantity','unitPrice','amount','settlementDays','remainingLife'],
+    'economic-global':['officialExchangeRate','shadowExchangeRate','standardConversionFactor','foreignCurrencyConversionFactor'],
+    'economic-items':['financialValue','firstAppearancePrice','firstAppearanceQuantity','borderPrice','adjustmentFactor','adjustedMarketValue','transportAdjustedValue','otherAdjustedValue'],
+    'economic-effects':['amount','headcount','shadowWageFactor'],
+    'sensitivity':['targetNpv','maxIncrease','maxDecrease','order'],
+   }
+   for(const key of nonNegativeBySection[section.id]??[]){
+    const amount=row.values[key]
+    if(typeof amount==='number'&&amount<0)errors.push(section.id+':'+i+':negative-value:'+key)
+   }
+   if(section.id==='sales-programme'){
+    const v=row.values
+    const entered=['salesQuantity','netUnitPrice','salesTaxPercent','subsidyPercent','subsidyAmount','closingFinishedGoods'].some(key=>v[key]!==null&&v[key]!=='')
+    if(entered&&(!v.productId||!v.period))errors.push('sales-programme:'+i+':product-and-period-required')
+    if(v.subsidyPercent!==null&&v.subsidyPercent!==''&&v.subsidyAmount!==null&&v.subsidyAmount!=='')errors.push('sales-programme:'+i+':choose-subsidy-percent-or-amount')
+   }
+   if(section.id==='fixed-investment'){
+    const v=row.values
+    const hasAcquisition=['quantity','unitPrice','total'].some(key=>v[key]!==null&&v[key]!=='')
+    if(hasAcquisition&&(!v.assetName||!v.acquisitionDate))errors.push('fixed-investment:'+i+':asset-and-acquisition-date-required')
+    if(v.startMode==='specified-date'&&!v.startDate)errors.push('fixed-investment:'+i+':depreciation-start-date-required')
+   }
+   if(section.id==='production-costs'){
+    const v=row.values
+    if(v.fixedPercent!==null&&v.fixedPercent!==''&&v.variablePercent!==null&&v.variablePercent!==''&&Math.abs(Number(v.fixedPercent)+Number(v.variablePercent)-100)>1e-8)errors.push('production-costs:'+i+':fixed-variable-split-must-equal-100')
    }
    const q=row.values.quantity,p=row.values.unitPrice,t=row.values.total
    if(typeof q==='number'&&typeof p==='number'&&typeof t==='number'&&Math.abs(q*p-t)>Math.max(.01,Math.abs(t)*1e-8))errors.push(section.id+':'+i+':quantity-price-total-mismatch')
