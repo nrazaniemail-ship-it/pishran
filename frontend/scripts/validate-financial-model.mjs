@@ -1464,8 +1464,9 @@ assert.equal(mismatchedIncremental.periods.length, 0, 'Incremental analysis must
 const expansionPanelSource = await readFile(new URL('../src/features/projects/ExpansionRehabilitationPanel.tsx', import.meta.url), 'utf8')
 const expansionWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 assert.ok(expansionWizardSource.includes("analysisMode: 'unspecified'|'new'|'expansion'|'rehabilitation'|'combined'")
-  && expansionWizardSource.includes("['expansion','rehabilitation','combined'].includes(m.analysisMode)&&Number.isFinite(m.project.constructionYears)&&Number.isFinite(m.project.operatingYears)&&<ExpansionRehabilitationPanel"),
-  'Project wizard must activate the existing-enterprise module only for explicit expansion/rehabilitation classifications with a defined planning horizon')
+  && expansionWizardSource.includes("projectClassificationReady=m.analysisMode==='new'||(['expansion','rehabilitation','combined'].includes(m.analysisMode)&&m.financialForms.openingBalanceSheet?.enabled===true)")
+  && !expansionWizardSource.includes('ExpansionRehabilitationPanel'),
+  'The raw wizard must use the integrated opening-balance-sheet form for existing-enterprise projects, not a disconnected pre-seeded panel')
 assert.ok(expansionPanelSource.includes('Starting Balances')
   && expansionPanelSource.includes('Incremental Analysis')
   && expansionPanelSource.includes('Work in progress')
