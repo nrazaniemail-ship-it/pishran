@@ -180,7 +180,7 @@ export default function ProjectReportVisuals(props: Props) {
   const currentTaxScheduleLabel = [...new Set(currentOperatingTaxRates.map(rate=>Number(rate.toFixed(2))))]
     .map(rate=>fmtValue(rate,2)+'%').join(' → ') || '—'
   const comfarBasisMatches = isHotRollingCoil && props.periodicResult?.valid === true &&
-    comfarAnnualRows.length === 17 &&
+    comfarAnnualRows.length === 17 && props.periodFrequency==='annual' &&
     Math.abs(props.capacity - HOT_ROLLING_200KT_AUDIT.capacityTpy) < 1 &&
     Math.abs(props.equityPercent - 70) < 0.001 && Math.abs(props.debtPercent - 30) < 0.001 &&
     Math.abs(props.taxPercent - 25) < 0.001 && comfarTaxScheduleMatches &&
