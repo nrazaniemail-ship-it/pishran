@@ -1,0 +1,51 @@
+name: Retain COMFAR III Reference Manual
+
+on:
+  push:
+    branches:
+      - feat/foreign-currency-loan-finance-orchestration-v2
+    paths:
+      - .github/workflows/import-comfar-iii-manual.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  retain-manual:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+      - name: Download and validate the official COMFAR III reference manual
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="docs/reference/comfar/COMFAR-III-Reference-Manual.pdf"
+          if [ -s "$target" ]; then
+            echo "Manual already retained at $target"
+            exit 0
+          fi
+          mkdir -p "$(dirname "$target")"
+          curl --fail --location --retry 3 --silent --show-error \
+            "https://comfar.org/wp-content/uploads/2018/12/ComfarIII-Reference.pdf" \
+            --output "$target"
+          test "$(head -c 5 "$target")" = "%PDF-"
+          test "$(wc -c < "$target")" -gt 1000000
+          file "$target"
+      - name: Commit manual to this branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/reference/comfar/COMFAR-III-Reference-Manual.pdf
+          if git diff --cached --quiet; then
+            echo "No manual changes to commit"
+            exit 0
+          fi
+          git commit -m "docs: retain COMFAR III reference manual [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
