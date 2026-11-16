@@ -61,20 +61,53 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
  const activeMonths=Math.min(periodMonths,remainingLifeMonths)
  const bookFloor=salvageValue
  const depreciableBase=acquisitionCost-salvageValue
- if(method==='sum-of-years-digits'&&(usefulLifeMonths%12!==0||(input.firstDepreciationYearMonths!==undefined&&input.firstDepreciationYearMonths!==12)))throw new Error('syd-partial-year-schedule-not-yet-implemented')
+ const firstYearMonths=input.firstDepreciationYearMonths??12
+ if(!Number.isInteger(firstYearMonths)||firstYearMonths<1||firstYearMonths>12)throw new Error('invalid-first-depreciation-year-months')
  if(activeMonths===0||openingBookValue<=bookFloor)return {charge:0,closingBookValue:Math.max(bookFloor,openingBookValue),remainingLifeMonths,methodUsed:method}
  let charge=0,methodUsed=method
- if(method==='linear-to-zero')charge=acquisitionCost/usefulLifeMonths*activeMonths
- else if(method==='linear-to-scrap')charge=depreciableBase/usefulLifeMonths*activeMonths
- else if(method==='sum-of-years-digits'){
-  const lifeYears=Math.ceil(usefulLifeMonths/12),denominator=lifeYears*(lifeYears+1)/2
-  let elapsed=monthsElapsed,months=activeMonths
-  while(months>0){
-   const yearIndex=Math.min(lifeYears-1,Math.floor(elapsed/12))
-   const monthsInYear=Math.min(months,12-(elapsed%12))
-   const remainingYears=lifeYears-yearIndex
-   charge+=depreciableBase*(remainingYears/denominator)*(monthsInYear/12)
-   elapsed+=monthsInYear;months-=monthsInYear
+ if(method==='linear-to-zero'||method==='linear-to-scrap'){
+  const base=method==='linear-to-zero'?acquisitionCost:depreciableBase
+  const m1=firstYearMonths,L=usefulLifeMonths/12,svRate=acquisitionCost===0?0:salvageValue/acquisitionCost
+  const M=Math.max(1,Math.floor((method==='linear-to-zero'?(1-svRate):1)*L-m1/12+1))
+  const segments=[m1,...Array(Math.max(0,M-1)).fill(12)]
+  const elapsedBeforeFinal=segments.reduce((sum,v)=>sum+v,0)
+  const finalMonths=Math.max(0,usefulLifeMonths-elapsedBeforeFinal)
+  const annual=base/L
+  const annualCharges=[annual*m1/12,...Array(Math.max(0,M-1)).fill(annual)]
+  const finalCharge=Math.max(0,openingBookValue-annualCharges.reduce((sum,v)=>sum+v,0)-salvageValue)
+  const schedule=[...annualCharges,finalCharge]
+  let cursor=0
+  for(let i=0;i<schedule.length;i++){
+   const length=i===0?m1:i<M?12:finalMonths
+   const overlap=Math.max(0,Math.min(monthsElapsed+activeMonths,cursor+length)-Math.max(monthsElapsed,cursor))
+   if(length>0&&overlap>0)charge+=schedule[i]*overlap/length
+   cursor+=length
+  }
+ }else if(method==='sum-of-years-digits'){
+  const Y=Math.floor(usefulLifeMonths/12),m=usefulLifeMonths%12,m1=firstYearMonths,base=depreciableBase
+  if(m===0){
+   const divisor=Y*(Y+1)/2
+   const segments=[m1,...Array(Math.max(0,Y-1)).fill(12)]
+   const schedule=segments.map((_,i)=>(Y-i)/divisor*base*(segments[i]/12))
+   const cursorStart=0;let cursor=cursorStart
+   for(let i=0;i<schedule.length;i++){const overlap=Math.max(0,Math.min(monthsElapsed+activeMonths,cursor+segments[i])-Math.max(monthsElapsed,cursor));if(segments[i]>0)charge+=schedule[i]*overlap/segments[i];cursor+=segments[i]}
+  }else{
+   const sodl=(Y+1)*(Y+2*m/12)/2,sodlAdj=(Y+1)*Y/2
+   const d1=(Y+m/12)/sodl*(m/12)*base
+   const intermediate=[d1]
+   for(let j=2;j<=Y+1;j++)intermediate.push((Y-j+2)/sodlAdj*(base-d1))
+   const partial=[]
+   if(m1<=m){
+    partial.push(d1*m1/m)
+    for(let j=2;j<=Y+1;j++){const prev=intermediate[j-2]??0,cur=intermediate[j-1]??0;partial.push(prev*(m-m1)/12+cur*(12-(m-m1))/12)}
+   }else{
+    partial.push(d1+((intermediate[1]??0)*(m1-m)/12))
+    for(let j=2;j<=Y;j++){const cur=intermediate[j-1]??0,next=intermediate[j]??0;partial.push(cur*(m1-m)/12+next*(12-(m1-m))/12)}
+   }
+   const segs=[m1,...Array(Math.max(0,Math.ceil((usefulLifeMonths-m1)/12))).fill(12)].map((v,i)=>i===0?v:Math.min(12,usefulLifeMonths-(m1+(i-1)*12)))
+   const total=partial.reduce((sum,v)=>sum+v,0);if(partial.length)partial[partial.length-1]+=base-total
+   let cursor=0
+   for(let i=0;i<segs.length;i++){const len=segs[i]??0,amt=partial[i]??0,overlap=Math.max(0,Math.min(monthsElapsed+activeMonths,cursor+len)-Math.max(monthsElapsed,cursor));if(len>0)charge+=amt*overlap/len;cursor+=len}
   }
  }else{
   const rate=input.annualRatePercent
