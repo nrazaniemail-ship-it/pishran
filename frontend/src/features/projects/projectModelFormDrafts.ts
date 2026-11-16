@@ -93,9 +93,14 @@ export function validateProductionCostFormDraft(value:ProductionCostFormDraft):s
  const errors:string[]=[]
  if(value.classification==='direct'&&!value.productId)errors.push('direct-cost-missing-product')
  if(value.classification==='indirect'&&value.productId)errors.push('indirect-cost-must-not-have-product')
- if(value.basis==='nominal-capacity'&&(!value.nominalCapacity||value.nominalCapacity<=0))errors.push('nominal-capacity-required')
+ if(value.basis==='nominal-capacity'&&(!Number.isFinite(value.nominalCapacity)||!value.nominalCapacity||value.nominalCapacity<=0))errors.push('nominal-capacity-required')
+ for(const [label,v] of [['fixed',value.fixedPercent],['variable',value.variablePercent]] as const)if(v!==null&&(!Number.isFinite(v)||v<0||v>100))errors.push('invalid-'+label+'-cost-percent')
  if(value.fixedPercent!==null&&value.variablePercent!==null&&Math.abs(value.fixedPercent+value.variablePercent-100)>1e-8)errors.push('fixed-variable-percentages-must-equal-100')
- for(const row of value.adjustments)if(row.fixedPercent!==null&&row.variablePercent!==null&&Math.abs(row.fixedPercent+row.variablePercent-100)>1e-8)errors.push('adjustment-fixed-variable-percentages-must-equal-100')
+ for(const row of value.adjustments){
+  if(row.fixedPercent!==null&&(!Number.isFinite(row.fixedPercent)||row.fixedPercent<0||row.fixedPercent>100))errors.push('invalid-adjustment-fixed-percent')
+  if(row.variablePercent!==null&&(!Number.isFinite(row.variablePercent)||row.variablePercent<0||row.variablePercent>100))errors.push('invalid-adjustment-variable-percent')
+  if(row.fixedPercent!==null&&row.variablePercent!==null&&Math.abs(row.fixedPercent+row.variablePercent-100)>1e-8)errors.push('adjustment-fixed-variable-percentages-must-equal-100')
+ }
  return errors
 }
 export function validateFixedAssetFormDraft(value:FixedAssetFormDraft):string[]{
@@ -105,6 +110,12 @@ export function validateFixedAssetFormDraft(value:FixedAssetFormDraft):string[]{
  if(d.usefulLifeMonths!==null&&(!Number.isInteger(d.usefulLifeMonths)||d.usefulLifeMonths<=0))errors.push('invalid-useful-life-months')
  if(d.salvagePercent!==null&&(!Number.isFinite(d.salvagePercent)||d.salvagePercent<0||d.salvagePercent>100))errors.push('invalid-salvage-percent')
  if(d.method==='sum-of-years-digits'&&d.ratePercent!==null)errors.push('sum-of-years-digits-does-not-use-rate')
+ for(const row of value.acquisitionPeriods){
+  if(row.quantity!==null&&(!Number.isFinite(row.quantity)||row.quantity<0))errors.push('invalid-asset-acquisition-quantity')
+  if(row.unitPrice!==null&&(!Number.isFinite(row.unitPrice)||row.unitPrice<0))errors.push('invalid-asset-acquisition-unit-price')
+  if(row.total!==null&&(!Number.isFinite(row.total)||row.total<0))errors.push('invalid-asset-acquisition-total')
+ }
+ if(value.disposal?.proceeds!==null&&value.disposal?.proceeds!==undefined&&(!Number.isFinite(value.disposal.proceeds)||value.disposal.proceeds<0))errors.push('invalid-asset-disposal-proceeds')
  return errors
 }
 export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):string[]{
@@ -113,6 +124,9 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
  if(value.loanType!=='profile'&&value.loanType!==null&&value.numberOfRepayments!==null&&(!Number.isInteger(value.numberOfRepayments)||value.numberOfRepayments<=0))errors.push('invalid-number-of-repayments')
  if(value.capitalizedInterestPercent!==null&&(!Number.isFinite(value.capitalizedInterestPercent)||value.capitalizedInterestPercent<0||value.capitalizedInterestPercent>100))errors.push('invalid-capitalized-interest-percent')
  if(value.interestPaymentMonth!==null&&(!Number.isInteger(value.interestPaymentMonth)||value.interestPaymentMonth<1||value.interestPaymentMonth>12))errors.push('invalid-interest-payment-month')
+ if(value.disbursements.some(row=>row.amount!==null&&(!Number.isFinite(row.amount)||row.amount<0)))errors.push('invalid-loan-disbursement')
+ if(value.interestRateChanges.some(row=>row.annualRatePercent!==null&&(!Number.isFinite(row.annualRatePercent)||row.annualRatePercent<0)))errors.push('invalid-loan-interest-rate')
+ if(value.fees.some(fee=>fee.type===null))errors.push('loan-fee-type-required')
  if(value.fees.some(fee=>fee.ratePercent!==null&&(!Number.isFinite(fee.ratePercent)||fee.ratePercent<0)))errors.push('invalid-loan-fee-rate')
  return errors
 }
