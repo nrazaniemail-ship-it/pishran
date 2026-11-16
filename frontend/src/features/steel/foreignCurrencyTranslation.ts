@@ -360,13 +360,13 @@ export function postForeignExchangeIntoThreeStatements(
       netChangeInCash: statement.cashFlowStatement.netChangeInCash + periodCashAdjustment,
       closingCash: statement.cashFlowStatement.closingCash + cumulativeCashTaxAdjustment,
     }
-    const movementChecks = {
-      ...statement.movementChecks,
-      cash: statement.movementChecks.cash + periodCashAdjustment,
-      debt: statement.movementChecks.debt + (input.debtAlreadyRemeasured?0:fxLoss),
-      retainedEarnings: statement.movementChecks.retainedEarnings + netIncomeDelta,
-    }
-    const reconciled=Math.abs(balanceDifference)<=0.01&&(input.debtAlreadyRemeasured?Object.values(movementChecks).every(value=>Math.abs(value)<=0.01):statement.balanceSheet.reconciled)
+    // Opening balances, closing balances and the corresponding cash/debt/equity
+    // movements are all restated together above. Their roll-forward residuals
+    // therefore remain the base statement residuals; adding the FX deltas again
+    // here would double-count the very adjustments already posted to both sides.
+    const movementChecks = { ...statement.movementChecks }
+    const reconciled = Math.abs(balanceDifference) <= 0.01 &&
+      Object.values(movementChecks).every(value => finite(value) && Math.abs(value) <= 0.01)
     posted.push({
       ...statement,
       openingBalances,
