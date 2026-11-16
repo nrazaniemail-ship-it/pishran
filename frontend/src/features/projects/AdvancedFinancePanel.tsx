@@ -6,6 +6,7 @@ import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention, ProjectFoundation } from './projectFoundation'
 import type { ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import { calculateProjectFinancialModelFromDrafts } from './projectFinancialModelOrchestrator'
+import { bindLoanFacilitiesToPeriodicFinance } from './foreignCurrencyLoanFinanceBinding'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
 import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
 import { calculatePeriodicSensitivity, type PeriodicSensitivityVariable } from '../steel/periodicSensitivity'
@@ -343,7 +344,19 @@ export default function AdvancedFinancePanel(props: Props) {
         npvEquity:null,irrEquity:null,mirrEquity:null,totalDebtDrawdown:0,totalEquityContribution:0,
         totalCapitalizedInterest:0,peakWorkingCapital:0,warnings:orchestration.issues,
       }
-      return Object.assign(orchestration.finalRun.finance,{sensitivityInput:orchestration.financeInput??financeInput})
+      const openingForeignBalances=Object.fromEntries(props.financialForms.loans
+        .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
+        .map(loan=>[loan.id,loan.openingForeignBalance as number]))
+      const openingExchangeRatesToLocal=Object.fromEntries(props.financialForms.loans
+        .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
+        .map(loan=>[loan.id,loan.openingExchangeRateToLocal as number]))
+      const sensitivityLoanBinding=bindLoanFacilitiesToPeriodicFinance({
+        finance:orchestration.financeInput??financeInput,loans:props.financialForms.loans,
+        foundation:props.foundation,openingForeignBalances,openingExchangeRatesToLocal,
+      })
+      return Object.assign(orchestration.finalRun.finance,{
+        sensitivityInput:sensitivityLoanBinding.valid?sensitivityLoanBinding.financeInput??undefined:undefined
+      })
     }
     return Object.assign(calculateIntegratedPeriodicFinance(financeInput),{sensitivityInput:financeInput})
   },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.financialForms??null),JSON.stringify(props.foundation??null),props.productionStartDate,props.greenfield])
