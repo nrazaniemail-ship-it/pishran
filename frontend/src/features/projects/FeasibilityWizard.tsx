@@ -165,7 +165,7 @@ function baseModel(project:FeasibilityProject):Model {
  const coldRollingProject=!rawProject&&selectedStage.id==='cold-rolling'
  const hotRollingCoilProject=!rawProject&&selectedStage.id==='hot-rolling'&&/کلاف/.test(project.steelStage??project.name)
  return {
-  projectCategory:project.steelStage?.includes('معدن')?'mining':'industrial',
+  projectCategory:selectedStage.id==='mining'?'mining':'industrial',
   analysisMode:'new',
   partners:[],
   partnerDistributionPercent:100,
