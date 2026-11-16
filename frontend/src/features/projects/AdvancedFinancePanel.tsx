@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
-import { allocateJointVentureCashFlows, type JointVenturePartner } from './partnerFinance'
+import { allocateJointVentureCashFlows, type JointVenturePartner, type PartnerFinanceResult } from './partnerFinance'
 import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
@@ -52,6 +52,7 @@ type Props = {
   onResult?: (result:IntegratedFinanceResult)=>void
   onSensitivity?: (analysis:OneWaySensitivityAnalysis)=>void
   onPeriodicResult?: (result:PeriodicProjectFinanceResult|null)=>void
+  onPartnerFinanceResult?: (result:PartnerFinanceResult|null)=>void
   equityPercent: number
   costOfEquity: number
   costOfDebt: number
@@ -294,6 +295,7 @@ export default function AdvancedFinancePanel(props: Props) {
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
   useEffect(()=>{props.onPeriodicResult?.(periodicFinanceResult)},[periodicFinanceResult,props.onPeriodicResult])
+  useEffect(()=>{props.onPartnerFinanceResult?.(partnerFinanceResult)},[partnerFinanceResult,props.onPartnerFinanceResult])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
@@ -498,8 +500,10 @@ export default function AdvancedFinancePanel(props: Props) {
           <article><small>{t('وجه نقد نگه‌داشته‌شده در پروژه','Cash retained in project')}</small><b>{money(partnerFinanceResult.retainedPositiveCashFlow)}</b></article>
           <article><small>{t('آورده اعلامی شرکا','Declared partner capital')}</small><b>{money(partnerFinanceResult.totalDeclaredCapitalContribution)}</b></article>
           <article><small>{t('آورده ثبت‌شده در موتور مالی','Scheduled engine equity')}</small><b>{money(partnerFinanceResult.totalScheduledEquityContribution)}</b></article>
+          <article><small>{t('درصد جریان مثبت قابل تقسیم','Positive cash flow distributed')}</small><b>{money(partnerFinanceResult.positiveCashFlowDistributionPercent)}%</b></article>
         </div>
         <p className="fw-hint">{t('اختلاف آورده اعلامی شرکا با برنامه آورده ثبت‌شده در موتور مالی: ','Variance between declared partner capital and scheduled engine equity: ')}<b>{money(partnerFinanceResult.declaredCapitalContributionVariance)}</b>. {t('این اختلاف باید پیش از نهایی‌کردن قرارداد مشارکت و گزارش مالی تطبیق داده شود.','Reconcile this difference before finalizing the JV agreement and financial report.')}</p>
+        <p className="fw-hint">{t('کنترل تخصیص جریان نقدی؛ اختلاف مانده تخصیص‌یافته و وجه نقد نگه‌داشته‌شده با جریان نقدی کل سهامداران: ','Allocation control; difference between partner allocations plus retained cash and total equity cash flow: ')}<b>{money(partnerFinanceResult.allocationReconciliationVariance)}</b>. {t('این مقدار باید صفر باشد.','This amount must be zero.')}</p>
         <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('شریک','Partner')}</th><th>{t('آورده قراردادی','Declared capital')}</th><th>{t('جریان نقدی منفی تخصیص‌یافته','Allocated negative CF')}</th><th>{t('توزیع جریان نقدی مثبت','Positive CF distribution')}</th><th>{t('خالص جریان نقدی شریک','Partner net CF')}</th></tr></thead>
           <tbody>{partnerFinanceResult.rows.map(row=><tr key={row.partnerId}><td>{row.partnerName}</td><td>{money(row.declaredCapitalContribution)}</td><td>{money(row.negativeCashFlowAllocation)}</td><td>{money(row.positiveCashFlowDistribution)}</td><td>{money(row.netCashFlow)}</td></tr>)}</tbody>
         </table></div>
