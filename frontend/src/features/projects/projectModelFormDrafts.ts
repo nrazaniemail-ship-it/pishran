@@ -62,7 +62,7 @@ export function resolveLoanFeeBasis(type:LoanFeeType):LoanFeeBasis{
  return 'total-loan-at-first-disbursement'
 }
 export type LoanFacilityFormDraft={
- id:string; name:string; currencyCode:string|null; facilityLimit?:number|null; marketOrigin:'local'|'foreign'|null
+ id:string; name:string; currencyCode:string|null; facilityLimit?:number|null; openingForeignBalance?:number|null; openingExchangeRateToLocal?:number|null; marketOrigin:'local'|'foreign'|null
  loanType:'annuity'|'constant-principal'|'profile'|null
  repaymentInterval:'annual'|'semiannual'|'quarterly'|'monthly'|null
  firstRepaymentDate:string; numberOfRepayments:number|null
@@ -74,7 +74,7 @@ export type LoanFacilityFormDraft={
  fees:{id:string;type:LoanFeeType|null;ratePercent:number|null;currencyCode:string|null;paymentDate?:string;treatment?:'expense'|'capitalize'|null}[]
 }
 export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{return{
- id,name:'',currencyCode:null,facilityLimit:null,marketOrigin:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',numberOfRepayments:null,
+ id,name:'',currencyCode:null,facilityLimit:null,openingForeignBalance:null,openingExchangeRateToLocal:null,marketOrigin:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',numberOfRepayments:null,
  disbursements:[],profileMovements:[],interestRateChanges:[],interestPaymentMonth:null,
  capitalizedInterestPercent:null,capitalizeUntilDate:'',fees:[]
 }}
@@ -166,6 +166,8 @@ export function validateFixedAssetFormDraft(value:FixedAssetFormDraft):string[]{
 export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):string[]{
  const errors:string[]=[]
  if(value.facilityLimit!==undefined&&value.facilityLimit!==null&&(!Number.isFinite(value.facilityLimit)||value.facilityLimit<=0))errors.push('invalid-facility-limit')
+ if(value.openingForeignBalance!=null&&(!Number.isFinite(value.openingForeignBalance)||value.openingForeignBalance<0))errors.push('invalid-opening-foreign-balance')
+ if(value.openingForeignBalance!=null&&value.openingForeignBalance>0&&(!Number.isFinite(value.openingExchangeRateToLocal)||!value.openingExchangeRateToLocal||value.openingExchangeRateToLocal<=0))errors.push('opening-foreign-debt-requires-opening-exchange-rate')
  if(value.loanType==='profile'&&value.numberOfRepayments!==null)errors.push('profile-loan-uses-dated-movements')
  if(value.loanType!=='profile'&&value.loanType!==null&&value.numberOfRepayments!==null&&(!Number.isInteger(value.numberOfRepayments)||value.numberOfRepayments<=0))errors.push('invalid-number-of-repayments')
  if(value.capitalizedInterestPercent!==null&&(!Number.isFinite(value.capitalizedInterestPercent)||value.capitalizedInterestPercent<0||value.capitalizedInterestPercent>100))errors.push('invalid-capitalized-interest-percent')
