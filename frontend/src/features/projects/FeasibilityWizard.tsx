@@ -131,6 +131,27 @@ const stageFormDefinitions:Record<string,{materials:[string,string][];utilities:
 const stageRows=(items:[string,string][],source:string)=>items.map(([name,unit])=>makeRow(name,unit,0,0,source))
 const stageCapexRows=(items:string[],currency:string,source:string)=>items.map(name=>makeRow(name,currency,0,0,source))
 
+/** Resolve the user's steel-chain project labels to the correct technical form. */
+function resolveProjectStage(project:FeasibilityProject):typeof stageOptions[number] {
+ const label=`${project.steelStage??''} ${project.name??''}`
+  .replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\s_-]/g,'').toLowerCase()
+ const has=(value:string)=>label.includes(value)
+ const id=has('نوردسرد')?'cold-rolling'
+  :has('پلیت')?'hot-plate'
+  :has('نوردگرم')&&has('کلاف')?'hot-rolling'
+  :has('میلگرد')?'rebar-rolling'
+  :has('نبشی')?'angle-rolling'
+  :has('تیرآهن')||has('تیر اهن')?'beam-rolling'
+  :((has('احیاء')||has('احیا'))&&has('فولادسازی'))||has('تولیداسلب')?'dri-steelmaking-slab'
+  :has('فولادسازی')||has('ذوب')||has('ریخته')?'steelmaking'
+  :has('احیاء')||has('احیا')||has('dri')?'dri'
+  :has('گندله')?'pellet'
+  :has('کنسانتره')||has('کنستانتره')?'concentrate'
+  :has('معدن')||has('سنگآهن')?'mining'
+  :'hot-rolling'
+ return (stageOptions.find(stage=>stage.id===id)??stageOptions.find(stage=>stage.id==='hot-rolling')) as typeof stageOptions[number]
+}
+
 const steps = [
  ['profile','تعریف پروژه و بازار'],['stage','محصول و ظرفیت تولید'],['process','فرآیند تولید و موازنه مواد'],['balance','مصارف زیربنایی و فرآیندی'],['capex','هزینه‌های دوره ساخت'],['opex','هزینه‌های دوره بهره‌برداری'],['finance','تأمین مالی و نرخ تنزیل'],['cashflow','جریان نقدی و شاخص‌های مالی'],['results','جمع‌بندی و ارزیابی نهایی'],['reports','گزارش و خروجی‌ها']
 ] as const
@@ -140,9 +161,9 @@ type Step = typeof steps[number][0]
 const makeRow=(name:string,unit='تن',quantity=0,unitPrice=0,source='فرض کاربر'):Row=>({id:crypto.randomUUID?.()??String(Date.now()+Math.random()),name,quantity,unit,unitPrice,source})
 function baseModel(project:FeasibilityProject):Model {
  const rawProject=project.templateId==='raw'||project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
- const coldRollingProject=!rawProject&&project.steelStage?.includes('نورد سرد')
- const hotRollingCoilProject=!rawProject&&/نورد.*گرم.*کلاف|گرم.*نورد.*کلاف/.test((project.steelStage+' '+project.name).replace(/\s/g,''))
- const selectedStage=rawProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):(stageOptions.find(s=>project.steelStage?.includes(s.name))??stageOptions.find(s=>s.id==='hot-rolling') as typeof stageOptions[number])
+ const selectedStage=rawProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
+ const coldRollingProject=!rawProject&&selectedStage.id==='cold-rolling'
+ const hotRollingCoilProject=!rawProject&&selectedStage.id==='hot-rolling'&&/کلاف/.test(project.steelStage??project.name)
  return {
   projectCategory:project.steelStage?.includes('معدن')?'mining':'industrial',
   analysisMode:'new',
