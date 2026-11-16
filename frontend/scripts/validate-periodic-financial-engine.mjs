@@ -23,9 +23,9 @@ const partnerAllocation = partnerFinance.allocateJointVentureCashFlows({
   valid:true,
   totalEquityContribution:100,
   rows:[
-    {period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100},
-    {period:2,startDate:'2026-01-01',endDate:'2026-12-31',equityFreeCashFlow:200},
-    {period:3,startDate:'2027-01-01',endDate:'2027-12-31',equityFreeCashFlow:100},
+    {period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100,equityContribution:100,equityWorkingCapitalContribution:0},
+    {period:2,startDate:'2026-01-01',endDate:'2026-12-31',equityFreeCashFlow:200,equityContribution:0,equityWorkingCapitalContribution:0},
+    {period:3,startDate:'2027-01-01',endDate:'2027-12-31',equityFreeCashFlow:100,equityContribution:0,equityWorkingCapitalContribution:0},
   ],
 },[
   {id:'p1',name:'Partner A',sharePercent:60,capitalContribution:60,profitSharePercent:30},
@@ -64,7 +64,7 @@ assert.equal(partnerAllocation.rows.reduce((sum,row)=>sum+row.netCashFlow,0)+par
   'Partner net cash flows plus retained cash must reconcile to total project equity cash flow')
 const invalidPartnerAllocation=partnerFinance.allocateJointVentureCashFlows({
   valid:true,totalEquityContribution:100,
-  rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:100}],
+  rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:100,equityContribution:100,equityWorkingCapitalContribution:0}],
 },[
   {id:'p1',name:'Partner A',sharePercent:60,capitalContribution:60,profitSharePercent:60},
   {id:'p2',name:'Partner B',sharePercent:30,capitalContribution:40,profitSharePercent:30},
@@ -73,7 +73,7 @@ assert.equal(invalidPartnerAllocation.valid,false,'Partner equity and profit sha
 
 const mismatchedPartnerCapital=partnerFinance.allocateJointVentureCashFlows({
   valid:true,totalEquityContribution:100,
-  rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100}],
+  rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100,equityContribution:100,equityWorkingCapitalContribution:0}],
 },[
   {id:'p1',name:'Partner A',sharePercent:60,capitalContribution:50,profitSharePercent:60},
   {id:'p2',name:'Partner B',sharePercent:40,capitalContribution:50,profitSharePercent:40},
@@ -86,6 +86,27 @@ assert.equal(mismatchedPartnerCapital.valid,false,
   'Each partner declared contribution must reconcile to the agreed capital-share allocation')
 assert.ok(mismatchedPartnerCapital.warnings.some(warning=>warning.includes('Each partner declared capital contribution')),
   'Partner-level capital contribution mismatch must be disclosed')
+
+const aggregateContributionMismatch=partnerFinance.allocateJointVentureCashFlows({
+  valid:true,totalEquityContribution:100,
+  rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100,equityContribution:80,equityWorkingCapitalContribution:0}],
+},[
+  {id:'p1',name:'Partner A',sharePercent:60,capitalContribution:60,profitSharePercent:60},
+  {id:'p2',name:'Partner B',sharePercent:40,capitalContribution:40,profitSharePercent:40},
+],100)
+assert.equal(aggregateContributionMismatch.valid,false,
+  'Aggregate contribution must reconcile to periodic contribution components')
+assert.ok(aggregateContributionMismatch.warnings.some(warning=>warning.includes('aggregated equity contribution')),
+  'Periodic contribution mismatch must be disclosed')
+
+const invalidPeriodDate=partnerFinance.allocateJointVentureCashFlows({
+  valid:true,totalEquityContribution:100,
+  rows:[{period:1,startDate:'2025-02-30',endDate:'2025-12-31',equityFreeCashFlow:-100,equityContribution:100,equityWorkingCapitalContribution:0}],
+},[
+  {id:'p1',name:'Partner A',sharePercent:100,capitalContribution:100,profitSharePercent:100},
+],100)
+assert.equal(invalidPeriodDate.valid,false,'Invalid calendar dates must block partner allocation')
+
 
 const malformedPartnerFinance=partnerFinance.allocateJointVentureCashFlows({
   valid:true,rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:100}],
