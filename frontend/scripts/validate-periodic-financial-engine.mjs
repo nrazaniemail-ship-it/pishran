@@ -21,6 +21,7 @@ const partnerFinanceOutput = ts.transpileModule(partnerFinanceSource, {
 const partnerFinance = await import('data:text/javascript;base64,' + Buffer.from(partnerFinanceOutput).toString('base64'))
 const partnerAllocation = partnerFinance.allocateJointVentureCashFlows({
   valid:true,
+  totalEquityContribution:100,
   rows:[
     {period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100},
     {period:2,startDate:'2026-01-01',endDate:'2026-12-31',equityFreeCashFlow:200},
