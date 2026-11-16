@@ -555,6 +555,32 @@ assert.ok(existingEnterpriseStatements.every(row=>row.balanceSheet.reconciled),
   'Opening cash and debt balances must roll forward for an existing enterprise')
 assert.ok(existingEnterpriseStatements.every(row=>Math.abs(row.movementChecks.debt)<1e-9),
   'Opening debt must not be discarded when no new loan schedule exists')
+
+const openingDebtWithScheduledFacility = engine.calculateIntegratedPeriodicFinance({
+  periods:quarter,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
+  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
+  annualTaxRates:[0],annualEquityContributions:[0],workingCapitalByPeriod:[0,0,0,0],
+  loans:[{id:'opening-facility',input:{
+    annualRatePercent:0,drawdowns:[0,0,0,0],openingBalance:100,
+    repaymentMethod:'bullet',repaymentStartPeriod:1,gracePeriods:3,
+    termPeriods:1,capitalizeInterest:false,
+  }}],
+})
+assert.equal(openingDebtWithScheduledFacility.valid,true,openingDebtWithScheduledFacility.warnings.join('; '))
+const openingDebtWithFacilityStatements = engine.buildPeriodicThreeFinancialStatements(
+  openingDebtWithScheduledFacility,{cash:200,debt:150,paidInCapital:50},
+)
+assert.equal(openingDebtWithFacilityStatements.length,4,
+  'Existing opening debt must include the opening balance of every modelled loan facility')
+assert.deepEqual(openingDebtWithFacilityStatements.map(row=>row.balanceSheet.debt),[150,150,150,50],
+  'Opening debt must not be double-counted; unmodelled legacy debt must remain while the scheduled facility amortizes')
+assert.ok(openingDebtWithFacilityStatements.every(row=>row.balanceSheet.reconciled),
+  'Three statements must reconcile when opening debt contains both scheduled and legacy facilities')
+assert.equal(engine.buildPeriodicThreeFinancialStatements(
+  openingDebtWithScheduledFacility,{cash:200,debt:50,paidInCapital:50},
+).length,0,
+  'Statement generation must reject a scheduled opening loan balance that exceeds the opening debt liability')
 assert.equal(engine.buildPeriodicThreeFinancialStatements({...integratedPeriodic,valid:false}).length,0,
   'Invalid periodic finance results must not produce statements')
 assert.equal(integratedPeriodic.rows[3].salvageGainLoss,500,
