@@ -72,8 +72,11 @@ export function allocateJointVentureCashFlows(
     totalScheduledEquityContribution: 0,totalDeclaredCapitalContribution: 0,
     declaredCapitalContributionVariance: 0,distributedPositiveCashFlow: 0,retainedPositiveCashFlow: 0,
   })
-  if (!finance.valid || !finance.rows.length) {
-    warnings.push('A valid periodic equity cash-flow schedule is required before partner allocations can be calculated.')
+  if (!finance.valid || !finance.rows.length ||
+      !Number.isFinite(finance.totalEquityContribution) || finance.totalEquityContribution < 0 ||
+      finance.rows.some(period => !Number.isFinite(period.equityFreeCashFlow) ||
+        !Number.isFinite(period.period) || !period.startDate || !period.endDate)) {
+    warnings.push('A valid periodic equity cash-flow schedule with finite equity contributions and period cash flows is required before partner allocations can be calculated.')
     return empty()
   }
   if (!partners.length || partners.length > 20) {
@@ -146,9 +149,12 @@ export function allocateJointVentureCashFlows(
   const totalDeclaredCapitalContribution=partners.reduce((sum,partner)=>sum+partner.capitalContribution,0)
   const allocatedPartnerNetCashFlow=rows.reduce((sum,row)=>sum+row.netCashFlow,0)
   const allocationReconciliationVariance=allocatedPartnerNetCashFlow+retainedPositiveCashFlow-totalProjectEquityCashFlow
+  const capitalContributionMismatch=rows.some(row=>Math.abs(row.capitalContributionVariance)>0.01)
+  if(capitalContributionMismatch)warnings.push('Each partner declared capital contribution must reconcile to that partner’s scheduled contribution based on the agreed capital share.')
+  if(Math.abs(totalDeclaredCapitalContribution-totalScheduledEquityContribution)>0.01)warnings.push('Total declared partner capital contributions do not reconcile to total scheduled equity contributions.')
   if(Math.abs(allocationReconciliationVariance)>0.01)warnings.push('Partner cash-flow allocations and retained cash do not reconcile to total equity cash flow.')
   return {
-    valid:Math.abs(allocationReconciliationVariance)<=0.01,warnings,rows,periods,totalProjectEquityCashFlow,
+    valid:!capitalContributionMismatch&&Math.abs(totalDeclaredCapitalContribution-totalScheduledEquityContribution)<=0.01&&Math.abs(allocationReconciliationVariance)<=0.01,warnings,rows,periods,totalProjectEquityCashFlow,
     positiveCashFlowDistributionPercent,allocationReconciliationVariance,totalScheduledEquityContribution,
     totalDeclaredCapitalContribution,
     declaredCapitalContributionVariance:totalDeclaredCapitalContribution-totalScheduledEquityContribution,
