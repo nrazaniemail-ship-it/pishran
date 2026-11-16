@@ -365,8 +365,16 @@ export function postForeignExchangeIntoThreeStatements(
     // therefore remain the base statement residuals; adding the FX deltas again
     // here would double-count the very adjustments already posted to both sides.
     const movementChecks = { ...statement.movementChecks }
+    // For a base statement whose foreign debt is still carried at its
+    // transaction-date amount, the engine's authoritative control is its
+    // balance-sheet reconciliation flag. Its movementChecks are source
+    // movements (not residuals) until debt remeasurement has already been
+    // incorporated by the upstream schedule. In that pre-remeasured path,
+    // every movement check must be a finite zero residual.
     const reconciled = Math.abs(balanceDifference) <= 0.01 &&
-      Object.values(movementChecks).every(value => finite(value) && Math.abs(value) <= 0.01)
+      (input.debtAlreadyRemeasured
+        ? Object.values(movementChecks).every(value => finite(value) && Math.abs(value) <= 0.01)
+        : statement.balanceSheet.reconciled === true)
     posted.push({
       ...statement,
       openingBalances,
