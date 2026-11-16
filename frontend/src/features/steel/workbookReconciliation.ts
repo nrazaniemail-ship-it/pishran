@@ -207,7 +207,8 @@ export const HOT_ROLLING_200KT_AUDIT = {
     workingCapitalNeed: 4_595_370.4572,
     workingCapitalFundingGap: 1_286_225.931577,
     /** Derived from 70/30 fixed-capital weights, Ke=30%, Kd=26%, and 25% tax shield. */
-    comfarReferenceWaccPercent: 26.85,
+    derivedWacc30_70FixedCapitalPercent: 26.85,
+    comfarWaccWithWorkingCapitalEquityPercent: 27.32355142441652,
     /** WACC sheet uses 20% equity + 80% fixed debt + a separate working-capital loan. */
     excelWacc20_80WithWorkingCapitalDebtPercent: 21.284299025331596,
     excelWacc20_80FixedOnlyPercent: 21.6,
