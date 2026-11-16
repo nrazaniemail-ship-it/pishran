@@ -227,6 +227,10 @@ export type PeriodicLoanInput = {
   openingBalance?: number
   /** Exact cash draw dates; when supplied, amounts must reconcile to drawdowns by period. */
   datedDrawdowns?: { date: string; amount: number }[]
+  /** Effective-dated annual nominal rate resets; the base annualRatePercent applies before the first reset. */
+  rateChanges?: { effectiveDate: string; annualRatePercent: number }[]
+  /** Financing fees paid on a date; capitalized fees are added to debt, expense fees are paid in cash. */
+  fees?: { date: string; amount: number; treatment: 'expense' | 'capitalize'; label?: string }[]
   interestConvention?: 'comfar-months-plus-360' | 'actual-360' | 'actual-365'
 }
 
@@ -237,6 +241,8 @@ export type PeriodicLoanRow = {
   periodRatePercent: number
   interestExpense: number
   capitalizedInterest: number
+  financingFeeExpense: number
+  capitalizedFinancingFees: number
   principal: number
   closingBalance: number
   debtService: number
@@ -314,6 +320,18 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Unsupported loan interest day-count convention.')
   if (input.datedDrawdowns && !interestConvention)
     issues.push('Exact dated drawdowns require an explicit interest day-count convention.')
+  const rateChanges = input.rateChanges ?? []
+  if (rateChanges.some((change,index) => !change || !parseIsoDateUtc(change.effectiveDate) ||
+      !validFinite(change.annualRatePercent) || change.annualRatePercent < 0 ||
+      (index > 0 && rateChanges[index - 1].effectiveDate >= change.effectiveDate)))
+    issues.push('Rate resets must have valid dates, non-negative finite rates and strictly increasing effective dates.')
+  const fees = input.fees ?? []
+  if (fees.some(fee => !fee || !parseIsoDateUtc(fee.date) || !validFinite(fee.amount) ||
+      fee.amount <= 0 || !['expense','capitalize'].includes(fee.treatment)))
+    issues.push('Financing fees require valid dates, positive finite amounts and a supported treatment.')
+  if (periods.length && [...rateChanges.map(item=>item.effectiveDate),...fees.map(item=>item.date)]
+      .some(date => date < periods[0].startDate || date > periods[periods.length-1].endDate))
+    issues.push('Rate resets and financing fees must fall within the modeled project calendar.')
   if (input.datedDrawdowns) {
     if (input.datedDrawdowns.some(item => !item || !parseIsoDateUtc(item.date) || !validFinite(item.amount) || item.amount <= 0))
       issues.push('Exact loan drawdowns require valid dates and positive finite amounts.')
@@ -357,6 +375,29 @@ export function calculatePeriodicLoanSchedule(
     }
     return annualEffectiveRateToPeriodRate(input.annualRatePercent, period.days, dayCountBasis) / 100
   })
+  const effectiveRateForDate = (date: string) => {
+    let rate = input.annualRatePercent
+    for (const change of rateChanges) {
+      if (change.effectiveDate > date) break
+      rate = change.annualRatePercent
+    }
+    return rate
+  }
+  const hasDatedFinancingEvents = rateChanges.length > 0 || fees.length > 0
+  if (hasDatedFinancingEvents) {
+    for (let index=0; index<periods.length; index++) {
+      const period=periods[index]
+      const boundaries=[period.startDate,...rateChanges.map(item=>item.effectiveDate).filter(date=>date>period.startDate&&date<=period.endDate),period.endDate]
+        .sort()
+      let weighted=0
+      for(let segment=0;segment<boundaries.length-1;segment++) {
+        const fraction=loanYearFraction(boundaries[segment],boundaries[segment+1],interestConvention??(dayCountBasis===360?'actual-360':'actual-365'))
+        weighted+=effectiveRateForDate(boundaries[segment])*fraction
+      }
+      const periodFraction=loanYearFraction(period.startDate,period.endDate,interestConvention??(dayCountBasis===360?'actual-360':'actual-365'))
+      if(periodFraction>0) periodRates[index]=weighted/periodFraction/100
+    }
+  }
   let balance = input.openingBalance ?? 0
   let annuityPayment: number | null = null
   let equalPrincipalAmount: number | null = null
@@ -365,21 +406,39 @@ export function calculatePeriodicLoanSchedule(
     const drawdown = input.drawdowns[index]
     const openingBalance = balance
     let interestAccrued: number
-    if (input.datedDrawdowns) {
+    let financingFeeExpense = 0
+    let capitalizedFinancingFees = 0
+    if (input.datedDrawdowns || hasDatedFinancingEvents) {
       const period = periods[index]
-      const events = input.datedDrawdowns.filter(item => item.date >= period.startDate && item.date <= period.endDate)
-        .sort((a,b) => a.date.localeCompare(b.date))
-      let cursor = period.startDate
-      let interestBalance = openingBalance
-      interestAccrued = 0
-      for (const event of events) {
-        interestAccrued += interestBalance * (input.annualRatePercent / 100)
-          * loanYearFraction(cursor, event.date, interestConvention!)
-        interestBalance += event.amount
-        cursor = event.date
+      const events: {date:string;kind:'rate'|'drawdown'|'fee';amount:number;treatment?:'expense'|'capitalize'}[] = []
+      for(const item of input.datedDrawdowns??[]) if(item.date>=period.startDate&&item.date<=period.endDate) events.push({date:item.date,kind:'drawdown',amount:item.amount})
+      for(const item of rateChanges) if(item.effectiveDate>=period.startDate&&item.effectiveDate<=period.endDate) events.push({date:item.effectiveDate,kind:'rate',amount:item.annualRatePercent})
+      for(const item of fees) if(item.date>=period.startDate&&item.date<=period.endDate) events.push({date:item.date,kind:'fee',amount:item.amount,treatment:item.treatment})
+      if(!input.datedDrawdowns && drawdown>0) {
+        const midpoint=new Date(Date.parse(period.startDate+'T00:00:00Z')+Math.floor(period.days/2)*86400000).toISOString().slice(0,10)
+        events.push({date:midpoint,kind:'drawdown',amount:drawdown})
       }
-      interestAccrued += interestBalance * (input.annualRatePercent / 100)
-        * loanYearFraction(cursor, period.endDate, interestConvention!)
+      events.sort((a,b)=>a.date.localeCompare(b.date)||({rate:0,drawdown:1,fee:2}[a.kind]-{rate:0,drawdown:1,fee:2}[b.kind]))
+      let cursor=period.startDate
+      let interestBalance=openingBalance
+      let activeRate=effectiveRateForDate(period.startDate)
+      interestAccrued=0
+      const convention=interestConvention??(dayCountBasis===360?'actual-360':'actual-365')
+      for(const event of events) {
+        if(event.date>cursor) interestAccrued+=interestBalance*(activeRate/100)*loanYearFraction(cursor,event.date,convention)
+        if(event.kind==='rate') activeRate=event.amount
+        else if(event.kind==='drawdown') interestBalance+=event.amount
+        else if(event.treatment==='capitalize') { capitalizedFinancingFees+=event.amount; interestBalance+=event.amount }
+        else financingFeeExpense+=event.amount
+        cursor=event.date
+      }
+      if(period.endDate>cursor) interestAccrued+=interestBalance*(activeRate/100)*loanYearFraction(cursor,period.endDate,convention)
+      // Preserve the engine's inclusive-day convention for intervals without date-specific events.
+      if(!input.datedDrawdowns && !rateChanges.length && fees.length) {
+        const expected=period.days/(convention==='actual-360'?360:convention==='actual-365'?365:360)
+        const elapsed=loanYearFraction(period.startDate,period.endDate,convention)
+        if(elapsed>0) interestAccrued*=expected/elapsed
+      }
     } else {
       const interestBase = openingBalance + drawdown * 0.5
       interestAccrued = interestBase * periodRates[index]
@@ -387,7 +446,7 @@ export function calculatePeriodicLoanSchedule(
     const beforePrincipal = index < firstPrincipalIndex
     const capitalizedInterest = beforePrincipal && input.capitalizeInterest ? interestAccrued : 0
     const interestExpense = capitalizedInterest > 0 ? 0 : interestAccrued
-    const availableBalance = openingBalance + drawdown + capitalizedInterest
+    const availableBalance = openingBalance + drawdown + capitalizedInterest + capitalizedFinancingFees
     let principal = 0
     const repaymentIndex = index - firstPrincipalIndex
     if (repaymentIndex >= 0 && repaymentIndex < input.termPeriods) {
@@ -421,9 +480,11 @@ export function calculatePeriodicLoanSchedule(
       periodRatePercent: periodRates[index] * 100,
       interestExpense,
       capitalizedInterest,
+      financingFeeExpense,
+      capitalizedFinancingFees,
       principal,
       closingBalance: balance,
-      debtService: interestExpense + principal,
+      debtService: interestExpense + financingFeeExpense + principal,
     })
   }
   return { rows, valid: true, issues: [] }
