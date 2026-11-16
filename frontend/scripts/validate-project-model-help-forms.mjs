@@ -96,6 +96,27 @@ try {
  centres=h.updateHelpFormRow(centres,'cost-centres','cc-1','parentId','Missing')
  assert.ok(h.validateHelpDrivenProjectForms(centres).includes('cost-centre:unknown-parent:Missing'))
 
+
+ let products=h.addHelpFormRow(draft.helpDriven,'products','product-1')
+ products=h.updateHelpFormRow(products,'products','product-1','name','Steel')
+ let sales=h.addHelpFormRow(products,'sales-programme','sale-1')
+ sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','productId','Unknown')
+ assert.ok(h.validateHelpDrivenProjectForms(sales).includes('sales-programme:0:unknown-product-reference:Unknown'))
+ sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','productId','Steel')
+ assert.equal(h.validateHelpDrivenProjectForms(sales).length,0)
+ let loans2=h.addHelpFormRow(draft.helpDriven,'loan-conditions','loan-1')
+ loans2=h.updateHelpFormRow(loans2,'loan-conditions','loan-1','loanName','Facility A')
+ let fees2=h.addHelpFormRow(loans2,'loan-fees','fee-1')
+ fees2=h.updateHelpFormRow(fees2,'loan-fees','fee-1','loanName','Facility B')
+ assert.ok(h.validateHelpDrivenProjectForms(fees2).includes('loan-fees:0:unknown-loan-reference:Facility B'))
+ let centreCycle=h.addHelpFormRow(draft.helpDriven,'cost-centres','cc-1')
+ centreCycle=h.updateHelpFormRow(centreCycle,'cost-centres','cc-1','name','Factory')
+ centreCycle=h.updateHelpFormRow(centreCycle,'cost-centres','cc-1','parentId','cc-2')
+ centreCycle=h.addHelpFormRow(centreCycle,'cost-centres','cc-2')
+ centreCycle=h.updateHelpFormRow(centreCycle,'cost-centres','cc-2','name','Utilities')
+ centreCycle=h.updateHelpFormRow(centreCycle,'cost-centres','cc-2','parentId','cc-1')
+ assert.ok(h.validateHelpDrivenProjectForms(centreCycle).some(issue=>issue.startsWith('cost-centre:parent-cycle:')))
+
  console.log('COMFAR help form coverage tests passed')
 } finally {
  await rm(temp,{recursive:true,force:true})
