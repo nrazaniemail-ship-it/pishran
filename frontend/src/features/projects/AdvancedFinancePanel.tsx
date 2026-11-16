@@ -28,6 +28,11 @@ type Loan = IntegratedLoanInput & {
   exactDrawdownDates?: string[]
   rateChanges?: {effectiveDate:string;annualRatePercent:number}[]
   financingFees?: {date:string;amount:number;treatment:'expense'|'capitalize';label?:string}[]
+  facilityLimit?: number
+  commitmentFeeAnnualRatePercent?: number
+  periodRepaymentMethod?: 'equal-principal'|'annuity'|'bullet'|'custom'
+  customPrincipalRepayments?: {period:number;amount:number}[]
+  balloonAtMaturity?: boolean
 }
 type Props = {
   projectId: string
@@ -97,6 +102,7 @@ type SavedState = {
   periodTaxRates?: number[]
   periodTaxRateDates?: string[]
   fundingStructureVersion?: number
+  minimumDscr?: number
 }
 const money = (v: number) => Number.isFinite(v) ? v.toLocaleString(typeof document!=='undefined'&&document.documentElement.lang==='en'?'en-US':'fa-IR',{maximumFractionDigits:1}) : '—'
 const directoryRepaymentMethod: Record<string, Loan['repaymentMethod']> = {
@@ -265,7 +271,7 @@ export default function AdvancedFinancePanel(props: Props) {
       const firstFiscalIndex=Math.max(0,loan.repaymentStartYear-1)
       const derivedStart=periods.findIndex(period=>fiscalYearIndexForPeriod(period,periods,fiscalMonth)>=firstFiscalIndex)
       return {id:loan.id,input:{
-        annualRatePercent:loan.annualRate,drawdowns,repaymentMethod:loan.repaymentMethod,
+        annualRatePercent:loan.annualRate,drawdowns,repaymentMethod:loan.periodRepaymentMethod??loan.repaymentMethod,
         repaymentStartPeriod:loan.periodRepaymentStart??(derivedStart>=0?derivedStart+1:periods.length+1),
         gracePeriods:loan.periodGracePeriods??loan.graceYears*periodsPerYear,
         termPeriods:loan.periodTerm??loan.termYears*periodsPerYear,
@@ -273,6 +279,10 @@ export default function AdvancedFinancePanel(props: Props) {
         rateConversion:loan.periodRateConversion??'effective-annual-by-actual-days',periodsPerYear,
         datedDrawdowns:loan.drawdownMode==='period-manual'?periods.map((period,index)=>({date:loan.exactDrawdownDates?.[index]??period.startDate,amount:Math.max(0,drawdowns[index]??0)})).filter(item=>item.amount>0):undefined,
         rateChanges:loan.rateChanges??[],
+        facilityLimit:loan.facilityLimit,
+        commitmentFeeAnnualRatePercent:loan.commitmentFeeAnnualRatePercent,
+        customPrincipalRepayments:(loan.customPrincipalRepayments??[]).filter(item=>item.amount>0),
+        balloonAtMaturity:loan.balloonAtMaturity,
         fees:(loan.financingFees??[]).filter(fee=>fee.amount>0).map(({date,amount,treatment,label})=>({date,amount,treatment,label})),
         interestConvention:loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':undefined)
       } as PeriodicLoanInput}
@@ -288,6 +298,7 @@ export default function AdvancedFinancePanel(props: Props) {
     })
     return calculateIntegratedPeriodicFinance({
       periods,fiscalYearStartMonth:fiscalMonth,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
+      minimumDscr:state.minimumDscr,
       annualRevenue:result.years.map(row=>row.revenue),annualVariableCost:result.years.map(row=>row.variableCashCost),
       annualFixedCost:result.years.map(row=>row.fixedCashCost),annualDepreciation:depreciationValues,
       annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
@@ -360,7 +371,14 @@ export default function AdvancedFinancePanel(props: Props) {
           <label className="fw-field"><span>{t('شروع بازپرداخت اصل (شماره دوره)','Principal Repayment Start (Period)')}</span><input type="number" min="1" max={props.projectPeriods.length} value={loan.periodRepaymentStart??defaultPeriodRepaymentStart(loan)} onChange={e=>updateLoan(loan.id,{periodRepaymentStart:Number(e.target.value)})}/></label>
           <label className="fw-field"><span>{t('دوره تنفس اصل (تعداد دوره)','Principal Grace (Periods)')}</span><input type="number" min="0" value={loan.periodGracePeriods??loan.graceYears*periodsPerYear} onChange={e=>updateLoan(loan.id,{periodGracePeriods:Number(e.target.value)})}/></label>
           <label className="fw-field"><span>{t('مدت بازپرداخت (تعداد دوره)','Repayment Term (Periods)')}</span><input type="number" min="1" value={loan.periodTerm??loan.termYears*periodsPerYear} onChange={e=>updateLoan(loan.id,{periodTerm:Number(e.target.value)})}/></label>
+          <label className="fw-field"><span>{t('روش بازپرداخت دوره‌ای','Periodic Repayment Method')}</span><select value={loan.periodRepaymentMethod??loan.repaymentMethod} onChange={e=>updateLoan(loan.id,{periodRepaymentMethod:e.target.value as Loan['periodRepaymentMethod']})}><option value="equal-principal">{t('اصل مساوی','Equal Principal')}</option><option value="annuity">{t('اقساط مساوی','Annuity')}</option><option value="bullet">{t('یکجا در سررسید','Bullet at Maturity')}</option><option value="custom">{t('برنامه سفارشی / بالونی','Custom / Balloon Schedule')}</option></select></label>
+          <label className="fw-field"><span>{t('سقف تعهد تسهیلات','Committed Facility Limit')}</span><input type="number" min="0" value={loan.facilityLimit??''} onChange={e=>updateLoan(loan.id,{facilityLimit:e.target.value===''?undefined:Number(e.target.value)})}/></label>
+          <label className="fw-field"><span>{t('کارمزد سالانه مانده استفاده‌نشده (%)','Annual Undrawn Commitment Fee (%)')}</span><input type="number" min="0" step="0.01" value={loan.commitmentFeeAnnualRatePercent??0} onChange={e=>updateLoan(loan.id,{commitmentFeeAnnualRatePercent:Number(e.target.value)})}/></label>
         </div>
+        {(loan.periodRepaymentMethod??loan.repaymentMethod)==='custom'&&<div className="fw-card"><b>{t('برنامه اصل سفارشی به تفکیک دوره','Custom Principal Repayment by Period')}</b>
+          {projectPeriods.map(period=>{const current=(loan.customPrincipalRepayments??[]).find(item=>item.period===period.index)?.amount??0;return <label className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} – {period.endDate}</span><input type="number" min="0" value={current} onChange={e=>updateLoan(loan.id,{customPrincipalRepayments:[...(loan.customPrincipalRepayments??[]).filter(item=>item.period!==period.index),...(Number(e.target.value)>0?[{period:period.index,amount:Number(e.target.value)}]:[])]})}/></label>})}
+          <label className="fw-field"><span><input type="checkbox" checked={loan.balloonAtMaturity??false} onChange={e=>updateLoan(loan.id,{balloonAtMaturity:e.target.checked})}/> {t('تسویه مانده باقی‌مانده به‌صورت قسط بالونی در سررسید','Settle remaining principal as a balloon at maturity')}</span></label>
+        </div>}
         {loan.periodRateConversion==='effective-annual-divided-by-frequency'&&periodicRateMethod&&<p className="fw-hint">{t('فرمول روش:','Method formula:')} {periodicRateMethod.formula} · {t('منبع:','Source:')} {periodicRateMethod.source} · {t('محدودیت:','Limitation:')} {periodicRateMethod.limitations}</p>}
         <div className="fw-grid">
           <label className="fw-field"><span>{t('مبنای روزشمار بهره و هزینه تأمین مالی','Interest & Financing Fee Day-Count')}</span><select value={loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':'')} onChange={e=>updateLoan(loan.id,{periodInterestConvention:e.target.value?(e.target.value as Loan['periodInterestConvention']):undefined})}>
@@ -393,6 +411,11 @@ export default function AdvancedFinancePanel(props: Props) {
       <div className="fw-card"><b>{tr('برنامه بازپرداخت دوره‌ای همین تسهیلات')}</b>{(periodicFinanceResult?.valid ? periodicFinanceResult.loanSchedules[loan.id]??[] : result.loanSchedules[loan.id]??[]).map((r,i)=><div className="fw-validation" key={i}><span>{periodicFinanceResult?.valid ? `${tr('دوره')} ${i+1} · ${periodicFinanceResult.rows[i]?.startDate} تا ${periodicFinanceResult.rows[i]?.endDate}` : `${tr('سال')} ${i+1}`} · {tr('برداشت')} {money(r.drawdown)} · {tr('مانده اول')} {money(r.openingBalance)}</span><b>{tr('بهره نقدی')} {money(r.interestExpense)} · {tr('بهره سرمایه‌ای')} {money(r.capitalizedInterest)} · {t('کارمزد نقدی','Cash Fees')} {money('financingFeeExpense' in r ? r.financingFeeExpense : 0)} · {t('هزینه سرمایه‌ای','Capitalized Fees')} {money('capitalizedFinancingFees' in r ? r.capitalizedFinancingFees : 0)} · {tr('اصل')} {money(r.principal)} · {tr('مانده پایان')} {money(r.closingBalance)}</b></div>)}</div><button className="secondary-button" onClick={()=>setState(s=>({...s,loans:s.loans.filter(l=>l.id!==loan.id)}))}><Trash2 size={14}/> {tr('حذف تسهیلات')}</button>
     </div>)}
     <button className="secondary-button" onClick={addLoan}><Plus size={14}/> {tr('افزودن وام')}</button>
+    <div className="fw-card">
+      <h4>{t('کنترل تعهدات قراردادی تسهیلات','Loan Covenant Controls')}</h4>
+      <label className="fw-field"><span>{t('حداقل نسبت پوشش خدمت بدهی (DSCR)','Minimum Debt Service Coverage Ratio (DSCR)')}</span><input type="number" min="0.01" step="0.01" placeholder={t('بدون محدودیت','No covenant')} value={state.minimumDscr??''} onChange={e=>setState(s=>({...s,minimumDscr:e.target.value===''?undefined:Number(e.target.value)}))}/></label>
+      <p className="fw-hint">{t('نقض حداقل DSCR در هر دوره به‌صورت هشدار قراردادی گزارش می‌شود و به‌طور خودکار جریان نقد یا اقساط را تغییر نمی‌دهد.','A minimum DSCR breach is reported as a covenant warning for the affected period; cash flows and repayments are not automatically altered.')}</p>
+    </div>
     <div className="fw-card">
       <h4>{t('آورده نقدی سهامدار به تفکیک سال','Annual Shareholder Equity Contributions')}</h4>
       <div className="fw-grid">{Array.from({length:construction},(_,i)=><label className="fw-field" key={i}><span>{tr('آورده سال ساخت')} {i+1}</span><input type="number" min="0" value={equityContributions[i]??0} onChange={e=>setEquity(i,Number(e.target.value))}/></label>)}</div>
