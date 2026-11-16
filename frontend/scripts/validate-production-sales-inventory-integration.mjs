@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
+import { STEEL_SLAB_EXTRA_DRI_SALES_BENCHMARK as benchmark } from './fixtures/comfar-steel-sales-output.fixture.mjs'
 
 async function transpile(path) {
   const source=await readFile(new URL(path,import.meta.url),'utf8')
@@ -66,5 +67,44 @@ const negativeStock=adapter.buildProductionSalesInventorySchedule({
 },periods,1,{slab:2})
 assert.equal(negativeStock.valid,false)
 assert.ok(negativeStock.issues.some(x=>x.includes('Sales exceed opening stock')))
+
+
+const benchmarkPeriods=benchmark.periods.map((year,index)=>({
+ index:year,startDate:(2025+index)+'-01-01',endDate:(2025+index)+'-12-31',
+ days:((2025+index)%4===0?366:365),partial:false,
+}))
+const benchmarkSales=benchmark.products.map(product=>({
+ productId:product.productId,
+ periods:benchmark.periods.map((period,index)=>({
+  period:String(period),salesQuantity:product.sales[index],netUnitPrice:product.unitPrice,
+  salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,
+  finishedGoodsClosingQuantity:product.closingFinishedGoods[index],
+ })),
+}))
+const benchmarkResult=adapter.buildProductionSalesInventorySchedule({
+ sales:benchmarkSales,productionCosts:[]
+},benchmarkPeriods,1,Object.fromEntries(benchmark.products.map(product=>[
+ product.productId,product.openingFinishedGoods[0]
+])))
+assert.equal(benchmarkResult.valid,true,benchmarkResult.issues.join('; '))
+for(let i=0;i<benchmark.periods.length;i++) {
+ const totalRevenue=benchmark.products.reduce((sum,product)=>sum+product.salesRevenue[i],0)
+ assert.ok(Math.abs(benchmarkResult.periodRevenue[i]-totalRevenue)<0.02,
+  'reference revenue mismatch in project period '+benchmark.periods[i])
+ for(const product of benchmark.products) {
+  const row=benchmarkResult.rows.find(x=>x.productId===product.productId&&x.period===i+1)
+  assert.ok(row,'missing product period row: '+product.productId+'/'+benchmark.periods[i])
+  assert.ok(Math.abs(row.productionQuantity-product.production[i])<0.02,
+   'reference production mismatch: '+product.productId+'/'+benchmark.periods[i])
+  assert.ok(Math.abs(row.salesQuantity-product.sales[i])<0.02,
+   'reference sales mismatch: '+product.productId+'/'+benchmark.periods[i])
+  assert.ok(Math.abs(row.closingFinishedGoodsQuantity-product.closingFinishedGoods[i])<0.02,
+   'reference finished-goods mismatch: '+product.productId+'/'+benchmark.periods[i])
+  assert.ok(Math.abs(row.recognizedRevenue-product.salesRevenue[i])<0.02,
+   'reference sales revenue mismatch: '+product.productId+'/'+benchmark.periods[i])
+ }
+}
+assert.deepEqual(benchmarkResult.periodRevenue,benchmark.totalSalesRevenue)
+console.log('Independent COMFAR output benchmark: periods 5-10 production, sales, finished goods and revenue reconciled.')
 
 console.log('Production, sales and finished-goods integration validation passed.')
