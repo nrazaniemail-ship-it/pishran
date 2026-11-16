@@ -302,12 +302,40 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
  }
  const products=value.sections?.['products']??[]
  const productRefs=new Set(products.flatMap(row=>[row.id,typeof row.values.name==='string'?row.values.name.trim():'']).filter(Boolean))
- for(const sectionId of ['sales-programme','production-costs','working-capital']){
+ for(const sectionId of ['sales-programme','production-costs','working-capital','cost-allocation']){
   for(const [index,row] of (value.sections?.[sectionId]??[]).entries()){
    const productId=row.values.productId
    if(typeof productId==='string'&&productId.trim()&&!productRefs.has(productId.trim()))
     errors.push(sectionId+':'+index+':unknown-product-reference:'+productId)
   }
+ }
+ const financialRefs=new Set([
+  ...(value.sections?.['fixed-investment']??[]).map(row=>row.id),
+  ...(value.sections?.['production-costs']??[]).map(row=>row.id),
+  ...(value.sections?.['sales-programme']??[]).map(row=>row.id),
+  ...(value.sections?.['products']??[]).map(row=>row.id),
+ ])
+ const costItems=value.sections?.['production-costs']??[]
+ const costItemRefs=new Set(costItems.flatMap(row=>[row.id,typeof row.values.item==='string'?row.values.item.trim():'']).filter(Boolean))
+ for(const [index,row] of (value.sections?.['working-capital']??[]).entries()){
+  const item=row.values.costItemId
+  if(typeof item==='string'&&item.trim()&&!costItemRefs.has(item.trim()))
+   errors.push('working-capital:'+index+':unknown-cost-item-reference:'+item)
+ }
+ for(const [index,row] of (value.sections?.['economic-items']??[]).entries()){
+  const linked=row.values.financialItemId
+  if(typeof linked==='string'&&linked.trim()&&!financialRefs.has(linked.trim()))
+   errors.push('economic-items:'+index+':unknown-financial-item-reference:'+linked)
+ }
+ const economicRows=value.sections?.['economic-items']??[]
+ const economicIds=new Set(economicRows.map(row=>row.id))
+ const economicParent=new Map(economicRows.map(row=>[row.id,typeof row.values.parentEconomicItemId==='string'?row.values.parentEconomicItemId:'']))
+ for(const row of economicRows){
+  const parent=row.values.parentEconomicItemId
+  if(typeof parent==='string'&&parent.trim()&&!economicIds.has(parent.trim()))
+   errors.push('economic-items:unknown-parent-reference:'+parent)
+  const path=new Set<string>();let cursor:string|undefined=row.id
+  while(cursor){if(path.has(cursor)){errors.push('economic-items:parent-cycle:'+row.id);break}path.add(cursor);cursor=economicParent.get(cursor)}
  }
  const costCentreRows=value.sections?.['cost-centres']??[]
  const costCentreIds=new Set(costCentreRows.map(row=>row.id))
