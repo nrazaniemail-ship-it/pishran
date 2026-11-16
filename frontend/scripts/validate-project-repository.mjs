@@ -13,10 +13,11 @@ const removed=[]
 const mockStore={
  async get(key){return state.get(key)},
  async set(key,value){state.set(key,value)},
- async remove(key){removed.push(key);state.delete(key)}
+ async remove(key){removed.push(key);state.delete(key)},
+ async list(prefix=''){return [...state.entries()].filter(([key])=>key.startsWith(prefix)).map(([key,value])=>({key,value}))}
 }
 globalThis.__mockStore=mockStore
-const mockUrl='data:text/javascript;base64,'+Buffer.from(`export const localStore={get:async key=>globalThis.__mockStore.get(key),set:async (key,value)=>globalThis.__mockStore.set(key,value),remove:async key=>globalThis.__mockStore.remove(key)};`).toString('base64')
+const mockUrl='data:text/javascript;base64,'+Buffer.from(`export const localStore={get:async key=>globalThis.__mockStore.get(key),set:async (key,value)=>globalThis.__mockStore.set(key,value),remove:async key=>globalThis.__mockStore.remove(key),list:async prefix=>globalThis.__mockStore.list(prefix)};`).toString('base64')
 let output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 output=output.replace("'../storage/localStore'",JSON.stringify(mockUrl))
 const repository=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
@@ -30,6 +31,8 @@ const projects=[
  {id:'legacy-user',name:'کارخانه فولاد توسعه',steelStage:'نورد گرم ورق',capacity:'350000',location:'',industry:'فولاد و صنایع معدنی',status:'draft',createdAt:'',updatedAt:''}
 ]
 state.set('projects:list:v1',projects)
+state.set('feasibility:advanced-finance:sample-hr:hrcr-workbook-v1-legacy',{loans:[{annualRate:28}]})
+state.set('feasibility:advanced-finance:sample-old-template:hrcr-workbook-v1-old',{loans:[{annualRate:26}]})
 const remaining=await repository.removeSampleProjects()
 assert.deepEqual(remaining.map(x=>x.id),['user-hotrolling','user-raw','legacy-user'])
 assert.deepEqual((await repository.listProjects()).map(x=>x.id),['user-hotrolling','user-raw','legacy-user'])
@@ -38,6 +41,8 @@ assert.equal(remaining.find(project=>project.id==='legacy-user')?.steelStage,und
 assert.ok(removed.includes('feasibility:project:sample-hr:v1'))
 assert.ok(removed.includes('feasibility:project:sample-old-template:v1'))
 assert.ok(removed.includes('feasibility:project:sample-dash:v1'))
+assert.ok(removed.includes('feasibility:advanced-finance:sample-hr:hrcr-workbook-v1-legacy'))
+assert.ok(removed.includes('feasibility:advanced-finance:sample-old-template:hrcr-workbook-v1-old'))
 assert.ok(removed.includes('projects:workbook-seed:v1'))
 assert.ok(removed.includes('projects:dri-direct-reduction-seed:v1'))
 console.log('Project sample cleanup and raw-template retention: all assertions passed.')
