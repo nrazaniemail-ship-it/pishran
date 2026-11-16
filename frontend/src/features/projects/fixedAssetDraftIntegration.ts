@@ -166,9 +166,10 @@ export function bindFixedAssetDraftsToPeriodicFinance(input:{
   }
   const periodAssetSaleSchedule=periodSales.map((row,index)=>{
     const gain=row.saleGainLoss
-    if(gain < -0.01)issues.push('Asset disposal loss cannot be represented by the current sale posting schema; extend the disposal form/accounting mapping before posting '+row.period+'.')
-    const returnOfCapital=Math.max(0,row.bookValueDisposed)
-    const otherIncomeLoss=Math.max(0,row.saleProceeds-returnOfCapital)
+    // The reference treatment returns proceeds up to book value as capital;
+    // the signed difference between proceeds and disposed book value is income/loss.
+    const returnOfCapital=Math.min(row.saleProceeds,row.bookValueDisposed)
+    const otherIncomeLoss=gain
     return {
       saleProceeds:existingSales[index].saleProceeds+row.saleProceeds,
       returnOfCapital:existingSales[index].returnOfCapital+returnOfCapital,
