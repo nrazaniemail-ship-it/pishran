@@ -229,19 +229,31 @@ export default function ProjectReportVisuals(props: Props) {
        </tbody></table></div>
        <p className="fw-hint">{t("مرجع NPV و IRR از جریان نقدی کل سرمایه‌گذاری‌شده در صفحات ۶۷ تا ۷۱ استخراج شده است. برنامه مالیاتی COMFAR در صفحات ۵۹ تا ۶۲ پنج سال نخست بهره‌برداری را با نرخ ۵٪ و سال‌های بعد را با نرخ ۲۵٪ نشان می‌دهد؛ سناریوی یکنواخت ۲۵٪ پیشران جداگانه است. MIRR مرجع ۲۸٫۰۳٪ است، اما تا زمان تطبیق نرخ‌های finance و reinvestment اختلاف آن تأیید نمی‌شود.","Reference NPV and IRR are transcribed from the total-investment cash-flow schedule on pages 67–71. COMFAR's tax schedule on pages 59–62 applies 5% for the first five operating years and 25% thereafter; Pishran's uniform 25% scenario is separate. Reference MIRR is 28.03%, but its variance is not verified until finance and reinvestment rates are matched.",language)}</p>
        {isHotRollingCoil&&<div className="fw-card">
-        <h4>{t("تطبیق سال‌به‌سال جریان نقدی و محرک‌ها","Year-by-year cash-flow and driver reconciliation",language)}</h4>
+        <h4>{t("تطبیق دوره‌به‌دوره جریان نقدی و محرک‌ها","Period-by-period cash-flow and driver reconciliation",language)}</h4>
         {comfarAnnualRows.length===17?<div style={{overflowX:"auto"}}><table className="fw-table"><thead><tr>
           <th>{t("سال مالی","Fiscal year",language)}</th><th>{t("جریان نقدی مرجع","COMFAR cash flow",language)}</th><th>{t("جریان نقدی پیشران","Pishran cash flow",language)}</th><th>{t("اختلاف","Variance",language)}</th>
-          <th>{t("مالیات مرجع","Reference tax",language)}</th><th>{t("مالیات پیشران","Pishran tax",language)}</th>
-          <th>{t("استهلاک مرجع","Reference depreciation",language)}</th><th>{t("استهلاک پیشران","Pishran depreciation",language)}</th>
-          <th>{t("تغییر سرمایه در گردش مرجع","Reference change in working capital",language)}</th><th>{t("تغییر سرمایه در گردش پیشران","Pishran change in working capital",language)}</th><th>{t("بهره پیشران","Pishran interest",language)}</th><th>{t("اصل وام پیشران","Pishran principal",language)}</th><th>CFADS</th><th>DSCR</th>
+          <th>{t("مالیات مرجع","Reference tax",language)}</th><th>{t("مالیات پیشران","Pishran tax",language)}</th><th>{t("اختلاف مالیات (واحد درصد)","Tax variance (pp)",language)}</th>
+          <th>{t("استهلاک مرجع","Reference depreciation",language)}</th><th>{t("استهلاک پیشران","Pishran depreciation",language)}</th><th>{t("اختلاف استهلاک","Depreciation variance",language)}</th>
+          <th>{t("تغییر سرمایه در گردش مرجع","Reference change in working capital",language)}</th><th>{t("تغییر سرمایه در گردش پیشران","Pishran change in working capital",language)}</th><th>{t("اختلاف سرمایه در گردش","Working-capital variance",language)}</th>
+          <th>{t("بهره مرجع (بازسازی‌شده)","Reference interest (reconstructed)",language)}</th><th>{t("بهره پیشران","Pishran interest",language)}</th><th>{t("اختلاف بهره","Interest variance",language)}</th>
+          <th>{t("اصل مرجع (تطبیق‌شده با جریان مالی)","Reference principal (financing-flow reconciled)",language)}</th><th>{t("اصل وام پیشران","Pishran principal",language)}</th><th>{t("اختلاف اصل","Principal variance",language)}</th><th>CFADS</th><th>DSCR</th>
         </tr></thead><tbody>{comfarAnnualRows.map((row,index)=>{
           const year=1403+index
           const referenceCashFlow=HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectCashFlowsForIrr[index]
           const referenceTax=index<2?null:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.taxScheduleByOperatingYear[index-2]?.ratePercent
           const referenceDepreciation=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.depreciationByOperatingYear[index-2]?.[1]??0
           const referenceWorkingCapital=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.changeInWorkingCapitalByOperatingYear[index-2]?.[1]??0
-          return <tr key={index}><td>{index===16?t('۱۴۱۹ + ارزش اسقاط ۱۴۲۰','1419 + terminal salvage 1420',language):year}</td><td>{fmtValue(referenceCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow-referenceCashFlow)}</td><td>{referenceTax==null?'—':fmtValue(referenceTax,2)+'%'}</td><td>{row.taxRatePercent==null?'—':fmtValue(row.taxRatePercent,2)+'%'}</td><td>{fmtValue(referenceDepreciation)}</td><td>{fmtValue(row.depreciation)}</td><td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td><td>{fmtValue(row.interestExpense)}</td><td>{fmtValue(row.principal)}</td><td>{fmtValue(row.cfads)}</td><td>{row.dscr==null?'—':fmtValue(row.dscr,3)+'x'}</td></tr>
+          const loanYearIndex=index-2
+          const referenceInterest=loanYearIndex>=0&&loanYearIndex<5?HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.annualInterestByYear[loanYearIndex]:0
+          const referencePrincipal=loanYearIndex>=0&&loanYearIndex<5?HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.annualPrincipalRepaymentsByYear[loanYearIndex]:0
+          return <tr key={index}><td>{index===16?t('۱۴۱۹ + ارزش اسقاط ۱۴۲۰','1419 + terminal salvage 1420',language):year}</td>
+            <td>{fmtValue(referenceCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow-referenceCashFlow)}</td>
+            <td>{referenceTax==null?'—':fmtValue(referenceTax,2)+'%'}</td><td>{row.taxRatePercent==null?'—':fmtValue(row.taxRatePercent,2)+'%'}</td><td>{referenceTax==null||row.taxRatePercent==null?'—':fmtValue(row.taxRatePercent-referenceTax,2)}</td>
+            <td>{fmtValue(referenceDepreciation)}</td><td>{fmtValue(row.depreciation)}</td><td>{fmtValue(row.depreciation-referenceDepreciation)}</td>
+            <td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital-referenceWorkingCapital)}</td>
+            <td>{fmtValue(referenceInterest)}</td><td>{fmtValue(row.interestExpense)}</td><td>{fmtValue(row.interestExpense-referenceInterest)}</td>
+            <td>{fmtValue(referencePrincipal)}</td><td>{fmtValue(row.principal)}</td><td>{fmtValue(row.principal-referencePrincipal)}</td>
+            <td>{fmtValue(row.cfads)}</td><td>{row.dscr==null?'—':fmtValue(row.dscr,3)+'x'}</td></tr>
         })}</tbody></table></div>:<p className="fw-hint">{t("خروجی دوره‌ای پیشران باید تمام ۱۷ سال مالی ۱۴۰۳ تا ۱۴۱۹ را پوشش دهد. تناوب‌های ماهانه، فصلی و نیم‌سالانه بر اساس ماه آغاز سال مالی تجمیع می‌شوند؛ دوره‌های مفقود یا پوشش ناقص، مانع تطبیق است.","Pishran's periodic output must cover all 17 fiscal years 1403–1419. Monthly, quarterly and semiannual periods are aggregated using the fiscal-year start month; missing periods or incomplete coverage prevent reconciliation.",language)}</p>}
         {comfarAnnualRows.length===17&&<div className="fw-card">
           <h4>{t("تطبیق سالانه منابع تأمین مالی","Annual Financing-Source Reconciliation",language)}</h4>
