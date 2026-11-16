@@ -106,7 +106,7 @@ export function createBlankOpeningBalanceSheetDraft():OpeningBalanceSheetDraft{r
 export function validateOpeningBalanceSheetDraft(value:OpeningBalanceSheetDraft):string[]{
  if(!value.enabled)return []
  const fields=(Object.keys(value) as (keyof OpeningBalanceSheetDraft)[]).filter(key=>key!=='enabled')
- const errors=fields.filter(key=>value[key]===null||!Number.isFinite(value[key])||(value[key] as number)<0).map(key=>'opening-balance-required-or-negative:'+key)
+ const errors=fields.filter(key=>{const amount=value[key] as number|null;return amount===null||!Number.isFinite(amount)||amount<0}).map(key=>'opening-balance-required-or-negative:'+key)
  if(errors.length)return errors
  const currentAssets=(value.inventory!+value.workInProgress!+value.finishedGoods!+value.receivables!+value.otherCurrentAssets!)
  const currentLiabilities=value.tradePayables!+value.otherCurrentLiabilities!
