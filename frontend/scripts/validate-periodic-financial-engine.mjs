@@ -650,4 +650,7 @@ assert.ok(comfarIrr !== null && Math.abs(comfarIrr - comfarReference.projectIrrP
   'COMFAR HRCR200 project IRR must reconcile to 48.31% within displayed precision')
 assert.ok(Math.abs(engine.calculatePeriodicNpv([100,100],comfarAnnualPeriods.slice(0,2),25,365,'period-end',comfarAnnualPeriods[1].endDate,'period-count',1)-225) < 1e-8,
   'A cash flow before the valuation date must be compounded forward to the valuation date')
+assert.ok(advancedFinanceUi.includes("periodicFinanceResult?.valid ? periodicFinanceResult.loanSchedules[loan.id]")
+  && advancedFinanceUi.includes("periodicFinanceResult.rows[i]?.startDate"),
+  'Loan repayment detail must display the actual monthly/quarterly schedule and its period dates when the periodic engine is valid')
 console.log('PASS: asset-level monthly/quarterly depreciation, disposals and integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
