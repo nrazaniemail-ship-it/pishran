@@ -1745,6 +1745,50 @@ const quarterlyRegisterDepreciation=engine.calculateComfarCalendarDepreciationSc
 assert.equal(quarterlyRegisterDepreciation.valid,true,'Dated fixed-asset vintages must calculate on a quarterly project calendar')
 near(quarterlyRegisterDepreciation.periods[0].depreciation,0,1e-9,'Quarterly depreciation must respect the fixed asset Starting at date')
 assert.ok(quarterlyRegisterDepreciation.periods[1].depreciation>0,'Quarterly depreciation must begin in the period containing the configured start date')
+
+const threeYearDepreciationCalendar=foundation.buildProjectCalendarPeriods('2024-01-01','2026-12-31','annual',1)
+const depreciationMethodCases=[
+  {method:'none',ratePercent:undefined},
+  {method:'linear-to-zero',ratePercent:33.3333333333},
+  {method:'linear-to-scrap',ratePercent:33.3333333333},
+  {method:'accelerated',ratePercent:50},
+  {method:'sum-of-years-digits',ratePercent:undefined},
+]
+for (const testCase of depreciationMethodCases) {
+  const asset={
+    id:'calendar-'+testCase.method,name:'Calendar '+testCase.method,
+    originalValue:1200,initialBookValue:1200,scrapPercent:10,
+    lengthYears:3,lengthMonths:0,ratePercent:testCase.ratePercent,
+    method:testCase.method,acquisitionPeriod:0,startingAtPeriod:1,
+    acquisitionDate:'2024-01-01',startingAtDate:'2024-01-01',firstDepreciationMonths:12,
+  }
+  const schedule=engine.calculateComfarCalendarDepreciationSchedule([asset],threeYearDepreciationCalendar,1)
+  assert.equal(schedule.valid,true,testCase.method+' calendar depreciation must accept a valid dated asset')
+  assert.equal(schedule.periods.length,3,testCase.method+' calendar depreciation must return all fiscal years')
+  assert.ok(schedule.periods.every(row=>row.assets.length===1),testCase.method+' must preserve asset-by-asset rows in every period')
+  assert.ok(schedule.periods.every(row=>row.assets[0].closingBookValue>=120-1e-8),testCase.method+' must never depreciate below the 10% salvage floor')
+  assert.ok(schedule.periods.every(row=>row.assets[0].depreciation>=0),testCase.method+' depreciation must never be negative')
+  const totalDepreciation=schedule.periods.reduce((sum,row)=>sum+row.assets[0].depreciation,0)
+  if (testCase.method==='none') near(totalDepreciation,0,1e-9,'Non-depreciable asset must retain zero depreciation')
+  else {
+    near(totalDepreciation,1080,0.02,testCase.method+' must depreciate exactly original value less salvage by end of useful life')
+    near(schedule.periods[2].assets[0].closingBookValue,120,0.02,testCase.method+' must finish at salvage value')
+  }
+  assert.ok(schedule.methodControls.every(control=>control.numericalBenchmark==='pending'),
+    'Method formulas must not be labelled externally benchmarked until matched to independent COMFAR method outputs')
+}
+const datedStartAsset={
+  id:'dated-start',name:'Dated start',originalValue:1200,initialBookValue:1200,scrapPercent:10,
+  lengthYears:3,lengthMonths:0,ratePercent:33.3333333333,method:'linear-to-scrap',
+  acquisitionPeriod:0,startingAtPeriod:1,acquisitionDate:'2024-01-01',startingAtDate:'2024-07-01',
+}
+const datedStartSchedule=engine.calculateComfarCalendarDepreciationSchedule([datedStartAsset],threeYearDepreciationCalendar,1)
+assert.equal(datedStartSchedule.valid,true,'A mid-year depreciation start date must be accepted')
+near(datedStartSchedule.periods[0].assets[0].depreciation,180.37,0.1,
+  'First-year straight-line depreciation must be prorated from the actual July 1 start date')
+assert.ok(datedStartSchedule.periods[0].assets[0].openingBookValue===1200,
+  'The asset opening book value must remain its full acquisition cost before depreciation')
+
 assert.equal(engine.resolveComfarDepreciationStartPeriod(registerBuild.assets[0].acquisitionPeriod,registerBuild.assets[0].startingAtPeriod,registerBuild.assets[0].acquisitionDate,registerBuild.assets[0].startingAtDate),1,'Full acquisition date before Starting at must retain same-year depreciation')
 near(registerBuild.assets[0].originalValue,200,1e-9,'Fixed-asset acquisition amount must be converted to local currency')
 assert.equal(registerBuild.investmentSchedule[0],200,'Confirmed asset acquisitions must create a periodised investment cash-flow schedule')
