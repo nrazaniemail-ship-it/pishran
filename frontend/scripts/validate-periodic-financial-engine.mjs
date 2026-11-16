@@ -779,6 +779,12 @@ function buildMonthlyPeriods(startYear,startMonth,endYear,endMonth) {
   return periods
 }
 const monthlyDepreciationPeriods=buildMonthlyPeriods(2024,1,2026,1)
+const annualDepreciationPeriods=Array.from({length:3},(_,index)=>{
+  const year=2024+index
+  const start=new Date(Date.UTC(year,0,1))
+  const end=new Date(Date.UTC(year+1,0,1)-86400000)
+  return {index:index+1,startDate:start.toISOString().slice(0,10),endDate:end.toISOString().slice(0,10),days:Math.round((end-start)/86400000)+1,partial:false}
+})
 const straightLineAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   id:'asset-sl-01',name:'Monthly straight-line asset',assetClass:'fixed',
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:1,lengthMonths:0,
@@ -802,6 +808,16 @@ assert.equal(partialFirstYearAsset.depreciationByPeriod[6],300,'Six-month first 
 assert.equal(partialFirstYearAsset.depreciationByPeriod[18],600,'The next full depreciation year must charge the full annual amount')
 assert.equal(partialFirstYearAsset.depreciationByPeriod[24],300,'The final partial year must clear the remaining depreciable base')
 assert.ok(Math.abs(partialFirstYearAsset.periods.at(-1).closingBookValue)<1e-7)
+const annualPartialFirstYearAsset=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-annual-partial-first-year',name:'Annual period with two depreciation boundaries',assetClass:'fixed',
+  originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
+  firstDepreciationMonths:6,ratePercent:null,method:'linear-to-scrap',
+  acquisitionDate:'2024-12-31',startingAtDate:'2025-01-01'
+}],[],annualDepreciationPeriods)
+assert.equal(annualPartialFirstYearAsset.valid,true)
+assert.deepEqual(annualPartialFirstYearAsset.depreciationByPeriod,[0,300,900],
+  'An annual reporting period must accumulate both the remaining partial-year and full-year depreciation segments due within it')
+assert.ok(Math.abs(annualPartialFirstYearAsset.periods.at(-1).closingBookValue)<1e-7)
 const sydAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   id:'asset-syd-01',name:'Two-year SYD asset',assetClass:'fixed',
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
