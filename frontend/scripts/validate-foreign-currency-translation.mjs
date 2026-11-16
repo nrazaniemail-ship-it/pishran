@@ -46,4 +46,38 @@ assert.equal(module.calculatePeriodicForeignCurrencyDebt({
   capitalizedInterestExchangeRates: [1], closingExchangeRates: [1],
 }, [{ index: 1, startDate: '2025-01-01', endDate: '2025-06-30', days: 180, partial: false }]).valid,
 false, 'Invalid calendar day counts must be rejected')
-console.log('Periodic foreign-currency translation validation passed.')
+
+const integrated = module.translatePeriodicForeignCurrencyLoan({
+  currency: {
+    id: 'eur', code: 'EUR', name: 'Euro',
+    exchangeRates: [{ period: '1', rateToLocal: 1.3 }, { period: '2', rateToLocal: 1.25 }],
+  },
+  periods,
+  openingForeignBalance: 100,
+  openingExchangeRateToLocal: 1.1,
+  schedule: [
+    { period: 1, drawdown: 50, openingBalance: 100, periodRatePercent: 0, interestExpense: 0,
+      capitalizedInterest: 5, financingFeeExpense: 0, commitmentFeeExpense: 0,
+      capitalizedFinancingFees: 2, principal: 20, closingBalance: 137, debtService: 20 },
+    { period: 2, drawdown: 0, openingBalance: 137, periodRatePercent: 0, interestExpense: 0,
+      capitalizedInterest: 0, financingFeeExpense: 0, commitmentFeeExpense: 0,
+      capitalizedFinancingFees: 0, principal: 0, closingBalance: 137, debtService: 0 },
+  ],
+})
+assert.equal(integrated.valid, true, integrated.issues.join('; '))
+assert.equal(integrated.rows[0].closingForeignBalance, 137)
+assert.ok(Math.abs(integrated.rows[0].foreignExchangeLossLocal - 24.7) < 1e-10,
+  'Integrated loan translation must include capitalized financing fees in foreign principal')
+assert.ok(Math.abs(integrated.rows[1].foreignExchangeLossLocal + 6.85) < 1e-10)
+const missingRate = module.translatePeriodicForeignCurrencyLoan({
+  currency: { id: 'eur', code: 'EUR', name: 'Euro', exchangeRates: [{ period: '1', rateToLocal: 1.3 }] },
+  periods, openingForeignBalance: 0, openingExchangeRateToLocal: 1.3,
+  schedule: integrated.rows.map((_, index) => ({
+    period: index + 1, drawdown: 0, openingBalance: 0, periodRatePercent: 0, interestExpense: 0,
+    capitalizedInterest: 0, financingFeeExpense: 0, commitmentFeeExpense: 0,
+    capitalizedFinancingFees: 0, principal: 0, closingBalance: 0, debtService: 0,
+  })),
+})
+assert.equal(missingRate.valid, false, 'Every project period must have an explicit currency rate')
+console.log('Periodic foreign-currency translation and loan-schedule integration validation passed.')
+
