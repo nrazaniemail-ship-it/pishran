@@ -2,7 +2,7 @@
  * Item-level empty form drafts for COMFAR help-driven project modelling.
  * Every quantitative field is null until explicitly supplied by the analyst.
  */
-import { createBlankCommonFinancialItemMetadata, type CommonFinancialItemMetadata } from './projectModelSchema'
+import type { CommonFinancialItemMetadata } from './projectModelSchema'\nconst createBlankCommonFinancialItemMetadata=():CommonFinancialItemMetadata=>({description:'',currencyCode:null,marketOrigin:null,escalationPercent:null,remarks:'',costCentreId:null})
 
 export type DepreciationMethod='linear-to-zero'|'linear-to-scrap'|'accelerated-declining-balance'|'sum-of-years-digits'
 export type FixedAssetFormDraft={
