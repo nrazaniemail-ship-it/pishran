@@ -147,7 +147,7 @@ const comfarMonthDayLoan = engine.calculatePeriodicLoanSchedule({
   capitalizeInterest: true,
 }, comfarMonthDayPeriod, 360)
 assert.equal(comfarMonthDayLoan.valid, true, comfarMonthDayLoan.issues.join('; '))
-assert.ok(Math.abs(comfarMonthDayLoan.rows[0].capitalizedInterest - 3.05) < 1e-8, 'COMFAR interval 15 January to 20 April is 3 months and 5 days')
+assert.ok(Math.abs(comfarMonthDayLoan.rows[0].capitalizedInterest - (100 * 0.12 * (3 / 12 + 5 / 360))) < 1e-8, 'COMFAR interval 15 January to 20 April is 3 months and 5 days')
 
 const mismatchedDatedLoan = engine.calculatePeriodicLoanSchedule({
   annualRatePercent: 12,
