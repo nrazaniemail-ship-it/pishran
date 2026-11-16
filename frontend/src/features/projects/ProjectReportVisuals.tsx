@@ -172,7 +172,7 @@ export default function ProjectReportVisuals(props: Props) {
   const annualComparisonRows = aggregatePeriodicFinanceByFiscalYear(
     props.periodicResult?.rows??[],props.fiscalYearStartMonth??1,17
   )
-  const comfarAnnualRows = hasCompleteFiscalYearCoverage(props.periodicResult?.rows??[],props.fiscalYearStartMonth??1,17)&&annualComparisonRows.length===17&&annualComparisonRows.every(row=>row.rows.length>0)
+  const comfarAnnualRows = hasCompleteFiscalYearCoverage(props.periodicResult?.rows??[],props.fiscalYearStartMonth??1,17,props.periodFrequency==='monthly'?12:props.periodFrequency==='quarterly'?4:props.periodFrequency==='semiannual'?2:1)&&annualComparisonRows.length===17&&annualComparisonRows.every(row=>row.rows.length>0)
     ? annualComparisonRows.map(row=>({...row,year:1403+row.fiscalYearIndex})) : []
   const quarterlyDebtRows = (props.periodicResult?.rows??[]).map((row,index)=>({
     row,index,
