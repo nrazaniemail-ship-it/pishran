@@ -577,6 +577,9 @@ assert.equal(invalidPeriodicAsset.valid,false,'Non-ISO acquisition dates must fa
 const advancedFinanceSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 const feasibilityWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 const projectReportSource = await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx', import.meta.url), 'utf8')
+assert.ok(projectReportSource.includes('equityIrrPercent')
+  && projectReportSource.includes('20-quarter repayment schedule'),
+  'COMFAR equity IRR must be disclosed with an explicit quarterly repayment comparability gate')
 const projectFoundationPanelSource = await readFile(new URL('../src/features/projects/ProjectFoundationPanel.tsx', import.meta.url), 'utf8')
 assert.ok(advancedFinanceSource.includes('calculateIntegratedPeriodicFinance')
   && advancedFinanceSource.includes('periodicFinanceResult')
