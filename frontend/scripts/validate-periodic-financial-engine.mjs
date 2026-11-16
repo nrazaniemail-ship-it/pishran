@@ -688,6 +688,7 @@ assert.ok(feasibilityWizardSource.includes('hasPricedRows')
   && feasibilityWizardSource.includes('opex:sum(m.opex)>0'),
   'Completion indicators must require populated engineering, utility, OPEX and valid periodic finance inputs')
 assert.ok(feasibilityWizardSource.includes("project.templateId==='raw'")
+  && feasibilityWizardSource.includes("process:{technology:rawProject?'':selectedStage.name,route:rawProject?'':selectedStage.route")
   && feasibilityWizardSource.includes('technical:rawProject?[]')
   && feasibilityWizardSource.includes('balance:rawProject?[]')
   && feasibilityWizardSource.includes('utilities:rawProject?[]')
