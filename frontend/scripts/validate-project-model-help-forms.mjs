@@ -144,6 +144,16 @@ try {
  assert.ok(h.validateHelpDrivenProjectForms(economicCycle).includes('economic-items:parent-cycle:econ-1'))
 
 
+ let missingCalendar=h.addHelpFormRow(draft.helpDriven,'loan-disbursements','date-without-calendar')
+ missingCalendar=h.updateHelpFormRow(missingCalendar,'loan-disbursements','date-without-calendar','date','2025-05-01')
+ assert.ok(h.validateHelpDrivenProjectPeriods(missingCalendar,[]).includes('loan-disbursements:0:project-calendar-required-for:date'))
+ let allocations=h.addHelpFormRow(draft.helpDriven,'cost-allocation','allocation-a')
+ allocations=h.updateHelpFormRow(allocations,'cost-allocation','allocation-a','name','Factory allocation')
+ allocations=h.updateHelpFormRow(allocations,'cost-allocation','allocation-a','allocationPercent',60)
+ allocations=h.addHelpFormRow(allocations,'cost-allocation','allocation-b')
+ allocations=h.updateHelpFormRow(allocations,'cost-allocation','allocation-b','name','Factory allocation')
+ allocations=h.updateHelpFormRow(allocations,'cost-allocation','allocation-b','allocationPercent',50)
+ assert.ok(h.validateHelpDrivenProjectForms(allocations).includes('cost-allocation:percentages-must-equal-100:Factory allocation'))
  const calendar=[{index:1,startDate:'2025-01-01',endDate:'2025-12-31'},{index:2,startDate:'2026-01-01',endDate:'2026-12-31'}]
  let calendarDraft=h.addHelpFormRow(draft.helpDriven,'sales-programme','calendar-sale')
  calendarDraft=h.updateHelpFormRow(calendarDraft,'sales-programme','calendar-sale','period','3')
