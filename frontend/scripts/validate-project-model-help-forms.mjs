@@ -139,6 +139,18 @@ try {
  economicCycle=h.updateHelpFormRow(economicCycle,'economic-items','econ-2','parentEconomicItemId','econ-1')
  assert.ok(h.validateHelpDrivenProjectForms(economicCycle).includes('economic-items:parent-cycle:econ-1'))
 
+
+ const calendar=[{index:1,startDate:'2025-01-01',endDate:'2025-12-31'},{index:2,startDate:'2026-01-01',endDate:'2026-12-31'}]
+ let calendarDraft=h.addHelpFormRow(draft.helpDriven,'sales-programme','calendar-sale')
+ calendarDraft=h.updateHelpFormRow(calendarDraft,'sales-programme','calendar-sale','period','3')
+ assert.ok(h.validateHelpDrivenProjectPeriods(calendarDraft,calendar).includes('sales-programme:0:period-outside-project-calendar:period:3'))
+ calendarDraft=h.updateHelpFormRow(calendarDraft,'sales-programme','calendar-sale','period','2')
+ calendarDraft=h.updateHelpFormRow(calendarDraft,'sales-programme','calendar-sale','salesQuantity',5)
+ calendarDraft=h.updateHelpFormRow(calendarDraft,'sales-programme','calendar-sale','productId','product-1')
+ assert.equal(h.validateHelpDrivenProjectPeriods(calendarDraft,calendar).length,0)
+ calendarDraft=h.updateHelpFormRow(calendarDraft,'sales-programme','calendar-sale','period','2027-01-01')
+ assert.ok(h.validateHelpDrivenProjectPeriods(calendarDraft,calendar).some(issue=>issue.includes('period-outside-project-calendar')))
+
  console.log('COMFAR help form coverage tests passed')
 } finally {
  await rm(temp,{recursive:true,force:true})
