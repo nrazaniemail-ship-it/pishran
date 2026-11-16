@@ -100,6 +100,33 @@ assert.equal(bulletLoan.valid, true)
 assert.equal(bulletLoan.rows[2].principal, 0)
 assert.ok(bulletLoan.rows[3].principal > 0)
 assert.ok(Math.abs(bulletLoan.rows[3].closingBalance) < 1e-8)
+
+const exactDatedLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100, 0, 0, 0],
+  datedDrawdowns: [{ date: '2025-02-01', amount: 100 }],
+  interestConvention: 'comfar-months-plus-360',
+  repaymentMethod: 'bullet',
+  repaymentStartPeriod: 4,
+  gracePeriods: 0,
+  termPeriods: 1,
+  capitalizeInterest: true,
+}, quarter, 365)
+assert.equal(exactDatedLoan.valid, true, exactDatedLoan.issues.join('; '))
+assert.ok(Math.abs(exactDatedLoan.rows[0].capitalizedInterest - 2) < 1e-8, 'dated drawdown should accrue only from 1 February to 31 March using COMFAR month/12 plus days/360')
+assert.ok(Math.abs(exactDatedLoan.rows[0].drawdown - 100) < 1e-8)
+const mismatchedDatedLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100, 0, 0, 0],
+  datedDrawdowns: [{ date: '2025-02-01', amount: 90 }],
+  interestConvention: 'comfar-months-plus-360',
+  repaymentMethod: 'bullet',
+  repaymentStartPeriod: 4,
+  gracePeriods: 0,
+  termPeriods: 1,
+  capitalizeInterest: true,
+}, quarter, 365)
+assert.equal(mismatchedDatedLoan.valid, false)
 function buildQuarterPeriods(startYear, count) {
   return Array.from({ length: count }, (_, index) => {
     const start = new Date(Date.UTC(startYear, index * 3, 1))
