@@ -867,6 +867,10 @@ for (const method of ['none','linear-to-zero','linear-to-scrap','accelerated','s
   assert.equal(methodRun.valid,true,'Directory depreciation method '+method+' must have an independently executable calendar path')
   assert.ok(methodRun.periods.every(row=>Number.isFinite(row.depreciation)&&row.depreciation>=0),
     'Directory depreciation method '+method+' must produce finite non-negative period charges')
+  assert.equal(methodRun.methodControls.find(control=>control.method===method).calculationImplemented,true,
+    'Directory method '+method+' must expose its executable formula control')
+  assert.equal(methodRun.methodControls.find(control=>control.method===method).numericalBenchmark,'pending',
+    'Directory method '+method+' must remain explicitly unverified until reconciled to an independent reference output')
 }
 const hrcrDepreciationRun=engine.calculateComfarAssetDepreciationSchedule(hrcrAssetBuild.assets,17)
 assert.equal(hrcrDepreciationRun.valid,true,'Fractional useful lives from HRCR depreciation rates must be accepted by the XI.H engine')
