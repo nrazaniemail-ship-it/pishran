@@ -203,6 +203,18 @@ assert.ok(integratedPeriodic.rows[0].capitalizedInterest > 0, 'Grace-period inte
 assert.ok(integratedPeriodic.rows[2].principal > 0 && integratedPeriodic.rows[3].closingWorkingCapital === 15)
 assert.ok(integratedPeriodic.rows[2].dscr !== null && Number.isFinite(integratedPeriodic.rows[2].dscr))
 assert.ok(Math.abs(integratedPeriodic.totalDebtDrawdown - 1800) < 1e-9)
+const openingBalancePeriodic = engine.calculateIntegratedPeriodicFinance({
+  periods:quarter,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[4800],annualVariableCost:[1600],annualFixedCost:[400],annualDepreciation:[400],
+  annualFixedInvestment:[3000],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],annualTaxRates:[25],
+  annualEquityContributions:[1200],workingCapitalByPeriod:[0,10,20,15],constructionPeriodCount:2,
+  loans:[{id:'opening-periodic-loan',input:{
+    annualRatePercent:12,drawdowns:[0,0,0,0],openingBalance:1800,drawdownTiming:'beginning',
+    repaymentMethod:'equal-principal',repaymentStartPeriod:3,gracePeriods:0,termPeriods:2,capitalizeInterest:true
+  }}],discountRatePercent:25,discountConvention:'period-count',discountPeriodsPerYear:4
+})
+assert.equal(openingBalancePeriodic.valid,true,'Periodic finance must accept an opening loan balance')
+near(openingBalancePeriodic.totalDebtDrawdown,1800,1e-9,'Periodic total debt funding must include opening balance')
 assert.ok(Math.abs(integratedPeriodic.totalEquityContribution - 1200) < 1e-9)
 assert.ok(Number.isFinite(integratedPeriodic.npvProject))
 assert.ok(Number.isFinite(integratedPeriodic.npvTotalCapitalInvested),'Total-capital NPV must include construction-period interest')
@@ -425,7 +437,7 @@ near(midTiming.rows[0].interestExpense,capexLoanReference.effectiveQuarterRatePe
 near(endTiming.rows[0].interestExpense,0,1e-9,'End-period drawdown interest')
 assert.ok(Math.abs(comfarNpv - comfarReference.projectNpvAt25) < 0.05,
   'COMFAR HRCR200 NPV at 25% and valuation date 12/1404 must reconcile within rounding')
-const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
+const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end', 'period-count', 1)
 assert.ok(comfarIrr !== null && Math.abs(comfarIrr - comfarReference.projectIrrPercent) < 0.01,
   'COMFAR HRCR200 project IRR must reconcile to 48.31% within displayed precision')
 assert.ok(Math.abs(engine.calculatePeriodicNpv([100,100],comfarAnnualPeriods.slice(0,2),25,365,'period-end',comfarAnnualPeriods[1].endDate,'period-count',1)-225) < 1e-8,
