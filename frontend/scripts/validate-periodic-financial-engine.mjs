@@ -398,6 +398,24 @@ const integratedPeriodic = engine.calculateIntegratedPeriodicFinance({
 })
 assert.equal(integratedPeriodic.valid, true, 'Integrated period model must accept valid quarterly inputs')
 
+const hrcrWorkingCapitalBuffer = engine.calculateIntegratedPeriodicFinance({
+  periods:[quarter[0]],fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
+  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
+  annualTaxRates:[5],annualEquityContributions:[0],
+  annualEquityWorkingCapitalContributions:[3309144.53],
+  workingCapitalByPeriod:[3216759.32004],openingWorkingCapital:0,loans:[],
+})
+assert.equal(hrcrWorkingCapitalBuffer.valid,true)
+assert.ok(Math.abs(hrcrWorkingCapitalBuffer.rows[0].equityFreeCashFlow+3309144.53)<0.01,
+  'COMFAR shareholder funding must preserve the full reported 1405 equity outflow')
+const hrcrBufferStatements=engine.buildPeriodicThreeFinancialStatements(hrcrWorkingCapitalBuffer)
+assert.ok(Math.abs(hrcrBufferStatements[0].balanceSheet.cash-92385.20996)<0.01,
+  'The 92,385.21 difference between shareholder funding and OPEX working-capital use must remain as cash buffer')
+assert.ok(hrcrBufferStatements[0].balanceSheet.reconciled,
+  'The COMFAR equity funding buffer must reconcile as cash without a balance-sheet plug')
+assert.ok(Math.abs(hrcrWorkingCapitalBuffer.totalEquityContribution-3309144.53)<0.01)
+
 const periodicStatements = engine.buildPeriodicThreeFinancialStatements(integratedPeriodic)
 assert.equal(periodicStatements.length,4,'Periodic three-statement builder must produce one linked statement per project period')
 for (const statement of periodicStatements) {
