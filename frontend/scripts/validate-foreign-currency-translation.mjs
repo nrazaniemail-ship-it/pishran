@@ -155,6 +155,26 @@ assert.equal(module.postForeignExchangeIntoThreeStatements({
   },
   taxRatesPercent: [20], taxTreatment: 'deductible',
 }).valid, false, 'Statement and FX period numbers must match')
-console.log('Periodic FX translation, loan integration and three-statement posting validation passed.')
+
+const foundation = {
+  currencies: {
+    localCurrencyCode: 'IRR',
+    foreignCurrencies: [{
+      id: 'eur', code: 'EUR', name: 'Euro',
+      exchangeRates: [{ period: '1', rateToLocal: 1.3 }, { period: '2', rateToLocal: 1.25 }],
+    }],
+  },
+}
+assert.equal(module.resolveLoanFacilityCurrency(
+  { currencyCode: 'eur', marketOrigin: 'foreign' }, foundation,
+).currency.code, 'EUR')
+assert.equal(module.resolveLoanFacilityCurrency(
+  { currencyCode: 'USD', marketOrigin: 'foreign' }, foundation,
+).valid, false, 'Foreign loan currency must exist in project foundation')
+assert.equal(module.resolveLoanFacilityCurrency(
+  { currencyCode: 'EUR', marketOrigin: 'local' }, foundation,
+).valid, false, 'Local loans may not use a foreign currency code')
+console.log('Periodic FX translation, loan-form currency binding and three-statement posting validation passed.')
+
 
 
