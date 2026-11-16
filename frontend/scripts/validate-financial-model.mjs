@@ -1467,6 +1467,7 @@ assert.ok(advancedFinanceSource.includes('calculateComfarAssetLifecycle')
   'The integrated finance panel must use COMFAR depreciation and asset sale results instead of the legacy two-method schedule when register assets are supplied')
 const reportWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 const reportVisualsSource = await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx', import.meta.url), 'utf8')
+const periodicEngineSource = await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts', import.meta.url), 'utf8')
 assert.ok(reportWizardSource.includes('ProjectReportVisuals')
   && reportWizardSource.includes('onSensitivity={setReportSensitivity}')
   && reportWizardSource.includes("display:step==='cashflow'?'block':'none'"),
