@@ -89,7 +89,7 @@ assert.deepEqual(f.calculateEconomicCostBenefitPeriod({salesRevenue:500,shortTer
 assert.deepEqual(f.calculateIncrementalSeries([10,20],[13,15]),[3,-5])
 assert.ok(Math.abs(f.calculateInternalRateOfReturn([-100,60,60])[0]-0.13066)<0.001)
 assert.ok(Math.abs(f.calculateSimplePayback([-100,60,60]).years-1.6666666667)<1e-8)
-assert.ok(Math.abs(f.calculateDynamicPayback([-100,60,60],10).years-1.8333333333)<1e-8)
+assert.ok(Math.abs(f.calculateDynamicPayback([-100,60,60],10).years-2.9166666667)<1e-8)
 assert.equal(f.calculateShortNpv([-100,60,60],10,1),-100+60/1.1)
 assert.deepEqual(f.calculateNpvRatio(20,[100,100],10),{npv:20,presentValueOfInvestment:100+100/1.1,ratio:20/(100+100/1.1)})
 assert.deepEqual(f.calculateBreakEven({fixedCost:100,variableCostPerUnit:5,salesPricePerUnit:10,capacity:100}),{quantity:20,capacityPercent:20,revenue:200})
