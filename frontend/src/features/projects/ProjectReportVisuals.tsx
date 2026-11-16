@@ -4,6 +4,7 @@ import { aggregatePeriodicFinanceByFiscalYear, hasCompleteFiscalYearCoverage, ty
 import { HOT_ROLLING_200KT_AUDIT } from '../steel/workbookReconciliation'
 import { HOT_ROLLING_COMFAR_OUTPUT_AUDIT } from '../steel/hotRollingExcelBenchmark'
 
+type ReportFormRow = { id:string; name:string; quantity:number; unit:string; unitPrice:number; source:string; valueText?:string; flowType?:'input'|'output' }
 type Props = {
   language: 'fa' | 'en'
   isHotRollingCoil: boolean
@@ -28,6 +29,12 @@ type Props = {
   sensitivity: OneWaySensitivityAnalysis | null
   periodicResult: PeriodicProjectFinanceResult | null
   partnerFinanceResult?: PartnerFinanceResult | null
+  products?: ReportFormRow[]
+  technicalParameters?: ReportFormRow[]
+  materialBalance?: ReportFormRow[]
+  utilities?: ReportFormRow[]
+  capexItems?: ReportFormRow[]
+  opexItems?: ReportFormRow[]
   valuationDate: string
   discountConvention: 'actual-days' | 'period-count'
   periodFrequency: string
@@ -67,6 +74,19 @@ const referenceRows: [string,string,string,string][] = [
 const t = (fa: string, en: string, language: 'fa'|'en') => language === 'en' ? en : fa
 const fmt = (value: number | null | undefined, language: 'fa'|'en', digits = 2) =>
   value == null || !Number.isFinite(value) ? '—' : value.toLocaleString(language === 'en' ? 'en-US' : 'fa-IR', { maximumFractionDigits: digits, minimumFractionDigits: digits })
+
+function FormRowsTable({title,rows,language,kind='cost'}:{title:string;rows:ReportFormRow[];language:'fa'|'en';kind?:'technical'|'material'|'cost'}){
+  if(!rows.length)return null
+  const direction=(row:ReportFormRow)=>row.flowType==='output'||(row.flowType==null&&/(تولیدی|قابل فروش|باطله|ضایعات|نرمه و برگشتی|سرباره|پرت|برگشتی)/.test(row.name))
+    ?t('خروجی / محصول','Output / Product',language):t('ورودی / مصرف','Input / Consumption',language)
+  return <div className="fw-card"><h4>{title}</h4><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
+    <th>{t('قلم / پارامتر','Item / Parameter',language)}</th><th>{t('مقدار / مشخصه','Quantity / Value',language)}</th><th>{t('واحد','Unit',language)}</th><th>{t('قیمت واحد','Unit price',language)}</th><th>{t('جمع','Total',language)}</th><th>{t('منبع','Source',language)}</th>{kind==='material'&&<th>{t('جهت جریان','Flow direction',language)}</th>}
+  </tr></thead><tbody>{rows.map(row=><tr key={row.id}>
+    <td>{row.name}</td><td>{kind==='technical'?(row.valueText|| (row.quantity!==0?fmt(row.quantity,language):'—')):fmt(row.quantity,language)}</td>
+    <td>{row.unit||'—'}</td><td>{kind==='technical'||row.unitPrice===0?'—':fmt(row.unitPrice,language)}</td>
+    <td>{kind==='technical'||row.unitPrice===0?'—':fmt(row.quantity*row.unitPrice,language)}</td><td>{row.source||'—'}</td>{kind==='material'&&<td>{direction(row)}</td>}
+  </tr>)}</tbody></table></div></div>
+}
 
 function SensitivityChart({ analysis, language, currency }: { analysis: OneWaySensitivityAnalysis | null; language: 'fa'|'en'; currency: string }) {
   if (!analysis) return <p className="fw-hint">{t('در حال آماده‌سازی تحلیل حساسیت یک‌متغیره؛ مدل مالی یکپارچه باید یک بار محاسبه شود.','One-way sensitivity analysis is being prepared; the integrated financial model must complete one calculation.',language)}</p>
@@ -348,6 +368,17 @@ export default function ProjectReportVisuals(props: Props) {
       <div className="fw-validation"><span>{t('سرمایه‌گذار / مجری','Investor / operator',language)}</span><b>{project.owner||'—'}</b></div>
       <div className="fw-validation"><span>{t('سال شروع / دوره ساخت / بهره‌برداری','Start year / construction / operation',language)}</span><b>{fmtValue(project.startYear,0)} / {fmtValue(project.constructionYears,1)} / {fmtValue(project.operatingYears,1)}</b></div>
       <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('شاخص','Indicator',language)}</th><th>{t('مقدار','Value',language)}</th><th>{t('واحد','Unit',language)}</th></tr></thead><tbody>{currentRows.map((row,i)=><tr key={i}><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td></tr>)}</tbody></table></div>
+    </div>
+    <div className="fw-card">
+      <h4>{t('جزئیات فرم‌های فنی و هزینه‌ای پروژه','Project Technical & Cost Form Details',language)}</h4>
+      <FormRowsTable title={t('محصولات و مشخصات فروش','Products & Sales Specifications',language)} rows={props.products??[]} language={language}/>
+      <FormRowsTable title={t('پارامترهای فنی','Technical Parameters',language)} rows={props.technicalParameters??[]} language={language} kind="technical"/>
+      <FormRowsTable title={t('موازنه مواد و خوراک','Material Balance & Feed',language)} rows={props.materialBalance??[]} language={language} kind="material"/>
+      <FormRowsTable title={t('یوتیلیتی و مصارف زیرساختی','Utilities & Infrastructure Consumption',language)} rows={props.utilities??[]} language={language}/>
+      <FormRowsTable title={t('سرمایه‌گذاری ثابت و CAPEX','Fixed Investment & CAPEX',language)} rows={props.capexItems??[]} language={language}/>
+      <FormRowsTable title={t('هزینه‌های بهره‌برداری و OPEX','Operating Costs & OPEX',language)} rows={props.opexItems??[]} language={language}/>
+      {![props.products,props.technicalParameters,props.materialBalance,props.utilities,props.capexItems,props.opexItems].some(rows=>!!rows?.length)&&
+        <p className="fw-hint">{t('فرم خام هنوز داده‌ای برای گزارش فنی و هزینه‌ای ندارد. پس از تکمیل فرم‌ها، ردیف‌ها در این بخش نمایش داده می‌شوند.','The blank template has no technical or cost entries yet. Completed form rows will appear here.',language)}</p>}
     </div>
     {props.periodicResult?.valid&&<div className="fw-card">
       <h4>{t('خروجی‌های مدل مالی دوره‌ای','Periodic Financial Model Outputs',language)}</h4>
