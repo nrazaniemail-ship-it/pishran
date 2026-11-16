@@ -1104,7 +1104,8 @@ assert.equal(comfarLinearZero.valid,true,'COMFAR Linear to zero partial first-ye
 near(comfarLinearZero.periods[0].depreciation,0,1e-9,'Depreciation must not start before Starting at')
 near(comfarLinearZero.periods[1].depreciation,100,1e-9,'Linear to zero first partial-year depreciation')
 near(comfarLinearZero.periods[5].closingBookValue,100,1e-9,'Linear to zero must stop at salvage value')
-near(comfarLinearZero.periods[6].depreciation,0,1e-9,'Linear to zero must not depreciate after reaching salvage')
+near(comfarLinearZero.periods[6].depreciation,100,1e-9,'Linear to zero must depreciate the remaining book value after the final full year')
+near(comfarLinearZero.periods[6].closingBookValue,0,1e-9,'Linear to zero must finish at zero after the final partial period')
 const comfarLinearScrap = engine.calculateComfarAssetDepreciationSchedule([{
   id:'linear-scrap',name:'Linear scrap',originalValue:1000,initialBookValue:1000,scrapPercent:10,
   lengthYears:5,ratePercent:20,method:'linear-to-scrap',
