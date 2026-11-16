@@ -648,7 +648,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const signChanges = (flows: number[]) => { const nonZero=flows.filter(value=>value!==0); let changes=0; for(let index=1;index<nonZero.length;index++) if(Math.sign(nonZero[index])!==Math.sign(nonZero[index-1])) changes++; return changes }
   if (signChanges(projectFlows) > 1 || signChanges(equityFlows) > 1)
     warnings.push('Non-conventional cash-flow signs may produce multiple IRR roots; the reported IRR is one numerical root only.')
-  const totalDebtDrawdown = rows.reduce((sum,row)=>sum+row.debtDrawdown,0)
+  const totalDebtDrawdown = rows.reduce((sum,row)=>sum+row.debtDrawdown,0) + input.loans.reduce((sum,loan)=>sum+(loan.input.openingBalance??0),0)
   const totalEquityContribution = rows.reduce((sum,row)=>sum+row.equityContribution,0)
   const totalCapitalizedInterest = rows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
   return {
