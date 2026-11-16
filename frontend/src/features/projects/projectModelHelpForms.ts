@@ -193,6 +193,16 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
   if(category==='non-traded'&&typeof v.fxExposure==='number'&&v.fxExposure!==0)errors.push('economic-item:non-traded-fx-exposure-must-be-zero')
   if(direction==='output'&&typeof v.taxesDutiesIncludedPercent==='number'&&v.taxesDutiesIncludedPercent!==0)errors.push('economic-output:taxes-duties-included-not-entered-here')
  }
+ for(const row of value.sections?.['products']??[]){
+  const v=row.values
+  if(v.productionIntervalMode==='user-defined'&&(!v.productionIntervalStart||!v.productionIntervalEnd))errors.push('product:user-defined-production-interval-requires-start-and-end')
+  if(typeof v.productionIntervalStart==='string'&&typeof v.productionIntervalEnd==='string'&&v.productionIntervalStart&&v.productionIntervalEnd&&v.productionIntervalEnd<v.productionIntervalStart)errors.push('product:production-interval-end-before-start')
+ }
+ for(const row of value.sections?.['sales-programme']??[]){
+  const v=row.values
+  if(v.productionActive===false&&typeof v.salesQuantity==='number'&&typeof v.openingFinishedGoods==='number'&&v.salesQuantity>v.openingFinishedGoods)errors.push('sales:production-inactive-sales-exceed-opening-stock')
+  if(typeof v.futureSalesQuantity==='number'&&v.futureSalesQuantity<0)errors.push('sales:future-sales-quantity-negative')
+ }
  for(const row of value.sections?.['profit-distribution']??[]){
   const retained=row.values.retainedPercent,distributed=row.values.distributedPercent
   if(typeof retained==='number'&&typeof distributed==='number'&&Math.abs(retained+distributed-100)>1e-8)errors.push('profit-retention-and-distribution-must-equal-100')
