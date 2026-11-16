@@ -103,6 +103,8 @@ try {
  assert.match(wizardSource,/products:\[\]/,'Raw product rows must start empty')
  assert.match(wizardSource,/fixedInvestmentItems:\[\]/,'Raw project fixed assets must not be seeded')
  assert.doesNotMatch(projectViewSource,/HRCR200|نورد ورق گرم|STEEL_PROJECT_OPTIONS/,'Raw project creation UI must not contain sample project names')
+ assert.match(projectViewSource,/const templateId = 'raw' as const/,'The project chooser must expose only the raw template')
+ assert.match(projectViewSource,/قالب خام/,'The only project template must be labelled as the raw template')
  assert.match(wizardSource,/analysisMode:'unspecified'/,'Raw project classification must not be preselected')
  assert.match(wizardSource,/scope:\{studyLevel:'unspecified'/,'Raw study level must not be preselected')
  assert.match(wizardSource,/startYear:null as unknown as number/,'Raw project start year must remain unset')
