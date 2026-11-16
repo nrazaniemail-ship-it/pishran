@@ -383,7 +383,9 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
  const allocationRows=value.sections?.['cost-allocation']??[]
  const allocationGroups=new Map<string,typeof allocationRows>()
  for(const row of allocationRows){
-  const key=typeof row.values.name==='string'?row.values.name.trim():''
+  const name=typeof row.values.name==='string'?row.values.name.trim():''
+  const centre=typeof row.values.costCentreId==='string'?row.values.costCentreId.trim():''
+  const key=name&&centre?name+'|'+centre:''
   if(key)allocationGroups.set(key,[...(allocationGroups.get(key)??[]),row])
  }
  for(const [key,rows] of allocationGroups){
