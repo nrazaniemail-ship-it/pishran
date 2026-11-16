@@ -62,6 +62,9 @@ assert.equal(result.financeInput.periodAssetSaleSchedule[2].bookValueDisposed,90
 assert.equal(result.financeInput.periodAssetSaleSchedule[2].otherIncomeLoss,1410)
 const integrated=engine.calculateIntegratedPeriodicFinance(result.financeInput)
 assert.equal(integrated.valid,true,integrated.warnings.join('; '))
+const statements=engine.buildPeriodicThreeFinancialStatements(integrated,{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0})
+assert.equal(statements.length,periods.length)
+assert.ok(statements.every(row=>row.balanceSheet.reconciled),'Annual asset depreciation and disposal must reconcile all three financial statements period by period')
 
 const missingRate=adapter.bindFixedAssetDraftsToPeriodicFinance({
  finance,assets:[{...asset,metadata:{...asset.metadata,currencyCode:'GBP'}}],foundation,productionStartDate:'2026-01-01',
