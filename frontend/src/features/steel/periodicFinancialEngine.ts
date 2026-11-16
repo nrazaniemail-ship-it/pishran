@@ -221,6 +221,10 @@ export type PeriodicLoanInput = {
   gracePeriods: number
   termPeriods: number
   capitalizeInterest: boolean
+  /** Optional partial capitalization rate; overrides the legacy boolean when supplied. */
+  capitalizedInterestPercent?: number
+  /** Inclusive final date eligible for interest capitalization. */
+  capitalizeUntilDate?: string
   rateConversion?: 'effective-annual-by-actual-days' | 'effective-annual-divided-by-frequency'
   periodsPerYear?: 1 | 2 | 4 | 12
   /** Existing principal balance at the start of the first modeled period; not a new cash drawdown. */
@@ -312,6 +316,14 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Unsupported periodic repayment method.')
   if (typeof input.capitalizeInterest !== 'boolean')
     issues.push('Capitalized-interest option must be explicitly true or false.')
+  if (input.capitalizedInterestPercent != null &&
+      (!validFinite(input.capitalizedInterestPercent) || input.capitalizedInterestPercent < 0 || input.capitalizedInterestPercent > 100))
+    issues.push('Capitalized-interest percentage must be between 0 and 100.')
+  if (input.capitalizeUntilDate != null && !parseIsoDateUtc(input.capitalizeUntilDate))
+    issues.push('Interest capitalization end date must be a valid ISO calendar date.')
+  if (input.capitalizeUntilDate != null && periods.length &&
+      (input.capitalizeUntilDate < periods[0].startDate || input.capitalizeUntilDate > periods[periods.length-1].endDate))
+    issues.push('Interest capitalization end date must fall inside the project calendar.')
   const rateConversion = input.rateConversion ?? 'effective-annual-by-actual-days'
   if (!['effective-annual-by-actual-days', 'effective-annual-divided-by-frequency'].includes(rateConversion))
     issues.push('Unsupported period interest-rate conversion convention.')
@@ -522,8 +534,20 @@ export function calculatePeriodicLoanSchedule(
     }
     financingFeeExpense += commitmentFeeExpense
     const beforePrincipal = index < firstPrincipalIndex
-    const capitalizedInterest = beforePrincipal && input.capitalizeInterest ? interestAccrued : 0
-    const interestExpense = capitalizedInterest > 0 ? 0 : interestAccrued
+    const requestedCapitalizationPercent = input.capitalizedInterestPercent ?? (input.capitalizeInterest ? 100 : 0)
+    let capitalizationPeriodFraction = 0
+    if (beforePrincipal && requestedCapitalizationPercent > 0) {
+      const capitalizationEnd = input.capitalizeUntilDate ?? periods[index].endDate
+      if (periods[index].startDate <= capitalizationEnd) {
+        const endDate = parseIsoDateUtc(capitalizationEnd)!
+        const startDate = parseIsoDateUtc(periods[index].startDate)!
+        const eligibleDays = Math.max(0, Math.min(periods[index].days,
+          Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1))
+        capitalizationPeriodFraction = eligibleDays / periods[index].days
+      }
+    }
+    const capitalizedInterest = interestAccrued * requestedCapitalizationPercent / 100 * capitalizationPeriodFraction
+    const interestExpense = interestAccrued - capitalizedInterest
     const availableBalance = openingBalance + drawdown + capitalizedInterest + capitalizedFinancingFees
     // Period-end capitalized interest becomes outstanding facility utilization
     // at close; it must not silently push total debt above the commitment.
@@ -608,6 +632,8 @@ export type PeriodicProjectFinanceInput = {
   openingTaxLoss?: number
   openingUnleveredTaxLoss?: number
   loans: PeriodicProjectLoan[]
+  /** Validated local-currency schedules prepared by adapters (e.g. foreign-currency translation). */
+  precomputedLoanSchedules?: Record<string, PeriodicLoanRow[]>
   /** Minimum covenant DSCR as a multiple (e.g. 1.20); breaches are warnings, not automatic cash-flow changes. */
   minimumDscr?: number
   discountRatePercent?: number | null
@@ -985,13 +1011,43 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     return empty()
   }
   const loanSchedules: Record<string, PeriodicLoanRow[]> = {}
+  const suppliedSchedules = input.precomputedLoanSchedules ?? {}
+  const loanIds = new Set(input.loans.map(loan => loan.id))
+  if (Object.keys(suppliedSchedules).some(id => !loanIds.has(id))) {
+    warnings.push('Precomputed loan schedules must reference an existing loan identifier.')
+    return empty()
+  }
   for (const loan of input.loans) {
-    const schedule = calculatePeriodicLoanSchedule(loan.input, periods, dayCountBasis)
-    if (!schedule.valid) {
-      warnings.push(...schedule.issues.map(issue => loan.id + ': ' + issue))
-      return empty()
+    const supplied = suppliedSchedules[loan.id]
+    if (supplied) {
+      const scheduleIssues: string[] = []
+      if (!Array.isArray(supplied) || supplied.length !== periods.length) {
+        scheduleIssues.push('Precomputed schedule must contain one row per project period.')
+      } else supplied.forEach((row,index) => {
+        const values = [row?.drawdown,row?.openingBalance,row?.periodRatePercent,row?.interestExpense,
+          row?.capitalizedInterest,row?.financingFeeExpense,row?.commitmentFeeExpense,
+          row?.capitalizedFinancingFees,row?.principal,row?.closingBalance,row?.debtService]
+        if (row?.period !== index+1 || values.some(value=>!validFinite(value)) ||
+            values.some(value=>value<0) ||
+            Math.abs(row.closingBalance-(row.openingBalance+row.drawdown+row.capitalizedInterest+
+              row.capitalizedFinancingFees-row.principal))>0.01 ||
+            Math.abs(row.debtService-(row.interestExpense+row.financingFeeExpense+row.principal))>0.01) {
+          scheduleIssues.push('Precomputed schedule row does not reconcile in period '+(index+1)+'.')
+        }
+      })
+      if (scheduleIssues.length) {
+        warnings.push(...scheduleIssues.map(issue=>loan.id+': '+issue))
+        return empty()
+      }
+      loanSchedules[loan.id] = supplied.map(row=>({...row}))
+    } else {
+      const schedule = calculatePeriodicLoanSchedule(loan.input, periods, dayCountBasis)
+      if (!schedule.valid) {
+        warnings.push(...schedule.issues.map(issue => loan.id + ': ' + issue))
+        return empty()
+      }
+      loanSchedules[loan.id] = schedule.rows
     }
-    loanSchedules[loan.id] = schedule.rows
   }
   if (input.annualEquityContributions.some(value => value < 0) ||
       !validFinite(input.openingWorkingCapital ?? 0) || (input.openingWorkingCapital ?? 0) < 0 ||
