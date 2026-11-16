@@ -14,6 +14,40 @@ const benchmarkOutput = ts.transpileModule(benchmarkSource, {
 const benchmark = await import('data:text/javascript;base64,' + Buffer.from(benchmarkOutput).toString('base64'))
 const comfarReference = benchmark.HOT_ROLLING_COMFAR_OUTPUT_AUDIT
 
+const partnerFinanceSource = await readFile(new URL('../src/features/projects/partnerFinance.ts', import.meta.url), 'utf8')
+const partnerFinanceOutput = ts.transpileModule(partnerFinanceSource, {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
+}).outputText
+const partnerFinance = await import('data:text/javascript;base64,' + Buffer.from(partnerFinanceOutput).toString('base64'))
+const partnerAllocation = partnerFinance.allocateJointVentureCashFlows({
+  valid:true,
+  rows:[
+    {period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100},
+    {period:2,startDate:'2026-01-01',endDate:'2026-12-31',equityFreeCashFlow:200},
+    {period:3,startDate:'2027-01-01',endDate:'2027-12-31',equityFreeCashFlow:100},
+  ],
+},[
+  {id:'p1',name:'Partner A',sharePercent:60,capitalContribution:60,profitSharePercent:30},
+  {id:'p2',name:'Partner B',sharePercent:40,capitalContribution:40,profitSharePercent:70},
+],50)
+assert.equal(partnerAllocation.valid,true,partnerAllocation.warnings.join('; '))
+assert.equal(partnerAllocation.rows[0].negativeCashFlowAllocation,60)
+assert.equal(partnerAllocation.rows[1].negativeCashFlowAllocation,40)
+assert.equal(partnerAllocation.rows[0].positiveCashFlowDistribution,45)
+assert.equal(partnerAllocation.rows[1].positiveCashFlowDistribution,105)
+assert.equal(partnerAllocation.rows[0].netCashFlow,-15)
+assert.equal(partnerAllocation.rows[1].netCashFlow,65)
+assert.equal(partnerAllocation.distributedPositiveCashFlow,150)
+assert.equal(partnerAllocation.retainedPositiveCashFlow,150)
+assert.equal(partnerAllocation.totalProjectEquityCashFlow,200)
+const invalidPartnerAllocation=partnerFinance.allocateJointVentureCashFlows({
+  valid:true,rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:100}],
+},[
+  {id:'p1',name:'Partner A',sharePercent:60,capitalContribution:60,profitSharePercent:60},
+  {id:'p2',name:'Partner B',sharePercent:30,capitalContribution:40,profitSharePercent:30},
+],100)
+assert.equal(invalidPartnerAllocation.valid,false,'Partner equity and profit shares must each total 100%')
+
 const year = [{ index: 1, startDate: '2025-01-01', endDate: '2025-12-31', days: 365, partial: false }]
 const quarter = [
   { index: 1, startDate: '2025-01-01', endDate: '2025-03-31', days: 90, partial: false },
@@ -615,6 +649,11 @@ assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
   && feasibilityWizardSource.includes('projectPeriods={projectCalendarPeriods}')
   && feasibilityWizardSource.includes('cashFlowTiming={m.foundation.planning.cashFlowTiming}'),
   'Project calendar dates and discount timing must flow from the project foundation into the periodic finance engine')
+assert.ok(feasibilityWizardSource.includes('partnerDistributionPercent={m.partnerDistributionPercent??100}')
+  && feasibilityWizardSource.includes('درصد جریان نقدی مثبت قابل تقسیم')
+  && advancedFinanceSource.includes('allocateJointVentureCashFlows')
+  && advancedFinanceSource.includes('Partner net CF'),
+  'Joint-venture partner shares and distribution policy must connect to period-level equity cash flows')
 assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   && projectReportSource.includes('periodicResult.rows.map'),
   'Project report must include the period-level financial schedule and key output metrics')
