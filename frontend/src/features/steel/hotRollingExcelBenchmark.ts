@@ -492,7 +492,19 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
     opexFirstYearWorkingCapitalRequirement:3_216_759.32004,
     excessFundingAgainstOpexFirstYearRequirement:92_385.20996,
     shortTermFinancingInComfarSchedule:0,
-    capexWorkbookAlternativeLongTermWorkingCapitalLoan:3_309_144.525623
+    capexWorkbookAlternativeLongTermWorkingCapitalLoan:3_309_144.525623,
+    capexWorkbookAlternativeLoanSchedule: {
+      fixedAssetLoan1Principal:3_816_495.99,
+      fixedAssetLoan2Principal:1_794_354.81,
+      workingCapitalLoanPrincipal:3_309_144.525623,
+      statedAnnualRatePercent:26,
+      effectiveQuarterlyRatePercent:7.333349618787344,
+      installmentCount:20,
+      quarterlyPayments:[369_636.70168048906,173_787.5253506871,320_498.5072800594],
+      aggregateQuarterlyPayment:863_922.7343112356,
+      aggregateTotalDebtService:17_278_454.686224714,
+      workingCapitalLoanTotalDebtService:6_409_970.145601188
+    }
   },
   /** Loan balance and first-year service independently reconstructed from report pp. 129–131 and COMFAR annuity rules. */
   loanRepaymentAudit: {
@@ -525,6 +537,7 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
     'The OPEX workbook sheet جریانات نقدی مالی (کامفار) maps 17 periods to 1403–1419: equity contributions are 8,905,157.30, 4,186,827.70 and 3,309,144.53 in the first three years; short-term financing is zero in all 17 years.',
     'The report PDF conflicts on first-year working-capital funding: printed p.122 says short-term loan, while p.128 says shareholder; the OPEX COMFAR financial-flow schedule classifies 3,309,144.53 as equity and short-term financing as zero.',
     'The CAPEX workbook financing-mechanism/WACC tabs label 3,309,144.53 as a long-term working-capital loan; retain this as a separate workbook alternative, not the COMFAR cash-flow baseline.',
+    'The CAPEX workbook repayment schedule separately models three 20-quarter annuity loans at a 7.33335% effective quarterly rate (26% stated annual): fixed-asset tranches 3,816,495.99 and 1,794,354.81, plus a 3,309,144.53 working-capital tranche. Their combined instalment is 863,922.73 per quarter, distinct from the COMFAR-reconstructed 840,992.27; do not combine these scenarios.',
     'The OPEX working-capital sheet calculates first-year net working capital of 3,216,759.32; the COMFAR finance-flow equity contribution is 92,385.21 higher and must remain visible as a cash funding buffer pending detailed source reconciliation.',
     'The active Pishran user scenario with a uniform 25% tax rate is a separate case and must not be labelled as an exact COMFAR tax-basis match.'
   ]
