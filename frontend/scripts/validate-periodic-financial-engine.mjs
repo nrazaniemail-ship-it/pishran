@@ -230,6 +230,32 @@ assert.ok(Math.abs(disposalClosingRow.projectFreeCashFlow - (disposalClosingRow.
   'Project cash flow must include disposal proceeds once, excluding double-counted accounting gain')
 assert.ok(Math.abs(disposalClosingRow.equityFreeCashFlow - (disposalClosingRow.revenue - disposalClosingRow.variableCost - disposalClosingRow.fixedCost - disposalClosingRow.tax + 500)) < 1e-8,
   'Equity cash flow must include disposal proceeds')
+
+const calendarAssetLifecycleFinance = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400],
+  annualDepreciation: [100], periodDepreciationSchedule: [10,20,30,40],
+  annualFixedInvestment: [0], annualPreOperatingCost: [0], annualMaintenanceCapex: [0],
+  annualTaxRates: [25], annualEquityContributions: [0], workingCapitalByPeriod: [0,0,0,0], loans: [],
+  periodAssetSaleSchedule: [
+    {saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0},
+    {saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0},
+    {saleProceeds:500,returnOfCapital:300,otherIncomeLoss:200,bookValueDisposed:300},
+    {saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0}
+  ]
+})
+assert.equal(calendarAssetLifecycleFinance.valid,true,'Period-specific depreciation and disposals must be accepted together')
+assert.deepEqual(calendarAssetLifecycleFinance.rows.map(row=>row.depreciation),[10,20,30,40],
+  'Actual calendar depreciation must override annual day-prorated depreciation in every project period')
+const calendarSaleRow=calendarAssetLifecycleFinance.rows[2]
+assert.ok(Math.abs(calendarSaleRow.ebit-(calendarSaleRow.revenue-calendarSaleRow.variableCost-calendarSaleRow.fixedCost-30+200))<1e-8,
+  'Actual-period disposal gain must enter taxable EBIT alongside the period depreciation charge')
+assert.ok(Math.abs(calendarSaleRow.tax-calendarSaleRow.ebit*0.25)<1e-8,
+  'Tax must use the period-specific depreciation and disposal gain')
+assert.ok(Math.abs(calendarSaleRow.cfads-(calendarSaleRow.revenue-calendarSaleRow.variableCost-calendarSaleRow.fixedCost-calendarSaleRow.tax+500))<1e-8,
+  'Actual-period disposal proceeds must flow into CFADS exactly once')
+assert.ok(Math.abs(calendarSaleRow.projectFreeCashFlow-(calendarSaleRow.ebit-200-calendarSaleRow.unleveredTax+30+500))<1e-8,
+  'Actual-period project FCF must remove accounting gain and add cash proceeds once')
 const invalidPeriodicAssetDisposal = engine.calculateIntegratedPeriodicFinance({
   periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
   annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400],
