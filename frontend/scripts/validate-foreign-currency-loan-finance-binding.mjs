@@ -108,7 +108,7 @@ assert.ok(missingOpeningRate.issues.some(issue=>issue.includes('opening exchange
 const feeBinding=binding.buildPeriodicLoanFacilityBinding({
  loan:{...loan,facilityLimit:2000,fees:[
   {id:'agency-cap',type:'agency',ratePercent:1,currencyCode:'USD',paymentDate:'2025-01-01',treatment:'capitalize'},
-  {id:'guarantee-exp',type:'guarantee',ratePercent:1,currencyCode:'USD',paymentDate:'2025-12-31',treatment:'expense'},
+  {id:'other-exp',type:'other',ratePercent:1,currencyCode:'USD',paymentDate:'2025-01-01',treatment:'expense'},
  ]},
  foundation,periods,dayCountBasis:365,
 })
