@@ -104,4 +104,14 @@ const unbalancedOpening=orchestrator.calculateProjectFinancialModelFromDrafts({
 })
 assert.equal(unbalancedOpening.valid,false)
 assert.ok(unbalancedOpening.issues.some(issue=>issue.includes('opening-balance-sheet-does-not-balance')))
+
+const invalidHelpDriven={sections:{'cost-centres':[{id:'centre-a',values:{name:'Factory',parentId:'missing'}}]}}
+const invalidHelpModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:invalidHelpDriven},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(invalidHelpModel.valid,false)
+assert.ok(invalidHelpModel.issues.includes('cost-centre:unknown-parent:missing'))
+
 console.log('Unified project form orchestration and opening-balance-sheet validation passed.')
