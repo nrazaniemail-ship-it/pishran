@@ -455,6 +455,7 @@ export type PeriodicProjectFinanceInput = {
   openingUnleveredTaxLoss?: number
   loans: PeriodicProjectLoan[]
   discountRatePercent?: number | null
+  equityDiscountRatePercent?: number | null
   valuationDate?: string
   discountConvention?: PeriodDiscountConvention
   discountPeriodsPerYear?: 1 | 2 | 4 | 12
@@ -739,6 +740,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       !validFinite(input.openingWorkingCapital ?? 0) || (input.openingWorkingCapital ?? 0) < 0 ||
       !validFinite(input.salvageValue ?? 0) || (input.salvageValue ?? 0) < 0 ||
       (input.discountRatePercent != null && (!validFinite(input.discountRatePercent) || input.discountRatePercent <= -100)) ||
+      (input.equityDiscountRatePercent != null && (!validFinite(input.equityDiscountRatePercent) || input.equityDiscountRatePercent <= -100)) ||
       (input.mirrFinanceRatePercent != null && (!validFinite(input.mirrFinanceRatePercent) || input.mirrFinanceRatePercent <= -100)) ||
       (input.mirrReinvestmentRatePercent != null && (!validFinite(input.mirrReinvestmentRatePercent) || input.mirrReinvestmentRatePercent <= -100)) ||
       new Set(input.loans.map(loan => loan.id)).size !== input.loans.length) {
@@ -804,7 +806,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const equityFlows = rows.map(row=>row.equityFreeCashFlow)
   const discountRate = input.discountRatePercent
   const npvProject = discountRate == null ? null : calculatePeriodicNpv(projectFlows,periods,discountRate,dayCountBasis,cashFlowTiming,input.valuationDate,input.discountConvention??'actual-days',input.discountPeriodsPerYear??1)
-  const npvEquity = discountRate == null ? null : calculatePeriodicNpv(equityFlows,periods,discountRate,dayCountBasis,cashFlowTiming,input.valuationDate,input.discountConvention??'actual-days',input.discountPeriodsPerYear??1)
+  const equityDiscountRate = input.equityDiscountRatePercent ?? discountRate
+  const npvEquity = equityDiscountRate == null ? null : calculatePeriodicNpv(equityFlows,periods,equityDiscountRate,dayCountBasis,cashFlowTiming,input.valuationDate,input.discountConvention??'actual-days',input.discountPeriodsPerYear??1)
   const mirrProject = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
     : calculatePeriodicMirr(projectFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
   const mirrEquity = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
