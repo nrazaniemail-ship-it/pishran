@@ -265,6 +265,8 @@ export type ForeignExchangeStatementPostingInput = {
   taxRatesPercent: number[]
   openingTaxLossCarryForward?: number
   taxTreatment: 'deductible' | 'non-deductible'
+  /** True when precomputed loan schedules already include FX remeasurement in debt balances. */
+  debtAlreadyRemeasured?:boolean
 }
 
 export type ForeignExchangeStatementPostingResult = {
@@ -340,15 +342,15 @@ export function postForeignExchangeIntoThreeStatements(
     const openingBalances = {
       ...statement.openingBalances,
       cash: statement.openingBalances.cash + cumulativeCashTaxAdjustment - periodCashAdjustment,
-      debt: statement.openingBalances.debt + cumulativeFx - fxLoss,
+      debt: statement.openingBalances.debt + (input.debtAlreadyRemeasured?0:cumulativeFx - fxLoss),
       retainedEarnings: statement.openingBalances.retainedEarnings +
         cumulativeRetainedEarningsAdjustment - netIncomeDelta,
     }
     const cash = statement.balanceSheet.cash + cumulativeCashTaxAdjustment
-    const debt = statement.balanceSheet.debt + cumulativeFx
+    const debt = statement.balanceSheet.debt + (input.debtAlreadyRemeasured?0:cumulativeFx)
     const retainedEarnings = statement.balanceSheet.retainedEarnings + cumulativeRetainedEarningsAdjustment
     const totalAssets = statement.balanceSheet.totalAssets + cumulativeCashTaxAdjustment
-    const totalLiabilities = statement.balanceSheet.totalLiabilities + cumulativeFx
+    const totalLiabilities = statement.balanceSheet.totalLiabilities + (input.debtAlreadyRemeasured?0:cumulativeFx)
     const totalEquity = statement.balanceSheet.totalEquity + cumulativeRetainedEarningsAdjustment
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
@@ -363,7 +365,7 @@ export function postForeignExchangeIntoThreeStatements(
     const movementChecks = {
       ...statement.movementChecks,
       cash: statement.movementChecks.cash + periodCashAdjustment,
-      debt: statement.movementChecks.debt + fxLoss,
+      debt: statement.movementChecks.debt + (input.debtAlreadyRemeasured?0:fxLoss),
       retainedEarnings: statement.movementChecks.retainedEarnings + netIncomeDelta,
     }
     posted.push({
