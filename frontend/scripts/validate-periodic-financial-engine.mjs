@@ -767,6 +767,9 @@ assert.ok(feasibilityWizardSource.includes('productPricingComplete')
   && feasibilityWizardSource.includes('productWeightedRevenuePrice')
   && feasibilityWizardSource.includes('sum(m.products)'),
   'Priced multi-product and by-product rows must feed weighted project revenue instead of being ignored by the financial model')
+assert.ok(feasibilityWizardSource.includes("n(r.quantity)*n(r.unitPrice)")
+  && feasibilityWizardSource.includes("sumMaterialInputs(m.balance)+sum(m.utilities)"),
+  'Variable and fixed OPEX must use quantity times unit price and exclude material output rows from cost totals')
 assert.ok(projectsViewSource.includes("{steelStage && <label>")
   && projectsViewSource.includes("t('نام پروژه','Project Name')")
   && projectsViewSource.includes('placeholder={t(\'نام دلخواه پروژه را وارد کنید\''),
