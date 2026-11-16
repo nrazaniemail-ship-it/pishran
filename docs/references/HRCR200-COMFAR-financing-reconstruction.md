@@ -125,3 +125,17 @@ The next financing-engine implementation must support dated disbursements, quart
 - project cash flow separately from equity cash flow.
 
 The 20% equity / 80% debt sponsor scenario remains a separate sensitivity case and must never overwrite the amount-derived COMFAR 70/30 reference case.
+
+## Five-gate HRCR200 shareholder financing audit
+
+The automated audit now enforces the following controls independently of the sponsor's alternative 20% equity / 80% debt scenario:
+
+1. **Quarterly debt-service bridge:** the reference annuity contains exactly 20 quarterly instalments. Four consecutive instalments are aggregated and checked against each of the five annual COMFAR principal totals. The full schedule must amortize the gross opening debt to zero.
+2. **Construction funding ratio:** the amount-derived construction funding base is 18,702,835.36 million IRR, funded by 13,091,985.20 equity (70%) and 5,610,850.80 original loan principal (30%). The amounts, not the conflicting printed percentage labels, define this reference case.
+3. **Capitalized-interest treatment:** 3,298,633.06 million IRR is added to original principal to form 8,909,484.06 million IRR gross opening repayment debt. In the repayment schedule this gross balance is an opening liability, not a fresh drawdown; capitalized interest must not be added again.
+4. **Shareholder IRR perimeter:** shareholder cash flow must be constructed separately from project cash flow, including equity contributions and cash interest/principal service on the correct dates. The engine's equity IRR is not accepted merely because the debt schedule or project IRR reconciles.
+5. **Certification gate:** the reported COMFAR equity IRR of 57.99% remains a reference-only value. The current source set contains annual project cash flows and a reconstructed quarterly loan schedule, but does not contain a source-authenticated quarterly shareholder cash-flow vector or exact COMFAR payment dates. Accordingly, the equity IRR variance remains explicitly uncertified; no interpolation or quarterly allocation of annual operating cash flows is allowed to manufacture a match.
+
+### Current audit boundary
+
+The 20-quarter debt schedule is independently checked against the reconstructed 7%-per-quarter annuity and the annual COMFAR principal totals. This validates the debt-service reconstruction to the documented tolerance, but it does **not** complete the shareholder cash-flow reconciliation. Completion of gate 4 requires the detailed COMFAR equity cash-flow output (or the original COMFAR C30 project file) with matching quarter dates, equity injections, operating cash flows, tax, cash interest, and principal. Until then, 57.99% is not marked as reproduced by Pishran.
