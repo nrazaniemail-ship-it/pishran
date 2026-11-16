@@ -71,7 +71,9 @@ export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
   ])
   const isSample = (project: FeasibilityProject) => {
     if (project.templateId === 'hot-rolling-200kt') return true
+    const normalizedName = project.name.normalize('NFKC').replace(/[\u200c\s_-]/g, '').toLowerCase()
     if (sampleNames.has(project.name.trim())) return true
+    if (normalizedName.includes('hrcr200') || normalizedName.includes('نوردگرم') || normalizedName.includes('واحداحیاءمستقیم')) return true
     if (project.steelStage === 'نورد گرم / ورق'
       && project.capacity === '۲۰۰٬۰۰۰ تن ورق در سال (مبنای فایل HRCR200)') return true
     if (project.steelStage === 'مجتمع احیاء مستقیم و فولادسازی'
