@@ -264,12 +264,16 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
   if(new Set(ids).size!==ids.length)errors.push(sectionId+':duplicate-row-id')
  }
  const costCentres=value.sections?.['cost-centres']??[]
+ const centreIds=new Set(costCentres.map(row=>row.id))
  const centreNames=costCentres.map(row=>row.values.name).filter((name):name is string=>typeof name==='string'&&name.trim()!=='')
  if(new Set(centreNames.map(name=>name.trim().toLocaleLowerCase())).size!==centreNames.length)errors.push('cost-centres:duplicate-name')
- const centreSet=new Set(centreNames)
+ const parentOf=new Map(costCentres.map(row=>[row.id,typeof row.values.parentId==='string'?row.values.parentId:'']))
  for(const row of costCentres){
   const parent=row.values.parentId
-  if(typeof parent==='string'&&parent.trim()&&!centreSet.has(parent))errors.push('cost-centre:unknown-parent:'+parent)
+  if(typeof parent==='string'&&parent.trim()&&!centreIds.has(parent))errors.push('cost-centre:unknown-parent:'+parent)
+  if(parent===row.id)errors.push('cost-centre:self-parent:'+row.id)
+  const path=new Set<string>();let cursor:string|undefined=row.id
+  while(cursor){if(path.has(cursor)){errors.push('cost-centre:parent-cycle:'+row.id);break}path.add(cursor);cursor=parentOf.get(cursor)}
  }
  for(const row of value.sections?.['cost-allocation']??[]){
   const v=row.values
