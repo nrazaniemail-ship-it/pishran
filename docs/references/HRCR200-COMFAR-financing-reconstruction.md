@@ -1,5 +1,13 @@
 # HRCR200 — COMFAR financing reconstruction
 
+## Reference-file identity gate
+
+The Library file `COMFAR III - 001 - Summary sheet1(2).pdf` (107 pages, report header `SARZAMIN`) is **not** an HRCR200 hot-rolling project output. Its first page identifies an integrated steelmaking project with 1,200,000 t/year steelmaking capacity and 1,760,000 t/year direct-reduction capacity, a four-year construction phase and a 15-year production phase. It must not be used to populate, validate, or certify the HRCR200 benchmark. The same applies to duplicate copies of that report.
+
+The HRCR200 acceptance fixture in code is a separate reconstruction sourced from the HRCR200 OPEX financing-flow workbook and the HRCR200 economic-evaluation/loan evidence documented below. Its period-level operating cash-flow vector, tax schedule, depreciation schedule, working-capital movements and annual financing flows must remain explicitly attributed to those HRCR200 sources. The 107-page SARZAMIN report is excluded from that fixture.
+
+A direct, complete balance-sheet parity claim for HRCR200 is **not established** by the currently indexed source set. The HRCR200 economic-evaluation PDF is supporting evidence, not a substitute for a native COMFAR projected-balance-sheet export. Until the correct HRCR200 projected balance-sheet and period schedules are available in the source set, report balance-sheet arithmetic checks as internal reconciliation only, and mark external balance-sheet parity as unverified. Do not backfill HRCR200 balance-sheet values from SARZAMIN or the unrelated Ramhormoz DRI report.
+
 ## Authority and reconstruction rule
 
 The COMFAR output schedules are the numerical acceptance baseline. The economic evaluation PDF and the Excel workbooks are supporting evidence for assumptions and source labels; a conflicting label is not allowed to override a COMFAR amount or cash-flow schedule.
