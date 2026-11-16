@@ -13,14 +13,14 @@ import {
   type PeriodicProjectFinanceResult,
   type PeriodicStatementOpeningBalances,
   type PeriodicFinancialStatement,
-} from './periodicFinancialEngine'
+} from '../steel/periodicFinancialEngine'
 import {
   resolveLoanFacilityCurrency,
   translatePeriodicForeignCurrencyLoan,
   postMultipleForeignCurrencyDebtsIntoThreeFinancialStatements,
   type PeriodicForeignCurrencyDebtResult,
   type ForeignExchangeStatementPostingResult,
-} from './foreignCurrencyTranslation'
+} from '../steel/foreignCurrencyTranslation'
 
 export type PeriodicLoanFacilityBinding = {
   valid:boolean
