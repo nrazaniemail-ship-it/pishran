@@ -239,7 +239,7 @@ export default function AdvancedFinancePanel(props: Props) {
         capitalizeInterest:loan.capitalizeInterest,
         rateConversion:loan.periodRateConversion??'effective-annual-by-actual-days',periodsPerYear,
         datedDrawdowns:loan.drawdownMode==='period-manual'?periods.map((period,index)=>({date:loan.exactDrawdownDates?.[index]??period.startDate,amount:Math.max(0,drawdowns[index]??0)})).filter(item=>item.amount>0):undefined,
-        interestConvention:'comfar-months-plus-360'
+        interestConvention:loan.drawdownMode==='period-manual'?'comfar-months-plus-360':undefined
       } as PeriodicLoanInput}
     })
     const workingCapitalByPeriod=periods.map(period=>{
