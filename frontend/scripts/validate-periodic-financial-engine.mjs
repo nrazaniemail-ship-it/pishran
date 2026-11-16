@@ -684,8 +684,11 @@ assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   'Project report must include the period-level financial schedule and key output metrics')
 assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
   && projectReportSource.includes('fiscalYearStartMonth')
-  && projectReportSource.includes('derivedDscr'),
-  'HRCR200 benchmark reconciliation must aggregate periodic results and expose the derived first-year DSCR check')
+  && projectReportSource.includes('derivedDscr')
+  && projectReportSource.includes('Quarter-by-quarter reconstructed debt-service reconciliation')
+  && projectReportSource.includes('quarterlyDebtRows')
+  && projectReportSource.includes('quarterlySchedule'),
+  'HRCR200 benchmark reconciliation must expose annual and all-20-quarter debt-service comparisons')
 assert.ok(projectFoundationPanelSource.includes('Day-count Basis')
   && projectFoundationPanelSource.includes('Cash Flow Timing for Discounting'),
   'Project foundation must require a day-count basis and cash-flow timing before periodic valuation')
