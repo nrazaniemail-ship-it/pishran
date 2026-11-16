@@ -279,3 +279,105 @@ export function calculateDividendRepatriation(dividend:number,repatriationPercen
  const exported=dividend*repatriationPercent/100
  return {exported,local:dividend-exported}
 }
+
+
+/** Financial prices are converted to local currency at the official exchange rate. */
+export function calculateEconomicFinancialValue(price:number,marketOrigin:'local'|'foreign',officialExchangeRate:number){
+ if(!nonNegative(price)||!nonNegative(officialExchangeRate)||officialExchangeRate===0)throw new Error('invalid-economic-financial-value')
+ return marketOrigin==='foreign'?price*officialExchangeRate:price
+}
+export function calculateAdjustedMarketValue(financialValue:number,adjustmentFactor:number){
+ if(!finite(financialValue)||!nonNegative(adjustmentFactor))throw new Error('invalid-adjusted-market-value')
+ return financialValue*adjustmentFactor
+}
+export function deriveEconomicAdjustmentFactor(financialValue:number,adjustedMarketValue:number){
+ if(!finite(financialValue)||financialValue===0||!finite(adjustedMarketValue))throw new Error('invalid-economic-adjustment-factor')
+ return adjustedMarketValue/financialValue
+}
+export type EconomicCompositeItem={financialValue:number;adjustedMarketValue:number;foreignCurrencyExposurePercent:number}
+export function calculateEconomicComposite(items:EconomicCompositeItem[]){
+ if(items.length===0||items.some(x=>![x.financialValue,x.adjustedMarketValue,x.foreignCurrencyExposurePercent].every(finite)||x.foreignCurrencyExposurePercent<0||x.foreignCurrencyExposurePercent>100))throw new Error('invalid-economic-composite')
+ const financialValue=items.reduce((s,x)=>s+x.financialValue,0)
+ const adjustedMarketValue=items.reduce((s,x)=>s+x.adjustedMarketValue,0)
+ const foreignWeighted=items.reduce((s,x)=>s+x.adjustedMarketValue*x.foreignCurrencyExposurePercent/100,0)
+ return {financialValue,adjustedMarketValue,adjustmentFactor:financialValue===0?null:adjustedMarketValue/financialValue,foreignCurrencyExposurePercent:adjustedMarketValue===0?0:foreignWeighted/adjustedMarketValue*100}
+}
+export function calculateNetForeignExchangeEffect(input:{price:number;officialExchangeRate:number;quantity:number;tradablePercent:number;direction:'inflow'|'outflow'}){
+ if(![input.price,input.officialExchangeRate,input.quantity,input.tradablePercent].every(nonNegative)||input.tradablePercent>100)throw new Error('invalid-net-foreign-exchange-input')
+ const value=input.price*input.officialExchangeRate*input.quantity*input.tradablePercent/100
+ return input.direction==='inflow'?value:-value
+}
+export function calculateValueAdded(input:{grossSalesRevenue:number;salesTaxes:number;subsidiesOnSales:number;otherIncome:number;materialInputs:number;fixedInvestment:number;preproductionExInterest:number;inventoryIncrease:number;repatriatedPayments:number}){
+ const values=Object.values(input)
+ if(!values.every(finite)||input.materialInputs<0||input.fixedInvestment<0||input.preproductionExInterest<0)throw new Error('invalid-value-added-input')
+ const output=input.grossSalesRevenue+input.salesTaxes-input.subsidiesOnSales
+ const grossDomesticValueAdded=output+input.otherIncome-input.materialInputs
+ const investment=input.fixedInvestment+input.preproductionExInterest+input.inventoryIncrease
+ const netDomesticValueAdded=grossDomesticValueAdded-investment
+ const netNationalValueAdded=netDomesticValueAdded-input.repatriatedPayments
+ return {output,grossDomesticValueAdded,investment,netDomesticValueAdded,netNationalValueAdded}
+}
+export function calculateEconomicPresentValue(periodAmounts:number[],annualDiscountRatePercent:number){
+ if(!periodAmounts.every(finite)||!nonNegative(annualDiscountRatePercent))throw new Error('invalid-economic-present-value')
+ const rate=annualDiscountRatePercent/100
+ return periodAmounts.reduce((sum,amount,year)=>sum+amount/Math.pow(1+rate,year),0)
+}
+export function calculateEconomicAppraisalLevels(input:{financialValue:number;adjustedMarketValue:number;foreignExchangeAdjustment:number;indirectEffects:number;discountRatePercent:number}){
+ if(![input.financialValue,input.adjustedMarketValue,input.foreignExchangeAdjustment,input.indirectEffects].every(finite)||!nonNegative(input.discountRatePercent))throw new Error('invalid-economic-appraisal')
+ const rate=input.discountRatePercent/100
+ return {
+  financialPresentValue:input.financialValue/(1+rate),
+  adjustedMarketPresentValue:input.adjustedMarketValue/(1+rate),
+  economicValue1:(input.adjustedMarketValue+input.foreignExchangeAdjustment)/(1+rate),
+  economicValue2:(input.adjustedMarketValue+input.foreignExchangeAdjustment+input.indirectEffects)/(1+rate)
+ }
+}
+export function calculateEmploymentIndicators(input:{unskilledJobs:number;skilledJobs:number;investment:number;unskilledWages:number;skilledWages:number;totalWages:number}){
+ if(!Object.values(input).every(nonNegative)||input.investment===0||input.unskilledWages===0||input.skilledWages===0||input.totalWages===0)throw new Error('invalid-employment-indicators')
+ return {unskilledJobsPerInvestment:input.unskilledJobs/input.investment,skilledJobsPerInvestment:input.skilledJobs/input.investment,totalJobsPerInvestment:(input.unskilledJobs+input.skilledJobs)/input.investment,investmentToUnskilledWages:input.investment/input.unskilledWages,investmentToSkilledWages:input.investment/input.skilledWages,investmentToTotalWages:input.investment/input.totalWages}
+}
+
+/** Apply global sensitivity percentages without mutating the source assumptions. */
+export function applyGlobalSensitivityVariation<T extends {quantity:number;price:number}>(items:T[],variations:Record<string,{quantityPercent?:number;pricePercent?:number}>):T[]{
+ return items.map((item,index)=>{
+  const variation=variations[String(index)]??{}
+  const q=variation.quantityPercent??0,p=variation.pricePercent??0
+  if(!finite(q)||!finite(p)||q< -100||p< -100)throw new Error('invalid-global-sensitivity-variation')
+  return {...item,quantity:item.quantity*(1+q/100),price:item.price*(1+p/100)}
+ })
+}
+export function calculateParametricSeries<T>(baseValue:number,variationPercent:number,steps:number,evaluate:(value:number)=>T){
+ if(!finite(baseValue)||!finite(variationPercent)||variationPercent<0||!Number.isInteger(steps)||steps<1)throw new Error('invalid-parametric-analysis')
+ return Array.from({length:steps*2+1},(_,i)=>{
+  const variation=(i-steps)*variationPercent/steps
+  const value=baseValue*(1+variation/100)
+  return {variationPercent:variation,inputValue:value,result:evaluate(value)}
+ })
+}
+/** Target search applies one-percent changes to each selected variable in sequence. */
+export function searchSensitivityTarget<T>(input:{variables:{id:string;baseValue:number;maxIncreasePercent:number;maxDecreasePercent:number}[];target:number;direction:'increase'|'decrease';evaluate:(values:Record<string,number>)=>number;maxIterations?:number}){
+ const values:Record<string,number>=Object.fromEntries(input.variables.map(v=>[v.id,v.baseValue]))
+ if(input.variables.some(v=>!finite(v.baseValue)||!nonNegative(v.maxIncreasePercent)||!nonNegative(v.maxDecreasePercent))||!finite(input.target))throw new Error('invalid-sensitivity-target')
+ const original={...values},history:{iteration:number;variableId:string;changePercent:number;metric:number}[]=[]
+ const limit=input.maxIterations??10000
+ let iteration=0,metric=input.evaluate(values)
+ const achieved=()=>input.direction==='increase'?metric>=input.target:metric<=input.target
+ if(achieved())return {achieved:true,values:{...values},original,metric,history,iterations:0}
+ for(const variable of input.variables){
+  const max=input.direction==='increase'?variable.maxIncreasePercent:variable.maxDecreasePercent
+  const sign=input.direction==='increase'?1:-1
+  for(let pct=1;pct<=max+1e-9;pct+=1){
+   if(iteration>=limit)return {achieved:false,values:{...values},original,metric,history,iterations:iteration,limitReached:true}
+   values[variable.id]=variable.baseValue*(1+sign*pct/100)
+   metric=input.evaluate(values);iteration++
+   history.push({iteration,variableId:variable.id,changePercent:sign*pct,metric})
+   if(achieved())return {achieved:true,values:{...values},original,metric,history,iterations:iteration}
+  }
+ }
+ return {achieved:false,values:{...original},original,metric:input.evaluate(original),history,iterations:iteration,limitReached:false}
+}
+/** Incremental analysis requires identical period counts and returns alternative minus base. */
+export function calculateIncrementalSeries(base:number[],alternative:number[]){
+ if(base.length!==alternative.length||!base.every(finite)||!alternative.every(finite))throw new Error('incremental-analysis-horizon-mismatch')
+ return alternative.map((value,index)=>value-base[index])
+}
