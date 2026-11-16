@@ -103,7 +103,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const initialCapexSchedule = activeFixedInvestmentSchedule.map((amount,i)=>amount+activePreOperatingSchedule[i])
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
-    loans:[{id:'loan-1',label:'تسهیلات اصلی و سرمایه در گردش',drawdowns:initialCapexSchedule.map((v,i)=>v*initialDebtShare+(i===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0)),drawdownMode:'annual-day-weighted',annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
+    loans:[{id:'loan-1',label:'تسهیلات اصلی و سرمایه در گردش',drawdowns:initialCapexSchedule.map((v,i)=>v*initialDebtShare+(i===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0)),openingBalance:0,drawdownTiming:'mid-period',drawdownMode:'annual-day-weighted',annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
     assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map((v,i)=>v*Math.max(0,Math.min(100,props.equityPercent))/100+(i===construction?Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100:0)),
     workingCapitalDays:props.workingCapitalDefaults?.days??{raw:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
     workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
@@ -138,7 +138,7 @@ export default function AdvancedFinancePanel(props: Props) {
   }
   const periodicRateMethod=listFinancialMethods('financing').find(method=>method.id==='financing.effective-annual-frequency-rate')
   const syncAssets=()=>setState(s=>({...s,assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20}))}))
-  const addLoan=()=>setState(s=>({...s,loans:[...s.loans,{id:'loan-'+Date.now(),label:'تسهیلات جدید',drawdowns:Array(years).fill(0),drawdownMode:'annual-day-weighted',annualRate:20,graceYears:0,termYears:Math.max(1,opYears),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}]}))
+  const addLoan=()=>setState(s=>({...s,loans:[...s.loans,{id:'loan-'+Date.now(),label:'تسهیلات جدید',drawdowns:Array(years).fill(0),openingBalance:0,drawdownTiming:'mid-period',drawdownMode:'annual-day-weighted',annualRate:20,graceYears:0,termYears:Math.max(1,opYears),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}]}))
   const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی جدید',cost:0,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line',decliningRate:20}]}))
 
   const depreciation = useMemo(()=>calculateAssetDepreciationSchedule(state.assets.filter(a=>a.cost>0&&!a.name.includes('زمین')),years),[state.assets,years])
@@ -181,7 +181,7 @@ export default function AdvancedFinancePanel(props: Props) {
     annualDepreciation:0,depreciationSchedule:depreciationValues,assetSaleSchedule,
     maintenanceCapexSchedule,fixedInvestment:props.fixedInvestment,preOperatingCost:props.preOperatingCost,
     fixedInvestmentSchedule,preOperatingSchedule:activePreOperatingSchedule,utilization,equityContributions,
-    loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
+    loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0)),openingBalance:Math.max(0,l.openingBalance??0)})),
     taxRate:props.taxRate,taxRateSchedule:taxRates,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
     workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:state.salesEscalationPercent,opexEscalationPercent:state.opexEscalationPercent,
     discountMode:state.discountMode,manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.mirrFinanceRate??props.costOfEquity,equityMirrReinvestmentRate:props.mirrReinvestmentRate??props.costOfEquity
@@ -199,7 +199,7 @@ export default function AdvancedFinancePanel(props: Props) {
       const firstFiscalIndex=Math.max(0,loan.repaymentStartYear-1)
       const derivedStart=periods.findIndex(period=>fiscalYearIndexForPeriod(period,periods,fiscalMonth)>=firstFiscalIndex)
       return {id:loan.id,input:{
-        annualRatePercent:loan.annualRate,drawdowns,repaymentMethod:loan.repaymentMethod,
+        annualRatePercent:loan.annualRate,drawdowns,openingBalance:Math.max(0,loan.openingBalance??0),drawdownTiming:loan.drawdownTiming??'mid-period',repaymentMethod:loan.repaymentMethod,
         repaymentStartPeriod:loan.periodRepaymentStart??(derivedStart>=0?derivedStart+1:periods.length+1),
         gracePeriods:loan.periodGracePeriods??loan.graceYears*periodsPerYear,
         termPeriods:loan.periodTerm??loan.termYears*periodsPerYear,
@@ -222,7 +222,7 @@ export default function AdvancedFinancePanel(props: Props) {
       annualFixedCost:result.years.map(row=>row.fixedCashCost),annualDepreciation:depreciationValues,
       annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
       annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:taxRates,annualEquityContributions:equityContributions,
-      workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
+      workingCapitalByPeriod,constructionPeriodCount:periods.filter(period=>{const index=fiscalYearIndexForPeriod(period,periods,fiscalMonth);return index>=0&&index<construction}).length,openingWorkingCapital:0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
       valuationDate:props.valuationDate||undefined,
@@ -275,6 +275,8 @@ export default function AdvancedFinancePanel(props: Props) {
         <h4>{t('زمان‌بندی دوره‌ای تسهیلات','Periodic Loan Schedule Settings')}</h4>
         <div className="fw-grid">
           <label className="fw-field"><span>{t('مبنای برداشت در دوره‌ها','Period Drawdown Allocation')}</span><select value={loan.drawdownMode??'annual-day-weighted'} onChange={e=>{const mode=e.target.value as Loan['drawdownMode'];updateLoan(loan.id,mode==='period-manual'?{drawdownMode:mode,periodDrawdowns:allocateAnnualFlowsToPeriods(loan.drawdowns,props.projectPeriods??[],props.fiscalYearStartMonth??1),periodDrawdownDates:(props.projectPeriods??[]).map(period=>period.startDate+'|'+period.endDate)}:{drawdownMode:mode,periodDrawdowns:undefined,periodDrawdownDates:undefined})}}><option value="annual-day-weighted">{t('توزیع روزشمار برداشت سالانه','Allocate annual drawdowns by actual days')}</option><option value="period-manual">{t('ورود مستقیم برداشت هر دوره','Enter each period drawdown')}</option></select></label>
+          <label className="fw-field"><span>{t('مانده وام در ابتدای پروژه','Opening loan balance at project start')}</span><input type="number" min="0" value={loan.openingBalance??0} onChange={e=>updateLoan(loan.id,{openingBalance:Math.max(0,Number(e.target.value)||0)})}/></label>
+          <label className="fw-field"><span>{t('زمان برداشت در دوره','Drawdown timing within period')}</span><select value={loan.drawdownTiming??'mid-period'} onChange={e=>updateLoan(loan.id,{drawdownTiming:e.target.value as Loan['drawdownTiming']})}><option value="beginning">{t('ابتدای دوره','Beginning of period')}</option><option value="mid-period">{t('میانه دوره','Mid-period')}</option><option value="end-period">{t('انتهای دوره','End of period')}</option></select></label>
           <label className="fw-field"><span>{t('روش تبدیل نرخ سالانه','Annual-to-Period Rate Convention')}</span><select value={loan.periodRateConversion??'effective-annual-by-actual-days'} onChange={e=>updateLoan(loan.id,{periodRateConversion:e.target.value as Loan['periodRateConversion']})}><option value="effective-annual-by-actual-days">{t('نرخ مؤثر سالانه بر مبنای روزهای واقعی','Effective annual rate by actual days')}</option><option value="effective-annual-divided-by-frequency">{t('نرخ مؤثر سالانه تقسیم بر تعداد دوره‌ها','Effective annual rate divided by frequency')}</option></select></label>
           <label className="fw-field"><span>{t('شروع بازپرداخت اصل (شماره دوره)','Principal Repayment Start (Period)')}</span><input type="number" min="1" max={props.projectPeriods.length} value={loan.periodRepaymentStart??defaultPeriodRepaymentStart(loan)} onChange={e=>updateLoan(loan.id,{periodRepaymentStart:Number(e.target.value)})}/></label>
           <label className="fw-field"><span>{t('دوره تنفس اصل (تعداد دوره)','Principal Grace (Periods)')}</span><input type="number" min="0" value={loan.periodGracePeriods??loan.graceYears*periodsPerYear} onChange={e=>updateLoan(loan.id,{periodGracePeriods:Number(e.target.value)})}/></label>
