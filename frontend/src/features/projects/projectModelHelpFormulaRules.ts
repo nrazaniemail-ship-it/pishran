@@ -57,12 +57,62 @@ export function calculateDefaultSalesProduction(input:{sales:number;openingFinis
  if(![sales,openingFinishedGoods].every(nonNegative))throw new Error('invalid-sales-production-input')
  const turnover=calculateHelpWorkingCapitalTurnover(daysCoverage,periodMonths)
  const requiredStock=sales/turnover
- if(sales<openingFinishedGoods){
-  const production=0
-  return {production,closingFinishedGoods:openingFinishedGoods-sales,requiredStock,turnover}
+ const balanceAfterSales=openingFinishedGoods-sales
+ const closingFinishedGoods=Math.max(balanceAfterSales,requiredStock)
+ const production=Math.max(0,sales-openingFinishedGoods+closingFinishedGoods)
+ return {production,closingFinishedGoods,requiredStock,turnover}
+}
+/** Reference production/sales bridge, including a product-specific production interval. */
+export function calculateSalesProductionPeriod(input:{sales:number;openingFinishedGoods:number;daysCoverage:number;periodMonths:number;productionActive:boolean;salesEndsBeforeProductionPhase:boolean;futureSalesQuantity?:number}){
+ const {sales,openingFinishedGoods,daysCoverage,periodMonths,productionActive,salesEndsBeforeProductionPhase}=input
+ const futureSales=input.futureSalesQuantity??0
+ if(![sales,openingFinishedGoods,futureSales].every(nonNegative)||!Number.isFinite(periodMonths)||periodMonths<=0||!Number.isFinite(daysCoverage)||daysCoverage<=0)throw new Error('invalid-sales-production-period')
+ if(!productionActive){
+  if(sales>openingFinishedGoods)throw new Error('sales-exceed-opening-stock-outside-production-interval')
+  return {production:0,closingFinishedGoods:openingFinishedGoods-sales,requiredStock:0,turnover:30*periodMonths/daysCoverage}
  }
- const production=sales+requiredStock-openingFinishedGoods
- return {production,closingFinishedGoods:requiredStock,requiredStock,turnover}
+ const turnover=30*periodMonths/daysCoverage
+ let requiredStock=sales/turnover
+ if(salesEndsBeforeProductionPhase)requiredStock=Math.min(requiredStock,futureSales)
+ if(salesEndsBeforeProductionPhase&&sales<openingFinishedGoods){
+  return {production:0,closingFinishedGoods:openingFinishedGoods-sales,requiredStock,turnover}
+ }
+ const closingFinishedGoods=Math.max(0,requiredStock)
+ const production=Math.max(0,sales+closingFinishedGoods-openingFinishedGoods)
+ return {production,closingFinishedGoods,requiredStock,turnover}
+}
+export function calculateTerminalFinishedGoodsSale(closingQuantity:number,unitValue:number){
+ if(!nonNegative(closingQuantity)||!nonNegative(unitValue))throw new Error('invalid-terminal-finished-goods')
+ return {quantitySold:closingQuantity,proceeds:closingQuantity*unitValue,closingQuantity:0}
+}
+export function calculateWorkingCapitalQuantityRequirement(input:{openingQuantity:number;activityQuantity:number;quantityPerUnit:number;turnover:number;unitValue:number;openingUnitValue:number}){
+ if(![input.openingQuantity,input.activityQuantity,input.quantityPerUnit,input.unitValue,input.openingUnitValue].every(nonNegative)||!nonNegative(input.turnover)||input.turnover===0)throw new Error('invalid-working-capital-quantity')
+ const requiredStock=input.activityQuantity*input.quantityPerUnit/input.turnover
+ const balanceAfterConsumption=input.openingQuantity-input.activityQuantity*input.quantityPerUnit
+ const closingQuantity=Math.max(requiredStock,balanceAfterConsumption)
+ const openingValue=input.openingQuantity*input.openingUnitValue
+ const closingValue=closingQuantity*input.unitValue
+ return {requiredStock,balanceAfterConsumption,closingQuantity,openingValue,closingValue,increment:closingValue-openingValue}
+}
+export function calculateWeightedAverageMaterialUnitValue(standardQuantity:number,standardPrice:number,adjustmentQuantity:number,adjustmentPrice:number){
+ if(![standardQuantity,standardPrice,adjustmentQuantity,adjustmentPrice].every(nonNegative))throw new Error('invalid-weighted-average-material-value')
+ const totalQuantity=standardQuantity+adjustmentQuantity
+ return {totalQuantity,unitValue:totalQuantity===0?0:(standardQuantity*standardPrice+adjustmentQuantity*adjustmentPrice)/totalQuantity}
+}
+export function calculateWorkingCapitalValueRequirement(input:{openingValue:number;basis:number;turnover:number}){
+ if(![input.openingValue,input.basis,input.turnover].every(nonNegative)||input.turnover===0)throw new Error('invalid-working-capital-value')
+ const requiredValue=input.basis/input.turnover
+ const balanceAfterBasis=input.openingValue-input.basis
+ const closingValue=Math.max(requiredValue,balanceAfterBasis)
+ return {requiredValue,balanceAfterBasis,closingValue,increment:closingValue-input.openingValue}
+}
+export function calculateWorkingCapitalPeriodTotals(currentAssetItems:number[],currentLiabilityItems:number[],previousNwc=0){
+ if(![...currentAssetItems,...currentLiabilityItems,previousNwc].every(finite))throw new Error('invalid-working-capital-period-totals')
+ const currentAssets=currentAssetItems.reduce((sum,x)=>sum+x,0)
+ const currentLiabilities=currentLiabilityItems.reduce((sum,x)=>sum+x,0)
+ const netWorkingCapital=currentAssets-currentLiabilities
+ const change=netWorkingCapital-previousNwc
+ return {currentAssets,currentLiabilities,netWorkingCapital,change,cashOutflow:Math.max(0,change),cashInflow:Math.max(0,-change)}
 }
 export function calculateGraduatedIncomeTax(taxableIncome:number,brackets:{lowerLimit:number;ratePercent:number}[]){
  if(!finite(taxableIncome))throw new Error('invalid-taxable-income')
