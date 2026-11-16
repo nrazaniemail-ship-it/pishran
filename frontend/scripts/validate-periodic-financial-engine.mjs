@@ -23,7 +23,7 @@ const partnerAllocation = partnerFinance.allocateJointVentureCashFlows({
   valid:true,
   totalEquityContribution:100,
   rows:[
-    {period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100,equityContribution:100,equityWorkingCapitalContribution:0},
+    {period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100,equityContribution:70,equityWorkingCapitalContribution:30},
     {period:2,startDate:'2026-01-01',endDate:'2026-12-31',equityFreeCashFlow:200,equityContribution:0,equityWorkingCapitalContribution:0},
     {period:3,startDate:'2027-01-01',endDate:'2027-12-31',equityFreeCashFlow:100,equityContribution:0,equityWorkingCapitalContribution:0},
   ],
@@ -106,6 +106,18 @@ const invalidPeriodDate=partnerFinance.allocateJointVentureCashFlows({
   {id:'p1',name:'Partner A',sharePercent:100,capitalContribution:100,profitSharePercent:100},
 ],100)
 assert.equal(invalidPeriodDate.valid,false,'Invalid calendar dates must block partner allocation')
+
+const gapInPeriodicSchedule=partnerFinance.allocateJointVentureCashFlows({
+  valid:true,totalEquityContribution:100,
+  rows:[
+    {period:1,startDate:'2025-01-01',endDate:'2025-06-30',equityFreeCashFlow:-100,equityContribution:100,equityWorkingCapitalContribution:0},
+    {period:2,startDate:'2025-07-02',endDate:'2025-12-31',equityFreeCashFlow:0,equityContribution:0,equityWorkingCapitalContribution:0},
+  ],
+},[
+  {id:'p1',name:'Partner A',sharePercent:100,capitalContribution:100,profitSharePercent:100},
+],100)
+assert.equal(gapInPeriodicSchedule.valid,false,'Gaps in the periodic cash-flow schedule must block partner allocation')
+
 
 
 const malformedPartnerFinance=partnerFinance.allocateJointVentureCashFlows({
