@@ -479,7 +479,7 @@ const integrated = engine.calculateIntegratedFinance({
   discountMode: 'wacc',
   manualDiscountRate: 25,
   salvageValue: 50,
-  salvageBookValue: 50
+  salvageBookValue: 20
 })
 near(integrated.wacc, 0.15, 1e-12, 'Integrated WACC')
 const matchingCashFlows = engine.reconcileCashFlowSeries([-100, 60, 60], [-100, 60, 60], 0.01)
@@ -1036,6 +1036,13 @@ near(saleStatements[1].cashFlowStatement.investingCashFlow,900,1e-9,'Cash flow s
 near(saleStatements[1].balanceSheet.netFixedAssets,180,1e-9,'Balance sheet must remove disposed book value from fixed assets')
 assert.ok(saleStatements[1].balanceSheet.reconciled,'Asset disposal must reconcile all three financial statements')
 
+near(integrated.years[integrated.years.length-1].salvageGainLoss,30,1e-9,
+  'Terminal salvage gain must be sale proceeds less disposed book value')
+near(integrated.years[integrated.years.length-1].ebit,
+  integrated.years[integrated.years.length-1].revenue-integrated.years[integrated.years.length-1].variableCashCost-
+    integrated.years[integrated.years.length-1].fixedCashCost-integrated.years[integrated.years.length-1].depreciation+30+
+    integrated.years[integrated.years.length-1].assetSaleOtherIncomeLoss,1e-9,
+  'Terminal salvage gain must enter taxable EBIT')
 const statements = engine.buildThreeFinancialStatements(integrated.years)
 assert.equal(statements.length, integrated.years.length, 'Three statements must cover the full model horizon')
 assert.ok(statements.every(row => row.balanceSheet.reconciled), 'Balance sheet must reconcile without a plug for the integrated reference case')
