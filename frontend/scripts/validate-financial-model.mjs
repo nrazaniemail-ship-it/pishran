@@ -178,10 +178,20 @@ assert.equal(fundingAudit.comfarOutputWorkingCapitalLoan, 0,
 near(fundingAudit.excelMechanismWorkingCapitalLoan, 3309144.525623, 0.01,
   'HRCR200 Excel mechanism tab separately labels working capital as a loan')
 
-const comfar30_70Wacc = engine.calculateWacc({
+const comfar30_70FixedWacc = engine.calculateWacc({
   equityWeight: 70, debtWeight: 30, costOfEquity: 30, costOfDebt: 26, taxRate: 25
 })
-near(comfar30_70Wacc.value, 0.2685, 1e-12, 'HRCR200 30/70 construction WACC with 25% debt tax shield')
+near(comfar30_70FixedWacc.value, fundingAudit.derivedWacc30_70FixedCapitalPercent / 100, 1e-12,
+  'HRCR200 pure fixed-capital 30/70 WACC with 25% debt tax shield')
+const comfar30_70EquityWeight = fundingAudit.comfarOutputTotalEquity
+  / (fundingAudit.comfarOutputTotalEquity + fundingAudit.comfarReferenceDebtAmount) * 100
+const comfar30_70DebtWeight = 100 - comfar30_70EquityWeight
+const comfar30_70Wacc = engine.calculateWacc({
+  equityWeight: comfar30_70EquityWeight, debtWeight: comfar30_70DebtWeight,
+  costOfEquity: 30, costOfDebt: 26, taxRate: 25
+})
+near(comfar30_70Wacc.value, fundingAudit.comfarWaccWithWorkingCapitalEquityPercent / 100, 1e-12,
+  'HRCR200 30/70 fixed capital plus COMFAR working-capital equity WACC')
 const workbook20_80Amounts = {
   equity: 3740567.0717058936,
   fixedDebt: 14962268.286823574,
@@ -210,7 +220,7 @@ const discountOnlyNpv20_80 = comfarValuationNpv(workbook20_80Wacc.value)
 const discountOnlyNpv30_70 = comfarValuationNpv(comfar30_70Wacc.value)
 near(discountOnlyNpv20_80, 41119481.85, 0.02,
   'HRCR200 discount-only NPV at workbook 20/80 WACC, before recalculating capitalized interest')
-near(discountOnlyNpv30_70, 27342692.40, 0.02,
+near(discountOnlyNpv30_70, 26373890.89, 0.02,
   'HRCR200 discount-only NPV at 30/70 construction WACC, before recalculating capitalized interest')
 assert.ok(discountOnlyNpv20_80 > discountOnlyNpv30_70,
   'Lower 20/80 WACC must raise NPV when the same unlevered cash-flow vector is held constant')
@@ -247,6 +257,7 @@ console.log('FIRST-YEAR DSCR COMPARISON (flat 25% tax; same operations; debt ser
 })
 console.log('FINANCING COMPARISON (discount-only; loan interest/capitalized interest not re-run):', {
   WACC20_80: workbook20_80Wacc.value, WACC30_70: comfar30_70Wacc.value,
+  WACC30_70FixedOnly: comfar30_70FixedWacc.value,
   NPV20_80: discountOnlyNpv20_80, NPV30_70: discountOnlyNpv30_70,
   NPVAt25Both: comfarValuationNpv(0.25)
 })
