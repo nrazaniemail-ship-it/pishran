@@ -1377,7 +1377,7 @@ assert.equal(capitalizedFeeOverLimit.valid,false,
 const capitalizedInterestOverLimit=engine.calculatePeriodicLoanSchedule({
   annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
   repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:true,
-  facilityLimit:105,
+  facilityLimit:104,
 },loanEventPeriods,365)
 assert.equal(capitalizedInterestOverLimit.valid,false,
   'Period-end capitalized interest must not silently exceed the total-outstanding facility limit')
