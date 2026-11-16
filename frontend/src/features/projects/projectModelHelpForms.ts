@@ -252,9 +252,44 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
    if(typeof amount==='number'&&(!Number.isFinite(amount)||amount<0))errors.push('joint-venture:invalid-'+key)
   }
  }
+ const products=value.sections?.['products']??[]
+ const productRefs=new Set(products.flatMap(row=>[row.id,typeof row.values.name==='string'?row.values.name.trim():'']).filter(Boolean))
+ for(const sectionId of ['sales-programme','production-costs','working-capital']){
+  for(const [index,row] of (value.sections?.[sectionId]??[]).entries()){
+   const productId=row.values.productId
+   if(typeof productId==='string'&&productId.trim()&&!productRefs.has(productId.trim()))
+    errors.push(sectionId+':'+index+':unknown-product-reference:'+productId)
+  }
+ }
+ const costCentreRows=value.sections?.['cost-centres']??[]
+ const costCentreIds=new Set(costCentreRows.map(row=>row.id))
+ for(const [index,row] of (value.sections?.['production-costs']??[]).entries()){
+  const centre=row.values.costCentreId
+  if(typeof centre==='string'&&centre.trim()&&!costCentreIds.has(centre.trim()))
+   errors.push('production-costs:'+index+':unknown-cost-centre:'+centre)
+  const allocation=row.values.allocationKeyId
+  if(typeof allocation==='string'&&allocation.trim()&&!(value.sections?.['cost-allocation']??[]).some(item=>item.id===allocation.trim()))
+   errors.push('production-costs:'+index+':unknown-allocation-key:'+allocation)
+ }
+ const loanConditions=value.sections?.['loan-conditions']??[]
+ const loanNames=loanConditions.map(row=>typeof row.values.loanName==='string'?row.values.loanName.trim():'').filter(Boolean)
+ if(new Set(loanNames.map(name=>name.toLocaleLowerCase())).size!==loanNames.length)errors.push('loan-conditions:duplicate-loan-name')
+ for(const sectionId of ['loan-disbursements','loan-interest','loan-fees']){
+  for(const [index,row] of (value.sections?.[sectionId]??[]).entries()){
+   const loanName=row.values.loanName
+   if(typeof loanName==='string'&&loanName.trim()&&!loanNames.includes(loanName.trim()))
+    errors.push(sectionId+':'+index+':unknown-loan-reference:'+loanName)
+  }
+ }
+ const currencyRows=value.sections?.['currencies']??[]
+ const currencyCodes=currencyRows.map(row=>typeof row.values.code==='string'?row.values.code.trim().toUpperCase():'').filter(Boolean)
+ if(new Set(currencyCodes).size!==currencyCodes.length)errors.push('currencies:duplicate-currency-code')
+ const accountingCurrencies=currencyRows.filter(row=>row.values.accountingCurrency===true)
+ if(accountingCurrencies.length>1)errors.push('currencies:multiple-accounting-currencies')
  const incremental=value.sections?.['incremental-analysis']??[]
  const incrementalKeys=incremental.map(row=>[row.values.alternative,row.values.view,row.values.period].join('|'))
- if(incrementalKeys.some(key=>key==='||'))errors.push('incremental-analysis:alternative-view-and-period-required')
+ if(incremental.some(row=>!['alternative','view','period'].every(key=>typeof row.values[key]==='string'&&String(row.values[key]).trim())))
+  errors.push('incremental-analysis:alternative-view-and-period-required')
  if(new Set(incrementalKeys).size!==incrementalKeys.length)errors.push('incremental-analysis:duplicate-alternative-view-period')
  for(const row of value.sections?.['sensitivity']??[]){
   const v=row.values
