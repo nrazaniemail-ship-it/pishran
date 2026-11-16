@@ -708,6 +708,11 @@ assert.ok(feasibilityWizardSource.includes("project.templateId==='raw'")
   && feasibilityWizardSource.includes('stageFormDefinitions[selectedStage.id]?.capex')
   && feasibilityWizardSource.includes('stageFormDefinitions[selectedStage.id]?.opex'),
   'Blank projects must start with empty data while specialist projects receive stage-specific engineering rows')
+assert.ok(feasibilityWizardSource.includes('TechnicalParameterEditor')
+  && feasibilityWizardSource.includes('valueText')
+  && feasibilityWizardSource.includes('technicalParametersComplete')
+  && feasibilityWizardSource.includes('مقدار / مشخصه'),
+  'Raw and specialist technical forms must support descriptive and numeric parameter values and enforce parameter completion')
 assert.ok(projectsViewSource.includes("{steelStage && <label>")
   && projectsViewSource.includes("t('نام پروژه','Project Name')")
   && projectsViewSource.includes('placeholder={t(\'نام دلخواه پروژه را وارد کنید\''),
