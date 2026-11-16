@@ -241,6 +241,17 @@ const invalidPeriodicAssetDisposal = engine.calculateIntegratedPeriodicFinance({
   }]
 })
 assert.equal(invalidPeriodicAssetDisposal.valid, false, 'Unreconciled asset disposal schedules must fail closed')
+const invalidAssetReturnOfCapital = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400],
+  annualDepreciation: [400], annualFixedInvestment: [0], annualPreOperatingCost: [0],
+  annualMaintenanceCapex: [0], annualTaxRates: [25], annualEquityContributions: [0],
+  workingCapitalByPeriod: [0, 0, 0, 0], loans: [],
+  annualAssetSaleSchedule: [{
+    saleProceeds: 500, returnOfCapital: 450, otherIncomeLoss: 50, bookValueDisposed: 400
+  }]
+})
+assert.equal(invalidAssetReturnOfCapital.valid, false, 'Return of capital cannot exceed proceeds or the disposed asset book value')
 const expectedEquityFlow = -integratedPeriodic.rows[0].equityContribution
   + integratedPeriodic.rows[0].revenue - integratedPeriodic.rows[0].variableCost
   - integratedPeriodic.rows[0].fixedCost - integratedPeriodic.rows[0].tax
