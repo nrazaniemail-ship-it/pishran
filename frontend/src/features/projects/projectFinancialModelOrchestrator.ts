@@ -69,7 +69,7 @@ export function calculateProjectFinancialModelFromDrafts(
   const taxDraft=input.drafts.tax
   if(taxDraft.system==='none') {
     finance={...finance,taxRatesByPeriod:finance.periods.map(()=>0),taxAllowancesByPeriod:finance.periods.map(()=>0),
-      openingTaxLoss:0,openingUnleveredTaxLoss:0}
+      openingTaxLoss:0,openingUnleveredTaxLoss:0,taxLossCarryForwardEnabled:false}
   } else {
     if(taxDraft.rates.length) {
       const rates=Array(finance.periods.length).fill(Number.NaN) as number[]
@@ -93,10 +93,12 @@ export function calculateProjectFinancialModelFromDrafts(
       }
       finance={...finance,taxAllowancesByPeriod:allowances}
     }
-    if(taxDraft.lossCarryForward===false)finance={...finance,openingTaxLoss:0,openingUnleveredTaxLoss:0}
-    if(taxDraft.lossCarryForward===true&&taxDraft.lossCarryForwardYears!==null&&
-      (!Number.isInteger(taxDraft.lossCarryForwardYears)||taxDraft.lossCarryForwardYears<1))
-      return fail(['Tax-loss carry-forward duration must be a positive whole number of years.'])
+    if(taxDraft.lossCarryForward===false)finance={...finance,openingTaxLoss:0,openingUnleveredTaxLoss:0,taxLossCarryForwardEnabled:false}
+    if(taxDraft.lossCarryForward===true) {
+      if(taxDraft.lossCarryForwardYears!==null&&(!Number.isInteger(taxDraft.lossCarryForwardYears)||taxDraft.lossCarryForwardYears<1))
+        return fail(['Tax-loss carry-forward duration must be a positive whole number of years.'])
+      finance={...finance,taxLossCarryForwardEnabled:true,taxLossCarryForwardYears:taxDraft.lossCarryForwardYears}
+    }
   }
   const detailedOpeningNwc=openingDraft?.enabled
     ?openingDraft.inventory!+openingDraft.workInProgress!+openingDraft.finishedGoods!+openingDraft.receivables!+
