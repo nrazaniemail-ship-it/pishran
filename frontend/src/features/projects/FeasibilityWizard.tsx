@@ -345,7 +345,10 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const marketSize=m.market.domesticProduction+m.market.imports-m.market.exports
  const productPricingComplete=m.products.length>0&&m.products.every(row=>row.quantity>0&&row.unitPrice>0)
  const productWeightedRevenuePrice=productPricingComplete?sum(m.products)/Math.max(1,m.capacity.nameplate):null
- const revenuePrice=productWeightedRevenuePrice??(m.market.domesticPrice*(m.market.domesticShare/100)+m.market.exportPrice*(1-m.market.domesticShare/100))
+ const marketWeightedRevenuePrice=m.market.domesticPrice>0&&m.market.exportPrice>0
+  ?m.market.domesticPrice*(m.market.domesticShare/100)+m.market.exportPrice*(1-m.market.domesticShare/100)
+  :m.market.domesticPrice>0?m.market.domesticPrice:Math.max(0,m.market.exportPrice)
+ const revenuePrice=productWeightedRevenuePrice??marketWeightedRevenuePrice
  const model=useMemo(()=>{
   const constructionPeriods=Math.max(1,Math.ceil(m.project.constructionYears||1))
   const operatingPeriods=Math.max(1,Math.ceil(m.project.operatingYears||1))
