@@ -432,3 +432,49 @@ export function mergeHotRollingCoilProjectFoundation(saved: unknown): ProjectFou
     }
   }
 }
+
+
+/** Exact annual project cash-flow and tax controls transcribed from COMFAR III output. */
+export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
+  source: 'COMFAR III - 001 - نتایج تحلیل مالی و اقتصادی طرح · pages 2, 24–27, 59–62 and 67–73',
+  valuationDate: '2026-03-20',
+  discountRatePercent: 25,
+  discountConvention: 'period-count' as const,
+  cashFlowTiming: 'period-end' as const,
+  constructionYears: [1403, 1404],
+  operatingYears: Array.from({length:15},(_,index)=>1405+index),
+  /** Cash flows by project year 1403–1419; terminal salvage is recorded separately below. */
+  projectCashFlowsByYear: [
+    -13_907_805.03,-8_093_664.03,9_602_342.59,14_451_793.80,16_364_704.85,
+    18_303_107.76,18_712_850.68,15_024_064.82,15_024_064.82,15_024_064.82,
+    15_024_064.82,14_719_546.80,14_719_546.80,14_719_546.80,14_718_471.78,
+    14_710_023.10,14_708_024.54
+  ],
+  terminalSalvage: {
+    displayedYear: 1420,
+    amount: 13_735_466.82,
+    includedAtFinalOperatingPeriodForNpvAndIrr: true
+  },
+  /** COMFAR discounts the salvage column at the final operating-period date in its reported schedule. */
+  projectCashFlowsForIrr: [
+    -13_907_805.03,-8_093_664.03,9_602_342.59,14_451_793.80,16_364_704.85,
+    18_303_107.76,18_712_850.68,15_024_064.82,15_024_064.82,15_024_064.82,
+    15_024_064.82,14_719_546.80,14_719_546.80,14_719_546.80,14_718_471.78,
+    14_710_023.10,14_708_024.54 + 13_735_466.82
+  ],
+  taxScheduleByOperatingYear: Array.from({length:15},(_,index)=>({
+    year:1405+index,
+    ratePercent:index<5?5:25
+  })),
+  projectNpvAt25: 31_399_764.27,
+  projectIrrPercent: 48.31,
+  projectMirrPercent: 28.03,
+  equityNpvAt30: 23_579_675.01,
+  equityIrrPercent: 57.99,
+  equityMirrPercent: 30.90,
+  sourceNotes: [
+    'Corporate tax is 5% in operating years 1405–1409 and 25% from 1410 through 1419 in the COMFAR cash-flow-for-financial-planning schedule.',
+    'The terminal salvage value is printed in a separate 1420 column but discounted at the end-of-final-operating-period date in the COMFAR total-investment discounted cash-flow schedule.',
+    'The active Pishran user scenario with a uniform 25% tax rate is a separate case and must not be labelled as an exact COMFAR tax-basis match.'
+  ]
+} as const
