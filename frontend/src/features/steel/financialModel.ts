@@ -777,7 +777,8 @@ export function calculateComfarAssetDepreciationSchedule(
     const months = asset.lengthMonths ?? 0
     const firstMonths = asset.firstDepreciationMonths ?? 12
     const length = asset.lengthYears + months / 12
-    const scrapValue = asset.originalValue * asset.scrapPercent / 100
+    // Straight-line-to-zero ignores the configured scrap percentage by definition.
+    const scrapValue = asset.method === 'linear-to-zero' ? 0 : asset.originalValue * asset.scrapPercent / 100
     const startPeriod = resolveComfarDepreciationStartPeriod(asset.acquisitionPeriod, asset.startingAtPeriod, asset.acquisitionDate, asset.startingAtDate)
     const valid = [asset.originalValue, asset.initialBookValue, asset.scrapPercent, asset.lengthYears, months, firstMonths].every(Number.isFinite)
       && asset.originalValue >= 0 && asset.initialBookValue >= 0 && scrapValue <= asset.initialBookValue + 1e-8
@@ -953,7 +954,8 @@ export function calculateComfarCalendarDepreciationSchedule(
   for (const asset of assets) {
     const months=asset.lengthMonths??0
     const length=asset.lengthYears+months/12
-    const salvage=asset.originalValue*asset.scrapPercent/100
+    // Straight-line-to-zero depreciates the full book value; scrap applies only to scrap-based methods.
+    const salvage=asset.method==='linear-to-zero'?0:asset.originalValue*asset.scrapPercent/100
     const valid=[asset.originalValue,asset.initialBookValue,asset.scrapPercent,asset.lengthYears,months].every(Number.isFinite)
       && asset.originalValue>=0 && asset.initialBookValue>=0 && salvage<=asset.initialBookValue+1e-8
       && asset.scrapPercent>=0 && asset.scrapPercent<=100 && asset.lengthYears>=0
