@@ -61,7 +61,7 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
  const activeMonths=Math.min(periodMonths,remainingLifeMonths)
  const bookFloor=salvageValue
  const depreciableBase=acquisitionCost-salvageValue
- const firstYearMonths=input.firstDepreciationYearMonths??12
+ const firstYearMonths=input.firstDepreciationYearMonths??Math.min(12,usefulLifeMonths)
  if(!Number.isInteger(firstYearMonths)||firstYearMonths<1||firstYearMonths>12||firstYearMonths>usefulLifeMonths)throw new Error('invalid-first-depreciation-year-months')
  if(method==='sum-of-years-digits'&&usefulLifeMonths%12===0&&firstYearMonths!==12)throw new Error('syd-exact-year-life-with-partial-first-year-not-defined-by-reference')
  if(activeMonths===0||openingBookValue<=bookFloor)return {charge:0,closingBookValue:Math.max(bookFloor,openingBookValue),remainingLifeMonths,methodUsed:method}
@@ -113,10 +113,26 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
  }else{
   const rate=input.annualRatePercent
   if(rate===undefined||!Number.isFinite(rate)||rate<0||rate>100)throw new Error('invalid-declining-balance-rate')
-  const decliningCharge=openingBookValue*(rate/100)*activeMonths/12
-  const straightLineCharge=Math.max(0,openingBookValue-salvageValue)/remainingLifeMonths*activeMonths
-  if(decliningCharge>=straightLineCharge)charge=decliningCharge
-  else {charge=straightLineCharge;methodUsed='linear-to-scrap'}
+  const lengths=[Math.min(firstYearMonths,usefulLifeMonths)]
+  let unallocated=usefulLifeMonths-lengths[0]
+  while(unallocated>0){const length=Math.min(12,unallocated);lengths.push(length);unallocated-=length}
+  let book=acquisitionCost,cursor=0,switched=false
+  const requestedEnd=monthsElapsed+activeMonths
+  for(const length of lengths){
+   const remaining=usefulLifeMonths-cursor
+   if(book<=salvageValue||remaining<=0)break
+   const declining=book*(rate/100)*length/12
+   const straight=Math.max(0,book-salvageValue)/remaining*length
+   let segmentCharge:number
+   if(!switched&&declining>=straight)segmentCharge=declining
+   else{switched=true;segmentCharge=straight}
+   segmentCharge=Math.min(segmentCharge,Math.max(0,book-salvageValue))
+   const overlap=Math.max(0,Math.min(requestedEnd,cursor+length)-Math.max(monthsElapsed,cursor))
+   if(overlap>0)charge+=segmentCharge*overlap/length
+   if(switched&&cursor<requestedEnd)methodUsed='linear-to-scrap'
+   book-=segmentCharge
+   cursor+=length
+  }
  }
  charge=Math.min(Math.max(0,charge),Math.max(0,openingBookValue-bookFloor))
  const closingBookValue=Math.max(bookFloor,openingBookValue-charge)
