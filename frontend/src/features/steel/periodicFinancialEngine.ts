@@ -648,6 +648,9 @@ export type PeriodicProjectFinanceRow = {
   assetSaleOtherIncomeLoss: number
   assetBookValueDisposed: number
   interestExpense: number
+  /** Cash fees excluding the separately reported commitment fee. */
+  financingFeeExpense: number
+  commitmentFeeExpense: number
   capitalizedInterest: number
   capitalizedFinancingFees: number
   principal: number
@@ -1012,6 +1015,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     // Financing fees paid as period expenses are deductible financing costs;
     // capitalized fees remain separately visible in each loan schedule and are
     // included in the period's capitalized financing balance.
+    const financingFeeExpense = loanRows.reduce((sum,row)=>sum+row.financingFeeExpense-row.commitmentFeeExpense,0)
+    const commitmentFeeExpense = loanRows.reduce((sum,row)=>sum+row.commitmentFeeExpense,0)
+    // Preserve the established all-in deductible financing-cost field while exposing fee components separately.
     const interestExpense = loanRows.reduce((sum,row)=>sum+row.interestExpense+row.financingFeeExpense,0)
     const capitalizedInterest = loanRows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
     const capitalizedFinancingFees = loanRows.reduce((sum,row)=>sum+row.capitalizedFinancingFees,0)
@@ -1064,7 +1070,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
-      interestExpense,capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
+      interestExpense,financingFeeExpense,commitmentFeeExpense,capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
