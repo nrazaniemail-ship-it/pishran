@@ -14,12 +14,13 @@ const near = (actual, expected, tolerance, label) => {
   assert.ok(Math.abs(actual - expected) <= tolerance,
     label + ': expected ' + expected + ', got ' + actual + ', delta ' + (actual - expected))
 }
-const [engine, reference, integratedReference, workbookAudit, foundation] = await Promise.all([
+const [engine, reference, integratedReference, workbookAudit, foundation, comfarOutput] = await Promise.all([
   loadTypeScriptModule('../src/features/steel/financialModel.ts'),
   loadTypeScriptModule('../src/features/steel/hotRollingExcelBenchmark.ts'),
   loadTypeScriptModule('../src/features/steel/integratedProjectBenchmark.ts'),
   loadTypeScriptModule('../src/features/steel/workbookReconciliation.ts'),
-  loadTypeScriptModule('../src/features/projects/projectFoundation.ts')
+  loadTypeScriptModule('../src/features/projects/projectFoundation.ts'),
+  loadTypeScriptModule('../src/features/steel/hrcr200ComfarOutputReference.ts')
 ])
 
 const validStartingAsset = {
@@ -1267,6 +1268,29 @@ for (const [scenarioName,scenario] of Object.entries(scenarioResults)) {
 }
 
 console.log('PASS: integrated WACC, staged loan amortization, working capital, terminal value, cash flow reconciliation, NPV and project/equity IRR')
+const comfarSource=comfarOutput.HRCR200_COMFAR_OUTPUT_REFERENCE
+assert.equal(comfarSource.projectCashFlows.length,18,'COMFAR HRCR200 project cash-flow source must cover 1403–1420')
+for (const row of comfarSource.projectCashFlows) {
+  near(row.inflows-row.outflows,row.net,0.02,'COMFAR raw project cash-flow identity '+row.year)
+}
+near(comfarSource.projectCashFlows.reduce((sum,row)=>sum+row.presentValue,0),
+  comfarSource.summary.projectNpvAt25Percent,0.02,'COMFAR discounted project cash flows must sum to reported NPV')
+assert.equal(comfarSource.incomeStatement.length,15,'COMFAR income statement must cover 1405–1419')
+for (const row of comfarSource.incomeStatement) {
+  near(row.revenue-row.variableCosts-row.fixedCosts-row.financingCosts,row.profitBeforeTax,0.02,
+    'COMFAR income statement profit bridge '+row.year)
+  near(row.profitBeforeTax-row.tax,row.netProfit,0.02,'COMFAR net profit bridge '+row.year)
+  near(row.tax/row.profitBeforeTax,row.year<=1409?0.05:0.25,0.000001,
+    'COMFAR effective tax rate shown in report '+row.year)
+}
+assert.equal(comfarSource.balanceSheet.length,17,'COMFAR balance sheet must cover 1403–1419')
+for (const row of comfarSource.balanceSheet) {
+  near(row.currentAssets+row.netFixedAssets,row.totalAssets,0.02,'COMFAR asset composition '+row.year)
+  near(row.currentLiabilities+row.longTermDebt+row.netWorth,row.totalAssets,0.02,
+    'COMFAR balance sheet assets = liabilities + equity '+row.year)
+  near(row.paidInCapital+row.retainedEarningsBeginning+row.currentYearProfit,row.netWorth,0.02,
+    'COMFAR equity roll-forward '+row.year)
+}
 console.log('PASS: asset-level depreciation, tax loss carry-forward, multi-variable sensitivity, scenarios and three-statement balance-sheet reconciliation')
 const taxLossModel = engine.calculateIntegratedFinance({
   years:4,constructionYears:1,capacity:100,fullCapacityRevenue:2000,fullCapacityVariableCashCost:600,
