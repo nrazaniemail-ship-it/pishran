@@ -618,6 +618,9 @@ assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
 assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   && projectReportSource.includes('periodicResult.rows.map'),
   'Project report must include the period-level financial schedule and key output metrics')
+assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
+  && projectReportSource.includes('fiscalYearStartMonth'),
+  'HRCR200 benchmark reconciliation must aggregate monthly and quarterly model periods to the 17 fiscal-year reference schedule')
 assert.ok(projectFoundationPanelSource.includes('Day-count Basis')
   && projectFoundationPanelSource.includes('Cash Flow Timing for Discounting'),
   'Project foundation must require a day-count basis and cash-flow timing before periodic valuation')
@@ -665,6 +668,24 @@ assert.equal(comfarReference.changeInWorkingCapitalByOperatingYear.find(([year])
 assert.equal(comfarCashFlows.at(-1), comfarReference.projectCashFlowsByYear.at(-1)+comfarReference.terminalSalvage.amount, 'Terminal salvage shown in 1420 must be reconciled to the final operating-period cash-flow timing')
 assert.ok(Math.abs(comfarNpv - comfarReference.projectNpvAt25) < 0.05,
   'COMFAR HRCR200 NPV at 25% and valuation date 12/1404 must reconcile within rounding')
+
+const fiscalQuarterRows = [
+  { period:1,startDate:'2025-04-01',endDate:'2025-06-30',days:91,taxRatePercent:5,projectFreeCashFlow:10,depreciation:2,changeInWorkingCapital:3,interestExpense:4,principal:5,debtService:9,cfads:18 },
+  { period:2,startDate:'2025-07-01',endDate:'2025-09-30',days:92,taxRatePercent:5,projectFreeCashFlow:20,depreciation:3,changeInWorkingCapital:4,interestExpense:3,principal:6,debtService:9,cfads:18 },
+  { period:3,startDate:'2026-04-01',endDate:'2026-06-30',days:91,taxRatePercent:5,projectFreeCashFlow:30,depreciation:4,changeInWorkingCapital:5,interestExpense:2,principal:7,debtService:9,cfads:18 },
+  { period:4,startDate:'2026-07-01',endDate:'2026-09-30',days:92,taxRatePercent:25,projectFreeCashFlow:40,depreciation:5,changeInWorkingCapital:6,interestExpense:1,principal:8,debtService:9,cfads:18 },
+]
+const fiscalQuarterAggregation = engine.aggregatePeriodicFinanceByFiscalYear(fiscalQuarterRows,4,2)
+assert.equal(fiscalQuarterAggregation.length,2)
+assert.equal(fiscalQuarterAggregation[0].projectFreeCashFlow,30)
+assert.equal(fiscalQuarterAggregation[0].depreciation,5)
+assert.equal(fiscalQuarterAggregation[0].changeInWorkingCapital,7)
+assert.equal(fiscalQuarterAggregation[0].interestExpense,7)
+assert.equal(fiscalQuarterAggregation[0].principal,11)
+assert.equal(fiscalQuarterAggregation[0].dscr,2)
+assert.equal(fiscalQuarterAggregation[1].projectFreeCashFlow,70)
+assert.equal(fiscalQuarterAggregation[1].taxRatePercent,null,
+  'Mixed intra-year tax rates must not be presented as one annual tax rate')
 const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
 assert.ok(comfarIrr !== null && Math.abs(comfarIrr - comfarReference.projectIrrPercent) < 0.01,
   'COMFAR HRCR200 project IRR must reconcile to 48.31% within displayed precision')
