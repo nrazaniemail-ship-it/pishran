@@ -76,7 +76,6 @@ const bound=binding.bindLoanFacilitiesToPeriodicFinance({
 assert.equal(bound.valid,true,bound.issues.join('; '))
 assert.equal(bound.financeInput.loans.length,1)
 assert.equal(bound.financeInput.precomputedLoanSchedules['foreign-facility'].length,3)
-console.log('DEBUG foreign precomputed schedule',JSON.stringify(bound.financeInput.precomputedLoanSchedules['foreign-facility']))
 const integrated=engine.calculateIntegratedPeriodicFinance(bound.financeInput)
 assert.equal(integrated.valid,true,integrated.warnings.join('; '))
 const run=binding.calculatePeriodicFinanceWithForeignCurrencyLoans({
@@ -88,6 +87,9 @@ assert.equal(run.valid,true,run.issues.join('; '))
 assert.equal(run.statements.length,3)
 assert.ok(run.statements.every(row=>row.balanceSheet.reconciled))
 assert.ok(run.fxPosting.valid)
+assert.ok(run.finance.loanSchedules['foreign-facility'][2].foreignExchangeLoss>0)
+assert.ok(Math.abs(run.statements[2].balanceSheet.debt-run.fxPosting.statements[2].balanceSheet.debt)<1e-8)
+assert.ok(run.statements.every(row=>row.balanceSheet.reconciled))
 
 const feeBinding=binding.buildPeriodicLoanFacilityBinding({
  loan:{...loan,facilityLimit:2000,fees:[
