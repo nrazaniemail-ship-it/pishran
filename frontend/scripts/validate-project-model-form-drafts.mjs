@@ -98,7 +98,7 @@ try {
  assert.match(advancedFinanceSource,/utilization:.*props\.ramp\[i-construction\]\?\?\(props\.blankStart\?Number\.NaN:100\)/,'Raw utilization must not assume full production when ramp-up is blank')
  assert.match(advancedFinanceSource,/discountMode:blank\?'':/,'Raw discount method must remain unselected until user input')
  assert.match(advancedFinanceSource,/value=\{blankNumber\(state\.manualRate\)\}/,'Blank discount rates must display as blank')
- assert.doesNotMatch(advancedFinanceSource,/تسهیلات و برنامه بازپرداخت/,'The raw advanced finance panel must not duplicate the integrated detailed loan form')
+ assert.match(advancedFinanceSource,/!props\.blankStart&&<>[\s\S]*تسهیلات و برنامه بازپرداخت/,'The legacy loan editor must remain hidden for the raw template')
  assert.match(wizardSource,/nameplate:null as unknown as number/,'Raw capacity must remain unset')
  assert.match(wizardSource,/products:\[\]/,'Raw product rows must start empty')
  assert.match(wizardSource,/fixedInvestmentItems:\[\]/,'Raw project fixed assets must not be seeded')
