@@ -83,7 +83,7 @@ export function allocateJointVentureCashFlows(
     const start=validIsoDate(period.startDate),end=validIsoDate(period.endDate)
     const startTime=start?Date.parse(`${period.startDate}T00:00:00.000Z`):NaN
     const endTime=end?Date.parse(`${period.endDate}T00:00:00.000Z`):NaN
-    const previous=finance.rows[index-1]
+    const previous=financeRows[index-1]
     const previousEnd=previous&&validIsoDate(previous.endDate)
       ?Date.parse(`${previous.endDate}T00:00:00.000Z`):NaN
     return Number.isInteger(period.period)&&period.period>0&&
@@ -94,8 +94,8 @@ export function allocateJointVentureCashFlows(
       (!previous||(period.period===previous.period+1&&startTime===previousEnd+86400000))
   })
   const rowScheduledEquityContribution=financeRows.reduce((sum,period)=>
-    sum+(Number.isFinite(period.equityContribution)?period.equityContribution:0)+
-      (Number.isFinite(period.equityWorkingCapitalContribution)?period.equityWorkingCapitalContribution:0),0)
+    sum+(Number.isFinite(period?.equityContribution)?period.equityContribution:0)+
+      (Number.isFinite(period?.equityWorkingCapitalContribution)?period.equityWorkingCapitalContribution:0),0)
   if (!finance || !finance.valid || !Array.isArray(finance.rows) || !scheduleRowsValid ||
       !Number.isFinite(finance.totalEquityContribution) || finance.totalEquityContribution < 0) {
     warnings.push('A valid periodic equity cash-flow schedule with finite, non-negative contribution components and ordered, valid period dates is required before partner allocations can be calculated.')
