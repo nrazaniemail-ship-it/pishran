@@ -180,8 +180,8 @@ export const HOT_ROLLING_200KT_AUDIT = {
     irrNpvEquityInitialOutflows: 2_761_971
   },
   financingAlternativesInWorkbook: {
+    /** Excel mechanism tab says working capital is a loan; the COMFAR output classifies the 3.309m production-phase contribution as equity. */
     workingCapitalFundingSourceConflict: true,
-    /** Amounts in the mechanism schedule imply about 70/30 equity/debt, not its conflicting text labels. */
     mechanismTabDebtSharePercent: 30,
     mechanismTabEquitySharePercent: 70,
     mechanismTabLabelDebtSharePercent: 80,
@@ -194,10 +194,23 @@ export const HOT_ROLLING_200KT_AUDIT = {
     comfarReferenceEquityAmount: 13_091_985.2,
     comfarReferenceDebtAmount: 5_610_850.8,
     comfarReferenceFundingBase: 18_702_835.358529467,
+    comfarReferenceCapitalizedInterest: 3_298_633.06,
+    comfarOutputConstructionEquity: 13_091_985,
+    comfarOutputWorkingCapitalEquity: 3_309_144.53,
+    comfarOutputWorkingCapitalLoan: 0,
+    comfarOutputTotalEquity: 16_401_129.53,
+    comfarOutputLongTermDebtGross: 8_909_484.06,
+    comfarOutputTotalSources: 25_310_613.59,
+    comfarOutputEquitySharePercent: 64.7994149635311,
+    comfarOutputDebtSharePercent: 35.20058503646889,
+    excelMechanismWorkingCapitalLoan: 3_309_144.525623,
     workingCapitalNeed: 4_595_370.4572,
-    identifiedWorkingCapitalLoan: 3_309_144.525623,
     workingCapitalFundingGap: 1_286_225.931577,
-    comfarReferenceWaccPercent: 26.85
+    /** Derived from 70/30 fixed-capital weights, Ke=30%, Kd=26%, and 25% tax shield. */
+    comfarReferenceWaccPercent: 26.85,
+    /** WACC sheet uses 20% equity + 80% fixed debt + a separate working-capital loan. */
+    excelWacc20_80WithWorkingCapitalDebtPercent: 21.284299025331596,
+    excelWacc20_80FixedOnlyPercent: 21.6
   }
 } as const
 
