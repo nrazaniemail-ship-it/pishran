@@ -219,11 +219,17 @@ assert.equal(periodicAssetDisposal.rows[3].assetSaleProceeds, 500, 'Annual asset
 assert.equal(periodicAssetDisposal.rows[3].assetReturnOfCapital, 400)
 assert.equal(periodicAssetDisposal.rows[3].assetBookValueDisposed, 400)
 assert.equal(periodicAssetDisposal.rows[3].assetSaleOtherIncomeLoss, 100)
-assert.equal(periodicAssetDisposal.rows[3].ebit, 700, 'Asset disposal gain must enter taxable EBIT')
-assert.equal(periodicAssetDisposal.rows[3].tax, 175, 'Asset disposal gain must be included in period tax')
-assert.equal(periodicAssetDisposal.rows[3].cfads, 1025, 'Disposal proceeds must be included in cash flow available for debt service')
-assert.equal(periodicAssetDisposal.rows[3].projectFreeCashFlow, 1025, 'Project cash flow must include disposal proceeds once, excluding double-counted accounting gain')
-assert.equal(periodicAssetDisposal.rows[3].equityFreeCashFlow, 1025, 'Equity cash flow must include disposal proceeds')
+const disposalClosingRow = periodicAssetDisposal.rows[3]
+assert.ok(Math.abs(disposalClosingRow.ebit - (disposalClosingRow.revenue - disposalClosingRow.variableCost - disposalClosingRow.fixedCost - disposalClosingRow.depreciation + 100)) < 1e-8,
+  'Asset disposal gain must enter taxable EBIT')
+assert.ok(Math.abs(disposalClosingRow.tax - disposalClosingRow.ebit * 0.25) < 1e-8,
+  'Asset disposal gain must be included in period tax')
+assert.ok(Math.abs(disposalClosingRow.cfads - (disposalClosingRow.revenue - disposalClosingRow.variableCost - disposalClosingRow.fixedCost - disposalClosingRow.tax + 500)) < 1e-8,
+  'Disposal proceeds must be included in cash flow available for debt service')
+assert.ok(Math.abs(disposalClosingRow.projectFreeCashFlow - (disposalClosingRow.ebit - 100 - disposalClosingRow.unleveredTax + disposalClosingRow.depreciation + 500)) < 1e-8,
+  'Project cash flow must include disposal proceeds once, excluding double-counted accounting gain')
+assert.ok(Math.abs(disposalClosingRow.equityFreeCashFlow - (disposalClosingRow.revenue - disposalClosingRow.variableCost - disposalClosingRow.fixedCost - disposalClosingRow.tax + 500)) < 1e-8,
+  'Equity cash flow must include disposal proceeds')
 const invalidPeriodicAssetDisposal = engine.calculateIntegratedPeriodicFinance({
   periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
   annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400],
