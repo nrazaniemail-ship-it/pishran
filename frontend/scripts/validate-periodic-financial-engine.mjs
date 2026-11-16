@@ -900,5 +900,12 @@ const excessiveEquityWorkingCapitalResult = engine.calculateIntegratedPeriodicFi
   workingCapitalByPeriod: [0, 100],
   loans: [],
 })
-assert.equal(excessiveEquityWorkingCapitalResult.valid, false)
+assert.equal(excessiveEquityWorkingCapitalResult.valid, true,
+  'Shareholder funding may exceed the working-capital increase when the excess is retained as a cash buffer')
+assert.equal(excessiveEquityWorkingCapitalResult.rows[1].equityFreeCashFlow,-1,
+  'The 1-unit excess equity funding must remain in project cash, not be deducted as additional working capital')
+const excessiveFundingStatements=engine.buildPeriodicThreeFinancialStatements(excessiveEquityWorkingCapitalResult)
+assert.equal(excessiveFundingStatements[1].balanceSheet.cash,101)
+assert.ok(excessiveFundingStatements.every(row=>row.balanceSheet.reconciled),
+  'Working-capital funding above the requirement must reconcile as a cash buffer in the three statements')
 
