@@ -815,6 +815,32 @@ assert.equal(equityWorkingCapitalResult.rows[1].projectFreeCashFlow, 0)
 assert.equal(equityWorkingCapitalResult.rows[1].equityFreeCashFlow, 70)
 assert.equal(equityWorkingCapitalResult.totalEquityContribution, 30)
 
+const workingCapitalReleaseWithEquity = engine.calculateIntegratedPeriodicFinance({
+  periods: equityWorkingCapitalPeriods,
+  fiscalYearStartMonth: 1,
+  dayCountBasis: 365,
+  cashFlowTiming: 'period-end',
+  annualRevenue: [0, 0],
+  annualVariableCost: [0, 0],
+  annualFixedCost: [0, 0],
+  annualDepreciation: [0, 0],
+  annualFixedInvestment: [0, 0],
+  annualPreOperatingCost: [0, 0],
+  annualMaintenanceCapex: [0, 0],
+  annualTaxRates: [0, 0],
+  annualEquityContributions: [0, 0],
+  annualEquityWorkingCapitalContributions: [0, 5],
+  workingCapitalByPeriod: [100, 90],
+  loans: [],
+})
+assert.equal(workingCapitalReleaseWithEquity.valid,true)
+assert.equal(workingCapitalReleaseWithEquity.rows[1].changeInWorkingCapital,-10)
+assert.equal(workingCapitalReleaseWithEquity.rows[1].equityFreeCashFlow,5,
+  'Working-capital release must benefit equity cash flow while any new shareholder cash injection is deducted once')
+const releaseStatements=engine.buildPeriodicThreeFinancialStatements(workingCapitalReleaseWithEquity)
+assert.ok(releaseStatements.every(row=>row.balanceSheet.reconciled),
+  'Working-capital releases and additional equity injections must reconcile in the three statements')
+
 // HRCR200 reference: the first production-year shareholder WC cash contribution
 // is distinct from the full net working-capital requirement.
 const hrcr200WorkingCapitalResult = engine.calculateIntegratedPeriodicFinance({
