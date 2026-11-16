@@ -436,7 +436,7 @@ export function mergeHotRollingCoilProjectFoundation(saved: unknown): ProjectFou
 
 /** Exact annual project cash-flow and tax controls transcribed from COMFAR III output. */
 export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
-  source: 'COMFAR III - 001 - نتایج تحلیل مالی و اقتصادی طرح · pages 2, 24–27, 59–62 and 67–73',
+  source: 'COMFAR III - 001 - نتایج تحلیل مالی و اقتصادی طرح · pages 2, 24–27, 59–62 and 67–73; OPEX workbook · جریانات نقدی مالی (کامفار), periods 1–17',
   valuationDate: '2026-03-20',
   discountRatePercent: 25,
   discountConvention: 'period-count' as const,
