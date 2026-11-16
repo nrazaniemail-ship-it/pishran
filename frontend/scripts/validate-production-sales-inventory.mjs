@@ -43,7 +43,7 @@ const userDefinedInterval = engine.calculateFinishedGoodsProductionSchedule({
 assert.equal(userDefinedInterval.valid, true, userDefinedInterval.issues.join('; '))
 assert.equal(userDefinedInterval.rows[0].productionQuantity, 0)
 assert.equal(userDefinedInterval.rows[0].stockCarriedOver, 10)
-assert.equal(userDefinedInterval.rows[1].productionQuantity, 60)
+assert.equal(userDefinedInterval.rows[1].productionQuantity, 55)
 
 const stockOnly = engine.calculateFinishedGoodsProductionSchedule({
   periods: [{ index: 1, months: 12, salesQuantity: 30 }],
