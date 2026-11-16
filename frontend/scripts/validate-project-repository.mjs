@@ -8,6 +8,8 @@ assert.match(projectsView,/قالب خام/,'The raw template must remain availa
 assert.doesNotMatch(projectsView,/نورد ورق گرم|HRCR200|STEEL_PROJECT_OPTIONS|changeSteelProject/,'No specialized sample project may appear in the raw project creation flow')
 assert.doesNotMatch(projectsView,/setSteelStage|changeSteelProject/,'The raw project creation flow must not select a steel-specific stage')
 const source=await readFile(new URL('../src/core/projects/projectRepository.ts',import.meta.url),'utf8')
+assert.match(source,/templateId: 'raw'/,'The repository must force every newly created project onto the raw template')
+assert.doesNotMatch(source,/input\.steelStage/,'New raw projects must not persist legacy steel-stage metadata')
 const state=new Map()
 const removed=[]
 const mockStore={
