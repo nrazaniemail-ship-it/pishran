@@ -322,7 +322,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const capex=sum(m.capex),variable=m.opex.filter(r=>r.unit.includes('/تن')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)+sumMaterialInputs(m.balance)+sum(m.utilities),fixed=m.opex.filter(r=>r.unit.includes('/سال')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)
   const preOperatingCost=m.capex.filter(r=>r.name.includes('قبل از بهره‌برداری')).reduce((a,r)=>a+r.quantity*r.unitPrice,0)
   const fixedInvestmentForFinance=capex-preOperatingCost
-  const isHotRollingCoil=/نورد.*گرم.*کلاف|گرم.*نورد.*کلاف/.test((project.steelStage+' '+project.name).replace(/\s/g,''))
+  const isHotRollingCoil=!isRawTemplate&&/نورد.*گرم.*کلاف|گرم.*نورد.*کلاف/.test((project.steelStage+' '+project.name).replace(/\s/g,''))
   const hotRollingDepreciationAssets=isHotRollingCoil?[
     {id:'hr-site',name:'محوطه‌سازی و آماده‌سازی سایت',cost:430007.7606094665,residualValue:43000.77606094665,usefulLife:1/0.07,startYear:Math.ceil(m.project.constructionYears)+1,method:'straight-line' as const},
     {id:'hr-industrial-buildings',name:'ساختمان‌های صنعتی',cost:2016000,residualValue:201600,usefulLife:1/0.07,startYear:Math.ceil(m.project.constructionYears)+1,method:'straight-line' as const},
