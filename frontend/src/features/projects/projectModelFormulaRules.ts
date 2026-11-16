@@ -51,7 +51,7 @@ export function calculateWorkingCapitalMovement(previousNwc:number,currentNwc:nu
 export type DepreciationMethod='linear-to-zero'|'linear-to-scrap'|'accelerated-declining-balance'|'sum-of-years-digits'
 export type DepreciationPeriodInput={
  method:DepreciationMethod;acquisitionCost:number;salvageValue:number;usefulLifeMonths:number
- monthsElapsed:number;periodMonths:number;openingBookValue:number;annualRatePercent?:number
+ monthsElapsed:number;periodMonths:number;openingBookValue:number;annualRatePercent?:number;firstDepreciationYearMonths?:number
 }
 export type DepreciationPeriodResult={charge:number;closingBookValue:number;remainingLifeMonths:number;methodUsed:DepreciationMethod}
 export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):DepreciationPeriodResult{
@@ -61,6 +61,7 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
  const activeMonths=Math.min(periodMonths,remainingLifeMonths)
  const bookFloor=salvageValue
  const depreciableBase=acquisitionCost-salvageValue
+ if(method==='sum-of-years-digits'&&(usefulLifeMonths%12!==0||(input.firstDepreciationYearMonths!==undefined&&input.firstDepreciationYearMonths!==12)))throw new Error('syd-partial-year-schedule-not-yet-implemented')
  if(activeMonths===0||openingBookValue<=bookFloor)return {charge:0,closingBookValue:Math.max(bookFloor,openingBookValue),remainingLifeMonths,methodUsed:method}
  let charge=0,methodUsed=method
  if(method==='linear-to-zero')charge=acquisitionCost/usefulLifeMonths*activeMonths
