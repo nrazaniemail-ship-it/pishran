@@ -500,7 +500,15 @@ export function calculatePeriodicLoanSchedule(
         accrueUntil(event.date)
         if(event.kind==='rate') activeRate=event.amount
         else if(event.kind==='drawdown') { interestBalance+=event.amount; committedAmount+=event.amount }
-        else if(event.treatment==='capitalize') { capitalizedFinancingFees+=event.amount; interestBalance+=event.amount }
+        else if(event.treatment==='capitalize') {
+          capitalizedFinancingFees+=event.amount
+          interestBalance+=event.amount
+          // The facility is measured on total outstanding debt. A capitalized
+          // fee consumes facility from its effective date, not from period start.
+          committedAmount+=event.amount
+          if(input.facilityLimit!=null && committedAmount>input.facilityLimit+0.01)
+            issues.push('Capitalized financing fee exceeds the committed facility limit in period '+(index+1)+'.')
+        }
         else financingFeeExpense+=event.amount
       }
       accrueUntil(endExclusive)
@@ -517,6 +525,10 @@ export function calculatePeriodicLoanSchedule(
     const capitalizedInterest = beforePrincipal && input.capitalizeInterest ? interestAccrued : 0
     const interestExpense = capitalizedInterest > 0 ? 0 : interestAccrued
     const availableBalance = openingBalance + drawdown + capitalizedInterest + capitalizedFinancingFees
+    // Period-end capitalized interest becomes outstanding facility utilization
+    // at close; it must not silently push total debt above the commitment.
+    if(input.facilityLimit!=null && availableBalance>input.facilityLimit+0.01)
+      issues.push('Capitalized interest or financing fees exceed the committed facility limit in period '+(index+1)+'.')
     let principal = 0
     const repaymentIndex = index - firstPrincipalIndex
     if (repaymentIndex >= 0 && repaymentIndex < input.termPeriods) {
