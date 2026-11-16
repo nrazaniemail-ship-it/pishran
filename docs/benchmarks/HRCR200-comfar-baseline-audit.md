@@ -49,7 +49,29 @@ The report contains further percentage-label conflicts:
 | Repayment frequency | Quarterly; 20 instalments |
 | First repayment | First quarter of 1405 |
 
-**Modeling caution:** retain the 23% interest rate and 5% issuance cost as distinct source inputs until the original COMFAR loan-fee configuration or payment schedule confirms how the 5% is applied. The report's prose calls the combined result 28%, but it does not establish from these pages alone that the 5% is an annual recurring coupon rather than an issuance fee. Do not silently turn the fee into annual interest. The report specifies quarterly instalments but does not, in the cited text, establish whether principal is equal, annuity-based, or profile-based.
+### Reconstructed repayment method — independently reconciled
+
+The first-year debt-service figures in the COMFAR reconciliation workbook exactly identify an **annuity (constant total instalment)** schedule when the report's combined 28% annual rate is applied as 7% per quarter to the gross repayment balance:
+
+| Reconstructed control | Value, million IRR |
+|---|---:|
+| Gross balance entering repayment | 8,909,484.06 |
+| Quarterly rate | 7.00% |
+| Number of quarterly instalments | 20 |
+| Constant quarterly instalment | 840,992.27 |
+| First-year interest (four quarters) | 2,399,043.44 |
+| First-year principal (four quarters) | 964,925.63 |
+| First-year total debt service | 3,363,969.07 |
+
+Annuity formula:
+
+`A = P × r / (1 − (1 + r)^−n)`
+
+where `P = 8,909,484.06`, `r = 0.07`, and `n = 20`. The calculated first-year interest, principal and debt service match the reported COMFAR values to rounding precision. The COMFAR III Reference Manual also documents the annuity repayment formula and the balance-based interest calculation (Financial calculation rules, pp. 344–345).
+
+This is strong numerical evidence that the repayment method used in the reference output is annuity, not equal-principal. Pishran now stores the gross balance as an opening loan balance (not a new cash drawdown) and tests all four first-year controls plus full amortization after 20 instalments.
+
+**Remaining fee classification caveat:** the report states 23% interest plus 5% bond issuance cost and says 28% total. The output proves that 28%/4 = 7% is the rate that reproduces the annuity interest line. The report pages do not separately show whether the 5% is configured in COMFAR as a recurring service/financing fee or incorporated into the loan's effective annual rate. Keep the 23% coupon and 5% issuance fee as separately traceable source fields; do not count the 5% twice.
 
 ## COMFAR output benchmark (report page 132)
 
