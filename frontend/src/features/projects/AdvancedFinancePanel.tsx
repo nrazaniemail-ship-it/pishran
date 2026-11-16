@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
+import { allocateJointVentureCashFlows, type JointVenturePartner } from './partnerFinance'
 import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
@@ -18,6 +19,9 @@ type Asset = DepreciationAssetInput
 type Loan = IntegratedLoanInput & { periodDrawdowns?: number[]; periodDrawdownDates?: string[]; drawdownMode?: 'annual-day-weighted'|'period-manual'; periodRepaymentStart?: number; periodGracePeriods?: number; periodTerm?: number; periodRateConversion?: 'effective-annual-by-actual-days'|'effective-annual-divided-by-frequency'; exactDrawdownDates?: string[] }
 type Props = {
   projectId: string
+  jointVenture?: boolean
+  partners?: JointVenturePartner[]
+  partnerDistributionPercent?: number
   currency: string
   constructionYears: number
   operatingYears: number
@@ -282,6 +286,9 @@ export default function AdvancedFinancePanel(props: Props) {
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     })
   },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
+  const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
+    ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
+    :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
   useEffect(()=>{props.onPeriodicResult?.(periodicFinanceResult)},[periodicFinanceResult,props.onPeriodicResult])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
@@ -477,6 +484,23 @@ export default function AdvancedFinancePanel(props: Props) {
       </div>
       {periodicFinanceResult.warnings.length>0&&<ul className="fw-checklist">{periodicFinanceResult.warnings.map((warning,i)=><li key={i}>{tr(warning)}</li>)}</ul>}
     </div>:<p className="fw-hint">{periodicFinanceResult?.warnings.length?periodicFinanceResult.warnings.join(' · '):t('برای فعال‌سازی محاسبه دوره‌ای، تاریخ شروع و پایان پروژه، تناوب مالی، ماه آغاز سال مالی، مبنای روزشمار و زمان‌بندی جریان نقدی را در فونداسیون پروژه تعیین کنید.','To activate periodic calculations, define project start/end dates, financial frequency, fiscal-year start month, day-count basis and cash-flow timing in the project foundation.')}</p>}
+    {props.jointVenture&&<div className="fw-card">
+      <h4>{t('۹. جریان نقدی و تخصیص منافع شرکای مشارکت','9. Joint-Venture Partner Cash Flows & Allocation')}</h4>
+      <p className="fw-hint">{t('جریان نقدی منفی حقوق صاحبان سهام بر اساس سهم سرمایه و جریان نقدی مثبت قابل تقسیم بر اساس سهم سود تخصیص داده می‌شود. آورده قراردادی اعلام‌شده فقط برای کنترل نمایش داده می‌شود و دوباره به جریان نقدی اضافه یا از آن کسر نمی‌شود. این جدول، توزیع وجه نقد را نشان می‌دهد و جایگزین صورت سود تقسیمی مصوب یا قرارداد حقوقی شرکا نیست.','Negative equity cash flows are allocated by capital shares; distributable positive cash flow is allocated by profit shares. Declared capital contributions are shown for control only and are not added to or deducted from cash flows again. This table represents cash distributions, not an approved dividend statement or legal JV agreement.')}</p>
+      {partnerFinanceResult?.valid?<>
+        <div className="fw-kpis">
+          <article><small>{t('جریان نقدی کل سهامداران','Total equity cash flow')}</small><b>{money(partnerFinanceResult.totalProjectEquityCashFlow)}</b></article>
+          <article><small>{t('وجه نقد تخصیص‌یافته','Cash distributed')}</small><b>{money(partnerFinanceResult.distributedPositiveCashFlow)}</b></article>
+          <article><small>{t('وجه نقد نگه‌داشته‌شده در پروژه','Cash retained in project')}</small><b>{money(partnerFinanceResult.retainedPositiveCashFlow)}</b></article>
+        </div>
+        <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('شریک','Partner')}</th><th>{t('آورده قراردادی','Declared capital')}</th><th>{t('جریان نقدی منفی تخصیص‌یافته','Allocated negative CF')}</th><th>{t('توزیع جریان نقدی مثبت','Positive CF distribution')}</th><th>{t('خالص جریان نقدی شریک','Partner net CF')}</th></tr></thead>
+          <tbody>{partnerFinanceResult.rows.map(row=><tr key={row.partnerId}><td>{row.partnerName}</td><td>{money(row.declaredCapitalContribution)}</td><td>{money(row.negativeCashFlowAllocation)}</td><td>{money(row.positiveCashFlowDistribution)}</td><td>{money(row.netCashFlow)}</td></tr>)}</tbody>
+        </table></div>
+        <div style={{overflowX:'auto',maxHeight:360}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ','Date')}</th>{partnerFinanceResult.rows.map(row=><th key={row.partnerId}>{row.partnerName}</th>)}</tr></thead>
+          <tbody>{periodicFinanceResult?.rows.map((period,index)=><tr key={period.period}><td>{period.period}</td><td>{period.startDate} – {period.endDate}</td>{partnerFinanceResult.rows.map(row=><td key={row.partnerId}>{money(row.periods[index]?.allocatedCashFlow??0)}</td>)}</tr>)}</tbody>
+        </table></div>
+      </>:<ul className="fw-checklist">{(partnerFinanceResult?.warnings??[t('برای تخصیص جریان نقدی شرکا، ابتدا موتور دوره‌ای معتبر را فعال کنید.','Activate a valid periodic finance schedule before allocating partner cash flows.')]).map((warning,index)=><li key={index}>{tr(warning)}</li>)}</ul>}
+    </div>}
 
   </div>
 }
