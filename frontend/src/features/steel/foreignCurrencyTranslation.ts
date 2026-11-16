@@ -1,4 +1,5 @@
-import type { ProjectCalendarPeriod, ProjectCurrency } from '../projects/projectFoundation'
+import type { ProjectCalendarPeriod, ProjectCurrency, ProjectFoundation } from '../projects/projectFoundation'
+import type { LoanFacilityFormDraft } from '../projects/projectModelFormDrafts'
 import type { PeriodicLoanRow, PeriodicFinancialStatement } from './periodicFinancialEngine'
 
 export type PeriodicForeignCurrencyDebtInput = {
@@ -391,4 +392,37 @@ export function postForeignExchangeIntoThreeStatements(
   }
   if (issues.length) return { valid: false, statements: [], closingTaxLossCarryForward: Number.NaN, issues }
   return { valid: true, statements: posted, closingTaxLossCarryForward: taxLossCarryForward, issues: [] }
+}
+
+
+export type LoanFacilityCurrencyResolution = {
+  valid: boolean
+  currency: ProjectCurrency | null
+  issues: string[]
+}
+
+/** Resolve a financing form's currency code against the project's currency directory. */
+export function resolveLoanFacilityCurrency(
+  loan: Pick<LoanFacilityFormDraft, 'currencyCode' | 'marketOrigin'>,
+  foundation: ProjectFoundation,
+): LoanFacilityCurrencyResolution {
+  if (loan.marketOrigin === 'local') {
+    if (loan.currencyCode && loan.currencyCode.trim().toUpperCase() !== foundation.currencies.localCurrencyCode.trim().toUpperCase())
+      return { valid: false, currency: null, issues: ['A local loan must use the project's local currency.'] }
+    return { valid: true, currency: null, issues: [] }
+  }
+  if (loan.marketOrigin !== 'foreign')
+    return { valid: false, currency: null, issues: ['Select whether the loan is local or foreign.'] }
+  if (!loan.currencyCode?.trim())
+    return { valid: false, currency: null, issues: ['Select a currency code for the foreign loan.'] }
+  const matches = foundation.currencies.foreignCurrencies.filter(
+    currency => currency.code.trim().toUpperCase() === loan.currencyCode!.trim().toUpperCase(),
+  )
+  if (matches.length !== 1)
+    return {
+      valid: false,
+      currency: null,
+      issues: [matches.length ? 'The selected foreign currency code is ambiguous.' : 'The selected foreign currency is not defined in the project foundation.'],
+    }
+  return { valid: true, currency: matches[0], issues: [] }
 }
