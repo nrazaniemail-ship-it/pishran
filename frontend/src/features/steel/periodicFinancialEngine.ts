@@ -568,32 +568,32 @@ export function hasCompleteFiscalYearCoverage(
   rows: PeriodicProjectFinanceRow[],
   fiscalYearStartMonth: number,
   fiscalYearCount: number,
+  periodsPerYear: 1 | 2 | 4 | 12,
 ): boolean {
   if (!rows.length || !Number.isInteger(fiscalYearCount) || fiscalYearCount < 1 ||
-      !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12) return false
+      !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12 ||
+      ![1,2,4,12].includes(periodsPerYear) || rows.length!==fiscalYearCount*periodsPerYear) return false
   const periods: ProjectCalendarPeriod[] = rows.map(row=>({
     index:row.period,startDate:row.startDate,endDate:row.endDate,days:row.days,partial:false
   }))
   const starts=periods.map(period=>parseIsoDateUtc(period.startDate))
   const ends=periods.map(period=>parseIsoDateUtc(period.endDate))
   if(starts.some(date=>!date)||ends.some(date=>!date))return false
+  const minDays=periodsPerYear===12?27:periodsPerYear===4?89:periodsPerYear===2?180:350
+  const maxDays=periodsPerYear===12?32:periodsPerYear===4?93:periodsPerYear===2?184:367
   for(let index=0;index<periods.length;index++){
     const start=starts[index] as Date,end=ends[index] as Date
-    if(!Number.isInteger(periods[index].days)||periods[index].days<=0||end<start||
-      Math.round((end.getTime()-start.getTime())/86400000)+1!==periods[index].days)return false
+    if(!Number.isInteger(periods[index].days)||periods[index].days<minDays||periods[index].days>maxDays||
+      end<start||Math.round((end.getTime()-start.getTime())/86400000)+1!==periods[index].days)return false
     if(index>0&&start.getTime()!==(ends[index-1] as Date).getTime()+86400000)return false
-    if(fiscalYearStartFor(start,fiscalYearStartMonth).getTime()!==fiscalYearStartFor(end,fiscalYearStartMonth).getTime())return false
   }
-  const firstFiscalStart=fiscalYearStartFor(starts[0] as Date,fiscalYearStartMonth)
-  const finalFiscalStart=new Date(Date.UTC(firstFiscalStart.getUTCFullYear()+fiscalYearCount,fiscalYearStartMonth-1,1))
-  if((starts[0] as Date).getTime()!==firstFiscalStart.getTime()||
-    (ends[ends.length-1] as Date).getTime()!==finalFiscalStart.getTime()-86400000)return false
   const grouped=Array.from({length:fiscalYearCount},()=>0)
   periods.forEach(period=>{
     const index=fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)
-    if(index>=0&&index<fiscalYearCount)grouped[index]++
+    if(index<0||index>=fiscalYearCount)return
+    grouped[index]++
   })
-  return grouped.every(count=>count>0)
+  return grouped.every(count=>count===periodsPerYear)
 }
 
 /** Aggregate monthly/quarterly/semiannual rows onto the project's fiscal-year basis. */
