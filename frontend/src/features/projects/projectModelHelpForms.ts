@@ -384,6 +384,58 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
 
  return errors
 }
+
+export type HelpDrivenCalendarPeriod={index:number;startDate:string;endDate:string}
+export function validateHelpDrivenProjectPeriods(value:HelpDrivenProjectForms,periods:readonly HelpDrivenCalendarPeriod[]):string[]{
+ const errors:string[]=[]
+ if(!periods.length)return errors
+ const validPeriods=periods.map((period,index)=>({period,index,start:Date.parse(period.startDate+'T00:00:00Z'),end:Date.parse(period.endDate+'T00:00:00Z')}))
+ for(let i=0;i<validPeriods.length;i++){
+  const current=validPeriods[i]
+  if(!Number.isFinite(current.start)||!Number.isFinite(current.end)||current.start>current.end)
+   errors.push('project-calendar:invalid-period:'+String(current.period.index))
+  if(i>0&&current.start<=validPeriods[i-1].end)
+   errors.push('project-calendar:overlapping-or-unsorted-periods:'+String(current.period.index))
+ }
+ const resolvePeriod=(key:string):number=>{
+  const matches=validPeriods.filter(({period,index})=>key===String(period.index)||key===period.startDate||key===period.endDate)
+  return matches.length===1?matches[0].index:-1
+ }
+ const datedFields:Record<string,string[]>={
+  products:['actualStart','actualEnd','productionIntervalStart','productionIntervalEnd'],
+  currencies:['effectiveDate'],inflation:['effectiveDate'],
+  'fixed-investment':['acquisitionDate','startDate','saleDate'],
+  'loan-conditions':['firstRepaymentDate','disbursementUntil'],
+  'loan-disbursements':['date'],
+  'loan-interest':['effectiveDate','capitalizeUntil','capitalizedInterestStart'],
+  'loan-fees':['depreciationStart'],
+ }
+ for(const [sectionId,rows] of Object.entries(value.sections??{})){
+  const periodFields=['period','adjustmentPeriod','recoveryPeriod']
+  for(const [rowIndex,row] of rows.entries()){
+   for(const key of periodFields){
+    const raw=row.values[key]
+    if(typeof raw==='string'&&raw.trim()&&raw!=='project-end'&&resolvePeriod(raw.trim())<0)
+     errors.push(sectionId+':'+rowIndex+':period-outside-project-calendar:'+key+':'+raw)
+   }
+   for(const key of datedFields[sectionId]??[]){
+    const raw=row.values[key]
+    if(typeof raw==='string'&&raw.trim()){
+     const containing=validPeriods.filter(({start,end})=>Date.parse(raw+'T00:00:00Z')>=start&&Date.parse(raw+'T00:00:00Z')<=end)
+     if(containing.length!==1)errors.push(sectionId+':'+rowIndex+':date-outside-project-calendar:'+key+':'+raw)
+    }
+   }
+   const pairs=sectionId==='products'?[['actualStart','actualEnd'],['productionIntervalStart','productionIntervalEnd']]:sectionId==='fixed-investment'?[['acquisitionDate','saleDate']]:[]
+   for(const [startKey,endKey] of pairs){
+    const start=row.values[startKey],end=row.values[endKey]
+    if(typeof start==='string'&&start&&typeof end==='string'&&end&&start>end)
+     errors.push(sectionId+':'+rowIndex+':date-range-reversed:'+startKey+':'+endKey)
+   }
+  }
+ }
+ return errors
+}
+
 export function updateHelpFormRow(value:HelpDrivenProjectForms,sectionId:string,rowId:string,fieldKey:string,next:HelpFieldValue):HelpDrivenProjectForms{
  const rows=(value.sections[sectionId]??[]).map(row=>{
   if(row.id!==rowId)return row
