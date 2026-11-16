@@ -174,6 +174,19 @@ export default function ProjectReportVisuals(props: Props) {
   )
   const comfarAnnualRows = annualComparisonRows.length===17&&annualComparisonRows.every(row=>row.rows.length>0)
     ? annualComparisonRows.map(row=>({...row,year:1403+row.fiscalYearIndex})) : []
+  const quarterlyDebtRows = (props.periodicResult?.rows??[]).map((row,index)=>({
+    row,index,
+    closingDebt:Object.values(props.periodicResult?.loanSchedules??{}).reduce((sum,schedule)=>sum+(schedule[index]?.closingBalance??0),0)
+  })).filter(item=>item.row.principal>0)
+  const quarterlyDebtReference=HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.quarterlySchedule
+  const quarterlyDebtScheduleMatches=props.periodFrequency==='quarterly'&&quarterlyDebtRows.length===20&&
+    quarterlyDebtRows.every((item,index)=>{
+      const reference=quarterlyDebtReference[index]
+      return Math.abs(item.row.interestExpense-reference.interestExpense)<0.1&&
+        Math.abs(item.row.principal-reference.principal)<0.1&&
+        Math.abs(item.row.debtService-reference.debtService)<0.1&&
+        Math.abs(item.closingDebt-reference.closingBalance)<0.1
+    })
   const currentOperatingTaxRates = comfarAnnualRows.slice(2).map(row=>row.taxRatePercent).filter((rate):rate is number=>rate!==null)
   const comfarTaxScheduleMatches = currentOperatingTaxRates.length === expectedComfarTaxRates.length &&
     expectedComfarTaxRates.every((rate,index)=>Math.abs((currentOperatingTaxRates[index]??NaN)-rate)<0.001)
@@ -268,6 +281,24 @@ export default function ProjectReportVisuals(props: Props) {
             const pishranTotal=row.equityContribution+row.netDebtFinancingFlow
             return <tr key={reference.year}><td>{reference.year}</td><td>{fmtValue(reference.equity)}</td><td>{fmtValue(row.equityContribution)}</td><td>{fmtValue(row.equityContribution-reference.equity)}</td><td>{fmtValue(reference.longTermLoanNet)}</td><td>{fmtValue(row.netDebtFinancingFlow)}</td><td>{fmtValue(row.netDebtFinancingFlow-reference.longTermLoanNet)}</td><td>{fmtValue(reference.shortTermFinancing)}</td><td>{fmtValue(reference.totalDomesticFinancing)}</td><td>{fmtValue(pishranTotal)}</td><td>{fmtValue(pishranTotal-reference.totalDomesticFinancing)}</td></tr>
           })}</tbody></table></div>
+        </div>}
+        {isHotRollingCoil&&<div className="fw-card">
+          <h4>{t("تطبیق بازسازی‌شدهٔ خدمت بدهی در ۲۰ قسط فصلی","Quarter-by-quarter reconstructed debt-service reconciliation",language)}</h4>
+          <p className="fw-hint">{t("مرجع فصلی از مانده افتتاحیه ۸٬۹۰۹٬۴۸۴٫۰۶، نرخ ۷٪ در هر فصل و قسط ثابت ۸۴۰٬۹۹۲٫۲۷ بازسازی شده است. این جدول با ارقام سالانه OPEX تطبیق داده شده، اما خروجی فصلی مستقل COMFAR در فایل‌های در دسترس نیست؛ بنابراین نتیجه، آزمون بازسازی است نه تأیید مستقیم فایل بومی نرم‌افزار.","The quarterly reference is reconstructed from an opening balance of 8,909,484.06, a 7% quarterly rate and a fixed 840,992.27 instalment. It reconciles to the OPEX annual financing flows, but a separate native COMFAR quarterly export is unavailable; this is a reconstruction test, not direct certification against a native quarterly export.",language)}</p>
+          {props.periodFrequency==='quarterly'&&quarterlyDebtRows.length===20?<><div className="fw-validation"><span>{t("وضعیت تطبیق ۲۰ قسط","20-instalment match status",language)}</span><b>{quarterlyDebtScheduleMatches?t("۲۰ قسط و مانده پایانی منطبق‌اند","All 20 instalments and closing balances match",language):t("اختلاف وجود دارد؛ ردیف‌ها را بررسی کنید","Variance detected; review each period",language)}</b></div>
+            <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
+              <th>{t("قسط","Instalment",language)}</th><th>{t("دوره پیشران","Pishran period",language)}
+              </th><th>{t("بهره مرجع","Reference interest",language)}</th><th>{t("بهره پیشران","Pishran interest",language)}</th><th>{t("اختلاف","Variance",language)}
+              </th><th>{t("اصل مرجع","Reference principal",language)}</th><th>{t("اصل پیشران","Pishran principal",language)}</th><th>{t("اختلاف","Variance",language)}
+              </th><th>{t("قسط مرجع","Reference instalment",language)}</th><th>{t("خدمت بدهی پیشران","Pishran debt service",language)}</th><th>{t("اختلاف","Variance",language)}
+              </th><th>{t("مانده مرجع","Reference closing debt",language)}</th><th>{t("مانده پیشران","Pishran closing debt",language)}</th><th>{t("اختلاف","Variance",language)}</th>
+            </tr></thead><tbody>{quarterlyDebtRows.map((item,index)=>{const reference=quarterlyDebtReference[index];return <tr key={item.row.period}>
+              <td>{reference.quarter}</td><td>{item.row.startDate} – {item.row.endDate}</td>
+              <td>{fmtValue(reference.interestExpense)}</td><td>{fmtValue(item.row.interestExpense)}</td><td>{fmtValue(item.row.interestExpense-reference.interestExpense)}</td>
+              <td>{fmtValue(reference.principal)}</td><td>{fmtValue(item.row.principal)}</td><td>{fmtValue(item.row.principal-reference.principal)}</td>
+              <td>{fmtValue(reference.debtService)}</td><td>{fmtValue(item.row.debtService)}</td><td>{fmtValue(item.row.debtService-reference.debtService)}</td>
+              <td>{fmtValue(reference.closingBalance)}</td><td>{fmtValue(item.closingDebt)}</td><td>{fmtValue(item.closingDebt-reference.closingBalance)}</td>
+            </tr>})}</tbody></table></div></>:<p className="fw-hint">{t("برای تطبیق فصلی، تناوب پروژه را روی سه‌ماهه قرار دهید و زمان‌بندی وام را طوری تعریف کنید که ۲۰ دوره بازپرداخت فصلی ثبت شود. در تناوب سالانه یا ماهانه این مقایسه به‌صورت مستقیم فعال نمی‌شود.","For a direct quarterly comparison, set the project frequency to quarterly and configure the loan so that 20 quarterly repayment periods are present. This comparison is not activated directly for annual or monthly frequency.",language)}</p>}
         </div>}
         {comfarAnnualRows.length===17&&<div className="fw-card">
           <h4>{t("کنترل تفصیلی خدمت بدهی در سال اول بهره‌برداری (۱۴۰۵)","First Operating-Year Debt-Service Check (1405)",language)}</h4>
