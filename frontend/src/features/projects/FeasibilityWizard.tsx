@@ -124,17 +124,24 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const saveNow=async()=>{await localStore.set(key,m);setSaved(new Date().toLocaleTimeString(en?'en-US':'fa-IR',{hour:'2-digit',minute:'2-digit'}))}
  const stage={id:'other',name:'فرآیند عمومی',route:'فرآیند مطابق تعریف تحلیلگر'}
  const cap=m.capacity.nameplate*Math.min(100,Math.max(0,m.capacity.availability))/100*Math.min(100,Math.max(0,m.capacity.yield))/100
- const capex=sum(m.capex),variable=m.opex.filter(r=>r.unit.includes('/تن')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)+sumMaterialInputs(m.balance)+sum(m.utilities),fixed=m.opex.filter(r=>r.unit.includes('/سال')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)
-  const preOperatingCost=m.capex.filter(r=>r.name.includes('قبل از بهره‌برداری')).reduce((a,r)=>a+r.quantity*r.unitPrice,0)
-  const fixedInvestmentForFinance=capex-preOperatingCost
+ const detailedAssetCost=m.financialForms.assets.reduce((total,asset)=>total+asset.acquisitionPeriods.reduce((sum,row)=>sum+(row.total??(row.quantity!==null&&row.unitPrice!==null?row.quantity*row.unitPrice:0)),0),0)
+ const capex=m.financialForms.assets.length?detailedAssetCost:sum(m.capex)
+ const variable=m.financialForms.productionCosts.length?0:m.opex.filter(r=>r.unit.includes('/تن')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)+sumMaterialInputs(m.balance)+sum(m.utilities)
+ const fixed=m.financialForms.productionCosts.length?0:m.opex.filter(r=>r.unit.includes('/سال')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)
  const preOperatingCost=m.capex.filter(r=>/پیش از تولید|قبل از بهره‌برداری|مخارج پیش از تولید/.test(r.name)).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)
- const fixedInvestmentForFinance=capex-preOperatingCost
+ const fixedInvestmentForFinance=m.financialForms.assets.length?0:capex-preOperatingCost
  const fixedInvestmentLifecycleInputs=m.fixedInvestmentItems.length
   ?buildComfarDepreciationAssetsFromFixedInvestmentItems(m.fixedInvestmentItems,m.project.startYear,Math.max(1,Math.ceil(m.project.constructionYears||1)+Math.ceil(m.project.operatingYears||1)),m.foundation.planning.periodFrequency,m.foundation)
   :{assets:[],sales:[],investmentSchedule:Array.from({length:Math.max(1,Math.ceil(m.project.constructionYears||1)+Math.ceil(m.project.operatingYears||1))},()=>0),investmentScheduleVerified:false,preOperatingSchedule:Array.from({length:Math.max(1,Math.ceil(m.project.constructionYears||1)+Math.ceil(m.project.operatingYears||1))},()=>0),preOperatingScheduleVerified:false,warnings:[]}
  const fixedInvestmentRegisterReconciliation=reconcileFixedInvestmentRegister(m.fixedInvestmentItems,capex,preOperatingCost)
- const confirmedFixedInvestmentSchedule=fixedInvestmentLifecycleInputs.investmentScheduleVerified&&fixedInvestmentRegisterReconciliation.status==='matched'?fixedInvestmentLifecycleInputs.investmentSchedule:undefined
- const confirmedPreOperatingSchedule=fixedInvestmentLifecycleInputs.preOperatingScheduleVerified&&fixedInvestmentRegisterReconciliation.status==='matched'?fixedInvestmentLifecycleInputs.preOperatingSchedule:undefined
+ const confirmedFixedInvestmentSchedule=m.financialForms.assets.length===0&&fixedInvestmentLifecycleInputs.investmentScheduleVerified&&fixedInvestmentRegisterReconciliation.status==='matched'?fixedInvestmentLifecycleInputs.investmentSchedule:undefined
+ const confirmedPreOperatingSchedule=m.financialForms.assets.length===0&&fixedInvestmentLifecycleInputs.preOperatingScheduleVerified&&fixedInvestmentRegisterReconciliation.status==='matched'?fixedInvestmentLifecycleInputs.preOperatingSchedule:undefined
+ const assetsReady=m.financialForms.assets.length>0||m.fixedInvestmentItems.length>0&&fixedInvestmentLifecycleInputs.investmentScheduleVerified&&fixedInvestmentRegisterReconciliation.status==='matched'
+ const salesReady=m.financialForms.sales.length>0&&m.financialForms.sales.every(product=>product.periods.length>0)
+ const productionCostsReady=m.financialForms.productionCosts.length>0
+ const taxSetupReady=m.financialForms.tax.system!==null&&m.financialForms.tax.lossCarryForward!==null
+ const loanSetupReady=m.finance.debt===0||m.financialForms.loans.length>0
+ const financeFormIssues=validateProjectModelFinancialFormDrafts(m.financialForms)
  const wacc=(m.finance.equity/100)*(m.finance.equityCost/100)+(m.finance.debt/100)*(m.finance.debtCost/100)*(1-m.finance.tax/100)
  const rate=m.finance.method==='wacc'?wacc:m.finance.method==='manual'?m.finance.manualRate/100:0
  const marketSize=m.market.domesticProduction+m.market.imports-m.market.exports
@@ -183,17 +190,19 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const validRows=(rows:Row[])=>rows.every(row=>String(row.name??'').trim()&&String(row.unit??'').trim()&&[row.quantity,row.unitPrice].every(value=>Number.isFinite(value)&&value>=0))
  const hasPricedRows=(rows:Row[])=>rows.some(row=>Number.isFinite(row.quantity)&&row.quantity>0&&Number.isFinite(row.unitPrice)&&row.unitPrice>0)
  const technicalParametersComplete=m.technical.length>0&&m.technical.every(row=>String(row.name??'').trim()&&(row.valueText??(row.quantity!==0?String(row.quantity):'')).trim()!==''&&String(row.unit??'').trim()!==''&&String(row.source??'').trim()!=='')
- const financeRatesValid=(m.finance.equity===0||m.finance.equityCost>0)&&(m.finance.debt===0||m.finance.debtCost>0)&&m.finance.tax>=0&&m.finance.tax<=100&&m.finance.depreciationYears>0&&(m.finance.method==='manual'?m.finance.manualRate>0:m.finance.method==='wacc'?wacc>0:false)
- const rawCalculationInputsReady=!!String(m.project.name??'').trim()&&!!String(m.project.location??'').trim()&&!!m.project.currency&&Number.isFinite(m.project.startYear)&&m.project.startYear>0&&Number.isFinite(m.project.constructionYears)&&m.project.constructionYears>0&&Number.isFinite(m.project.operatingYears)&&m.project.operatingYears>0&&Number.isFinite(m.project.fxRate)&&m.project.fxRate>0&&projectCalendarPeriods.length>0&&m.products.length>0&&validRows(m.products)&&m.products.some(row=>row.quantity>0&&row.unitPrice>0)&&m.capacity.nameplate>0&&m.capacity.operatingDays>0&&m.capacity.hoursPerDay>0&&m.capacity.availability>0&&m.capacity.availability<=100&&m.capacity.yield>0&&m.capacity.yield<=100&&m.capex.length>0&&validRows(m.capex)&&m.opex.length>0&&validRows(m.opex)&&financeRatesValid&&Number.isFinite(m.finance.workingCapital)&&m.finance.workingCapital>=0
+ const taxRateReady=m.financialForms.tax.system==='none'||Number.isFinite(m.finance.tax)&&m.finance.tax>=0&&m.finance.tax<=100
+ const financeRatesValid=Number.isFinite(m.finance.equity)&&m.finance.equity>=0&&m.finance.equity<=100&&Number.isFinite(m.finance.debt)&&m.finance.debt>=0&&m.finance.debt<=100&&Math.abs(m.finance.equity+m.finance.debt-100)<=0.01&&(m.finance.equity===0||Number.isFinite(m.finance.equityCost)&&m.finance.equityCost>0)&&(m.finance.debt===0||Number.isFinite(m.finance.debtCost)&&m.finance.debtCost>0)&&taxRateReady&&(m.finance.method==='manual'?Number.isFinite(m.finance.manualRate)&&m.finance.manualRate>0:m.finance.method==='wacc'?Number.isFinite(wacc)&&wacc>0:false)
+ const projectClassificationReady=m.analysisMode==='new'||(['expansion','rehabilitation','combined'].includes(m.analysisMode)&&m.financialForms.openingBalanceSheet?.enabled===true)
+ const rawCalculationInputsReady=!!String(m.project.name??'').trim()&&!!String(m.project.location??'').trim()&&!!m.project.currency&&Number.isFinite(m.project.startYear)&&m.project.startYear>0&&Number.isFinite(m.project.constructionYears)&&m.project.constructionYears>0&&Number.isFinite(m.project.operatingYears)&&m.project.operatingYears>0&&Number.isFinite(m.project.fxRate)&&m.project.fxRate>0&&projectCalendarPeriods.length>0&&projectClassificationReady&&m.products.length>0&&validRows(m.products)&&m.products.some(row=>row.quantity>0&&row.unitPrice>0)&&m.capacity.nameplate>0&&m.capacity.operatingDays>0&&m.capacity.hoursPerDay>0&&m.capacity.availability>0&&m.capacity.availability<=100&&m.capacity.yield>0&&m.capacity.yield<=100&&assetsReady&&salesReady&&productionCostsReady&&taxSetupReady&&loanSetupReady&&financeFormIssues.length===0&&financeRatesValid&&Number.isFinite(m.finance.workingCapital)&&m.finance.workingCapital>=0
  const periodicModelValid=rawCalculationInputsReady&&reportPeriodicFinance?.valid===true&&reportPeriodicFinance.rows.length===projectCalendarPeriods.length&&projectCalendarPeriods.length>0
  const done:Record<Step,boolean>={
   profile:!!String(m.project.name??'').trim()&&!!String(m.project.location??'').trim()&&(m.market.domesticPrice>0||m.market.exportPrice>0||productPricingComplete)&&partnerSetupValid,
   stage:!!m.stage&&m.products.length>0&&validRows(m.products)&&m.products.some(r=>String(r.name??'').trim()&&r.quantity>0)&&m.capacity.nameplate>0,
   process:(!!String(m.process.technology??'').trim()||!!String(m.process.route??'').trim())&&(m.technical.length===0||technicalParametersComplete)&&validRows(m.technical)&&validRows(m.balance),
-  balance:m.utilities.length===0||(validRows(m.utilities)&&hasPricedRows(m.utilities)),
-  capex:m.capex.length>0&&validRows(m.capex),
-  opex:m.opex.length>0&&validRows(m.opex),
-  finance:m.finance.equity>=0&&m.finance.debt>=0&&m.finance.equity+m.finance.debt===100&&financeRatesValid,
+  balance:m.utilities.length>0&&validRows(m.utilities)&&hasPricedRows(m.utilities),
+  capex:assetsReady,
+  opex:productionCostsReady&&financeFormIssues.length===0,
+  finance:financeRatesValid&&taxSetupReady&&loanSetupReady&&financeFormIssues.length===0,
   cashflow:periodicModelValid&&(!m.scope.jointVenture||reportPartnerFinance?.valid===true),
   results:periodicModelValid&&model.flows.length>0&&model.flows.every(Number.isFinite)&&(!m.scope.jointVenture||reportPartnerFinance?.valid===true),
   reports:periodicModelValid&&!!String(m.project.name??'').trim()&&(!m.scope.jointVenture||reportPartnerFinance?.valid===true)
