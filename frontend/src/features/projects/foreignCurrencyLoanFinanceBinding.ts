@@ -180,18 +180,22 @@ export function buildPeriodicLoanFacilityBinding(input:{
     openingForeignBalance,openingExchangeRateToLocal:openingRate,
   })
   if(!fxTranslation.valid)return {valid:false,issues:fxTranslation.issues,loan:null,localSchedule:null,fxTranslation,openingCarryingAmountLocal:openingForeignBalance*openingRate}
+  let baseCarryingAmount=openingForeignBalance*openingRate
   const localSchedule=foreignSchedule.rows.map((row,index)=>{
     const translated=fxTranslation.rows[index]
     const rate=periodRates[index] as number
     const interestExpense=row.interestExpense*rate
     const financingFeeExpense=row.financingFeeExpense*rate
     const commitmentFeeExpense=row.commitmentFeeExpense*rate
-    const openingBalance=translated.openingCarryingAmountLocal
+    // Keep the base statement schedule at transaction-date carrying values;
+    // period-end remeasurement is posted separately by the FX statement adapter.
+    const openingBalance=baseCarryingAmount
     const drawdown=translated.drawdownLocal
     const capitalizedInterest=translated.capitalizedInterestLocal
     const capitalizedFinancingFees=translated.capitalizedFeesLocal
     const principal=translated.principalRepaymentLocal
     const closingBalance=openingBalance+drawdown+capitalizedInterest+capitalizedFinancingFees-principal
+    baseCarryingAmount=closingBalance
     return {
       period:index+1,drawdown,openingBalance,periodRatePercent:row.periodRatePercent,
       interestExpense,capitalizedInterest,financingFeeExpense,commitmentFeeExpense,
