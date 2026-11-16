@@ -63,3 +63,21 @@ The optional modules are activated explicitly. Their absence must not be interpr
 ## Source
 
 UNIDO, *COMFAR III Expert Reference Manual*, especially chapter VI (Data Structures) and chapter VII (Financial Data Input): project identification, planning horizon, products, currencies, cost-centre structure, inflation, joint ventures, discounting, fixed investment, production costs, sales programme, working capital, sources of finance, and taxes/allowances. The manual describes a tree-based input browser, project-class and analysis-level structures, optional modules, common item metadata and period-based data entry.
+
+## Implemented input and formula layer
+
+The wizard now stores a separate `financialForms` draft alongside the legacy feasibility model. The draft is initialized empty for every new project and is backfilled as empty when older saved projects are loaded, so the schema migration does not overwrite prior user-entered project data.
+
+The editable form panel currently covers:
+- Asset register, dated acquisitions, asset-level depreciation method/life/rate/salvage percentage, and disposal events.
+- Direct and indirect cost items, product association, nominal-capacity or per-unit basis, fixed/variable split, standard inputs and period adjustments.
+- Product sales by period, net price, sales tax, subsidy and finished-goods closing quantity.
+- Working-capital components, days coverage, turnover coefficient, valuation basis and dated balances.
+- Loan facilities, repayment type/interval, dated drawdowns, custom profile movements, dated rate resets, capitalization share and fee items.
+- Tax system, period tax rates, allowances and loss carry-forward settings.
+
+The common quantity / unit-price / total rule is applied interactively to asset acquisitions, standard cost inputs and period cost adjustments. Only the missing value is derived when exactly two values are present.
+
+`frontend/src/features/projects/projectModelFormulaRules.ts` contains independent, pure calculation primitives for nominal-capacity costs, per-unit costs, 360-day working-capital turnover and movements, asset depreciation methods, annuity repayments and debt roll-forward. The regression suite checks these formulas, including zero-interest loans and the distinction between straight-line-to-zero and straight-line-to-salvage.
+
+**Calculation boundary:** these new forms are persisted and validated, but they are not yet the authoritative inputs to the existing project cash-flow engine or the three financial statements. The formula primitives are separately tested. The next integration phase must map validated form data to the calculation graph and reconcile every period with a genuine COMFAR output file. Until that work is completed, these new form entries must not be presented as recalculated project metrics.
