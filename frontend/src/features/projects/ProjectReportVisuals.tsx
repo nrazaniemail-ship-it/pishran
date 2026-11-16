@@ -28,6 +28,7 @@ type Props = {
   periodicResult: PeriodicProjectFinanceResult | null
   valuationDate: string
   discountConvention: 'actual-days' | 'period-count'
+  periodFrequency: string
 }
 
 const referenceRows: [string,string,string,string][] = [
@@ -165,13 +166,14 @@ export default function ProjectReportVisuals(props: Props) {
   const fmtValue=(value:number|null|undefined,digits=2)=>fmt(value,language,digits)
   const comfarReference = HOT_ROLLING_200KT_AUDIT.alternativeMetricsInWorkbook
   const expectedComfarTaxRates = HOT_ROLLING_COMFAR_OUTPUT_AUDIT.taxScheduleByOperatingYear.map(row=>row.ratePercent)
-  const currentOperatingTaxRates = props.periodicResult?.rows.slice(2).map(row=>row.taxRatePercent) ?? []
+  const comfarAnnualRows = props.periodFrequency==='annual' && props.periodicResult?.rows.length===17 ? props.periodicResult.rows : []
+  const currentOperatingTaxRates = comfarAnnualRows.slice(2).map(row=>row.taxRatePercent)
   const comfarTaxScheduleMatches = currentOperatingTaxRates.length === expectedComfarTaxRates.length &&
     expectedComfarTaxRates.every((rate,index)=>Math.abs((currentOperatingTaxRates[index]??NaN)-rate)<0.001)
   const currentTaxScheduleLabel = [...new Set(currentOperatingTaxRates.map(rate=>Number(rate.toFixed(2))))]
     .map(rate=>fmtValue(rate,2)+'%').join(' → ') || '—'
   const comfarBasisMatches = isHotRollingCoil && props.periodicResult?.valid === true &&
-    props.periodicResult.rows.length === 17 &&
+    props.periodicResult.rows.length === 17 && props.periodFrequency==='annual' &&
     Math.abs(props.capacity - HOT_ROLLING_200KT_AUDIT.capacityTpy) < 1 &&
     Math.abs(props.taxPercent - 25) < 0.001 && comfarTaxScheduleMatches &&
     Math.abs(props.discountRatePercent - HOT_ROLLING_COMFAR_OUTPUT_AUDIT.discountRatePercent) < 0.001 &&
@@ -216,6 +218,22 @@ export default function ProjectReportVisuals(props: Props) {
          <tr><td>MIRR</td><td>{fmtValue(comfarReference.generalSummaryMirrPercent)}%</td><td>{props.periodicResult?.mirrProject==null?"—":fmtValue(props.periodicResult.mirrProject)+"%"}</td><td>{t("غیرقابل مقایسه مستقیم بدون نرخ‌های تأمین مالی و سرمایه‌گذاری مجدد مرجع","Not directly comparable without the reference finance and reinvestment rates",language)}</td></tr>
        </tbody></table></div>
        <p className="fw-hint">{t("مرجع NPV و IRR از جریان نقدی کل سرمایه‌گذاری‌شده در صفحات ۶۷ تا ۷۱ استخراج شده است. برنامه مالیاتی COMFAR در صفحات ۵۹ تا ۶۲ پنج سال نخست بهره‌برداری را با نرخ ۵٪ و سال‌های بعد را با نرخ ۲۵٪ نشان می‌دهد؛ سناریوی یکنواخت ۲۵٪ پیشران جداگانه است. MIRR مرجع ۲۸٫۰۳٪ است، اما تا زمان تطبیق نرخ‌های finance و reinvestment اختلاف آن تأیید نمی‌شود.","Reference NPV and IRR are transcribed from the total-investment cash-flow schedule on pages 67–71. COMFAR's tax schedule on pages 59–62 applies 5% for the first five operating years and 25% thereafter; Pishran's uniform 25% scenario is separate. Reference MIRR is 28.03%, but its variance is not verified until finance and reinvestment rates are matched.",language)}</p>
+       {isHotRollingCoil&&<div className="fw-card">
+        <h4>{t("تطبیق دوره‌به‌دوره جریان نقدی و محرک‌ها","Period-by-period cash-flow and driver reconciliation",language)}</h4>
+        {comfarAnnualRows.length===17?<div style={{overflowX:"auto"}}><table className="fw-table"><thead><tr>
+          <th>{t("سال مالی","Fiscal year",language)}</th><th>{t("جریان نقدی مرجع","COMFAR cash flow",language)}</th><th>{t("جریان نقدی پیشران","Pishran cash flow",language)}</th><th>{t("اختلاف","Variance",language)}</th>
+          <th>{t("مالیات مرجع","Reference tax",language)}</th><th>{t("مالیات پیشران","Pishran tax",language)}</th>
+          <th>{t("استهلاک مرجع","Reference depreciation",language)}</th><th>{t("استهلاک پیشران","Pishran depreciation",language)}</th>
+          <th>{t("تغییر سرمایه در گردش مرجع","Reference change in working capital",language)}</th><th>{t("تغییر سرمایه در گردش پیشران","Pishran change in working capital",language)}</th>
+        </tr></thead><tbody>{comfarAnnualRows.map((row,index)=>{
+          const year=1403+index
+          const referenceCashFlow=HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectCashFlowsForIrr[index]
+          const referenceTax=index<2?null:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.taxScheduleByOperatingYear[index-2]?.ratePercent
+          const referenceDepreciation=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.depreciationByOperatingYear[index-2]?.[1]??0
+          const referenceWorkingCapital=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.changeInWorkingCapitalByOperatingYear[index-2]?.[1]??0
+          return <tr key={row.period}><td>{index===16?'1419 + ارزش اسقاط 1420':year}</td><td>{fmtValue(referenceCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow-referenceCashFlow)}</td><td>{referenceTax==null?'—':fmtValue(referenceTax,2)+'%'}</td><td>{fmtValue(row.taxRatePercent,2)+'%'}</td><td>{fmtValue(referenceDepreciation)}</td><td>{fmtValue(row.depreciation)}</td><td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td></tr>
+        })}</tbody></table></div>:<p className="fw-hint">{t("تطبیق ردیف‌به‌ردیف با خروجی سالانه COMFAR فقط در تناوب سالانه و با ۱۷ دوره (دو سال ساخت و ۱۵ سال بهره‌برداری) انجام می‌شود. در تناوب ماهانه، فصلی یا نیم‌سالانه ابتدا باید جریان‌ها به سال مالی مرجع تجمیع شوند.","Row-by-row COMFAR comparison is available only for an annual schedule with 17 periods (two construction years and 15 operating years). Monthly, quarterly and semiannual outputs must first be aggregated to the reference fiscal years.",language)}</p>}
+       </div>}
      </div>}
      {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ محور نمایش تا ۸۳ هزار تن است، اما درصد ظرفیت بر مبنای ظرفیت واقعی ۲۰۰ هزار تن محاسبه می‌شود.','Reconstructed from the OPEX “Break-even Analysis” sheet. The visible axis ends at 83,000 tonnes, while the capacity percentage uses the actual 200,000-tonne project capacity.',language)}</p><BreakEvenChart capacity={200000} chartMaxQuantity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language}/></>}
       <h4>{t('نقطه سربه‌سر بر اساس مفروضات جاری پروژه','Break-even Based on Current Project Assumptions',language)}</h4>
