@@ -118,6 +118,23 @@ const gapInPeriodicSchedule=partnerFinance.allocateJointVentureCashFlows({
 ],100)
 assert.equal(gapInPeriodicSchedule.valid,false,'Gaps in the periodic cash-flow schedule must block partner allocation')
 
+const malformedPartnerRecord=partnerFinance.allocateJointVentureCashFlows({
+  valid:true,totalEquityContribution:100,
+  rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100,equityContribution:100,equityWorkingCapitalContribution:0}],
+},[
+  null,
+],100)
+assert.equal(malformedPartnerRecord.valid,false,'Malformed persisted partner records must return validation errors instead of throwing')
+
+const malformedPartnerName=partnerFinance.allocateJointVentureCashFlows({
+  valid:true,totalEquityContribution:100,
+  rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100,equityContribution:100,equityWorkingCapitalContribution:0}],
+},[
+  {id:'p1',name:null,sharePercent:100,capitalContribution:100,profitSharePercent:100},
+],100)
+assert.equal(malformedPartnerName.valid,false,'Non-string persisted partner names must be rejected safely')
+
+
 
 
 const malformedPartnerFinance=partnerFinance.allocateJointVentureCashFlows({
