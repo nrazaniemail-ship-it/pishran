@@ -757,6 +757,11 @@ assert.ok(feasibilityWizardSource.includes('TechnicalParameterEditor')
   && feasibilityWizardSource.includes('technicalParametersComplete')
   && feasibilityWizardSource.includes('مقدار / مشخصه'),
   'Raw and specialist technical forms must support descriptive and numeric parameter values and enforce parameter completion')
+assert.ok(feasibilityWizardSource.includes('flowType')
+  && feasibilityWizardSource.includes('sumMaterialInputs')
+  && feasibilityWizardSource.includes('showFlowType')
+  && feasibilityWizardSource.includes('Output / Product'),
+  'Material balance must distinguish input consumption from product, by-product and waste outputs before operating-cost aggregation')
 assert.ok(projectsViewSource.includes("{steelStage && <label>")
   && projectsViewSource.includes("t('نام پروژه','Project Name')")
   && projectsViewSource.includes('placeholder={t(\'نام دلخواه پروژه را وارد کنید\''),
