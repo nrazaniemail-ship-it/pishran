@@ -223,6 +223,9 @@ export type PeriodicLoanInput = {
   capitalizeInterest: boolean
   rateConversion?: 'effective-annual-by-actual-days' | 'effective-annual-divided-by-frequency'
   periodsPerYear?: 1 | 2 | 4 | 12
+  /** Exact cash draw dates; when supplied, amounts must reconcile to drawdowns by period. */
+  datedDrawdowns?: { date: string; amount: number }[]
+  interestConvention?: 'comfar-months-plus-360' | 'actual-360' | 'actual-365'
 }
 
 export type PeriodicLoanRow = {
@@ -241,6 +244,24 @@ export type PeriodicLoanScheduleResult = {
   rows: PeriodicLoanRow[]
   valid: boolean
   issues: string[]
+}
+
+function loanYearFraction(startDate: string, endDate: string, convention: 'comfar-months-plus-360' | 'actual-360' | 'actual-365'): number {
+  const start = parseIsoDateUtc(startDate)
+  const end = parseIsoDateUtc(endDate)
+  if (!start || !end || end <= start) return 0
+  const days = (end.getTime() - start.getTime()) / 86400000
+  if (convention === 'actual-360') return days / 360
+  if (convention === 'actual-365') return days / 365
+  let months = 0
+  while (months < 1200) {
+    const next = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months + 1, start.getUTCDate()))
+    if (next > end) break
+    months++
+  }
+  const wholeMonthDate = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, start.getUTCDate()))
+  const extraDays = (end.getTime() - wholeMonthDate.getTime()) / 86400000
+  return months / 12 + extraDays / 360
 }
 
 /** Build a period-by-period loan schedule from actual period lengths and staged drawdowns. */
@@ -275,6 +296,20 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Frequency-based rate conversion requires 1, 2, 4 or 12 periods per year.')
   if (input.drawdowns.some(value => !validFinite(value) || value < 0))
     issues.push('Every period drawdown must be finite and non-negative.')
+  const interestConvention = input.interestConvention ?? 'comfar-months-plus-360'
+  if (!['comfar-months-plus-360','actual-360','actual-365'].includes(interestConvention))
+    issues.push('Unsupported loan interest day-count convention.')
+  if (input.datedDrawdowns) {
+    if (input.datedDrawdowns.some(item => !item || !parseIsoDateUtc(item.date) || !validFinite(item.amount) || item.amount <= 0))
+      issues.push('Exact loan drawdowns require valid dates and positive finite amounts.')
+    const exactTotals = periods.map((period, index) => input.datedDrawdowns!
+      .filter(item => item.date >= period.startDate && item.date <= period.endDate)
+      .reduce((sum, item) => sum + item.amount, 0))
+    if (exactTotals.some((amount, index) => Math.abs(amount - input.drawdowns[index]) > 0.01))
+      issues.push('Exact dated drawdowns must reconcile to the period drawdown totals.')
+    if (input.datedDrawdowns.some(item => !periods.some(period => item.date >= period.startDate && item.date <= period.endDate)))
+      issues.push('Every exact loan drawdown date must fall inside the project calendar.')
+  }
   if (input.drawdowns.slice(Math.max(0, firstPrincipalIndex)).some(value => value > 0))
     issues.push('Loan drawdowns after principal repayment begins are not supported in this schedule.')
   const dates = periods.map(period => ({
@@ -293,6 +328,10 @@ export function calculatePeriodicLoanSchedule(
   if (issues.length) return { rows: [], valid: false, issues }
 
   const periodRates = periods.map(period => {
+    if (interestConvention === 'comfar-months-plus-360') {
+      return input.annualRatePercent / 100 * loanYearFraction(period.startDate, period.endDate, interestConvention)
+        / (period.days > 0 ? 1 : 1)
+    }
     if (rateConversion === 'effective-annual-divided-by-frequency') {
       const periodsPerYear = input.periodsPerYear as 1 | 2 | 4 | 12
       const fullPeriodRate = input.annualRatePercent / periodsPerYear
@@ -308,8 +347,26 @@ export function calculatePeriodicLoanSchedule(
   for (let index = 0; index < periods.length; index++) {
     const drawdown = input.drawdowns[index]
     const openingBalance = balance
-    const interestBase = openingBalance + drawdown * 0.5
-    const interestAccrued = interestBase * periodRates[index]
+    let interestAccrued: number
+    if (input.datedDrawdowns) {
+      const period = periods[index]
+      const events = input.datedDrawdowns.filter(item => item.date >= period.startDate && item.date <= period.endDate)
+        .sort((a,b) => a.date.localeCompare(b.date))
+      let cursor = period.startDate
+      let interestBalance = openingBalance
+      interestAccrued = 0
+      for (const event of events) {
+        interestAccrued += interestBalance * (input.annualRatePercent / 100)
+          * loanYearFraction(cursor, event.date, interestConvention)
+        interestBalance += event.amount
+        cursor = event.date
+      }
+      interestAccrued += interestBalance * (input.annualRatePercent / 100)
+        * loanYearFraction(cursor, period.endDate, interestConvention)
+    } else {
+      const interestBase = openingBalance + drawdown * 0.5
+      interestAccrued = interestBase * periodRates[index]
+    }
     const beforePrincipal = index < firstPrincipalIndex
     const capitalizedInterest = beforePrincipal && input.capitalizeInterest ? interestAccrued : 0
     const interestExpense = capitalizedInterest > 0 ? 0 : interestAccrued
@@ -344,7 +401,7 @@ export function calculatePeriodicLoanSchedule(
       period: index + 1,
       drawdown,
       openingBalance,
-      periodRatePercent: periodRates[index] * 100,
+      periodRatePercent: (openingBalance + drawdown * 0.5) > 0 ? interestAccrued / (openingBalance + drawdown * 0.5) * 100 : periodRates[index] * 100,
       interestExpense,
       capitalizedInterest,
       principal,
