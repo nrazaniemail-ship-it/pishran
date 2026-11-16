@@ -60,26 +60,91 @@ export function calculatePeriodTax(
  * Discount period cash flows using an effective annual rate and actual elapsed days.
  * The first period begins at t=0; mid-period timing discounts at the period midpoint.
  */
+export type PeriodDiscountConvention = 'actual-days' | 'period-count'
+
+function periodPositionAtDate(
+  valuationDate: string,
+  periods: ProjectCalendarPeriod[],
+  dayCountBasis: 360 | 365,
+  periodsPerYear: 1 | 2 | 4 | 12,
+): number | null {
+  const target = parseIsoDateUtc(valuationDate)
+  if (!target || !periods.length) return null
+  const nominalPeriodDays = dayCountBasis / periodsPerYear
+  let position = 0
+  for (const period of periods) {
+    const start = parseIsoDateUtc(period.startDate)
+    const end = parseIsoDateUtc(period.endDate)
+    if (!start || !end || end < start) return null
+    const fraction = period.partial ? period.days / nominalPeriodDays : 1
+    if (target < start) return position + (target.getTime() - start.getTime()) / 86400000 / nominalPeriodDays
+    if (target <= end) {
+      const elapsedInclusiveDays = (target.getTime() - start.getTime()) / 86400000 + 1
+      return position + fraction * Math.min(1, Math.max(0, elapsedInclusiveDays / period.days))
+    }
+    position += fraction
+  }
+  const lastEnd = parseIsoDateUtc(periods[periods.length - 1].endDate)
+  if (!lastEnd) return null
+  return position + (target.getTime() - lastEnd.getTime()) / 86400000 / nominalPeriodDays
+}
+
+/**
+ * Discount period cash flows against an optional valuation date.
+ * Actual-days uses elapsed calendar days; period-count treats each complete
+ * fiscal period as one period and prorates only partial boundary periods.
+ */
 export function calculatePeriodicNpv(
   cashFlows: number[],
   periods: ProjectCalendarPeriod[],
   annualDiscountRatePercent: number,
   dayCountBasis: 360 | 365,
   timing: PeriodCashFlowTiming = 'period-end',
+  valuationDate?: string,
+  convention: PeriodDiscountConvention = 'actual-days',
+  periodsPerYear: 1 | 2 | 4 | 12 = 1,
 ): number {
   if (cashFlows.length !== periods.length || cashFlows.some(value => !validFinite(value)) ||
       !validFinite(annualDiscountRatePercent) || annualDiscountRatePercent <= -100 ||
       (dayCountBasis !== 360 && dayCountBasis !== 365) ||
       (timing !== 'period-end' && timing !== 'mid-period') ||
+      (convention !== 'actual-days' && convention !== 'period-count') ||
+      ![1, 2, 4, 12].includes(periodsPerYear) ||
       periods.some(period => !Number.isInteger(period.days) || period.days <= 0)) return Number.NaN
+  const valuationPosition = valuationDate && convention === 'period-count'
+    ? periodPositionAtDate(valuationDate, periods, dayCountBasis, periodsPerYear)
+    : null
+  const valuationTimestamp = valuationDate && convention === 'actual-days'
+    ? parseIsoDateUtc(valuationDate)?.getTime() ?? null
+    : null
+  if (valuationDate && convention === 'period-count' && valuationPosition == null) return Number.NaN
+  if (valuationDate && convention === 'actual-days' && valuationTimestamp == null) return Number.NaN
   let elapsedDays = 0
+  let elapsedPeriods = 0
   let npv = 0
   for (let index = 0; index < periods.length; index++) {
     const period = periods[index]
-    const discountDays = elapsedDays + (timing === 'mid-period' ? period.days / 2 : period.days)
-    const exponent = discountDays / dayCountBasis
+    let exponent: number
+    if (convention === 'period-count') {
+      const nominalPeriodDays = dayCountBasis / periodsPerYear
+      const fraction = period.partial ? period.days / nominalPeriodDays : 1
+      const periodCashFlowPosition = elapsedPeriods + (timing === 'mid-period' ? fraction / 2 : fraction)
+      exponent = (periodCashFlowPosition - (valuationPosition ?? 0)) / periodsPerYear
+      elapsedPeriods += fraction
+    } else if (valuationTimestamp != null) {
+      const start = parseIsoDateUtc(period.startDate)
+      const end = parseIsoDateUtc(period.endDate)
+      if (!start || !end || end < start) return Number.NaN
+      const cashFlowTimestamp = timing === 'mid-period'
+        ? start.getTime() + period.days * 86400000 / 2
+        : end.getTime()
+      exponent = (cashFlowTimestamp - valuationTimestamp) / 86400000 / dayCountBasis
+    } else {
+      const discountDays = elapsedDays + (timing === 'mid-period' ? period.days / 2 : period.days)
+      exponent = discountDays / dayCountBasis
+      elapsedDays += period.days
+    }
     npv += cashFlows[index] / Math.pow(1 + annualDiscountRatePercent / 100, exponent)
-    elapsedDays += period.days
   }
   return npv
 }
@@ -316,6 +381,9 @@ export type PeriodicProjectFinanceInput = {
   openingUnleveredTaxLoss?: number
   loans: PeriodicProjectLoan[]
   discountRatePercent?: number | null
+  valuationDate?: string
+  discountConvention?: PeriodDiscountConvention
+  discountPeriodsPerYear?: 1 | 2 | 4 | 12
   mirrFinanceRatePercent?: number | null
   mirrReinvestmentRatePercent?: number | null
   salvageValue?: number
@@ -564,8 +632,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const projectFlows = rows.map(row=>row.projectFreeCashFlow)
   const equityFlows = rows.map(row=>row.equityFreeCashFlow)
   const discountRate = input.discountRatePercent
-  const npvProject = discountRate == null ? null : calculatePeriodicNpv(projectFlows,periods,discountRate,dayCountBasis,cashFlowTiming)
-  const npvEquity = discountRate == null ? null : calculatePeriodicNpv(equityFlows,periods,discountRate,dayCountBasis,cashFlowTiming)
+  const npvProject = discountRate == null ? null : calculatePeriodicNpv(projectFlows,periods,discountRate,dayCountBasis,cashFlowTiming,input.valuationDate,input.discountConvention??'actual-days',input.discountPeriodsPerYear??1)
+  const npvEquity = discountRate == null ? null : calculatePeriodicNpv(equityFlows,periods,discountRate,dayCountBasis,cashFlowTiming,input.valuationDate,input.discountConvention??'actual-days',input.discountPeriodsPerYear??1)
   const mirrProject = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
     : calculatePeriodicMirr(projectFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
   const mirrEquity = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
