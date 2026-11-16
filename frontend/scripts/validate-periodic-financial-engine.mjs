@@ -309,6 +309,18 @@ assert.ok(Math.abs(sumHrcr200Comfar('principal') - comfarReference.loanRepayment
   'HRCR200 first-year principal must match COMFAR')
 assert.ok(Math.abs(sumHrcr200Comfar('debtService') - comfarReference.loanRepaymentAudit.firstOperatingYearDebtService) < 0.1,
   'HRCR200 first-year total debt service must match COMFAR')
+assert.equal(comfarReference.loanRepaymentAudit.quarterlySchedule.length,20)
+hrcr200ComfarLoan.rows.forEach((row,index)=>{
+  const reference=comfarReference.loanRepaymentAudit.quarterlySchedule[index]
+  assert.ok(Math.abs(row.interestExpense-reference.interestExpense)<0.1,
+    'HRCR200 quarter '+(index+1)+' interest must match the reconstructed annuity reference')
+  assert.ok(Math.abs(row.principal-reference.principal)<0.1,
+    'HRCR200 quarter '+(index+1)+' principal must match the reconstructed annuity reference')
+  assert.ok(Math.abs(row.debtService-reference.debtService)<0.1,
+    'HRCR200 quarter '+(index+1)+' debt service must match the reconstructed annuity reference')
+  assert.ok(Math.abs(row.closingBalance-reference.closingBalance)<0.1,
+    'HRCR200 quarter '+(index+1)+' closing debt must match the reconstructed annuity reference')
+})
 assert.ok(Math.abs(hrcr200ComfarLoan.rows.at(-1).closingBalance) < 1e-7,
   'HRCR200 COMFAR annuity must fully amortize the gross opening loan balance after 20 quarters')
 const hrcr200AnnualPrincipalFromQuarters=Array.from({length:5},(_,yearIndex)=>
