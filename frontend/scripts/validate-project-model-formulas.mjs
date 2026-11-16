@@ -58,7 +58,14 @@ const syd=formulas.calculateAssetDepreciationPeriod({
 assert.equal(syd.charge,800)
 const sydPartial=formulas.calculateAssetDepreciationPeriod({method:'sum-of-years-digits',acquisitionCost:1200,salvageValue:0,usefulLifeMonths:30,monthsElapsed:0,periodMonths:30,openingBookValue:1200,firstDepreciationYearMonths:12})
 assert.ok(Math.abs(sydPartial.closingBookValue)<1e-8)
-assert.throws(()=>formulas.calculateAssetDepreciationPeriod({method:'sum-of-years-digits',acquisitionCost:1200,salvageValue:0,usefulLifeMonths:24,monthsElapsed:0,periodMonths:24,openingBookValue:1200,firstDepreciationYearMonths:8}),/syd-exact-year-life-with-partial-first-year-not-defined-by-reference/)
+const sydWholeLifePartialFirst=formulas.calculateAssetDepreciationPeriod({method:'sum-of-years-digits',acquisitionCost:1200,salvageValue:0,usefulLifeMonths:24,monthsElapsed:0,periodMonths:8,openingBookValue:1200,firstDepreciationYearMonths:8})
+assert.ok(Math.abs(sydWholeLifePartialFirst.charge-(800*8/12))<1e-9)
+const sydWholeLifeFollowingYear=formulas.calculateAssetDepreciationPeriod({method:'sum-of-years-digits',acquisitionCost:1200,salvageValue:0,usefulLifeMonths:24,monthsElapsed:8,periodMonths:12,openingBookValue:1200-sydWholeLifePartialFirst.charge,firstDepreciationYearMonths:8})
+assert.ok(Math.abs(sydWholeLifeFollowingYear.charge-(800*4/12+400*8/12))<1e-9)
+const sydWholeLifeFinalMonths=formulas.calculateAssetDepreciationPeriod({method:'sum-of-years-digits',acquisitionCost:1200,salvageValue:0,usefulLifeMonths:24,monthsElapsed:20,periodMonths:4,openingBookValue:1200-sydWholeLifePartialFirst.charge-sydWholeLifeFollowingYear.charge,firstDepreciationYearMonths:8})
+assert.ok(Math.abs(sydWholeLifeFinalMonths.charge-(400*4/12))<1e-9)
+assert.ok(Math.abs(sydWholeLifeFinalMonths.closingBookValue)<1e-9)
+assert.ok(Math.abs(sydWholeLifePartialFirst.charge+sydWholeLifeFollowingYear.charge+sydWholeLifeFinalMonths.charge-1200)<1e-9)
 const declining=formulas.calculateAssetDepreciationPeriod({
  method:'accelerated-declining-balance',acquisitionCost:1200,salvageValue:100,usefulLifeMonths:120,
  monthsElapsed:0,periodMonths:12,openingBookValue:1200,annualRatePercent:10
