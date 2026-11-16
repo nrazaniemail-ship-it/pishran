@@ -1784,7 +1784,7 @@ const datedStartAsset={
 }
 const datedStartSchedule=engine.calculateComfarCalendarDepreciationSchedule([datedStartAsset],threeYearDepreciationCalendar,1)
 assert.equal(datedStartSchedule.valid,true,'A mid-year depreciation start date must be accepted')
-near(datedStartSchedule.periods[0].assets[0].depreciation,181.64,0.1,
+near(datedStartSchedule.periods[0].assets[0].depreciation,181.36,0.02,
   'First-year straight-line depreciation must be prorated from the actual July 1 start date')
 assert.ok(datedStartSchedule.periods[0].assets[0].openingBookValue===1200,
   'The asset opening book value must remain its full acquisition cost before depreciation')
