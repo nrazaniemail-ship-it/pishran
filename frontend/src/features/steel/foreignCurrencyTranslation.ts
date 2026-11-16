@@ -346,7 +346,7 @@ export function postForeignExchangeIntoThreeStatements(
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
     const priorBalanceDifference = statement.balanceSheet.balanceDifference
-    const reconciled = Math.abs(balanceDifference) <= Math.max(0.01, Math.abs(priorBalanceDifference) + 0.01)
+    const reconciled = statement.balanceSheet.reconciled && Math.abs(balanceDifference) <= 0.01
 
     const cashFlowStatement = {
       ...statement.cashFlowStatement,
