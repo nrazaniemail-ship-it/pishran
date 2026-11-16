@@ -25,7 +25,6 @@ const INDUSTRY_OPTIONS = [
 export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenProject, language = 'fa' }: Props) {
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
-  const projectNames: Record<string, string> = { 'معدن سنگ آهن':'Iron Ore Mining', 'کنستانتره':'Iron Ore Concentration', 'گندله سازی':'Pelletizing', 'احیاء':'Direct Reduction', 'ذوب و ریخته گری':'Steelmaking & Casting', 'احیاء و فولادسازی- تولید اسلب':'DRI & Steelmaking – Slab', 'نورد ورق گرم- تولید پلیت':'Hot-Rolled Plate', 'نورد ورق گرم- تولید کلاف':'Hot-Rolled Coil', 'نورد سرد ورق':'Cold Rolling', 'نورد میلگرد':'Rebar Rolling', 'نورد نبشی':'Angle Rolling', 'نورد تیرآهن':'Beam Rolling', 'سایر':'Other' }
   const [showForm, setShowForm] = useState(false)
   const [showTemplateChooser, setShowTemplateChooser] = useState(false)
   const templateId = 'raw' as const
@@ -49,15 +48,8 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
     setIndustry(value)
     setName('')
     setProjectType('')
-    setSteelStage('')
   }
 
-  function changeSteelProject(value: string) {
-    setProjectType(value)
-    setName('')
-    const option = STEEL_PROJECT_OPTIONS.find(item => item.name === value)
-    setSteelStage(option?.stage ?? '')
-  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
