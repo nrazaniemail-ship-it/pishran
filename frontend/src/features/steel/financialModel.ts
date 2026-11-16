@@ -896,7 +896,7 @@ export type ComfarCalendarDepreciationSchedule = ComfarDepreciationSchedule & {
   periods: (ComfarDepreciationPeriod & { startDate: string; endDate: string; days: number })[]
 }
 function calendarDate(value: string): Date | null {
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(value)
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
   if (!match) return null
   const date = new Date(Date.UTC(Number(match[1]), Number(match[2])-1, Number(match[3])))
   return date.toISOString().slice(0,10) === value ? date : null
