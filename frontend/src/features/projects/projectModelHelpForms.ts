@@ -118,6 +118,39 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
   if(!section.repeatable&&rows.length!==1)errors.push(section.id+':expected-single-record')
   if(new Set(rows.map(row=>row.id)).size!==rows.length)errors.push(section.id+':duplicate-row-id')
   for(const [i,row] of rows.entries()){
+   const entered=Object.values(row.values??{}).some(fieldValue=>fieldValue!==null&&fieldValue!=='')
+   const requiredBySection:Record<string,string[]>={
+    'project-identification':['title','projectType','analysisLevel'],
+    'planning-horizon':['periodStart','periodEnd','frequency'],
+    products:['name','unit'],
+    currencies:['code','name','type'],
+    'cost-centres':['name','group'],
+    'cost-allocation':['name','type','costCentreId','allocationPercent'],
+    'joint-venture':['name','type'],
+    'fixed-investment':['assetName','currency','origin'],
+    'preproduction-expenditure':['description','currency','origin','period'],
+    'production-costs':['item','classification','currency','origin','basis'],
+    'sales-programme':['productId','period'],
+    'working-capital':['item','category','mode','basis'],
+    'equity-grants':['sourceName','sourceType','period','currency'],
+    'loan-conditions':['loanName','kind','currency','origin','repaymentType','interval'],
+    'loan-disbursements':['loanName','date','amount','flowType'],
+    'loan-interest':['loanName','effectiveDate','annualRate'],
+    'loan-fees':['loanName','type','rate','basis','payment','currency'],
+    'profit-distribution':['period','retainedPercent','distributedPercent'],
+    'tax-brackets':['lowerLimit','rate','period'],
+    'tax-allowances':['type','period','amount'],
+    'depreciation-adjustments':['period','origin','amount'],
+    'starting-balances':['category','item','amount'],
+    'economic-items':['item','direction','market','tradeCategory'],
+    'economic-effects':['type','period'],
+    sensitivity:['analysisType','variableGroup','variableId'],
+    'incremental-analysis':['alternative','view','period'],
+   }
+   if(entered)for(const key of requiredBySection[section.id]??[]){
+    const requiredValue=row.values?.[key]
+    if(requiredValue===null||requiredValue===undefined||requiredValue==='')errors.push(section.id+':'+i+':required-field:'+key)
+   }
    for(const field of section.fields){
     const v=row.values?.[field.key]
     if(v===undefined){errors.push(section.id+':'+i+':missing-field:'+field.key);continue}
@@ -398,7 +431,7 @@ export function validateHelpDrivenProjectPeriods(value:HelpDrivenProjectForms,pe
    errors.push('project-calendar:overlapping-or-unsorted-periods:'+String(current.period.index))
  }
  const resolvePeriod=(key:string):number=>{
-  const matches=validPeriods.filter(({period,index})=>key===String(period.index)||key===period.startDate||key===period.endDate)
+  const matches=validPeriods.filter(({period,index,start,end})=>key===String(period.index)||key===period.startDate||key===period.endDate||(key.length===7&&key===period.startDate.slice(0,7)&&key===period.endDate.slice(0,7)))
   return matches.length===1?matches[0].index:-1
  }
  const datedFields:Record<string,string[]>={
