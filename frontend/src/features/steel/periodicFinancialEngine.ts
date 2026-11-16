@@ -216,6 +216,8 @@ export function allocateAnnualFlowsToPeriods(
 export type PeriodicLoanInput = {
   annualRatePercent: number
   drawdowns: number[]
+  openingBalance?: number
+  drawdownTiming?: 'beginning' | 'mid-period' | 'end-period'
   repaymentMethod: 'equal-principal' | 'annuity' | 'bullet'
   repaymentStartPeriod: number
   gracePeriods: number
@@ -255,6 +257,10 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Drawdown schedule must contain one amount for every financial period.')
   if (!validFinite(input.annualRatePercent) || input.annualRatePercent < 0)
     issues.push('Annual loan interest rate must be a finite non-negative percentage.')
+  if (!validFinite(input.openingBalance ?? 0) || (input.openingBalance ?? 0) < 0)
+    issues.push('Opening loan balance must be finite and non-negative.')
+  if (!['beginning','mid-period','end-period'].includes(input.drawdownTiming ?? 'mid-period'))
+    issues.push('Drawdown timing must be beginning, mid-period or end-period.')
   if (dayCountBasis !== 360 && dayCountBasis !== 365)
     issues.push('Day-count basis must be 360 or 365.')
   if (!Number.isInteger(input.repaymentStartPeriod) || input.repaymentStartPeriod < 1 ||
@@ -301,14 +307,15 @@ export function calculatePeriodicLoanSchedule(
     }
     return annualEffectiveRateToPeriodRate(input.annualRatePercent, period.days, dayCountBasis) / 100
   })
-  let balance = 0
+  let balance = input.openingBalance ?? 0
+  const drawdownFactor = input.drawdownTiming === 'beginning' ? 1 : input.drawdownTiming === 'end-period' ? 0 : 0.5
   let annuityPayment: number | null = null
   let equalPrincipalAmount: number | null = null
   const rows: PeriodicLoanRow[] = []
   for (let index = 0; index < periods.length; index++) {
     const drawdown = input.drawdowns[index]
     const openingBalance = balance
-    const interestBase = openingBalance + drawdown * 0.5
+    const interestBase = openingBalance + drawdown * drawdownFactor
     const interestAccrued = interestBase * periodRates[index]
     const beforePrincipal = index < firstPrincipalIndex
     const capitalizedInterest = beforePrincipal && input.capitalizeInterest ? interestAccrued : 0
