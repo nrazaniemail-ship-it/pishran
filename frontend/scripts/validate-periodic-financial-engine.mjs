@@ -763,6 +763,10 @@ assert.ok(feasibilityWizardSource.includes('flowType')
   && feasibilityWizardSource.includes('showFlowType')
   && feasibilityWizardSource.includes('Output / Product'),
   'Material balance must distinguish input consumption from product, by-product and waste outputs before operating-cost aggregation')
+assert.ok(feasibilityWizardSource.includes('productPricingComplete')
+  && feasibilityWizardSource.includes('productWeightedRevenuePrice')
+  && feasibilityWizardSource.includes('sum(m.products)'),
+  'Priced multi-product and by-product rows must feed weighted project revenue instead of being ignored by the financial model')
 assert.ok(projectsViewSource.includes("{steelStage && <label>")
   && projectsViewSource.includes("t('نام پروژه','Project Name')")
   && projectsViewSource.includes('placeholder={t(\'نام دلخواه پروژه را وارد کنید\''),
