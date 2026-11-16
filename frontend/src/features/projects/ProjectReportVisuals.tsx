@@ -310,6 +310,7 @@ export default function ProjectReportVisuals(props: Props) {
             {[
               [t("افزایش سرمایه در گردش طبق OPEX","OPEX working-capital increase",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.firstOperatingYearWorkingCapitalFunding.opexWorkingCapitalByYear[0].annualIncrease,comfarAnnualRows[2].changeInWorkingCapital],
               [t("آورده سهامدار ثبت‌شده در جریان مالی COMFAR","Shareholder contribution in COMFAR finance flows",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.firstOperatingYearWorkingCapitalFunding.comfarEquityContribution,comfarAnnualRows[2].equityContribution],
+              [t("ذخیره نقدی ناشی از تفاوت منبع و مصرف سرمایه در گردش","Cash reserve from working-capital funding/use difference",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.firstOperatingYearWorkingCapitalFunding.fundingBufferPendingReconciliation,comfarAnnualRows[2].equityContribution-comfarAnnualRows[2].changeInWorkingCapital],
               [t("بهره نقدی","Cash interest",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.firstOperatingYearInterest,comfarAnnualRows[2].interestExpense],
               [t("بازپرداخت اصل","Principal repayment",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.firstOperatingYearPrincipal,comfarAnnualRows[2].principal],
               [t("خدمت بدهی","Debt service",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.firstOperatingYearDebtService,comfarAnnualRows[2].debtService],
