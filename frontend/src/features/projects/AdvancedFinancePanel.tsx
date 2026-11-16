@@ -272,6 +272,7 @@ export default function AdvancedFinancePanel(props: Props) {
       workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
+      equityDiscountRatePercent:props.costOfEquity,
       valuationDate:props.valuationDate||undefined,
       discountConvention:props.discountConvention??'actual-days',
       discountPeriodsPerYear:periodsPerYear,
