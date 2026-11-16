@@ -322,7 +322,7 @@ export default function AdvancedFinancePanel(props: Props) {
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     }
-    if(props.financialForms&&props.foundation&&props.greenfield) {
+    if(props.financialForms&&props.foundation&&(props.greenfield||props.financialForms.openingBalanceSheet?.enabled)) {
       const hasForeignLoans=props.financialForms.loans.some(loan=>loan.marketOrigin==='foreign')
       const fxTreatment=props.foundation.taxation.foreignExchangeLossTreatment??'unspecified'
       if(hasForeignLoans&&fxTreatment==='unspecified')return {
