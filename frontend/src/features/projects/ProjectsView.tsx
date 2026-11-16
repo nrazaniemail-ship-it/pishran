@@ -31,8 +31,6 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   const [name, setName] = useState('')
   const [projectType, setProjectType] = useState('')
   const [industry, setIndustry] = useState('')
-  const [capacity, setCapacity] = useState('')
-  const [location, setLocation] = useState('')
 
   function chooseTemplate() {
     setShowTemplateChooser(false)
@@ -40,8 +38,6 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
     setIndustry('')
     setName('')
     setProjectType('')
-    setCapacity('')
-    setLocation('')
   }
 
   function changeIndustry(value: string) {
@@ -59,11 +55,11 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
       name: projectName,
       industry,
       projectType: projectType.trim(),
-      capacity: capacity.trim(),
-      location: location.trim(),
+      capacity: '',
+      location: '',
       templateId
     })
-    setName(''); setProjectType(''); setCapacity(''); setLocation(''); setShowForm(false); setShowTemplateChooser(false)
+    setName(''); setProjectType(''); setShowForm(false); setShowTemplateChooser(false)
   }
 
   return <section className="projects-page">
@@ -80,8 +76,6 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
         </label>
         <label>{t('نوع پروژه','Project Type')}<input required value={projectType} onChange={e => setProjectType(e.target.value)} placeholder={t('نوع فعالیت یا پروژه را وارد کنید','Describe the project type')}/></label>
         <label>{t('نام پروژه','Project Name')}<input required value={name} onChange={e => setName(e.target.value)} placeholder={t('نام دلخواه پروژه را وارد کنید','Enter a project name')}/></label>
-        <label>{t('ظرفیت اسمی و واحد آن','Nameplate Capacity and Unit')}<input value={capacity} onChange={e => setCapacity(e.target.value)} placeholder={t('مثلاً ۵۰۰۰۰۰ تن در سال یا ۵۰۰ مگاوات','e.g. 500,000 tonnes/year or 500 MW')}/></label>
-        <label>{t('موقعیت پروژه','Project Location')}<input value={location} onChange={e => setLocation(e.target.value)} placeholder={t('شهر، استان، کشور','City, region, country')}/></label>
       </div>
       <div className="form-actions"><button type="submit" className="primary">{t('ذخیره پروژه','Save Project')}</button><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>{t('انصراف','Cancel')}</button></div>
     </form>}
