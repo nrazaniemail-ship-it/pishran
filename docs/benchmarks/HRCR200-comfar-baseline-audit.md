@@ -30,7 +30,26 @@ The report's narrative label beside the 5,610,851 loan amount says “20%”. Th
 
 Capitalized interest of 3,298,633 is not an additional principal drawdown. It is shown separately as financing cost and brings the reported total cost/funding to approximately 22,001,468/22,001,469. When representing the debt balance, the capitalized interest may increase the outstanding balance; do not count it again as a fresh cash drawdown.
 
-The report's rounded source percentages (60%, 26%, 15%) are percentages of the total funding including capitalized interest, not the equity/debt split on construction investment. They sum to 101% only because of rounding.
+The report contains further percentage-label conflicts:
+- Page 131 summary labels the 5,610,851 financing amount as 80% of fixed investment and the 13,091,985 equity amount as 20%; these labels are reversed/inconsistent with the amounts.
+- Page 130 funding table labels equity as 70% and the loan principal as 20%; the loan amount is actually approximately 30% of construction-phase cost.
+- Page 129 detailed text says the loan is 30% of fixed investment, but its parenthetical amount is 13,091,985 (the equity amount); the principal amount used in the total is 5,610,851.
+- The rounded source percentages (60%, 26%, 15%) are shares of total funding including capitalized interest, not the equity/debt split on construction investment. They sum to 101% only because of rounding.
+
+## Loan conditions stated in the report (page 129 and page 131)
+
+| Condition | Reported value |
+|---|---:|
+| Loan principal | 5,610,851 million IRR |
+| Contractual annual interest rate | 23% |
+| Bond issuance / financing cost | 5% |
+| Total loan rate described by the report | 28% |
+| Grace period | 0 months |
+| Repayment tenor | 5 years |
+| Repayment frequency | Quarterly; 20 instalments |
+| First repayment | First quarter of 1405 |
+
+**Modeling caution:** retain the 23% interest rate and 5% issuance cost as distinct source inputs until the original COMFAR loan-fee configuration or payment schedule confirms how the 5% is applied. The report's prose calls the combined result 28%, but it does not establish from these pages alone that the 5% is an annual recurring coupon rather than an issuance fee. Do not silently turn the fee into annual interest. The report specifies quarterly instalments but does not, in the cited text, establish whether principal is equal, annuity-based, or profile-based.
 
 ## COMFAR output benchmark (report page 132)
 
