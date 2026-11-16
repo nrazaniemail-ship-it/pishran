@@ -70,6 +70,14 @@ try {
  assert.ok(forms.validateProjectModelCrossReferences(duplicateSales).includes('sales-0:duplicate-period-key'))
  assert.deepEqual(forms.validateProjectModelCrossReferences(complete),[])
 
+ const wizardSource=await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx',import.meta.url),'utf8')
+ assert.match(wizardSource,/startYear:rawProject\?null as unknown as number:/,'Raw project start year must remain unset')
+ assert.match(wizardSource,/constructionYears:rawProject\?null as unknown as number:/,'Raw construction duration must remain unset')
+ assert.match(wizardSource,/nameplate:rawProject\?null as unknown as number:/,'Raw nameplate capacity must remain unset')
+ assert.match(wizardSource,/market:\{demand:rawProject\?null as unknown as number:/,'Raw market inputs must remain unset')
+ assert.match(wizardSource,/finance:\{equity:rawProject\?null as unknown as number:/,'Raw financing assumptions must remain unset')
+ assert.match(wizardSource,/e\.target\.value===''\?null as unknown as number:Number\(e\.target\.value\)/,'Clearing a numeric field must preserve null rather than silently writing zero')
+ assert.match(wizardSource,/project\.templateId!=='raw'&&\/نورد\.\*گرم\.\*کلاف/,'Raw project must never enter the hot-rolling migration path')
  console.log('Help-driven item-level finance forms: all assertions passed.')
 } finally {
  await rm(temp,{recursive:true,force:true})
