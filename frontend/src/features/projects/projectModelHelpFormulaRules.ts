@@ -586,7 +586,7 @@ export function calculateDynamicPayback(cashFlows:number[],discountRatePercent:n
  let cumulative=0
  for(let i=0;i<npv.discountedCashFlows.length;i++){
   const previous=cumulative;cumulative+=npv.discountedCashFlows[i]
-  if(cumulative>=0&&previous<0&&npv.discountedCashFlows[i]>0)return {period:i,years:Math.max(0,i-1)+Math.abs(previous)/npv.discountedCashFlows[i],cumulativeNpv:cumulative}
+  if(cumulative>=0&&previous<0&&npv.discountedCashFlows[i]>0)return {period:i+1,years:i+Math.abs(previous)/npv.discountedCashFlows[i],cumulativeNpv:cumulative}
  }
  return null
 }
