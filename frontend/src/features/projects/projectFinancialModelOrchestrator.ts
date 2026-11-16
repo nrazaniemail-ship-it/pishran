@@ -57,6 +57,11 @@ export function calculateProjectFinancialModelFromDrafts(
   const fail=(issues:string[]):ProjectFinancialModelOrchestrationResult=>({
     valid:false,issues,financeInput:null,productionSales,workingCapital,fixedAssets,finalRun:null,
   })
+  const openingDraft=input.drafts.openingBalanceSheet
+  const detailedOpeningNwc=openingDraft?.enabled
+    ?openingDraft.inventory!+openingDraft.workInProgress!+openingDraft.finishedGoods!+openingDraft.receivables!+
+      openingDraft.otherCurrentAssets!-openingDraft.tradePayables!-openingDraft.otherCurrentLiabilities!
+    :undefined
 
   if(input.drafts.sales.length||input.drafts.productionCosts.length) {
     const openingFinishedGoodsByProduct=input.openingFinishedGoodsByProduct??Object.fromEntries(input.drafts.sales.map(product=>[product.productId,product.openingFinishedGoodsQuantity??Number.NaN]))
@@ -69,7 +74,7 @@ export function calculateProjectFinancialModelFromDrafts(
     const componentOpeningBalances=input.drafts.workingCapital.map(component=>component.openingBalance)
     if(input.openingWorkingCapital==null&&componentOpeningBalances.some(value=>!Number.isFinite(value)||value!<0))
       return fail(['Every working-capital component requires an explicit non-negative opening balance.'])
-    const openingWorkingCapital=input.openingWorkingCapital??input.drafts.workingCapital.reduce((sum,component)=>{
+    const openingWorkingCapital=input.openingWorkingCapital??detailedOpeningNwc??input.drafts.workingCapital.reduce((sum,component)=>{
       const liability=component.category==='payables'||component.category==='other-current-liability'
       return sum+(liability?-1:1)*(component.openingBalance??0)
     },0)
@@ -90,7 +95,6 @@ export function calculateProjectFinancialModelFromDrafts(
     finance=fixedAssets.financeInput
   }
   let openingBalances=input.openingBalances
-  const openingDraft=input.drafts.openingBalanceSheet
   if(openingDraft?.enabled) {
     const openingIssues=validateOpeningBalanceSheetDraft(openingDraft)
     if(openingIssues.length)return fail(openingIssues)
