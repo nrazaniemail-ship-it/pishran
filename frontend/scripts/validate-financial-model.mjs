@@ -1030,16 +1030,22 @@ const zeroMethodAsset={id:'linear-zero-salvage-check',name:'Linear to zero asset
   scrapPercent:10,lengthYears:2,lengthMonths:0,ratePercent:50,method:'linear-to-zero',
   acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'2024-12-31',startingAtDate:'2025-01-01'}
 const annualZeroMethod=engine.calculateComfarAssetDepreciationSchedule([zeroMethodAsset],3)
-near(annualZeroMethod.periods[0].depreciation,500,1e-9,'Linear-to-zero must depreciate full original cost in year one, ignoring scrap')
-near(annualZeroMethod.periods[1].depreciation,500,1e-9,'Linear-to-zero must depreciate full original cost in year two')
-near(annualZeroMethod.periods[1].closingBookValue,0,1e-9,'Linear-to-zero must close at zero, not at the configured scrap value')
+near(annualZeroMethod.periods[0].depreciation,500,1e-9,'Linear-to-zero first year must use the original book value as its depreciation base')
+near(annualZeroMethod.periods[1].depreciation,400,1e-9,'Linear-to-zero final year must stop at the defined scrap value')
+near(annualZeroMethod.periods[1].closingBookValue,100,1e-9,'Linear-to-zero must preserve the configured scrap value')
 const threeYearMonthlyCalendar=foundation.buildProjectCalendarPeriods('2025-01-01','2027-12-31','monthly',1)
 const calendarZeroMethod=engine.calculateComfarCalendarDepreciationSchedule([zeroMethodAsset],threeYearMonthlyCalendar,1)
 assert.equal(calendarZeroMethod.valid,true,'Calendar linear-to-zero depreciation must accept a valid dated asset')
-near(calendarZeroMethod.periods.reduce((sum,row)=>sum+row.depreciation,0),1000,1e-6,
-  'Calendar linear-to-zero must depreciate the entire original cost over the useful life')
-near(calendarZeroMethod.periods[calendarZeroMethod.periods.length-1].assets[0].closingBookValue,0,1e-6,
-  'Calendar linear-to-zero must not retain scrap value after useful life')
+near(calendarZeroMethod.periods.reduce((sum,row)=>sum+row.depreciation,0),900,1e-6,
+  'Calendar linear-to-zero must stop at the configured 10 percent scrap value')
+near(calendarZeroMethod.periods[calendarZeroMethod.periods.length-1].assets[0].closingBookValue,100,1e-6,
+  'Calendar linear-to-zero must retain the configured scrap value after useful life')
+const zeroScrapAsset={...zeroMethodAsset,id:'linear-zero-no-scrap',name:'Linear to zero no scrap',scrapPercent:0}
+const calendarNoScrap=engine.calculateComfarCalendarDepreciationSchedule([zeroScrapAsset],threeYearMonthlyCalendar,1)
+near(calendarNoScrap.periods.reduce((sum,row)=>sum+row.depreciation,0),1000,1e-6,
+  'Calendar zero-scrap asset must depreciate to zero exactly once')
+near(calendarNoScrap.periods[calendarNoScrap.periods.length-1].assets[0].closingBookValue,0,1e-6,
+  'Calendar asset at zero book value must not restart depreciation in later periods')
 
 for (const method of ['none','linear-to-zero','linear-to-scrap','accelerated','sum-of-years-digits']) {
   const methodAsset={...monthlyAsset,id:'method-'+method,name:'Method '+method,method,
@@ -1104,8 +1110,8 @@ assert.equal(comfarLinearZero.valid,true,'COMFAR Linear to zero partial first-ye
 near(comfarLinearZero.periods[0].depreciation,0,1e-9,'Depreciation must not start before Starting at')
 near(comfarLinearZero.periods[1].depreciation,100,1e-9,'Linear to zero first partial-year depreciation')
 near(comfarLinearZero.periods[5].closingBookValue,100,1e-9,'Linear to zero must stop at salvage value')
-near(comfarLinearZero.periods[6].depreciation,100,1e-9,'Linear to zero must depreciate the remaining book value after the final full year')
-near(comfarLinearZero.periods[6].closingBookValue,0,1e-9,'Linear to zero must finish at zero after the final partial period')
+near(comfarLinearZero.periods[6].depreciation,0,1e-9,'Linear to zero must not depreciate after reaching salvage')
+near(comfarLinearZero.periods[6].closingBookValue,100,1e-9,'Linear to zero must preserve salvage after the useful life')
 const comfarLinearScrap = engine.calculateComfarAssetDepreciationSchedule([{
   id:'linear-scrap',name:'Linear scrap',originalValue:1000,initialBookValue:1000,scrapPercent:10,
   lengthYears:5,ratePercent:20,method:'linear-to-scrap',
