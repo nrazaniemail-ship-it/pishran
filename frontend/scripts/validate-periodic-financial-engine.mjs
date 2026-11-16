@@ -778,6 +778,9 @@ assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
   && feasibilityWizardSource.includes('projectPeriods={projectCalendarPeriods}')
   && feasibilityWizardSource.includes('cashFlowTiming={m.foundation.planning.cashFlowTiming}'),
   'Project calendar dates and discount timing must flow from the project foundation into the periodic finance engine')
+assert.ok(feasibilityWizardSource.includes('partners:Array.isArray(v.partners)')
+  && feasibilityWizardSource.includes('partnerDistributionPercent:Number.isFinite(v.partnerDistributionPercent)'),
+  'Saved projects created before joint-venture partner fields must migrate to safe defaults')
 assert.ok(feasibilityWizardSource.includes('partnerDistributionPercent={m.partnerDistributionPercent??100}')
   && feasibilityWizardSource.includes('درصد جریان نقدی مثبت قابل تقسیم')
   && advancedFinanceSource.includes('allocateJointVentureCashFlows')
