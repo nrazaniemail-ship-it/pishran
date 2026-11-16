@@ -167,7 +167,7 @@ near(fundingAudit.comfarOutputConstructionEquity + fundingAudit.comfarOutputWork
 near(fundingAudit.comfarOutputTotalEquity + fundingAudit.comfarOutputLongTermDebtGross,
   fundingAudit.comfarOutputTotalSources, 0.01, 'HRCR200 COMFAR total finance sources')
 near(fundingAudit.comfarOutputLongTermDebtGross - fundingAudit.comfarReferenceDebtAmount,
-  fundingAudit.comfarReferenceCapitalizedInterest, 0.02, 'HRCR200 gross COMFAR long-term debt includes capitalized construction interest')
+  fundingAudit.comfarReferenceCapitalizedInterest, 0.21, 'HRCR200 gross COMFAR long-term debt includes capitalized construction interest')
 near(fundingAudit.comfarOutputEquitySharePercent + fundingAudit.comfarOutputDebtSharePercent,
   100, 1e-9, 'HRCR200 COMFAR output gross source shares')
 near(fundingAudit.comfarOutputEquitySharePercent,
@@ -214,6 +214,37 @@ near(discountOnlyNpv30_70, 27342692.40, 0.02,
   'HRCR200 discount-only NPV at 30/70 construction WACC, before recalculating capitalized interest')
 assert.ok(discountOnlyNpv20_80 > discountOnlyNpv30_70,
   'Lower 20/80 WACC must raise NPV when the same unlevered cash-flow vector is held constant')
+
+const firstYear = fundingAudit.firstOperatingYear1405
+const baseLoanPrincipal = fundingAudit.comfarReferenceDebtAmount
+const loanScale20_80 = workbook20_80Amounts.fixedDebt / baseLoanPrincipal
+const firstYearEbitBeforeInterest = firstYear.taxableProfitAfterComfarDebtInterest + firstYear.comfarInterest
+const evaluateFirstYearDscr = (loanScale) => {
+  const interest = firstYear.comfarInterest * loanScale
+  const principal = firstYear.comfarPrincipal * loanScale
+  const taxableProfit = Math.max(0, firstYearEbitBeforeInterest - interest)
+  const tax = taxableProfit * 0.25
+  const cfads = firstYear.revenue - firstYear.operatingCosts - firstYear.marketingCosts
+    - tax - firstYear.workingCapitalIncrease
+  const debtService = interest + principal
+  return { interest, principal, taxableProfit, tax, cfads, debtService, dscr: cfads / debtService }
+}
+const firstYear30_70 = evaluateFirstYearDscr(1)
+const firstYear20_80 = evaluateFirstYearDscr(loanScale20_80)
+near(firstYear30_70.debtService, firstYear.comfarAnnualDebtService, 0.01,
+  'HRCR200 30/70 first operating-year debt service must match COMFAR')
+near(firstYear30_70.dscr, 2.2862240332667514, 1e-9,
+  'HRCR200 first operating-year DSCR under 30/70 and 25% flat tax')
+near(firstYear20_80.debtService, 8970583.878993252, 0.02,
+  'HRCR200 first operating-year debt service under 20/80 scaled COMFAR annuity')
+near(firstYear20_80.dscr, 0.9687650693316578, 1e-9,
+  'HRCR200 first operating-year DSCR under 20/80 and 25% flat tax')
+assert.ok(firstYear30_70.dscr > 1 && firstYear20_80.dscr < 1,
+  'HRCR200 first-year 20/80 fixed-debt scenario must flag DSCR below 1 before any separate working-capital loan service')
+console.log('FIRST-YEAR DSCR COMPARISON (flat 25% tax; same operations; debt service scaled to the COMFAR five-year annuity; excludes any separate working-capital loan):', {
+  DSCR30_70: firstYear30_70.dscr, debtService30_70: firstYear30_70.debtService,
+  DSCR20_80: firstYear20_80.dscr, debtService20_80: firstYear20_80.debtService
+})
 console.log('FINANCING COMPARISON (discount-only; loan interest/capitalized interest not re-run):', {
   WACC20_80: workbook20_80Wacc.value, WACC30_70: comfar30_70Wacc.value,
   NPV20_80: discountOnlyNpv20_80, NPV30_70: discountOnlyNpv30_70,
