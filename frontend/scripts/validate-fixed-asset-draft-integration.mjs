@@ -75,7 +75,13 @@ assert.ok(missingRate.issues.some(x=>x.includes('exchange rate')))
 const disposalLoss=adapter.bindFixedAssetDraftsToPeriodicFinance({
  finance,assets:[{...asset,disposal:{date:'2027-12-31',proceeds:10}}],foundation,productionStartDate:'2026-01-01',
 })
-assert.equal(disposalLoss.valid,false)
-assert.ok(disposalLoss.issues.some(x=>x.includes('disposal loss')))
+assert.equal(disposalLoss.valid,true,disposalLoss.issues.join('; '))
+assert.equal(disposalLoss.financeInput.periodAssetSaleSchedule[2].returnOfCapital,10)
+assert.equal(disposalLoss.financeInput.periodAssetSaleSchedule[2].otherIncomeLoss,-80)
+const lossIntegrated=engine.calculateIntegratedPeriodicFinance(disposalLoss.financeInput)
+assert.equal(lossIntegrated.valid,true,lossIntegrated.warnings.join('; '))
+const lossStatements=engine.buildPeriodicThreeFinancialStatements(lossIntegrated,{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0})
+assert.equal(lossStatements.length,periods.length)
+assert.ok(lossStatements.every(row=>row.balanceSheet.reconciled),'Asset disposal losses must reconcile income, cash flow and balance sheet')
 
 console.log('Fixed-asset acquisition, FX valuation, depreciation, disposal and periodic finance binding validation passed.')
