@@ -18,6 +18,7 @@ fixedOutput=fixedOutput.replace("'../steel/periodicFinancialEngine'",JSON.string
 const fixedUrl=url(fixedOutput)
 let loanOutput=await transpile('../src/features/projects/foreignCurrencyLoanFinanceBinding.ts')
 loanOutput=loanOutput.replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl)).replace("'../steel/foreignCurrencyTranslation'",JSON.stringify(fxUrl)).replace("'../projects/projectModelFormDrafts'",JSON.stringify(draftsUrl))
+loanOutput=loanOutput.replace("'./projectModelHelpFormulaRules'",JSON.stringify(helpFormulaUrl))
 const loanUrl=url(loanOutput)
 let orchestratorOutput=await transpile('../src/features/projects/projectFinancialModelOrchestrator.ts')
 orchestratorOutput=orchestratorOutput.replace("'./productionSalesInventoryIntegration'",JSON.stringify(productionUrl))
