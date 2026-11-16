@@ -1189,6 +1189,7 @@ const resetAndFeeLoan = engine.calculatePeriodicLoanSchedule({
   annualRatePercent:10,
   rateChanges:[{effectiveDate:'2025-07-01',annualRatePercent:20}],
   drawdowns:[100,0],
+  datedDrawdowns:[{date:'2025-01-01',amount:100}],
   repaymentMethod:'bullet',
   repaymentStartPeriod:2,
   gracePeriods:0,
@@ -1201,7 +1202,7 @@ const resetAndFeeLoan = engine.calculatePeriodicLoanSchedule({
   ],
 },loanEventPeriods,365)
 assert.equal(resetAndFeeLoan.valid,true,resetAndFeeLoan.issues.join('; '))
-assert.ok(Math.abs(resetAndFeeLoan.rows[0].interestExpense-15)<0.2,
+assert.ok(Math.abs(resetAndFeeLoan.rows[0].interestExpense-15.23)<0.2,
   'Interest must use the 10% base rate before 1 July and the 20% reset rate thereafter')
 assert.equal(resetAndFeeLoan.rows[0].financingFeeExpense,10,
   'Expense-classified fees must remain separate from accrued interest')
@@ -1231,3 +1232,37 @@ const outOfCalendarFinancingFee = engine.calculatePeriodicLoanSchedule({
 },loanEventPeriods,365)
 assert.equal(outOfCalendarFinancingFee.valid,false,
   'Financing fees outside the modeled calendar must be rejected')
+
+
+const integratedRateResetAndFees = engine.calculateIntegratedPeriodicFinance({
+  periods:loanEventPeriods,
+  fiscalYearStartMonth:1,
+  dayCountBasis:365,
+  cashFlowTiming:'period-end',
+  annualRevenue:[0,0],annualVariableCost:[0,0],annualFixedCost:[0,0],
+  annualDepreciation:[0,0],annualFixedInvestment:[0,0],annualPreOperatingCost:[0,0],
+  annualMaintenanceCapex:[0,0],annualTaxRates:[0,0],annualEquityContributions:[0,0],
+  workingCapitalByPeriod:[0,0],
+  loans:[{id:'reset-fee-loan',input:{
+    annualRatePercent:10,
+    rateChanges:[{effectiveDate:'2025-07-01',annualRatePercent:20}],
+    drawdowns:[100,0],
+    datedDrawdowns:[{date:'2025-01-01',amount:100}],
+    repaymentMethod:'bullet',repaymentStartPeriod:2,gracePeriods:0,
+    termPeriods:1,capitalizeInterest:false,interestConvention:'actual-365',
+    fees:[
+      {date:'2025-04-01',amount:10,treatment:'expense'},
+      {date:'2025-10-01',amount:5,treatment:'capitalize'},
+    ],
+  }}],
+})
+assert.equal(integratedRateResetAndFees.valid,true,integratedRateResetAndFees.warnings.join('; '))
+assert.equal(integratedRateResetAndFees.rows[0].interestExpense,integratedRateResetAndFees.loanSchedules['reset-fee-loan'][0].interestExpense+10,
+  'Expense financing fees must flow into periodic financing costs and taxable profit')
+assert.equal(integratedRateResetAndFees.rows[0].capitalizedFinancingFees,5,
+  'Capitalized financing fees must remain distinct from capitalized interest in project results')
+assert.equal(integratedRateResetAndFees.rows[0].debtService,integratedRateResetAndFees.loanSchedules['reset-fee-loan'][0].debtService,
+  'Debt service must include expense fees exactly once')
+const integratedFeeStatements=engine.buildPeriodicThreeFinancialStatements(integratedRateResetAndFees)
+assert.ok(integratedFeeStatements.every(row=>row.balanceSheet.reconciled),
+  'Capitalized fees must increase deferred pre-operating assets and debt by the same amount')
