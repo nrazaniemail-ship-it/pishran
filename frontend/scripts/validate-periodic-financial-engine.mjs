@@ -6,7 +6,13 @@ const source = await readFile(new URL('../src/features/steel/periodicFinancialEn
 const output = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
 }).outputText
-const engine = await import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
+const engineModuleUrl='data:text/javascript;base64,' + Buffer.from(output).toString('base64')
+const engine = await import(engineModuleUrl)
+const sensitivitySource=await readFile(new URL('../src/features/steel/periodicSensitivity.ts',import.meta.url),'utf8')
+const sensitivityOutput=ts.transpileModule(sensitivitySource,{
+  compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}
+}).outputText.replace("from './periodicFinancialEngine'",`from '${engineModuleUrl}'`)
+const periodicSensitivity=await import('data:text/javascript;base64,'+Buffer.from(sensitivityOutput).toString('base64'))
 const benchmarkSource = await readFile(new URL('../src/features/steel/hotRollingExcelBenchmark.ts', import.meta.url), 'utf8')
 const benchmarkOutput = ts.transpileModule(benchmarkSource, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
@@ -779,6 +785,28 @@ function buildMonthlyPeriods(startYear,startMonth,endYear,endMonth) {
   return periods
 }
 const monthlyDepreciationPeriods=buildMonthlyPeriods(2024,1,2026,1)
+const periodicSensitivityInput={
+  periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,1000,1200],annualVariableCost:[0,300,350],annualFixedCost:[0,100,100],
+  annualDepreciation:[0,50,50],annualFixedInvestment:[500,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[25,25,25],annualEquityContributions:[500,0,0],
+  workingCapitalByPeriod:[0,20,0],loans:[],discountRatePercent:15,equityDiscountRatePercent:20,
+}
+const periodicSensitivityResult=periodicSensitivity.calculatePeriodicSensitivity(
+  periodicSensitivityInput,['revenue','variable-cost','tax-rate'],10,'npvProject'
+)
+assert.equal(periodicSensitivityResult.valid,true,periodicSensitivityResult.issues.join('; '))
+assert.equal(periodicSensitivityResult.points.length,6)
+assert.ok(periodicSensitivityResult.points.every(point=>point.valid&&point.metric!==null))
+assert.ok(periodicSensitivityResult.optimistic.npvProject>periodicSensitivityResult.baseline.npvProject)
+assert.ok(periodicSensitivityResult.pessimistic.npvProject<periodicSensitivityResult.baseline.npvProject)
+const targetSearch=periodicSensitivity.searchPeriodicFinanceTarget({
+  finance:periodicSensitivityInput,variable:'revenue',metric:'npvProject',
+  target:(periodicSensitivityResult.baseline.npvProject??0)+1,direction:'increase',
+  maxVariationPercent:50,tolerance:0.001,maxIterations:80,
+})
+assert.equal(targetSearch.achieved,true,targetSearch.issues.join('; '))
+assert.ok((targetSearch.achievedValue??-Infinity)>=(targetSearch.target-0.001))
 const annualDepreciationPeriods=Array.from({length:3},(_,index)=>{
   const year=2024+index
   const start=new Date(Date.UTC(year,0,1))
