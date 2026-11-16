@@ -542,6 +542,50 @@ export function fiscalYearIndexForPeriod(period: ProjectCalendarPeriod, periods:
     - fiscalYearStartFor(first, fiscalYearStartMonth).getUTCFullYear()
 }
 
+export type PeriodicFiscalYearSummary = {
+  fiscalYearIndex: number
+  rows: PeriodicProjectFinanceRow[]
+  projectFreeCashFlow: number
+  taxRatePercent: number | null
+  depreciation: number
+  changeInWorkingCapital: number
+  interestExpense: number
+  principal: number
+  debtService: number
+  cfads: number
+  dscr: number | null
+}
+
+/** Aggregate monthly/quarterly/semiannual rows onto the project's fiscal-year basis. */
+export function aggregatePeriodicFinanceByFiscalYear(
+  rows: PeriodicProjectFinanceRow[],
+  fiscalYearStartMonth: number,
+  fiscalYearCount: number,
+): PeriodicFiscalYearSummary[] {
+  if (!rows.length || !Number.isInteger(fiscalYearCount) || fiscalYearCount < 1 ||
+      !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12) return []
+  const periods: ProjectCalendarPeriod[] = rows.map(row=>({
+    index:row.period,startDate:row.startDate,endDate:row.endDate,days:row.days,partial:false
+  }))
+  const grouped=Array.from({length:fiscalYearCount},()=>[] as PeriodicProjectFinanceRow[])
+  rows.forEach((row,index)=>{
+    const fiscalIndex=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
+    if(fiscalIndex>=0&&fiscalIndex<fiscalYearCount)grouped[fiscalIndex].push(row)
+  })
+  return grouped.map((yearRows,fiscalYearIndex)=>{
+    const sum=(key:'projectFreeCashFlow'|'depreciation'|'changeInWorkingCapital'|'interestExpense'|'principal'|'debtService'|'cfads')=>
+      yearRows.reduce((total,row)=>total+row[key],0)
+    const taxRates=[...new Set(yearRows.map(row=>Number(row.taxRatePercent.toFixed(4))))]
+    const debtService=sum('debtService'),cfads=sum('cfads')
+    return {
+      fiscalYearIndex,rows:yearRows,projectFreeCashFlow:sum('projectFreeCashFlow'),
+      taxRatePercent:taxRates.length===1?taxRates[0]:null,depreciation:sum('depreciation'),
+      changeInWorkingCapital:sum('changeInWorkingCapital'),interestExpense:sum('interestExpense'),
+      principal:sum('principal'),debtService,cfads,dscr:debtService>0?cfads/debtService:null
+    }
+  })
+}
+
 /** Annual effective IRR expressed as a percentage, discounted on actual period dates. */
 export function calculatePeriodicIrr(
   cashFlows: number[],
