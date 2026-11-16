@@ -24,7 +24,7 @@ export type ProjectFinancialModelOrchestrationInput={
   foundation:ProjectFoundation
   productionStartDate:string
   openingFinishedGoodsByProduct?:Record<string,number>
-  openingWorkingCapital:number
+  openingWorkingCapital?:number
   openingBalances:PeriodicStatementOpeningBalances
   taxTreatment:'deductible'|'non-deductible'
   openingTaxLossCarryForward?:number
@@ -66,8 +66,16 @@ export function calculateProjectFinancialModelFromDrafts(
     finance=result.financeInput
   }
   if(input.drafts.workingCapital.length) {
+    const componentOpeningBalances=input.drafts.workingCapital.map(component=>component.openingBalance)
+    if(input.openingWorkingCapital==null&&componentOpeningBalances.some(value=>!Number.isFinite(value)||value!<0))
+      return fail(['Every working-capital component requires an explicit non-negative opening balance.'])
+    const openingWorkingCapital=input.openingWorkingCapital??input.drafts.workingCapital.reduce((sum,component)=>{
+      const liability=component.category==='payables'||component.category==='other-current-liability'
+      return sum+(liability?-1:1)*(component.openingBalance??0)
+    },0)
+    if(openingWorkingCapital<0)return fail(['Opening net working capital cannot be negative in this model input.'])
     const result=bindWorkingCapitalDraftsToPeriodicFinance(
-      finance,{workingCapital:input.drafts.workingCapital},input.openingWorkingCapital,
+      finance,{workingCapital:input.drafts.workingCapital},openingWorkingCapital,
     )
     workingCapital=result.schedule
     if(!result.valid||!result.financeInput)return fail(result.issues)
