@@ -922,6 +922,12 @@ assert.ok(feasibilityWizardUi.includes('Array.isArray(m.partners)')
   && feasibilityWizardUi.includes('Number.isFinite(m.partnerDistributionPercent)'),
   'Joint-venture setup validation must safely reject malformed persisted partner records and invalid percentages')
 
+assert.ok(feasibilityWizardUi.includes("key==='partners'||key==='partnerDistributionPercent'")
+  && feasibilityWizardUi.includes('setReportPartnerFinance(null)')
+  && feasibilityWizardUi.includes("key==='scope'"),
+  'Changing JV partners, distribution policy or JV activation must invalidate stale partner allocation results immediately')
+
+
 
 const advancedFinanceUi = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 assert.ok(advancedFinanceUi.includes('Annual-to-Period Rate Convention')
