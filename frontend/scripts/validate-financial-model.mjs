@@ -1458,7 +1458,7 @@ assert.ok(reportVisualsSource.includes('Sensitivity Analysis Chart')
 assert.ok(reportVisualsSource.includes('HOT_ROLLING_COMFAR_OUTPUT_AUDIT')
   && reportVisualsSource.includes('comfarTaxScheduleMatches')
   && reportVisualsSource.includes('Tax schedule')
-  && reportVisualsSource.includes('5% in 1405-1409; 25% in 1410-1419'),
+  && reportVisualsSource.includes('5% in 1405–1409; 25% in 1410–1419'),
   'COMFAR reconciliation must compare the original five-year 5% tax period and subsequent 25% schedule, not only the uniform 25% sponsor scenario')
 assert.ok(foundationPanel.includes('Project Start Date')
   && foundationPanel.includes('Project End Date')
