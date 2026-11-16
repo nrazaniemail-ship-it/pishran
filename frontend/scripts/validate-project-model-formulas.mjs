@@ -36,6 +36,13 @@ const straight=formulas.calculateAssetDepreciationPeriod({
 })
 assert.equal(straight.charge,108)
 assert.equal(straight.closingBookValue,1092)
+const straightToZero=formulas.calculateAssetDepreciationPeriod({
+ method:'linear-to-zero',acquisitionCost:1200,salvageValue:120,usefulLifeMonths:120,
+ monthsElapsed:0,periodMonths:12,openingBookValue:1200
+})
+assert.equal(straightToZero.charge,120)
+assert.equal(straightToZero.closingBookValue,1080)
+
 const syd=formulas.calculateAssetDepreciationPeriod({
  method:'sum-of-years-digits',acquisitionCost:1200,salvageValue:0,usefulLifeMonths:24,
  monthsElapsed:0,periodMonths:12,openingBookValue:1200
