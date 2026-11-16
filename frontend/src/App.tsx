@@ -119,7 +119,7 @@ export default function App() {
     setStorageInfo(await localStore.info())
   }
 
-  async function handleCreateProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'steelStage' | 'capacity' | 'location' | 'templateId'>) {
+  async function handleCreateProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'location' | 'templateId'>) {
     const created = await createProject(input)
     setProjects(current => [created, ...current])
     await refreshStorage()
@@ -201,7 +201,7 @@ export default function App() {
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView language={settings.language} projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); const stage=project.steelStage||''; if(project.templateId==='raw') setPage('project-wizard'); else if(project.industry!=='فولاد و صنایع معدنی') setPage('project-wizard'); else if(stage.includes('مجتمع احیاء')) setPage('integrated-plant'); else if(stage.includes('احیای مستقیم')) {setActivePlantType('dri');setPage('process-plant')} else if(stage.includes('فولادسازی و ریخته‌گری')) {setActivePlantType('steelmaking');setPage('process-plant')} else if(stage.includes('نورد گرم')) setPage('hot-rolling'); else setPage('project-wizard') }}/>}
+    {page === 'projects' && <ProjectsView language={settings.language} projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard') }}/>}
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language} onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}
