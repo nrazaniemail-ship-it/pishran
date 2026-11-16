@@ -63,7 +63,8 @@ assert.equal(partnerAllocation.periods[1].retainedPositiveCashFlow,100)
 assert.equal(partnerAllocation.rows.reduce((sum,row)=>sum+row.netCashFlow,0)+partnerAllocation.retainedPositiveCashFlow,200,
   'Partner net cash flows plus retained cash must reconcile to total project equity cash flow')
 const invalidPartnerAllocation=partnerFinance.allocateJointVentureCashFlows({
-  valid:true,rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:100}],
+  valid:true,totalEquityContribution:100,
+  rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:100}],
 },[
   {id:'p1',name:'Partner A',sharePercent:60,capitalContribution:60,profitSharePercent:60},
   {id:'p2',name:'Partner B',sharePercent:30,capitalContribution:40,profitSharePercent:30},
