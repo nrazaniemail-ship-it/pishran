@@ -210,8 +210,18 @@ export const HOT_ROLLING_200KT_AUDIT = {
     comfarReferenceWaccPercent: 26.85,
     /** WACC sheet uses 20% equity + 80% fixed debt + a separate working-capital loan. */
     excelWacc20_80WithWorkingCapitalDebtPercent: 21.284299025331596,
-    excelWacc20_80FixedOnlyPercent: 21.6
-  }
+    excelWacc20_80FixedOnlyPercent: 21.6,
+    /** First operating year (1405) COMFAR source lines, used for a controlled DSCR comparison at the user's flat 25% tax baseline. */
+    firstOperatingYear1405: {
+      revenue: 43_581_720,
+      operatingCosts: 30_130_083.97,
+      marketingCosts: 62_260,
+      workingCapitalIncrease: 3_309_144.53,
+      taxableProfitAfterComfarDebtInterest: 9_557_778.26,
+      comfarInterest: 2_399_043.44,
+      comfarPrincipal: 964_925.63,
+      comfarAnnualDebtService: 3_363_969.07
+    }
 } as const
 
 /** Exact cash-flow rows transcribed from OPEX workbook sheet "IRR-NPV" (million IRR). */
