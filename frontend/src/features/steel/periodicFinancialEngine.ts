@@ -457,6 +457,8 @@ export function calculatePeriodicLoanSchedule(
   for (let index = 0; index < periods.length; index++) {
     const drawdown = input.drawdowns[index]
     const openingBalance = balance
+    if (input.facilityLimit != null && openingBalance + drawdown > input.facilityLimit + 0.01)
+      issues.push('Period ' + (index + 1) + ' drawdown exceeds the committed facility limit.')
     let interestAccrued: number
     let financingFeeExpense = 0
     let commitmentFeeExpense = 0
@@ -474,6 +476,7 @@ export function calculatePeriodicLoanSchedule(
       events.sort((a,b)=>a.date.localeCompare(b.date)||({rate:0,drawdown:1,fee:2}[a.kind]-{rate:0,drawdown:1,fee:2}[b.kind]))
       let cursor=period.startDate
       let interestBalance=openingBalance
+      let committedAmount=openingBalance
       let activeRate=effectiveRateForDate(period.startDate)
       interestAccrued=0
       // Exact dated drawdowns retain the engine's established end-exclusive accrual rule.
@@ -483,7 +486,7 @@ export function calculatePeriodicLoanSchedule(
         const accrued=segmentInterest(interestBalance,activeRate,cursor,nextDate,period)
         interestAccrued+=accrued
         if ((input.commitmentFeeAnnualRatePercent ?? 0) > 0 && input.facilityLimit != null) {
-          const unusedCommitment = Math.max(0, input.facilityLimit - interestBalance)
+          const unusedCommitment = Math.max(0, input.facilityLimit - committedAmount)
           const days = segmentDays(cursor,nextDate)
           commitmentFeeExpense += unusedCommitment * (input.commitmentFeeAnnualRatePercent as number) / 100 * days / dayCountBasis
         }
@@ -496,7 +499,7 @@ export function calculatePeriodicLoanSchedule(
       for(const event of events) {
         accrueUntil(event.date)
         if(event.kind==='rate') activeRate=event.amount
-        else if(event.kind==='drawdown') interestBalance+=event.amount
+        else if(event.kind==='drawdown') { interestBalance+=event.amount; committedAmount+=event.amount }
         else if(event.treatment==='capitalize') { capitalizedFinancingFees+=event.amount; interestBalance+=event.amount }
         else financingFeeExpense+=event.amount
       }
@@ -563,7 +566,7 @@ export function calculatePeriodicLoanSchedule(
       debtService: interestExpense + financingFeeExpense + principal,
     })
   }
-  return { rows, valid: true, issues: [] }
+  return issues.length ? { rows: [], valid: false, issues } : { rows, valid: true, issues: [] }
 }
 
 
@@ -853,6 +856,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       (input.salvageBookValue != null && (!validFinite(input.salvageBookValue) || input.salvageBookValue < 0)) ||
       (dayCountBasis !== 360 && dayCountBasis !== 365) ||
       !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12 ||
+      (input.minimumDscr != null && (!validFinite(input.minimumDscr) || input.minimumDscr <= 0)) ||
       !['period-end','mid-period'].includes(cashFlowTiming)) {
     warnings.push('Project periods, fiscal-year start month, day-count basis or cash-flow timing are invalid.')
     return empty()
