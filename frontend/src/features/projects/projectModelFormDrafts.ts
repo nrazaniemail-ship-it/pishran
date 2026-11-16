@@ -210,6 +210,7 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
  }
  for(const [index,row] of value.tax.rates.entries())if(row.ratePercent!==null&&(!Number.isFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100))errors.push('tax-rate-'+index+':invalid-tax-rate')
  if(value.tax.lossCarryForwardYears!==null&&(!Number.isInteger(value.tax.lossCarryForwardYears)||value.tax.lossCarryForwardYears<0))errors.push('invalid-loss-carry-forward-years')
+ errors.push(...validateProjectModelCrossReferences(value))
  return errors
 }
 
