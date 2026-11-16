@@ -14,12 +14,13 @@ const near = (actual, expected, tolerance, label) => {
   assert.ok(Math.abs(actual - expected) <= tolerance,
     label + ': expected ' + expected + ', got ' + actual + ', delta ' + (actual - expected))
 }
-const [engine, reference, integratedReference, workbookAudit, foundation] = await Promise.all([
+const [engine, reference, integratedReference, workbookAudit, foundation, comfarOutput] = await Promise.all([
   loadTypeScriptModule('../src/features/steel/financialModel.ts'),
   loadTypeScriptModule('../src/features/steel/hotRollingExcelBenchmark.ts'),
   loadTypeScriptModule('../src/features/steel/integratedProjectBenchmark.ts'),
   loadTypeScriptModule('../src/features/steel/workbookReconciliation.ts'),
-  loadTypeScriptModule('../src/features/projects/projectFoundation.ts')
+  loadTypeScriptModule('../src/features/projects/projectFoundation.ts'),
+  loadTypeScriptModule('../src/features/steel/hrcr200ComfarOutputReference.ts')
 ])
 
 const validStartingAsset = {
@@ -1267,6 +1268,136 @@ for (const [scenarioName,scenario] of Object.entries(scenarioResults)) {
 }
 
 console.log('PASS: integrated WACC, staged loan amortization, working capital, terminal value, cash flow reconciliation, NPV and project/equity IRR')
+const comfarSource=comfarOutput.HRCR200_COMFAR_OUTPUT_REFERENCE
+assert.equal(comfarSource.projectCashFlows.length,18,'COMFAR HRCR200 project cash-flow source must cover 1403–1420')
+for (const row of comfarSource.projectCashFlows) {
+  near(row.inflows-row.outflows,row.net,0.02,'COMFAR raw project cash-flow identity '+row.year)
+}
+near(comfarSource.projectCashFlows.reduce((sum,row)=>sum+row.presentValue,0),
+  comfarSource.summary.projectNpvAt25Percent,0.02,'COMFAR discounted project cash flows must sum to reported NPV')
+near(comfarSource.financing.originalConstructionLoanPrincipal+comfarSource.financing.capitalizedConstructionInterest,
+  comfarSource.financing.longTermDebtAfterConstruction,0.5,
+  'COMFAR original loan principal plus capitalized construction interest must explain closing construction debt')
+near(comfarSource.financing.annualSchedule.reduce((sum,row)=>sum+row.equityContribution,0),
+  comfarSource.financing.totalEquityCapital,0.02,'COMFAR annual equity contributions must reconcile to paid-in capital')
+near(comfarSource.financing.annualSchedule.reduce((sum,row)=>sum+row.debtAddition,0),
+  comfarSource.financing.longTermDebtAfterConstruction,0.02,'COMFAR annual debt additions must reconcile to gross closing debt')
+near(comfarSource.financing.annualSchedule.reduce((sum,row)=>sum+row.principalRepayment,0),
+  comfarSource.financing.longTermDebtAfterConstruction,0.02,'COMFAR annual principal repayments must extinguish the gross debt')
+for (const row of comfarSource.financing.annualSchedule) {
+  const balanceSheetRow=comfarSource.balanceSheet.find(item=>item.year===row.year)
+  assert.ok(balanceSheetRow,'COMFAR financing row must have a matching balance-sheet year '+row.year)
+  near(row.closingDebt,balanceSheetRow.longTermDebt,0.02,'COMFAR financing schedule debt roll-forward '+row.year)
+}
+near(comfarSource.financing.annualSchedule.find(row=>row.year===1405).equityContribution,
+  comfarSource.financing.operatingWorkingCapitalEquity,0.02,
+  'COMFAR production-phase working capital contribution is equity, not a short-term loan')
+assert.equal(comfarSource.financing.operatingWorkingCapitalLoan,0,
+  'COMFAR output reports no separate working-capital loan')
+assert.equal(comfarSource.incomeStatement.length,15,'COMFAR income statement must cover 1405–1419')
+for (const row of comfarSource.incomeStatement) {
+  near(row.revenue-row.variableCosts-row.fixedCosts-row.financingCosts,row.profitBeforeTax,0.02,
+    'COMFAR income statement profit bridge '+row.year)
+  near(row.profitBeforeTax-row.tax,row.netProfit,0.02,'COMFAR net profit bridge '+row.year)
+  near(row.tax/row.profitBeforeTax,row.year<=1409?0.05:0.25,0.000001,
+    'COMFAR effective tax rate shown in report '+row.year)
+}
+assert.equal(comfarSource.depreciationSchedule.length,15,'COMFAR asset depreciation schedule must cover 1405–1419')
+for (const row of comfarSource.depreciationSchedule) {
+  assert.ok(row.depreciation>=0,'COMFAR depreciation cannot be negative '+row.year)
+}
+assert.equal(comfarSource.balanceSheet.length,17,'COMFAR balance sheet must cover 1403–1419')
+for (const row of comfarSource.balanceSheet) {
+  near(row.currentAssets+row.netFixedAssets,row.totalAssets,0.02,'COMFAR asset composition '+row.year)
+  near(row.currentLiabilities+row.longTermDebt+row.netWorth,row.totalAssets,0.02,
+    'COMFAR balance sheet assets = liabilities + equity '+row.year)
+  near(row.paidInCapital+row.retainedEarningsBeginning+row.currentYearProfit,row.netWorth,0.02,
+    'COMFAR equity roll-forward '+row.year)
+}
+const comfarIncomeByYear=new Map(comfarSource.incomeStatement.map(row=>[row.year,row]))
+const comfarBalanceByYear=new Map(comfarSource.balanceSheet.map(row=>[row.year,row]))
+const comfarFundingByYear=new Map(comfarSource.financing.annualSchedule.map(row=>[row.year,row]))
+const comfarConstructionByYear=new Map(comfarSource.constructionSchedule.map(row=>[row.year,row]))
+const comfarWorkingCapitalByYear=new Map(comfarSource.workingCapitalSchedule.map(row=>[row.year,row]))
+const comfarDepreciationByYear=new Map(comfarSource.depreciationSchedule.map(row=>[row.year,row.depreciation]))
+const comfarProjectCashFlowByYear=new Map(comfarSource.projectCashFlows.map(row=>[row.year,row.net]))
+const comfarStatementInputs=Array.from({length:17},(_,index)=>{
+  const year=1403+index
+  const income=comfarIncomeByYear.get(year)
+  const balance=comfarBalanceByYear.get(year)
+  const funding=comfarFundingByYear.get(year)
+  const construction=comfarConstructionByYear.get(year)
+  const workingCapital=comfarWorkingCapitalByYear.get(year)
+  const depreciation=comfarDepreciationByYear.get(year)??0
+  const fixedCashCost=income?income.fixedCosts-depreciation:0
+  const wcAssets=workingCapital?.currentAssets??0
+  const cashBalance=balance?balance.currentAssets-wcAssets:0
+  const revenue=income?.revenue??0
+  const variableCashCost=income?.variableCosts??0
+  const interest=income?.financingCosts??0
+  return {
+    year,utilization:year<1405?0:year===1405?0.7:year===1406?0.8:year===1407?0.9:1,
+    production:0,revenue,variableCashCost,fixedCashCost,depreciation,
+    ebit:revenue-variableCashCost-fixedCashCost-depreciation,interest,
+    taxableProfit:income?.profitBeforeTax??0,taxLossCarryForward:0,tax:income?.tax??0,
+    principal:funding?.principalRepayment??0,
+    debtDrawdown:construction?.cashLoanDrawdown??0,
+    equityContribution:construction?.equityContribution??0,
+    fixedInvestment:construction?.fixedInvestment??0,
+    preOperatingCost:construction?.preOperatingCost??0,
+    maintenanceCapex:0,capitalizedInterest:construction?.capitalizedInterest??0,
+    workingCapital:wcAssets,closingWorkingCapital:wcAssets,
+    workingCapitalBreakdown:{
+      rawMaterials:workingCapital?.inventory??0,energy:0,spareParts:0,
+      workInProgress:0,finishedGoods:0,receivables:0,
+      minimumCash:workingCapital?.minimumCash??0,payables:0
+    },
+    salvageProceeds:0,assetSaleProceeds:0,assetReturnOfCapital:0,
+    assetSaleOtherIncomeLoss:0,assetBookValueDisposed:0,terminalValue:0,
+    changeInWorkingCapital:workingCapital?.changeInWorkingCapital??0,
+    projectFreeCashFlow:comfarProjectCashFlowByYear.get(year)??0,
+    equityFreeCashFlow:0,cashBalance,debtBalance:balance?.longTermDebt??0,
+    debtService:interest+(funding?.principalRepayment??0),cfads:0,dscr:null
+  }
+})
+const reconstructedComfarStatements=engine.buildThreeFinancialStatements(comfarStatementInputs,0.02)
+assert.equal(reconstructedComfarStatements.length,17,'COMFAR reconstruction must cover construction and all operating balance-sheet years')
+let previousComfarCash=0
+for(const statement of reconstructedComfarStatements){
+  const year=statement.year
+  const sourceBalance=comfarBalanceByYear.get(year)
+  const sourceIncome=comfarIncomeByYear.get(year)
+  assert.ok(statement.balanceSheet.reconciled,'Reconstructed COMFAR three statements must reconcile without a plug in '+year)
+  if(sourceIncome){
+    near(statement.incomeStatement.revenue,sourceIncome.revenue,0.05,'Reconstructed COMFAR revenue '+year)
+    near(statement.incomeStatement.cashOperatingCosts+statement.incomeStatement.depreciation,
+      sourceIncome.variableCosts+sourceIncome.fixedCosts,0.05,'Reconstructed COMFAR operating cost and depreciation bridge '+year)
+    near(statement.incomeStatement.interest,sourceIncome.financingCosts,0.05,'Reconstructed COMFAR financing cost '+year)
+    near(statement.incomeStatement.profitBeforeTax,sourceIncome.profitBeforeTax,0.05,'Reconstructed COMFAR profit before tax '+year)
+    near(statement.incomeStatement.tax,sourceIncome.tax,0.05,'Reconstructed COMFAR tax '+year)
+    near(statement.incomeStatement.netIncome,sourceIncome.netProfit,0.05,'Reconstructed COMFAR net profit '+year)
+  }
+  near(statement.balanceSheet.cash+statement.balanceSheet.workingCapitalAssets,
+    sourceBalance.currentAssets,0.05,'Reconstructed COMFAR current assets '+year)
+  near(statement.balanceSheet.netFixedAssets+statement.balanceSheet.deferredPreOperatingAssets,
+    sourceBalance.netFixedAssets,0.10,'Reconstructed COMFAR fixed and pre-operating assets '+year)
+  near(statement.balanceSheet.debt,sourceBalance.longTermDebt,0.05,'Reconstructed COMFAR debt '+year)
+  near(statement.balanceSheet.totalEquity,sourceBalance.netWorth,0.05,'Reconstructed COMFAR equity '+year)
+  near(statement.balanceSheet.totalAssets,sourceBalance.totalAssets,0.05,'Reconstructed COMFAR total assets '+year)
+  near(statement.balanceSheet.totalLiabilitiesAndEquity,sourceBalance.totalAssets,0.05,
+    'Reconstructed COMFAR total liabilities and equity '+year)
+  near(statement.cashFlowStatement.closingCash,statement.balanceSheet.cash,0.05,
+    'Reconstructed cash-flow closing cash '+year)
+  near(statement.cashFlowStatement.netChangeInCash,statement.balanceSheet.cash-previousComfarCash,0.05,
+    'Reconstructed cash-flow movement to balance-sheet cash '+year)
+  previousComfarCash=statement.balanceSheet.cash
+}
+near(comfarSource.terminalRecovery.remainingNetFixedAssets+comfarSource.terminalRecovery.workingCapitalRecovery,
+  comfarSource.terminalRecovery.totalTerminalInflows,0.05,
+  'COMFAR terminal value must equal remaining net fixed assets plus recovered working capital')
+near(comfarSource.projectCashFlows.find(row=>row.year===1420).net,
+  comfarSource.terminalRecovery.totalTerminalInflows,0.05,
+  'COMFAR terminal project cash flow must include asset salvage and working-capital recovery')
 console.log('PASS: asset-level depreciation, tax loss carry-forward, multi-variable sensitivity, scenarios and three-statement balance-sheet reconciliation')
 const taxLossModel = engine.calculateIntegratedFinance({
   years:4,constructionYears:1,capacity:100,fullCapacityRevenue:2000,fullCapacityVariableCashCost:600,
