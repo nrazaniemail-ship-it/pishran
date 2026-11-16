@@ -1382,6 +1382,71 @@ const capitalizedInterestOverLimit=engine.calculatePeriodicLoanSchedule({
 assert.equal(capitalizedInterestOverLimit.valid,false,
   'Period-end capitalized interest must not silently exceed the total-outstanding facility limit')
 
+// Combined independent oracle: floating rate + staged drawdowns + undrawn fee +
+// mid-period capitalized fee + capitalized construction interest + custom/balloon principal.
+const combinedLoanInput={
+  annualRatePercent:10,
+  rateChanges:[{effectiveDate:'2025-07-01',annualRatePercent:20}],
+  drawdowns:[100,50,0,0],
+  datedDrawdowns:[{date:'2025-01-01',amount:100},{date:'2025-04-01',amount:50}],
+  repaymentMethod:'custom',repaymentStartPeriod:3,gracePeriods:0,termPeriods:2,
+  capitalizeInterest:true,
+  interestConvention:'actual-365',
+  facilityLimit:200,commitmentFeeAnnualRatePercent:2,
+  fees:[{date:'2025-05-01',amount:5,treatment:'capitalize'}],
+  customPrincipalRepayments:[{period:3,amount:20}],
+  balloonAtMaturity:true,
+}
+const combinedLoanOracle=engine.calculatePeriodicLoanSchedule(combinedLoanInput,quarterlyRatePeriods,365)
+assert.equal(combinedLoanOracle.valid,true,combinedLoanOracle.issues.join('; '))
+const q1Interest=100*0.10*89/365
+const q1CommitmentFee=(200-100)*0.02*89/365
+const q2Opening=100+q1Interest
+const q2Interest=(q2Opening+50)*0.10*30/365+(q2Opening+50+5)*0.10*60/365
+const q2CommitmentFee=(200-q2Opening-50)*0.02*30/365+(200-q2Opening-50-5)*0.02*60/365
+const q3Opening=q2Opening+50+q2Interest+5
+const q3Interest=q3Opening*0.20*91/365
+const q3CommitmentFee=(200-q3Opening)*0.02*91/365
+const q3Closing=q3Opening-20
+const q4Interest=q3Closing*0.20*91/365
+const q4CommitmentFee=(200-q3Closing)*0.02*91/365
+assert.ok(Math.abs(combinedLoanOracle.rows[0].capitalizedInterest-q1Interest)<1e-8,
+  'Q1 capitalized interest must match the independent Actual/365 oracle')
+assert.ok(Math.abs(combinedLoanOracle.rows[0].commitmentFeeExpense-q1CommitmentFee)<1e-8,
+  'Q1 commitment fee must accrue on the time-weighted undrawn facility')
+assert.ok(Math.abs(combinedLoanOracle.rows[1].capitalizedInterest-q2Interest)<1e-8,
+  'Q2 floating-rate interest must accrue on staged principal and the capitalized fee from its effective date')
+assert.ok(Math.abs(combinedLoanOracle.rows[1].commitmentFeeExpense-q2CommitmentFee)<1e-8,
+  'Q2 commitment fee must reduce undrawn facility utilization from the capitalized-fee date')
+assert.ok(Math.abs(combinedLoanOracle.rows[2].interestExpense-q3Interest)<1e-8,
+  'Q3 interest must apply the reset 20% rate to the opening debt balance')
+assert.ok(Math.abs(combinedLoanOracle.rows[2].commitmentFeeExpense-q3CommitmentFee)<1e-8)
+assert.equal(combinedLoanOracle.rows[2].principal,20,
+  'The custom Q3 principal payment must be applied exactly once')
+assert.ok(Math.abs(combinedLoanOracle.rows[3].interestExpense-q4Interest)<1e-8)
+assert.ok(Math.abs(combinedLoanOracle.rows[3].commitmentFeeExpense-q4CommitmentFee)<1e-8)
+assert.ok(Math.abs(combinedLoanOracle.rows[3].principal-q3Closing)<1e-8,
+  'The final balloon must settle all remaining principal and capitalized financing costs')
+assert.ok(combinedLoanOracle.rows.every(row=>Math.abs(
+  row.closingBalance-(row.openingBalance+row.drawdown+row.capitalizedInterest+row.capitalizedFinancingFees-row.principal)
+)<1e-8), 'Every period debt balance must reconcile from opening debt, drawdowns, capitalizations and principal')
+assert.ok(Math.abs(combinedLoanOracle.rows[3].closingBalance)<1e-8,
+  'The custom schedule and final balloon must leave no residual principal')
+
+const integratedCombinedLoan=engine.calculateIntegratedPeriodicFinance({
+  periods:quarterlyRatePeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
+  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
+  annualTaxRates:[0],annualEquityContributions:[0],workingCapitalByPeriod:[0,0,0,0],
+  loans:[{id:'combined-floating-capitalized-custom',input:combinedLoanInput}],
+})
+assert.equal(integratedCombinedLoan.valid,true,integratedCombinedLoan.warnings.join('; '))
+assert.deepEqual(integratedCombinedLoan.loanSchedules['combined-floating-capitalized-custom'],combinedLoanOracle.rows,
+  'Integrated project finance must preserve the independently verified combined loan schedule')
+const integratedCombinedStatements=engine.buildPeriodicThreeFinancialStatements(integratedCombinedLoan)
+assert.ok(integratedCombinedStatements.every(row=>row.balanceSheet.reconciled),
+  'Combined floating-rate, capitalized-fee and custom-repayment financing must reconcile all three statements')
+
 const invalidCommitmentFee=engine.calculatePeriodicLoanSchedule({
   annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
   repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
