@@ -7,12 +7,12 @@ import { createBlankCommonFinancialItemMetadata, type CommonFinancialItemMetadat
 export type DepreciationMethod='linear-to-zero'|'linear-to-scrap'|'accelerated-declining-balance'|'sum-of-years-digits'
 export type FixedAssetFormDraft={
  id:string; metadata:CommonFinancialItemMetadata; acquisitionPeriods:{period:string;quantity:number|null;unitPrice:number|null;total:number|null}[]
- depreciation:{method:DepreciationMethod|null;startDate:string;ratePercent:number|null;usefulLifeMonths:number|null;salvageValue:number|null}
+ depreciation:{method:DepreciationMethod|null;startDate:string;ratePercent:number|null;usefulLifeMonths:number|null;salvagePercent:number|null}
  disposal:{date:string;proceeds:number|null}|null
 }
 export function createBlankFixedAssetFormDraft(id=''):FixedAssetFormDraft{return{
  id,metadata:createBlankCommonFinancialItemMetadata(),acquisitionPeriods:[],
- depreciation:{method:null,startDate:'',ratePercent:null,usefulLifeMonths:null,salvageValue:null},disposal:null
+ depreciation:{method:null,startDate:'',ratePercent:null,usefulLifeMonths:null,salvagePercent:null},disposal:null
 }}
 
 export type ProductionCostFormDraft={
@@ -47,7 +47,7 @@ export function deriveWorkingCapitalTurnover(daysCoverage:number|null,periodDays
  return (360/daysCoverage)*(periodDays/360)
 }
 
-export type LoanFeeType='agency'|'guarantee'|'commitment'|'other'
+export type LoanFeeType='agency'|'guarantee'|'commitment'|'other'\nexport type LoanFeeBasis='each-positive-disbursement'|'outstanding-loan-including-current-disbursement-excluding-current-repayment'|'undisbursed-commitment'|'total-loan-at-first-disbursement'\nexport function resolveLoanFeeBasis(type:LoanFeeType):LoanFeeBasis{\n if(type==='agency')return 'each-positive-disbursement'\n if(type==='guarantee')return 'outstanding-loan-including-current-disbursement-excluding-current-repayment'\n if(type==='commitment')return 'undisbursed-commitment'\n return 'total-loan-at-first-disbursement'\n}
 export type LoanFacilityFormDraft={
  id:string; name:string; currencyCode:string|null; marketOrigin:'local'|'foreign'|null
  loanType:'annuity'|'constant-principal'|'profile'|null
@@ -76,7 +76,7 @@ export function createBlankProjectTaxFormDraft():ProjectTaxFormDraft{return{
  system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null
 }}
 
-export function validateProductionCostFormDraft(value:ProductionCostFormDraft):string[]{
+export function deriveFixedVariableSplit(fixedPercent:number|null,variablePercent:number|null):{fixedPercent:number|null;variablePercent:number|null}{\n if(fixedPercent!==null&&variablePercent===null&&fixedPercent>=0&&fixedPercent<=100)return {fixedPercent,variablePercent:100-fixedPercent}\n if(variablePercent!==null&&fixedPercent===null&&variablePercent>=0&&variablePercent<=100)return {fixedPercent:100-variablePercent,variablePercent}\n return {fixedPercent,variablePercent}\n}\nexport function validateProductionCostFormDraft(value:ProductionCostFormDraft):string[]{
  const errors:string[]=[]
  if(value.classification==='direct'&&!value.productId)errors.push('direct-cost-missing-product')
  if(value.classification==='indirect'&&value.productId)errors.push('indirect-cost-must-not-have-product')
@@ -90,7 +90,7 @@ export function validateFixedAssetFormDraft(value:FixedAssetFormDraft):string[]{
  const d=value.depreciation
  if(d.ratePercent!==null&&(!Number.isFinite(d.ratePercent)||d.ratePercent<0||d.ratePercent>100))errors.push('invalid-depreciation-rate')
  if(d.usefulLifeMonths!==null&&(!Number.isInteger(d.usefulLifeMonths)||d.usefulLifeMonths<=0))errors.push('invalid-useful-life-months')
- if(d.salvageValue!==null&&(!Number.isFinite(d.salvageValue)||d.salvageValue<0))errors.push('invalid-salvage-value')
+ if(d.salvagePercent!==null&&(!Number.isFinite(d.salvagePercent)||d.salvagePercent<0||d.salvagePercent>100))errors.push('invalid-salvage-percent')
  if(d.method==='sum-of-years-digits'&&d.ratePercent!==null)errors.push('sum-of-years-digits-does-not-use-rate')
  return errors
 }
