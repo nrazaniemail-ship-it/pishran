@@ -387,7 +387,8 @@ export type IntegratedFinanceYear = {
   closingWorkingCapital: number
   workingCapitalBreakdown: WorkingCapitalBreakdown
   salvageProceeds: number
-  salvageBookValueDisposed: number
+  salvageBookValueDisposed?: number
+  salvageGainLoss?: number
   assetSaleProceeds: number
   assetReturnOfCapital: number
   assetSaleOtherIncomeLoss: number
@@ -544,7 +545,10 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const assetReturnOfCapital = Math.max(0, Number(assetSale?.returnOfCapital) || 0)
     const assetSaleOtherIncomeLoss = Number.isFinite(assetSale?.otherIncomeLoss) ? Number(assetSale?.otherIncomeLoss) : 0
     const assetBookValueDisposed = Math.max(0, Number(assetSale?.bookValueDisposed) || 0)
-    const ebit = revenue - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss
+    const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
+    const salvageBookValueDisposed = year === years ? Math.max(0, Number(input.salvageBookValue) || 0) : 0
+    const salvageGainLoss = salvageProceeds - salvageBookValueDisposed
+    const ebit = revenue - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss + salvageGainLoss
 
     const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
     const taxableProfit = ebit - interest - taxLoss
@@ -556,11 +560,9 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const unleveredTax = Math.max(0, unleveredTaxableProfit) * effectiveTaxRate / 100
     unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : Math.max(0, unleveredTaxLoss - ebit)
 
-    const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
-    const salvageBookValueDisposed = year === years ? Math.max(0, Number(input.salvageBookValue) || 0) : 0
     const terminalValue = salvageProceeds + assetSaleProceeds
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
-    const projectFreeCashFlow = ebit - assetSaleOtherIncomeLoss - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
+    const projectFreeCashFlow = ebit - assetSaleOtherIncomeLoss - salvageGainLoss - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
     const equityFreeCashFlow = -equityContribution + revenue - variableCashCost - fixedCashCost - tax - interest - principal - maintenanceCapex - changeInWorkingCapital + terminalValue
     const debtService = principal + interest
     const cfads = revenue - variableCashCost - fixedCashCost - tax - maintenanceCapex - changeInWorkingCapital
@@ -579,7 +581,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
-      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, salvageBookValueDisposed, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
+      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, salvageBookValueDisposed, salvageGainLoss, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
     })
   }
@@ -1470,7 +1472,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
   return years.map(row => {
     const cashOperatingCosts = row.variableCashCost + row.fixedCashCost
     const ebitda = row.revenue - cashOperatingCosts
-    const otherIncomeLoss = row.assetSaleOtherIncomeLoss ?? 0
+    const otherIncomeLoss = (row.assetSaleOtherIncomeLoss ?? 0) + (row.salvageGainLoss ?? 0)
     const ebit = ebitda - row.depreciation + otherIncomeLoss
     const profitBeforeTax = ebit - row.interest
     const netIncome = profitBeforeTax - row.tax
