@@ -106,6 +106,7 @@ try {
  sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','productId','Unknown')
  assert.ok(h.validateHelpDrivenProjectForms(sales).includes('sales-programme:0:unknown-product-reference:Unknown'))
  sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','productId','Steel')
+ sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','period','1')
  assert.equal(h.validateHelpDrivenProjectForms(sales).length,0)
  let loans2=h.addHelpFormRow(draft.helpDriven,'loan-conditions','loan-1')
  loans2=h.updateHelpFormRow(loans2,'loan-conditions','loan-1','loanName','Facility A')
