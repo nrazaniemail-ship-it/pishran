@@ -1,5 +1,5 @@
 import type { ProjectFoundation } from './projectFoundation'
-import type { ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
+import { validateOpeningBalanceSheetDraft, type ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import type { PeriodicProjectFinanceInput, PeriodicStatementOpeningBalances } from '../steel/periodicFinancialEngine'
 import {
   bindProductionSalesToPeriodicFinance,
@@ -20,7 +20,7 @@ import {
 
 export type ProjectFinancialModelOrchestrationInput={
   finance:PeriodicProjectFinanceInput
-  drafts:Pick<ProjectModelFinancialFormDrafts,'sales'|'productionCosts'|'workingCapital'|'assets'|'loans'>
+  drafts:Pick<ProjectModelFinancialFormDrafts,'sales'|'productionCosts'|'workingCapital'|'assets'|'loans'> & Partial<Pick<ProjectModelFinancialFormDrafts,'openingBalanceSheet'>>
   foundation:ProjectFoundation
   productionStartDate:string
   openingFinishedGoodsByProduct?:Record<string,number>
@@ -89,9 +89,25 @@ export function calculateProjectFinancialModelFromDrafts(
     if(!fixedAssets.valid||!fixedAssets.financeInput)return fail(fixedAssets.issues)
     finance=fixedAssets.financeInput
   }
+  let openingBalances=input.openingBalances
+  const openingDraft=input.drafts.openingBalanceSheet
+  if(openingDraft?.enabled) {
+    const openingIssues=validateOpeningBalanceSheetDraft(openingDraft)
+    if(openingIssues.length)return fail(openingIssues)
+    openingBalances={
+      cash:openingDraft.cash!,
+      debt:openingDraft.shortTermDebt!+openingDraft.longTermDebt!,
+      netFixedAssets:openingDraft.grossFixedAssets!-openingDraft.accumulatedDepreciation!,
+      netWorkingCapital:openingDraft.inventory!+openingDraft.workInProgress!+openingDraft.finishedGoods!+
+        openingDraft.receivables!+openingDraft.otherCurrentAssets!-openingDraft.tradePayables!-openingDraft.otherCurrentLiabilities!,
+      deferredPreOperatingAssets:openingDraft.deferredPreOperatingAssets!,
+      paidInCapital:openingDraft.shareCapital!,
+      retainedEarnings:openingDraft.retainedEarnings!,
+    }
+  }
   const finalRun=calculatePeriodicFinanceWithForeignCurrencyLoans({
     finance,loans:input.drafts.loans,foundation:input.foundation,
-    openingBalances:input.openingBalances,taxTreatment:input.taxTreatment,
+    openingBalances,taxTreatment:input.taxTreatment,
     openingTaxLossCarryForward:input.openingTaxLossCarryForward,
     openingForeignBalances:input.openingForeignBalances,
     openingExchangeRatesToLocal:input.openingExchangeRatesToLocal,
