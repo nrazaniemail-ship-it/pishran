@@ -253,7 +253,7 @@ export function allocateIndirectCost(totalIndirectCost:number,products:CostAlloc
  if(key==='equal-products')return products.map(p=>({productId:p.id,allocatedCost:totalIndirectCost/products.length}))
  if(key==='user-defined'){
   const shares=products.map(p=>userPercentages?.[p.id])
-  if(shares.some(x=>x===undefined||!nonNegative(x!))||Math.abs(shares.reduce((sum,x)=>sum+(x??0),0)-100)>1e-8)throw new Error('invalid-user-allocation-percentages')
+  if(shares.some(x=>x===undefined||!nonNegative(x!))||Math.abs(shares.reduce<number>((sum,x)=>sum+(x??0),0)-100)>1e-8)throw new Error('invalid-user-allocation-percentages')
   return products.map((p,i)=>({productId:p.id,allocatedCost:totalIndirectCost*(shares[i]??0)/100}))
  }
  const field=key==='direct-cost'?'directCost':key==='direct-factory-cost'?'directFactoryCost':key==='direct-material-cost'?'directMaterialCost':key==='direct-labour-cost'?'directLabourCost':'salesRevenue'
