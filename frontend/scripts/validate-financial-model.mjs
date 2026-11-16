@@ -478,7 +478,8 @@ const integrated = engine.calculateIntegratedFinance({
   opexEscalationPercent: 2,
   discountMode: 'wacc',
   manualDiscountRate: 25,
-  salvageValue: 50
+  salvageValue: 50,
+  salvageBookValue: 50
 })
 near(integrated.wacc, 0.15, 1e-12, 'Integrated WACC')
 const matchingCashFlows = engine.reconcileCashFlowSeries([-100, 60, 60], [-100, 60, 60], 0.01)
@@ -1039,7 +1040,17 @@ const statements = engine.buildThreeFinancialStatements(integrated.years)
 assert.equal(statements.length, integrated.years.length, 'Three statements must cover the full model horizon')
 assert.ok(statements.every(row => row.balanceSheet.reconciled), 'Balance sheet must reconcile without a plug for the integrated reference case')
 for (const row of statements) {
-  near(row.cashFlowStatement.closingCash, row.balanceSheet.cash, 1e-9, 'Cash flow statement and balance sheet cash tie')
+  for (const [movement,value] of Object.entries(row.movementChecks)) {
+    near(value,0,1e-6,'Three-statement roll-forward '+movement+' year '+row.year)
+  }
+  near(row.cashFlowStatement.closingCash-row.openingBalances.cash,row.cashFlowStatement.netChangeInCash,1e-6,
+    'Opening-to-closing cash must reconcile to the three cash-flow sections')
+  near(row.balanceSheet.netFixedAssets-row.openingBalances.netFixedAssets,
+    integrated.years[row.year-1].fixedInvestment+integrated.years[row.year-1].maintenanceCapex-
+      integrated.years[row.year-1].depreciation-integrated.years[row.year-1].assetBookValueDisposed-
+      integrated.years[row.year-1].salvageBookValueDisposed,1e-6,
+    'Fixed asset movement must use book value disposed, not sale proceeds')
+, row.balanceSheet.cash, 1e-9, 'Cash flow statement and balance sheet cash tie')
   near(row.balanceSheet.totalAssets, row.balanceSheet.totalLiabilitiesAndEquity, 1e-6, 'Balance sheet reconciliation year ' + row.year)
 }
 const sensitivity = engine.calculateSensitivityMatrix({
