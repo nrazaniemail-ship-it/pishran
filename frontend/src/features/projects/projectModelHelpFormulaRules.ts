@@ -164,6 +164,6 @@ export function calculateDividendPool(netProfit:number,retainedPercent:number,pr
 }
 export function composeTotalInvestmentCashFlow(input:{netCashFlow:number;equity:number;loanDrawdowns:number;principalRepayments:number;interestAndFees:number;dividends:number;}){
  const {netCashFlow,equity,loanDrawdowns,principalRepayments,interestAndFees,dividends}=input
- if(![netCashFlow,equity,loanDrawdowns,principalRepayments,interestAndFees,dividends,preproductionInterestAndFees].every(finite))throw new Error('invalid-total-investment-flow')
+ if(![netCashFlow,equity,loanDrawdowns,principalRepayments,interestAndFees,dividends].every(finite))throw new Error('invalid-total-investment-flow')
  return netCashFlow-equity-loanDrawdowns+principalRepayments+interestAndFees+dividends
 }
