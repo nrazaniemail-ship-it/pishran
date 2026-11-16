@@ -317,6 +317,7 @@ const integratedPeriodic = engine.calculateIntegratedPeriodicFinance({
     }
   }],
   discountRatePercent: 25,
+  equityDiscountRatePercent: 30,
   mirrFinanceRatePercent: 10,
   mirrReinvestmentRatePercent: 12,
   salvageValue: 1500,
@@ -387,6 +388,16 @@ assert.ok(Number.isFinite(integratedPeriodic.npvProject))
 assert.ok(Number.isFinite(integratedPeriodic.irrProject), 'Periodic project IRR must use actual period dates')
 assert.ok(Number.isFinite(integratedPeriodic.mirrProject), 'Periodic project MIRR must use actual period dates')
 assert.ok(Number.isFinite(integratedPeriodic.npvEquity))
+assert.ok(Math.abs(integratedPeriodic.npvProject-engine.calculatePeriodicNpv(
+  integratedPeriodic.rows.map(row=>row.projectFreeCashFlow),quarter,25,365,'period-end'))<1e-7,
+  'Project NPV must retain the project discount rate independently')
+assert.ok(Math.abs(integratedPeriodic.npvEquity-engine.calculatePeriodicNpv(
+  integratedPeriodic.rows.map(row=>row.equityFreeCashFlow),quarter,30,365,'period-end'))<1e-7,
+  'Equity NPV must use the separate 30% cost-of-equity discount rate')
+assert.ok(Math.abs(integratedPeriodic.npvEquity-engine.calculatePeriodicNpv(
+  integratedPeriodic.rows.map(row=>row.equityFreeCashFlow),quarter,25,365,'period-end'))>1e-4,
+  'Equity NPV must not silently reuse the project discount rate when a shareholder rate is supplied')
+
 const periodicAssetDisposal = engine.calculateIntegratedPeriodicFinance({
   periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
   annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400],
@@ -581,6 +592,8 @@ assert.ok(projectReportSource.includes('equityIrrPercent')
   && projectReportSource.includes('20-quarter repayment schedule'),
   'COMFAR equity IRR must be disclosed with an explicit quarterly repayment comparability gate')
 const projectFoundationPanelSource = await readFile(new URL('../src/features/projects/ProjectFoundationPanel.tsx', import.meta.url), 'utf8')
+assert.ok(advancedFinanceSource.includes('equityDiscountRatePercent:props.costOfEquity'),
+  'Advanced finance panel must discount shareholder NPV at the cost of equity, independently of project WACC')
 assert.ok(advancedFinanceSource.includes('calculateIntegratedPeriodicFinance')
   && advancedFinanceSource.includes('periodicFinanceResult')
   && advancedFinanceSource.includes('periodDrawdowns')
