@@ -225,6 +225,15 @@ near(discountOnlyNpv30_70, 26373890.94, 0.02,
   'HRCR200 discount-only NPV at 30/70 construction WACC, before recalculating capitalized interest')
 assert.ok(discountOnlyNpv20_80 > discountOnlyNpv30_70,
   'Lower 20/80 WACC must raise NPV when the same unlevered cash-flow vector is held constant')
+// A financing-ratio change does not alter project NPV at a fixed manual discount rate or project IRR when the unlevered project cash-flow vector is unchanged.
+const projectNpv25For30_70 = comfarValuationNpv(0.25)
+const projectNpv25For20_80 = comfarValuationNpv(0.25)
+near(projectNpv25For30_70, projectNpv25For20_80, 0.000001,
+  'HRCR200 project NPV at fixed 25% must be invariant to 30/70 versus 20/80 financing')
+near(engine.calculateIrr(comfarReferenceFlows), 0.4831, 0.0001,
+  'HRCR200 project IRR must remain 48.31% irrespective of WACC weights')
+near(projectNpv25For30_70, 31399764.27, 0.02,
+  'HRCR200 project NPV at fixed 25% remains the COMFAR output regardless of financing mix')
 
 const firstYear = fundingAudit.firstOperatingYear1405
 const baseLoanPrincipal = fundingAudit.comfarReferenceDebtAmount
