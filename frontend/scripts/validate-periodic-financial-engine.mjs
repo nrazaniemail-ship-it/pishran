@@ -803,6 +803,29 @@ assert.equal(periodicTaxLossRollForward.valid,true,periodicTaxLossRollForward.wa
 assert.deepEqual(periodicTaxLossRollForward.rows.map(row=>row.taxLossCarryForward),[100,100,0])
 assert.deepEqual(periodicTaxLossRollForward.rows.map(row=>row.tax),[0,0,12.5],
   'Periodic integrated tax must carry operating losses forward and tax only the remaining taxable profit')
+
+const expiredPeriodicTaxLoss=engine.calculateIntegratedPeriodicFinance({
+  periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,150],annualVariableCost:[0,0,0],annualFixedCost:[100,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],discountRatePercent:10,
+  taxLossCarryForwardEnabled:true,taxLossCarryForwardYears:1,
+})
+assert.equal(expiredPeriodicTaxLoss.valid,true,expiredPeriodicTaxLoss.warnings.join('; '))
+assert.equal(expiredPeriodicTaxLoss.rows[2].tax,37.5,
+  'Losses must expire after the configured number of fiscal years rather than offsetting indefinitely')
+const periodicTaxAllowance=engine.calculateIntegratedPeriodicFinance({
+  periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,150],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],discountRatePercent:10,taxAllowancesByPeriod:[0,0,50],
+})
+assert.equal(periodicTaxAllowance.valid,true,periodicTaxAllowance.warnings.join('; '))
+assert.equal(periodicTaxAllowance.rows[2].taxAllowances,50)
+assert.equal(periodicTaxAllowance.rows[2].tax,25,
+  'Period tax allowances must reduce the taxable base before tax is calculated')
 const periodicSensitivityInput={
   periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
   annualRevenue:[0,1000,1200],annualVariableCost:[0,300,350],annualFixedCost:[0,100,100],
