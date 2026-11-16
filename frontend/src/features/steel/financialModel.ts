@@ -950,8 +950,14 @@ export function calculateComfarCalendarDepreciationSchedule(
       warnings.push(asset.name+': نرخ سالانه با عمر مفید سازگار نیست؛ نرخ و مدت را اصلاح کنید.')
     const acquisitionFallbackIndex=yearStartPeriod(Math.max(0,asset.acquisitionPeriod-1))
     const startingFallbackIndex=yearStartPeriod(Math.max(0,asset.startingAtPeriod-1))
+    const hasSubannualPeriods=periods.some(period=>period.days<300)
+    if (hasSubannualPeriods && asset.acquisitionPeriod>0 && !asset.acquisitionDate) {
+      warnings.push(asset.name+': تاریخ سالانه تحصیل برای محاسبه ماهانه/فصلی کافی نیست؛ تاریخ دقیق YYYY-MM-DD لازم است.')
+      periods.forEach((period,index)=>rowsByPeriod[index].push({id:asset.id,name:asset.name,methodApplied:null,openingBookValue:0,depreciation:0,closingBookValue:0}))
+      continue
+    }
     const acquired=asset.acquisitionDate?calendarDate(asset.acquisitionDate):
-      (acquisitionFallbackIndex>=0?calendarDate(periods[acquisitionFallbackIndex].startDate):firstDate)
+      (asset.acquisitionPeriod===0?firstDate:(acquisitionFallbackIndex>=0?calendarDate(periods[acquisitionFallbackIndex].startDate):firstDate))
     const requestedStart=asset.startingAtDate?calendarDate(asset.startingAtDate):
       (startingFallbackIndex>=0?calendarDate(periods[startingFallbackIndex].startDate):null)
     if (!acquired || (asset.acquisitionDate&&!calendarDate(asset.acquisitionDate)) ||
@@ -963,7 +969,7 @@ export function calculateComfarCalendarDepreciationSchedule(
     let eligible=requestedStart??addCalendarDays(acquired,1)
     if (!asset.startingAtDate && requestedStart && (asset.firstDepreciationMonths??12)<12)
       eligible=addCalendarMonths(eligible,12-(asset.firstDepreciationMonths??12))
-    if (acquired>=eligible) {
+    if (asset.acquisitionPeriod!==0 && acquired>=eligible) {
       const acquiredIndex=periods.findIndex(period=>period.startDate<=dateOnly(acquired)&&period.endDate>=dateOnly(acquired))
       eligible=acquiredIndex>=0?addCalendarDays(calendarDate(periods[acquiredIndex].endDate)!,1):addCalendarDays(acquired,1)
     }
