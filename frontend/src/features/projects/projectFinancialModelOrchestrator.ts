@@ -58,7 +58,7 @@ export function calculateProjectFinancialModelFromDrafts(
     valid:false,issues,financeInput:null,productionSales,workingCapital,fixedAssets,finalRun:null,
   })
   const openingDraft=input.drafts.openingBalanceSheet
-  const crossFormIssues=validateProjectModelCrossReferences(input.drafts as ProjectModelFinancialFormDrafts)
+  const crossFormIssues=validateProjectModelCrossReferences(input.drafts)
   if(crossFormIssues.length)return fail(crossFormIssues)
   const resolveTaxPeriod=(key:string):number=>{
     const matches:number[]=[]
