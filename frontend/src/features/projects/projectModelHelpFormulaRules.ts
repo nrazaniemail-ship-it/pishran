@@ -283,7 +283,7 @@ export function calculateDividendRepatriation(dividend:number,repatriationPercen
 
 /** Financial prices are converted to local currency at the official exchange rate. */
 export function calculateEconomicFinancialValue(price:number,marketOrigin:'local'|'foreign',officialExchangeRate:number){
- if(!nonNegative(price)||!nonNegative(officialExchangeRate)||officialExchangeRate===0)throw new Error('invalid-economic-financial-value')
+ if(!nonNegative(price)||!nonNegative(officialExchangeRate)||(marketOrigin==='foreign'&&officialExchangeRate===0))throw new Error('invalid-economic-financial-value')
  return marketOrigin==='foreign'?price*officialExchangeRate:price
 }
 export function calculateAdjustedMarketValue(financialValue:number,adjustmentFactor:number){
@@ -302,8 +302,9 @@ export function calculateEconomicComposite(items:EconomicCompositeItem[]){
  const foreignWeighted=items.reduce((s,x)=>s+x.adjustedMarketValue*x.foreignCurrencyExposurePercent/100,0)
  return {financialValue,adjustedMarketValue,adjustmentFactor:financialValue===0?null:adjustedMarketValue/financialValue,foreignCurrencyExposurePercent:adjustedMarketValue===0?0:foreignWeighted/adjustedMarketValue*100}
 }
-export function calculateNetForeignExchangeEffect(input:{price:number;officialExchangeRate:number;quantity:number;tradablePercent:number;direction:'inflow'|'outflow'}){
+export function calculateNetForeignExchangeEffect(input:{price:number;officialExchangeRate:number;quantity:number;tradablePercent:number;marketOrigin:'local'|'foreign';direction:'inflow'|'outflow'}){
  if(![input.price,input.officialExchangeRate,input.quantity,input.tradablePercent].every(nonNegative)||input.tradablePercent>100)throw new Error('invalid-net-foreign-exchange-input')
+ if(input.marketOrigin==='local')return 0
  const value=input.price*input.officialExchangeRate*input.quantity*input.tradablePercent/100
  return input.direction==='inflow'?value:-value
 }
@@ -322,15 +323,12 @@ export function calculateEconomicPresentValue(periodAmounts:number[],annualDisco
  const rate=annualDiscountRatePercent/100
  return periodAmounts.reduce((sum,amount,year)=>sum+amount/Math.pow(1+rate,year),0)
 }
-export function calculateEconomicAppraisalLevels(input:{financialValue:number;adjustedMarketValue:number;foreignExchangeAdjustment:number;indirectEffects:number;discountRatePercent:number}){
- if(![input.financialValue,input.adjustedMarketValue,input.foreignExchangeAdjustment,input.indirectEffects].every(finite)||!nonNegative(input.discountRatePercent))throw new Error('invalid-economic-appraisal')
- const rate=input.discountRatePercent/100
- return {
-  financialPresentValue:input.financialValue/(1+rate),
-  adjustedMarketPresentValue:input.adjustedMarketValue/(1+rate),
-  economicValue1:(input.adjustedMarketValue+input.foreignExchangeAdjustment)/(1+rate),
-  economicValue2:(input.adjustedMarketValue+input.foreignExchangeAdjustment+input.indirectEffects)/(1+rate)
- }
+export function calculateEconomicAppraisalLevels(input:{financialValue:number[];adjustedMarketValue:number[];foreignExchangeAdjustment:number[];indirectEffects:number[];discountRatePercent:number}){
+ const lengths=[input.financialValue.length,input.adjustedMarketValue.length,input.foreignExchangeAdjustment.length,input.indirectEffects.length]
+ if(new Set(lengths).size!==1||![...input.financialValue,...input.adjustedMarketValue,...input.foreignExchangeAdjustment,...input.indirectEffects].every(finite)||!nonNegative(input.discountRatePercent))throw new Error('invalid-economic-appraisal')
+ const economicValue1=input.adjustedMarketValue.map((value,i)=>value+input.foreignExchangeAdjustment[i])
+ const economicValue2=economicValue1.map((value,i)=>value+input.indirectEffects[i])
+ return {financialPresentValue:calculateEconomicPresentValue(input.financialValue,input.discountRatePercent),adjustedMarketPresentValue:calculateEconomicPresentValue(input.adjustedMarketValue,input.discountRatePercent),economicValue1:calculateEconomicPresentValue(economicValue1,input.discountRatePercent),economicValue2:calculateEconomicPresentValue(economicValue2,input.discountRatePercent)}
 }
 export function calculateEmploymentIndicators(input:{unskilledJobs:number;skilledJobs:number;investment:number;unskilledWages:number;skilledWages:number;totalWages:number}){
  if(!Object.values(input).every(nonNegative)||input.investment===0||input.unskilledWages===0||input.skilledWages===0||input.totalWages===0)throw new Error('invalid-employment-indicators')
@@ -347,7 +345,7 @@ export function applyGlobalSensitivityVariation<T extends {quantity:number;price
  })
 }
 export function calculateParametricSeries<T>(baseValue:number,variationPercent:number,steps:number,evaluate:(value:number)=>T){
- if(!finite(baseValue)||!finite(variationPercent)||variationPercent<0||!Number.isInteger(steps)||steps<1)throw new Error('invalid-parametric-analysis')
+ if(!finite(baseValue)||!finite(variationPercent)||variationPercent<0||variationPercent>100||!Number.isInteger(steps)||steps<1)throw new Error('invalid-parametric-analysis')
  return Array.from({length:steps*2+1},(_,i)=>{
   const variation=(i-steps)*variationPercent/steps
   const value=baseValue*(1+variation/100)
@@ -362,7 +360,7 @@ export function searchSensitivityTarget<T>(input:{variables:{id:string;baseValue
  const limit=input.maxIterations??10000
  let iteration=0,metric=input.evaluate(values)
  const achieved=()=>input.direction==='increase'?metric>=input.target:metric<=input.target
- if(achieved())return {achieved:true,values:{...values},original,metric,history,iterations:0}
+ if(achieved())return {achieved:true,values:{...original},achievedValues:{...original},original,metric,history,iterations:0}
  for(const variable of input.variables){
   const max=input.direction==='increase'?variable.maxIncreasePercent:variable.maxDecreasePercent
   const sign=input.direction==='increase'?1:-1
@@ -371,7 +369,7 @@ export function searchSensitivityTarget<T>(input:{variables:{id:string;baseValue
    values[variable.id]=variable.baseValue*(1+sign*pct/100)
    metric=input.evaluate(values);iteration++
    history.push({iteration,variableId:variable.id,changePercent:sign*pct,metric})
-   if(achieved())return {achieved:true,values:{...values},original,metric,history,iterations:iteration}
+   if(achieved())return {achieved:true,values:{...original},achievedValues:{...values},original,metric,history,iterations:iteration}
   }
  }
  return {achieved:false,values:{...original},original,metric:input.evaluate(original),history,iterations:iteration,limitReached:false}
