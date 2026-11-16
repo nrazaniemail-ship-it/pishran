@@ -62,7 +62,8 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
  const bookFloor=salvageValue
  const depreciableBase=acquisitionCost-salvageValue
  const firstYearMonths=input.firstDepreciationYearMonths??12
- if(!Number.isInteger(firstYearMonths)||firstYearMonths<1||firstYearMonths>12)throw new Error('invalid-first-depreciation-year-months')
+ if(!Number.isInteger(firstYearMonths)||firstYearMonths<1||firstYearMonths>12||firstYearMonths>usefulLifeMonths)throw new Error('invalid-first-depreciation-year-months')
+ if(method==='sum-of-years-digits'&&usefulLifeMonths%12===0&&firstYearMonths!==12)throw new Error('syd-exact-year-life-with-partial-first-year-not-defined-by-reference')
  if(activeMonths===0||openingBookValue<=bookFloor)return {charge:0,closingBookValue:Math.max(bookFloor,openingBookValue),remainingLifeMonths,methodUsed:method}
  let charge=0,methodUsed=method
  if(method==='linear-to-zero'||method==='linear-to-scrap'){
