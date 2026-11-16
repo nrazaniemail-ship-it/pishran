@@ -564,11 +564,15 @@ export default function AdvancedFinancePanel(props: Props) {
     {periodicSensitivityResult&&!periodicSensitivityResult.valid&&<p className="fw-hint">{tr(periodicSensitivityResult.issues.join('; '))}</p>}
     <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('حجم \\ قیمت')}</th>{[-20,-10,0,10,20].map(v=><th key={v}>{v}%</th>)}</tr></thead><tbody>{sensitivity.map((row,i)=><tr key={i}><th>{[-20,-10,0,10,20][i]}%</th>{row.map((cell,j)=><td key={j}>{cell.npv==null?'—':money(cell.npv)}</td>)}</tr>)}</tbody></table></div>
     <h4>{t('۶. سناریوهای خوش‌بینانه و بدبینانه','6. Optimistic & Pessimistic Scenarios')}</h4>
-    <div className="fw-grid">
+    {periodicSensitivityResult?.valid?<div className="fw-grid">
+      <div className="fw-result">{tr('بدبینانه')} · NPV {money(periodicSensitivityResult.pessimistic.npvProject??NaN)} · IRR {periodicSensitivityResult.pessimistic.irrProject==null?'—':money(periodicSensitivityResult.pessimistic.irrProject*100)+'٪'}</div>
+      <div className="fw-result">{tr('مبنا')} · NPV {money(periodicSensitivityResult.baseline.npvProject??NaN)} · IRR {periodicSensitivityResult.baseline.irrProject==null?'—':money(periodicSensitivityResult.baseline.irrProject*100)+'٪'}</div>
+      <div className="fw-result">{tr('خوش‌بینانه')} · NPV {money(periodicSensitivityResult.optimistic.npvProject??NaN)} · IRR {periodicSensitivityResult.optimistic.irrProject==null?'—':money(periodicSensitivityResult.optimistic.irrProject*100)+'٪'}</div>
+    </div>:<div className="fw-grid">
       <div className="fw-result">{tr('بدبینانه')} · NPV {money(scenarios.pessimistic.npvProject??NaN)} · IRR {scenarios.pessimistic.irrProject==null?'—':money(scenarios.pessimistic.irrProject*100)+'٪'}</div>
       <div className="fw-result">{tr('مبنا')} · NPV {money(scenarios.base.npvProject??NaN)} · IRR {scenarios.base.irrProject==null?'—':money(scenarios.base.irrProject*100)+'٪'}</div>
       <div className="fw-result">{tr('خوش‌بینانه')} · NPV {money(scenarios.optimistic.npvProject??NaN)} · IRR {scenarios.optimistic.irrProject==null?'—':money(scenarios.optimistic.irrProject*100)+'٪'}</div>
-    </div>
+    </div>}
 
     <h4>{t('۷. تطبیق سه صورت مالی و کنترل ترازنامه','7. Three-Statement Reconciliation & Balance Sheet Check')}</h4>
     <div className="fw-result">{tr('ترازهای منطبق: ')}<b>{totalBalanceChecks} {tr('از')} {statements.length}</b> {tr('دوره')} · {tr('کنترل گردش مانده‌ها: ')}<b>{totalMovementChecks} {tr('از')} {statements.length}</b></div>
