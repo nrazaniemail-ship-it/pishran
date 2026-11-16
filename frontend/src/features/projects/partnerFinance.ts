@@ -12,6 +12,8 @@ export type PartnerCashFlowAllocation = {
   partnerId: string
   partnerName: string
   declaredCapitalContribution: number
+  expectedCapitalContribution: number
+  capitalContributionVariance: number
   negativeCashFlowAllocation: number
   positiveCashFlowDistribution: number
   netCashFlow: number
@@ -86,9 +88,12 @@ export function allocateJointVentureCashFlows(
     warnings.push('Partner capital shares and profit-sharing percentages must each total 100%.')
     return empty()
   }
+  const totalScheduledEquityContribution=finance.totalEquityContribution
   const rows: PartnerCashFlowAllocation[] = partners.map(partner=>({
     partnerId:partner.id,partnerName:partner.name.trim(),
     declaredCapitalContribution:partner.capitalContribution,
+    expectedCapitalContribution:totalScheduledEquityContribution*partner.sharePercent/100,
+    capitalContributionVariance:partner.capitalContribution-totalScheduledEquityContribution*partner.sharePercent/100,
     negativeCashFlowAllocation:0,positiveCashFlowDistribution:0,netCashFlow:0,periods:[],
   }))
   let totalProjectEquityCashFlow=0
@@ -117,7 +122,6 @@ export function allocateJointVentureCashFlows(
     })
   })
   const totalDeclaredCapitalContribution=partners.reduce((sum,partner)=>sum+partner.capitalContribution,0)
-  const totalScheduledEquityContribution=finance.totalEquityContribution
   const allocatedPartnerNetCashFlow=rows.reduce((sum,row)=>sum+row.netCashFlow,0)
   const allocationReconciliationVariance=allocatedPartnerNetCashFlow+retainedPositiveCashFlow-totalProjectEquityCashFlow
   if(Math.abs(allocationReconciliationVariance)>0.01)warnings.push('Partner cash-flow allocations and retained cash do not reconcile to total equity cash flow.')
