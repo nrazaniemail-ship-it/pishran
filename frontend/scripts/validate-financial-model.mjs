@@ -341,7 +341,7 @@ assert.ok(projectsViewSource.includes("value={projectType} onChange={e => setPro
   && projectsViewSource.includes("!isSteel && projectType.trim() ? { steelStage: projectType.trim() }")
   && projectsViewSource.includes("value={name} onChange={e => setName(e.target.value)}"),
   'Non-steel raw templates must also keep project type and manually entered project name as separate persisted fields')
-assert.ok(wizardSource.includes("!isRawTemplate&&project.industry==='فولاد و صنایع معدنی'")
+assert.ok(!wizardSource.includes("مرحله اصلی زنجیره فولاد")
   && wizardSource.includes('technical:rawProject?[]')
   && wizardSource.includes('balance:rawProject?[]')
   && wizardSource.includes('utilities:rawProject?[]')
