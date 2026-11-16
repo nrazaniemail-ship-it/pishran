@@ -330,6 +330,9 @@ export function calculatePeriodicLoanSchedule(
   if (issues.length) return { rows: [], valid: false, issues }
 
   const periodRates = periods.map(period => {
+    if (interestConvention === 'actual-360' || interestConvention === 'actual-365') {
+      return input.annualRatePercent / 100 * period.days / (interestConvention === 'actual-360' ? 360 : 365)
+    }
     if (interestConvention === 'comfar-months-plus-360') {
       return input.annualRatePercent / 100 * loanYearFraction(period.startDate, period.endDate, interestConvention)
         / (period.days > 0 ? 1 : 1)
