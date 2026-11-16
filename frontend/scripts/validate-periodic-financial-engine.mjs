@@ -1178,3 +1178,56 @@ assert.equal(excessiveFundingStatements[1].balanceSheet.cash,101)
 assert.ok(excessiveFundingStatements.every(row=>row.balanceSheet.reconciled),
   'Working-capital funding above the requirement must reconcile as a cash buffer in the three statements')
 
+
+
+// Effective-dated loan rate resets and separately classified financing fees.
+const loanEventPeriods = [
+  { index:1,startDate:'2025-01-01',endDate:'2025-12-31',days:365,partial:false },
+  { index:2,startDate:'2026-01-01',endDate:'2026-12-31',days:365,partial:false },
+]
+const resetAndFeeLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,
+  rateChanges:[{effectiveDate:'2025-07-01',annualRatePercent:20}],
+  drawdowns:[100,0],
+  repaymentMethod:'bullet',
+  repaymentStartPeriod:2,
+  gracePeriods:0,
+  termPeriods:1,
+  capitalizeInterest:false,
+  interestConvention:'actual-365',
+  fees:[
+    {date:'2025-04-01',amount:10,treatment:'expense',label:'Arrangement fee'},
+    {date:'2025-10-01',amount:5,treatment:'capitalize',label:'Capitalized issuance cost'},
+  ],
+},loanEventPeriods,365)
+assert.equal(resetAndFeeLoan.valid,true,resetAndFeeLoan.issues.join('; '))
+assert.ok(Math.abs(resetAndFeeLoan.rows[0].interestExpense-15)<0.2,
+  'Interest must use the 10% base rate before 1 July and the 20% reset rate thereafter')
+assert.equal(resetAndFeeLoan.rows[0].financingFeeExpense,10,
+  'Expense-classified fees must remain separate from accrued interest')
+assert.equal(resetAndFeeLoan.rows[0].capitalizedFinancingFees,5,
+  'Capitalized issuance costs must be separately visible')
+assert.equal(resetAndFeeLoan.rows[0].closingBalance,105,
+  'Capitalized financing fees must increase the outstanding loan balance')
+assert.equal(resetAndFeeLoan.rows[0].debtService,10,
+  'Cash-paid financing fees must be included in debt service')
+assert.equal(resetAndFeeLoan.rows[1].principal,105,
+  'Bullet maturity must repay principal including capitalized financing costs')
+const invalidLoanRateOrder = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,
+  rateChanges:[
+    {effectiveDate:'2025-08-01',annualRatePercent:15},
+    {effectiveDate:'2025-07-01',annualRatePercent:20},
+  ],
+  drawdowns:[100,0],repaymentMethod:'bullet',repaymentStartPeriod:2,
+  gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+},loanEventPeriods,365)
+assert.equal(invalidLoanRateOrder.valid,false,
+  'Rate reset events must be strictly chronological')
+const outOfCalendarFinancingFee = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  fees:[{date:'2027-01-01',amount:1,treatment:'expense'}],
+},loanEventPeriods,365)
+assert.equal(outOfCalendarFinancingFee.valid,false,
+  'Financing fees outside the modeled calendar must be rejected')
