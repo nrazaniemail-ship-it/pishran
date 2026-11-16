@@ -54,9 +54,8 @@ export async function deleteProject(id: string): Promise<void> {
 }
 
 /**
- * Remove only the built-in demonstration projects from the project list.
- * Project-specific local data is deliberately preserved so it can be reused
- * when the final project forms are ready.
+ * Remove built-in demonstration projects and their project-specific draft data.
+ * User-created raw-template projects and their saved drafts are preserved.
  */
 export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
   const projects = await listProjects()
@@ -86,9 +85,11 @@ export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
       && project.location === 'شهرک صنعتی مربچه، شهرستان رامهرمز') return true
     return false
   }
+  const samples = projects.filter(isSample)
   const remaining = projects.filter(project => !isSample(project))
   if (remaining.length !== projects.length) {
     await localStore.set(PROJECTS_KEY, remaining)
+    await Promise.all(samples.map(project => localStore.remove('feasibility:project:' + project.id + ':v1')))
   }
   // Retire the old seed markers so sample projects are never recreated.
   await localStore.remove(WORKBOOK_SEED_KEY)
