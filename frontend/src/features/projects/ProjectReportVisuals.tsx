@@ -1,4 +1,4 @@
-import type { OneWaySensitivityAnalysis } from '../steel/financialModel'
+import type { OneWaySensitivityAnalysis, SensitivityCell } from '../steel/financialModel'
 import type { PartnerFinanceResult } from './partnerFinance'
 import { aggregatePeriodicFinanceByFiscalYear, hasCompleteFiscalYearCoverage, type PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
 import { HOT_ROLLING_200KT_AUDIT } from '../steel/workbookReconciliation'
@@ -27,6 +27,8 @@ type Props = {
   irrEquity: number | null
   mirrEquity: number | null
   sensitivity: OneWaySensitivityAnalysis | null
+  sensitivityMatrix?: SensitivityCell[][]
+  financialScenarios?: ReturnType<typeof import('../steel/financialModel').calculateFinancialScenarios> | null
   periodicResult: PeriodicProjectFinanceResult | null
   partnerFinanceResult?: PartnerFinanceResult | null
   marketSummary?: { demand:number; domesticProduction:number; imports:number; exports:number; targetShare:number; domesticPrice:number; exportPrice:number; domesticShare:number; growth:number }
@@ -247,6 +249,17 @@ export default function ProjectReportVisuals(props: Props) {
     <div className="fw-card">
       <h4>{t('نمودار تحلیل حساسیت','Sensitivity Analysis Chart',language)}</h4>
       <SensitivityChart analysis={props.sensitivity} language={language} currency={project.currency}/>
+      {props.sensitivityMatrix?.length===5&&<div className="fw-card">
+        <h4>{t('ماتریس حساسیت هم‌زمان قیمت و حجم','Combined Price & Volume Sensitivity Matrix',language)}</h4>
+        <p className="fw-hint">{t('هر خانه با تغییر هم‌زمان قیمت فروش و حجم تولید و با حفظ سایر مفروضات مدل مالی محاسبه شده است. ارقام، NPV پروژه هستند.','Each cell recalculates project NPV under simultaneous selling-price and production-volume changes, holding the remaining model assumptions constant.',language)}</p>
+        <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('حجم / قیمت','Volume / Price',language)}</th>{[-20,-10,0,10,20].map(v=><th key={v}>{v}%</th>)}</tr></thead><tbody>{props.sensitivityMatrix.map((row,i)=><tr key={i}><th>{[-20,-10,0,10,20][i]}%</th>{row.map((cell,j)=><td key={j}>{cell.npv==null?'—':fmtValue(cell.npv)}</td>)}</tr>)}</tbody></table></div>
+      </div>}
+      {props.financialScenarios&&<div className="fw-card">
+        <h4>{t('مقایسه سناریوهای مالی','Financial Scenario Comparison',language)}</h4>
+        <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('سناریو','Scenario',language)}</th><th>NPV</th><th>IRR</th></tr></thead><tbody>
+          {([{key:'pessimistic',labelFa:'بدبینانه',labelEn:'Pessimistic'},{key:'base',labelFa:'مبنا',labelEn:'Base'},{key:'optimistic',labelFa:'خوش‌بینانه',labelEn:'Optimistic'}] as const).map(item=>{const result=props.financialScenarios?.[item.key];return <tr key={item.key}><td>{language==='en'?item.labelEn:item.labelFa}</td><td>{result?.npvProject==null?'—':fmtValue(result.npvProject)}</td><td>{result?.irrProject==null?'—':fmtValue(result.irrProject*100)+'%'}</td></tr>})}
+        </tbody></table></div>
+      </div>}
       {isHotRollingCoil&&<div className="fw-card"><h4>{t('نمودار حساسیت مرجع OPEX','OPEX Reference Sensitivity Charts',language)}</h4><ReferenceSensitivityChart language={language}/></div>}
     </div>
     <div className="fw-card">
