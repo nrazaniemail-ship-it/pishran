@@ -777,8 +777,7 @@ export function calculateComfarAssetDepreciationSchedule(
     const months = asset.lengthMonths ?? 0
     const firstMonths = asset.firstDepreciationMonths ?? 12
     const length = asset.lengthYears + months / 12
-    // Straight-line-to-zero ignores the configured scrap percentage by definition.
-    const scrapValue = asset.method === 'linear-to-zero' ? 0 : asset.originalValue * asset.scrapPercent / 100
+    const scrapValue = asset.originalValue * asset.scrapPercent / 100
     const startPeriod = resolveComfarDepreciationStartPeriod(asset.acquisitionPeriod, asset.startingAtPeriod, asset.acquisitionDate, asset.startingAtDate)
     const valid = [asset.originalValue, asset.initialBookValue, asset.scrapPercent, asset.lengthYears, months, firstMonths].every(Number.isFinite)
       && asset.originalValue >= 0 && asset.initialBookValue >= 0 && scrapValue <= asset.initialBookValue + 1e-8
