@@ -125,6 +125,20 @@ try {
  badSale=h.updateHelpFormRow(badSale,'sales-programme','bad-sale','salesQuantity',10)
  assert.ok(h.validateHelpDrivenProjectForms(badSale).includes('sales-programme:0:product-and-period-required'))
 
+
+ let linkedCosts=h.addHelpFormRow(draft.helpDriven,'production-costs','cost-1')
+ linkedCosts=h.updateHelpFormRow(linkedCosts,'production-costs','cost-1','item','Electricity')
+ let linkedWc=h.addHelpFormRow(linkedCosts,'working-capital','wc-1')
+ linkedWc=h.updateHelpFormRow(linkedWc,'working-capital','wc-1','costItemId','missing-cost')
+ assert.ok(h.validateHelpDrivenProjectForms(linkedWc).includes('working-capital:0:unknown-cost-item-reference:missing-cost'))
+ let economicCycle=h.addHelpFormRow(draft.helpDriven,'economic-items','econ-1')
+ economicCycle=h.updateHelpFormRow(economicCycle,'economic-items','econ-1','item','Steel')
+ economicCycle=h.updateHelpFormRow(economicCycle,'economic-items','econ-1','parentEconomicItemId','econ-2')
+ economicCycle=h.addHelpFormRow(economicCycle,'economic-items','econ-2')
+ economicCycle=h.updateHelpFormRow(economicCycle,'economic-items','econ-2','item','Energy')
+ economicCycle=h.updateHelpFormRow(economicCycle,'economic-items','econ-2','parentEconomicItemId','econ-1')
+ assert.ok(h.validateHelpDrivenProjectForms(economicCycle).includes('economic-items:parent-cycle:econ-1'))
+
  console.log('COMFAR help form coverage tests passed')
 } finally {
  await rm(temp,{recursive:true,force:true})
