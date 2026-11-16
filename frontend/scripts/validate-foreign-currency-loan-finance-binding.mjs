@@ -76,6 +76,7 @@ const bound=binding.bindLoanFacilitiesToPeriodicFinance({
 assert.equal(bound.valid,true,bound.issues.join('; '))
 assert.equal(bound.financeInput.loans.length,1)
 assert.equal(bound.financeInput.precomputedLoanSchedules['foreign-facility'].length,3)
+console.log('DEBUG foreign precomputed schedule',JSON.stringify(bound.financeInput.precomputedLoanSchedules['foreign-facility']))
 const integrated=engine.calculateIntegratedPeriodicFinance(bound.financeInput)
 assert.equal(integrated.valid,true,integrated.warnings.join('; '))
 const run=binding.calculatePeriodicFinanceWithForeignCurrencyLoans({
