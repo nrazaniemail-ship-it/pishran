@@ -255,7 +255,7 @@ export default function AdvancedFinancePanel(props: Props) {
           }
         })
       : undefined
-  const utilization = Array.from({length:years},(_,i)=>i<construction?0:Math.max(0,Math.min(100,props.ramp[i-construction]??100))/100)
+  const utilization = Array.from({length:years},(_,i)=>i<construction?0:Math.max(0,Math.min(100,props.ramp[i-construction]??(props.blankStart?Number.NaN:100)))/100)
   const fixedInvestmentSchedule = capexSchedule
   const workingCapitalPolicy = useMemo(()=>({
     dayBasis:(props.dayCountBasis??360) as 360|365,rawMaterialDays:state.workingCapitalDays.raw,energyDays:state.workingCapitalDays.energy,sparePartsDays:state.workingCapitalDays.spareParts,workInProgressDays:state.workingCapitalDays.wip,
@@ -289,7 +289,7 @@ export default function AdvancedFinancePanel(props: Props) {
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
     const fiscalMonth=props.fiscalYearStartMonth
     const periodLoans=state.loans.map(loan=>{
-      const annualDrawdowns=loan.drawdowns.length===years?loan.drawdowns:Array(years).fill(0)
+      const annualDrawdowns=loan.drawdowns.length===years?loan.drawdowns:Array(years).fill(props.blankStart?Number.NaN:0)
       const drawdowns=loan.drawdownMode==='period-manual'
         ? (periodDrawdownDatesMatch(loan)?loan.periodDrawdowns!:Array(periods.length).fill(Number.NaN))
         : allocateAnnualFlowsToPeriods(annualDrawdowns,periods,fiscalMonth)
