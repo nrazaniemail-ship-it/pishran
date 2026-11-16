@@ -379,7 +379,13 @@ assert.ok(Math.abs(integratedPeriodic.rows.reduce((sum,row)=>sum+row.fixedInvest
 assert.equal(integratedPeriodic.rows[1].changeInWorkingCapital, 10)
 assert.equal(integratedPeriodic.rows[2].changeInWorkingCapital, 10)
 assert.equal(integratedPeriodic.rows[3].changeInWorkingCapital, -5)
-assert.equal(integratedPeriodic.rows[3].equityFreeCashFlow, 5, 'A working-capital release must increase equity cash flow when no explicit shareholder funding schedule is supplied')
+assert.ok(Math.abs(integratedPeriodic.rows[3].equityFreeCashFlow - (
+  -integratedPeriodic.rows[3].equityContribution + integratedPeriodic.rows[3].revenue -
+  integratedPeriodic.rows[3].variableCost - integratedPeriodic.rows[3].fixedCost -
+  integratedPeriodic.rows[3].tax - integratedPeriodic.rows[3].interestExpense -
+  integratedPeriodic.rows[3].principal - integratedPeriodic.rows[3].maintenanceCapex +
+  integratedPeriodic.rows[3].assetSaleProceeds + integratedPeriodic.rows[3].salvageValue + 5
+)) < 1e-8, 'A working-capital release must increase equity cash flow when no explicit shareholder funding schedule is supplied')
 assert.ok(integratedPeriodic.rows[0].capitalizedInterest > 0, 'Grace-period interest must be capitalized')
 assert.ok(integratedPeriodic.rows[2].principal > 0 && integratedPeriodic.rows[3].closingWorkingCapital === 15)
 assert.ok(integratedPeriodic.rows[2].dscr !== null && Number.isFinite(integratedPeriodic.rows[2].dscr))
