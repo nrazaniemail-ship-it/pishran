@@ -466,6 +466,12 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
     year:1405+index,
     ratePercent:index<5?5:25
   })),
+  depreciationByOperatingYear: HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarDepreciationByYear,
+  changeInWorkingCapitalByOperatingYear: [
+    [1405,3_309_144.53],[1406,409_216.09],[1407,441_167.49],[1408,441_167.49],
+    [1409,-5_325.23],[1410,0],[1411,0],[1412,0],[1413,0],[1414,0],
+    [1415,0],[1416,0],[1417,0],[1418,0],[1419,0]
+  ] as const,
   projectNpvAt25: 31_399_764.27,
   projectIrrPercent: 48.31,
   projectMirrPercent: 28.03,
