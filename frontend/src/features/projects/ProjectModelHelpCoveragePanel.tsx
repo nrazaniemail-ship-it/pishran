@@ -1,10 +1,11 @@
 import {
  HELP_FORM_SECTIONS, createBlankHelpDrivenProjectForms, addHelpFormRow,
  removeHelpFormRow, updateHelpFormRow, validateHelpDrivenProjectForms,
- type HelpDrivenProjectForms, type HelpFormField, type HelpFormRow, type HelpFormSection
+ validateHelpDrivenProjectPeriods, type HelpDrivenProjectForms, type HelpDrivenCalendarPeriod,
+ type HelpFormField, type HelpFormRow, type HelpFormSection
 } from './projectModelHelpForms'
 
-type Props={value?:HelpDrivenProjectForms;onChange:(value:HelpDrivenProjectForms)=>void;language?:'fa'|'en'}
+type Props={value?:HelpDrivenProjectForms;onChange:(value:HelpDrivenProjectForms)=>void;language?:'fa'|'en';periods?:readonly HelpDrivenCalendarPeriod[]}
 const parseNumber=(value:string):number|null=>value.trim()===''?null:Number.isFinite(Number(value))?Number(value):null
 function FieldControl({field,row,onChange,language,referenceOptions}:{field:HelpFormField;row:HelpFormRow;onChange:(value:string|number|boolean|null)=>void;language:'fa'|'en';referenceOptions?:{value:string;label:string}[]}){
  const value=row.values[field.key]
@@ -30,11 +31,11 @@ function referenceOptionsFor(fieldKey:string,model:HelpDrivenProjectForms):{valu
  return undefined
 }
 
-export default function ProjectModelHelpCoveragePanel({value,onChange,language='fa'}:Props){
+export default function ProjectModelHelpCoveragePanel({value,onChange,language='fa',periods=[]}:Props){
  const en=language==='en'
  const t=(fa:string,english:string)=>en?english:fa
  const model=value??createBlankHelpDrivenProjectForms()
- const errors=validateHelpDrivenProjectForms(model)
+ const errors=[...validateHelpDrivenProjectForms(model),...validateHelpDrivenProjectPeriods(model,periods)]
  const groups:HelpFormSection['group'][]=['project','operating','investment','finance','tax','economic','analysis']
  const groupFa:Record<string,string>={project:'۱. تعریف پروژه و تقویم',operating:'۲. عملیات، هزینه و سرمایه در گردش',investment:'۳. سرمایه‌گذاری و دارایی',finance:'۴. منابع مالی و بدهی',tax:'۵. مالیات و مانده‌های افتتاحیه',economic:'۶. ارزیابی اقتصادی',analysis:'۷. تحلیل حساسیت و افزایشی'}
  const groupEn:Record<string,string>={project:'1. Project definition and calendar',operating:'2. Operations, costs and working capital',investment:'3. Investment and assets',finance:'4. Finance and debt',tax:'5. Tax and opening balances',economic:'6. Economic appraisal',analysis:'7. Sensitivity and incremental analysis'}
