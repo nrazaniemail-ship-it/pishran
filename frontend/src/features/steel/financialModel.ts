@@ -1463,13 +1463,15 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
   let previousCash = 0
   let previousDebt = 0
   let previousNetFixedAssets = 0
-  let previousWorkingCapitalAssets = 0
+  let previousNetWorkingCapital = 0
+  let previousPreOperatingAssets = 0
   let previousPaidInCapital = 0
   let previousRetainedEarnings = 0
   return years.map(row => {
     const cashOperatingCosts = row.variableCashCost + row.fixedCashCost
     const ebitda = row.revenue - cashOperatingCosts
-    const ebit = ebitda - row.depreciation + (row.assetSaleOtherIncomeLoss ?? 0)
+    const otherIncomeLoss = row.assetSaleOtherIncomeLoss ?? 0
+    const ebit = ebitda - row.depreciation + otherIncomeLoss
     const profitBeforeTax = ebit - row.interest
     const netIncome = profitBeforeTax - row.tax
     retainedEarnings += netIncome
@@ -1477,11 +1479,13 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     cumulativeGrossFixedAssets += row.fixedInvestment + row.maintenanceCapex
     cumulativePreOperatingAssets += row.preOperatingCost + row.capitalizedInterest
     accumulatedDepreciation += row.depreciation
-    cumulativeBookValueDisposed += row.assetBookValueDisposed ?? 0
-    const currentAssets = row.workingCapitalBreakdown.rawMaterials + (row.workingCapitalBreakdown.energy ?? 0) + (row.workingCapitalBreakdown.spareParts ?? 0) + row.workingCapitalBreakdown.workInProgress
-      + row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables + row.workingCapitalBreakdown.minimumCash
+    cumulativeBookValueDisposed += (row.assetBookValueDisposed ?? 0) + (row.salvageBookValueDisposed ?? 0)
+    const currentAssets = row.workingCapitalBreakdown.rawMaterials + (row.workingCapitalBreakdown.energy ?? 0) +
+      (row.workingCapitalBreakdown.spareParts ?? 0) + row.workingCapitalBreakdown.workInProgress +
+      row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables +
+      row.workingCapitalBreakdown.minimumCash
     const tradePayables = row.workingCapitalBreakdown.payables
-    cumulativeBookValueDisposed += row.salvageBookValueDisposed ?? 0
+    const netWorkingCapital = currentAssets - tradePayables
     const netFixedAssets = cumulativeGrossFixedAssets - accumulatedDepreciation - cumulativeBookValueDisposed
     const deferredPreOperatingAssets = cumulativePreOperatingAssets
     const totalAssets = row.cashBalance + currentAssets + netFixedAssets + deferredPreOperatingAssets
@@ -1489,34 +1493,57 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     const totalEquity = paidInCapital + retainedEarnings
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
+    const operatingCashFlow = netIncome + row.depreciation - otherIncomeLoss - row.changeInWorkingCapital
+    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex +
+      row.salvageProceeds + (row.assetSaleProceeds ?? 0)
+    const financingCashFlow = row.debtDrawdown + row.equityContribution - row.principal
+    const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
+    const openingBalances = {
+      cash: previousCash, debt: previousDebt, netFixedAssets: previousNetFixedAssets,
+      workingCapitalAssets: previousNetWorkingCapital, preOperatingAssets: previousPreOperatingAssets,
+      paidInCapital: previousPaidInCapital, retainedEarnings: previousRetainedEarnings,
+    }
     const movementChecks = {
-      cash: row.cashBalance - previousCash - (row.cashBalance - previousCash),
+      cash: row.cashBalance - previousCash - netChangeInCash,
       debt: row.debtBalance - previousDebt - (row.debtDrawdown + row.capitalizedInterest - row.principal),
-      netFixedAssets: netFixedAssets - previousNetFixedAssets - (row.fixedInvestment + row.maintenanceCapex - row.depreciation - (row.assetBookValueDisposed ?? 0) - (row.salvageBookValueDisposed ?? 0)),
-      workingCapital: currentAssets - previousWorkingCapitalAssets - row.changeInWorkingCapital,
+      netFixedAssets: netFixedAssets - previousNetFixedAssets -
+        (row.fixedInvestment + row.maintenanceCapex - row.depreciation -
+          (row.assetBookValueDisposed ?? 0) - (row.salvageBookValueDisposed ?? 0)),
+      workingCapital: netWorkingCapital - previousNetWorkingCapital - row.changeInWorkingCapital,
+      preOperatingAssets: deferredPreOperatingAssets - previousPreOperatingAssets -
+        row.preOperatingCost - row.capitalizedInterest,
       paidInCapital: paidInCapital - previousPaidInCapital - row.equityContribution,
       retainedEarnings: retainedEarnings - previousRetainedEarnings - netIncome,
     }
-    const openingBalances = { cash: previousCash, debt: previousDebt, netFixedAssets: previousNetFixedAssets, workingCapitalAssets: previousWorkingCapitalAssets, paidInCapital: previousPaidInCapital, retainedEarnings: previousRetainedEarnings }
-    const operatingCashFlow = netIncome + row.depreciation - (row.assetSaleOtherIncomeLoss ?? 0) - row.changeInWorkingCapital
-    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex + row.salvageProceeds + (row.assetSaleProceeds ?? 0)
-    const financingCashFlow = row.debtDrawdown + row.equityContribution - row.principal
-    const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
-    return {
+    const result: FinancialStatementYear = {
       year: row.year,
       openingBalances,
       movementChecks,
-      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation, otherIncomeLoss: row.assetSaleOtherIncomeLoss ?? 0, ebit, interest: row.interest, profitBeforeTax, tax: row.tax, taxLossCarryForward: row.taxLossCarryForward, netIncome },
-      cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash, closingCash: row.cashBalance },
+      incomeStatement: {
+        revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation,
+        otherIncomeLoss, ebit, interest: row.interest, profitBeforeTax, tax: row.tax,
+        taxLossCarryForward: row.taxLossCarryForward, netIncome,
+      },
+      cashFlowStatement: {
+        operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash,
+        closingCash: row.cashBalance,
+      },
       balanceSheet: {
-        cash: row.cashBalance, workingCapitalAssets: currentAssets, netFixedAssets, deferredPreOperatingAssets,
-        totalAssets, tradePayables, debt: row.debtBalance, totalLiabilities, paidInCapital, retainedEarnings,
-        totalEquity, totalLiabilitiesAndEquity, balanceDifference,
-        reconciled: Math.abs(balanceDifference) <= Math.max(0, tolerance) && Object.values(movementChecks).every(value => Math.abs(value) <= Math.max(0,tolerance)),
+        cash: row.cashBalance, workingCapitalAssets: currentAssets, netFixedAssets,
+        deferredPreOperatingAssets, totalAssets, tradePayables, debt: row.debtBalance,
+        totalLiabilities, paidInCapital, retainedEarnings, totalEquity,
+        totalLiabilitiesAndEquity, balanceDifference,
+        reconciled: Math.abs(balanceDifference) <= Math.max(0, tolerance) &&
+          Object.values(movementChecks).every(value => Math.abs(value) <= Math.max(0, tolerance)),
       },
     }
-    previousCash=row.cashBalance; previousDebt=row.debtBalance; previousNetFixedAssets=netFixedAssets;
-    previousWorkingCapitalAssets=currentAssets; previousPaidInCapital=paidInCapital; previousRetainedEarnings=retainedEarnings;
+    previousCash = row.cashBalance
+    previousDebt = row.debtBalance
+    previousNetFixedAssets = netFixedAssets
+    previousNetWorkingCapital = netWorkingCapital
+    previousPreOperatingAssets = deferredPreOperatingAssets
+    previousPaidInCapital = paidInCapital
+    previousRetainedEarnings = retainedEarnings
     return result
   })
 }
