@@ -1565,3 +1565,45 @@ assert.ok(projectReportSource.includes('equityIrrPercent')
   && projectReportSource.includes('تا تطبیق برنامه بازپرداخت ۲۰ قسط فصلی، اختلاف قابل تأیید نیست')
   && projectReportSource.includes('Variance not certified until the 20-quarter repayment schedule is matched'),
   'The report must keep the 57.99% COMFAR equity IRR explicitly uncertified until shareholder cash flows and quarterly debt service are reconciled')
+
+ 
+// HRCR200 five-gate shareholder financing audit. Amounts are million IRR.
+// Capitalized construction interest increases opening debt; it is not a second cash drawdown.
+const hrcr200ConstructionFunding = {
+  constructionFundingBase: 18702835.36,
+  equity: 13091985.20,
+  originalLoanPrincipal: 5610850.80,
+  capitalizedInterest: 3298633.06,
+  grossOpeningRepaymentDebt: 8909484.06,
+}
+assert.ok(Math.abs(hrcr200ConstructionFunding.equity / hrcr200ConstructionFunding.constructionFundingBase * 100 - 70) < 0.001,
+  'HRCR200 construction equity must reconcile to the amount-derived 70% share')
+assert.ok(Math.abs(hrcr200ConstructionFunding.originalLoanPrincipal / hrcr200ConstructionFunding.constructionFundingBase * 100 - 30) < 0.001,
+  'HRCR200 construction loan principal must reconcile to the amount-derived 30% share')
+assert.ok(Math.abs(hrcr200ConstructionFunding.equity + hrcr200ConstructionFunding.originalLoanPrincipal - hrcr200ConstructionFunding.constructionFundingBase) < 0.01,
+  'HRCR200 70/30 construction sources must reconcile to the construction funding base')
+assert.ok(Math.abs(hrcr200ConstructionFunding.originalLoanPrincipal + hrcr200ConstructionFunding.capitalizedInterest - hrcr200ConstructionFunding.grossOpeningRepaymentDebt) < 0.01,
+  'Capitalized construction interest must increase the opening repayment debt without being treated as fresh principal')
+assert.equal(hrcr200ComfarLoan.rows.length, 20,
+  'HRCR200 COMFAR debt-service audit must contain exactly 20 quarterly instalments')
+assert.ok(hrcr200ComfarLoan.rows.every(row => row.drawdown === 0),
+  'The gross post-capitalization opening balance must not be counted again as 20-quarter cash drawdowns')
+assert.ok(hrcr200ComfarLoan.rows.every(row => row.capitalizedInterest === 0),
+  'Construction-capitalized interest is already embedded in opening debt and must not be capitalized a second time')
+assert.ok(Math.abs(hrcr200ComfarLoan.rows.reduce((sum,row)=>sum+row.principal,0) - hrcr200ConstructionFunding.grossOpeningRepaymentDebt) < 0.1,
+  'The 20 quarterly principal instalments must fully amortize principal plus capitalized construction interest')
+assert.ok(Math.abs(hrcr200ComfarLoan.rows.at(-1).closingBalance) < 0.01,
+  'HRCR200 closing debt must be zero after the twentieth quarterly instalment')
+const hrcr200AnnualPrincipalFrom20Quarters = Array.from({length:5},(_,yearIndex)=>
+  hrcr200ComfarLoan.rows.slice(yearIndex*4,yearIndex*4+4).reduce((sum,row)=>sum+row.principal,0))
+hrcr200AnnualPrincipalFrom20Quarters.forEach((amount,index)=>assert.ok(
+  Math.abs(amount-comfarReference.loanRepaymentAudit.annualPrincipalRepaymentsByYear[index])<0.1,
+  'Four quarterly principal payments in repayment year '+(index+1)+' must reconcile to the annual COMFAR principal'
+))
+// The available COMFAR reference includes annual project cash flows and a reconstructed
+// quarterly debt schedule, but not a source-authenticated quarterly shareholder cash-flow
+// vector. Therefore equity IRR 57.99% remains a reference-only value, never a passed test.
+assert.ok(projectReportSource.includes('equityIrrPercent')
+  && projectReportSource.includes('تا تطبیق برنامه بازپرداخت ۲۰ قسط فصلی، اختلاف قابل تأیید نیست')
+  && projectReportSource.includes('Variance not certified until the 20-quarter repayment schedule is matched'),
+  'The report must keep the 57.99% COMFAR equity IRR explicitly uncertified until shareholder cash flows and quarterly debt service are reconciled')
