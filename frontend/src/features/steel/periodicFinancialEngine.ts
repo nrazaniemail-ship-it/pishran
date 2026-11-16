@@ -255,6 +255,8 @@ export type PeriodicLoanRow = {
   commitmentFeeExpense: number
   capitalizedFinancingFees: number
   principal: number
+  /** Non-cash local-currency liability remeasurement; may be negative for an FX gain. */
+  foreignExchangeLoss?: number
   closingBalance: number
   debtService: number
 }
@@ -1030,7 +1032,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
         if (row?.period !== index+1 || values.some(value=>!validFinite(value)) ||
             values.some(value=>value<0) ||
             Math.abs(row.closingBalance-(row.openingBalance+row.drawdown+row.capitalizedInterest+
-              row.capitalizedFinancingFees-row.principal))>0.01 ||
+              row.capitalizedFinancingFees-row.principal+(row.foreignExchangeLoss??0)))>0.01 ||
             Math.abs(row.debtService-(row.interestExpense+row.financingFeeExpense+row.principal))>0.01) {
           scheduleIssues.push('Precomputed schedule row does not reconcile in period '+(index+1)+'.')
         }
@@ -1520,13 +1522,14 @@ export function buildPeriodicThreeFinancialStatements(
       capitalizedInterest: sum.capitalizedInterest + schedule[index].capitalizedInterest,
       capitalizedFinancingFees: sum.capitalizedFinancingFees + schedule[index].capitalizedFinancingFees,
       principal: sum.principal + schedule[index].principal,
+      foreignExchangeLoss: sum.foreignExchangeLoss + (schedule[index].foreignExchangeLoss??0),
       closingBalance: sum.closingBalance + schedule[index].closingBalance,
-    }), { drawdown: 0, capitalizedInterest: 0, capitalizedFinancingFees: 0, principal: 0, closingBalance: 0 })
+    }), { drawdown: 0, capitalizedInterest: 0, capitalizedFinancingFees: 0, principal: 0, foreignExchangeLoss:0, closingBalance: 0 })
     if (Math.abs(scheduledPeriod.drawdown - row.debtDrawdown) > tolerance ||
         Math.abs(scheduledPeriod.capitalizedInterest - row.capitalizedInterest) > tolerance ||
         Math.abs(scheduledPeriod.capitalizedFinancingFees - row.capitalizedFinancingFees) > tolerance ||
         Math.abs(scheduledPeriod.principal - row.principal) > tolerance) return []
-    const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal
+    const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal + scheduledPeriod.foreignExchangeLoss
     if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance)) > tolerance) return []
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
     const cashOperatingCosts = row.variableCost + row.fixedCost
@@ -1554,7 +1557,7 @@ export function buildPeriodicThreeFinancialStatements(
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
     const movementChecks = {
       cash: closingCash - cash - netChangeInCash,
-      debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal),
+      debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal + scheduledPeriod.foreignExchangeLoss),
       netWorkingCapital: closingWorkingCapital - netWorkingCapital - row.changeInWorkingCapital,
       netFixedAssets: closingNetFixedAssets - netFixedAssets -
         (row.fixedInvestment + row.maintenanceCapex - row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed),
