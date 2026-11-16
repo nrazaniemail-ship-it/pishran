@@ -326,4 +326,33 @@ assert.ok(projectFoundationPanelSource.includes('Day-count Basis')
 assert.ok(advancedFinanceSource.includes('Values in the period tax schedule override the annual rate.')
   && !advancedFinanceSource.includes('Monthly/quarterly calculation will be enabled after the period engine is complete'),
   'Tax UI must explain period-specific overrides rather than claim monthly/quarterly support is unavailable')
+const comfarAnnualPeriods = Array.from({ length: 17 }, (_, index) => {
+  const start = new Date(Date.UTC(2024, 0, 1 + index * 365))
+  const end = new Date(start.getTime() + 364 * 86400000)
+  return {
+    index: index + 1,
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+    days: 365,
+    partial: false,
+  }
+})
+const comfarCashFlows = [
+  -13907805.03,-8093664.03,9602342.59,14451793.80,16364704.85,
+  18303107.76,18712850.68,15024064.82,15024064.82,15024064.82,
+  15024064.82,14719546.80,14719546.80,14719546.80,14718471.78,
+  14710023.10,14708024.54 + 13735466.82,
+]
+const comfarValuationDate = comfarAnnualPeriods[1].endDate
+const comfarNpv = engine.calculatePeriodicNpv(
+  comfarCashFlows, comfarAnnualPeriods, 25, 365, 'period-end',
+  comfarValuationDate, 'period-count', 1,
+)
+assert.ok(Math.abs(comfarNpv - 31399764.27) < 0.05,
+  'COMFAR HRCR200 NPV at 25% and valuation date 12/1404 must reconcile within rounding')
+const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
+assert.ok(comfarIrr !== null && Math.abs(comfarIrr - 48.31) < 0.01,
+  'COMFAR HRCR200 project IRR must reconcile to 48.31% within displayed precision')
+assert.ok(Math.abs(engine.calculatePeriodicNpv([100,100],comfarAnnualPeriods.slice(0,2),25,365,'period-end',comfarAnnualPeriods[1].endDate,'period-count',1)-225) < 1e-8,
+  'A cash flow before the valuation date must be compounded forward to the valuation date')
 console.log('PASS: asset-level monthly/quarterly depreciation, disposals and integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
