@@ -2,6 +2,11 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 
+const projectsView=await readFile(new URL('../src/features/projects/ProjectsView.tsx',import.meta.url),'utf8')
+assert.match(projectsView,/const templateId = 'raw' as const/,'New projects must always use the raw template')
+assert.match(projectsView,/قالب خام/,'The raw template must remain available')
+assert.doesNotMatch(projectsView,/نورد ورق گرم|HRCR200|STEEL_PROJECT_OPTIONS|changeSteelProject/,'No specialized sample project may appear in the raw project creation flow')
+assert.doesNotMatch(projectsView,/setSteelStage|changeSteelProject/,'The raw project creation flow must not select a steel-specific stage')
 const source=await readFile(new URL('../src/core/projects/projectRepository.ts',import.meta.url),'utf8')
 const state=new Map()
 const removed=[]
