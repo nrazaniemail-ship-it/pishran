@@ -1,6 +1,5 @@
 import type { OneWaySensitivityAnalysis } from '../steel/financialModel'
-import { fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
-import type { ProjectCalendarPeriod } from './projectFoundation'
+import { aggregatePeriodicFinanceByFiscalYear, type PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
 import { HOT_ROLLING_200KT_AUDIT } from '../steel/workbookReconciliation'
 import { HOT_ROLLING_COMFAR_OUTPUT_AUDIT } from '../steel/hotRollingExcelBenchmark'
 
@@ -170,15 +169,11 @@ export default function ProjectReportVisuals(props: Props) {
   const fmtValue=(value:number|null|undefined,digits=2)=>fmt(value,language,digits)
   const comfarReference = HOT_ROLLING_200KT_AUDIT.alternativeMetricsInWorkbook
   const expectedComfarTaxRates = HOT_ROLLING_COMFAR_OUTPUT_AUDIT.taxScheduleByOperatingYear.map(row=>row.ratePercent)
-  const comparisonPeriods: ProjectCalendarPeriod[] = (props.periodicResult?.rows??[]).map(row=>({index:row.period,startDate:row.startDate,endDate:row.endDate,days:row.days,partial:false}))
-  const annualComparisonRows = Array.from({length:17},(_,yearIndex)=>{
-    const grouped=(props.periodicResult?.rows??[]).filter((row,index)=>fiscalYearIndexForPeriod(comparisonPeriods[index],comparisonPeriods,props.fiscalYearStartMonth??1)===yearIndex)
-    const sum=(key:'projectFreeCashFlow'|'depreciation'|'changeInWorkingCapital'|'interestExpense'|'principal'|'debtService'|'cfads')=>grouped.reduce((total,row)=>total+row[key],0)
-    const taxRates=[...new Set(grouped.map(row=>Number(row.taxRatePercent.toFixed(4))))]
-    const debtService=sum('debtService'), cfads=sum('cfads')
-    return {year:1403+yearIndex,rows:grouped,projectFreeCashFlow:sum('projectFreeCashFlow'),taxRatePercent:taxRates.length===1?taxRates[0]:null,depreciation:sum('depreciation'),changeInWorkingCapital:sum('changeInWorkingCapital'),interestExpense:sum('interestExpense'),principal:sum('principal'),debtService,cfads,dscr:debtService>0?cfads/debtService:null}
-  })
-  const comfarAnnualRows = annualComparisonRows.every(row=>row.rows.length>0) ? annualComparisonRows : []
+  const annualComparisonRows = aggregatePeriodicFinanceByFiscalYear(
+    props.periodicResult?.rows??[],props.fiscalYearStartMonth??1,17
+  )
+  const comfarAnnualRows = annualComparisonRows.length===17&&annualComparisonRows.every(row=>row.rows.length>0)
+    ? annualComparisonRows.map(row=>({...row,year:1403+row.fiscalYearIndex})) : []
   const currentOperatingTaxRates = comfarAnnualRows.slice(2).map(row=>row.taxRatePercent)
   const comfarTaxScheduleMatches = currentOperatingTaxRates.length === expectedComfarTaxRates.length &&
     expectedComfarTaxRates.every((rate,index)=>Math.abs((currentOperatingTaxRates[index]??NaN)-rate)<0.001)
