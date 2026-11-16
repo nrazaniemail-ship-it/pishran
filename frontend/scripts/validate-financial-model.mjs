@@ -338,6 +338,9 @@ assert.ok(rollingWorkspaceSource.includes("(project.templateId as string)==='hot
   'Legacy project detection remains isolated from new raw-template projects')
 assert.ok(wizardSource.includes("project.templateId==='raw'"),
   'Raw template must initialize an empty feasibility model')
+assert.ok(appSource.includes("onOpenProject={project => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard') }}")
+  && !appSource.includes("stage.includes('نورد گرم')"),
+  'Every saved project must open in the single raw feasibility model')
 assert.ok(projectsViewSource.indexOf("t('نوع پروژه','Project Type')") < projectsViewSource.indexOf("t('نام پروژه','Project Name')")
   && projectsViewSource.includes("value={projectType} onChange={e => setProjectType(e.target.value)}")
   && projectsViewSource.includes("value={name} onChange={e => setName(e.target.value)}")
