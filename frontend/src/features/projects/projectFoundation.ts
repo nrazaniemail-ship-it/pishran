@@ -1,4 +1,5 @@
 export type ProjectPeriodFrequency = 'unspecified' | 'annual' | 'semiannual' | 'quarterly' | 'monthly'
+export type ProjectDiscountConvention = 'actual-days' | 'period-count'
 export type ProjectCurrency = { id: string; code: string; name: string; exchangeRates: { period: string; rateToLocal: number }[] }
 export type ProjectCostCentre = { id: string; code: string; name: string; parentId?: string }
 export type ProjectInflationIndex = { id: string; name: string; currencyCode: string; rates: { period: string; ratePercent: number }[] }
@@ -15,6 +16,7 @@ export type ProjectFoundation = {
     balanceDateDay: number | null
     dayCountBasis: 360 | 365 | null
     valuationDate: string
+    discountConvention: ProjectDiscountConvention
     cashFlowTiming: 'unspecified' | 'period-end' | 'mid-period'
   }
   currencies: {
@@ -56,6 +58,7 @@ export function createBlankProjectFoundation(): ProjectFoundation {
       balanceDateDay: null,
       dayCountBasis: null,
       valuationDate: '',
+      discountConvention: 'actual-days',
       cashFlowTiming: 'unspecified',
     },
     currencies: { localCurrencyCode: '', localCurrencyName: '', foreignCurrencies: [] },
