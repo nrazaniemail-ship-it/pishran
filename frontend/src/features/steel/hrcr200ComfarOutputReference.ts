@@ -46,6 +46,34 @@ export const HRCR200_COMFAR_OUTPUT_REFERENCE = {
     { year: 1419, inflows: 62_259_600, outflows: 47_551_575.46, net: 14_708_024.54, presentValue: 517_492.61 },
     { year: 1420, inflows: 13_735_466.82, outflows: 0, net: 13_735_466.82, presentValue: 483_273.78 }
   ],
+  financing: {
+    originalConstructionLoanPrincipal: 5_610_850.80,
+    capitalizedConstructionInterest: 3_298_633.06,
+    longTermDebtAfterConstruction: 8_909_484.06,
+    constructionEquity: 13_091_985.00,
+    operatingWorkingCapitalEquity: 3_309_144.53,
+    operatingWorkingCapitalLoan: 0,
+    totalEquityCapital: 16_401_129.53,
+    annualSchedule: [
+      { year: 1403, equityContribution: 8_905_157.30, debtAddition: 5_002_647.728981, principalRepayment: 0, closingDebt: 5_002_647.73 },
+      { year: 1404, equityContribution: 4_186_827.70, debtAddition: 3_906_836.328126, principalRepayment: 0, closingDebt: 8_909_484.06 },
+      { year: 1405, equityContribution: 3_309_144.53, debtAddition: 0, principalRepayment: 964_925.632872, closingDebt: 7_944_558.42 },
+      { year: 1406, equityContribution: 0, debtAddition: 0, principalRepayment: 1_264_820.669515, closingDebt: 6_679_737.75 },
+      { year: 1407, equityContribution: 0, debtAddition: 0, principalRepayment: 1_657_921.886966, closingDebt: 5_021_815.87 },
+      { year: 1408, equityContribution: 0, debtAddition: 0, principalRepayment: 2_173_197.394327, closingDebt: 2_848_618.47 },
+      { year: 1409, equityContribution: 0, debtAddition: 0, principalRepayment: 2_848_618.473426, closingDebt: 0 },
+      { year: 1410, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 },
+      { year: 1411, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 },
+      { year: 1412, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 },
+      { year: 1413, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 },
+      { year: 1414, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 },
+      { year: 1415, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 },
+      { year: 1416, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 },
+      { year: 1417, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 },
+      { year: 1418, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 },
+      { year: 1419, equityContribution: 0, debtAddition: 0, principalRepayment: 0, closingDebt: 0 }
+    ]
+  },
   incomeStatement: [
     { year: 1405, revenue: 43_581_720, variableCosts: 29_106_327.74, fixedCosts: 2_518_570.57, financingCosts: 2_399_043.44, profitBeforeTax: 9_557_778.26, tax: 477_888.91, netProfit: 9_079_889.35 },
     { year: 1406, revenue: 49_807_680, variableCosts: 33_264_374.56, fixedCosts: 2_518_570.57, financingCosts: 2_099_148.40, profitBeforeTax: 11_925_586.47, tax: 596_279.32, netProfit: 11_329_307.15 },
