@@ -22,6 +22,7 @@ loanOutput=loanOutput.replace("'./projectModelHelpFormulaRules'",JSON.stringify(
 const loanUrl=url(loanOutput)
 let orchestratorOutput=await transpile('../src/features/projects/projectFinancialModelOrchestrator.ts')
 orchestratorOutput=orchestratorOutput.replace("'./projectModelFormDrafts'",JSON.stringify(draftsUrl))
+ .replace("'./projectModelHelpForms'",JSON.stringify(helpFormsUrl))
 orchestratorOutput=orchestratorOutput.replace("'./productionSalesInventoryIntegration'",JSON.stringify(productionUrl))
  .replace("'./workingCapitalDraftIntegration'",JSON.stringify(workingCapitalUrl))
  .replace("'./fixedAssetDraftIntegration'",JSON.stringify(fixedUrl))
