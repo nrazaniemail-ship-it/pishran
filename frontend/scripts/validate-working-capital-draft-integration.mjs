@@ -25,6 +25,19 @@ assert.deepEqual(result.closingWorkingCapital, [80, 100])
 assert.deepEqual(result.changeInWorkingCapital, [30, 20])
 assert.equal(result.componentRows.length, 4)
 
+const bound = adapter.bindWorkingCapitalDraftsToPeriodicFinance({
+  periods, fiscalYearStartMonth: 1, dayCountBasis: 360, cashFlowTiming: 'period-end',
+  annualRevenue: [], annualVariableCost: [], annualFixedCost: [], annualDepreciation: [],
+  annualFixedInvestment: [], annualPreOperatingCost: [], annualMaintenanceCapex: [], annualTaxRates: [],
+  annualEquityContributions: [], workingCapitalByPeriod: [], loans: [],
+}, { workingCapital: [
+  { id: 'raw', name: 'Raw materials', category: 'inventory', minimumDaysCoverage: null, turnoverCoefficient: null, valuationBasis: 'user-defined', periodBalances: [{ period: '1', amount: 100 }, { period: '2', amount: 130 }] },
+  { id: 'pay', name: 'Payables', category: 'payables', minimumDaysCoverage: null, turnoverCoefficient: null, valuationBasis: 'user-defined', periodBalances: [{ period: '1', amount: 20 }, { period: '2', amount: 30 }] },
+] }, 50)
+assert.equal(bound.valid, true, bound.issues.join('; '))
+assert.deepEqual(bound.financeInput.workingCapitalByPeriod, [80, 100])
+assert.equal(bound.financeInput.openingWorkingCapital, 50)
+
 const missingBalance = adapter.buildWorkingCapitalScheduleFromDrafts({
   workingCapital: [{ id: 'raw', name: 'Raw materials', category: 'inventory', minimumDaysCoverage: 30, turnoverCoefficient: 12, valuationBasis: 'cost-of-production',
     periodBalances: [{ period: '1', amount: 100 }] }],
