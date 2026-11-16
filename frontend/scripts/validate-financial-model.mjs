@@ -353,33 +353,22 @@ assert.ok(projectsViewSource.includes("value={projectType} onChange={e => setPro
   && projectRepositorySource.includes("projectType?: string"),
   'Non-steel raw templates must persist project type separately from the manually entered project name')
 assert.ok(!wizardSource.includes("مرحله اصلی زنجیره فولاد")
-  && wizardSource.includes('technical:rawProject?[]')
-  && wizardSource.includes('balance:rawProject?[]')
-  && wizardSource.includes('utilities:rawProject?[]')
-  && wizardSource.includes('capex:rawProject?[]')
-  && wizardSource.includes('opex:rawProject?[]'),
-  'Raw template must hide stage-specific selector and start technical, material, utility, CAPEX and OPEX rows blank')
-assert.ok(['mining','concentrate','pellet','dri','steelmaking','dri-steelmaking-slab','hot-rolling','hot-plate','cold-rolling','rebar-rolling','angle-rolling','beam-rolling']
-  .every(id=>wizardSource.includes("id:'"+id+"'")&&(wizardSource.includes(id+':{')||wizardSource.includes("'"+id+"':{"))),
-  'Every requested steel-chain stage must have a matching stage-specific form definition')
-assert.ok(wizardSource.includes("id:'dri-steelmaking-slab'")
-  && wizardSource.includes("id:'hot-plate'")
-  && wizardSource.includes("const stageFormDefinitions")
-  && wizardSource.includes("dri:{")
-  && wizardSource.includes("'dri-steelmaking-slab':{")
-  && wizardSource.includes("'hot-plate':{")
-  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.materials")
-  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.utilities")
-  && wizardSource.includes("stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex")
-  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.opex"),
-  'Mining, concentration, pelletizing, DRI, steelmaking, integrated slab, hot plate, hot coil and rolling forms must use stage-specific input rows')
-assert.ok(wizardSource.includes("stageOptions.find(s=>s.id==='other')")
-  && !wizardSource.includes("stageOptions[10]"),
-  'Blank-template stage selection must use stable stage IDs, not a fragile array index')
-assert.ok(wizardSource.includes("خرید زمین (۱۳ هکتار؛ ۱۳۰٬۰۰۰ مترمربع)")
-  && wizardSource.includes("حقوق و دستمزد ۲۵۰ نفر")
-  && wizardSource.includes("کلاف گرم (ماده اولیه اصلی)"),
-  'Existing cold-rolling source-based CAPEX, payroll and material-balance fields must be preserved')
+  && wizardSource.includes("function baseModel(project:FeasibilityProject):Model")
+  && wizardSource.includes("analysisMode:'unspecified'")
+  && wizardSource.includes("stage:'other'")
+  && wizardSource.includes("products:[]")
+  && wizardSource.includes("technical:[]")
+  && wizardSource.includes("balance:[]")
+  && wizardSource.includes("utilities:[]")
+  && wizardSource.includes("capex:[]")
+  && wizardSource.includes("opex:[]")
+  && wizardSource.includes("startYear:null as unknown as number")
+  && wizardSource.includes("nameplate:null as unknown as number")
+  && wizardSource.includes("market:{demand:null as unknown as number")
+  && wizardSource.includes("finance:{equity:null as unknown as number")
+  && !/HRCR200|hotRolling|HOT_ROLLING|کلاف گرم|کلاف سرد|نورد گرم|نورد سرد/.test(wizardSource)
+  && !wizardSource.includes("ExpansionRehabilitationPanel"),
+  'Raw template must be a generic blank model with no sample-project or steel-stage references')
 assert.ok(wizardSource.includes("unit={project.industry==='انرژی و نیروگاه'?'مگاوات':'واحد/سال'}")
   && projectsViewSource.includes("const INDUSTRY_OPTIONS")
   && !projectsViewSource.includes('inputMode="numeric" pattern="[0-9]*"')
@@ -415,8 +404,8 @@ assert.ok(appSource.includes("onOpenProject={project => { setActiveProject({...p
 assert.ok(rollingWorkspaceSource.includes('ممیزی جریان نقدی خام و اصلاح‌شده مرجع مالی')
   && rollingWorkspaceSource.includes('HOT_ROLLING_reference_CASHFLOW_AUDIT'),
   'Active rolling workspace must expose the reference cash-flow audit')
-assert.ok(wizardSource.includes('useFixedInvestmentRegister={true}'), 'The shared fixed investment register must remain the authoritative depreciation source for every feasibility project, including when it is empty')
-assert.equal(model.discountMode, 'wacc', 'Hot-rolling template must use the sponsor-confirmed WACC by default')
+assert.ok(wizardSource.includes('useFixedInvestmentRegister={m.financialForms.assets.length===0}') && wizardSource.includes('comfarDepreciationAssets={m.financialForms.assets.length?undefined:fixedInvestmentLifecycleInputs.assets}'), 'Raw projects must use one asset source at a time and prefer the detailed asset form when populated')
+assert.ok(wizardSource.includes("method:'unspecified'") && wizardSource.includes("manualRate:null as unknown as number"), 'The raw template must leave discount-rate method and manual rate unset')
 
 const output = expected.capacity
 const currency = model.currency
