@@ -45,6 +45,17 @@ The file frontend/src/features/projects/projectModelHelpForms.ts defines source-
 
 ## Source-derived calculation rules
 
+### Asset depreciation and disposal
+
+The reference defines four methods: Linear to Zero, Linear to Scrap, Accelerated (declining balance), and Sum of Years Digits. The asset amount is converted to local currency at the current period exchange rate before depreciation.
+
+- Linear to Zero: annual charge is based on initial book value divided by total depreciation length; the first depreciation year is prorated by its number of months. The number of full depreciation years is determined using the salvage value and the first-year fraction. The final depreciation amount is adjusted so the closing book value equals salvage value.
+- Linear to Scrap: annual charge is based on initial book value less salvage value, divided by depreciation length; the first year is prorated and the final period leaves salvage value.
+- Accelerated: declining-balance depreciation is applied only while it exceeds the straight-line amount over remaining life to salvage; otherwise the method switches to Linear to Scrap. The first year is prorated by months.
+- Sum of Years Digits: the manual defines separate formula branches for whole-year life, additional months in useful life, and a partial first depreciation year. The partial-year formulas use the exact variables Y, m, m1, SODL and SODL_adj; a simple ceil(usefulLifeMonths/12) denominator is not equivalent.
+
+On disposal, proceeds up to book value are return of capital; the difference between proceeds and book value is other income or loss. Remaining book value at the end of production is returned as capital in the year after production under the default rule.
+
 ### Standard production cost at nominal capacity
 
 For a cost item and production period j:
@@ -105,9 +116,9 @@ The form catalogue and tests are added to npm run test:financial. All values rem
 The current change provides a comprehensive reference-mapped input catalogue, persistence through the existing financialForms model, form-level validation and independently tested formula primitives. It does **not** yet constitute a complete reproduction of every COMFAR III Expert calculation or report. In particular, the following remain separate integration work:
 1. Connect every new field to a single period-indexed calculation graph.
 2. Implement all non-default product production-interval cases, all working-capital sub-item algorithms and their starting-stock interactions.
-3. Complete foreign-currency loan revaluation, cash-deficit automatic equity/overdraft behaviour, all opening-balance accounting and full residual-value calculation.
+3. Complete foreign-currency loan revaluation and currency translation across all schedules, opening-balance accounting and full residual-value calculation. The debt adjustment and automatic cash-deficit functions are primitives only.
 4. Complete full balance-sheet, net-income and financial-planning cash-flow generation, including every capitalized-interest/fee/depreciation/tax/dividend interaction.
-5. Complete the full economic appraisal algorithms, sensitivity target search and parametric chart output.
+5. Complete the partial-year Sum of Years Digits depreciation schedule (the current depreciation helper deliberately rejects fractional-life/partial-first-year cases rather than emit an unverified schedule), full economic appraisal algorithms, sensitivity target search and parametric chart output.
 6. Reconcile period by period against independently supplied COMFAR output files, using tolerances and traceable source pages.
 
 Therefore, the forms now cover the documented input domains, but the entire model must not be described as calculation-equivalent to COMFAR until these integrations and output reconciliations pass. The uploaded project output and spreadsheets remain excluded from the design baseline and are reserved for a later simulation stage.
