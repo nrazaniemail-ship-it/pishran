@@ -246,6 +246,15 @@ export type PeriodicLoanScheduleResult = {
   issues: string[]
 }
 
+function loanDateAddMonthsClamped(date: Date, months: number): Date {
+  const year = date.getUTCFullYear()
+  const month = date.getUTCMonth() + months
+  const targetYear = year + Math.floor(month / 12)
+  const targetMonth = ((month % 12) + 12) % 12
+  const day = Math.min(date.getUTCDate(), new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate())
+  return new Date(Date.UTC(targetYear, targetMonth, day))
+}
+
 function loanYearFraction(startDate: string, endDate: string, convention: 'comfar-months-plus-360' | 'actual-360' | 'actual-365'): number {
   const start = parseIsoDateUtc(startDate)
   const end = parseIsoDateUtc(endDate)
@@ -255,11 +264,11 @@ function loanYearFraction(startDate: string, endDate: string, convention: 'comfa
   if (convention === 'actual-365') return days / 365
   let months = 0
   while (months < 1200) {
-    const next = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months + 1, start.getUTCDate()))
+    const next = loanDateAddMonthsClamped(start, months + 1)
     if (next > end) break
     months++
   }
-  const wholeMonthDate = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, start.getUTCDate()))
+  const wholeMonthDate = loanDateAddMonthsClamped(start, months)
   const extraDays = (end.getTime() - wholeMonthDate.getTime()) / 86400000
   return months / 12 + extraDays / 360
 }
@@ -335,7 +344,6 @@ export function calculatePeriodicLoanSchedule(
     }
     if (interestConvention === 'comfar-months-plus-360') {
       return input.annualRatePercent / 100 * loanYearFraction(period.startDate, period.endDate, interestConvention)
-        / (period.days > 0 ? 1 : 1)
     }
     if (rateConversion === 'effective-annual-divided-by-frequency') {
       const periodsPerYear = input.periodsPerYear as 1 | 2 | 4 | 12
