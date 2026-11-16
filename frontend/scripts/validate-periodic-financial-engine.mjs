@@ -1562,8 +1562,8 @@ hrcr200AnnualPrincipalFrom20Quarters.forEach((amount,index)=>assert.ok(
 // quarterly debt schedule, but not a source-authenticated quarterly shareholder cash-flow
 // vector. Therefore equity IRR 57.99% remains a reference-only value, never a passed test.
 assert.ok(projectReportSource.includes('equityIrrPercent')
-  && projectReportSource.includes('تا تطبیق برنامه بازپرداخت ۲۰ قسط فصلی، اختلاف قابل تأیید نیست')
-  && projectReportSource.includes('Variance not certified until the 20-quarter repayment schedule is matched'),
+  && projectReportSource.includes('تا تطبیق جریان نقدی سهام‌دار با ۲۰ قسط فصلی و تاریخ‌های پرداخت، اختلاف قابل تأیید نیست')
+  && projectReportSource.includes('Variance not certified until shareholder cash flows are matched to all 20 quarterly instalments and payment dates'),
   'The report must keep the 57.99% COMFAR equity IRR explicitly uncertified until shareholder cash flows and quarterly debt service are reconciled')
 
  
@@ -1604,6 +1604,6 @@ hrcr200AnnualPrincipalFrom20Quarters.forEach((amount,index)=>assert.ok(
 // quarterly debt schedule, but not a source-authenticated quarterly shareholder cash-flow
 // vector. Therefore equity IRR 57.99% remains a reference-only value, never a passed test.
 assert.ok(projectReportSource.includes('equityIrrPercent')
-  && projectReportSource.includes('تا تطبیق برنامه بازپرداخت ۲۰ قسط فصلی، اختلاف قابل تأیید نیست')
-  && projectReportSource.includes('Variance not certified until the 20-quarter repayment schedule is matched'),
+  && projectReportSource.includes('تا تطبیق جریان نقدی سهام‌دار با ۲۰ قسط فصلی و تاریخ‌های پرداخت، اختلاف قابل تأیید نیست')
+  && projectReportSource.includes('Variance not certified until shareholder cash flows are matched to all 20 quarterly instalments and payment dates'),
   'The report must keep the 57.99% COMFAR equity IRR explicitly uncertified until shareholder cash flows and quarterly debt service are reconciled')
