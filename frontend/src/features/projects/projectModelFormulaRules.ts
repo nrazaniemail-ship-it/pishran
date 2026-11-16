@@ -74,7 +74,7 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
   const finalMonths=Math.max(0,usefulLifeMonths-elapsedBeforeFinal)
   const annual=base/L
   const annualCharges=[annual*m1/12,...Array(Math.max(0,M-1)).fill(annual)]
-  const finalCharge=Math.max(0,openingBookValue-annualCharges.reduce((sum,v)=>sum+v,0)-salvageValue)
+  const finalCharge=Math.max(0,acquisitionCost-annualCharges.reduce((sum,v)=>sum+v,0)-salvageValue)
   const schedule=[...annualCharges,finalCharge]
   let cursor=0
   for(let i=0;i<schedule.length;i++){
@@ -105,7 +105,7 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
     for(let j=2;j<=Y;j++){const cur=intermediate[j-1]??0,next=intermediate[j]??0;partial.push(cur*(m1-m)/12+next*(12-(m1-m))/12)}
    }
    const segs=[m1,...Array(Math.max(0,Math.ceil((usefulLifeMonths-m1)/12))).fill(12)].map((v,i)=>i===0?v:Math.min(12,usefulLifeMonths-(m1+(i-1)*12)))
-   const total=partial.reduce((sum,v)=>sum+v,0);if(partial.length)partial[partial.length-1]+=base-total
+   const total=partial.reduce((sum,v)=>sum+v,0);if(segs.length>partial.length)partial.push(base-total);else if(partial.length)partial[partial.length-1]+=base-total
    let cursor=0
    for(let i=0;i<segs.length;i++){const len=segs[i]??0,amt=partial[i]??0,overlap=Math.max(0,Math.min(monthsElapsed+activeMonths,cursor+len)-Math.max(monthsElapsed,cursor));if(len>0)charge+=amt*overlap/len;cursor+=len}
   }
