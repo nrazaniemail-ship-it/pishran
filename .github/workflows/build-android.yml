@@ -3,7 +3,7 @@ name: Build Pishran Android APK and iOS IPA
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/integrated-dri-steelmaking-comfar, feat/valuation-date-discounting-rebased]
+    branches: [main, feature/integrated-dri-steelmaking-comfar, feat/valuation-date-discounting-rebased, feat/periodic-loan-rate-resets-and-fees]
     paths:
       - "frontend/**"
       - ".github/workflows/build-android.yml"
