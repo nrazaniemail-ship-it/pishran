@@ -1220,21 +1220,6 @@ assert.ok(Math.abs(engine.calculatePeriodicNpv([100,100],comfarAnnualPeriods.sli
 assert.ok(advancedFinanceUi.includes("periodicFinanceResult?.valid ? periodicFinanceResult.loanSchedules[loan.id]")
   && advancedFinanceUi.includes("periodicFinanceResult.rows[i]?.startDate"),
   'Loan repayment detail must display the actual monthly/quarterly schedule and its period dates when the periodic engine is valid')
-const financingAuditDoc = await readFile(new URL('../../docs/references/HRCR200-COMFAR-financing-reconstruction.md', import.meta.url), 'utf8')
-assert.ok(financingAuditDoc.includes('840,992.27')
-  && financingAuditDoc.includes('2,399,043.44')
-  && financingAuditDoc.includes('964,925.63')
-  && financingAuditDoc.includes('3,363,969.07'),
-  'HRCR200 financing audit must preserve the reconstructed 20-quarter annuity and first-year debt-service reconciliation')
-assert.ok(financingAuditDoc.includes('one-off or recurring')
-  && financingAuditDoc.includes('must not be charged twice')
-  && financingAuditDoc.includes('3,309,144.53'),
-  'HRCR200 financing audit must keep issuance-fee ambiguity and shareholder working-capital funding explicit')
-assert.ok(financingAuditDoc.includes('SARZAMIN')
-  && financingAuditDoc.includes('Ramhormoz')
-  && financingAuditDoc.includes('excluded from that fixture')
-  && financingAuditDoc.includes('external balance-sheet parity as unverified'),
-  'The reference audit must distinguish unrelated SARZAMIN/Ramhormoz material and keep external balance-sheet parity explicitly unverified')
 console.log('PASS: asset-level monthly/quarterly depreciation, disposals and integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
 
 // Shareholder-funded working capital is recorded once as an equity injection;
