@@ -1218,9 +1218,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
     return { assets, sales, investmentSchedule, investmentScheduleVerified: false, preOperatingSchedule, preOperatingScheduleVerified: false, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
   }
-  if (periodFrequency !== 'annual' && periodFrequency !== 'unspecified') {
-    return { assets, sales, investmentSchedule, investmentScheduleVerified: false, preOperatingSchedule, preOperatingScheduleVerified: false, warnings: ['موتور یکپارچه فعلی فقط برنامه سالانه را محاسبه می‌کند؛ برای دوره‌های نیم‌سالانه، فصلی یا ماهانه، موتور دوره‌ای متناظر باید فعال شود.'] }
-  }
+  // Asset vintages remain indexed by fiscal year here; the calendar depreciation engine
+  // expands them into actual monthly, quarterly or other project periods.
   if (periodFrequency === 'unspecified') {
     investmentScheduleVerified = false
     preOperatingScheduleVerified = false
@@ -1336,6 +1335,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
           priceMode: sale.priceMode,
           selfDefinedPrice: sale.selfDefinedPrice ?? undefined,
           exchangeRateToLocal: saleFx,
+          saleDate: sold.date,
         })
       }
     }
