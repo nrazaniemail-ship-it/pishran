@@ -603,6 +603,9 @@ export type PeriodicProjectFinanceInput = {
   annualEquityContributions: number[]
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
+  /** COMFAR equity-return inflows, supplied on the actual project-period calendar. */
+  dividendsByPeriod?: number[]
+  equityCapitalRefundsByPeriod?: number[]
   workingCapitalByPeriod: number[]
   openingWorkingCapital?: number
   openingTaxLoss?: number
@@ -671,6 +674,8 @@ export type PeriodicProjectFinanceRow = {
   changeInWorkingCapital: number
   equityContribution: number
   equityWorkingCapitalContribution: number
+  dividends: number
+  equityCapitalRefund: number
   salvageValue: number
   salvageBookValueDisposed: number
   salvageGainLoss: number
@@ -891,6 +896,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       input.annualTaxRates.some(value => value < 0 || value > 100) ||
       !Array.isArray(input.workingCapitalByPeriod) || input.workingCapitalByPeriod.length !== periods.length ||
       input.workingCapitalByPeriod.some(value => !validFinite(value) || value < 0) ||
+      (input.dividendsByPeriod != null && (input.dividendsByPeriod.length !== periods.length || input.dividendsByPeriod.some(value => !validFinite(value) || value < 0))) ||
+      (input.equityCapitalRefundsByPeriod != null && (input.equityCapitalRefundsByPeriod.length !== periods.length || input.equityCapitalRefundsByPeriod.some(value => !validFinite(value) || value < 0))) ||
       input.loans.some(loan => !loan.id || !loan.input)) {
     warnings.push('Annual flow arrays, tax rates, working-capital balances or loan definitions are invalid.')
     return empty()
@@ -1068,9 +1075,14 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
+    const dividends = input.dividendsByPeriod?.[index] ?? 0
+    const equityCapitalRefund = input.equityCapitalRefundsByPeriod?.[index] ?? 0
+    // COMFAR's equity return includes the financial-planning cash surplus/deficit,
+    // dividends and refunded equity, less equity capital paid. Debt service is
+    // already reflected once in the operating cash surplus through interest/principal.
     const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
-      - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
+      - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage + dividends + equityCapitalRefund
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
       revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
@@ -1081,7 +1093,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
-      equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
+      equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,dividends,equityCapitalRefund,
       salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,dscrCovenantStatus,projectFreeCashFlow,equityFreeCashFlow
     })
     priorWorkingCapital = closingWorkingCapital
