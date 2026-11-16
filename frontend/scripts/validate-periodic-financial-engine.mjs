@@ -311,6 +311,13 @@ assert.ok(Math.abs(sumHrcr200Comfar('debtService') - comfarReference.loanRepayme
   'HRCR200 first-year total debt service must match COMFAR')
 assert.ok(Math.abs(hrcr200ComfarLoan.rows.at(-1).closingBalance) < 1e-7,
   'HRCR200 COMFAR annuity must fully amortize the gross opening loan balance after 20 quarters')
+const hrcr200AnnualPrincipalFromQuarters=Array.from({length:5},(_,yearIndex)=>
+  hrcr200ComfarLoan.rows.slice(yearIndex*4,yearIndex*4+4).reduce((sum,row)=>sum+row.principal,0))
+hrcr200AnnualPrincipalFromQuarters.forEach((value,index)=>assert.ok(
+  Math.abs(value-comfarReference.loanRepaymentAudit.annualPrincipalRepaymentsByYear[index])<0.1,
+  'HRCR200 quarterly annuity principal must reconcile to the OPEX COMFAR annual financing-flow schedule for year '+(1405+index)
+))
+
 assert.equal(hrcr200ComfarLoan.rows.reduce((sum, row) => sum + row.drawdown, 0), 0,
   'Opening debt balance must not be double-counted as a new cash drawdown')
 
@@ -716,10 +723,10 @@ assert.ok(Math.abs(comfarNpv - comfarReference.projectNpvAt25) < 0.05,
   'COMFAR HRCR200 NPV at 25% and valuation date 12/1404 must reconcile within rounding')
 
 const fiscalQuarterRows = [
-  { period:1,startDate:'2025-04-01',endDate:'2025-06-30',days:91,taxRatePercent:5,projectFreeCashFlow:10,depreciation:2,changeInWorkingCapital:3,interestExpense:4,principal:5,debtService:9,cfads:18 },
-  { period:2,startDate:'2025-07-01',endDate:'2025-09-30',days:92,taxRatePercent:5,projectFreeCashFlow:20,depreciation:3,changeInWorkingCapital:4,interestExpense:3,principal:6,debtService:9,cfads:18 },
-  { period:3,startDate:'2026-04-01',endDate:'2026-06-30',days:91,taxRatePercent:5,projectFreeCashFlow:30,depreciation:4,changeInWorkingCapital:5,interestExpense:2,principal:7,debtService:9,cfads:18 },
-  { period:4,startDate:'2026-07-01',endDate:'2026-09-30',days:92,taxRatePercent:25,projectFreeCashFlow:40,depreciation:5,changeInWorkingCapital:6,interestExpense:1,principal:8,debtService:9,cfads:18 },
+  { period:1,startDate:'2025-04-01',endDate:'2025-06-30',days:91,taxRatePercent:5,projectFreeCashFlow:10,equityContribution:5,equityWorkingCapitalContribution:0,debtDrawdown:2,capitalizedInterest:1,depreciation:2,changeInWorkingCapital:3,interestExpense:4,principal:5,debtService:9,cfads:18 },
+  { period:2,startDate:'2025-07-01',endDate:'2025-09-30',days:92,taxRatePercent:5,projectFreeCashFlow:20,equityContribution:6,equityWorkingCapitalContribution:0,debtDrawdown:3,capitalizedInterest:0,depreciation:3,changeInWorkingCapital:4,interestExpense:3,principal:6,debtService:9,cfads:18 },
+  { period:3,startDate:'2026-04-01',endDate:'2026-06-30',days:91,taxRatePercent:5,projectFreeCashFlow:30,equityContribution:0,equityWorkingCapitalContribution:10,debtDrawdown:0,capitalizedInterest:0,depreciation:4,changeInWorkingCapital:5,interestExpense:2,principal:7,debtService:9,cfads:18 },
+  { period:4,startDate:'2026-07-01',endDate:'2026-09-30',days:92,taxRatePercent:25,projectFreeCashFlow:40,equityContribution:0,equityWorkingCapitalContribution:0,debtDrawdown:0,capitalizedInterest:0,depreciation:5,changeInWorkingCapital:6,interestExpense:1,principal:8,debtService:9,cfads:18 },
 ]
 const fiscalQuarterAggregation = engine.aggregatePeriodicFinanceByFiscalYear(fiscalQuarterRows,4,2)
 assert.equal(fiscalQuarterAggregation.length,2)
@@ -729,6 +736,9 @@ assert.equal(fiscalQuarterAggregation[0].changeInWorkingCapital,7)
 assert.equal(fiscalQuarterAggregation[0].interestExpense,7)
 assert.equal(fiscalQuarterAggregation[0].principal,11)
 assert.equal(fiscalQuarterAggregation[0].dscr,2)
+assert.equal(fiscalQuarterAggregation[0].equityContribution,11)
+assert.equal(fiscalQuarterAggregation[0].netDebtFinancingFlow,-5)
+assert.equal(fiscalQuarterAggregation[1].equityContribution,10)
 assert.equal(fiscalQuarterAggregation[1].projectFreeCashFlow,70)
 assert.equal(fiscalQuarterAggregation[1].taxRatePercent,null,
   'Mixed intra-year tax rates must not be presented as one annual tax rate')
@@ -737,14 +747,22 @@ const hrcrAnnualAggregation = engine.aggregatePeriodicFinanceByFiscalYear(
   comfarAnnualPeriods.map((period,index)=>({
     period:index+1,startDate:period.startDate,endDate:period.endDate,days:period.days,
     taxRatePercent:index<2?25:comfarReference.taxScheduleByOperatingYear[index-2].ratePercent,
-    projectFreeCashFlow:comfarCashFlows[index],depreciation:index<2?0:comfarReference.depreciationByOperatingYear[index-2][1],
+    projectFreeCashFlow:comfarCashFlows[index],
+    equityContribution:comfarReference.financingCashFlowsByYear[index].equity,
+    equityWorkingCapitalContribution:0,
+    debtDrawdown:Math.max(0,comfarReference.financingCashFlowsByYear[index].longTermLoanNet),
+    capitalizedInterest:0,
+    depreciation:index<2?0:comfarReference.depreciationByOperatingYear[index-2][1],
     changeInWorkingCapital:index<2?0:comfarReference.changeInWorkingCapitalByOperatingYear[index-2][1],
-    interestExpense:0,principal:0,debtService:0,cfads:0,
+    interestExpense:0,principal:Math.max(0,-comfarReference.financingCashFlowsByYear[index].longTermLoanNet),debtService:0,cfads:0,
   })),3,17
 )
 assert.equal(hrcrAnnualAggregation.length,17)
 assert.equal(hrcrAnnualAggregation[0].projectFreeCashFlow,comfarCashFlows[0])
 assert.equal(hrcrAnnualAggregation[2].taxRatePercent,5)
+assert.equal(hrcrAnnualAggregation[0].equityContribution,8905157.3)
+assert.ok(Math.abs(hrcrAnnualAggregation[2].netDebtFinancingFlow+964925.632872)<0.01)
+assert.equal(hrcrAnnualAggregation[2].equityContribution,3309144.53)
 assert.equal(hrcrAnnualAggregation[16].projectFreeCashFlow,comfarCashFlows[16])
 const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
 assert.ok(comfarIrr !== null && Math.abs(comfarIrr - comfarReference.projectIrrPercent) < 0.01,
