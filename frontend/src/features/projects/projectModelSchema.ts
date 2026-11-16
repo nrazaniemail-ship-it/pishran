@@ -80,6 +80,7 @@ export type QuantityPriceTotalInput={quantity:number|null;unitPrice:number|null;
 export function deriveQuantityPriceTotal(input:QuantityPriceTotalInput):QuantityPriceTotalInput{
  const {quantity,unitPrice,total}=input
  if([quantity,unitPrice,total].filter(v=>v!==null).length!==2)return{...input}
+ if([quantity,unitPrice,total].some(v=>v!==null&&!Number.isFinite(v)))return{...input}
  if(quantity!==null&&unitPrice!==null&&total===null)return{...input,total:quantity*unitPrice}
  if(quantity!==null&&total!==null&&unitPrice===null)return quantity===0?{...input}:{...input,unitPrice:total/quantity}
  if(unitPrice!==null&&total!==null&&quantity===null)return unitPrice===0?{...input}:{...input,quantity:total/unitPrice}
