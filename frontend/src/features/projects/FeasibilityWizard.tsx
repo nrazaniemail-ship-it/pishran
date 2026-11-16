@@ -312,7 +312,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const saveNow=async()=>{await localStore.set(key,m);setSaved(new Date().toLocaleTimeString(en?'en-US':'fa-IR',{hour:'2-digit',minute:'2-digit'}))}
  const stage=stageOptions.find(s=>s.id===m.stage)??stageOptions[5]
  const cap=m.capacity.nameplate*Math.min(100,Math.max(0,m.capacity.availability))/100*Math.min(100,Math.max(0,m.capacity.yield))/100
- const capex=sum(m.capex),variable=m.opex.filter(r=>r.unit.includes('/تن')).reduce((a,r)=>a+n(r.unitPrice),0)+sumMaterialInputs(m.balance)+sum(m.utilities),fixed=m.opex.filter(r=>r.unit.includes('/سال')).reduce((a,r)=>a+n(r.unitPrice),0)
+ const capex=sum(m.capex),variable=m.opex.filter(r=>r.unit.includes('/تن')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)+sumMaterialInputs(m.balance)+sum(m.utilities),fixed=m.opex.filter(r=>r.unit.includes('/سال')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)
   const preOperatingCost=m.capex.filter(r=>r.name.includes('قبل از بهره‌برداری')).reduce((a,r)=>a+r.quantity*r.unitPrice,0)
   const fixedInvestmentForFinance=capex-preOperatingCost
   const isHotRollingCoil=/نورد.*گرم.*کلاف|گرم.*نورد.*کلاف/.test((project.steelStage+' '+project.name).replace(/\s/g,''))
