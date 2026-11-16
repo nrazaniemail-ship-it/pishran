@@ -18,10 +18,11 @@ export function calculateNominalCapacityCost(input:NominalCapacityCostInput):Cos
  const {standardQuantity,standardUnitPrice,nominalCapacity,activityVolume,fixedPercent,variablePercent}=input
  const aq=input.adjustmentQuantity??0,ap=input.adjustmentUnitPrice??0,af=input.adjustmentFixedPercent??0,av=input.adjustmentVariablePercent??0
  if(![standardQuantity,standardUnitPrice,nominalCapacity,activityVolume,aq,ap].every(finiteNonNegative)||nominalCapacity<=0)throw new Error('invalid-cost-volume-or-price')
- if(!validSplit(fixedPercent,variablePercent)||!validSplit(af,av))throw new Error('invalid-fixed-variable-split')
+ if(!validSplit(fixedPercent,variablePercent))throw new Error('invalid-fixed-variable-split')
  const standardCost=standardQuantity*standardUnitPrice
  const periodAdjustmentCost=aq*ap
- const activityRatio=Math.min(1,activityVolume/nominalCapacity)
+ if(periodAdjustmentCost>0&&!validSplit(af,av))throw new Error('invalid-period-adjustment-split')
+ const activityRatio=activityVolume/nominalCapacity
  const standardFixedCost=standardCost*fixedPercent/100
  const standardVariableCost=standardCost*variablePercent/100*activityRatio
  const adjustmentFixedCost=periodAdjustmentCost*af/100
