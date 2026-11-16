@@ -475,6 +475,25 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
   projectNpvAt25: 31_399_764.27,
   projectIrrPercent: 48.31,
   projectMirrPercent: 28.03,
+  /** Annual finance transactions from OPEX workbook sheet "جریانات نقدی مالی (کامفار)", periods mapped to 1403–1419. */
+  financingCashFlowsByYear: [
+    {year:1403,equity:8_905_157.30,longTermLoanNet:5_002_647.728981,shortTermFinancing:0,totalDomesticFinancing:13_907_805.028981},
+    {year:1404,equity:4_186_827.70,longTermLoanNet:3_906_836.328126,shortTermFinancing:0,totalDomesticFinancing:8_093_664.028126},
+    {year:1405,equity:3_309_144.53,longTermLoanNet:-964_925.632872,shortTermFinancing:0,totalDomesticFinancing:2_344_218.897128},
+    {year:1406,equity:0,longTermLoanNet:-1_264_820.669515,shortTermFinancing:0,totalDomesticFinancing:-1_264_820.669515},
+    {year:1407,equity:0,longTermLoanNet:-1_657_921.886966,shortTermFinancing:0,totalDomesticFinancing:-1_657_921.886966},
+    {year:1408,equity:0,longTermLoanNet:-2_173_197.394327,shortTermFinancing:0,totalDomesticFinancing:-2_173_197.394327},
+    {year:1409,equity:0,longTermLoanNet:-2_848_618.473426,shortTermFinancing:0,totalDomesticFinancing:-2_848_618.473426},
+    ...Array.from({length:10},(_,index)=>({year:1410+index,equity:0,longTermLoanNet:0,shortTermFinancing:0,totalDomesticFinancing:0}))
+  ] as const,
+  firstOperatingYearWorkingCapitalFunding: {
+    comfarEquityContribution:3_309_144.53,
+    fullCapacityWorkingCapital:4_595_370.46,
+    opexFirstYearWorkingCapitalRequirement:3_216_759.32004,
+    excessFundingAgainstOpexFirstYearRequirement:92_385.20996,
+    shortTermFinancingInComfarSchedule:0,
+    capexWorkbookAlternativeLongTermWorkingCapitalLoan:3_309_144.525623
+  },
   /** Loan balance and first-year service independently reconstructed from report pp. 129–131 and COMFAR annuity rules. */
   loanRepaymentAudit: {
     principalDisbursed: 5_610_850.80,
@@ -488,6 +507,9 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
     firstOperatingYearInterest: 2_399_043.4359598644,
     firstOperatingYearPrincipal: 964_925.6331853358,
     firstOperatingYearDebtService: 3_363_969.0691452003,
+    annualPrincipalRepaymentsByYear: [
+      964_925.632872,1_264_820.669515,1_657_921.886966,2_173_197.394327,2_848_618.473426
+    ],
   },
   equityNpvAt30: 23_579_675.01,
   equityIrrPercent: 57.99,
@@ -495,6 +517,10 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
   sourceNotes: [
     'Corporate tax is 5% in operating years 1405–1409 and 25% from 1410 through 1419 in the COMFAR cash-flow-for-financial-planning schedule.',
     'The terminal salvage value is printed in a separate 1420 column but discounted at the end-of-final-operating-period date in the COMFAR total-investment discounted cash-flow schedule.',
+    'The OPEX workbook sheet جریانات نقدی مالی (کامفار) maps 17 periods to 1403–1419: equity contributions are 8,905,157.30, 4,186,827.70 and 3,309,144.53 in the first three years; short-term financing is zero in all 17 years.',
+    'The report PDF conflicts on first-year working-capital funding: printed p.122 says short-term loan, while p.128 says shareholder; the OPEX COMFAR financial-flow schedule classifies 3,309,144.53 as equity and short-term financing as zero.',
+    'The CAPEX workbook financing-mechanism/WACC tabs label 3,309,144.53 as a long-term working-capital loan; retain this as a separate workbook alternative, not the COMFAR cash-flow baseline.',
+    'The OPEX working-capital sheet calculates first-year net working capital of 3,216,759.32; the COMFAR finance-flow equity contribution is 92,385.21 higher and must remain visible as a cash funding buffer pending detailed source reconciliation.',
     'The active Pishran user scenario with a uniform 25% tax rate is a separate case and must not be labelled as an exact COMFAR tax-basis match.'
   ]
 } as const
