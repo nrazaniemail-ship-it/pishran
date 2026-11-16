@@ -185,8 +185,8 @@ export default function ProjectReportVisuals(props: Props) {
     project.startYear === 1403 && props.valuationDate === HOT_ROLLING_COMFAR_OUTPUT_AUDIT.valuationDate &&
     props.discountConvention === HOT_ROLLING_COMFAR_OUTPUT_AUDIT.discountConvention &&
     /million\s*IRR|میلیون\s*ریال/i.test(project.currency)
-  const comfarCurrentNpv = props.periodicResult?.npvProject ?? null
-  const comfarCurrentIrr = props.periodicResult?.irrProject ?? null
+  const comfarCurrentNpv = props.periodicResult?.npvTotalCapitalInvested ?? null
+  const comfarCurrentIrr = props.periodicResult?.irrTotalCapitalInvested ?? null
   const currentRows: [string,string,string][] = [
     [t('ظرفیت عملی قابل فروش','Saleable capacity',language),fmtValue(props.capacity,0),t('تن در سال','tonnes/year',language)],
     [t('سرمایه‌گذاری ثبت‌شده','Recorded investment',language),fmtValue(props.capex),props.project.currency],
@@ -232,10 +232,11 @@ export default function ProjectReportVisuals(props: Props) {
         </tr></thead><tbody>{comfarAnnualRows.map((row,index)=>{
           const year=1403+index
           const referenceCashFlow=HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectCashFlowsForIrr[index]
+          const referenceConstructionFinanceCost=HOT_ROLLING_COMFAR_OUTPUT_AUDIT.constructionFinancingCostsByYear.find(([fiscalYear])=>fiscalYear===year)?.[1]??0
           const referenceTax=index<2?null:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.taxScheduleByOperatingYear[index-2]?.ratePercent
           const referenceDepreciation=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.depreciationByOperatingYear[index-2]?.[1]??0
           const referenceWorkingCapital=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.changeInWorkingCapitalByOperatingYear[index-2]?.[1]??0
-          return <tr key={row.period}><td>{index===16?t('۱۴۱۹ + ارزش اسقاط ۱۴۲۰','1419 + terminal salvage 1420',language):year}</td><td>{fmtValue(referenceCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow-referenceCashFlow)}</td><td>{referenceTax==null?'—':fmtValue(referenceTax,2)+'%'}</td><td>{fmtValue(row.taxRatePercent,2)+'%'}</td><td>{fmtValue(referenceDepreciation)}</td><td>{fmtValue(row.depreciation)}</td><td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td></tr>
+          return <tr key={row.period}><td>{index===16?t('۱۴۱۹ + ارزش اسقاط ۱۴۲۰','1419 + terminal salvage 1420',language):year}</td><td>{fmtValue(referenceCashFlow)}</td><td>{fmtValue(row.totalCapitalInvestedCashFlow)}</td><td>{fmtValue(row.totalCapitalInvestedCashFlow-referenceCashFlow)}</td><td>{fmtValue(referenceConstructionFinanceCost)}</td><td>{fmtValue(row.constructionInterestCost)}</td><td>{referenceTax==null?'—':fmtValue(referenceTax,2)+'%'}</td><td>{fmtValue(row.taxRatePercent,2)+'%'}</td><td>{fmtValue(referenceDepreciation)}</td><td>{fmtValue(row.depreciation)}</td><td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td></tr>
         })}</tbody></table></div>:<p className="fw-hint">{t("تطبیق ردیف‌به‌ردیف با خروجی سالانه COMFAR فقط در تناوب سالانه و با ۱۷ دوره (دو سال ساخت و ۱۵ سال بهره‌برداری) انجام می‌شود. در تناوب ماهانه، فصلی یا نیم‌سالانه ابتدا باید جریان‌ها به سال مالی مرجع تجمیع شوند.","Row-by-row COMFAR comparison is available only for an annual schedule with 17 periods (two construction years and 15 operating years). Monthly, quarterly and semiannual outputs must first be aggregated to the reference fiscal years.",language)}</p>}
        </div>}
      </div>}
