@@ -726,6 +726,8 @@ assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
 assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
   && projectReportSource.includes('hasCompleteFiscalYearCoverage')
   && projectReportSource.includes('fiscalYearStartMonth')
+  && projectReportSource.includes('opexWorkingCapitalByYear')
+  && projectReportSource.includes('COMFAR reference working-capital movement')
   && projectReportSource.includes('derivedDscr')
   && projectReportSource.includes('Quarter-by-quarter reconstructed debt-service reconciliation')
   && projectReportSource.includes('quarterlyDebtRows')
@@ -775,6 +777,14 @@ assert.deepEqual(comfarReference.taxScheduleByOperatingYear.map(row=>row.ratePer
 assert.equal(comfarReference.depreciationByOperatingYear.length, 15, 'COMFAR depreciation audit must cover all operating years')
 assert.equal(comfarReference.depreciationByOperatingYear.find(([year])=>year===1414)?.[1], 98840.49, 'COMFAR depreciation must preserve the sharp 1414 reduction')
 assert.equal(comfarReference.changeInWorkingCapitalByOperatingYear.find(([year])=>year===1405)?.[1], 3309144.53, 'COMFAR working-capital build must start in 1405')
+assert.equal(comfarReference.firstOperatingYearWorkingCapitalFunding.opexWorkingCapitalByYear[0].annualIncrease,3216759.32004,
+  'OPEX working-capital requirement must remain separate from COMFAR shareholder funding')
+assert.equal(comfarReference.firstOperatingYearWorkingCapitalFunding.opexWorkingCapitalByYear[1].annualIncrease,459537.04572)
+assert.ok(Math.abs(
+  comfarReference.firstOperatingYearWorkingCapitalFunding.comfarEquityContribution-
+  comfarReference.firstOperatingYearWorkingCapitalFunding.opexWorkingCapitalByYear[0].annualIncrease-
+  comfarReference.firstOperatingYearWorkingCapitalFunding.fundingBufferPendingReconciliation
+)<0.01,'The 1405 difference between COMFAR equity source and OPEX working-capital use must reconcile as a separately disclosed buffer')
 assert.equal(comfarCashFlows.at(-1), comfarReference.projectCashFlowsByYear.at(-1)+comfarReference.terminalSalvage.amount, 'Terminal salvage shown in 1420 must be reconciled to the final operating-period cash-flow timing')
 assert.ok(Math.abs(comfarNpv - comfarReference.projectNpvAt25) < 0.05,
   'COMFAR HRCR200 NPV at 25% and valuation date 12/1404 must reconcile within rounding')
