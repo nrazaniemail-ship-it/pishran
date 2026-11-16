@@ -96,7 +96,6 @@ export function buildPeriodicLoanFacilityBinding(input:{
   issues.push(...validateLoanFacilityFormDraft(loan))
   if(!loan.id.trim())issues.push('Loan facility identifier is required.')
   if(!periods.length)issues.push('Project calendar is required.')
-  if(loan.fees.length)issues.push('Loan fee rows need explicit payment dates and expense/capitalization treatment before automatic posting.')
   const currencyResolution=resolveLoanFacilityCurrency(loan,foundation)
   if(!currencyResolution.valid)issues.push(...currencyResolution.issues)
   const periodsPerYear=loan.repaymentInterval==='annual'?1:loan.repaymentInterval==='semiannual'?2:loan.repaymentInterval==='quarterly'?4:loan.repaymentInterval==='monthly'?12:0
