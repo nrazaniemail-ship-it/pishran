@@ -133,3 +133,12 @@ Foreign-currency debt must be carried in its contractual currency and remeasured
 `FX loss = closing debt at closing rate - opening carrying amount - translated drawdowns - translated capitalized interest + translated principal repayments`
 
 The engine helper in `frontend/src/features/steel/foreignCurrencyTranslation.ts` implements this bridge with explicit per-period rates and balance conservation. It does not infer exchange rates from inflation, choose official/market rates, or yet post the resulting FX gain/loss into the integrated income statement and balance sheet. Those are separate model-integration steps and remain unverified until connected to the project currency and loan forms.
+
+
+#### Connection to project currency and periodic loan schedules
+
+`translatePeriodicForeignCurrencyLoan` now adapts a calculated `PeriodicLoanRow[]` and the project's `ProjectCurrency.exchangeRates` directory into the debt remeasurement calculation. It resolves only explicit period keys (1-based period number, exact start date, exact end date, or YYYY-MM) and rejects missing/duplicate rates, mismatched period sequences, invalid dates, or non-positive rates. The opening foreign balance still requires its own explicit opening carrying rate.
+
+Capitalized financing fees are included separately from capitalized interest in the foreign-currency debt roll-forward. Since the existing periodic loan engine aggregates movements by project period, this adapter uses the resolved period rate for all movements in that period and for its closing remeasurement. It does not claim to reproduce exact intraperiod spot-rate accounting.
+
+This is an engine-level adapter, not yet a user-interface binding or a posting into the linked income statement, cash-flow statement, and balance sheet. FX tax deductibility and loss carry-forward treatment must be applied under the project's tax policy before claiming full three-statement integration.
