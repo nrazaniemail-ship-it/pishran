@@ -135,20 +135,22 @@ export function calculateLoanFee(input:{type:'agency'|'guarantee'|'commitment'|'
 }
 export function calculateHelpNpv(cashFlows:number[],discountRatePercent:number,periodsPerYear:number,referencePoint:'beginning-of-first-period'|'end-of-first-period'='beginning-of-first-period',salvageValue=0){
  if(!cashFlows.every(finite)||!nonNegative(discountRatePercent)||!Number.isInteger(periodsPerYear)||periodsPerYear<=0||!finite(salvageValue))throw new Error('invalid-npv-input')
- const rate=discountRatePercent/100/periodsPerYear
- const shift=referencePoint==='end-of-first-period'?1:0
- const discounted=cashFlows.reduce((sum,flow,index)=>sum+flow/Math.pow(1+rate,Math.max(0,index+1-shift)),0)
- const salvageDiscount=salvageValue/Math.pow(1+rate,Math.max(0,cashFlows.length-shift))
- return {npv:discounted+salvageDiscount,discountedCashFlows:cashFlows.map((flow,index)=>flow/Math.pow(1+rate,Math.max(0,index+1-shift))),discountedSalvageValue:salvageDiscount}
+ const annualFactor=1+discountRatePercent/100
+ const referenceShift=referencePoint==='end-of-first-period'?1/periodsPerYear:0
+ const exponents=cashFlows.map((_,index)=>Math.max(0,(index+1)/periodsPerYear-referenceShift))
+ const discountedCashFlows=cashFlows.map((flow,index)=>flow/Math.pow(annualFactor,exponents[index]))
+ const salvageExponent=Math.max(0,cashFlows.length/periodsPerYear-referenceShift)
+ const discountedSalvageValue=salvageValue/Math.pow(annualFactor,salvageExponent)
+ return {npv:discountedCashFlows.reduce((sum,flow)=>sum+flow,0)+discountedSalvageValue,discountedCashFlows,discountedSalvageValue}
 }
-export function calculateHelpMirr(cashFlows:number[],reinvestmentRatePercent:number,borrowingRatePercent:number,planningHorizonYears:number,periodsPerYear:number){
+export function calculateHelpMirr(cashFlows:number[],reinvestmentRatePercent:number,borrowingRatePercent:number,planningHorizonYears:number,periodsPerYear:number,referencePoint:'beginning-of-first-period'|'end-of-first-period'='beginning-of-first-period'){
  if(!cashFlows.every(finite)||!nonNegative(reinvestmentRatePercent)||!nonNegative(borrowingRatePercent)||!nonNegative(planningHorizonYears)||planningHorizonYears===0||!Number.isInteger(periodsPerYear)||periodsPerYear<=0)throw new Error('invalid-mirr-input')
- const reinvest=reinvestmentRatePercent/100,borrow=borrowingRatePercent/100
- const horizon=planningHorizonYears
- const positiveFuture=cashFlows.reduce((sum,flow,index)=>flow>0?sum+flow*Math.pow(1+reinvest,horizon+1-(index+1)/periodsPerYear):sum,0)
- const negativePresent=cashFlows.reduce((sum,flow,index)=>flow<0?sum+(-flow)/Math.pow(1+borrow,(index+1)/periodsPerYear):sum,0)
+ const reinvest=1+reinvestmentRatePercent/100,borrow=1+borrowingRatePercent/100
+ const horizon=planningHorizonYears,referenceShift=referencePoint==='end-of-first-period'?1/periodsPerYear:0
+ const positiveFuture=cashFlows.reduce((sum,flow,index)=>flow>0?sum+flow*Math.pow(reinvest,Math.max(0,horizon+1-(index+1)/periodsPerYear)):sum,0)
+ const negativePresent=cashFlows.reduce((sum,flow,index)=>flow<0?sum+(-flow)/Math.pow(borrow,Math.max(0,(index+1)/periodsPerYear-referenceShift)):sum,0)
  if(negativePresent===0)return null
- return Math.pow(positiveFuture/negativePresent,1/horizon)-1
+ return Math.pow(positiveFuture/negativePresent,1/(horizon+1-referenceShift))-1
 }
 export function calculateDividendPool(netProfit:number,retainedPercent:number,preferredDividends:number[],jointVentureCount:number){
  if(!finite(netProfit)||!nonNegative(retainedPercent)||retainedPercent>100||!preferredDividends.every(nonNegative)||!Number.isInteger(jointVentureCount)||jointVentureCount<0||jointVentureCount>preferredDividends.length)throw new Error('invalid-dividend-input')
