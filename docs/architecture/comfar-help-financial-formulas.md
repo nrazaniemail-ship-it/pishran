@@ -124,3 +124,12 @@ The current change provides a comprehensive reference-mapped input catalogue, pe
 6. Reconcile period by period against independently supplied COMFAR output files, using tolerances and traceable source pages.
 
 Therefore, the forms now cover the documented input domains, but the entire model must not be described as calculation-equivalent to COMFAR until these integrations and output reconciliations pass. The uploaded project output and spreadsheets remain excluded from the design baseline and are reserved for a later simulation stage.
+
+
+### Foreign-currency debt translation
+
+Foreign-currency debt must be carried in its contractual currency and remeasured into the accounting currency at each period end. Principal drawdowns, repayments and capitalized interest are translated at their respective transaction rates; the closing foreign-currency balance is translated at the period-end rate. The residual movement is the exchange gain/loss on the liability (positive = loss, negative = gain):
+
+`FX loss = closing debt at closing rate - opening carrying amount - translated drawdowns - translated capitalized interest + translated principal repayments`
+
+The engine helper in `frontend/src/features/steel/foreignCurrencyTranslation.ts` implements this bridge with explicit per-period rates and balance conservation. It does not infer exchange rates from inflation, choose official/market rates, or yet post the resulting FX gain/loss into the integrated income statement and balance sheet. Those are separate model-integration steps and remain unverified until connected to the project currency and loan forms.
