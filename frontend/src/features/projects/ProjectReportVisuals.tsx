@@ -1,4 +1,5 @@
 import type { OneWaySensitivityAnalysis } from '../steel/financialModel'
+import type { PartnerFinanceResult } from './partnerFinance'
 import { aggregatePeriodicFinanceByFiscalYear, hasCompleteFiscalYearCoverage, type PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
 import { HOT_ROLLING_200KT_AUDIT } from '../steel/workbookReconciliation'
 import { HOT_ROLLING_COMFAR_OUTPUT_AUDIT } from '../steel/hotRollingExcelBenchmark'
@@ -26,6 +27,7 @@ type Props = {
   mirrEquity: number | null
   sensitivity: OneWaySensitivityAnalysis | null
   periodicResult: PeriodicProjectFinanceResult | null
+  partnerFinanceResult?: PartnerFinanceResult | null
   valuationDate: string
   discountConvention: 'actual-days' | 'period-count'
   periodFrequency: string
@@ -340,6 +342,34 @@ export default function ProjectReportVisuals(props: Props) {
       <div style={{overflowX:'auto',maxHeight:420}}><table className="fw-table"><thead><tr><th>{t('دوره','Period',language)}</th><th>{t('تاریخ','Dates',language)}</th><th>{t('نرخ مالیات','Tax rate',language)}</th><th>{t('بهره','Interest',language)}</th><th>{t('اصل','Principal',language)}</th><th>CFADS</th><th>DSCR</th><th>{t('جریان نقد پروژه','Project FCF',language)}</th><th>{t('جریان نقد سهامدار','Equity FCF',language)}</th></tr></thead><tbody>{props.periodicResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.startDate} – {row.endDate}</td><td>{fmtValue(row.taxRatePercent)}%</td><td>{fmtValue(row.interestExpense)}</td><td>{fmtValue(row.principal)}</td><td>{fmtValue(row.cfads)}</td><td>{row.dscr==null?'—':fmtValue(row.dscr)+'x'}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.equityFreeCashFlow)}</td></tr>)}</tbody></table></div>
       {props.periodicResult.warnings.length>0&&<p className="fw-hint">{props.periodicResult.warnings.join(' · ')}</p>}
     </div>}
+    {props.partnerFinanceResult?.valid&&<div className="fw-card">
+      <h4>{t('جریان نقدی و تخصیص شرکای مشارکت','Joint-Venture Partner Cash-Flow Allocation',language)}</h4>
+      <div className="fw-grid">
+        <div className="fw-result">{t('جریان نقدی کل سهامداران','Total equity cash flow',language)} · {fmtValue(props.partnerFinanceResult.totalProjectEquityCashFlow)} {project.currency}</div>
+        <div className="fw-result">{t('وجه نقد توزیع‌شده','Cash distributed',language)} · {fmtValue(props.partnerFinanceResult.distributedPositiveCashFlow)} {project.currency}</div>
+        <div className="fw-result">{t('وجه نقد نگه‌داشته‌شده','Cash retained',language)} · {fmtValue(props.partnerFinanceResult.retainedPositiveCashFlow)} {project.currency}</div>
+        <div className="fw-result">{t('درصد قابل تقسیم','Distribution percentage',language)} · {fmtValue(props.partnerFinanceResult.positiveCashFlowDistributionPercent)}%</div>
+      </div>
+      <p className="fw-hint">{t('آورده اعلامی شرکا: ','Declared partner capital: ')}<b>{fmtValue(props.partnerFinanceResult.totalDeclaredCapitalContribution)}</b> · {t('آورده برنامه‌ریزی‌شده موتور مالی: ','Scheduled engine equity: ')}<b>{fmtValue(props.partnerFinanceResult.totalScheduledEquityContribution)}</b> · {t('اختلاف: ','Variance: ')}<b>{fmtValue(props.partnerFinanceResult.declaredCapitalContributionVariance)}</b> {project.currency}</p>
+      <p className="fw-hint">{t('اختلاف کنترل تخصیص کل (جمع جریان نقدی خالص شرکا به‌علاوه وجه نقد نگه‌داشته‌شده منهای جریان نقدی کل سهامداران): ','Allocation reconciliation variance: ')}<b>{fmtValue(props.partnerFinanceResult.allocationReconciliationVariance)}</b> {project.currency}. {t('مقدار مورد انتظار صفر است.','Expected value is zero.')}</p>
+      <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
+        <th>{t('شریک','Partner',language)}</th><th>{t('آورده قراردادی','Declared capital',language)}</th>
+        <th>{t('جریان نقدی منفی تخصیص‌یافته','Allocated negative cash flow',language)}</th>
+        <th>{t('توزیع جریان نقدی مثبت','Positive cash flow distribution',language)}</th>
+        <th>{t('خالص جریان نقدی شریک','Partner net cash flow',language)}</th>
+      </tr></thead><tbody>{props.partnerFinanceResult.rows.map(row=><tr key={row.partnerId}>
+        <td>{row.partnerName}</td><td>{fmtValue(row.declaredCapitalContribution)}</td>
+        <td>{fmtValue(row.negativeCashFlowAllocation)}</td><td>{fmtValue(row.positiveCashFlowDistribution)}</td><td>{fmtValue(row.netCashFlow)}</td>
+      </tr>)}</tbody></table></div>
+      <div style={{overflowX:'auto',maxHeight:360}}><table className="fw-table"><thead><tr>
+        <th>{t('دوره','Period',language)}</th><th>{t('تاریخ','Dates',language)}
+        </th>{props.partnerFinanceResult.rows.map(row=><th key={row.partnerId}>{row.partnerName}</th>)}
+      </tr></thead><tbody>{(props.partnerFinanceResult.rows[0]?.periods??[]).map((period,index)=><tr key={period.period}>
+        <td>{period.period}</td><td>{period.startDate} – {period.endDate}</td>
+        {props.partnerFinanceResult!.rows.map(row=><td key={row.partnerId}>{fmtValue(row.periods[index]?.allocatedCashFlow??0)}</td>)}
+      </tr>)}</tbody></table></div>
+    </div>}
+    {props.partnerFinanceResult&&!props.partnerFinanceResult.valid&&<p className="fw-hint">{t('گزارش جریان نقدی شرکا به دلیل عدم تطبیق تخصیص محاسبه نشده است: ','Partner cash-flow report is unavailable because allocation did not reconcile: ',language)}{props.partnerFinanceResult.warnings.join(' · ')}</p>}
     {props.periodicResult&&!props.periodicResult.valid&&<div className="fw-hint">{t('مدل دوره‌ای به علت نقص یا ناسازگاری ورودی‌ها محاسبه نشده است:','Periodic model was not calculated because inputs are incomplete or inconsistent:',language)} {props.periodicResult.warnings.join(' · ')}</div>}
     {!props.periodicResult&&<p className="fw-hint">{t('برای نمایش خروجی دوره‌ای، تاریخ‌ها و تناوب مالی را در فونداسیون پروژه تعیین و مرحله جریان نقدی را باز کنید.','Set project dates and financial frequency in the project foundation and open the cash-flow step to generate periodic outputs.',language)}</p>}
     {isHotRollingCoil&&<div className="fw-card">
