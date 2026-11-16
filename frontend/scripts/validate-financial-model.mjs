@@ -109,6 +109,11 @@ const rollingAudit = workbookAudit.HOT_ROLLING_200KT_AUDIT
 
 const hrcrFixedAssets = reference.createHotRollingCoilFixedInvestmentItems()
 const hrcrFoundation = reference.createHotRollingCoilProjectFoundation()
+assert.equal(hrcrFoundation.planning.valuationDate, '2026-03-20', 'HRCR200 12/1404 valuation date must be stored as ISO for HTML date input and periodic discounting')
+const migratedLegacyValuation = reference.mergeHotRollingCoilProjectFoundation({...hrcrFoundation,planning:{...hrcrFoundation.planning,valuationDate:'1404-12'}})
+assert.equal(migratedLegacyValuation.planning.valuationDate, '2026-03-20', 'Legacy Jalali year-month valuation strings must migrate to the source-backed 12/1404 ISO date')
+const preservedCustomValuation = reference.mergeHotRollingCoilProjectFoundation({...hrcrFoundation,planning:{...hrcrFoundation.planning,valuationDate:'2027-04-15'}})
+assert.equal(preservedCustomValuation.planning.valuationDate, '2027-04-15', 'A valid user-selected ISO valuation date must survive foundation merging')
 const hrcrFixedRegisterTotal = hrcrFixedAssets.filter(item=>item.assetClass!=='preproduction').reduce((total,item)=>total+item.acquisitions.reduce((subtotal,acquisition)=>subtotal+acquisition.quantity*acquisition.unitPrice*(item.origin==='foreign'?(acquisition.exchangeRateToLocal??0):1),0),0)
 const hrcrPreproductionTotal = hrcrFixedAssets.filter(item=>item.assetClass==='preproduction').reduce((total,item)=>total+item.acquisitions.reduce((subtotal,acquisition)=>subtotal+acquisition.quantity*acquisition.unitPrice*(item.origin==='foreign'?(acquisition.exchangeRateToLocal??0):1),0),0)
 near(hrcrFixedRegisterTotal,rollingAudit.capex.fixedInvestment,0.01,'HRCR200 fixed-asset register must reconcile to fixed investment CAPEX')
@@ -144,12 +149,128 @@ near(rollingAudit.capex.constructionInvestment + rollingAudit.capex.capitalizedI
   rollingAudit.capex.constructionUsesIncludingInterest, 0.01, 'HRCR200 construction uses including interest')
 near(rollingAudit.annualOpex.totalIncludingDepreciation - rollingAudit.annualOpex.depreciation,
   rollingAudit.annualOpex.totalExcludingDepreciation, 0.01, 'HRCR200 OPEX excluding depreciation')
-assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabDebtSharePercent, 80,
-  'HRCR200 mechanism-tab financing split must remain visible')
-assert.equal(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingSourceConflict, true,
-  'HRCR200 working-capital source must remain flagged as unconfirmed')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabDebtSharePercent, 30,
+  'HRCR200 mechanism-tab actual amounts must imply 30% debt during construction')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabLabelDebtSharePercent, 80,
+  'HRCR200 contradictory 80% debt label must remain visible separately from the amounts')
 assert.equal(rollingAudit.financingAlternativesInWorkbook.fundingSummaryTabEquitySharePercent, 70,
-  'HRCR200 alternative financing split must remain visible')
+  'HRCR200 funding-summary actual amounts must preserve 70% equity')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.fundingSummaryTabDebtLabelSharePercent, 20,
+  'HRCR200 conflicting 20% debt label must remain visible')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingSourceConflict, true,
+  'HRCR200 working-capital funding gap must remain flagged')
+near(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingGap, 1286225.931577, 0.01,
+  'HRCR200 unidentified working-capital funding gap')
+const fundingAudit = rollingAudit.financingAlternativesInWorkbook
+near(fundingAudit.comfarOutputConstructionEquity + fundingAudit.comfarOutputWorkingCapitalEquity,
+  fundingAudit.comfarOutputTotalEquity, 0.01, 'HRCR200 COMFAR equity sources by construction and production phase')
+near(fundingAudit.comfarOutputTotalEquity + fundingAudit.comfarOutputLongTermDebtGross,
+  fundingAudit.comfarOutputTotalSources, 0.01, 'HRCR200 COMFAR total finance sources')
+near(fundingAudit.comfarOutputLongTermDebtGross - fundingAudit.comfarReferenceDebtAmount,
+  fundingAudit.comfarReferenceCapitalizedInterest, 0.21, 'HRCR200 gross COMFAR long-term debt includes capitalized construction interest')
+near(fundingAudit.comfarOutputEquitySharePercent + fundingAudit.comfarOutputDebtSharePercent,
+  100, 1e-9, 'HRCR200 COMFAR output gross source shares')
+near(fundingAudit.comfarOutputEquitySharePercent,
+  fundingAudit.comfarOutputTotalEquity / fundingAudit.comfarOutputTotalSources * 100, 1e-9,
+  'HRCR200 COMFAR equity share across total reported sources')
+assert.equal(fundingAudit.comfarOutputWorkingCapitalLoan, 0,
+  'HRCR200 COMFAR output classifies the production-phase working-capital contribution as equity, not a loan')
+near(fundingAudit.excelMechanismWorkingCapitalLoan, 3309144.525623, 0.01,
+  'HRCR200 Excel mechanism tab separately labels working capital as a loan')
+
+const comfar30_70FixedWacc = engine.calculateWacc({
+  equityWeight: 70, debtWeight: 30, costOfEquity: 30, costOfDebt: 26, taxRate: 25
+})
+near(comfar30_70FixedWacc.value, fundingAudit.derivedWacc30_70FixedCapitalPercent / 100, 1e-12,
+  'HRCR200 pure fixed-capital 30/70 WACC with 25% debt tax shield')
+const comfar30_70EquityWeight = fundingAudit.comfarOutputTotalEquity
+  / (fundingAudit.comfarOutputTotalEquity + fundingAudit.comfarReferenceDebtAmount) * 100
+const comfar30_70DebtWeight = 100 - comfar30_70EquityWeight
+const comfar30_70Wacc = engine.calculateWacc({
+  equityWeight: comfar30_70EquityWeight, debtWeight: comfar30_70DebtWeight,
+  costOfEquity: 30, costOfDebt: 26, taxRate: 25
+})
+near(comfar30_70Wacc.value, fundingAudit.comfarWaccWithWorkingCapitalEquityPercent / 100, 1e-12,
+  'HRCR200 30/70 fixed capital plus COMFAR working-capital equity WACC')
+const workbook20_80Amounts = {
+  equity: 3740567.0717058936,
+  fixedDebt: 14962268.286823574,
+  workingCapitalDebt: 3309144.525623
+}
+const workbook20_80EquityWeight = workbook20_80Amounts.equity
+  / (workbook20_80Amounts.equity + workbook20_80Amounts.fixedDebt + workbook20_80Amounts.workingCapitalDebt) * 100
+const workbook20_80DebtWeight = 100 - workbook20_80EquityWeight
+const workbook20_80Wacc = engine.calculateWacc({
+  equityWeight: workbook20_80EquityWeight, debtWeight: workbook20_80DebtWeight,
+  costOfEquity: 30, costOfDebt: 26, taxRate: 25
+})
+near(workbook20_80Wacc.value, fundingAudit.excelWacc20_80WithWorkingCapitalDebtPercent / 100, 1e-12,
+  'HRCR200 Excel WACC sheet reproduces 20/80 fixed funding plus separate working-capital debt')
+near(engine.calculateWacc({equityWeight:20,debtWeight:80,costOfEquity:30,costOfDebt:26,taxRate:25}).value,
+  fundingAudit.excelWacc20_80FixedOnlyPercent / 100, 1e-12, 'Pure 20/80 fixed-capital WACC')
+
+const comfarReferenceFlows = [...reference.HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectCashFlowsForIrr]
+const comfarValuationNpv = (rate) => engine.calculateNpv(comfarReferenceFlows, rate) * (1 + rate)
+near(comfarValuationNpv(0.25), reference.HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectNpvAt25, 0.02,
+  'HRCR200 COMFAR cash flows reproduce reported NPV at the 25% valuation-date convention')
+near(engine.calculateIrr(comfarReferenceFlows),
+  reference.HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectIrrPercent / 100, 0.0001,
+  'HRCR200 COMFAR project IRR remains independent of the discount-rate scenario')
+// Compare total funding bases consistently: COMFAR 30/70 keeps working capital as equity; Excel 20/80 funds it with a separate loan.
+const discountOnlyNpv20_80 = comfarValuationNpv(workbook20_80Wacc.value)
+const discountOnlyNpv30_70 = comfarValuationNpv(comfar30_70Wacc.value)
+near(discountOnlyNpv20_80, 41119481.85, 0.02,
+  'HRCR200 discount-only NPV at workbook 20/80 WACC, before recalculating capitalized interest')
+near(discountOnlyNpv30_70, 26373890.94, 0.02,
+  'HRCR200 discount-only NPV at 30/70 construction WACC, before recalculating capitalized interest')
+assert.ok(discountOnlyNpv20_80 > discountOnlyNpv30_70,
+  'Lower 20/80 WACC must raise NPV when the same unlevered cash-flow vector is held constant')
+// A financing-ratio change does not alter project NPV at a fixed manual discount rate or project IRR when the unlevered project cash-flow vector is unchanged.
+const projectNpv25For30_70 = comfarValuationNpv(0.25)
+const projectNpv25For20_80 = comfarValuationNpv(0.25)
+near(projectNpv25For30_70, projectNpv25For20_80, 0.000001,
+  'HRCR200 project NPV at fixed 25% must be invariant to 30/70 versus 20/80 financing')
+near(engine.calculateIrr(comfarReferenceFlows), 0.4831, 0.0001,
+  'HRCR200 project IRR must remain 48.31% irrespective of WACC weights')
+near(projectNpv25For30_70, 31399764.27, 0.02,
+  'HRCR200 project NPV at fixed 25% remains the COMFAR output regardless of financing mix')
+
+const firstYear = fundingAudit.firstOperatingYear1405
+const baseLoanPrincipal = fundingAudit.comfarReferenceDebtAmount
+const loanScale20_80 = workbook20_80Amounts.fixedDebt / baseLoanPrincipal
+const firstYearEbitBeforeInterest = firstYear.taxableProfitAfterComfarDebtInterest + firstYear.comfarInterest
+const evaluateFirstYearDscr = (loanScale) => {
+  const interest = firstYear.comfarInterest * loanScale
+  const principal = firstYear.comfarPrincipal * loanScale
+  const taxableProfit = Math.max(0, firstYearEbitBeforeInterest - interest)
+  const tax = taxableProfit * 0.25
+  const cfads = firstYear.revenue - firstYear.operatingCosts - firstYear.marketingCosts
+    - tax - firstYear.workingCapitalIncrease
+  const debtService = interest + principal
+  return { interest, principal, taxableProfit, tax, cfads, debtService, dscr: cfads / debtService }
+}
+const firstYear30_70 = evaluateFirstYearDscr(1)
+const firstYear20_80 = evaluateFirstYearDscr(loanScale20_80)
+near(firstYear30_70.debtService, firstYear.comfarAnnualDebtService, 0.01,
+  'HRCR200 30/70 first operating-year debt service must match COMFAR')
+near(firstYear30_70.dscr, 2.2862240332667514, 1e-9,
+  'HRCR200 first operating-year DSCR under 30/70 and 25% flat tax')
+near(firstYear20_80.debtService, 8970583.878993252, 0.02,
+  'HRCR200 first operating-year debt service under 20/80 scaled COMFAR annuity')
+near(firstYear20_80.dscr, 0.9687650693316578, 1e-9,
+  'HRCR200 first operating-year DSCR under 20/80 and 25% flat tax')
+assert.ok(firstYear30_70.dscr > 1 && firstYear20_80.dscr < 1,
+  'HRCR200 first-year 20/80 fixed-debt scenario must flag DSCR below 1 before any separate working-capital loan service')
+console.log('FIRST-YEAR DSCR COMPARISON (flat 25% tax; same operations; debt service scaled to the COMFAR five-year annuity; excludes any separate working-capital loan):', {
+  DSCR30_70: firstYear30_70.dscr, debtService30_70: firstYear30_70.debtService,
+  DSCR20_80: firstYear20_80.dscr, debtService20_80: firstYear20_80.debtService
+})
+console.log('FINANCING COMPARISON (discount-only; loan interest/capitalized interest not re-run):', {
+  WACC20_80: workbook20_80Wacc.value, WACC30_70: comfar30_70Wacc.value,
+  WACC30_70FixedOnly: comfar30_70FixedWacc.value,
+  NPV20_80: discountOnlyNpv20_80, NPV30_70: discountOnlyNpv30_70,
+  NPVAt25Both: comfarValuationNpv(0.25)
+})
 near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryIrrPercent, 48.31, 0.001,
   'HRCR200 general-summary IRR')
 near(rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetProjectIrrPercent, 43.378234116396674, 1e-9,
@@ -212,6 +333,46 @@ assert.ok(rollingWorkspaceSource.includes("project.templateId==='hot-rolling-200
   'Only explicit hot-rolling template or legacy hot-rolling projects may load benchmark defaults')
 assert.ok(wizardSource.includes("project.templateId==='raw'"),
   'Raw template must initialize an empty feasibility model')
+assert.ok(projectsViewSource.indexOf('value={projectType}') < projectsViewSource.indexOf('{steelStage && <label>')
+  && projectsViewSource.includes("t('نام پروژه','Project Name')")
+  && !projectsViewSource.includes("مرحله زنجیره فولاد"),
+  'Raw project creation must ask for project type then a manually entered project name, without a steel-chain-stage field')
+assert.ok(projectsViewSource.includes("value={projectType} onChange={e => setProjectType(e.target.value)}")
+  && projectsViewSource.includes("projectType: projectType.trim()")
+  && projectsViewSource.includes("value={name} onChange={e => setName(e.target.value)}")
+  && projectRepositorySource.includes("projectType?: string"),
+  'Non-steel raw templates must persist project type separately from the manually entered project name')
+assert.ok(!wizardSource.includes("مرحله اصلی زنجیره فولاد")
+  && wizardSource.includes('technical:rawProject?[]')
+  && wizardSource.includes('balance:rawProject?[]')
+  && wizardSource.includes('utilities:rawProject?[]')
+  && wizardSource.includes('capex:rawProject?[]')
+  && wizardSource.includes('opex:rawProject?[]'),
+  'Raw template must hide stage-specific selector and start technical, material, utility, CAPEX and OPEX rows blank')
+assert.ok(['mining','concentrate','pellet','dri','steelmaking','dri-steelmaking-slab','hot-rolling','hot-plate','cold-rolling','rebar-rolling','angle-rolling','beam-rolling']
+  .every(id=>wizardSource.includes("id:'"+id+"'")&&(wizardSource.includes(id+':{')||wizardSource.includes("'"+id+"':{"))),
+  'Every requested steel-chain stage must have a matching stage-specific form definition')
+assert.ok(wizardSource.includes("id:'dri-steelmaking-slab'")
+  && wizardSource.includes("id:'hot-plate'")
+  && wizardSource.includes("const stageFormDefinitions")
+  && wizardSource.includes("dri:{")
+  && wizardSource.includes("'dri-steelmaking-slab':{")
+  && wizardSource.includes("'hot-plate':{")
+  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.materials")
+  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.utilities")
+  && wizardSource.includes("stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex")
+  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.opex"),
+  'Mining, concentration, pelletizing, DRI, steelmaking, integrated slab, hot plate, hot coil and rolling forms must use stage-specific input rows')
+assert.ok(wizardSource.includes("stageOptions.find(s=>s.id==='other')")
+  && !wizardSource.includes("stageOptions[10]"),
+  'Blank-template stage selection must use stable stage IDs, not a fragile array index')
+assert.ok(wizardSource.includes("خرید زمین (۱۳ هکتار؛ ۱۳۰٬۰۰۰ مترمربع)")
+  && wizardSource.includes("حقوق و دستمزد ۲۵۰ نفر")
+  && wizardSource.includes("کلاف گرم (ماده اولیه اصلی)"),
+  'Existing cold-rolling source-based CAPEX, payroll and material-balance fields must be preserved')
+assert.ok(wizardSource.includes("unit={project.industry==='انرژی و نیروگاه'?'مگاوات':project.industry==='فولاد و صنایع معدنی'?'تن/سال':'واحد/سال'}")
+  && projectsViewSource.includes('inputMode="numeric" pattern="[0-9]*"'),
+  'Capacity must use MW for energy projects and tonnes/year for steel/mining with numeric-only entry')
 assert.ok(wizardSource.includes("value=\"industrial\"")
   && wizardSource.includes("value=\"maritime\"")
   && wizardSource.includes("value=\"agricultural\"")
@@ -467,7 +628,8 @@ const integrated = engine.calculateIntegratedFinance({
   opexEscalationPercent: 2,
   discountMode: 'wacc',
   manualDiscountRate: 25,
-  salvageValue: 50
+  salvageValue: 50,
+  salvageBookValue: 20
 })
 near(integrated.wacc, 0.15, 1e-12, 'Integrated WACC')
 const matchingCashFlows = engine.reconcileCashFlowSeries([-100, 60, 60], [-100, 60, 60], 0.01)
@@ -791,10 +953,92 @@ near(hrcrAssetBridge.preproductionTotal,workbookAudit.HOT_ROLLING_200KT_AUDIT.ca
 assert.equal(hrcrAssetBridge.status,'matched','HRCR fixed assets and preproduction expenditures must reconcile as separate categories')
 const hrcrAssetValidation=foundation.validateFixedInvestmentItems(hrcrDepreciationAssets,reference.createHotRollingCoilProjectFoundation())
 assert.equal(hrcrAssetValidation.filter(issue=>issue.severity==='error').length,0,'HRCR seed fractional depreciation lives must pass fixed asset validation')
+const hrcrMonthlyAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(
+  hrcrDepreciationAssets,1403,17,'monthly',reference.createHotRollingCoilProjectFoundation()
+)
+assert.ok(hrcrMonthlyAssetBuild.assets.length>=18,
+  'The fixed investment register must preserve asset acquisition vintages for monthly calendar depreciation')
+assert.ok(!hrcrMonthlyAssetBuild.warnings.some(warning=>warning.includes('only computes an annual schedule')),
+  'Monthly projects must no longer be blocked by the annual-only asset register guard')
 const hrcrAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(
   hrcrDepreciationAssets,1403,17,'annual',reference.createHotRollingCoilProjectFoundation()
 )
 assert.ok(hrcrAssetBuild.assets.length>=18,'HRCR reference must create asset acquisition vintages from the CAPEX workbook')
+
+const monthlyCalendar=foundation.buildProjectCalendarPeriods('2025-01-01','2025-12-31','monthly',1)
+const invalidMonthlyCalendar=monthlyCalendar.map((period,index)=>index===1?{...period,days:period.days+1}:period)
+assert.equal(engine.calculateComfarCalendarDepreciationSchedule([],invalidMonthlyCalendar,1).valid,false,
+  'Calendar periods with inconsistent day counts must be rejected')
+const monthlyAsset={id:'monthly-asset',name:'Monthly asset',originalValue:1200,initialBookValue:1200,
+  scrapPercent:10,lengthYears:2,lengthMonths:0,ratePercent:50,method:'linear-to-scrap',
+  acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'2025-02-15',startingAtDate:'2025-03-01'}
+const monthlyRun=engine.calculateComfarCalendarDepreciationSchedule([monthlyAsset],monthlyCalendar,1)
+assert.equal(monthlyRun.valid,true,'Date-driven monthly straight-line schedule must validate')
+near(monthlyRun.periods[0].depreciation,0,1e-9,'Monthly depreciation must not begin before acquisition')
+near(monthlyRun.periods[1].depreciation,0,1e-9,'Monthly depreciation must respect the explicit March start date')
+near(monthlyRun.periods[2].depreciation,540*31/365.2425,0.01,'Monthly depreciation must use the actual days in the first eligible month')
+near(monthlyRun.periods.reduce((sum,row)=>sum+row.depreciation,0),540*306/365.2425,0.02,
+  'Monthly depreciation must use actual eligible days through year end')
+near(monthlyRun.periods[11].assets[0].closingBookValue,1200-monthlyRun.periods.reduce((sum,row)=>sum+row.depreciation,0),0.02,
+  'Monthly closing book value must reconcile to opening cost less accumulated depreciation')
+
+const annualOnlyAcquisition=engine.calculateComfarCalendarDepreciationSchedule([{
+  ...monthlyAsset,acquisitionDate:undefined,startingAtDate:undefined
+}],monthlyCalendar,1)
+assert.equal(annualOnlyAcquisition.valid,false,
+  'Annual-only acquisition timing must not be silently treated as an exact monthly acquisition date')
+assert.ok(annualOnlyAcquisition.warnings.some(warning=>warning.includes('تاریخ دقیق')),
+  'Missing subannual acquisition dates must be disclosed as a blocking reconciliation warning')
+
+const quarterlyCalendar=foundation.buildProjectCalendarPeriods('2025-01-01','2025-12-31','quarterly',1)
+const quarterlyAsset={id:'quarterly-asset',name:'Quarterly asset',originalValue:1000,initialBookValue:1000,
+  scrapPercent:10,lengthYears:2,lengthMonths:0,ratePercent:50,method:'linear-to-scrap',
+  acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'2025-01-15',startingAtDate:'2025-02-01'}
+const invalidCalendarSale=engine.calculateComfarCalendarAssetLifecycle([quarterlyAsset],[{
+  id:'invalid-calendar-sale',assetId:'quarterly-asset',period:3,priceMode:'self-defined',
+  selfDefinedPrice:500,saleDate:'2025-07-15'
+}],quarterlyCalendar,1)
+assert.equal(invalidCalendarSale.valid,false,
+  'Self-defined calendar disposal must require a positive exchange rate')
+const quarterlyRun=engine.calculateComfarCalendarDepreciationSchedule([quarterlyAsset],quarterlyCalendar,1)
+assert.equal(quarterlyRun.valid,true,'Date-driven quarterly schedule must validate')
+near(quarterlyRun.periods[0].depreciation,450*59/365.2425,0.02,
+  'Quarterly depreciation must begin on the actual February start date')
+near(quarterlyRun.periods[1].depreciation,450*91/365.2425,0.02,
+  'Quarterly depreciation must use the actual length of the second quarter')
+
+const quarterlySale=engine.calculateComfarCalendarAssetLifecycle([quarterlyAsset],[{
+  id:'quarterly-sale',assetId:'quarterly-asset',period:3,priceMode:'self-defined',
+  selfDefinedPrice:500,exchangeRateToLocal:1,saleDate:'2025-07-15'
+}],quarterlyCalendar,1)
+assert.equal(quarterlySale.valid,true,'A dated asset sale must be accepted on the quarterly calendar')
+const expectedQuarterlySaleBook=1000-450*(59+91+15)/365.2425
+near(quarterlySale.sales[0].bookValueAtSale,expectedQuarterlySaleBook,0.03,
+  'Asset book value at sale must include depreciation only through the actual disposal date')
+near(quarterlySale.depreciation.periods[2].depreciation,450*15/365.2425,0.02,
+  'Quarterly sale-period depreciation must stop on the actual sale date')
+near(quarterlySale.sales[0].returnOfCapital,500,0.01,
+  'Sale proceeds below book value must be treated as return of capital up to proceeds')
+near(quarterlySale.sales[0].otherIncomeLoss,500-expectedQuarterlySaleBook,0.03,
+  'Sale loss must reconcile proceeds to book value')
+near(quarterlySale.depreciation.periods[2].closingBookValue,0,1e-9,
+  'Disposed asset must be derecognised in the sale period')
+near(quarterlySale.depreciation.periods[3].assets[0].closingBookValue,0,1e-9,
+  'Disposed asset must not carry a book value into later periods')
+
+for (const method of ['none','linear-to-zero','linear-to-scrap','accelerated','sum-of-years-digits']) {
+  const methodAsset={...monthlyAsset,id:'method-'+method,name:'Method '+method,method,
+    lengthYears:method==='sum-of-years-digits'?3:2,lengthMonths:0,
+    ratePercent:method==='none'?undefined:method==='sum-of-years-digits'?undefined:50}
+  const methodRun=engine.calculateComfarCalendarDepreciationSchedule([methodAsset],monthlyCalendar,1)
+  assert.equal(methodRun.valid,true,'Directory depreciation method '+method+' must have an independently executable calendar path')
+  assert.ok(methodRun.periods.every(row=>Number.isFinite(row.depreciation)&&row.depreciation>=0),
+    'Directory depreciation method '+method+' must produce finite non-negative period charges')
+  assert.equal(methodRun.methodControls.find(control=>control.method===method).calculationImplemented,true,
+    'Directory method '+method+' must expose its executable formula control')
+  assert.equal(methodRun.methodControls.find(control=>control.method===method).numericalBenchmark,'pending',
+    'Directory method '+method+' must remain explicitly unverified until reconciled to an independent reference output')
+}
 const hrcrDepreciationRun=engine.calculateComfarAssetDepreciationSchedule(hrcrAssetBuild.assets,17)
 assert.equal(hrcrDepreciationRun.valid,true,'Fractional useful lives from HRCR depreciation rates must be accepted by the XI.H engine')
 near(hrcrDepreciationRun.periods[2].depreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterFirstYearDepreciation,0.01,
@@ -942,12 +1186,31 @@ near(saleStatements[1].cashFlowStatement.investingCashFlow,900,1e-9,'Cash flow s
 near(saleStatements[1].balanceSheet.netFixedAssets,180,1e-9,'Balance sheet must remove disposed book value from fixed assets')
 assert.ok(saleStatements[1].balanceSheet.reconciled,'Asset disposal must reconcile all three financial statements')
 
+near(integrated.years[integrated.years.length-1].salvageGainLoss,30,1e-9,
+  'Terminal salvage gain must be sale proceeds less disposed book value')
+near(integrated.years[integrated.years.length-1].ebit,
+  integrated.years[integrated.years.length-1].revenue-integrated.years[integrated.years.length-1].variableCashCost-
+    integrated.years[integrated.years.length-1].fixedCashCost-integrated.years[integrated.years.length-1].depreciation+30+
+    integrated.years[integrated.years.length-1].assetSaleOtherIncomeLoss,1e-9,
+  'Terminal salvage gain must enter taxable EBIT')
 const statements = engine.buildThreeFinancialStatements(integrated.years)
 assert.equal(statements.length, integrated.years.length, 'Three statements must cover the full model horizon')
 assert.ok(statements.every(row => row.balanceSheet.reconciled), 'Balance sheet must reconcile without a plug for the integrated reference case')
 for (const row of statements) {
-  near(row.cashFlowStatement.closingCash, row.balanceSheet.cash, 1e-9, 'Cash flow statement and balance sheet cash tie')
-  near(row.balanceSheet.totalAssets, row.balanceSheet.totalLiabilitiesAndEquity, 1e-6, 'Balance sheet reconciliation year ' + row.year)
+  for (const [movement,value] of Object.entries(row.movementChecks)) {
+    near(value,0,1e-6,'Three-statement roll-forward '+movement+' year '+row.year)
+  }
+  near(row.cashFlowStatement.closingCash-row.openingBalances.cash,row.cashFlowStatement.netChangeInCash,1e-6,
+    'Opening-to-closing cash must reconcile to the three cash-flow sections')
+  near(row.balanceSheet.cash,row.cashFlowStatement.closingCash,1e-9,
+    'Cash flow statement and balance sheet cash tie')
+  near(row.balanceSheet.totalAssets,row.balanceSheet.totalLiabilitiesAndEquity,1e-6,
+    'Balance sheet reconciliation year '+row.year)
+  near(row.balanceSheet.netFixedAssets-row.openingBalances.netFixedAssets,
+    integrated.years[row.year-1].fixedInvestment+integrated.years[row.year-1].maintenanceCapex-
+      integrated.years[row.year-1].depreciation-integrated.years[row.year-1].assetBookValueDisposed-
+      integrated.years[row.year-1].salvageBookValueDisposed,1e-6,
+    'Fixed asset movement must use book value disposed, not sale proceeds')
 }
 const sensitivity = engine.calculateSensitivityMatrix({
   years:6,constructionYears:1,capacity:100,fullCapacityRevenue:2000,fullCapacityVariableCashCost:600,
@@ -1313,8 +1576,13 @@ assert.equal(registerBuild.assets.length,1,'A valid fixed-asset acquisition must
 assert.equal(registerBuild.assets[0].acquisitionPeriod,1,'Fixed-asset acquisition year must map to annual project period')
 assert.equal(registerBuild.assets[0].startingAtPeriod,1,'Starting at year must map to annual project period')
 const quarterlyRegisterBuild = engine.buildComfarDepreciationAssetsFromFixedInvestmentItems([registerAsset],1405,48,'quarterly')
-assert.equal(quarterlyRegisterBuild.assets.length,0,'The annual depreciation engine must not silently process quarterly periods')
-assert.ok(quarterlyRegisterBuild.warnings.some(warning=>warning.includes('سالانه')),'Non-annual depreciation preview must explain the unsupported period frequency')
+assert.equal(quarterlyRegisterBuild.assets.length,1,'The fixed investment register must preserve vintages for the quarterly calendar engine')
+assert.ok(!quarterlyRegisterBuild.warnings.some(warning=>warning.includes('فقط برنامه سالانه')),'Quarterly asset vintages must no longer be blocked by the annual-only depreciation guard')
+const quarterlyRegisterCalendar=foundation.buildProjectCalendarPeriods('1405-01-01','1405-12-31','quarterly',1)
+const quarterlyRegisterDepreciation=engine.calculateComfarCalendarDepreciationSchedule(quarterlyRegisterBuild.assets,quarterlyRegisterCalendar,1)
+assert.equal(quarterlyRegisterDepreciation.valid,true,'Dated fixed-asset vintages must calculate on a quarterly project calendar')
+near(quarterlyRegisterDepreciation.periods[0].depreciation,0,1e-9,'Quarterly depreciation must respect the fixed asset Starting at date')
+assert.ok(quarterlyRegisterDepreciation.periods[1].depreciation>0,'Quarterly depreciation must begin in the period containing the configured start date')
 assert.equal(engine.resolveComfarDepreciationStartPeriod(registerBuild.assets[0].acquisitionPeriod,registerBuild.assets[0].startingAtPeriod,registerBuild.assets[0].acquisitionDate,registerBuild.assets[0].startingAtDate),1,'Full acquisition date before Starting at must retain same-year depreciation')
 near(registerBuild.assets[0].originalValue,200,1e-9,'Fixed-asset acquisition amount must be converted to local currency')
 assert.equal(registerBuild.investmentSchedule[0],200,'Confirmed asset acquisitions must create a periodised investment cash-flow schedule')
@@ -1445,12 +1713,35 @@ assert.ok(reportWizardSource.includes('ProjectReportVisuals')
   && reportWizardSource.includes('onSensitivity={setReportSensitivity}')
   && reportWizardSource.includes("display:step==='cashflow'?'block':'none'"),
   'Project reports must receive live integrated sensitivity analysis even when the report tab is opened directly')
+assert.ok(reportVisualsSource.includes('chartMaxQuantity?:number')
+  && reportVisualsSource.includes('capacity={200000} chartMaxQuantity={83000}')
+  && reportVisualsSource.includes('breakEven/capacity*100'),
+  'Reference break-even plot must use the workbook chart range separately from the actual 200,000-tonne capacity denominator')
 assert.ok(reportVisualsSource.includes('Sensitivity Analysis Chart')
   && reportVisualsSource.includes('Break-Even Chart')
   && reportVisualsSource.includes('General Project Specification')
   && reportVisualsSource.includes('24,675.80')
   && reportVisualsSource.includes('12.15'),
   'Project report must include sensitivity, break-even and source-backed OPEX specification outputs with conflicts preserved')
+assert.ok(reportVisualsSource.includes('1,286,225.93')
+  && reportVisualsSource.includes('80% وام / 20% آورده')
+  && reportVisualsSource.includes('70% آورده / 30% وام'),
+  'Project report must disclose amount-derived 70/30 financing and the contradictory 80/20 label plus working-capital funding gap')
+assert.ok(reportVisualsSource.includes('HOT_ROLLING_COMFAR_OUTPUT_AUDIT')
+  && reportVisualsSource.includes('comfarTaxScheduleMatches')
+  && reportVisualsSource.includes('Tax schedule')
+  && reportVisualsSource.includes('5% in 1405–1409; 25% in 1410–1419'),
+  'COMFAR reconciliation must compare the original five-year 5% tax period and subsequent 25% schedule, not only the uniform 25% sponsor scenario')
+assert.ok(reportVisualsSource.includes('Construction financing split')
+  && reportVisualsSource.includes('props.equityPercent - 70')
+  && reportVisualsSource.includes('props.debtPercent - 30'),
+  'Exact COMFAR basis matching must require the amount-derived 70/30 construction financing, while the sponsor 20/80 scenario remains separate')
+assert.ok(reportVisualsSource.includes('Period-by-period cash-flow and driver reconciliation')
+  && reportVisualsSource.includes('projectFreeCashFlow-referenceCashFlow')
+  && reportVisualsSource.includes('depreciationByOperatingYear')
+  && reportVisualsSource.includes('changeInWorkingCapitalByOperatingYear')
+  && wizardSource.includes('periodFrequency={m.foundation.planning.periodFrequency}'),
+  'Annual COMFAR reconciliation must expose project cash flow, tax, depreciation and working-capital variances period by period')
 assert.ok(foundationPanel.includes('Project Start Date')
   && foundationPanel.includes('Project End Date')
   && foundationPanel.includes('Fiscal Year Start Month')

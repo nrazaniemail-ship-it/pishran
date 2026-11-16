@@ -1,22 +1,27 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
+import { allocateJointVentureCashFlows, type JointVenturePartner, type PartnerFinanceResult } from './partnerFinance'
 import { listFinancialMethods } from './financialMethodDirectory'
-import type { ProjectCalendarPeriod, ProjectPeriodFrequency } from './projectFoundation'
+import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
-import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
+import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
   calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, calculateComfarAssetLifecycle,
+  calculateComfarCalendarAssetLifecycle,
   type IntegratedFinanceInput, type IntegratedFinanceResult, type IntegratedLoanInput, type DepreciationAssetInput,
   type ComfarDepreciationAssetInput, type ComfarAssetSaleInput, type OneWaySensitivityAnalysis,
 } from '../steel/financialModel'
 
 type CapexRow = { id: string; name: string; amount: number }
 type Asset = DepreciationAssetInput
-type Loan = IntegratedLoanInput & { periodDrawdowns?: number[]; periodDrawdownDates?: string[]; drawdownMode?: 'annual-day-weighted'|'period-manual'; periodRepaymentStart?: number; periodGracePeriods?: number; periodTerm?: number; periodRateConversion?: 'effective-annual-by-actual-days'|'effective-annual-divided-by-frequency' }
+type Loan = IntegratedLoanInput & { periodDrawdowns?: number[]; periodDrawdownDates?: string[]; drawdownMode?: 'annual-day-weighted'|'period-manual'; periodRepaymentStart?: number; periodGracePeriods?: number; periodTerm?: number; periodRateConversion?: 'effective-annual-by-actual-days'|'effective-annual-divided-by-frequency'; exactDrawdownDates?: string[] }
 type Props = {
   projectId: string
+  jointVenture?: boolean
+  partners?: JointVenturePartner[]
+  partnerDistributionPercent?: number
   currency: string
   constructionYears: number
   operatingYears: number
@@ -29,6 +34,9 @@ type Props = {
   fixedInvestmentSchedule?: number[]
   preOperatingSchedule?: number[]
   initialWorkingCapital?: number
+  initialWorkingCapitalEquityContribution?: number
+  initialLoanRatePercent?: number
+  initialRepaymentMethod?: Loan['repaymentMethod']
   loanTermYears?: number
   depreciationAssets?: Asset[]
   comfarDepreciationAssets?: ComfarDepreciationAssetInput[]
@@ -44,6 +52,7 @@ type Props = {
   onResult?: (result:IntegratedFinanceResult)=>void
   onSensitivity?: (analysis:OneWaySensitivityAnalysis)=>void
   onPeriodicResult?: (result:PeriodicProjectFinanceResult|null)=>void
+  onPartnerFinanceResult?: (result:PartnerFinanceResult|null)=>void
   equityPercent: number
   costOfEquity: number
   costOfDebt: number
@@ -56,11 +65,14 @@ type Props = {
   fiscalYearStartMonth?: number | null
   dayCountBasis?: 360 | 365 | null
   cashFlowTiming?: 'unspecified'|'period-end'|'mid-period'
+  valuationDate?: string
+  discountConvention?: ProjectDiscountConvention
 }
 type SavedState = {
   loans: Loan[]
   assets: Asset[]
   equityContributions: number[]
+  equityWorkingCapitalContributions: number[]
   workingCapitalDays: { raw: number; energy:number; spareParts:number; wip: number; finished: number; receivable: number; cash: number; payable: number }
   workingCapitalBases: { rawMaterials: number; energy:number; spareParts:number; conversion: number; finishedGoods: number; cash: number; payables: number }
   wipCompletion: { material: number; conversion: number }
@@ -72,6 +84,7 @@ type SavedState = {
   opexEscalationPercent: number
   periodTaxRates?: number[]
   periodTaxRateDates?: string[]
+  fundingStructureVersion?: number
 }
 const money = (v: number) => Number.isFinite(v) ? v.toLocaleString(typeof document!=='undefined'&&document.documentElement.lang==='en'?'en-US':'fa-IR',{maximumFractionDigits:1}) : '—'
 const directoryRepaymentMethod: Record<string, Loan['repaymentMethod']> = {
@@ -86,7 +99,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const en=props.language==='en'
   const projectPeriods=props.projectPeriods??[]
   const t=(fa:string,english:string)=>en?english:fa
- const labelEn:Record<string,string>={"عنوان تسهیلات":"Loan Name","نرخ سالانه":"Annual Interest Rate","دوره تنفس اصل (سال)":"Principal Grace Period (Years)","مدت بازپرداخت (سال)":"Repayment Term (Years)","شروع بازپرداخت اصل (سال مدل)":"Principal Repayment Start (Model Year)","روش اقساط":"Repayment Method","سرمایه‌ای شدن بهره تا شروع بازپرداخت":"Capitalise interest until repayment starts","برداشت سالانه (واحد پول پایه)":"Annual Drawdown (Base Currency)","برنامه بازپرداخت همین تسهیلات":"Repayment Schedule for This Loan","حذف تسهیلات":"Remove Loan","افزودن وام":"Add Loan","آورده نقدی سهامدار به تفکیک سال":"Annual Shareholder Equity Contributions","روز موجودی مواد اولیه":"Raw Material Inventory Days","روز موجودی/پوشش هزینه انرژی":"Energy Inventory / Coverage Days","روز موجودی قطعات یدکی":"Spare Parts Inventory Days","مبنای سالانه هزینه انرژی":"Annual Energy Cost Basis","مبنای سالانه قطعات یدکی":"Annual Spare Parts Cost Basis","روز کالای در جریان ساخت":"Work-in-Progress Days","روز محصول نهایی":"Finished Goods Days","روز وصول مطالبات":"Receivable Days","روز حداقل نقد عملیاتی":"Minimum Operating Cash Days","روز پرداخت بدهی تجاری":"Trade Payables Days","مبنای سالانه مواد اولیه":"Annual Raw Material Cost Basis","مبنای سالانه هزینه تبدیل":"Annual Conversion Cost Basis","بهای سالانه محصول ساخته‌شده":"Annual Cost of Finished Goods","هزینه نقدی سالانه برای حداقل نقد":"Annual Cash Cost for Minimum Cash","مبنای سالانه بدهی تجاری":"Annual Trade Payables Cost Basis","تکمیل مواد در جریان ساخت (%)":"WIP Material Completion (%)","تکمیل تبدیل در جریان ساخت (%)":"WIP Conversion Completion (%)","دارایی":"Asset","بهای تمام‌شده":"Asset Cost","ارزش اسقاط":"Residual Value","عمر مفید (سال)":"Useful Life (Years)","شروع استهلاک (سال مدل)":"Depreciation Start (Model Year)","روش":"Method","خط مستقیم":"Straight Line","مانده نزولی":"Declining Balance","نرخ نزولی (%)":"Declining-Balance Rate (%)","نرخ تنزیل":"Discount Rate","نرخ تنزیل دستی (%)":"Manual Discount Rate (%)","CAPEX نگهداری سالانه (% هزینه نقدی)":"Annual Maintenance CAPEX (% of Cash Cost)","سال":"Year","بهره":"Interest","اصل":"Principal","مانده بدهی":"Debt Balance","فروش":"Revenue","زیان انتقالی پایان سال":"Closing Tax Loss Carryforward","سود خالص":"Net Income","جریان نقد پایان سال":"Closing Cash","جمع دارایی‌ها":"Total Assets","بدهی + حقوق مالکانه":"Liabilities + Equity","اختلاف تراز":"Balance Difference","تسهیلات اصلی":"Primary Loan","تسهیلات جدید":"New Loan","دارایی جدید":"New Asset","زمین":"Land","اصل مساوی":"Equal Principal","اقساط مساوی":"Equal Instalments","یکجا در سررسید":"Bullet at Maturity","ساخت":"Construction","بهره‌برداری":"Operation","افزودن دارایی":"Add Asset","حذف دارایی":"Remove Asset","دارایی‌ها و استهلاک":"Assets & Depreciation","برنامه تسهیلات و بدهی":"Loans & Debt Schedule","سرمایه در گردش عملیاتی":"Operating Working Capital","مفروضات مالیاتی سالانه":"Annual Tax Assumptions","تحلیل حساسیت":"Sensitivity Analysis","سناریوهای مالی":"Financial Scenarios","صورت‌های مالی سه‌گانه":"Three Financial Statements","برنامه سالانه جریان نقدی":"Annual Cash Flow Schedule","جریان نقدی در دسترس برای خدمت بدهی":"Cash Flow Available for Debt Service","نسبت پوشش خدمت بدهی":"Debt Service Coverage Ratio","روش استهلاک":"Depreciation Method","موجودی مواد اولیه":"Raw Material Inventory","کالای در جریان ساخت":"Work in Progress","محصول نهایی":"Finished Goods","مطالبات":"Receivables","نقد عملیاتی":"Operating Cash","بدهی تجاری":"Trade Payables","جمع بدهی‌ها و حقوق مالکانه":"Total Liabilities & Equity","درآمد":"Revenue","سود عملیاتی":"Operating Profit","مالیات":"Tax","مانده نقد":"Cash Balance","موجودی نقد":"Cash Balance","بهره نقدی":"Cash Interest","بهره سرمایه‌ای":"Capitalised Interest","اصل بدهی":"Principal","مانده پایان":"Closing Balance","مانده اول":"Opening Balance","برداشت":"Drawdown","سرمایه‌گذاری مجدد":"Reinvestment","سال مدل":"Model Year","هزینه سرمایه‌گذاری ثابت":"Fixed Investment Cost","هزینه نقدی عملیاتی":"Cash Operating Cost","درصد":"Percent","روز":"Days","آورده سال ساخت":"Construction-Year Equity","آورده سهامدار را جدا از برداشت وام وارد کنید. کسری منابع، در خروجی هشدار داده می‌شود.":"Enter shareholder equity separately from loan drawdowns. Any funding gap is flagged in the results.","مبنای روز ۳۶۰ روز است. روزهای نگهداری/وصول/پرداخت را از چرخه واقعی پروژه وارد کنید؛ مقدار صفر یعنی برای آن قلم سرمایه در گردش منظور نمی‌شود.":"The day-count basis is 360 days. Enter inventory, collection and payment days from the actual operating cycle. A zero value means no working capital is assigned to that item.","اوج نیاز سرمایه در گردش":"Peak Working Capital Requirement","کسری منابع":"Funding Gap","مبنای هزینه‌های سرمایه در گردش عمداً از OPEX کل به‌صورت خودکار تفکیک نمی‌شود؛ ارقام واقعی مواد، تبدیل، محصول، نقد و خرید اعتباری را وارد کنید تا تقسیم‌بندی فرضی در مدل ایجاد نشود.":"Working-capital cost bases are intentionally not auto-allocated from total OPEX. Enter actual raw-material, conversion, finished-goods, cash and credit-purchase bases to avoid arbitrary assumptions.","اوج نیاز سرمایه در گردش: ":"Peak Working Capital Requirement: ","همگام‌سازی دارایی‌ها از CAPEX":"Sync Assets from CAPEX","جمع استهلاک سالانه (به ترتیب سال مدل)":"Total Annual Depreciation (by Model Year)","دستی":"Manual","نرخ مالیات سال":"Tax Rate — Year","NPV پروژه":"Project NPV","IRR پروژه":"Project IRR","NPV سهامدار":"Equity NPV","IRR سهامدار":"Equity IRR","اوج سرمایه در گردش":"Peak Working Capital","کل برداشت وام":"Total Loan Drawdown","کل آورده":"Total Equity Contribution","جدول سالانه خدمت بدهی":"Annual Debt Service Schedule","CFADS":"CFADS","ردیف‌ها تغییر حجم/ظرفیت و ستون‌ها تغییر قیمت فروش را نشان می‌دهند. مقادیر NPV پروژه با همان برنامه وام، مالیات و سرمایه در گردش دوباره محاسبه می‌شوند.":"Rows represent volume/capacity changes and columns represent selling-price changes. Project NPV is recalculated using the same loan, tax and working-capital schedules.","حجم \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ قیمت":"Volume \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ Price","بدبینانه":"Downside","مبنا":"Base Case","خوش‌بینانه":"Upside","ترازهای منطبق: ":"Balanced Statements: ","از":"of","دوره":"Period","صورت‌ها از یک مجموعه جریان نقدی و برنامه دارایی/بدهی ساخته می‌شوند؛ هیچ رقم ترازکنندهٔ مصنوعی به حقوق مالکانه اضافه نمی‌شود. اگر اختلاف تراز صفر نباشد، خروجی به‌عنوان عدم تطبیق علامت می‌خورد و باید طبقه‌بندی CAPEX، آورده، بدهی یا سرمایه در گردش بررسی شود. این نسخه هنوز اقلام حسابداری تفصیلی مانند مالیات بر ارزش افزوده، سود تقسیمی، مطالبات/بدهی مالیاتی، تجدید ارزیابی و ثبت‌های چندارزی را پوشش نمی‌دهد.":"The statements are built from one cash-flow set and the asset/debt schedules; no artificial balancing plug is added to equity. Any balance difference is flagged for review of CAPEX, equity, debt or working-capital classification. This version does not yet cover detailed accounting items such as VAT, dividends, tax receivables/payables, revaluation or multi-currency postings.","دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.":"Sync assets from CAPEX. Land is not depreciated by default. Depreciation method (straight-line or declining-balance), useful life, residual value and start year are set independently for each asset. Tax-loss carry-forward is applied by the calculation engine.","جدول دوره‌ای سرمایه در گردش":"Periodic Working Capital Schedule","سرمایه در گردش خالص":"Net Working Capital","چرخه تبدیل وجه نقد":"Cash Conversion Cycle","سال اول":"Year 1","سال آخر":"Final Year","سناریوهای خوش‌بینانه و بدبینانه":"Upside & Downside Scenarios","سناریوی پایه":"Base Case","سناریوی بدبینانه":"Downside Case","سناریوی خوش‌بینانه":"Upside Case","سه صورت مالی":"Three Financial Statements","ترازنامه":"Balance Sheet","صورت سود و زیان":"Income Statement","صورت جریان وجوه نقد":"Cash Flow Statement","ترازهای منطبق":"Balanced Periods","مالیات و انتقال زیان":"Tax & Loss Carryforward","زیان انتقالی":"Tax Loss Carryforward","جمع دارایی‌های ثابت":"Total Fixed Assets","سرمایه‌گذاری در دارایی":"Asset Investment","سرمایه در گردش اوج":"Peak Working Capital","سال اوج نیاز":"Peak Requirement Year","برداشت سالانه":"Annual Drawdown","آورده نقدی سهامدار":"Shareholder Cash Contribution","واحد پول پایه":"Base Currency","هزینه‌های سرمایه‌ای":"Capital Expenditure","هزینه‌های عملیاتی":"Operating Expenditure","هزینه خدمت بدهی":"Debt Service Cost","عمر مفید":"Useful Life","سرمایه در گردش":"Working Capital","مواد اولیه":"Raw Materials","هزینه تبدیل":"Conversion Cost","محصول ساخته‌شده":"Finished Goods","حداقل نقد عملیاتی":"Minimum Operating Cash","نرخ مالیات":"Tax Rate","مواد":"Materials","محصول":"Finished Goods","پرداختنی":"Payables","نیاز":"Requirement","تکمیل اولیه":"Initially Complete","نیازمند تکمیل":"Completion Required","نامعتبر":"Invalid","کسری نقدینگی":"Funding Shortfall","جمع‌بندی سه صورت مالی":"Three-Statement Reconciliation"}
+ const labelEn:Record<string,string>={"عنوان تسهیلات":"Loan Name","نرخ سالانه":"Annual Interest Rate","دوره تنفس اصل (سال)":"Principal Grace Period (Years)","مدت بازپرداخت (سال)":"Repayment Term (Years)","شروع بازپرداخت اصل (سال مدل)":"Principal Repayment Start (Model Year)","روش اقساط":"Repayment Method","سرمایه‌ای شدن بهره تا شروع بازپرداخت":"Capitalise interest until repayment starts","برداشت سالانه (واحد پول پایه)":"Annual Drawdown (Base Currency)","برنامه بازپرداخت همین تسهیلات":"Repayment Schedule for This Loan","حذف تسهیلات":"Remove Loan","افزودن وام":"Add Loan","آورده نقدی سهامدار به تفکیک سال":"Annual Shareholder Equity Contributions","روز موجودی مواد اولیه":"Raw Material Inventory Days","روز موجودی/پوشش هزینه انرژی":"Energy Inventory / Coverage Days","روز موجودی قطعات یدکی":"Spare Parts Inventory Days","مبنای سالانه هزینه انرژی":"Annual Energy Cost Basis","مبنای سالانه قطعات یدکی":"Annual Spare Parts Cost Basis","روز کالای در جریان ساخت":"Work-in-Progress Days","روز محصول نهایی":"Finished Goods Days","روز وصول مطالبات":"Receivable Days","روز حداقل نقد عملیاتی":"Minimum Operating Cash Days","روز پرداخت بدهی تجاری":"Trade Payables Days","مبنای سالانه مواد اولیه":"Annual Raw Material Cost Basis","مبنای سالانه هزینه تبدیل":"Annual Conversion Cost Basis","بهای سالانه محصول ساخته‌شده":"Annual Cost of Finished Goods","هزینه نقدی سالانه برای حداقل نقد":"Annual Cash Cost for Minimum Cash","مبنای سالانه بدهی تجاری":"Annual Trade Payables Cost Basis","تکمیل مواد در جریان ساخت (%)":"WIP Material Completion (%)","تکمیل تبدیل در جریان ساخت (%)":"WIP Conversion Completion (%)","دارایی":"Asset","بهای تمام‌شده":"Asset Cost","ارزش اسقاط":"Residual Value","عمر مفید (سال)":"Useful Life (Years)","شروع استهلاک (سال مدل)":"Depreciation Start (Model Year)","روش":"Method","خط مستقیم":"Straight Line","مانده نزولی":"Declining Balance","نرخ نزولی (%)":"Declining-Balance Rate (%)","نرخ تنزیل":"Discount Rate","نرخ تنزیل دستی (%)":"Manual Discount Rate (%)","CAPEX نگهداری سالانه (% هزینه نقدی)":"Annual Maintenance CAPEX (% of Cash Cost)","سال":"Year","بهره":"Interest","اصل":"Principal","مانده بدهی":"Debt Balance","فروش":"Revenue","زیان انتقالی پایان سال":"Closing Tax Loss Carryforward","سود خالص":"Net Income","جریان نقد پایان سال":"Closing Cash","جمع دارایی‌ها":"Total Assets","بدهی + حقوق مالکانه":"Liabilities + Equity","اختلاف تراز":"Balance Difference","تسهیلات اصلی":"Primary Loan","تسهیلات جدید":"New Loan","دارایی جدید":"New Asset","زمین":"Land","اصل مساوی":"Equal Principal","اقساط مساوی":"Equal Instalments","یکجا در سررسید":"Bullet at Maturity","ساخت":"Construction","بهره‌برداری":"Operation","افزودن دارایی":"Add Asset","حذف دارایی":"Remove Asset","دارایی‌ها و استهلاک":"Assets & Depreciation","برنامه تسهیلات و بدهی":"Loans & Debt Schedule","سرمایه در گردش عملیاتی":"Operating Working Capital","مفروضات مالیاتی سالانه":"Annual Tax Assumptions","تحلیل حساسیت":"Sensitivity Analysis","سناریوهای مالی":"Financial Scenarios","صورت‌های مالی سه‌گانه":"Three Financial Statements","برنامه سالانه جریان نقدی":"Annual Cash Flow Schedule","جریان نقدی در دسترس برای خدمت بدهی":"Cash Flow Available for Debt Service","نسبت پوشش خدمت بدهی":"Debt Service Coverage Ratio","روش استهلاک":"Depreciation Method","موجودی مواد اولیه":"Raw Material Inventory","کالای در جریان ساخت":"Work in Progress","محصول نهایی":"Finished Goods","مطالبات":"Receivables","نقد عملیاتی":"Operating Cash","بدهی تجاری":"Trade Payables","جمع بدهی‌ها و حقوق مالکانه":"Total Liabilities & Equity","درآمد":"Revenue","سود عملیاتی":"Operating Profit","مالیات":"Tax","مانده نقد":"Cash Balance","موجودی نقد":"Cash Balance","بهره نقدی":"Cash Interest","بهره سرمایه‌ای":"Capitalised Interest","اصل بدهی":"Principal","مانده پایان":"Closing Balance","مانده اول":"Opening Balance","برداشت":"Drawdown","سرمایه‌گذاری مجدد":"Reinvestment","سال مدل":"Model Year","هزینه سرمایه‌گذاری ثابت":"Fixed Investment Cost","هزینه نقدی عملیاتی":"Cash Operating Cost","درصد":"Percent","روز":"Days","آورده سال ساخت":"Construction-Year Equity","آورده سرمایه در گردش سال بهره‌برداری":"Operating-Year Shareholder Working-Capital Contribution","آورده سهامدار را جدا از برداشت وام وارد کنید. کسری منابع، در خروجی هشدار داده می‌شود.":"Enter shareholder equity separately from loan drawdowns. Any funding gap is flagged in the results.","مبنای روز ۳۶۰ روز است. روزهای نگهداری/وصول/پرداخت را از چرخه واقعی پروژه وارد کنید؛ مقدار صفر یعنی برای آن قلم سرمایه در گردش منظور نمی‌شود.":"The day-count basis is 360 days. Enter inventory, collection and payment days from the actual operating cycle. A zero value means no working capital is assigned to that item.","اوج نیاز سرمایه در گردش":"Peak Working Capital Requirement","کسری منابع":"Funding Gap","مبنای هزینه‌های سرمایه در گردش عمداً از OPEX کل به‌صورت خودکار تفکیک نمی‌شود؛ ارقام واقعی مواد، تبدیل، محصول، نقد و خرید اعتباری را وارد کنید تا تقسیم‌بندی فرضی در مدل ایجاد نشود.":"Working-capital cost bases are intentionally not auto-allocated from total OPEX. Enter actual raw-material, conversion, finished-goods, cash and credit-purchase bases to avoid arbitrary assumptions.","اوج نیاز سرمایه در گردش: ":"Peak Working Capital Requirement: ","همگام‌سازی دارایی‌ها از CAPEX":"Sync Assets from CAPEX","جمع استهلاک سالانه (به ترتیب سال مدل)":"Total Annual Depreciation (by Model Year)","دستی":"Manual","نرخ مالیات سال":"Tax Rate — Year","NPV پروژه":"Project NPV","IRR پروژه":"Project IRR","NPV سهامدار":"Equity NPV","IRR سهامدار":"Equity IRR","اوج سرمایه در گردش":"Peak Working Capital","کل برداشت وام":"Total Loan Drawdown","کل آورده":"Total Equity Contribution","جدول سالانه خدمت بدهی":"Annual Debt Service Schedule","CFADS":"CFADS","ردیف‌ها تغییر حجم/ظرفیت و ستون‌ها تغییر قیمت فروش را نشان می‌دهند. مقادیر NPV پروژه با همان برنامه وام، مالیات و سرمایه در گردش دوباره محاسبه می‌شوند.":"Rows represent volume/capacity changes and columns represent selling-price changes. Project NPV is recalculated using the same loan, tax and working-capital schedules.","حجم \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ قیمت":"Volume \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ Price","بدبینانه":"Downside","مبنا":"Base Case","خوش‌بینانه":"Upside","ترازهای منطبق: ":"Balanced Statements: ","از":"of","دوره":"Period","صورت‌ها از یک مجموعه جریان نقدی و برنامه دارایی/بدهی ساخته می‌شوند؛ هیچ رقم ترازکنندهٔ مصنوعی به حقوق مالکانه اضافه نمی‌شود. اگر اختلاف تراز صفر نباشد، خروجی به‌عنوان عدم تطبیق علامت می‌خورد و باید طبقه‌بندی CAPEX، آورده، بدهی یا سرمایه در گردش بررسی شود. این نسخه هنوز اقلام حسابداری تفصیلی مانند مالیات بر ارزش افزوده، سود تقسیمی، مطالبات/بدهی مالیاتی، تجدید ارزیابی و ثبت‌های چندارزی را پوشش نمی‌دهد.":"The statements are built from one cash-flow set and the asset/debt schedules; no artificial balancing plug is added to equity. Any balance difference is flagged for review of CAPEX, equity, debt or working-capital classification. This version does not yet cover detailed accounting items such as VAT, dividends, tax receivables/payables, revaluation or multi-currency postings.","دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.":"Sync assets from CAPEX. Land is not depreciated by default. Depreciation method (straight-line or declining-balance), useful life, residual value and start year are set independently for each asset. Tax-loss carry-forward is applied by the calculation engine.","جدول دوره‌ای سرمایه در گردش":"Periodic Working Capital Schedule","سرمایه در گردش خالص":"Net Working Capital","چرخه تبدیل وجه نقد":"Cash Conversion Cycle","سال اول":"Year 1","سال آخر":"Final Year","سناریوهای خوش‌بینانه و بدبینانه":"Upside & Downside Scenarios","سناریوی پایه":"Base Case","سناریوی بدبینانه":"Downside Case","سناریوی خوش‌بینانه":"Upside Case","سه صورت مالی":"Three Financial Statements","ترازنامه":"Balance Sheet","صورت سود و زیان":"Income Statement","صورت جریان وجوه نقد":"Cash Flow Statement","ترازهای منطبق":"Balanced Periods","مالیات و انتقال زیان":"Tax & Loss Carryforward","زیان انتقالی":"Tax Loss Carryforward","جمع دارایی‌های ثابت":"Total Fixed Assets","سرمایه‌گذاری در دارایی":"Asset Investment","سرمایه در گردش اوج":"Peak Working Capital","سال اوج نیاز":"Peak Requirement Year","برداشت سالانه":"Annual Drawdown","آورده نقدی سهامدار":"Shareholder Cash Contribution","واحد پول پایه":"Base Currency","هزینه‌های سرمایه‌ای":"Capital Expenditure","هزینه‌های عملیاتی":"Operating Expenditure","هزینه خدمت بدهی":"Debt Service Cost","عمر مفید":"Useful Life","سرمایه در گردش":"Working Capital","مواد اولیه":"Raw Materials","هزینه تبدیل":"Conversion Cost","محصول ساخته‌شده":"Finished Goods","حداقل نقد عملیاتی":"Minimum Operating Cash","نرخ مالیات":"Tax Rate","مواد":"Materials","محصول":"Finished Goods","پرداختنی":"Payables","نیاز":"Requirement","تکمیل اولیه":"Initially Complete","نیازمند تکمیل":"Completion Required","نامعتبر":"Invalid","کسری نقدینگی":"Funding Shortfall","جمع‌بندی سه صورت مالی":"Three-Statement Reconciliation"}
   const tr=(v:string, english?:string)=>en?(english??labelEn[v]??v):v
   const loanMethodEn:Record<string,string>={'equal-principal':'Equal Principal','annuity':'Equal Instalments','bullet':'Bullet at Maturity'}
   const years = Math.max(1, Math.min(60, Math.ceil(props.constructionYears) + Math.ceil(props.operatingYears)))
@@ -101,21 +114,32 @@ export default function AdvancedFinancePanel(props: Props) {
   const initialCapexSchedule = activeFixedInvestmentSchedule.map((amount,i)=>amount+activePreOperatingSchedule[i])
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
-    loans:[{id:'loan-1',label:'تسهیلات اصلی و سرمایه در گردش',drawdowns:initialCapexSchedule.map((v,i)=>v*initialDebtShare+(i===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0)),drawdownMode:'annual-day-weighted',annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
-    assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map((v,i)=>v*Math.max(0,Math.min(100,props.equityPercent))/100+(i===construction?Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100:0)),
+    loans:[{id:'loan-1',label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),drawdownMode:'annual-day-weighted',annualRate:props.initialLoanRatePercent??props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:props.initialRepaymentMethod??'equal-principal',capitalizeInterest:true}],
+    assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??0):0),fundingStructureVersion:2,
     workingCapitalDays:props.workingCapitalDefaults?.days??{raw:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
     workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
     wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),
     discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0
   }))
   const [loaded,setLoaded]=useState(false)
-  useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved)setState({...state,...saved});setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
+  useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const matchesLegacyDefault=Math.abs(legacyContribution-legacyWorkingCapitalEquity)<0.01;restored.equityWorkingCapitalContributions=Array(years).fill(0);if(matchesLegacyDefault){restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-legacyWorkingCapitalEquity):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??legacyWorkingCapitalEquity):0)}}if((saved.fundingStructureVersion??0)<2){const legacyDrawdowns=initialCapexSchedule.map((value,index)=>value*initialDebtShare+(index===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0));restored.loans=restored.loans.map(loan=>{const untouchedLegacyDefault=loan.label==='تسهیلات اصلی و سرمایه در گردش'&&loan.drawdowns.length===years&&loan.drawdowns.every((value,index)=>Math.abs(value-legacyDrawdowns[index])<0.01)&&Math.abs(loan.annualRate-props.costOfDebt)<0.0001&&loan.repaymentMethod==='equal-principal';return untouchedLegacyDefault?{...loan,label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(value=>value*initialDebtShare),annualRate:props.initialLoanRatePercent??props.costOfDebt,repaymentMethod:props.initialRepaymentMethod??'equal-principal'}:loan});if(props.initialWorkingCapitalEquityContribution&&restored.equityWorkingCapitalContributions.every(value=>value===0)){restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?props.initialWorkingCapitalEquityContribution!:0)}restored.fundingStructureVersion=2}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
   const capexSchedule = activeFixedInvestmentSchedule
   const updateLoan=(id:string,patch:Partial<Loan>)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,...patch}:l)}))
   const updateDraw=(id:string,index:number,value:number)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,drawdowns:l.drawdowns.map((v,i)=>i===index?Math.max(0,value):v),drawdownMode:'annual-day-weighted',periodDrawdowns:undefined}:l)}))
-  const updatePeriodDraw=(id:string,index:number,value:number)=>setState(s=>({...s,loans:s.loans.map(l=>l.id===id?{...l,periodDrawdowns:Array.from({length:props.projectPeriods?.length??0},(_,i)=>i===index?Math.max(0,value):Math.max(0,l.periodDrawdowns?.[i]??0)),periodDrawdownDates:(props.projectPeriods??[]).map(period=>period.startDate+'|'+period.endDate)}:l)}))
+  const updatePeriodDraw=(id:string,index:number,value:number)=>setState(s=>({...s,loans:s.loans.map(l=>{
+    if(l.id!==id)return l
+    const periods=props.projectPeriods??[]
+    const datesMatch=l.periodDrawdowns?.length===periods.length&&l.periodDrawdownDates?.length===periods.length&&l.periodDrawdownDates.every((date,i)=>date===periods[i].startDate+'|'+periods[i].endDate)
+    return {...l,periodDrawdowns:Array.from({length:periods.length},(_,i)=>i===index?Math.max(0,value):Math.max(0,l.periodDrawdowns?.[i]??0)),exactDrawdownDates:periods.map((period,i)=>datesMatch?(l.exactDrawdownDates?.[i]??period.startDate):period.startDate),periodDrawdownDates:periods.map(period=>period.startDate+'|'+period.endDate)}
+  })}))
+  const updatePeriodDrawDate=(id:string,index:number,date:string)=>setState(s=>({...s,loans:s.loans.map(l=>{
+    if(l.id!==id)return l
+    const periods=props.projectPeriods??[]
+    const datesMatch=l.periodDrawdowns?.length===periods.length&&l.periodDrawdownDates?.length===periods.length&&l.periodDrawdownDates.every((value,i)=>value===periods[i].startDate+'|'+periods[i].endDate)
+    return {...l,exactDrawdownDates:periods.map((period,i)=>i===index?date:(datesMatch?(l.exactDrawdownDates?.[i]??period.startDate):period.startDate))}
+  })}))
   const periodTaxRateDatesMatch=()=>{const periods=props.projectPeriods??[];return state.periodTaxRates?.length===periods.length&&state.periodTaxRateDates?.length===periods.length&&state.periodTaxRateDates.every((date,index)=>date===periods[index].startDate+'|'+periods[index].endDate)}
   const periodDrawdownDatesMatch=(loan:Loan)=>{const periods=props.projectPeriods??[];return loan.periodDrawdowns?.length===periods.length&&loan.periodDrawdownDates?.length===periods.length&&loan.periodDrawdownDates.every((date,index)=>date===periods[index].startDate+'|'+periods[index].endDate)}
   const updatePeriodTaxRate=(index:number,value:number)=>setState(s=>{
@@ -140,15 +164,18 @@ export default function AdvancedFinancePanel(props: Props) {
   const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی جدید',cost:0,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line',decliningRate:20}]}))
 
   const depreciation = useMemo(()=>calculateAssetDepreciationSchedule(state.assets.filter(a=>a.cost>0&&!a.name.includes('زمین')),years),[state.assets,years])
-  const comfarLifecycle = useMemo(()=>props.comfarDepreciationAssets?.length
+  const comfarCalendarLifecycle = useMemo(()=>props.comfarDepreciationAssets?.length && projectPeriods.length && props.fiscalYearStartMonth!=null
+    ? calculateComfarCalendarAssetLifecycle(props.comfarDepreciationAssets,props.comfarAssetSales??[],projectPeriods,props.fiscalYearStartMonth)
+    : null,[JSON.stringify(props.comfarDepreciationAssets??[]),JSON.stringify(props.comfarAssetSales??[]),JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
+  const comfarLifecycle = comfarCalendarLifecycle ?? (props.comfarDepreciationAssets?.length
     ? calculateComfarAssetLifecycle(props.comfarDepreciationAssets,props.comfarAssetSales??[],years)
-    : null,[JSON.stringify(props.comfarDepreciationAssets??[]),JSON.stringify(props.comfarAssetSales??[]),years])
-  const depreciationValues = comfarLifecycle
-    ? comfarLifecycle.depreciation.periods.map(row=>row.depreciation)
-    : props.useFixedInvestmentRegister ? Array(years).fill(0) : depreciation.map(row=>row.depreciation)
-  const assetSaleSchedule = comfarLifecycle
-    ? Array.from({length:years},(_,index)=>{
-        const rows=comfarLifecycle.sales.filter(sale=>sale.period===index+1)
+    : null)
+  const periodDepreciationSchedule = comfarCalendarLifecycle
+    ? comfarCalendarLifecycle.depreciation.periods.map(row=>row.depreciation)
+    : undefined
+  const periodAssetSaleSchedule = comfarCalendarLifecycle
+    ? projectPeriods.map((period,index)=>{
+        const rows=comfarCalendarLifecycle.sales.filter(sale=>sale.period===index+1)
         return {
           saleProceeds:rows.reduce((sum,row)=>sum+row.saleProceeds,0),
           returnOfCapital:rows.reduce((sum,row)=>sum+row.returnOfCapital,0),
@@ -157,6 +184,34 @@ export default function AdvancedFinancePanel(props: Props) {
         }
       })
     : undefined
+  const depreciationValues = comfarCalendarLifecycle
+    ? Array.from({length:years},(_,year)=>comfarCalendarLifecycle.depreciation.periods.reduce((sum,row,index)=>
+        fiscalYearIndexForPeriod(projectPeriods[index],projectPeriods,props.fiscalYearStartMonth!)===year?sum+row.depreciation:sum,0))
+    : comfarLifecycle
+      ? comfarLifecycle.depreciation.periods.map(row=>row.depreciation)
+      : props.useFixedInvestmentRegister ? Array(years).fill(0) : depreciation.map(row=>row.depreciation)
+  const assetSaleSchedule = comfarCalendarLifecycle
+    ? Array.from({length:years},(_,year)=>{
+        const rows=comfarCalendarLifecycle.sales.filter(sale=>
+          fiscalYearIndexForPeriod(projectPeriods[sale.period-1],projectPeriods,props.fiscalYearStartMonth!)===year)
+        return {
+          saleProceeds:rows.reduce((sum,row)=>sum+row.saleProceeds,0),
+          returnOfCapital:rows.reduce((sum,row)=>sum+row.returnOfCapital,0),
+          otherIncomeLoss:rows.reduce((sum,row)=>sum+row.otherIncomeLoss,0),
+          bookValueDisposed:rows.reduce((sum,row)=>sum+row.bookValueAtSale,0),
+        }
+      })
+    : comfarLifecycle
+      ? Array.from({length:years},(_,index)=>{
+          const rows=comfarLifecycle.sales.filter(sale=>sale.period===index+1)
+          return {
+            saleProceeds:rows.reduce((sum,row)=>sum+row.saleProceeds,0),
+            returnOfCapital:rows.reduce((sum,row)=>sum+row.returnOfCapital,0),
+            otherIncomeLoss:rows.reduce((sum,row)=>sum+row.otherIncomeLoss,0),
+            bookValueDisposed:rows.reduce((sum,row)=>sum+row.bookValueAtSale,0),
+          }
+        })
+      : undefined
   const utilization = Array.from({length:years},(_,i)=>i<construction?0:Math.max(0,Math.min(100,props.ramp[i-construction]??100))/100)
   const fixedInvestmentSchedule = capexSchedule
   const workingCapitalPolicy = useMemo(()=>({
@@ -171,6 +226,7 @@ export default function AdvancedFinancePanel(props: Props) {
     annualRevenue:props.fullCapacityRevenue,annualCashOperatingCost:state.workingCapitalBases.cash
   }),[state.workingCapitalDays,state.workingCapitalBases,state.wipCompletion,props.fullCapacityRevenue,props.dayCountBasis])
   const equityContributions = state.equityContributions.length===years ? state.equityContributions : Array(years).fill(0)
+  const equityWorkingCapitalContributions = Array.isArray(state.equityWorkingCapitalContributions)&&state.equityWorkingCapitalContributions.length===years ? state.equityWorkingCapitalContributions : Array(years).fill(0)
   const taxRates = state.taxRates?.length===years ? state.taxRates : Array(years).fill(props.taxRate)
   const maintenanceCapexSchedule = utilization.map(u=>(props.fullCapacityFixedCashCost+props.fullCapacityVariableCashCost)*u*state.maintenancePercent/100)
   const input: IntegratedFinanceInput = {
@@ -202,7 +258,9 @@ export default function AdvancedFinancePanel(props: Props) {
         gracePeriods:loan.periodGracePeriods??loan.graceYears*periodsPerYear,
         termPeriods:loan.periodTerm??loan.termYears*periodsPerYear,
         capitalizeInterest:loan.capitalizeInterest,
-        rateConversion:loan.periodRateConversion??'effective-annual-by-actual-days',periodsPerYear
+        rateConversion:loan.periodRateConversion??'effective-annual-by-actual-days',periodsPerYear,
+        datedDrawdowns:loan.drawdownMode==='period-manual'?periods.map((period,index)=>({date:loan.exactDrawdownDates?.[index]??period.startDate,amount:Math.max(0,drawdowns[index]??0)})).filter(item=>item.amount>0):undefined,
+        interestConvention:loan.drawdownMode==='period-manual'?'comfar-months-plus-360':undefined
       } as PeriodicLoanInput}
     })
     const workingCapitalByPeriod=periods.map(period=>{
@@ -220,23 +278,37 @@ export default function AdvancedFinancePanel(props: Props) {
       annualFixedCost:result.years.map(row=>row.fixedCashCost),annualDepreciation:depreciationValues,
       annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
       annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:taxRates,annualEquityContributions:equityContributions,
+      annualEquityWorkingCapitalContributions:equityWorkingCapitalContributions,
+      annualAssetSaleSchedule:assetSaleSchedule,
+      periodDepreciationSchedule,periodAssetSaleSchedule,
       workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
+      equityDiscountRatePercent:props.costOfEquity,
+      valuationDate:props.valuationDate||undefined,
+      discountConvention:props.discountConvention??'actual-days',
+      discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     })
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule)])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
+  const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
+    ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
+    :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
   useEffect(()=>{props.onPeriodicResult?.(periodicFinanceResult)},[periodicFinanceResult,props.onPeriodicResult])
+  useEffect(()=>{props.onPartnerFinanceResult?.(partnerFinanceResult)},[partnerFinanceResult,props.onPartnerFinanceResult])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
+  const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult):[],[periodicFinanceResult])
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
   const updateAsset=(id:string,patch:Partial<Asset>)=>setState(s=>({...s,assets:s.assets.map(a=>a.id===id?{...a,...patch}:a)}))
   const updateDay=(key:keyof SavedState['workingCapitalDays'],value:number)=>setState(s=>({...s,workingCapitalDays:{...s.workingCapitalDays,[key]:Math.max(0,value)}}))
   const setEquity=(index:number,value:number)=>setState(s=>({...s,equityContributions:Array.from({length:years},(_,i)=>i===index?Math.max(0,value):(s.equityContributions[i]??0))}))
+  const setWorkingCapitalEquity=(index:number,value:number)=>setState(s=>({...s,equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===index?Math.max(0,value):(s.equityWorkingCapitalContributions[i]??0))}))
   const totalBalanceChecks=statements.filter(r=>r.balanceSheet.reconciled).length
+  const totalMovementChecks=statements.filter(r=>Object.values(r.movementChecks).every(value=>Math.abs(value)<=0.01)).length
 
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
@@ -278,15 +350,18 @@ export default function AdvancedFinancePanel(props: Props) {
         {loan.periodRateConversion==='effective-annual-divided-by-frequency'&&periodicRateMethod&&<p className="fw-hint">{t('فرمول روش:','Method formula:')} {periodicRateMethod.formula} · {t('منبع:','Source:')} {periodicRateMethod.source} · {t('محدودیت:','Limitation:')} {periodicRateMethod.limitations}</p>}
         <p className="fw-hint">{t('تغییرات برداشت دوره‌ای در موتور ماهانه/فصلی اعمال می‌شوند؛ جدول سالانه برای کنترل و گزارش سالانه مستقل باقی می‌ماند.','Period drawdown edits affect the monthly/quarterly engine; the annual schedule remains separately available for annual reporting.')}</p>
         {loan.drawdownMode==='period-manual'&&!periodDrawdownDatesMatch(loan)&&<div className="fw-hint">{t('تقویم پروژه تغییر کرده است؛ برنامه برداشت قبلی به تاریخ‌های جدید متصل نیست. برای بازسازی از برنامه سالانه استفاده کنید.','The project calendar changed; the prior drawdown schedule is not mapped to the new dates. Rebuild it from the annual schedule.')} <button className="secondary-button" onClick={()=>updateLoan(loan.id,{periodDrawdowns:allocateAnnualFlowsToPeriods(loan.drawdowns,props.projectPeriods??[],props.fiscalYearStartMonth??1),periodDrawdownDates:(props.projectPeriods??[]).map(period=>period.startDate)})}>{t('بازسازی برنامه دوره‌ای','Rebuild period schedule')}</button></div>}
-        {loan.drawdownMode==='period-manual'?<div className="fw-grid">{props.projectPeriods.map((period,index)=><label className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} تا {period.endDate}</span><input type="number" min="0" value={periodDrawdownDatesMatch(loan)?loan.periodDrawdowns?.[index]??0:0} onChange={e=>updatePeriodDraw(loan.id,index,Number(e.target.value))}/></label>)}</div>:<p className="fw-hint">{t('برداشت‌های سالانه برای موتور دوره‌ای بر اساس تعداد روز واقعی هر دوره توزیع می‌شوند. برای برداشت‌های یک‌باره یا مرحله‌ای دقیق، ورود مستقیم برداشت هر دوره را انتخاب کنید.','Annual drawdowns are distributed by actual period days in the periodic engine. Select direct period entry for exact one-off or staged drawdowns.')}</p>}
+        {loan.drawdownMode==='period-manual'?<div className="fw-grid">{props.projectPeriods.map((period,index)=><div className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} تا {period.endDate}</span><input type="number" min="0" value={periodDrawdownDatesMatch(loan)?loan.periodDrawdowns?.[index]??0:0} onChange={e=>updatePeriodDraw(loan.id,index,Number(e.target.value))}/><span>{t('تاریخ دقیق برداشت','Exact drawdown date')}</span><input type="date" min={period.startDate} max={period.endDate} value={periodDrawdownDatesMatch(loan)?loan.exactDrawdownDates?.[index]??period.startDate:period.startDate} onChange={e=>updatePeriodDrawDate(loan.id,index,e.target.value)}/></div>)}</div>:<p className="fw-hint">{t('برداشت‌های سالانه برای موتور دوره‌ای بر اساس تعداد روز واقعی هر دوره توزیع می‌شوند. برای برداشت‌های یک‌باره یا مرحله‌ای دقیق، ورود مستقیم برداشت هر دوره را انتخاب کنید.','Annual drawdowns are distributed by actual period days in the periodic engine. Select direct period entry for exact one-off or staged drawdowns.')}</p>}
       </div>}
-      <div className="fw-card"><b>{tr('برنامه بازپرداخت همین تسهیلات')}</b>{(result.loanSchedules[loan.id]??[]).map((r,i)=><div className="fw-validation" key={i}><span>{tr('سال')} {i+1} · برداشت {money(r.drawdown)} · {tr('مانده اول')} {money(r.openingBalance)}</span><b>{tr('بهره نقدی')} {money(r.interestExpense)} · {tr('بهره سرمایه‌ای')} {money(r.capitalizedInterest)} · {tr('اصل')} {money(r.principal)} · {tr('مانده پایان')} {money(r.closingBalance)}</b></div>)}</div><button className="secondary-button" onClick={()=>setState(s=>({...s,loans:s.loans.filter(l=>l.id!==loan.id)}))}><Trash2 size={14}/> {tr('حذف تسهیلات')}</button>
+      <div className="fw-card"><b>{tr('برنامه بازپرداخت دوره‌ای همین تسهیلات')}</b>{(periodicFinanceResult?.valid ? periodicFinanceResult.loanSchedules[loan.id]??[] : result.loanSchedules[loan.id]??[]).map((r,i)=><div className="fw-validation" key={i}><span>{periodicFinanceResult?.valid ? `${tr('دوره')} ${i+1} · ${periodicFinanceResult.rows[i]?.startDate} تا ${periodicFinanceResult.rows[i]?.endDate}` : `${tr('سال')} ${i+1}`} · {tr('برداشت')} {money(r.drawdown)} · {tr('مانده اول')} {money(r.openingBalance)}</span><b>{tr('بهره نقدی')} {money(r.interestExpense)} · {tr('بهره سرمایه‌ای')} {money(r.capitalizedInterest)} · {tr('اصل')} {money(r.principal)} · {tr('مانده پایان')} {money(r.closingBalance)}</b></div>)}</div><button className="secondary-button" onClick={()=>setState(s=>({...s,loans:s.loans.filter(l=>l.id!==loan.id)}))}><Trash2 size={14}/> {tr('حذف تسهیلات')}</button>
     </div>)}
     <button className="secondary-button" onClick={addLoan}><Plus size={14}/> {tr('افزودن وام')}</button>
     <div className="fw-card">
       <h4>{t('آورده نقدی سهامدار به تفکیک سال','Annual Shareholder Equity Contributions')}</h4>
       <div className="fw-grid">{Array.from({length:construction},(_,i)=><label className="fw-field" key={i}><span>{tr('آورده سال ساخت')} {i+1}</span><input type="number" min="0" value={equityContributions[i]??0} onChange={e=>setEquity(i,Number(e.target.value))}/></label>)}</div>
-      <p className="fw-hint">{tr('آورده سهامدار را جدا از برداشت وام وارد کنید. کسری منابع، در خروجی هشدار داده می‌شود.')}</p>
+      <p className="fw-hint">{tr('آورده سهامدار برای CAPEX را جدا از برداشت وام وارد کنید. سرمایه در گردش در بخش مستقل زیر ثبت می‌شود.')}</p>
+      <h4>{t('آورده سهامدار برای سرمایه در گردش','Shareholder Equity for Working Capital')}</h4>
+      <div className="fw-grid">{Array.from({length:opYears},(_,i)=>{const yearIndex=construction+i;return <label className="fw-field" key={yearIndex}><span>{tr('آورده سرمایه در گردش سال بهره‌برداری')} {i+1}</span><input type="number" min="0" value={equityWorkingCapitalContributions[yearIndex]??0} onChange={e=>setWorkingCapitalEquity(yearIndex,Number(e.target.value))}/></label>})}</div>
+      <p className="fw-hint">{tr('این مبلغ، آورده نقدی سهامدار برای تأمین سرمایه در گردش است و فقط یک‌بار ثبت می‌شود. اگر از افزایش خالص سرمایه در گردش بیشتر باشد، مازاد در مانده نقد ترازنامه دیده می‌شود؛ اگر کمتر باشد، کسری نقدینگی باقی می‌ماند. سهم تأمین‌شده از محل وام در این قسمت وارد نمی‌شود.','This is the shareholder cash contribution to working capital; enter it only once. Any amount above the net working-capital increase remains as cash on the balance sheet; any shortfall remains visible as a cash deficit. Do not enter debt-funded amounts here.')}</p>
     </div>
 
     <h4>{t('۲. سرمایه در گردش دوره‌ای','2. Periodic Working Capital')}</h4>
@@ -322,6 +397,9 @@ export default function AdvancedFinancePanel(props: Props) {
             <span>{tr('وضعیت دفتر دارایی و فروش','Fixed Asset Register & Disposal Status')}</span>
             <b>{comfarLifecycle.valid&&!(props.comfarDepreciationWarnings?.length)?tr('معتبر','Valid'):tr('نیازمند اصلاح','Requires review')}</b>
             {comfarLifecycle.warnings.concat(props.comfarDepreciationWarnings??[]).map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
+            {comfarCalendarLifecycle?.depreciation.methodControls.map(control=><p className="fw-hint" key={control.method}>
+              {control.method}: {tr('فرمول اجرایی فعال؛ تطبیق عددی مستقل با خروجی مرجع در انتظار است.','Calculation implemented; independent numerical benchmark reconciliation is pending.')}
+            </p>)}
             {comfarLifecycle.sales.map(sale=><p className="fw-hint" key={sale.id}>{tr('فروش دوره','Sale period')} {sale.period}: {tr('ارزش دفتری','Book value')} {money(sale.bookValueAtSale)} · {tr('عواید فروش','Sale proceeds')} {money(sale.saleProceeds)} · {tr('سود/زیان واگذاری','Other income / loss')} {money(sale.otherIncomeLoss)}</p>)}
           </div>}
           {state.assets.map(asset=><div className="fw-grid" key={asset.id}>
@@ -338,7 +416,15 @@ export default function AdvancedFinancePanel(props: Props) {
           <div className="fw-validation"><span>{tr('جمع استهلاک سالانه (به ترتیب سال مدل)')}</span><b>{depreciationValues.map(value=>money(value)).join(' · ')}</b></div>
     </>}
     {props.useFixedInvestmentRegister&&!comfarLifecycle&&<p className="fw-hint">{tr('برنامه استهلاک فقط از دفتر عمومی Fixed Investment خوانده می‌شود. هنوز نوبت تحصیل مستهلک‌شونده‌ای در دفتر ثبت نشده است؛ هیچ عمر مفید یا نرخ استهلاک فرضی اعمال نمی‌شود.','Depreciation is sourced only from the shared Fixed Investment Register. No depreciable acquisition is registered yet; no assumed useful life or depreciation rate is applied.')}</p>}
-    {props.useFixedInvestmentRegister&&comfarLifecycle&&<div className="fw-validation"><span>{tr('جمع استهلاک سالانه از دفتر دارایی','Annual Depreciation from Fixed Investment Register')}</span><b>{depreciationValues.map(value=>money(value)).join(' · ')}</b></div>}
+    {props.useFixedInvestmentRegister&&comfarLifecycle&&<div className="fw-validation">
+      <span>{tr('جمع استهلاک سالانه از دفتر دارایی','Annual Depreciation from Fixed Investment Register')}</span>
+      <b>{depreciationValues.map(value=>money(value)).join(' · ')}</b>
+      {comfarLifecycle.warnings.concat(props.comfarDepreciationWarnings??[]).map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
+      {comfarCalendarLifecycle?.depreciation.methodControls.map(control=><p className="fw-hint" key={control.method}>
+        {control.method}: {tr('فرمول اجرایی فعال؛ تطبیق عددی مستقل با خروجی مرجع در انتظار است.','Calculation implemented; independent numerical benchmark reconciliation is pending.')}
+      </p>)}
+      {comfarLifecycle.sales.map(sale=><p className="fw-hint" key={sale.id}>{tr('فروش دوره','Sale period')} {sale.period}: {tr('ارزش دفتری','Book value')} {money(sale.bookValueAtSale)} / {tr('عواید فروش','Sale proceeds')} {money(sale.saleProceeds)} / {tr('سود یا زیان','Gain / loss')} {money(sale.otherIncomeLoss)}</p>)}
+    </div>}
     <div className="fw-grid">
       <label className="fw-field"><span>{tr('نرخ تنزیل')}</span><select value={state.discountMode} onChange={e=>setState(s=>({...s,discountMode:e.target.value as SavedState['discountMode']}))}><option value="wacc">WACC</option><option value="manual">{tr('دستی')}</option></select></label>
       {state.discountMode==='manual'&&<label className="fw-field"><span>{tr('نرخ تنزیل دستی (%)')}</span><input type="number" value={state.manualRate} onChange={e=>setState(s=>({...s,manualRate:Number(e.target.value)}))}/></label>}
@@ -375,12 +461,12 @@ export default function AdvancedFinancePanel(props: Props) {
     </div>
 
     <h4>{t('۷. تطبیق سه صورت مالی و کنترل ترازنامه','7. Three-Statement Reconciliation & Balance Sheet Check')}</h4>
-    <div className="fw-result">{tr('ترازهای منطبق: ')}<b>{totalBalanceChecks} {tr('از')} {statements.length}</b> {tr('دوره')}</div>
-    <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('سال')}</th><th>{tr('فروش')}</th><th>EBIT</th><th>{tr('زیان انتقالی پایان سال')}</th><th>{tr('سود خالص')}</th><th>{tr('جریان نقد پایان سال')}</th><th>{tr('جمع دارایی‌ها')}</th><th>{tr('بدهی + حقوق مالکانه')}</th><th>{tr('اختلاف تراز')}</th></tr></thead><tbody>{statements.map(r=><tr key={r.year}><td>{r.year}</td><td>{money(r.incomeStatement.revenue)}</td><td>{money(r.incomeStatement.ebit)}</td><td>{money(r.incomeStatement.taxLossCarryForward)}</td><td>{money(r.incomeStatement.netIncome)}</td><td>{money(r.cashFlowStatement.closingCash)}</td><td>{money(r.balanceSheet.totalAssets)}</td><td>{money(r.balanceSheet.totalLiabilitiesAndEquity)}</td><td>{money(r.balanceSheet.balanceDifference)} {r.balanceSheet.reconciled?'✓':'⚠'}</td></tr>)}</tbody></table></div>
+    <div className="fw-result">{tr('ترازهای منطبق: ')}<b>{totalBalanceChecks} {tr('از')} {statements.length}</b> {tr('دوره')} · {tr('کنترل گردش مانده‌ها: ')}<b>{totalMovementChecks} {tr('از')} {statements.length}</b></div>
+    <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('سال')}</th><th>{tr('فروش')}</th><th>EBIT</th><th>{tr('سود خالص')}</th><th>{tr('وجه نقد ابتدای دوره')}</th><th>{tr('جریان عملیاتی')}</th><th>{tr('جریان سرمایه‌گذاری')}</th><th>{tr('جریان تأمین مالی')}</th><th>{tr('وجه نقد پایان دوره')}</th><th>{tr('جمع دارایی‌ها')}</th><th>{tr('بدهی + حقوق مالکانه')}</th><th>{tr('اختلاف تراز')}</th></tr></thead><tbody>{statements.map(r=><tr key={r.year}><td>{r.year}</td><td>{money(r.incomeStatement.revenue)}</td><td>{money(r.incomeStatement.ebit)}</td><td>{money(r.incomeStatement.netIncome)}</td><td>{money(r.openingBalances.cash)}</td><td>{money(r.cashFlowStatement.operatingCashFlow)}</td><td>{money(r.cashFlowStatement.investingCashFlow)}</td><td>{money(r.cashFlowStatement.financingCashFlow)}</td><td>{money(r.cashFlowStatement.closingCash)}</td><td>{money(r.balanceSheet.totalAssets)}</td><td>{money(r.balanceSheet.totalLiabilitiesAndEquity)}</td><td>{money(r.balanceSheet.balanceDifference)} {r.balanceSheet.reconciled?'✓':'⚠'}</td></tr>)}</tbody></table></div>
     <p className="fw-hint">{tr('صورت‌ها از یک مجموعه جریان نقدی و برنامه دارایی/بدهی ساخته می‌شوند؛ هیچ رقم ترازکنندهٔ مصنوعی به حقوق مالکانه اضافه نمی‌شود. اگر اختلاف تراز صفر نباشد، خروجی به‌عنوان عدم تطبیق علامت می‌خورد و باید طبقه‌بندی CAPEX، آورده، بدهی یا سرمایه در گردش بررسی شود. این نسخه هنوز اقلام حسابداری تفصیلی مانند مالیات بر ارزش افزوده، سود تقسیمی، مطالبات/بدهی مالیاتی، تجدید ارزیابی و ثبت‌های چندارزی را پوشش نمی‌دهد.')}</p>
     <h4>{t('۸. موتور یکپارچه جریان نقدی ماهانه/فصلی','8. Integrated Monthly / Quarterly Cash-Flow Engine')}</h4>
     {periodicFinanceResult?.valid?<div className="fw-card">
-      <p className="fw-hint">{t('جریان‌های عملیاتی سالانه با تعداد روز واقعی به دوره‌های پروژه تخصیص یافته‌اند. برداشت وام می‌تواند روزشمار از مبالغ سالانه توزیع شود یا برای هر دوره مستقلاً ثبت شود. نرخ مالیات قابل تنظیم در هر دوره است و زیان انتقالی، بهره، اصل بدهی و سرمایه در گردش در سطح هر دوره محاسبه می‌شوند. محدودیت این نسخه: CAPEX و استهلاک دارایی‌ها فعلاً از برنامه سالانه به نسبت روزها تخصیص می‌یابند؛ استهلاک مستقل هر دارایی از تاریخ تحصیل در سطح ماه/فصل هنوز نیازمند تکمیل و تطبیق است.','Annual operating flows are allocated to project periods by actual day counts. Loan drawdowns can be day-weighted from annual amounts or entered directly by period. Tax rates can be set for each period, and loss carry-forward, interest, principal and working capital are calculated period by period. Current limitation: CAPEX and depreciation are allocated from annual schedules by actual days; independent asset-by-asset depreciation from exact acquisition dates at monthly/quarterly level still requires completion and benchmarking.')}</p>
+      <p className="fw-hint">{t('جریان‌های عملیاتی سالانه با تعداد روز واقعی به دوره‌های پروژه تخصیص یافته‌اند. برداشت وام می‌تواند روزشمار از مبالغ سالانه توزیع شود یا برای هر دوره مستقلاً ثبت شود. نرخ مالیات قابل تنظیم در هر دوره است و زیان انتقالی، بهره، اصل بدهی و سرمایه در گردش در سطح هر دوره محاسبه می‌شوند. در صورت وجود تاریخ‌های مستند دفتر دارایی، استهلاک و واگذاری دارایی‌به‌دارایی در سطح ماه/فصل اعمال می‌شود. صورت‌های مالی دوره‌ای نیز مانده وام، سرمایه در گردش خالص و گردش دارایی‌ها را کنترل می‌کنند؛ مانده‌های افتتاحیه برای پروژه جدید صفر فرض شده‌اند.','Annual operating flows are allocated to project periods by actual day counts. Loan drawdowns can be day-weighted from annual amounts or entered directly by period. Tax rates can be set for each period, and loss carry-forward, interest, principal and working capital are calculated period by period. Current limitation: Annual operating flows are allocated by actual days; asset-level depreciation and disposals use the dated monthly/quarterly asset lifecycle when verified. The periodic statements expose net working capital, loan closing balances and disposal accounting; opening balances default to zero for greenfield projects.')}</p>
       <div className="fw-kpis">
         <article><small>NPV {t('پروژه','Project')}</small><b>{money(periodicFinanceResult.npvProject??NaN)}</b></article>
         <article><small>IRR {t('پروژه','Project')}</small><b>{periodicFinanceResult.irrProject==null?'—':money(periodicFinanceResult.irrProject)+'%'}</b></article>
@@ -389,13 +475,51 @@ export default function AdvancedFinancePanel(props: Props) {
         <article><small>IRR {t('سهامدار','Equity')}</small><b>{periodicFinanceResult.irrEquity==null?'—':money(periodicFinanceResult.irrEquity)+'%'}</b></article>
         <article><small>{t('اوج سرمایه در گردش','Peak working capital')}</small><b>{money(periodicFinanceResult.peakWorkingCapital)}</b></article>
       </div>
+      <h4>{t('صورت‌های مالی یکپارچه در سطح هر دوره','Linked Three Financial Statements by Period')}</h4>
+      <div className="fw-result">{t('ترازهای منطبق','Reconciled periods')}: <b>{periodicStatements.filter(row=>row.balanceSheet.reconciled).length} / {periodicStatements.length}</b></div>
+      <div style={{overflowX:'auto',maxHeight:420}}>
+        <table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ پایان','Period end')}</th><th>EBIT</th><th>{t('سود خالص','Net income')}</th><th>{t('جریان عملیاتی','Operating CF')}</th><th>{t('جریان سرمایه‌گذاری','Investing CF')}</th><th>{t('جریان تأمین مالی','Financing CF')}</th><th>{t('وجه نقد پایان','Closing cash')}</th><th>{t('بدهی پایان','Closing debt')}</th><th>{t('دارایی خالص ثابت','Net fixed assets')}</th><th>{t('اختلاف تراز','Balance difference')}</th></tr></thead>
+          <tbody>{periodicStatements.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.endDate}</td><td>{money(row.incomeStatement.ebit)}</td><td>{money(row.incomeStatement.netIncome)}</td><td>{money(row.cashFlowStatement.operatingCashFlow)}</td><td>{money(row.cashFlowStatement.investingCashFlow)}</td><td>{money(row.cashFlowStatement.financingCashFlow)}</td><td>{money(row.cashFlowStatement.closingCash)}</td><td>{money(row.balanceSheet.debt)}</td><td>{money(row.balanceSheet.netFixedAssets)}</td><td>{money(row.balanceSheet.balanceDifference)} {row.balanceSheet.reconciled?'✓':'⚠'}</td></tr>)}</tbody>
+        </table>
+      </div>
+      <p className="fw-hint">{t('سرمایه در گردش به‌صورت خالص (دارایی‌های جاری منهای بدهی‌های عملیاتی) نمایش داده می‌شود؛ تفکیک ناخالص اقلام جاری بدون داده تفصیلی ساخته نمی‌شود. بهره سرمایه‌ای‌شده هم‌زمان به دارایی‌های قبل از بهره‌برداری و بدهی افزوده می‌شود.','Working capital is shown net of operating payables; gross current-asset splits are not inferred without detailed data. Capitalized interest increases both deferred pre-operating assets and debt.')}</p>
       <div style={{overflowX:'auto',maxHeight:480}}>
-        <table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ','Dates')}</th><th>{t('روز','Days')}</th><th>{t('فروش','Revenue')}</th><th>{t('هزینه متغیر','Variable cost')}</th><th>{t('هزینه ثابت','Fixed cost')}</th><th>{t('استهلاک','Depreciation')}</th><th>{t('بهره','Interest')}</th><th>{t('اصل','Principal')}</th><th>{t('مالیات','Tax')}</th><th>{t('تغییر سرمایه در گردش','Change in WC')}</th><th>CFADS</th><th>DSCR</th><th>{t('جریان نقدی پروژه','Project FCF')}</th></tr></thead>
-          <tbody>{periodicFinanceResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.startDate} – {row.endDate}</td><td>{row.days}</td><td>{money(row.revenue)}</td><td>{money(row.variableCost)}</td><td>{money(row.fixedCost)}</td><td>{money(row.depreciation)}</td><td>{money(row.interestExpense)}</td><td>{money(row.principal)}</td><td>{money(row.tax)}</td><td>{money(row.changeInWorkingCapital)}</td><td>{money(row.cfads)}</td><td>{row.dscr==null?'—':money(row.dscr)+'x'}</td><td>{money(row.projectFreeCashFlow)}</td></tr>)}</tbody>
+        <table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ','Dates')}</th><th>{t('روز','Days')}</th><th>{t('فروش','Revenue')}</th><th>{t('هزینه متغیر','Variable cost')}</th><th>{t('هزینه ثابت','Fixed cost')}</th><th>{t('استهلاک','Depreciation')}</th><th>{t('بهره','Interest')}</th><th>{t('اصل','Principal')}</th><th>{t('مالیات','Tax')}</th><th>{t('تغییر سرمایه در گردش','Change in WC')}</th><th>{t('آورده سهامدار برای سرمایه در گردش','Shareholder WC Equity')}</th><th>CFADS</th><th>DSCR</th><th>{t('جریان نقدی پروژه','Project FCF')}</th></tr></thead>
+          <tbody>{periodicFinanceResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.startDate} – {row.endDate}</td><td>{row.days}</td><td>{money(row.revenue)}</td><td>{money(row.variableCost)}</td><td>{money(row.fixedCost)}</td><td>{money(row.depreciation)}</td><td>{money(row.interestExpense)}</td><td>{money(row.principal)}</td><td>{money(row.tax)}</td><td>{money(row.changeInWorkingCapital)}</td><td>{money(row.equityWorkingCapitalContribution)}</td><td>{money(row.cfads)}</td><td>{row.dscr==null?'—':money(row.dscr)+'x'}</td><td>{money(row.projectFreeCashFlow)}</td></tr>)}</tbody>
         </table>
       </div>
       {periodicFinanceResult.warnings.length>0&&<ul className="fw-checklist">{periodicFinanceResult.warnings.map((warning,i)=><li key={i}>{tr(warning)}</li>)}</ul>}
     </div>:<p className="fw-hint">{periodicFinanceResult?.warnings.length?periodicFinanceResult.warnings.join(' · '):t('برای فعال‌سازی محاسبه دوره‌ای، تاریخ شروع و پایان پروژه، تناوب مالی، ماه آغاز سال مالی، مبنای روزشمار و زمان‌بندی جریان نقدی را در فونداسیون پروژه تعیین کنید.','To activate periodic calculations, define project start/end dates, financial frequency, fiscal-year start month, day-count basis and cash-flow timing in the project foundation.')}</p>}
+    {props.jointVenture&&<div className="fw-card">
+      <h4>{t('۹. جریان نقدی و تخصیص منافع شرکای مشارکت','9. Joint-Venture Partner Cash Flows & Allocation')}</h4>
+      <p className="fw-hint">{t('جریان نقدی منفی حقوق صاحبان سهام بر اساس سهم سرمایه و جریان نقدی مثبت قابل تقسیم بر اساس سهم سود تخصیص داده می‌شود. آورده قراردادی اعلام‌شده فقط برای کنترل نمایش داده می‌شود و دوباره به جریان نقدی اضافه یا از آن کسر نمی‌شود. این جدول، توزیع وجه نقد را نشان می‌دهد و جایگزین صورت سود تقسیمی مصوب یا قرارداد حقوقی شرکا نیست.','Negative equity cash flows are allocated by capital shares; distributable positive cash flow is allocated by profit shares. Declared capital contributions are shown for control only and are not added to or deducted from cash flows again. This table represents cash distributions, not an approved dividend statement or legal JV agreement.')}</p>
+      {partnerFinanceResult?.valid?<>
+        <div className="fw-kpis">
+          <article><small>{t('جریان نقدی کل سهامداران','Total equity cash flow')}</small><b>{money(partnerFinanceResult.totalProjectEquityCashFlow)}</b></article>
+          <article><small>{t('وجه نقد تخصیص‌یافته','Cash distributed')}</small><b>{money(partnerFinanceResult.distributedPositiveCashFlow)}</b></article>
+          <article><small>{t('وجه نقد نگه‌داشته‌شده در پروژه','Cash retained in project')}</small><b>{money(partnerFinanceResult.retainedPositiveCashFlow)}</b></article>
+          <article><small>{t('آورده اعلامی شرکا','Declared partner capital')}</small><b>{money(partnerFinanceResult.totalDeclaredCapitalContribution)}</b></article>
+          <article><small>{t('آورده ثبت‌شده در موتور مالی','Scheduled engine equity')}</small><b>{money(partnerFinanceResult.totalScheduledEquityContribution)}</b></article>
+          <article><small>{t('درصد جریان مثبت قابل تقسیم','Positive cash flow distributed')}</small><b>{money(partnerFinanceResult.positiveCashFlowDistributionPercent)}%</b></article>
+        </div>
+        <p className="fw-hint">{t('اختلاف آورده اعلامی شرکا با برنامه آورده ثبت‌شده در موتور مالی: ','Variance between declared partner capital and scheduled engine equity: ')}<b>{money(partnerFinanceResult.declaredCapitalContributionVariance)}</b>. {t('این اختلاف باید پیش از نهایی‌کردن قرارداد مشارکت و گزارش مالی تطبیق داده شود.','Reconcile this difference before finalizing the JV agreement and financial report.')}</p>
+        <p className="fw-hint">{t('کنترل تخصیص جریان نقدی؛ اختلاف مانده تخصیص‌یافته و وجه نقد نگه‌داشته‌شده با جریان نقدی کل سهامداران: ','Allocation control; difference between partner allocations plus retained cash and total equity cash flow: ')}<b>{money(partnerFinanceResult.allocationReconciliationVariance)}</b>. {t('این مقدار باید صفر باشد.','This amount must be zero.')}</p>
+        <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('شریک','Partner')}</th><th>{t('آورده قراردادی','Declared capital')}</th><th>{t('آورده مورد انتظار بر اساس سهم','Expected capital by share')}</th><th>{t('اختلاف آورده شریک','Partner capital variance')}</th><th>{t('جریان نقدی منفی تخصیص‌یافته','Allocated negative CF')}</th><th>{t('توزیع جریان نقدی مثبت','Positive CF distribution')}</th><th>{t('خالص جریان نقدی شریک','Partner net CF')}</th></tr></thead>
+          <tbody>{partnerFinanceResult.rows.map(row=><tr key={row.partnerId}><td>{row.partnerName}</td><td>{money(row.declaredCapitalContribution)}</td><td>{money(row.expectedCapitalContribution)}</td><td>{money(row.capitalContributionVariance)}</td><td>{money(row.negativeCashFlowAllocation)}</td><td>{money(row.positiveCashFlowDistribution)}</td><td>{money(row.netCashFlow)}</td></tr>)}</tbody>
+        </table></div>
+        <div style={{overflowX:'auto',maxHeight:360}}><table className="fw-table"><thead><tr>
+          <th>{t('دوره','Period')}</th><th>{t('تاریخ','Date')}</th><th>{t('جریان نقد سهامداران','Total equity CF')}</th>
+          <th>{t('خالص تخصیص به شرکا','Partner net CF')}</th><th>{t('توزیع مثبت به شرکا','Positive distributions')}</th><th>{t('وجه نقد نگه‌داشته‌شده','Retained cash')}</th>
+          <th>{t('اختلاف کنترل','Reconciliation variance')}</th>{partnerFinanceResult.rows.map(row=><th key={row.partnerId}>{row.partnerName}</th>)}
+        </tr></thead>
+          <tbody>{partnerFinanceResult.periods.map((period,index)=><tr key={period.period}>
+            <td>{period.period}</td><td>{period.startDate} – {period.endDate}</td><td>{money(period.totalEquityCashFlow)}</td>
+            <td>{money(period.partnerNetCashFlow)}</td><td>{money(period.distributedPositiveCashFlow)}</td><td>{money(period.retainedPositiveCashFlow)}</td><td>{money(period.reconciliationVariance)}</td>
+            {partnerFinanceResult.rows.map(row=><td key={row.partnerId}>{money(row.periods[index]?.allocatedCashFlow??0)}</td>)}
+          </tr>)}</tbody>
+        </table></div>
+      </>:<ul className="fw-checklist">{(partnerFinanceResult?.warnings??[t('برای تخصیص جریان نقدی شرکا، ابتدا موتور دوره‌ای معتبر را فعال کنید.','Activate a valid periodic finance schedule before allocating partner cash flows.')]).map((warning,index)=><li key={index}>{tr(warning)}</li>)}</ul>}
+    </div>}
 
   </div>
 }

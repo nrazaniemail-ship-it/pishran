@@ -175,7 +175,7 @@ export const EXCEL_HOT_ROLLING_200KT = {
     row('opex-marketing','بازاریابی مستقیم (۰٫۱٪ فروش طبق فرمول سلول)',1,'تن محصول',0.311298,'به‌ازای هر تن','بازاریابی')
   ],
   market:[],
-  notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. فایل اکسل دو مبنای متعارض تأمین مالی دارد: شیت مکانیزم تأمین منابع ۲۰٪ آورده/۸۰٪ بدهی را نشان می‌دهد، درحالی‌که شیت خلاصه و خروجی COMFAR بر مبنای ۷۰٪ آورده/۳۰٪ بدهی‌اند. سناریوی پروژه پیشران طبق درخواست حامی ۲۰/۸۰ باقی می‌ماند و سناریوی ۷۰/۳۰ فقط برای مقایسه با خروجی مرجع نگهداری می‌شود. نرخ WACC بازحساب‌شده با هزینه حقوق صاحبان سهام ۳۰٪، هزینه بدهی ۲۶٪ و سپر مالیاتی ۲۵٪ برابر ۲۶٫۸۵٪ است. نرخ ۲۱٪ شیت IRR-NPV فقط به‌عنوان نرخ تاریخی گزارش منبع نگهداری شده و WACC ساختار تأییدشده نیست. منبع تأمین سرمایه در گردش در فایل صریح نیست و در تسهیلات مدل به‌عنوان بدهی جدید فرض نشده است. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ جداگانه نگهداری شده‌اند. جریان‌های نقدی مرجع reference در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند.'
+  notes:'پروژه آزمون مرجع بر مبنای دو فایل Excel HRCR200 کاشان با تاریخ ۱۴۰۲/۰۷/۱۰ ساخته شده است. ظرفیت ۲۰۰٬۰۰۰ تن در سال، قیمت موزون فروش ۳۱۱٫۲۹۸ میلیون ریال بر تن، هزینه‌های عملیاتی، نیروی انسانی و سرمایه در گردش از شیت‌های مرجع استخراج شده‌اند. برچسب‌های تأمین مالی فایل اکسل با مبالغ واقعی سازگار نیستند: برچسب خلاصه OPEX از ۸۰/۲۰ و برچسب جدول تأمین منابع از ۷۰/۲۰ سخن می‌گوید، اما مبالغ واقعی ساخت (۱۳٬۰۹۱٬۹۸۵٫۲۰ آورده و ۵٬۶۱۰٬۸۵۰٫۸۰ وام) نسبت تقریبی ۷۰/۳۰ آورده/بدهی را نشان می‌دهند. سرمایه در گردش ۴٬۵۹۵٬۳۷۰٫۴۶ است و فقط وام ۳٬۳۰۹٬۱۴۴٫۵۳ برای آن شناسایی شده؛ شکاف ۱٬۲۸۶٬۲۲۵٫۹۳ منبع قطعی ندارد. سناریوی پروژه پیشران طبق درخواست حامی ۲۰/۸۰ باقی می‌ماند و سناریوی ۷۰/۳۰ فقط برای مقایسه با خروجی مرجع نگهداری می‌شود. نرخ WACC بازحساب‌شده با هزینه حقوق صاحبان سهام ۳۰٪، هزینه بدهی ۲۶٪ و سپر مالیاتی ۲۵٪ برابر ۲۶٫۸۵٪ است. نرخ ۲۱٪ شیت IRR-NPV فقط به‌عنوان نرخ تاریخی گزارش منبع نگهداری شده و WACC ساختار تأییدشده نیست. منبع تأمین سرمایه در گردش در فایل صریح نیست و در تسهیلات مدل به‌عنوان بدهی جدید فرض نشده است. مالیات عملیاتی ۵٪ از شیت قیمت فروش و نرخ مالیات سپر WACC برابر ۲۵٪ جداگانه نگهداری شده‌اند. جریان‌های نقدی مرجع reference در آزمون مستقل شاخص‌های مالی استفاده می‌شوند و نباید با جریان نقدی تولیدشده توسط موتور پیشران یکی فرض شوند.'
 } as const
 
 
@@ -374,7 +374,7 @@ export function createHotRollingCoilProjectFoundation(): ProjectFoundation {
     schemaVersion: 1,
     planning: {
       periodFrequency: 'annual', projectStartDate: '', projectEndDate: '', fiscalYearStartMonth: null,
-      balanceDateMonth: 12, balanceDateDay: null, dayCountBasis: 360, valuationDate: '1404-12', cashFlowTiming: 'unspecified'
+      balanceDateMonth: 12, balanceDateDay: null, dayCountBasis: 365, valuationDate: '2026-03-20', discountConvention: 'period-count', cashFlowTiming: 'period-end'
     },
     currencies: {
       localCurrencyCode: 'IRR', localCurrencyName: 'میلیون ریال',
@@ -408,7 +408,7 @@ export function mergeHotRollingCoilProjectFoundation(saved: unknown): ProjectFou
       periodFrequency: planning.periodFrequency === 'unspecified' ? defaults.planning.periodFrequency : planning.periodFrequency,
       balanceDateMonth: planning.balanceDateMonth ?? defaults.planning.balanceDateMonth,
       dayCountBasis: planning.dayCountBasis ?? defaults.planning.dayCountBasis,
-      valuationDate: planning.valuationDate || defaults.planning.valuationDate,
+      valuationDate: /^\d{4}-\d{2}-\d{2}$/.test(planning.valuationDate || '') ? planning.valuationDate : defaults.planning.valuationDate,
       cashFlowTiming: planning.cashFlowTiming === 'unspecified' ? defaults.planning.cashFlowTiming : planning.cashFlowTiming
     },
     currencies: {
@@ -432,3 +432,139 @@ export function mergeHotRollingCoilProjectFoundation(saved: unknown): ProjectFou
     }
   }
 }
+
+
+/** Reconstructed 20-quarter 7%-per-quarter annuity control from the PDF's 28% annual rate and OPEX annual principal schedule. */
+const hrcr200QuarterlyPayment = 840_992.2672863001
+const hrcr200QuarterlyAnnuityReference = (() => {
+  let openingBalance = 8_909_484.06
+  return Array.from({length:20},(_,index)=>{
+    const interestExpense = openingBalance * 0.07
+    const principal = Math.min(openingBalance,hrcr200QuarterlyPayment-interestExpense)
+    const closingBalance = Math.max(0,openingBalance-principal)
+    const row = {quarter:index+1,openingBalance,interestExpense,principal,debtService:hrcr200QuarterlyPayment,closingBalance}
+    openingBalance = closingBalance
+    return row
+  })
+})()
+
+/** Exact annual project cash-flow and tax controls transcribed from COMFAR III output. */
+export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
+  source: 'COMFAR III - 001 - نتایج تحلیل مالی و اقتصادی طرح · pages 2, 24–27, 59–62 and 67–73; OPEX workbook · جریانات نقدی مالی (کامفار), periods 1–17',
+  valuationDate: '2026-03-20',
+  discountRatePercent: 25,
+  discountConvention: 'period-count' as const,
+  cashFlowTiming: 'period-end' as const,
+  constructionYears: [1403, 1404],
+  operatingYears: Array.from({length:15},(_,index)=>1405+index),
+  /** Cash flows by project year 1403–1419; terminal salvage is recorded separately below. */
+  projectCashFlowsByYear: [
+    -13_907_805.03,-8_093_664.03,9_602_342.59,14_451_793.80,16_364_704.85,
+    18_303_107.76,18_712_850.68,15_024_064.82,15_024_064.82,15_024_064.82,
+    15_024_064.82,14_719_546.80,14_719_546.80,14_719_546.80,14_718_471.78,
+    14_710_023.10,14_708_024.54
+  ],
+  terminalSalvage: {
+    displayedYear: 1420,
+    amount: 13_735_466.82,
+    includedAtFinalOperatingPeriodForNpvAndIrr: true
+  },
+  /** COMFAR discounts the salvage column at the final operating-period date in its reported schedule. */
+  projectCashFlowsForIrr: [
+    -13_907_805.03,-8_093_664.03,9_602_342.59,14_451_793.80,16_364_704.85,
+    18_303_107.76,18_712_850.68,15_024_064.82,15_024_064.82,15_024_064.82,
+    15_024_064.82,14_719_546.80,14_719_546.80,14_719_546.80,14_718_471.78,
+    14_710_023.10,14_708_024.54 + 13_735_466.82
+  ],
+  taxScheduleByOperatingYear: Array.from({length:15},(_,index)=>({
+    year:1405+index,
+    ratePercent:index<5?5:25
+  })),
+  depreciationByOperatingYear: HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarDepreciationByYear,
+  changeInWorkingCapitalByOperatingYear: [
+    [1405,3_309_144.53],[1406,409_216.09],[1407,441_167.49],[1408,441_167.49],
+    [1409,-5_325.23],[1410,0],[1411,0],[1412,0],[1413,0],[1414,0],
+    [1415,0],[1416,0],[1417,0],[1418,0],[1419,0]
+  ] as const,
+  projectNpvAt25: 31_399_764.27,
+  projectIrrPercent: 48.31,
+  projectMirrPercent: 28.03,
+  /** Annual finance transactions from OPEX workbook sheet "جریانات نقدی مالی (کامفار)", periods mapped to 1403–1419. */
+  financingCashFlowsByYear: [
+    {year:1403,equity:8_905_157.30,longTermLoanNet:5_002_647.728981,shortTermFinancing:0,totalDomesticFinancing:13_907_805.028981},
+    {year:1404,equity:4_186_827.70,longTermLoanNet:3_906_836.328126,shortTermFinancing:0,totalDomesticFinancing:8_093_664.028126},
+    {year:1405,equity:3_309_144.53,longTermLoanNet:-964_925.632872,shortTermFinancing:0,totalDomesticFinancing:2_344_218.897128},
+    {year:1406,equity:0,longTermLoanNet:-1_264_820.669515,shortTermFinancing:0,totalDomesticFinancing:-1_264_820.669515},
+    {year:1407,equity:0,longTermLoanNet:-1_657_921.886966,shortTermFinancing:0,totalDomesticFinancing:-1_657_921.886966},
+    {year:1408,equity:0,longTermLoanNet:-2_173_197.394327,shortTermFinancing:0,totalDomesticFinancing:-2_173_197.394327},
+    {year:1409,equity:0,longTermLoanNet:-2_848_618.473426,shortTermFinancing:0,totalDomesticFinancing:-2_848_618.473426},
+    ...Array.from({length:10},(_,index)=>({year:1410+index,equity:0,longTermLoanNet:0,shortTermFinancing:0,totalDomesticFinancing:0}))
+  ] as const,
+  firstOperatingYearWorkingCapitalFunding: {
+    comfarEquityContribution:3_309_144.53,
+    fullCapacityWorkingCapital:4_595_370.46,
+    opexFirstYearWorkingCapitalRequirement:3_216_759.32004,
+    excessFundingAgainstOpexFirstYearRequirement:92_385.20996,
+    /** This is a source/use timing difference, not additional working-capital consumption. */
+    fundingBufferPendingReconciliation:92_385.20996,
+    shortTermFinancingInComfarSchedule:0,
+    capexWorkbookAlternativeLongTermWorkingCapitalLoan:3_309_144.525623,
+    /** OPEX workbook sheet "سرمایه در گردش": balance and annual increases are distinct from COMFAR financing-source equity. */
+    opexWorkingCapitalByYear: [
+      {year:1405,closingRequirement:3_216_759.32004,annualIncrease:3_216_759.32004},
+      {year:1406,closingRequirement:3_676_296.36576,annualIncrease:459_537.04572},
+      {year:1407,closingRequirement:4_135_833.41148,annualIncrease:459_537.04572},
+      {year:1408,closingRequirement:4_595_370.4572,annualIncrease:459_537.04572},
+      {year:1409,closingRequirement:4_595_370.4572,annualIncrease:0},
+      ...Array.from({length:10},(_,index)=>({year:1410+index,closingRequirement:4_595_370.4572,annualIncrease:0}))
+    ] as const,
+    capexWorkbookAlternativeLoanSchedule: {
+      fixedAssetLoan1Principal:3_816_495.99,
+      fixedAssetLoan2Principal:1_794_354.81,
+      workingCapitalLoanPrincipal:3_309_144.525623,
+      statedAnnualRatePercent:26,
+      effectiveQuarterlyRatePercent:7.333349618787344,
+      installmentCount:20,
+      quarterlyPayments:[369_636.70168048906,173_787.5253506871,320_498.5072800594],
+      aggregateQuarterlyPayment:863_922.7343112356,
+      aggregateTotalDebtService:17_278_454.686224714,
+      workingCapitalLoanTotalDebtService:6_409_970.145601188
+    }
+  },
+  /** Loan balance and first-year service independently reconstructed from report pp. 129–131 and COMFAR annuity rules. */
+  loanRepaymentAudit: {
+    principalDisbursed: 5_610_850.80,
+    constructionCapitalizedInterest: 3_298_633.06,
+    openingRepaymentBalance: 8_909_484.06,
+    statedAnnualRatePercent: 28,
+    repaymentFrequencyPerYear: 4,
+    installmentCount: 20,
+    repaymentMethod: 'annuity' as const,
+    quarterlyPayment: 840_992.2672863001,
+    quarterlySchedule: hrcr200QuarterlyAnnuityReference,
+    firstOperatingYearInterest: 2_399_043.4359598644,
+    firstOperatingYearPrincipal: 964_925.6331853358,
+    firstOperatingYearDebtService: 3_363_969.0691452003,
+    annualPrincipalRepaymentsByYear: [
+      964_925.632872,1_264_820.669515,1_657_921.886966,2_173_197.394327,2_848_618.473426
+    ],
+    /** Annual interest reconstructed as four equal quarterly annuity payments less the OPEX-reconciled annual principal. */
+    annualInterestByYear: [
+      2_399_043.436273,2_099_148.399630,1_706_047.182179,1_190_771.674818,515_350.595719
+    ],
+    annualDebtServiceByYear: Array(5).fill(3_363_969.069145) as readonly number[],
+  },
+  equityNpvAt30: 23_579_675.01,
+  equityIrrPercent: 57.99,
+  equityMirrPercent: 30.90,
+  sourceNotes: [
+    'Corporate tax is 5% in operating years 1405–1409 and 25% from 1410 through 1419 in the COMFAR cash-flow-for-financial-planning schedule.',
+    'The terminal salvage value is printed in a separate 1420 column but discounted at the end-of-final-operating-period date in the COMFAR total-investment discounted cash-flow schedule.',
+    'The OPEX workbook sheet جریانات نقدی مالی (کامفار) maps 17 periods to 1403–1419: equity contributions are 8,905,157.30, 4,186,827.70 and 3,309,144.53 in the first three years; short-term financing is zero in all 17 years.',
+    'The report PDF conflicts on first-year working-capital funding: printed p.122 says short-term loan, while p.128 says shareholder; the OPEX COMFAR financial-flow schedule classifies 3,309,144.53 as equity and short-term financing as zero.',
+    'The CAPEX workbook financing-mechanism/WACC tabs label 3,309,144.53 as a long-term working-capital loan; retain this as a separate workbook alternative, not the COMFAR cash-flow baseline.',
+    'The CAPEX workbook repayment schedule separately models three 20-quarter annuity loans at a 7.33335% effective quarterly rate (26% stated annual): fixed-asset tranches 3,816,495.99 and 1,794,354.81, plus a 3,309,144.53 working-capital tranche. Their combined instalment is 863,922.73 per quarter, distinct from the COMFAR-reconstructed 840,992.27; do not combine these scenarios.',
+    'The OPEX working-capital sheet calculates first-year net working capital of 3,216,759.32; the COMFAR finance-flow equity contribution is 92,385.21 higher and must remain visible as a cash funding buffer pending detailed source reconciliation.',
+    'The active Pishran user scenario with a uniform 25% tax rate is a separate case and must not be labelled as an exact COMFAR tax-basis match.'
+  ]
+} as const

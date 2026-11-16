@@ -1,3 +1,4 @@
+import type { ProjectCalendarPeriod } from '../projects/projectFoundation'
 import type { FixedInvestmentItem, ProjectFoundation, ProjectPeriodFrequency } from '../projects/projectFoundation'
 
 export type CapitalStructureInput = {
@@ -348,6 +349,7 @@ export type IntegratedFinanceInput = {
   equityMirrFinanceRate?: number
   equityMirrReinvestmentRate?: number
   salvageValue?: number
+  salvageBookValue?: number
   assetSaleSchedule?: { saleProceeds: number; returnOfCapital: number; otherIncomeLoss: number; bookValueDisposed: number }[]
 }
 
@@ -385,6 +387,8 @@ export type IntegratedFinanceYear = {
   closingWorkingCapital: number
   workingCapitalBreakdown: WorkingCapitalBreakdown
   salvageProceeds: number
+  salvageBookValueDisposed?: number
+  salvageGainLoss?: number
   assetSaleProceeds: number
   assetReturnOfCapital: number
   assetSaleOtherIncomeLoss: number
@@ -541,7 +545,10 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const assetReturnOfCapital = Math.max(0, Number(assetSale?.returnOfCapital) || 0)
     const assetSaleOtherIncomeLoss = Number.isFinite(assetSale?.otherIncomeLoss) ? Number(assetSale?.otherIncomeLoss) : 0
     const assetBookValueDisposed = Math.max(0, Number(assetSale?.bookValueDisposed) || 0)
-    const ebit = revenue - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss
+    const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
+    const salvageBookValueDisposed = year === years ? Math.max(0, Number(input.salvageBookValue) || 0) : 0
+    const salvageGainLoss = salvageProceeds - salvageBookValueDisposed
+    const ebit = revenue - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss + salvageGainLoss
 
     const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
     const taxableProfit = ebit - interest - taxLoss
@@ -553,10 +560,9 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const unleveredTax = Math.max(0, unleveredTaxableProfit) * effectiveTaxRate / 100
     unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : Math.max(0, unleveredTaxLoss - ebit)
 
-    const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
     const terminalValue = salvageProceeds + assetSaleProceeds
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
-    const projectFreeCashFlow = ebit - assetSaleOtherIncomeLoss - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
+    const projectFreeCashFlow = ebit - assetSaleOtherIncomeLoss - salvageGainLoss - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
     const equityFreeCashFlow = -equityContribution + revenue - variableCashCost - fixedCashCost - tax - interest - principal - maintenanceCapex - changeInWorkingCapital + terminalValue
     const debtService = principal + interest
     const cfads = revenue - variableCashCost - fixedCashCost - tax - maintenanceCapex - changeInWorkingCapital
@@ -575,7 +581,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
-      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
+      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, salvageBookValueDisposed, salvageGainLoss, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
     })
   }
@@ -890,6 +896,224 @@ export function calculateComfarAssetDepreciationSchedule(
 }
 
 
+
+export type ComfarCalendarMethodControl = {
+  method: ComfarDepreciationMethod
+  calculationImplemented: boolean
+  numericalBenchmark: 'pending'
+  controlNote: string
+}
+export type ComfarCalendarDepreciationSchedule = ComfarDepreciationSchedule & {
+  periods: (ComfarDepreciationPeriod & { startDate: string; endDate: string; days: number })[]
+  methodControls: ComfarCalendarMethodControl[]
+}
+function calendarDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return null
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2])-1, Number(match[3])))
+  return date.toISOString().slice(0,10) === value ? date : null
+}
+function dateOnly(date: Date): string { return date.toISOString().slice(0,10) }
+function addCalendarDays(date: Date, days: number): Date { return new Date(date.getTime()+days*86400000) }
+function addCalendarMonths(date: Date, months: number): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+months,date.getUTCDate()))
+}
+function calendarFiscalYearIndex(date: Date, firstDate: Date, fiscalStartMonth: number): number {
+  const year = date.getUTCMonth()+1 < fiscalStartMonth ? date.getUTCFullYear()-1 : date.getUTCFullYear()
+  const firstYear = firstDate.getUTCMonth()+1 < fiscalStartMonth ? firstDate.getUTCFullYear()-1 : firstDate.getUTCFullYear()
+  return year-firstYear
+}
+
+/** Date-driven depreciation ledger using actual overlap days within every project period. */
+export function calculateComfarCalendarDepreciationSchedule(
+  assets: ComfarDepreciationAssetInput[],
+  periods: ProjectCalendarPeriod[],
+  fiscalYearStartMonth: number,
+  stopDatesByAsset: Record<string,string> = {},
+): ComfarCalendarDepreciationSchedule {
+  const warnings: string[] = []
+  const methodControls:ComfarCalendarMethodControl[] = (['none','linear-to-zero','linear-to-scrap','accelerated','sum-of-years-digits'] as ComfarDepreciationMethod[]).map(method=>({
+    method,calculationImplemented:true,numericalBenchmark:'pending',
+    controlNote:'Formula path and regression behavior are tested; independent reference-output reconciliation is pending.'
+  }))
+  const validCalendar = periods.length > 0 && periods.every((period,index) => {
+    const start=calendarDate(period.startDate)
+    const end=calendarDate(period.endDate)
+    const previousEnd=index>0?calendarDate(periods[index-1].endDate):null
+    const exactDays=start&&end?Math.round((end.getTime()-start.getTime())/86400000)+1:0
+    return period.index===index+1 && !!start && !!end && period.days===exactDays &&
+      exactDays>0 && period.endDate>=period.startDate &&
+      (!previousEnd || period.startDate===dateOnly(addCalendarDays(previousEnd,1)))
+  }) && Number.isInteger(fiscalYearStartMonth) && fiscalYearStartMonth >= 1 && fiscalYearStartMonth <= 12
+  if (!validCalendar) return { valid:false,warnings:["تقویم مالی یا ماه شروع سال مالی معتبر نیست."],periods:[],methodControls }
+  const firstDate = calendarDate(periods[0].startDate)!
+  const rowsByPeriod = periods.map(()=>[] as ComfarAssetDepreciationRow[])
+  const yearStartPeriod = (yearIndex:number) => periods.findIndex(period =>
+    calendarFiscalYearIndex(calendarDate(period.startDate)!,firstDate,fiscalYearStartMonth)===yearIndex)
+  for (const asset of assets) {
+    const months=asset.lengthMonths??0
+    const length=asset.lengthYears+months/12
+    const salvage=asset.originalValue*asset.scrapPercent/100
+    const valid=[asset.originalValue,asset.initialBookValue,asset.scrapPercent,asset.lengthYears,months].every(Number.isFinite)
+      && asset.originalValue>=0 && asset.initialBookValue>=0 && salvage<=asset.initialBookValue+1e-8
+      && asset.scrapPercent>=0 && asset.scrapPercent<=100 && asset.lengthYears>=0
+      && Number.isInteger(months) && months>=0 && months<=11 && (asset.method==='none'||length>0)
+      && (asset.method!=='sum-of-years-digits'||(months===0 && Number.isInteger(asset.lengthYears) && asset.lengthYears>0))
+      && (asset.method!=='accelerated'||(Number.isFinite(asset.ratePercent)&&(asset.ratePercent??0)>0&&(asset.ratePercent??0)<100))
+      && (asset.method==='none'||asset.method==='sum-of-years-digits'||(Number.isFinite(asset.ratePercent)&&(asset.ratePercent??0)>0&&(asset.ratePercent??0)<=100))
+    if (!valid) {
+      warnings.push(asset.name+': داده‌های استهلاک برای محاسبه تقویمی معتبر نیست؛ روش یا عمر مفید نیازمند بررسی است.')
+      periods.forEach((period,index)=>rowsByPeriod[index].push({id:asset.id,name:asset.name,methodApplied:null,openingBookValue:0,depreciation:0,closingBookValue:0}))
+      continue
+    }
+    if ((asset.method==='linear-to-zero'||asset.method==='linear-to-scrap') &&
+      Math.abs((asset.ratePercent??0)-100/length)>0.02)
+      warnings.push(asset.name+': نرخ سالانه با عمر مفید سازگار نیست؛ نرخ و مدت را اصلاح کنید.')
+    const acquisitionFallbackIndex=yearStartPeriod(Math.max(0,asset.acquisitionPeriod-1))
+    const startingFallbackIndex=yearStartPeriod(Math.max(0,asset.startingAtPeriod-1))
+    const hasSubannualPeriods=periods.some(period=>period.days<300)
+    if (hasSubannualPeriods && asset.acquisitionPeriod>0 && !asset.acquisitionDate) {
+      warnings.push(asset.name+': تاریخ سالانه تحصیل برای محاسبه ماهانه/فصلی کافی نیست؛ تاریخ دقیق YYYY-MM-DD لازم است.')
+      periods.forEach((period,index)=>rowsByPeriod[index].push({id:asset.id,name:asset.name,methodApplied:null,openingBookValue:0,depreciation:0,closingBookValue:0}))
+      continue
+    }
+    const acquired=asset.acquisitionDate?calendarDate(asset.acquisitionDate):
+      (asset.acquisitionPeriod===0?firstDate:(acquisitionFallbackIndex>=0?calendarDate(periods[acquisitionFallbackIndex].startDate):firstDate))
+    const requestedStart=asset.startingAtDate?calendarDate(asset.startingAtDate):
+      (startingFallbackIndex>=0?calendarDate(periods[startingFallbackIndex].startDate):null)
+    if (!acquired || (asset.acquisitionDate&&!calendarDate(asset.acquisitionDate)) ||
+      (asset.startingAtDate&&!calendarDate(asset.startingAtDate))) {
+      warnings.push(asset.name+': تاریخ تحصیل یا شروع استهلاک معتبر نیست؛ قالب YYYY-MM-DD لازم است.')
+      periods.forEach((period,index)=>rowsByPeriod[index].push({id:asset.id,name:asset.name,methodApplied:null,openingBookValue:0,depreciation:0,closingBookValue:0}))
+      continue
+    }
+    let eligible=requestedStart??addCalendarDays(acquired,1)
+    if (!asset.startingAtDate && requestedStart && (asset.firstDepreciationMonths??12)<12)
+      eligible=addCalendarMonths(eligible,12-(asset.firstDepreciationMonths??12))
+    if (asset.acquisitionPeriod!==0 && acquired>=eligible) {
+      const acquiredIndex=periods.findIndex(period=>period.startDate<=dateOnly(acquired)&&period.endDate>=dateOnly(acquired))
+      eligible=acquiredIndex>=0?addCalendarDays(calendarDate(periods[acquiredIndex].endDate)!,1):addCalendarDays(acquired,1)
+    }
+    let bookValue=0
+    const lifeDays=length*365.2425
+    for (let index=0;index<periods.length;index++) {
+      const period=periods[index]
+      const pStart=calendarDate(period.startDate)!
+      const pEndExclusive=addCalendarDays(calendarDate(period.endDate)!,1)
+      if (acquired>=pEndExclusive) {
+        rowsByPeriod[index].push({id:asset.id,name:asset.name,methodApplied:null,openingBookValue:0,depreciation:0,closingBookValue:0})
+        continue
+      }
+      if (bookValue===0) bookValue=asset.initialBookValue
+      const opening=bookValue
+      const activeStart=eligible>pStart?eligible:pStart
+      const stopDate=stopDatesByAsset[asset.id]?calendarDate(stopDatesByAsset[asset.id]):null
+      const stopExclusive=stopDate?addCalendarDays(stopDate,1):pEndExclusive
+      const activeEnd=stopExclusive<pEndExclusive?stopExclusive:pEndExclusive
+      const activeDays=activeStart>=activeEnd?0:Math.max(0,Math.min(period.days,Math.round((activeEnd.getTime()-activeStart.getTime())/86400000)))
+      const ageDays=Math.max(0,(activeStart.getTime()-eligible.getTime())/86400000)
+      let amount=0
+      let applied:ComfarDepreciationMethod|null=null
+      if (activeDays>0 && asset.method!=='none' && bookValue>salvage+1e-8) {
+        const fraction=activeDays/365.2425
+        if (asset.method==='linear-to-zero'||asset.method==='linear-to-scrap') {
+          const base=asset.method==='linear-to-zero'?asset.initialBookValue:asset.initialBookValue-salvage
+          amount=Math.min(bookValue-salvage,Math.max(0,base/length*fraction))
+          applied=asset.method
+        } else if (asset.method==='accelerated') {
+          const remainingYears=Math.max(0.000001,(lifeDays-ageDays)/365.2425)
+          const accelerated=bookValue*(asset.ratePercent??0)/100*fraction
+          const straight=(bookValue-salvage)/remainingYears*fraction
+          const useAccelerated=accelerated>straight
+          amount=Math.min(bookValue-salvage,Math.max(0,useAccelerated?accelerated:straight))
+          applied=useAccelerated?'accelerated':'linear-to-scrap'
+        } else if (asset.method==='sum-of-years-digits') {
+          const age=Math.min(asset.lengthYears,Math.floor(ageDays/365.2425)+1)
+          const divisor=asset.lengthYears*(asset.lengthYears+1)/2
+          const annual=(asset.lengthYears-age+1)/divisor*(asset.initialBookValue-salvage)
+          amount=Math.min(bookValue-salvage,Math.max(0,annual*fraction))
+          applied='sum-of-years-digits'
+        }
+      }
+      const depreciation=Math.min(Math.max(0,bookValue-salvage),amount)
+      bookValue=Math.max(salvage,bookValue-depreciation)
+      rowsByPeriod[index].push({id:asset.id,name:asset.name,methodApplied:applied,openingBookValue:opening,depreciation,closingBookValue:bookValue})
+    }
+  }
+  const resultPeriods=periods.map((period,index)=>{
+    const rows=rowsByPeriod[index]
+    return {period:index+1,startDate:period.startDate,endDate:period.endDate,days:period.days,
+      depreciation:rows.reduce((sum,row)=>sum+row.depreciation,0),
+      closingBookValue:rows.reduce((sum,row)=>sum+row.closingBookValue,0),assets:rows}
+  })
+  return {valid:warnings.length===0,warnings,periods:resultPeriods,methodControls}
+}
+
+/** Asset lifecycle on the actual project calendar, including period-specific disposals. */
+export function calculateComfarCalendarAssetLifecycle(
+  assets: ComfarDepreciationAssetInput[],
+  sales: ComfarAssetSaleInput[],
+  periods: ProjectCalendarPeriod[],
+  fiscalYearStartMonth: number,
+): ComfarAssetLifecycle & { depreciation: ComfarCalendarDepreciationSchedule } {
+  const stopDatesByAsset:Record<string,string>={}
+  for (const sale of sales) if (sale.saleDate) stopDatesByAsset[sale.assetId]=sale.saleDate
+  const depreciation=calculateComfarCalendarDepreciationSchedule(assets,periods,fiscalYearStartMonth,stopDatesByAsset)
+  const warnings=[...depreciation.warnings]
+  const results:ComfarAssetSaleResult[]=[]
+  const salesByAsset=new Map<string,ComfarAssetSaleResult>()
+  const seen=new Set<string>()
+  for (const sale of sales) {
+    const asset=assets.find(row=>row.id===sale.assetId)
+    if (!asset) { warnings.push('Sale '+sale.id+': linked acquisition vintage was not found.'); continue }
+    if (sale.priceMode!=='book-value' && sale.priceMode!=='self-defined') {
+      warnings.push(asset.name+': sale price mode is not supported.'); continue
+    }
+    if (sale.priceMode==='self-defined' && (!Number.isFinite(sale.selfDefinedPrice) || (sale.selfDefinedPrice??-1)<0 ||
+      !Number.isFinite(sale.exchangeRateToLocal) || (sale.exchangeRateToLocal??0)<=0)) {
+      warnings.push(asset.name+': self-defined sale price and positive exchange rate are required.'); continue
+    }
+    if (sale.saleDate && asset.acquisitionDate && sale.saleDate<asset.acquisitionDate) {
+      warnings.push(asset.name+': sale date cannot be earlier than its acquisition date.'); continue
+    }
+    if (seen.has(sale.assetId)) { warnings.push(asset.name+': multiple sales for one acquisition vintage are not supported.'); continue }
+    seen.add(sale.assetId)
+    let periodIndex=sale.period-1
+    if (sale.saleDate) {
+      if (!calendarDate(sale.saleDate)) { warnings.push(asset.name+': sale date must use YYYY-MM-DD.'); continue }
+      periodIndex=periods.findIndex(period=>period.startDate<=sale.saleDate!&&period.endDate>=sale.saleDate!)
+    } else {
+      const matches=periods.map((period,index)=>({period,index})).filter(({period})=>
+        calendarFiscalYearIndex(calendarDate(period.startDate)!,calendarDate(periods[0].startDate)!,fiscalYearStartMonth)===sale.period-1)
+      periodIndex=matches.length?matches[matches.length-1].index:-1
+    }
+    if (periodIndex<0||periodIndex>=periods.length) { warnings.push(asset.name+': sale date falls outside the project calendar.'); continue }
+    const row=depreciation.periods[periodIndex].assets.find(item=>item.id===sale.assetId)
+    if (!row) { warnings.push(asset.name+': book value at disposal is unavailable.'); continue }
+    const bookValueAtSale=row.closingBookValue
+    const saleProceeds=sale.priceMode==='book-value'?bookValueAtSale:(sale.selfDefinedPrice??0)*(sale.exchangeRateToLocal??1)
+    if (!Number.isFinite(saleProceeds)||saleProceeds<0) { warnings.push(asset.name+': sale proceeds must be non-negative.'); continue }
+    const result:ComfarAssetSaleResult={id:sale.id,assetId:sale.assetId,period:periodIndex+1,bookValueAtSale,saleProceeds,
+      returnOfCapital:Math.min(saleProceeds,bookValueAtSale),
+      extraordinaryIncome:Math.max(0,saleProceeds-bookValueAtSale),
+      extraordinaryLoss:Math.max(0,bookValueAtSale-saleProceeds),
+      otherIncomeLoss:saleProceeds-bookValueAtSale}
+    results.push(result); salesByAsset.set(sale.assetId,result)
+  }
+  for (const period of depreciation.periods) for (const row of period.assets) {
+    const sale=salesByAsset.get(row.id)
+    if (sale&&period.period>=sale.period) {
+      if (period.period===sale.period) row.closingBookValue=0
+      else { row.openingBookValue=0;row.depreciation=0;row.closingBookValue=0;row.methodApplied=null }
+    }
+  }
+  for (const period of depreciation.periods) {
+    period.depreciation=period.assets.reduce((sum,row)=>sum+row.depreciation,0)
+    period.closingBookValue=period.assets.reduce((sum,row)=>sum+row.closingBookValue,0)
+  }
+  return {valid:warnings.length===0,warnings,depreciation,sales:results}
+}
+
 export type ComfarAssetSaleInput = {
   id: string
   assetId: string
@@ -897,6 +1121,7 @@ export type ComfarAssetSaleInput = {
   priceMode: 'book-value' | 'self-defined'
   selfDefinedPrice?: number
   exchangeRateToLocal?: number
+  saleDate?: string
 }
 
 export type ComfarAssetSaleResult = {
@@ -1036,9 +1261,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   if (!Number.isInteger(projectStartYear) || projectStartYear < 1 || !Number.isInteger(periodCount) || periodCount < 1) {
     return { assets, sales, investmentSchedule, investmentScheduleVerified: false, preOperatingSchedule, preOperatingScheduleVerified: false, warnings: ['سال شروع پروژه و تعداد دوره‌های سالانه باید پیش از ساخت برنامه استهلاک تعیین شوند.'] }
   }
-  if (periodFrequency !== 'annual' && periodFrequency !== 'unspecified') {
-    return { assets, sales, investmentSchedule, investmentScheduleVerified: false, preOperatingSchedule, preOperatingScheduleVerified: false, warnings: ['موتور یکپارچه فعلی فقط برنامه سالانه را محاسبه می‌کند؛ برای دوره‌های نیم‌سالانه، فصلی یا ماهانه، موتور دوره‌ای متناظر باید فعال شود.'] }
-  }
+  // Asset vintages remain indexed by fiscal year here; the calendar depreciation engine
+  // expands them into actual monthly, quarterly or other project periods.
   if (periodFrequency === 'unspecified') {
     investmentScheduleVerified = false
     preOperatingScheduleVerified = false
@@ -1154,6 +1378,7 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
           priceMode: sale.priceMode,
           selfDefinedPrice: sale.selfDefinedPrice ?? undefined,
           exchangeRateToLocal: saleFx,
+          saleDate: sold.date,
         })
       }
     }
@@ -1222,6 +1447,8 @@ export function reconcileFixedInvestmentRegister(
 
 export type FinancialStatementYear = {
   year: number
+  openingBalances: { cash: number; debt: number; netFixedAssets: number; workingCapitalAssets: number; preOperatingAssets: number; paidInCapital: number; retainedEarnings: number }
+  movementChecks: { cash: number; debt: number; netFixedAssets: number; workingCapital: number; preOperatingAssets: number; paidInCapital: number; retainedEarnings: number }
   incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; otherIncomeLoss: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
   cashFlowStatement: { operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number; netChangeInCash: number; closingCash: number }
   balanceSheet: { cash: number; workingCapitalAssets: number; netFixedAssets: number; deferredPreOperatingAssets: number; totalAssets: number; tradePayables: number; debt: number; totalLiabilities: number; paidInCapital: number; retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number; balanceDifference: number; reconciled: boolean }
@@ -1235,10 +1462,18 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
   let cumulativePreOperatingAssets = 0
   let accumulatedDepreciation = 0
   let cumulativeBookValueDisposed = 0
+  let previousCash = 0
+  let previousDebt = 0
+  let previousNetFixedAssets = 0
+  let previousNetWorkingCapital = 0
+  let previousPreOperatingAssets = 0
+  let previousPaidInCapital = 0
+  let previousRetainedEarnings = 0
   return years.map(row => {
     const cashOperatingCosts = row.variableCashCost + row.fixedCashCost
     const ebitda = row.revenue - cashOperatingCosts
-    const ebit = ebitda - row.depreciation + (row.assetSaleOtherIncomeLoss ?? 0)
+    const otherIncomeLoss = (row.assetSaleOtherIncomeLoss ?? 0) + (row.salvageGainLoss ?? 0)
+    const ebit = ebitda - row.depreciation + otherIncomeLoss
     const profitBeforeTax = ebit - row.interest
     const netIncome = profitBeforeTax - row.tax
     retainedEarnings += netIncome
@@ -1246,31 +1481,72 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     cumulativeGrossFixedAssets += row.fixedInvestment + row.maintenanceCapex
     cumulativePreOperatingAssets += row.preOperatingCost + row.capitalizedInterest
     accumulatedDepreciation += row.depreciation
-    cumulativeBookValueDisposed += row.assetBookValueDisposed ?? 0
-    const currentAssets = row.workingCapitalBreakdown.rawMaterials + (row.workingCapitalBreakdown.energy ?? 0) + (row.workingCapitalBreakdown.spareParts ?? 0) + row.workingCapitalBreakdown.workInProgress
-      + row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables + row.workingCapitalBreakdown.minimumCash
+    cumulativeBookValueDisposed += (row.assetBookValueDisposed ?? 0) + (row.salvageBookValueDisposed ?? 0)
+    const currentAssets = row.workingCapitalBreakdown.rawMaterials + (row.workingCapitalBreakdown.energy ?? 0) +
+      (row.workingCapitalBreakdown.spareParts ?? 0) + row.workingCapitalBreakdown.workInProgress +
+      row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables +
+      row.workingCapitalBreakdown.minimumCash
     const tradePayables = row.workingCapitalBreakdown.payables
-    const netFixedAssets = Math.max(0, cumulativeGrossFixedAssets - accumulatedDepreciation - cumulativeBookValueDisposed - row.salvageProceeds)
+    const netWorkingCapital = currentAssets - tradePayables
+    const netFixedAssets = cumulativeGrossFixedAssets - accumulatedDepreciation - cumulativeBookValueDisposed
     const deferredPreOperatingAssets = cumulativePreOperatingAssets
     const totalAssets = row.cashBalance + currentAssets + netFixedAssets + deferredPreOperatingAssets
     const totalLiabilities = row.debtBalance + tradePayables
     const totalEquity = paidInCapital + retainedEarnings
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
-    const operatingCashFlow = netIncome + row.depreciation - (row.assetSaleOtherIncomeLoss ?? 0) - row.changeInWorkingCapital
-    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex + row.salvageProceeds + (row.assetSaleProceeds ?? 0)
+    const operatingCashFlow = netIncome + row.depreciation - otherIncomeLoss - row.changeInWorkingCapital
+    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex +
+      row.salvageProceeds + (row.assetSaleProceeds ?? 0)
     const financingCashFlow = row.debtDrawdown + row.equityContribution - row.principal
     const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
-    return {
+    const openingBalances = {
+      cash: previousCash, debt: previousDebt, netFixedAssets: previousNetFixedAssets,
+      workingCapitalAssets: previousNetWorkingCapital, preOperatingAssets: previousPreOperatingAssets,
+      paidInCapital: previousPaidInCapital, retainedEarnings: previousRetainedEarnings,
+    }
+    const movementChecks = {
+      cash: row.cashBalance - previousCash - netChangeInCash,
+      debt: row.debtBalance - previousDebt - (row.debtDrawdown + row.capitalizedInterest - row.principal),
+      netFixedAssets: netFixedAssets - previousNetFixedAssets -
+        (row.fixedInvestment + row.maintenanceCapex - row.depreciation -
+          (row.assetBookValueDisposed ?? 0) - (row.salvageBookValueDisposed ?? 0)),
+      workingCapital: netWorkingCapital - previousNetWorkingCapital - row.changeInWorkingCapital,
+      preOperatingAssets: deferredPreOperatingAssets - previousPreOperatingAssets -
+        row.preOperatingCost - row.capitalizedInterest,
+      paidInCapital: paidInCapital - previousPaidInCapital - row.equityContribution,
+      retainedEarnings: retainedEarnings - previousRetainedEarnings - netIncome,
+    }
+    const result: FinancialStatementYear = {
       year: row.year,
-      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation, otherIncomeLoss: row.assetSaleOtherIncomeLoss ?? 0, ebit, interest: row.interest, profitBeforeTax, tax: row.tax, taxLossCarryForward: row.taxLossCarryForward, netIncome },
-      cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash, closingCash: row.cashBalance },
+      openingBalances,
+      movementChecks,
+      incomeStatement: {
+        revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation,
+        otherIncomeLoss, ebit, interest: row.interest, profitBeforeTax, tax: row.tax,
+        taxLossCarryForward: row.taxLossCarryForward, netIncome,
+      },
+      cashFlowStatement: {
+        operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash,
+        closingCash: row.cashBalance,
+      },
       balanceSheet: {
-        cash: row.cashBalance, workingCapitalAssets: currentAssets, netFixedAssets, deferredPreOperatingAssets,
-        totalAssets, tradePayables, debt: row.debtBalance, totalLiabilities, paidInCapital, retainedEarnings,
-        totalEquity, totalLiabilitiesAndEquity, balanceDifference, reconciled: Math.abs(balanceDifference) <= Math.max(0, tolerance),
+        cash: row.cashBalance, workingCapitalAssets: currentAssets, netFixedAssets,
+        deferredPreOperatingAssets, totalAssets, tradePayables, debt: row.debtBalance,
+        totalLiabilities, paidInCapital, retainedEarnings, totalEquity,
+        totalLiabilitiesAndEquity, balanceDifference,
+        reconciled: Math.abs(balanceDifference) <= Math.max(0, tolerance) &&
+          Object.values(movementChecks).every(value => Math.abs(value) <= Math.max(0, tolerance)),
       },
     }
+    previousCash = row.cashBalance
+    previousDebt = row.debtBalance
+    previousNetFixedAssets = netFixedAssets
+    previousNetWorkingCapital = netWorkingCapital
+    previousPreOperatingAssets = deferredPreOperatingAssets
+    previousPaidInCapital = paidInCapital
+    previousRetainedEarnings = retainedEarnings
+    return result
   })
 }
 
