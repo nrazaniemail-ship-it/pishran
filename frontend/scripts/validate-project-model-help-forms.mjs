@@ -117,6 +117,14 @@ try {
  centreCycle=h.updateHelpFormRow(centreCycle,'cost-centres','cc-2','parentId','cc-1')
  assert.ok(h.validateHelpDrivenProjectForms(centreCycle).some(issue=>issue.startsWith('cost-centre:parent-cycle:')))
 
+
+ let badDate=h.addHelpFormRow(draft.helpDriven,'products','bad-date')
+ badDate=h.updateHelpFormRow(badDate,'products','bad-date','actualStart','2026-02-30')
+ assert.ok(h.validateHelpDrivenProjectForms(badDate).includes('products:0:invalid-date:actualStart'))
+ let badSale=h.addHelpFormRow(draft.helpDriven,'sales-programme','bad-sale')
+ badSale=h.updateHelpFormRow(badSale,'sales-programme','bad-sale','salesQuantity',10)
+ assert.ok(h.validateHelpDrivenProjectForms(badSale).includes('sales-programme:0:product-and-period-required'))
+
  console.log('COMFAR help form coverage tests passed')
 } finally {
  await rm(temp,{recursive:true,force:true})
