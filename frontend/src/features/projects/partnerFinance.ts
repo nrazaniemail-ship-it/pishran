@@ -89,7 +89,7 @@ export function allocateJointVentureCashFlows(
       Number.isFinite(period.equityContribution)&&period.equityContribution>=0&&
       Number.isFinite(period.equityWorkingCapitalContribution)&&period.equityWorkingCapitalContribution>=0&&
       start&&end&&endTime>=startTime&&
-      (!previous||(period.period>previous.period&&startTime>previousEnd))
+      (!previous||(period.period===previous.period+1&&startTime===previousEnd+86400000))
   })
   const rowScheduledEquityContribution=finance.rows.reduce((sum,period)=>
     sum+(Number.isFinite(period.equityContribution)?period.equityContribution:0)+
