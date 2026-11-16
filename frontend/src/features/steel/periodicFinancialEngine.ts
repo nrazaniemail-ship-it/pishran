@@ -322,8 +322,6 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Unsupported loan interest day-count convention.')
   if (input.datedDrawdowns && !interestConvention)
     issues.push('Exact dated drawdowns require an explicit interest day-count convention.')
-  if ((rateChanges.length > 0 || fees.length > 0) && !interestConvention)
-    issues.push('Dated rate resets and financing fees require an explicit interest day-count convention.')
   if (rateChanges.some((change,index) => !change || !parseIsoDateUtc(change.effectiveDate) ||
       !validFinite(change.annualRatePercent) || change.annualRatePercent < 0 ||
       (index > 0 && rateChanges[index - 1].effectiveDate >= change.effectiveDate)))
@@ -386,18 +384,52 @@ export function calculatePeriodicLoanSchedule(
     return rate
   }
   const hasDatedFinancingEvents = rateChanges.length > 0 || fees.length > 0
-  if (hasDatedFinancingEvents) {
+  const addDays = (date: string, days: number) => {
+    const parsed = parseIsoDateUtc(date)!
+    return dateOnlyUtc(new Date(parsed.getTime() + days * 86400000))
+  }
+  const segmentDays = (startDate: string, endDateExclusive: string) => {
+    const start = parseIsoDateUtc(startDate)!
+    const end = parseIsoDateUtc(endDateExclusive)!
+    return Math.max(0, (end.getTime() - start.getTime()) / 86400000)
+  }
+  const segmentInterest = (balance: number, annualRate: number, startDate: string, endDateExclusive: string) => {
+    if (interestConvention) {
+      return balance * annualRate / 100 * loanYearFraction(startDate, endDateExclusive, interestConvention)
+    }
+    const days = segmentDays(startDate, endDateExclusive)
+    if (rateConversion === 'effective-annual-divided-by-frequency') {
+      const periodsPerYear = input.periodsPerYear as 1 | 2 | 4 | 12
+      return balance * annualRate / 100 / periodsPerYear * days / (dayCountBasis / periodsPerYear)
+    }
+    return balance * (Math.pow(1 + annualRate / 100, days / dayCountBasis) - 1)
+  }
+  // A rate reset splits a period into effective-rate segments. The resulting
+  // period rate is the combined effective rate used by the annuity calculation.
+  if (rateChanges.length > 0) {
     for (let index=0; index<periods.length; index++) {
       const period=periods[index]
-      const boundaries=[period.startDate,...rateChanges.map(item=>item.effectiveDate).filter(date=>date>period.startDate&&date<=period.endDate),period.endDate]
-        .sort()
-      let weighted=0
+      const endExclusive=addDays(period.endDate,1)
+      const boundaries=[period.startDate,...rateChanges.map(item=>item.effectiveDate)
+        .filter(date=>date>period.startDate&&date<=period.endDate),endExclusive]
+        .sort().filter((date,i,array)=>i===0||date!==array[i-1])
+      let combinedFactor=1
+      let simpleFactor=0
       for(let segment=0;segment<boundaries.length-1;segment++) {
-        const fraction=loanYearFraction(boundaries[segment],boundaries[segment+1],interestConvention??(dayCountBasis===360?'actual-360':'actual-365'))
-        weighted+=effectiveRateForDate(boundaries[segment])*fraction
+        const from=boundaries[segment],to=boundaries[segment+1]
+        const rate=effectiveRateForDate(from)
+        if(interestConvention) {
+          simpleFactor+=rate/100*loanYearFraction(from,to,interestConvention)
+        } else if(rateConversion==='effective-annual-divided-by-frequency') {
+          const periodsPerYear=input.periodsPerYear as 1|2|4|12
+          simpleFactor+=rate/100/periodsPerYear*segmentDays(from,to)/(dayCountBasis/periodsPerYear)
+        } else {
+          combinedFactor*=Math.pow(1+rate/100,segmentDays(from,to)/dayCountBasis)
+        }
       }
-      const periodFraction=loanYearFraction(period.startDate,period.endDate,interestConvention??(dayCountBasis===360?'actual-360':'actual-365'))
-      if(periodFraction>0) periodRates[index]=weighted/periodFraction/100
+      periodRates[index]=interestConvention||rateConversion==='effective-annual-divided-by-frequency'
+        ? simpleFactor
+        : combinedFactor-1
     }
   }
   let balance = input.openingBalance ?? 0
@@ -417,7 +449,7 @@ export function calculatePeriodicLoanSchedule(
       for(const item of rateChanges) if(item.effectiveDate>=period.startDate&&item.effectiveDate<=period.endDate) events.push({date:item.effectiveDate,kind:'rate',amount:item.annualRatePercent})
       for(const item of fees) if(item.date>=period.startDate&&item.date<=period.endDate) events.push({date:item.date,kind:'fee',amount:item.amount,treatment:item.treatment})
       if(!input.datedDrawdowns && drawdown>0) {
-        const midpoint=new Date(Date.parse(period.startDate+'T00:00:00Z')+Math.floor(period.days/2)*86400000).toISOString().slice(0,10)
+        const midpoint=new Date(Date.parse(period.startDate+'T00:00:00Z')+Math.floor((period.days-1)/2)*86400000).toISOString().slice(0,10)
         events.push({date:midpoint,kind:'drawdown',amount:drawdown})
       }
       events.sort((a,b)=>a.date.localeCompare(b.date)||({rate:0,drawdown:1,fee:2}[a.kind]-{rate:0,drawdown:1,fee:2}[b.kind]))
@@ -425,22 +457,25 @@ export function calculatePeriodicLoanSchedule(
       let interestBalance=openingBalance
       let activeRate=effectiveRateForDate(period.startDate)
       interestAccrued=0
-      const convention=interestConvention??(dayCountBasis===360?'actual-360':'actual-365')
+      const endExclusive=addDays(period.endDate,1)
+      const accrueUntil=(nextDate:string) => {
+        if(nextDate<=cursor) return
+        const accrued=segmentInterest(interestBalance,activeRate,cursor,nextDate)
+        interestAccrued+=accrued
+        // Effective-annual conversion represents a compounded effective rate.
+        // Explicit day-count conventions and frequency-divided rates remain simple.
+        if(!interestConvention && rateConversion==='effective-annual-by-actual-days')
+          interestBalance+=accrued
+        cursor=nextDate
+      }
       for(const event of events) {
-        if(event.date>cursor) interestAccrued+=interestBalance*(activeRate/100)*loanYearFraction(cursor,event.date,convention)
+        accrueUntil(event.date)
         if(event.kind==='rate') activeRate=event.amount
         else if(event.kind==='drawdown') interestBalance+=event.amount
         else if(event.treatment==='capitalize') { capitalizedFinancingFees+=event.amount; interestBalance+=event.amount }
         else financingFeeExpense+=event.amount
-        cursor=event.date
       }
-      if(period.endDate>cursor) interestAccrued+=interestBalance*(activeRate/100)*loanYearFraction(cursor,period.endDate,convention)
-      // Preserve the engine's inclusive-day convention for intervals without date-specific events.
-      if(!input.datedDrawdowns && !rateChanges.length && fees.length) {
-        const expected=period.days/(convention==='actual-360'?360:convention==='actual-365'?365:360)
-        const elapsed=loanYearFraction(period.startDate,period.endDate,convention)
-        if(elapsed>0) interestAccrued*=expected/elapsed
-      }
+      accrueUntil(endExclusive)
     } else {
       const interestBase = openingBalance + drawdown * 0.5
       interestAccrued = interestBase * periodRates[index]
