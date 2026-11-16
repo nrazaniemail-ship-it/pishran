@@ -414,7 +414,7 @@ export function calculatePeriodicLoanSchedule(
       period: index + 1,
       drawdown,
       openingBalance,
-      periodRatePercent: (openingBalance + drawdown * 0.5) > 0 ? interestAccrued / (openingBalance + drawdown * 0.5) * 100 : periodRates[index] * 100,
+      periodRatePercent: periodRates[index] * 100,
       interestExpense,
       capitalizedInterest,
       principal,
@@ -780,7 +780,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
-    const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
+    const equityFreeCashFlow = debtDrawdown - equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
     rows.push({
