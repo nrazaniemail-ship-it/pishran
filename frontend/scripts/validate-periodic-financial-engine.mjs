@@ -656,6 +656,23 @@ assert.ok(Math.abs(disposalClosingRow.projectFreeCashFlow - (disposalClosingRow.
   'Project cash flow must include disposal proceeds once, excluding double-counted accounting gain')
 assert.ok(Math.abs(disposalClosingRow.equityFreeCashFlow - (disposalClosingRow.revenue - disposalClosingRow.variableCost - disposalClosingRow.fixedCost - disposalClosingRow.tax + 500)) < 1e-8,
   'Equity cash flow must include disposal proceeds')
+const periodicAssetDisposalLoss = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400],
+  annualDepreciation: [400], annualFixedInvestment: [0], annualPreOperatingCost: [0],
+  annualMaintenanceCapex: [0], annualTaxRates: [25], annualEquityContributions: [0],
+  workingCapitalByPeriod: [0, 0, 0, 0], loans: [],
+  annualAssetSaleSchedule: [{
+    saleProceeds: 500, returnOfCapital: 500, otherIncomeLoss: -140, bookValueDisposed: 640
+  }]
+})
+assert.equal(periodicAssetDisposalLoss.valid,true,'Periodic finance must accept a correctly reconciled disposal loss')
+const disposalLossRow=periodicAssetDisposalLoss.rows[3]
+assert.equal(disposalLossRow.assetSaleOtherIncomeLoss,-140)
+assert.ok(Math.abs(disposalLossRow.ebit-(disposalLossRow.revenue-disposalLossRow.variableCost-disposalLossRow.fixedCost-disposalLossRow.depreciation-140))<1e-8,
+  'Disposal loss must reduce taxable EBIT')
+assert.ok(Math.abs(disposalLossRow.projectFreeCashFlow-(disposalLossRow.ebit+140-disposalLossRow.unleveredTax+disposalLossRow.depreciation+500))<1e-8,
+  'Project cash flow must add back the accounting loss and include disposal proceeds once')
 
 const calendarAssetLifecycleFinance = engine.calculateIntegratedPeriodicFinance({
   periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
