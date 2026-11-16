@@ -813,6 +813,10 @@ const targetSearch=periodicSensitivity.searchPeriodicFinanceTarget({
 })
 assert.equal(targetSearch.achieved,true,targetSearch.issues.join('; '))
 assert.ok((targetSearch.achievedValue??-Infinity)>=(targetSearch.target-0.001))
+assert.throws(()=>periodicSensitivity.applyPeriodicSensitivityShock({
+  ...periodicSensitivityInput,precomputedLoanSchedules:{'form-loan':[]},
+},'loan-interest-rate',10),/loan-interest-rate-sensitivity-unavailable-for-precomputed-schedules/,
+'A loan-rate shock must not silently leave a precomputed repayment schedule unchanged')
 const straightLineAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   id:'asset-sl-01',name:'Monthly straight-line asset',assetClass:'fixed',
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:1,lengthMonths:0,
