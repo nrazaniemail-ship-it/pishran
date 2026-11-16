@@ -12,7 +12,7 @@
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "ios:add": "cap add ios",
     "ios:sync": "npm run build && cap sync ios",
-    "test:financial": "node scripts/validate-financial-model.mjs && node scripts/validate-method-directory.mjs && node scripts/validate-periodic-financial-engine.mjs && node scripts/validate-project-model-schema.mjs && node scripts/validate-project-model-form-drafts.mjs && node scripts/validate-project-model-formulas.mjs"
+    "test:financial": "node scripts/validate-financial-model.mjs && node scripts/validate-method-directory.mjs && node scripts/validate-periodic-financial-engine.mjs && node scripts/validate-project-model-schema.mjs && node scripts/validate-project-model-form-drafts.mjs && node scripts/validate-project-model-formulas.mjs && node scripts/validate-project-model-help-forms.mjs && node scripts/validate-project-model-help-formulas.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
