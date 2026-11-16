@@ -106,7 +106,7 @@ type SavedState = {
   workingCapitalBases: { rawMaterials: number; energy:number; spareParts:number; conversion: number; finishedGoods: number; cash: number; payables: number }
   wipCompletion: { material: number; conversion: number }
   taxRates: number[]
-  discountMode: 'wacc' | 'manual'
+  discountMode: '' | 'wacc' | 'manual'
   manualRate: number
   maintenancePercent: number
   salesEscalationPercent: number
@@ -158,13 +158,14 @@ export default function AdvancedFinancePanel(props: Props) {
      workingCapitalBases:blank?{rawMaterials:unset,energy:unset,spareParts:unset,conversion:unset,finishedGoods:unset,cash:unset,payables:unset}:(props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0}),
      wipCompletion:blank?{material:unset,conversion:unset}:(props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0}),
      taxRates:Array(years).fill(blank?unset:props.taxRate),
-     discountMode:blank?'manual':(props.initialDiscountMode??'wacc'),
+     discountMode:blank?'':(props.initialDiscountMode??'wacc'),
      manualRate:blank?unset:(props.initialManualRate??props.costOfEquity),
      maintenancePercent:blank?unset:0,salesEscalationPercent:blank?unset:0,opexEscalationPercent:blank?unset:0
     }
   })
   const [loaded,setLoaded]=useState(false)
   useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const matchesLegacyDefault=Math.abs(legacyContribution-legacyWorkingCapitalEquity)<0.01;restored.equityWorkingCapitalContributions=Array(years).fill(0);if(matchesLegacyDefault){restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-legacyWorkingCapitalEquity):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??legacyWorkingCapitalEquity):0)}}if((saved.fundingStructureVersion??0)<2){const legacyDrawdowns=initialCapexSchedule.map((value,index)=>value*initialDebtShare+(index===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0));restored.loans=restored.loans.map(loan=>{const untouchedLegacyDefault=loan.label==='تسهیلات اصلی و سرمایه در گردش'&&loan.drawdowns.length===years&&loan.drawdowns.every((value,index)=>Math.abs(value-legacyDrawdowns[index])<0.01)&&Math.abs(loan.annualRate-props.costOfDebt)<0.0001&&loan.repaymentMethod==='equal-principal';return untouchedLegacyDefault?{...loan,label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(value=>value*initialDebtShare),annualRate:props.initialLoanRatePercent??props.costOfDebt,repaymentMethod:props.initialRepaymentMethod??'equal-principal'}:loan});if(props.initialWorkingCapitalEquityContribution&&restored.equityWorkingCapitalContributions.every(value=>value===0)){restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?props.initialWorkingCapitalEquityContribution!:0)}restored.fundingStructureVersion=2}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
+  useEffect(()=>{setState(current=>{const resize=(values:number[],fill:number)=>Array.from({length:years},(_,index)=>values[index]??fill);return {...current,equityContributions:resize(current.equityContributions,props.blankStart?Number.NaN:0),equityWorkingCapitalContributions:resize(current.equityWorkingCapitalContributions,props.blankStart?Number.NaN:0),taxRates:resize(current.taxRates,props.blankStart?Number.NaN:props.taxRate),loans:current.loans.map(loan=>({...loan,drawdowns:resize(loan.drawdowns,props.blankStart?Number.NaN:0)}))}})},[years,props.blankStart,props.taxRate])
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
   const capexSchedule = activeFixedInvestmentSchedule
@@ -555,7 +556,7 @@ export default function AdvancedFinancePanel(props: Props) {
       {comfarLifecycle.sales.map(sale=><p className="fw-hint" key={sale.id}>{tr('فروش دوره','Sale period')} {sale.period}: {tr('ارزش دفتری','Book value')} {money(sale.bookValueAtSale)} / {tr('عواید فروش','Sale proceeds')} {money(sale.saleProceeds)} / {tr('سود یا زیان','Gain / loss')} {money(sale.otherIncomeLoss)}</p>)}
     </div>}
     <div className="fw-grid">
-      <label className="fw-field"><span>{tr('نرخ تنزیل')}</span><select value={state.discountMode} onChange={e=>setState(s=>({...s,discountMode:e.target.value as SavedState['discountMode']}))}><option value="wacc">WACC</option><option value="manual">{tr('دستی')}</option></select></label>
+      <label className="fw-field"><span>{tr('نرخ تنزیل')}</span><select value={state.discountMode} onChange={e=>setState(s=>({...s,discountMode:e.target.value as SavedState['discountMode']}))}><option value="">{t('انتخاب روش نرخ تنزیل','Select discount-rate method')}</option><option value="wacc">WACC</option><option value="manual">{tr('دستی')}</option></select></label>
       {state.discountMode==='manual'&&<label className="fw-field"><span>{tr('نرخ تنزیل دستی (%)')}</span><input type="number" value={blankNumber(state.manualRate)} onChange={e=>setState(s=>({...s,manualRate:Number(e.target.value)}))}/></label>}
       <label className="fw-field"><span>{tr('CAPEX نگهداری سالانه (% هزینه نقدی)')}</span><input type="number" min="0" value={blankNumber(state.maintenancePercent)} onChange={e=>setState(s=>({...s,maintenancePercent:Number(e.target.value)}))}/></label>
       <label className="fw-field"><span>{t('رشد سالانه قیمت فروش (%)','Annual Selling Price Escalation (%)')}</span><input type="number" min="-99" value={blankNumber(state.salesEscalationPercent)} onChange={e=>setState(s=>({...s,salesEscalationPercent:Number(e.target.value)}))}/></label>
