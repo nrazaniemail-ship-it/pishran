@@ -45,14 +45,15 @@ export default function ProjectModelHelpCoveragePanel({value,onChange,language='
    <h4>{en?groupEn[group]:groupFa[group]}</h4>
    {HELP_FORM_SECTIONS.filter(section=>section.group===group).map(section=>{
     const rows=model.sections?.[section.id]??[]
-    return <div className="fw-validation" key={section.id} style={{marginTop:10,padding:12}}>
-     <div className="fw-card-head"><div><h5>{en?section.en:section.fa}</h5><small className="fw-hint">{t('مرجع مستند: ','Manual reference: ')}{section.source}</small></div></div>
+    const hasEnteredValues=rows.some(row=>Object.values(row.values).some(value=>value!==null&&value!==''))
+    return <details className="fw-validation" key={section.id} open={hasEnteredValues} style={{marginTop:10,padding:12}}>
+     <summary className="fw-card-head" style={{cursor:'pointer'}}><div><h5>{en?section.en:section.fa}</h5><small className="fw-hint">{t('مرجع مستند: ','Manual reference: ')}{section.source}</small></div></summary>
      {rows.map(row=><div key={row.id} style={{marginTop:10,padding:10,border:'1px solid var(--border-color, #d7dee8)',borderRadius:8}}>
       <div className="fw-grid">{section.fields.map(field=><FieldControl key={field.key} field={field} row={row} language={language} referenceOptions={referenceOptionsFor(field.key,model)} onChange={next=>onChange(updateHelpFormRow(model,section.id,row.id,field.key,next))}/>)}</div>
       {section.repeatable&&<button type="button" className="secondary-button" onClick={()=>onChange(removeHelpFormRow(model,section.id,row.id))}>{t('حذف ردیف','Remove row')}</button>}
      </div>)}
      {section.repeatable&&<button type="button" className="secondary-button" style={{marginTop:8}} onClick={()=>onChange(addHelpFormRow(model,section.id,crypto.randomUUID()))}>{t('افزودن ردیف','Add row')}</button>}
-    </div>
+    </details>
    })}
   </div>)}
   {errors.length>0&&<div className="fw-validation" role="alert"><b>{t('کنترل‌های ساختاری نیازمند اصلاح','Structural validation issues')}</b><ul>{errors.slice(0,30).map((error,index)=><li key={index}>{error}</li>)}</ul>{errors.length>30&&<small>{t('و موارد بیشتر...','And more...')}</small>}</div>}
