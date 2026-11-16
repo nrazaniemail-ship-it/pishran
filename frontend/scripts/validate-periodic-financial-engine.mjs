@@ -768,6 +768,12 @@ assert.equal(comfarReference.loanRepaymentAudit.annualInterestByYear.length,5)
 assert.ok(Math.abs(comfarReference.loanRepaymentAudit.annualInterestByYear[0]-comfarReference.loanRepaymentAudit.firstOperatingYearInterest)<0.01)
 assert.ok(Math.abs(comfarReference.loanRepaymentAudit.annualPrincipalRepaymentsByYear.reduce((sum,value)=>sum+value,0)-comfarReference.loanRepaymentAudit.openingRepaymentBalance)<0.1,
   'Five annual principal repayments must amortize the reconstructed gross opening debt balance')
+const capexLoanAlternative=comfarReference.firstOperatingYearWorkingCapitalFunding.capexWorkbookAlternativeLoanSchedule
+assert.equal(capexLoanAlternative.installmentCount,20)
+assert.ok(Math.abs(capexLoanAlternative.quarterlyPayments.reduce((sum,value)=>sum+value,0)-capexLoanAlternative.aggregateQuarterlyPayment)<0.01)
+assert.ok(Math.abs(capexLoanAlternative.aggregateQuarterlyPayment-840992.2672863001)>20000,
+  'The CAPEX workbook three-loan financing alternative must remain distinct from the COMFAR 28% annuity baseline')
+assert.ok(Math.abs(capexLoanAlternative.workingCapitalLoanTotalDebtService-capexLoanAlternative.quarterlyPayments[2]*20)<0.01)
 assert.ok(projectReportSource.includes('row.taxRatePercent-referenceTax')
   && projectReportSource.includes('row.depreciation-referenceDepreciation')
   && projectReportSource.includes('row.changeInWorkingCapital-referenceWorkingCapital')
