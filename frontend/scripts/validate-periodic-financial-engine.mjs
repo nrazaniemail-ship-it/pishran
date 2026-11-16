@@ -683,6 +683,7 @@ assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   && projectReportSource.includes('periodicResult.rows.map'),
   'Project report must include the period-level financial schedule and key output metrics')
 assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
+  && projectReportSource.includes('hasCompleteFiscalYearCoverage')
   && projectReportSource.includes('fiscalYearStartMonth')
   && projectReportSource.includes('derivedDscr')
   && projectReportSource.includes('Quarter-by-quarter reconstructed debt-service reconciliation')
@@ -757,6 +758,8 @@ assert.equal(fiscalQuarterAggregation[1].equityContribution,10)
 assert.equal(fiscalQuarterAggregation[1].projectFreeCashFlow,70)
 assert.equal(fiscalQuarterAggregation[1].taxRatePercent,null,
   'Mixed intra-year tax rates must not be presented as one annual tax rate')
+assert.equal(engine.hasCompleteFiscalYearCoverage(fiscalQuarterRows,4,2),false,
+  'Partial quarterly schedules must not be certified as complete fiscal years')
 
 const hrcrAnnualAggregation = engine.aggregatePeriodicFinanceByFiscalYear(
   comfarAnnualPeriods.map((period,index)=>({
@@ -773,6 +776,12 @@ const hrcrAnnualAggregation = engine.aggregatePeriodicFinanceByFiscalYear(
   })),3,17
 )
 assert.equal(hrcrAnnualAggregation.length,17)
+assert.equal(engine.hasCompleteFiscalYearCoverage(comfarAnnualPeriods.map((period,index)=>({
+  period:index+1,startDate:period.startDate,endDate:period.endDate,days:period.days,
+  taxRatePercent:25,projectFreeCashFlow:0,equityContribution:0,equityWorkingCapitalContribution:0,
+  debtDrawdown:0,capitalizedInterest:0,depreciation:0,changeInWorkingCapital:0,
+  interestExpense:0,principal:0,debtService:0,cfads:0,
+})),3,17),true,'Full 17-year HRCR200 schedule must pass fiscal-year coverage')
 assert.equal(hrcrAnnualAggregation[0].projectFreeCashFlow,comfarCashFlows[0])
 assert.equal(hrcrAnnualAggregation[2].taxRatePercent,5)
 assert.equal(hrcrAnnualAggregation[0].equityContribution,8905157.3)
