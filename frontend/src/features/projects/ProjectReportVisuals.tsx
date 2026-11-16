@@ -249,7 +249,7 @@ export default function ProjectReportVisuals(props: Props) {
           <th>{t("سال مالی","Fiscal year",language)}</th><th>{t("جریان نقدی مرجع","COMFAR cash flow",language)}</th><th>{t("جریان نقدی پیشران","Pishran cash flow",language)}</th><th>{t("اختلاف","Variance",language)}</th>
           <th>{t("مالیات مرجع","Reference tax",language)}</th><th>{t("مالیات پیشران","Pishran tax",language)}</th><th>{t("اختلاف مالیات (واحد درصد)","Tax variance (pp)",language)}</th>
           <th>{t("استهلاک مرجع","Reference depreciation",language)}</th><th>{t("استهلاک پیشران","Pishran depreciation",language)}</th><th>{t("اختلاف استهلاک","Depreciation variance",language)}</th>
-          <th>{t("تغییر سرمایه در گردش مرجع","Reference change in working capital",language)}</th><th>{t("تغییر سرمایه در گردش پیشران","Pishran change in working capital",language)}</th><th>{t("اختلاف سرمایه در گردش","Working-capital variance",language)}</th>
+          <th>{t("تغییر سرمایه در گردش مرجع COMFAR","COMFAR reference working-capital movement",language)}</th><th>{t("افزایش سالانه طبق شیت OPEX","Annual increase per OPEX sheet",language)}</th><th>{t("تغییر سرمایه در گردش پیشران","Pishran change in working capital",language)}</th><th>{t("اختلاف پیشران با COMFAR","Pishran vs COMFAR variance",language)}</th>
           <th>{t("بهره مرجع (بازسازی‌شده)","Reference interest (reconstructed)",language)}</th><th>{t("بهره پیشران","Pishran interest",language)}</th><th>{t("اختلاف بهره","Interest variance",language)}</th>
           <th>{t("اصل مرجع (تطبیق‌شده با جریان مالی)","Reference principal (financing-flow reconciled)",language)}</th><th>{t("اصل وام پیشران","Pishran principal",language)}</th><th>{t("اختلاف اصل","Principal variance",language)}</th><th>CFADS</th><th>DSCR</th>
         </tr></thead><tbody>{comfarAnnualRows.map((row,index)=>{
@@ -258,6 +258,7 @@ export default function ProjectReportVisuals(props: Props) {
           const referenceTax=index<2?null:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.taxScheduleByOperatingYear[index-2]?.ratePercent
           const referenceDepreciation=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.depreciationByOperatingYear[index-2]?.[1]??0
           const referenceWorkingCapital=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.changeInWorkingCapitalByOperatingYear[index-2]?.[1]??0
+          const opexWorkingCapitalIncrease=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.firstOperatingYearWorkingCapitalFunding.opexWorkingCapitalByYear[index-2]?.annualIncrease??0
           const loanYearIndex=index-2
           const referenceInterest=loanYearIndex>=0&&loanYearIndex<5?HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.annualInterestByYear[loanYearIndex]:0
           const referencePrincipal=loanYearIndex>=0&&loanYearIndex<5?HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.annualPrincipalRepaymentsByYear[loanYearIndex]:0
@@ -265,7 +266,7 @@ export default function ProjectReportVisuals(props: Props) {
             <td>{fmtValue(referenceCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow-referenceCashFlow)}</td>
             <td>{referenceTax==null?'—':fmtValue(referenceTax,2)+'%'}</td><td>{row.taxRatePercent==null?'—':fmtValue(row.taxRatePercent,2)+'%'}</td><td>{referenceTax==null||row.taxRatePercent==null?'—':fmtValue(row.taxRatePercent-referenceTax,2)}</td>
             <td>{fmtValue(referenceDepreciation)}</td><td>{fmtValue(row.depreciation)}</td><td>{fmtValue(row.depreciation-referenceDepreciation)}</td>
-            <td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital-referenceWorkingCapital)}</td>
+            <td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(opexWorkingCapitalIncrease)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital-referenceWorkingCapital)}</td>
             <td>{fmtValue(referenceInterest)}</td><td>{fmtValue(row.interestExpense)}</td><td>{fmtValue(row.interestExpense-referenceInterest)}</td>
             <td>{fmtValue(referencePrincipal)}</td><td>{fmtValue(row.principal)}</td><td>{fmtValue(row.principal-referencePrincipal)}</td>
             <td>{fmtValue(row.cfads)}</td><td>{row.dscr==null?'—':fmtValue(row.dscr,3)+'x'}</td></tr>
@@ -304,9 +305,11 @@ export default function ProjectReportVisuals(props: Props) {
         </div>}
         {comfarAnnualRows.length===17&&<div className="fw-card">
           <h4>{t("کنترل تفصیلی خدمت بدهی در سال اول بهره‌برداری (۱۴۰۵)","First Operating-Year Debt-Service Check (1405)",language)}</h4>
-          <p className="fw-hint">{t("اقلام مرجع بهره و اصل از جمع چهار قسط فصلی بازسازی‌شده‌اند. CFADS و DSCR مرجع در این نما مشتق شده‌اند، نه ارقام مستقلاً چاپ‌شده در گزارش؛ مبنا: درآمد منهای هزینه عملیاتی، بازاریابی، مالیات ۵٪ و افزایش سرمایه در گردش.","Reference interest and principal are reconstructed from the four quarterly instalments. Reference CFADS and DSCR shown here are derived, not separately printed report values: revenue less operating costs, marketing, 5% tax and working-capital increase.",language)}</p>
+          <p className="fw-hint">{t("بهره و اصل مرجع از جمع چهار قسط فصلی بازسازی شده‌اند. افزایش سرمایه در گردش عملیاتی از شیت OPEX جداگانه نشان داده می‌شود؛ آورده سهامدار در شیت جریان مالی COMFAR یک منبع تأمین مالی است و الزاماً با مصرف سرمایه در گردش برابر نیست. CFADS و DSCR مرجع در این نما مشتق شده‌اند، نه ارقام مستقلاً چاپ‌شده در گزارش.","Reference interest and principal are reconstructed from four quarterly instalments. The operating working-capital increase from the OPEX sheet is shown separately; shareholder equity in the COMFAR finance-flow sheet is a funding source and is not necessarily equal to working-capital use. Reference CFADS and DSCR are derived, not separately printed report values.",language)}</p>
           <table className="fw-table"><thead><tr><th>{t("شاخص","Metric",language)}</th><th>{t("مرجع / بازسازی‌شده","Reference / reconstructed",language)}</th><th>{t("پیشران","Pishran",language)}</th><th>{t("اختلاف","Variance",language)}</th></tr></thead><tbody>
             {[
+              [t("افزایش سرمایه در گردش طبق OPEX","OPEX working-capital increase",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.firstOperatingYearWorkingCapitalFunding.opexWorkingCapitalByYear[0].annualIncrease,comfarAnnualRows[2].changeInWorkingCapital],
+              [t("آورده سهامدار ثبت‌شده در جریان مالی COMFAR","Shareholder contribution in COMFAR finance flows",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.firstOperatingYearWorkingCapitalFunding.comfarEquityContribution,comfarAnnualRows[2].equityContribution],
               [t("بهره نقدی","Cash interest",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.firstOperatingYearInterest,comfarAnnualRows[2].interestExpense],
               [t("بازپرداخت اصل","Principal repayment",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.firstOperatingYearPrincipal,comfarAnnualRows[2].principal],
               [t("خدمت بدهی","Debt service",language),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.firstOperatingYearDebtService,comfarAnnualRows[2].debtService],
