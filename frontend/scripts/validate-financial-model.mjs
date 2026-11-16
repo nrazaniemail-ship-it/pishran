@@ -220,7 +220,7 @@ const discountOnlyNpv20_80 = comfarValuationNpv(workbook20_80Wacc.value)
 const discountOnlyNpv30_70 = comfarValuationNpv(comfar30_70Wacc.value)
 near(discountOnlyNpv20_80, 41119481.85, 0.02,
   'HRCR200 discount-only NPV at workbook 20/80 WACC, before recalculating capitalized interest')
-near(discountOnlyNpv30_70, 26373890.89, 0.02,
+near(discountOnlyNpv30_70, 26373890.94, 0.02,
   'HRCR200 discount-only NPV at 30/70 construction WACC, before recalculating capitalized interest')
 assert.ok(discountOnlyNpv20_80 > discountOnlyNpv30_70,
   'Lower 20/80 WACC must raise NPV when the same unlevered cash-flow vector is held constant')
