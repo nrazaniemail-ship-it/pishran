@@ -65,7 +65,7 @@ export function bindFixedAssetDraftsToPeriodicFinance(input:{
     if(!asset.depreciation.method)issues.push('Depreciation method is required for asset '+asset.id+'.')
     if(asset.depreciation.method!=='linear-to-zero'&&asset.depreciation.method&&asset.depreciation.salvagePercent===null)
       issues.push('Salvage percentage must be explicit for asset '+asset.id+'.')
-    if(asset.depreciation.method!=='none'&&(!asset.depreciation.usefulLifeMonths||!asset.depreciation.firstDepreciationYearMonths))
+    if(asset.depreciation.method&&(!asset.depreciation.usefulLifeMonths||!asset.depreciation.firstDepreciationYearMonths))
       issues.push('Useful life and first depreciation-year months are required for asset '+asset.id+'.')
     if(asset.depreciation.startMode==='production-start'&&!productionStartDate)
       issues.push('Production start date is required for production-start depreciation: '+asset.id+'.')
@@ -91,8 +91,7 @@ export function bindFixedAssetDraftsToPeriodicFinance(input:{
       const startingAtDate=asset.depreciation.startMode==='specified-date'
         ?asset.depreciation.startDate
         :asset.depreciation.startMode==='production-start'?productionStartDate:undefined
-      const method=asset.depreciation.method==='none'?'none':
-        asset.depreciation.method?methodMap[asset.depreciation.method]:'none'
+      const method=asset.depreciation.method?methodMap[asset.depreciation.method]:'none'
       assets.push({
         id:vintage.id,name:asset.metadata.description||asset.id,assetClass:'fixed',
         originalValue:vintage.value,initialBookValue:vintage.value,
