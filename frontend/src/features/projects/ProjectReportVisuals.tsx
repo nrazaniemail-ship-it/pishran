@@ -304,6 +304,22 @@ export default function ProjectReportVisuals(props: Props) {
             </tr>})}</tbody></table></div></>:<p className="fw-hint">{t("برای تطبیق فصلی، تناوب پروژه را روی سه‌ماهه قرار دهید و زمان‌بندی وام را طوری تعریف کنید که ۲۰ دوره بازپرداخت فصلی ثبت شود. در تناوب سالانه یا ماهانه این مقایسه به‌صورت مستقیم فعال نمی‌شود.","For a direct quarterly comparison, set the project frequency to quarterly and configure the loan so that 20 quarterly repayment periods are present. This comparison is not activated directly for annual or monthly frequency.",language)}</p>}
         </div>}
         {comfarAnnualRows.length===17&&<div className="fw-card">
+          <h4>{t("تطبیق سرمایه در گردش و مانده نقدی تأمین‌شده (۱۴۰۵)","Working-Capital Funding and Cash-Buffer Reconciliation (1405)",language)}</h4>
+          <p className="fw-hint">{t("در شیت سرمایه در گردش OPEX، نیاز خالص سال اول ۳٬۲۱۶٬۷۵۹٫۳۲ است؛ شیت جریان نقدی مالی COMFAR، آورده سهامدار ۳٬۳۰۹٬۱۴۴٫۵۳ را ثبت می‌کند. اختلاف ۹۲٬۳۸۵٫۲۱ به‌عنوان وجه نقد باقی‌مانده نمایش داده می‌شود، نه هزینه سرمایه در گردش یا منبع مالی فرضی.","The OPEX working-capital sheet reports 3,216,759.32 net working-capital use in year one; the COMFAR finance cash-flow sheet records 3,309,144.53 of shareholder funding. The 92,385.21 difference is shown as retained cash, not as additional working-capital expense or an assumed financing source.",language)}</p>
+          {(()=>{
+            const reference=HOT_ROLLING_200KT_AUDIT.financingAlternativesInWorkbook.firstOperatingYear1405
+            const pishranYear=comfarAnnualRows[2]
+            const pishranContribution=pishranYear.rows.reduce((sum,row)=>sum+row.equityWorkingCapitalContribution,0)
+            const pishranBuffer=pishranContribution-pishranYear.changeInWorkingCapital
+            const referenceBuffer=reference.comfarEquityContribution-reference.opexFirstYearWorkingCapitalRequirement
+            return <table className="fw-table"><thead><tr><th>{t("شاخص","Metric",language)}</th><th>{t("مرجع","Reference",language)}</th><th>{t("پیشران","Pishran",language)}</th><th>{t("اختلاف","Variance",language)}</th></tr></thead><tbody>
+              <tr><td>{t("آورده سهامدار سرمایه در گردش","Shareholder WC contribution",language)}</td><td>{fmtValue(reference.comfarEquityContribution)}</td><td>{fmtValue(pishranContribution)}</td><td>{fmtValue(pishranContribution-reference.comfarEquityContribution)}</td></tr>
+              <tr><td>{t("افزایش سرمایه در گردش","Working-capital increase",language)}</td><td>{fmtValue(reference.opexFirstYearWorkingCapitalRequirement)}</td><td>{fmtValue(pishranYear.changeInWorkingCapital)}</td><td>{fmtValue(pishranYear.changeInWorkingCapital-reference.opexFirstYearWorkingCapitalRequirement)}</td></tr>
+              <tr><td>{t("وجه نقد باقی‌مانده از تأمین سرمایه در گردش","Cash funding buffer",language)}</td><td>{fmtValue(referenceBuffer)}</td><td>{fmtValue(pishranBuffer)}</td><td>{fmtValue(pishranBuffer-referenceBuffer)}</td></tr>
+            </tbody></table>
+          })()}
+        </div>}
+        {comfarAnnualRows.length===17&&<div className="fw-card">
           <h4>{t("کنترل تفصیلی خدمت بدهی در سال اول بهره‌برداری (۱۴۰۵)","First Operating-Year Debt-Service Check (1405)",language)}</h4>
           <p className="fw-hint">{t("بهره و اصل مرجع از جمع چهار قسط فصلی بازسازی شده‌اند. افزایش سرمایه در گردش عملیاتی از شیت OPEX جداگانه نشان داده می‌شود؛ آورده سهامدار در شیت جریان مالی COMFAR یک منبع تأمین مالی است و الزاماً با مصرف سرمایه در گردش برابر نیست. CFADS و DSCR مرجع در این نما مشتق شده‌اند، نه ارقام مستقلاً چاپ‌شده در گزارش.","Reference interest and principal are reconstructed from four quarterly instalments. The operating working-capital increase from the OPEX sheet is shown separately; shareholder equity in the COMFAR finance-flow sheet is a funding source and is not necessarily equal to working-capital use. Reference CFADS and DSCR are derived, not separately printed report values.",language)}</p>
           <table className="fw-table"><thead><tr><th>{t("شاخص","Metric",language)}</th><th>{t("مرجع / بازسازی‌شده","Reference / reconstructed",language)}</th><th>{t("پیشران","Pishran",language)}</th><th>{t("اختلاف","Variance",language)}</th></tr></thead><tbody>
