@@ -19,6 +19,7 @@ const projects=[
  {id:'sample-hr',name:'نورد گرم ورق-تولید کلاف',templateId:'raw',capacity:'200000',location:'کاشان',industry:'فولاد',status:'draft',createdAt:'',updatedAt:''},
  {id:'sample-old-template',name:'هر نامی',templateId:'hot-rolling-200kt',capacity:'',location:'',industry:'فولاد',status:'draft',createdAt:'',updatedAt:''},
  {id:'sample-dri',name:'واحد احیاء مستقیم',capacity:'',location:'',industry:'فولاد',status:'draft',createdAt:'',updatedAt:''},
+ {id:'sample-dash',name:'پروژه نورد گرم ورق – تولید کلاف',capacity:'',location:'',industry:'فولاد',status:'draft',createdAt:'',updatedAt:''},
  {id:'user-hotrolling',name:'نورد گرم ورق توسعه فاز دوم',templateId:'raw',capacity:'',location:'',industry:'صنعتی',status:'draft',createdAt:'',updatedAt:''},
  {id:'user-raw',name:'پروژه آزمایشی کاربر',templateId:'raw',capacity:'',location:'',industry:'سایر صنایع',status:'draft',createdAt:'',updatedAt:''}
 ]
@@ -28,6 +29,7 @@ assert.deepEqual(remaining.map(x=>x.id),['user-hotrolling','user-raw'])
 assert.deepEqual((await repository.listProjects()).map(x=>x.id),['user-hotrolling','user-raw'])
 assert.ok(removed.includes('feasibility:project:sample-hr:v1'))
 assert.ok(removed.includes('feasibility:project:sample-old-template:v1'))
+assert.ok(removed.includes('feasibility:project:sample-dash:v1'))
 assert.ok(removed.includes('projects:workbook-seed:v1'))
 assert.ok(removed.includes('projects:dri-direct-reduction-seed:v1'))
 console.log('Project sample cleanup and raw-template retention: all assertions passed.')
