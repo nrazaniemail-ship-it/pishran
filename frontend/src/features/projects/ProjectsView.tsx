@@ -100,7 +100,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
         </label>
         {isSteel ? <>
           <label>{t('نوع پروژه','Project Type')}
-            <select required value={projectType} disabled={templateId === 'hot-rolling-200kt'} onChange={e => changeSteelProject(e.target.value)}>
+            <select required value={projectType} onChange={e => changeSteelProject(e.target.value)}>
               <option value="" disabled>{t('ابتدا نوع پروژه را انتخاب کنید','Select a project type first')}</option>
               {STEEL_PROJECT_OPTIONS.map(option => <option key={option.name} value={option.name}>{en ? (projectNames[option.name] ?? option.name) : option.name}</option>)}
             </select>
