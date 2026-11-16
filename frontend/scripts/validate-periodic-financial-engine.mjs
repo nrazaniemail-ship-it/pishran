@@ -32,6 +32,10 @@ const partnerAllocation = partnerFinance.allocateJointVentureCashFlows({
   {id:'p2',name:'Partner B',sharePercent:40,capitalContribution:40,profitSharePercent:70},
 ],50)
 assert.equal(partnerAllocation.valid,true,partnerAllocation.warnings.join('; '))
+assert.equal(partnerAllocation.rows[0].expectedCapitalContribution,60)
+assert.equal(partnerAllocation.rows[0].capitalContributionVariance,0)
+assert.equal(partnerAllocation.rows[1].expectedCapitalContribution,40)
+assert.equal(partnerAllocation.rows[1].capitalContributionVariance,0)
 assert.equal(partnerAllocation.rows[0].negativeCashFlowAllocation,-60)
 assert.equal(partnerAllocation.rows[1].negativeCashFlowAllocation,-40)
 assert.equal(partnerAllocation.rows[0].positiveCashFlowDistribution,45)
@@ -707,6 +711,7 @@ assert.ok(feasibilityWizardSource.includes('partnerDistributionPercent={m.partne
   && feasibilityWizardSource.includes('درصد جریان نقدی مثبت قابل تقسیم')
   && advancedFinanceSource.includes('allocateJointVentureCashFlows')
   && advancedFinanceSource.includes('onPartnerFinanceResult')
+  && advancedFinanceSource.includes('expectedCapitalContribution')
   && feasibilityWizardSource.includes('reportPartnerFinance')
   && feasibilityWizardSource.includes('partnerFinanceResult={reportPartnerFinance}')
   && advancedFinanceSource.includes('Partner net CF'),
@@ -714,7 +719,8 @@ assert.ok(feasibilityWizardSource.includes('partnerDistributionPercent={m.partne
 assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   && projectReportSource.includes('periodicResult.rows.map')
   && projectReportSource.includes('Joint-Venture Partner Cash-Flow Allocation')
-  && projectReportSource.includes('allocationReconciliationVariance'),
+  && projectReportSource.includes('allocationReconciliationVariance')
+  && projectReportSource.includes('expectedCapitalContribution'),
   'Project report must include the period-level financial schedule and key output metrics')
 assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
   && projectReportSource.includes('hasCompleteFiscalYearCoverage')
