@@ -1443,15 +1443,35 @@ export function buildPeriodicThreeFinancialStatements(
     paidInCapital: opening.paidInCapital ?? 0, retainedEarnings: opening.retainedEarnings ?? 0,
   }
   if (Object.values(balances).some(value => !validFinite(value))) return []
-  const openingDebtBase = balances.debt
+  const loanSchedules = Object.values(result.loanSchedules ?? {})
+  if (loanSchedules.some(schedule => !Array.isArray(schedule) || schedule.length !== result.rows.length ||
+      schedule.some(row => !row || ![row.openingBalance, row.drawdown, row.capitalizedInterest,
+        row.capitalizedFinancingFees, row.principal, row.closingBalance].every(validFinite)))) return []
+  const scheduledOpeningDebt = loanSchedules.reduce((sum, schedule) => sum + (schedule[0]?.openingBalance ?? 0), 0)
+  if (scheduledOpeningDebt > balances.debt + tolerance) return []
+  // Opening statement debt is the total liability. Loan schedules account for
+  // only the facilities explicitly modelled; any remaining opening debt is
+  // carried forward as an unmodelled legacy liability.
+  const unmodelledOpeningDebt = balances.debt - scheduledOpeningDebt
   let cash = balances.cash, debt = balances.debt, netFixedAssets = balances.netFixedAssets
   let netWorkingCapital = balances.netWorkingCapital, deferredPreOperatingAssets = balances.deferredPreOperatingAssets
   let paidInCapital = balances.paidInCapital, retainedEarnings = balances.retainedEarnings
   const statements: PeriodicFinancialStatement[] = []
   for (let index = 0; index < result.rows.length; index++) {
     const row = result.rows[index]
-    const loanClosing = Object.values(result.loanSchedules).reduce((sum, schedule) => sum + (schedule[index]?.closingBalance ?? 0), 0)
-    const closingDebt = Object.keys(result.loanSchedules).length ? openingDebtBase + loanClosing : debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal
+    const scheduledPeriod = loanSchedules.reduce((sum, schedule) => ({
+      drawdown: sum.drawdown + schedule[index].drawdown,
+      capitalizedInterest: sum.capitalizedInterest + schedule[index].capitalizedInterest,
+      capitalizedFinancingFees: sum.capitalizedFinancingFees + schedule[index].capitalizedFinancingFees,
+      principal: sum.principal + schedule[index].principal,
+      closingBalance: sum.closingBalance + schedule[index].closingBalance,
+    }), { drawdown: 0, capitalizedInterest: 0, capitalizedFinancingFees: 0, principal: 0, closingBalance: 0 })
+    if (Math.abs(scheduledPeriod.drawdown - row.debtDrawdown) > tolerance ||
+        Math.abs(scheduledPeriod.capitalizedInterest - row.capitalizedInterest) > tolerance ||
+        Math.abs(scheduledPeriod.capitalizedFinancingFees - row.capitalizedFinancingFees) > tolerance ||
+        Math.abs(scheduledPeriod.principal - row.principal) > tolerance) return []
+    const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal
+    if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance)) > tolerance) return []
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
     const cashOperatingCosts = row.variableCost + row.fixedCost
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
