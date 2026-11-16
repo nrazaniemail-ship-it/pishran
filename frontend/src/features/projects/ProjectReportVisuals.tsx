@@ -370,12 +370,12 @@ export default function ProjectReportVisuals(props: Props) {
       <div style={{overflowX:'auto',maxHeight:360}}><table className="fw-table"><thead><tr>
         <th>{t('دوره','Period',language)}</th><th>{t('تاریخ','Dates',language)}</th>
         <th>{t('جریان نقد سهامداران','Total equity CF',language)}</th><th>{t('خالص تخصیص به شرکا','Partner net CF',language)}</th>
-        <th>{t('وجه نقد نگه‌داشته‌شده','Retained cash',language)}</th><th>{t('اختلاف کنترل','Reconciliation variance',language)}</th>
+        <th>{t('توزیع مثبت به شرکا','Positive distributions',language)}</th><th>{t('وجه نقد نگه‌داشته‌شده','Retained cash',language)}</th><th>{t('اختلاف کنترل','Reconciliation variance',language)}</th>
         {props.partnerFinanceResult.rows.map(row=><th key={row.partnerId}>{row.partnerName}</th>)}
       </tr></thead><tbody>{props.partnerFinanceResult.periods.map((period,index)=><tr key={period.period}>
         <td>{period.period}</td><td>{period.startDate} – {period.endDate}</td>
         <td>{fmtValue(period.totalEquityCashFlow)}</td><td>{fmtValue(period.partnerNetCashFlow)}</td>
-        <td>{fmtValue(period.retainedPositiveCashFlow)}</td><td>{fmtValue(period.reconciliationVariance)}</td>
+        <td>{fmtValue(period.distributedPositiveCashFlow)}</td><td>{fmtValue(period.retainedPositiveCashFlow)}</td><td>{fmtValue(period.reconciliationVariance)}</td>
         {props.partnerFinanceResult!.rows.map(row=><td key={row.partnerId}>{fmtValue(row.periods[index]?.allocatedCashFlow??0)}</td>)}
       </tr>)}</tbody></table></div>
     </div>}
