@@ -33,6 +33,8 @@ const groupLabels: Record<string,[string,string]> = {
 export default function ProjectModelStructurePanel({configuration,language='fa'}:Props) {
  const en=language==='en'
  const nodes=getVisibleProjectModelNodes(configuration)
+ const detailLevel=(node:ProjectModelNodeDefinition)=>configuration.analysisLevel==='opportunity'?node.opportunityLevel:node.feasibilityLevel
+ const detailLabel=(node:ProjectModelNodeDefinition)=>{const level=detailLevel(node);if(en)return level==='required'?'Core input':level==='reduced'?'Summary input':'Optional detail';return level==='required'?'ورودی اصلی':level==='reduced'?'ورودی خلاصه':'جزئیات اختیاری'}
  const groups=[...new Set(nodes.map(node=>node.group))]
  const label=(node:ProjectModelNodeDefinition)=>labels[node.id]?.[en?1:0]??node.id
  return <section className="fw-card" style={{marginTop:16}}>
@@ -44,7 +46,7 @@ export default function ProjectModelStructurePanel({configuration,language='fa'}
     {nodes.filter(node=>node.group===group).map(node=><div key={node.id} className="fw-validation" style={{padding:10}}>
      <b>{label(node)}</b>
      <div className="fw-hint">{en?'Input fields defined':'فیلدهای ساختاری تعریف‌شده'}: {node.fields.length}</div>
-     <div className="fw-hint">{en?(node.feasibilityLevel==='required'?'Feasibility detail':'Optional / configurable'):(node.feasibilityLevel==='required'?'بخش اصلی امکان‌سنجی':'بخش اختیاری / قابل تنظیم')}</div>
+     <div className="fw-hint">{detailLabel(node)}</div>
     </div>)}
    </div>
   </div>)}
