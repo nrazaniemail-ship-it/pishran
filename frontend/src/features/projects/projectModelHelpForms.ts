@@ -124,8 +124,8 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
     if((field.type==='number'||field.type==='percent')&&v!==null&&v!==''&&(typeof v!=='number'||!Number.isFinite(v)))errors.push(section.id+':'+i+':invalid-number:'+field.key)
     if(field.type==='percent'&&typeof v==='number'&&(v<0||v>100))errors.push(section.id+':'+i+':percent-out-of-range:'+field.key)
     if(field.type==='select'&&v!==null&&v!==''&&field.options&&!field.options.includes(String(v)))errors.push(section.id+':'+i+':invalid-option:'+field.key)
-    if(field.type==='date'&&typeof v==='string'&&v&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(v))errors.push(section.id+':'+i+':invalid-date:'+field.key)
-    if(field.type==='date'&&typeof v==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(v)){
+    if(field.type==='date'&&typeof v==='string'&&v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))errors.push(section.id+':'+i+':invalid-date:'+field.key)
+    if(field.type==='date'&&typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)){
      const [year,month,day]=v.split('-').map(Number)
      const date=new Date(Date.UTC(year,month-1,day))
      if(date.getUTCFullYear()!==year||date.getUTCMonth()!==month-1||date.getUTCDate()!==day)errors.push(section.id+':'+i+':invalid-date:'+field.key)
