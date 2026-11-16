@@ -345,7 +345,6 @@ export function postForeignExchangeIntoThreeStatements(
     const totalEquity = statement.balanceSheet.totalEquity + cumulativeRetainedEarningsAdjustment
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
-    const priorBalanceDifference = statement.balanceSheet.balanceDifference
     const reconciled = statement.balanceSheet.reconciled && Math.abs(balanceDifference) <= 0.01
 
     const cashFlowStatement = {
