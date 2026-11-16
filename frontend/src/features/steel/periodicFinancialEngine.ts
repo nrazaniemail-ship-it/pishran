@@ -768,7 +768,7 @@ export function calculatePeriodicComfarAssetLifecycle(
       !['fixed','preproduction'].includes(asset.assetClass)||
       !['none','linear-to-zero','linear-to-scrap','accelerated','sum-of-years-digits'].includes(asset.method)||
       (asset.method!=='none'&&lifeMonths<1)||
-      (asset.method==='accelerated'&&(!validFinite(asset.ratePercent)||asset.ratePercent!<=0||asset.ratePercent!>100))||
+      (asset.method==='accelerated'&&(asset.ratePercent==null||!validFinite(asset.ratePercent)||asset.ratePercent<=0||asset.ratePercent>100))||
       (asset.method==='sum-of-years-digits'&&(asset.lengthMonths!==0||asset.lengthYears<1||asset.firstDepreciationMonths!==12))) {
       warnings.push(asset.name+': periodic depreciation asset parameters or acquisition/start dates are invalid.')
       continue
@@ -790,7 +790,7 @@ export function calculatePeriodicComfarAssetLifecycle(
     const sale=sales.find(row=>row.assetId===asset.id)
     const saleDate=sale?parseIsoDateUtc(sale.saleDate):null
     if(sale&&(!saleDate||saleDate.getTime()<acquisitionDate.getTime()||
-      (sale.priceMode==='self-defined'&&(!validFinite(sale.selfDefinedPrice)||sale.selfDefinedPrice!<0||
+      (sale.priceMode==='self-defined'&&(sale.selfDefinedPrice==null||!validFinite(sale.selfDefinedPrice)||sale.selfDefinedPrice<0||
        !validFinite(sale.exchangeRateToLocal)||sale.exchangeRateToLocal<=0)))) {
       warnings.push(asset.name+': periodic disposal date or proceeds are invalid.')
       continue
