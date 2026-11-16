@@ -1443,6 +1443,19 @@ const integratedCombinedLoan=engine.calculateIntegratedPeriodicFinance({
 assert.equal(integratedCombinedLoan.valid,true,integratedCombinedLoan.warnings.join('; '))
 assert.deepEqual(integratedCombinedLoan.loanSchedules['combined-floating-capitalized-custom'],combinedLoanOracle.rows,
   'Integrated project finance must preserve the independently verified combined loan schedule')
+const integratedLoanRows=integratedCombinedLoan.loanSchedules['combined-floating-capitalized-custom']
+assert.ok(integratedCombinedLoan.rows.every((row,index)=>
+  Math.abs(row.interestExpense-(integratedLoanRows[index].interestExpense+integratedLoanRows[index].financingFeeExpense))<1e-8),
+  'Project interest expense must include cash financing and commitment fees exactly once')
+assert.ok(integratedCombinedLoan.rows.every((row,index)=>
+  Math.abs(row.debtService-integratedLoanRows[index].debtService)<1e-8),
+  'Integrated debt service and DSCR denominator must preserve each loan schedule cash debt service')
+assert.ok(integratedCombinedLoan.rows.every((row,index)=>
+  Math.abs(row.equityFreeCashFlow-(-row.equityContribution+row.revenue-row.variableCost-row.fixedCost-
+    row.tax-row.interestExpense-row.principal-row.maintenanceCapex-row.equityWorkingCapitalContribution+
+    row.assetSaleProceeds+row.salvageValue))<1e-8),
+  'Equity cash flow must include cash commitment fees and financing fees once')
+
 const integratedCombinedStatements=engine.buildPeriodicThreeFinancialStatements(integratedCombinedLoan)
 assert.ok(integratedCombinedStatements.every(row=>row.balanceSheet.reconciled),
   'Combined floating-rate, capitalized-fee and custom-repayment financing must reconcile all three statements')
