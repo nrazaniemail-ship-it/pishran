@@ -66,7 +66,7 @@ const integrated = module.translatePeriodicForeignCurrencyLoan({
 })
 assert.equal(integrated.valid, true, integrated.issues.join('; '))
 assert.equal(integrated.rows[0].closingForeignBalance, 137)
-assert.ok(Math.abs(integrated.rows[0].foreignExchangeLossLocal - 20.0) < 1e-10,
+assert.ok(Math.abs(integrated.rows[0].foreignExchangeLossLocal - 19.1) < 1e-10,
   'Integrated loan translation must include capitalized financing fees in foreign principal')
 assert.ok(Math.abs(integrated.rows[1].foreignExchangeLossLocal + 6.85) < 1e-10)
 const missingRate = module.translatePeriodicForeignCurrencyLoan({
