@@ -141,7 +141,8 @@ export function buildProductionSalesInventorySchedule(
     const map=resolveRows(product.periods,periods,'Sales for product '+product.productId,issues)
     if (map.size!==periods.length) issues.push('Sales and closing finished-goods data must be provided for every period for product '+product.productId+'.')
     salesByProduct.set(product.productId,map)
-    if (!nonNegative(openingFinishedGoodsByProduct[product.productId]))
+    const openingQuantity=openingFinishedGoodsByProduct[product.productId]??product.openingFinishedGoodsQuantity
+    if (!nonNegative(openingQuantity))
       issues.push('Explicit opening finished-goods quantity is required for product '+product.productId+'.')
   }
   const costRowsByPeriod=new Map<ProductionCostFormDraft,Map<number,ProductionCostFormDraft['adjustments'][number]>>()
@@ -162,7 +163,7 @@ export function buildProductionSalesInventorySchedule(
   const openingByProduct={...openingFinishedGoodsByProduct}
   const closingByProduct:Record<string,number[]>={}
   for (const product of drafts.sales) {
-    let opening=openingByProduct[product.productId]
+    let opening=openingByProduct[product.productId]??product.openingFinishedGoodsQuantity??Number.NaN
     const productClosings:number[]=[]
     const salesMap=salesByProduct.get(product.productId)!
     for (let i=0;i<periods.length;i++) {
