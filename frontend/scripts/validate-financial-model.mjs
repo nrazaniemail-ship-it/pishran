@@ -324,14 +324,18 @@ const [projectsViewSource,projectRepositorySource,rollingWorkspaceSource,wizardS
 ])
 assert.ok(projectsViewSource.includes('قالب پروژه جدید را انتخاب کنید')
   && projectsViewSource.includes('قالب خام')
-  && projectsViewSource.includes('قالب پروژه نورد ورق گرم'),
-  'New project must ask the user to choose one of the two named templates')
-assert.ok(projectRepositorySource.includes("ProjectTemplateId = 'raw' | 'hot-rolling-200kt'")
-  && projectRepositorySource.includes('templateId?: ProjectTemplateId'),
-  'Project template identity must be persisted with each project')
-assert.ok(rollingWorkspaceSource.includes("project.templateId==='hot-rolling-200kt'")
+  && !projectsViewSource.includes('قالب پروژه نورد ورق گرم')
+  && !projectsViewSource.includes('hot-rolling-200kt'),
+  'New project creation must expose only the blank template')
+assert.ok(projectRepositorySource.includes("ProjectTemplateId = 'raw'")
+  && projectRepositorySource.includes('templateId?: ProjectTemplateId')
+  && projectRepositorySource.includes('removeSampleProjects')
+  && projectRepositorySource.includes('projects:workbook-seed:v1')
+  && projectRepositorySource.includes('projects:dri-direct-reduction-seed:v1'),
+  'Only the raw template remains and saved demonstration projects are removed')
+assert.ok(rollingWorkspaceSource.includes("(project.templateId as string)==='hot-rolling-200kt'")
   && rollingWorkspaceSource.includes("!project.templateId&&project.steelStage?.includes('نورد گرم')"),
-  'Only explicit hot-rolling template or legacy hot-rolling projects may load benchmark defaults')
+  'Legacy project detection remains isolated from new raw-template projects')
 assert.ok(wizardSource.includes("project.templateId==='raw'"),
   'Raw template must initialize an empty feasibility model')
 assert.ok(projectsViewSource.indexOf('value={projectType}') < projectsViewSource.indexOf('{steelStage && <label>')
