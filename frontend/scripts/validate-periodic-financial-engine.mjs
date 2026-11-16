@@ -1565,3 +1565,26 @@ assert.ok(projectReportSource.includes('equityIrrPercent')
   && projectReportSource.includes('تا تطبیق جریان نقدی سهام‌دار با ۲۰ قسط فصلی و تاریخ‌های پرداخت، اختلاف قابل تأیید نیست')
   && projectReportSource.includes('Variance not certified until shareholder cash flows are matched to all 20 quarterly instalments and payment dates'),
   'The report must keep the 57.99% COMFAR equity IRR explicitly uncertified until shareholder cash flows and quarterly debt service are reconciled')
+
+
+// COMFAR shareholder-return bridge: surplus/deficit after debt service,
+// plus dividends and equity capital refunds, less equity capital paid.
+const comfarEquityBridgeControl = engine.calculateIntegratedPeriodicFinance({
+  periods:quarter,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
+  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
+  annualTaxRates:[0],annualEquityContributions:[0],workingCapitalByPeriod:[0,0,0,0],
+  loans:[],dividendsByPeriod:[0,10,0,0],equityCapitalRefundsByPeriod:[0,0,5,0],
+})
+assert.equal(comfarEquityBridgeControl.valid,true,comfarEquityBridgeControl.warnings.join('; '))
+assert.deepEqual(comfarEquityBridgeControl.rows.map(row=>row.equityFreeCashFlow),[0,10,5,0],
+  'COMFAR shareholder return must include dividends and refunded equity as inflows exactly once')
+const invalidComfarEquityBridge = engine.calculateIntegratedPeriodicFinance({
+  periods:quarter,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
+  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
+  annualTaxRates:[0],annualEquityContributions:[0],workingCapitalByPeriod:[0,0,0,0],
+  loans:[],dividendsByPeriod:[0,10],equityCapitalRefundsByPeriod:[0,0,5,0],
+})
+assert.equal(invalidComfarEquityBridge.valid,false,
+  'Shareholder distributions must have exactly one non-negative value per project period')
