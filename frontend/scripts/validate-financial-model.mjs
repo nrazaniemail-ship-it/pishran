@@ -1234,6 +1234,15 @@ const scenarioResults = engine.calculateFinancialScenarios({
 })
 assert.ok(scenarioResults.optimistic.npvProject > scenarioResults.base.npvProject,'Optimistic scenario must exceed base NPV')
 assert.ok(scenarioResults.pessimistic.npvProject < scenarioResults.base.npvProject,'Pessimistic scenario must be below base NPV')
+assert.ok(sensitivity.flat().every(cell=>Number.isFinite(cell.npv)&&(cell.irr===null||Number.isFinite(cell.irr))),
+  'Every multi-variable sensitivity cell must return a finite NPV and a finite or explicitly unavailable IRR')
+for (const [scenarioName,scenario] of Object.entries(scenarioResults)) {
+  const scenarioStatements=engine.buildThreeFinancialStatements(scenario.years)
+  assert.equal(scenarioStatements.length,scenario.years.length,
+    scenarioName+' scenario must produce all three statements for every model year')
+  assert.ok(scenarioStatements.every(row=>row.balanceSheet.reconciled),
+    scenarioName+' scenario must reconcile assets, liabilities and equity without a plug')
+}
 
 console.log('PASS: integrated WACC, staged loan amortization, working capital, terminal value, cash flow reconciliation, NPV and project/equity IRR')
 console.log('PASS: asset-level depreciation, tax loss carry-forward, multi-variable sensitivity, scenarios and three-statement balance-sheet reconciliation')
