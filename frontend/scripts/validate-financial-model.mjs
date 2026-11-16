@@ -802,6 +802,13 @@ near(hrcrAssetBridge.preproductionTotal,workbookAudit.HOT_ROLLING_200KT_AUDIT.ca
 assert.equal(hrcrAssetBridge.status,'matched','HRCR fixed assets and preproduction expenditures must reconcile as separate categories')
 const hrcrAssetValidation=foundation.validateFixedInvestmentItems(hrcrDepreciationAssets,reference.createHotRollingCoilProjectFoundation())
 assert.equal(hrcrAssetValidation.filter(issue=>issue.severity==='error').length,0,'HRCR seed fractional depreciation lives must pass fixed asset validation')
+const hrcrMonthlyAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(
+  hrcrDepreciationAssets,1403,17,'monthly',reference.createHotRollingCoilProjectFoundation()
+)
+assert.ok(hrcrMonthlyAssetBuild.assets.length>=18,
+  'The fixed investment register must preserve asset acquisition vintages for monthly calendar depreciation')
+assert.ok(!hrcrMonthlyAssetBuild.warnings.some(warning=>warning.includes('only computes an annual schedule')),
+  'Monthly projects must no longer be blocked by the annual-only asset register guard')
 const hrcrAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItems(
   hrcrDepreciationAssets,1403,17,'annual',reference.createHotRollingCoilProjectFoundation()
 )
