@@ -55,7 +55,8 @@ export async function deleteProject(id: string): Promise<void> {
 
 /**
  * Remove built-in demonstration projects and their project-specific draft data.
- * User-created raw-template projects and their saved drafts are preserved.
+ * Migrate every surviving project to the single raw template while preserving
+ * user-entered model drafts and removing legacy stage-specific routing metadata.
  */
 export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
   const projects = await listProjects()
