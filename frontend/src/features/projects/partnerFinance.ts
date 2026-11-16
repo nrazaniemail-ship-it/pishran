@@ -72,12 +72,13 @@ export function allocateJointVentureCashFlows(
     totalScheduledEquityContribution: 0,totalDeclaredCapitalContribution: 0,
     declaredCapitalContributionVariance: 0,distributedPositiveCashFlow: 0,retainedPositiveCashFlow: 0,
   })
-  const validIsoDate=(value:string):boolean=>{
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false
+  const validIsoDate=(value:unknown):value is string=>{
+    if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false
     const parsed=new Date(`${value}T00:00:00.000Z`)
     return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===value
   }
-  const scheduleRowsValid=finance.rows.length>0&&finance.rows.every((period,index)=>{
+  const scheduleRowsValid=Array.isArray(finance?.rows)&&finance.rows.length>0&&finance.rows.every((period,index)=>{
+    if(!period||typeof period!=='object')return false
     const start=validIsoDate(period.startDate),end=validIsoDate(period.endDate)
     const startTime=start?Date.parse(`${period.startDate}T00:00:00.000Z`):NaN
     const endTime=end?Date.parse(`${period.endDate}T00:00:00.000Z`):NaN
@@ -94,7 +95,7 @@ export function allocateJointVentureCashFlows(
   const rowScheduledEquityContribution=finance.rows.reduce((sum,period)=>
     sum+(Number.isFinite(period.equityContribution)?period.equityContribution:0)+
       (Number.isFinite(period.equityWorkingCapitalContribution)?period.equityWorkingCapitalContribution:0),0)
-  if (!finance.valid || !scheduleRowsValid ||
+  if (!finance || !finance.valid || !Array.isArray(finance.rows) || !scheduleRowsValid ||
       !Number.isFinite(finance.totalEquityContribution) || finance.totalEquityContribution < 0) {
     warnings.push('A valid periodic equity cash-flow schedule with finite, non-negative contribution components and ordered, valid period dates is required before partner allocations can be calculated.')
     return empty()
@@ -103,7 +104,7 @@ export function allocateJointVentureCashFlows(
     warnings.push('The aggregated equity contribution does not reconcile to the sum of periodic equity and shareholder-funded working-capital contributions.')
     return empty()
   }
-  if (!partners.length || partners.length > 20) {
+  if (!Array.isArray(partners) || !partners.length || partners.length > 20) {
     warnings.push('Define between one and twenty joint-venture partners.')
     return empty()
   }
@@ -112,8 +113,11 @@ export function allocateJointVentureCashFlows(
     warnings.push('The positive cash-flow distribution percentage must be between 0% and 100%.')
     return empty()
   }
-  if (new Set(partners.map(partner=>partner.id)).size !== partners.length ||
-      partners.some(partner=>!partner.id || !partner.name.trim() ||
+  if (partners.some(partner=>!partner||typeof partner!=='object'||
+        typeof partner.id!=='string'||!partner.id.trim()||
+        typeof partner.name!=='string'||!partner.name.trim()) ||
+      new Set(partners.map(partner=>partner.id)).size !== partners.length ||
+      partners.some(partner=>
         ![partner.sharePercent,partner.capitalContribution,partner.profitSharePercent].every(Number.isFinite) ||
         partner.sharePercent < 0 || partner.sharePercent > 100 ||
         partner.capitalContribution < 0 ||
