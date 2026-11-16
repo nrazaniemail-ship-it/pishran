@@ -774,6 +774,17 @@ assert.equal(straightLineAsset.depreciationByPeriod[0],0,'New asset depreciation
 assert.ok(Math.abs(straightLineAsset.depreciationByPeriod.reduce((sum,value)=>sum+value,0)-1200)<1e-7,
   'Monthly straight-line depreciation must exhaust the depreciable base over the exact useful-life dates')
 assert.ok(Math.abs(straightLineAsset.periods.at(-1).closingBookValue)<1e-7)
+const partialFirstYearAsset=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-partial-first-year',name:'Partial first depreciation year',assetClass:'fixed',
+  originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
+  firstDepreciationMonths:6,ratePercent:null,method:'linear-to-scrap',
+  acquisitionDate:'2024-01-15',startingAtDate:'2024-01-01'
+}],[],monthlyDepreciationPeriods)
+assert.equal(partialFirstYearAsset.valid,true)
+assert.equal(partialFirstYearAsset.depreciationByPeriod[6],300,'Six-month first depreciation year must charge half the annual straight-line amount at its balance date')
+assert.equal(partialFirstYearAsset.depreciationByPeriod[18],600,'The next full depreciation year must charge the full annual amount')
+assert.equal(partialFirstYearAsset.depreciationByPeriod[24],300,'The final partial year must clear the remaining depreciable base')
+assert.ok(Math.abs(partialFirstYearAsset.periods.at(-1).closingBookValue)<1e-7)
 const sydAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   id:'asset-syd-01',name:'Two-year SYD asset',assetClass:'fixed',
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
