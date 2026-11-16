@@ -1275,6 +1275,25 @@ for (const row of comfarSource.projectCashFlows) {
 }
 near(comfarSource.projectCashFlows.reduce((sum,row)=>sum+row.presentValue,0),
   comfarSource.summary.projectNpvAt25Percent,0.02,'COMFAR discounted project cash flows must sum to reported NPV')
+near(comfarSource.financing.originalConstructionLoanPrincipal+comfarSource.financing.capitalizedConstructionInterest,
+  comfarSource.financing.longTermDebtAfterConstruction,0.5,
+  'COMFAR original loan principal plus capitalized construction interest must explain closing construction debt')
+near(comfarSource.financing.annualSchedule.reduce((sum,row)=>sum+row.equityContribution,0),
+  comfarSource.financing.totalEquityCapital,0.02,'COMFAR annual equity contributions must reconcile to paid-in capital')
+near(comfarSource.financing.annualSchedule.reduce((sum,row)=>sum+row.debtAddition,0),
+  comfarSource.financing.longTermDebtAfterConstruction,0.02,'COMFAR annual debt additions must reconcile to gross closing debt')
+near(comfarSource.financing.annualSchedule.reduce((sum,row)=>sum+row.principalRepayment,0),
+  comfarSource.financing.longTermDebtAfterConstruction,0.02,'COMFAR annual principal repayments must extinguish the gross debt')
+for (const row of comfarSource.financing.annualSchedule) {
+  const balanceSheetRow=comfarSource.balanceSheet.find(item=>item.year===row.year)
+  assert.ok(balanceSheetRow,'COMFAR financing row must have a matching balance-sheet year '+row.year)
+  near(row.closingDebt,balanceSheetRow.longTermDebt,0.02,'COMFAR financing schedule debt roll-forward '+row.year)
+}
+near(comfarSource.financing.annualSchedule.find(row=>row.year===1405).equityContribution,
+  comfarSource.financing.operatingWorkingCapitalEquity,0.02,
+  'COMFAR production-phase working capital contribution is equity, not a short-term loan')
+assert.equal(comfarSource.financing.operatingWorkingCapitalLoan,0,
+  'COMFAR output reports no separate working-capital loan')
 assert.equal(comfarSource.incomeStatement.length,15,'COMFAR income statement must cover 1405–1419')
 for (const row of comfarSource.incomeStatement) {
   near(row.revenue-row.variableCosts-row.fixedCosts-row.financingCosts,row.profitBeforeTax,0.02,
