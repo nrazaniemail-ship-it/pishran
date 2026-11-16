@@ -32,8 +32,8 @@ const partnerAllocation = partnerFinance.allocateJointVentureCashFlows({
   {id:'p2',name:'Partner B',sharePercent:40,capitalContribution:40,profitSharePercent:70},
 ],50)
 assert.equal(partnerAllocation.valid,true,partnerAllocation.warnings.join('; '))
-assert.equal(partnerAllocation.rows[0].negativeCashFlowAllocation,60)
-assert.equal(partnerAllocation.rows[1].negativeCashFlowAllocation,40)
+assert.equal(partnerAllocation.rows[0].negativeCashFlowAllocation,-60)
+assert.equal(partnerAllocation.rows[1].negativeCashFlowAllocation,-40)
 assert.equal(partnerAllocation.rows[0].positiveCashFlowDistribution,45)
 assert.equal(partnerAllocation.rows[1].positiveCashFlowDistribution,105)
 assert.equal(partnerAllocation.rows[0].netCashFlow,-15)
