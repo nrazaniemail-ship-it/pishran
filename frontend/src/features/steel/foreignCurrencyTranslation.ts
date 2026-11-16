@@ -208,7 +208,7 @@ export function translatePeriodicForeignCurrencyLoan(
   input: PeriodicForeignCurrencyLoanTranslationInput,
 ): PeriodicForeignCurrencyDebtResult {
   const { currency, periods, schedule } = input
-  const issues: string[] = []
+  const issues: string[] = validatePeriods(periods)
   if (!currency?.code?.trim()) issues.push('A foreign currency code is required.')
   if (!Array.isArray(currency?.exchangeRates)) issues.push('The foreign currency must have an exchange-rate directory.')
   if (!Array.isArray(schedule) || schedule.length !== periods.length)
