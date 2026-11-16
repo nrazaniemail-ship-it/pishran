@@ -1045,13 +1045,15 @@ for (const row of statements) {
   }
   near(row.cashFlowStatement.closingCash-row.openingBalances.cash,row.cashFlowStatement.netChangeInCash,1e-6,
     'Opening-to-closing cash must reconcile to the three cash-flow sections')
+  near(row.balanceSheet.cash,row.cashFlowStatement.closingCash,1e-9,
+    'Cash flow statement and balance sheet cash tie')
+  near(row.balanceSheet.totalAssets,row.balanceSheet.totalLiabilitiesAndEquity,1e-6,
+    'Balance sheet reconciliation year '+row.year)
   near(row.balanceSheet.netFixedAssets-row.openingBalances.netFixedAssets,
     integrated.years[row.year-1].fixedInvestment+integrated.years[row.year-1].maintenanceCapex-
       integrated.years[row.year-1].depreciation-integrated.years[row.year-1].assetBookValueDisposed-
       integrated.years[row.year-1].salvageBookValueDisposed,1e-6,
     'Fixed asset movement must use book value disposed, not sale proceeds')
-, row.balanceSheet.cash, 1e-9, 'Cash flow statement and balance sheet cash tie')
-  near(row.balanceSheet.totalAssets, row.balanceSheet.totalLiabilitiesAndEquity, 1e-6, 'Balance sheet reconciliation year ' + row.year)
 }
 const sensitivity = engine.calculateSensitivityMatrix({
   years:6,constructionYears:1,capacity:100,fullCapacityRevenue:2000,fullCapacityVariableCashCost:600,
