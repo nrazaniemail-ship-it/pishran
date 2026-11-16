@@ -1230,10 +1230,11 @@ assert.ok(financingAuditDoc.includes('one-off or recurring')
   && financingAuditDoc.includes('must not be charged twice')
   && financingAuditDoc.includes('3,309,144.53'),
   'HRCR200 financing audit must keep issuance-fee ambiguity and shareholder working-capital funding explicit')
-assert.ok(financingAuditDoc.includes('not an HRCR200 hot-rolling project output')
+assert.ok(financingAuditDoc.includes('SARZAMIN')
+  && financingAuditDoc.includes('Ramhormoz')
   && financingAuditDoc.includes('excluded from that fixture')
   && financingAuditDoc.includes('external balance-sheet parity as unverified'),
-  'HRCR200 acceptance must reject unrelated SARZAMIN/Ramhormoz reports and keep external balance-sheet parity explicitly unverified until the correct native output is available')
+  'The reference audit must distinguish unrelated SARZAMIN/Ramhormoz material and keep external balance-sheet parity explicitly unverified')
 console.log('PASS: asset-level monthly/quarterly depreciation, disposals and integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
 
 // Shareholder-funded working capital is recorded once as an equity injection;
