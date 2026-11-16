@@ -50,6 +50,8 @@ const syd=formulas.calculateAssetDepreciationPeriod({
  monthsElapsed:0,periodMonths:12,openingBookValue:1200
 })
 assert.equal(syd.charge,800)
+assert.throws(()=>formulas.calculateAssetDepreciationPeriod({method:'sum-of-years-digits',acquisitionCost:1200,salvageValue:0,usefulLifeMonths:30,monthsElapsed:0,periodMonths:12,openingBookValue:1200}),/syd-partial-year-schedule-not-yet-implemented/)
+assert.throws(()=>formulas.calculateAssetDepreciationPeriod({method:'sum-of-years-digits',acquisitionCost:1200,salvageValue:0,usefulLifeMonths:24,monthsElapsed:0,periodMonths:12,openingBookValue:1200,firstDepreciationYearMonths:8}),/syd-partial-year-schedule-not-yet-implemented/)
 const declining=formulas.calculateAssetDepreciationPeriod({
  method:'accelerated-declining-balance',acquisitionCost:1200,salvageValue:100,usefulLifeMonths:120,
  monthsElapsed:0,periodMonths:12,openingBookValue:1200,annualRatePercent:10
