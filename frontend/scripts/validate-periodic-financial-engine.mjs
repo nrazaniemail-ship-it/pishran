@@ -370,7 +370,7 @@ assert.deepEqual(comfarReference.taxScheduleByOperatingYear.map(row=>row.ratePer
 assert.ok(Math.abs(comfarNpv - comfarReference.projectNpvAt25) < 0.05,
   'COMFAR HRCR200 NPV at 25% and valuation date 12/1404 must reconcile within rounding')
 const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
-assert.ok(comfarIrr !== null && Math.abs(comfarIrr*100 - comfarReference.projectIrrPercent) < 0.01,
+assert.ok(comfarIrr !== null && Math.abs(comfarIrr - comfarReference.projectIrrPercent) < 0.01,
   'COMFAR HRCR200 project IRR must reconcile to 48.31% within displayed precision')
 assert.ok(Math.abs(engine.calculatePeriodicNpv([100,100],comfarAnnualPeriods.slice(0,2),25,365,'period-end',comfarAnnualPeriods[1].endDate,'period-count',1)-225) < 1e-8,
   'A cash flow before the valuation date must be compounded forward to the valuation date')
