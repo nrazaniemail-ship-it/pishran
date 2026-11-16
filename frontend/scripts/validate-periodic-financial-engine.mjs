@@ -1202,9 +1202,9 @@ const resetAndFeeLoan = engine.calculatePeriodicLoanSchedule({
   ],
 },loanEventPeriods,365)
 assert.equal(resetAndFeeLoan.valid,true,resetAndFeeLoan.issues.join('; '))
-const expectedNominalResetInterest=100*(10*181/365+20*183/365)/100
+const expectedNominalResetInterest=100*(10*181/365+20*183/365)/100+5*20*91/365
 assert.ok(Math.abs(resetAndFeeLoan.rows[0].interestExpense-expectedNominalResetInterest)<1e-8,
-  'Exact dated drawdowns must preserve the established end-exclusive Actual/365 accrual convention across the rate reset')
+  'Exact dated drawdowns must preserve end-exclusive Actual/365 accrual, including interest on the capitalized fee from its payment date')
 assert.equal(resetAndFeeLoan.rows[0].financingFeeExpense,10,
   'Expense-classified fees must remain separate from accrued interest')
 assert.equal(resetAndFeeLoan.rows[0].capitalizedFinancingFees,5,
