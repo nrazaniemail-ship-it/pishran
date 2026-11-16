@@ -467,6 +467,8 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
     ratePercent:index<5?5:25
   })),
   depreciationByOperatingYear: HOT_ROLLING_FIXED_ASSET_REFERENCE.comfarDepreciationByYear,
+  constructionFinancingCostsByYear: [[1403,1_186_151.73],[1404,2_112_481.33]] as const,
+  totalCapitalizedConstructionInterest: 3_298_633.06,
   changeInWorkingCapitalByOperatingYear: [
     [1405,3_309_144.53],[1406,409_216.09],[1407,441_167.49],[1408,441_167.49],
     [1409,-5_325.23],[1410,0],[1411,0],[1412,0],[1413,0],[1414,0],
