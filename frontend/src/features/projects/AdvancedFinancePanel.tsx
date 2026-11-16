@@ -113,7 +113,7 @@ export default function AdvancedFinancePanel(props: Props) {
     discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0
   }))
   const [loaded,setLoaded]=useState(false)
-  useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved)setState({...state,...saved});setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
+  useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const migratedAmount=Math.min(legacyWorkingCapitalEquity,legacyContribution);restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-migratedAmount):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?migratedAmount:0)}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
   const capexSchedule = activeFixedInvestmentSchedule
