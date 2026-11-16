@@ -194,6 +194,51 @@ const comfarMonthDayLoan = engine.calculatePeriodicLoanSchedule({
 assert.equal(comfarMonthDayLoan.valid, true, comfarMonthDayLoan.issues.join('; '))
 assert.ok(Math.abs(comfarMonthDayLoan.rows[0].capitalizedInterest - (100 * 0.12 * (3 / 12 + 5 / 360))) < 1e-8, 'COMFAR interval 15 January to 20 April is 3 months and 5 days')
 
+const comfarRepaymentPeriods = Array.from({ length: 20 }, (_, index) => {
+  const start = new Date(Date.UTC(2026, index * 3, 1))
+  const next = new Date(Date.UTC(2026, (index + 1) * 3, 1))
+  const end = new Date(next.getTime() - 86400000)
+  return {
+    index: index + 1,
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+    days: Math.round((end.getTime() - start.getTime()) / 86400000) + 1,
+    partial: false,
+  }
+})
+const comfarOpeningBalance = 8909484.06
+const comfarAnnuityLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 28,
+  drawdowns: Array(20).fill(0),
+  openingBalance: comfarOpeningBalance,
+  interestConvention: 'comfar-months-plus-360',
+  repaymentMethod: 'annuity',
+  repaymentStartPeriod: 1,
+  gracePeriods: 0,
+  termPeriods: 20,
+  capitalizeInterest: false,
+}, comfarRepaymentPeriods, 360)
+assert.equal(comfarAnnuityLoan.valid, true, comfarAnnuityLoan.issues.join('; '))
+const comfarFirstYearInterest = comfarAnnuityLoan.rows.slice(0, 4).reduce((sum, row) => sum + row.interestExpense, 0)
+const comfarFirstYearPrincipal = comfarAnnuityLoan.rows.slice(0, 4).reduce((sum, row) => sum + row.principal, 0)
+const comfarFirstYearDebtService = comfarAnnuityLoan.rows.slice(0, 4).reduce((sum, row) => sum + row.debtService, 0)
+assert.ok(Math.abs(comfarFirstYearInterest - 2399043.44) < 0.05, 'HRCR200 first-year COMFAR interest must reconcile to the reported value')
+assert.ok(Math.abs(comfarFirstYearPrincipal - 964925.63) < 0.05, 'HRCR200 first-year COMFAR principal must reconcile to the reported value')
+assert.ok(Math.abs(comfarFirstYearDebtService - 3363969.07) < 0.05, 'HRCR200 first-year COMFAR debt service must reconcile to the reported value')
+assert.ok(Math.abs(comfarAnnuityLoan.rows[0].debtService - 840992.27) < 0.01, 'HRCR200 quarterly annuity payment must reconcile to the reconstructed instalment')
+assert.ok(Math.abs(comfarAnnuityLoan.rows[19].closingBalance) < 0.01, 'HRCR200 annuity must fully amortize after 20 quarterly instalments')
+const invalidOpeningBalanceLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 28,
+  drawdowns: Array(20).fill(0),
+  openingBalance: -1,
+  repaymentMethod: 'annuity',
+  repaymentStartPeriod: 1,
+  gracePeriods: 0,
+  termPeriods: 20,
+  capitalizeInterest: false,
+}, comfarRepaymentPeriods, 360)
+assert.equal(invalidOpeningBalanceLoan.valid, false)
+
 const mismatchedDatedLoan = engine.calculatePeriodicLoanSchedule({
   annualRatePercent: 12,
   drawdowns: [100, 0, 0, 0],
