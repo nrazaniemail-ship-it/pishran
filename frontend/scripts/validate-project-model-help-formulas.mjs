@@ -50,6 +50,35 @@ const interest=f.calculateComfarLoanInterest({
 assert.equal(interest.segments.length,3)
 assert.ok(Math.abs(interest.totalInterest-47.5)<1e-9)
 assert.equal(interest.closingBalance,1500)
+assert.throws(()=>f.calculateComfarLoanInterest({
+ openingDebt:1000,startDate:'2026-01-01',endDate:'2026-04-01',events:[],
+ rateChanges:[{effectiveDate:'2026-02-01',annualRatePercent:12}]
+}),/missing-interest-rate-at-period-start/)
+assert.throws(()=>f.calculateComfarLoanInterest({
+ openingDebt:1000,startDate:'2026-01-01',endDate:'2026-04-01',
+ events:[{date:'2026-04-02',type:'drawdown',amount:100}],
+ rateChanges:[{effectiveDate:'2026-01-01',annualRatePercent:12}]
+}),/invalid-loan-event/)
+assert.throws(()=>f.calculateComfarLoanInterest({
+ openingDebt:1000,startDate:'2026-01-01',endDate:'2026-04-01',events:[],
+ rateChanges:[{effectiveDate:'2026-01-01',annualRatePercent:12},{effectiveDate:'2026-01-01',annualRatePercent:15}]
+}),/duplicate-interest-rate-effective-date/)
+assert.throws(()=>f.calculateComfarLoanInterest({
+ openingDebt:1000,startDate:'2026-01-01',endDate:'2026-04-01',events:[],
+ rateChanges:[{effectiveDate:'2026-01-01',annualRatePercent:12},{effectiveDate:'2026-02-30',annualRatePercent:15}]
+}),/invalid-loan-date/)
+assert.throws(()=>f.calculateComfarLoanInterest({
+ openingDebt:100,startDate:'2026-01-01',endDate:'2026-04-01',
+ events:[{date:'2026-02-01',type:'repayment',amount:101}],
+ rateChanges:[{effectiveDate:'2026-01-01',annualRatePercent:12}]
+}),/negative-loan-balance/)
+const repaymentInterest=f.calculateComfarLoanInterest({
+ openingDebt:1000,startDate:'2026-01-01',endDate:'2026-04-01',
+ events:[{date:'2026-02-01',type:'repayment',amount:400}],
+ rateChanges:[{effectiveDate:'2026-01-01',annualRatePercent:12}]
+})
+assert.equal(repaymentInterest.closingBalance,600)
+assert.ok(Math.abs(repaymentInterest.totalInterest-20)<1e-9)
 
 const fee=f.calculateLoanFee({type:'guarantee',ratePercent:2,disbursement:100, outstandingBefore:500,repayment:50,undisbursedCommitment:300,totalLoan:1000})
 assert.equal(fee.basis,550)
