@@ -57,6 +57,13 @@ try {
  economicItems=h.updateHelpFormRow(economicItems,'economic-items','economic-1','market','local')
  economicItems=h.updateHelpFormRow(economicItems,'economic-items','economic-1','tradeCategory','imported')
  assert.ok(h.validateHelpDrivenProjectForms(economicItems).includes('economic-item:invalid-trade-category:input:local:imported'))
+ let products=h.addHelpFormRow(draft.helpDriven,'products','product-1')
+ products=h.updateHelpFormRow(products,'products','product-1','name','Product A')
+ products=h.updateHelpFormRow(products,'products','product-1','productionIntervalMode','user-defined')
+ assert.ok(h.validateHelpDrivenProjectForms(products).includes('product:user-defined-production-interval-requires-start-and-end'))
+ products=h.updateHelpFormRow(products,'products','product-1','productionIntervalStart','2026-01-01')
+ products=h.updateHelpFormRow(products,'products','product-1','productionIntervalEnd','2026-12-31')
+ assert.equal(h.validateHelpDrivenProjectForms(products).length,0)
  console.log('COMFAR help form coverage tests passed')
 } finally {
  await rm(temp,{recursive:true,force:true})
