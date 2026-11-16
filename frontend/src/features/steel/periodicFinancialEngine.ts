@@ -1428,9 +1428,7 @@ export function calculatePeriodicComfarAssetLifecycle(
     } else {
       depreciationStartDate=nextPeriodStartAfter(acquisitionDate,periods)
     }
-    const lifeEndExclusive=depreciationStartDate&&lifeMonths>0?addUtcMonthsClamped(depreciationStartDate,lifeMonths):null
     const salvageValue=asset.method==='linear-to-zero'?0:asset.initialBookValue*asset.scrapPercent/100
-    const depreciableBase=Math.max(0,asset.initialBookValue-salvageValue)
     const sale=sales.find(row=>row.assetId===asset.id)
     const saleDate=sale?parseIsoDateUtc(sale.saleDate):null
     if(sale&&(!saleDate||saleDate.getTime()<acquisitionDate.getTime()||
