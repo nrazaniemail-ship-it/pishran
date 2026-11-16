@@ -38,7 +38,30 @@ Capitalized interest is not a second external principal draw. It increases the l
 | Production-phase equity contribution shown by COMFAR | 3,309,144.53 |
 | Unfunded / not evidenced difference | 1,286,225.93 |
 
-The COMFAR output classifies the 3,309,144.53 production-phase contribution as equity and shows no working-capital loan for that amount. The Excel mechanism sheet labels an equivalent amount as a loan. Keep this source-classification conflict visible; do not silently convert COMFAR equity into debt.
+The OPEX workbook sheet "جریانات نقدی مالی (کامفار)" provides the strongest transaction-level classification: in period 3 (mapped to 1405), 3,309,144.53 is in the equity column and short-term financing is zero; this amount is therefore the COMFAR baseline equity contribution. However, the supporting documents conflict:
+- The PDF, printed p.122 (PDF p.133), says first-year working capital is financed by a short-term rial loan at 28%.
+- The PDF, printed p.128 (PDF p.139), says first-year working capital is funded by the shareholder.
+- The OPEX COMFAR financial-flow sheet records 3,309,144.53 as equity and zero short-term financing.
+- The CAPEX workbook "مکانیزم تامین سرمایه" sheet (G7) and "نرخ تنزیل" sheet classify 3,309,144.53 as a long-term working-capital loan at 26%; retain this as a separate workbook financing alternative, not the COMFAR baseline.
+
+There is a second amount discrepancy: the OPEX "سرمایه در گردش" sheet calculates first-year 1405 working capital at 3,216,759.32 (70% of full-capacity working capital), while the OPEX COMFAR financing-flow sheet records 3,309,144.53 equity. The difference is 92,385.21. Do not cap the reported equity funding to the OPEX working-capital requirement or silently discard the excess; show it as a cash funding buffer pending detailed reconciliation.
+
+## Annual COMFAR financing-flow reconciliation
+
+The OPEX workbook sheet "جریانات نقدی مالی (کامفار)" contains 17 periods mapped to fiscal years 1403–1419. The companion "جریانات نقدی دوره ای" sheet confirms each period's total domestic financing flow as equity plus net long-term loan flow. Amounts are million IRR.
+
+| Fiscal year | Equity contribution | Net long-term loan flow | Short-term financing | Total domestic financing flow |
+|---|---:|---:|---:|---:|
+| 1403 | 8,905,157.30 | 5,002,647.73 | 0 | 13,907,805.03 |
+| 1404 | 4,186,827.70 | 3,906,836.33 | 0 | 8,093,664.03 |
+| 1405 | 3,309,144.53 | -964,925.63 | 0 | 2,344,218.90 |
+| 1406 | 0 | -1,264,820.67 | 0 | -1,264,820.67 |
+| 1407 | 0 | -1,657,921.89 | 0 | -1,657,921.89 |
+| 1408 | 0 | -2,173,197.39 | 0 | -2,173,197.39 |
+| 1409 | 0 | -2,848,618.47 | 0 | -2,848,618.47 |
+| 1410–1419 | 0 | 0 | 0 | 0 |
+
+The five annual principal repayments sum to the gross opening repayment balance of 8,909,484.36 million IRR (minor rounding versus the reconstructed 8,909,484.06 balance). The 20-quarter 7%-per-quarter annuity schedule reproduces the annual principal sequence to rounding: 964,925.63; 1,264,820.67; 1,657,921.89; 2,173,197.39; 2,848,618.47. This is a materially stronger acceptance check than first-year totals alone.
 
 ## Repayment and interest reconstruction
 
@@ -62,9 +85,11 @@ Established from COMFAR output and amount reconciliation:
 - Construction equity is 13,091,985.20 million IRR.
 - Construction loan principal is 5,610,850.80 million IRR.
 - Capitalized interest is 3,298,633.06 million IRR.
-- The production-phase working-capital contribution is classified as equity in the COMFAR output.
+- The OPEX COMFAR financial-flow schedule classifies 3,309,144.53 in 1405 as equity and reports zero short-term financing across all 17 years.
+- Annual equity and net long-term loan flows for 1403–1419 are now recorded as explicit acceptance data.
+- The five annual principal repayments reconcile to the reconstructed 20-quarter annuity schedule to rounding.
 - The total reported sources include both production-phase equity and the capitalized-interest-adjusted debt balance; their gross shares are therefore not the same as the 70/30 construction principal split.
-- Printed p.128 (PDF p.139) states that first-year production working capital is funded by the shareholder and subsequent increases are funded from project revenues. This supports treating the 3,309,144.53 first-year working-capital increase as an investor cash outflow, not as construction fixed-investment equity.
+- Printed p.128 (PDF p.139) supports shareholder funding; printed p.122 (PDF p.133) contradicts it. The COMFAR-labelled OPEX financial-flow schedule resolves the base-case classification in favour of equity, while the CAPEX mechanism/WACC tabs are retained as a separate loan-funded alternative.
 
 Still not established from the available aggregate schedules:
 
@@ -72,8 +97,7 @@ Still not established from the available aggregate schedules:
 - The exact dated cash-flow timing of all construction drawdowns and capitalized-interest accruals.
 - Whether the 5% bond-issuance cost is one-off or recurring, and whether it is embedded in the stated 28% rate or separately charged.
 - Exact quarter-end payment dates and whether COMFAR applies a uniform 7% quarterly rate or actual day-count fractions for each repayment interval.
-- Whether the amount repaid in COMFAR's loan schedule includes all capitalized interest and the exact timing of its capitalization.
-- A period-by-period reconciliation of COMFAR interest, principal, and closing debt.
+- A period-by-period reconciliation of COMFAR interest and closing debt; annual principal is now reconciled, but quarterly COMFAR interest/closing-balance exports are not available.
 
 Do not infer these missing items from annual totals. The original COMFAR project file (.C30), or the detailed COMFAR loan conditions, disbursement, interest, capitalization, and repayment schedule exports/screens, is required to complete that reconstruction.
 
