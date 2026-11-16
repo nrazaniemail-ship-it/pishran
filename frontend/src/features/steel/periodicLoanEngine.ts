@@ -18,8 +18,6 @@ export type PeriodicLoanInput = {
   repaymentCount: number
   repaymentIntervalMonths: number
   repaymentMethod: LoanRepaymentMethod
-  /** Nominal annual rate converted to a regular contractual period rate for annuity calculation. */
-  annuityRateBasis?: 'nominal-monthly'
 }
 
 export type PeriodicLoanRow = {
@@ -90,7 +88,7 @@ function annuityPayment(principal: number, periodicRate: number, count: number):
 }
 
 /**
- * Dated debt schedule. Interest accrues Actual/360 or Actual/365 between events.
+ * Dated debt schedule. COMFAR month/12 plus excess-days/360 is the default interest convention.
  * Construction interest is accumulated and capitalized once at capitalizationDate.
  * Repayment dates follow the contractual interval; the annuity instalment uses a
  * nominal annual rate converted by interval months / 12 (COMFAR-compatible convention).
@@ -136,7 +134,6 @@ export function calculatePeriodicLoan(input: PeriodicLoanInput): PeriodicLoanRes
 
   for (const eventDate of events) {
     const eventTime = dateMs(eventDate)
-    const days = Math.max(0, (eventTime - previousDate) / DAY)
     const convention = input.interestConvention ?? 'comfar-months-plus-360'
     const intervalInterest = principal * rate * yearFraction(iso(previousDate), eventDate, convention, input.dayCountBasis)
     accrued += intervalInterest
