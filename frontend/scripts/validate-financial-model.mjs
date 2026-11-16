@@ -144,12 +144,18 @@ near(rollingAudit.capex.constructionInvestment + rollingAudit.capex.capitalizedI
   rollingAudit.capex.constructionUsesIncludingInterest, 0.01, 'HRCR200 construction uses including interest')
 near(rollingAudit.annualOpex.totalIncludingDepreciation - rollingAudit.annualOpex.depreciation,
   rollingAudit.annualOpex.totalExcludingDepreciation, 0.01, 'HRCR200 OPEX excluding depreciation')
-assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabDebtSharePercent, 80,
-  'HRCR200 mechanism-tab financing split must remain visible')
-assert.equal(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingSourceConflict, true,
-  'HRCR200 working-capital source must remain flagged as unconfirmed')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabDebtSharePercent, 30,
+  'HRCR200 mechanism-tab actual amounts must imply 30% debt during construction')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.mechanismTabLabelDebtSharePercent, 80,
+  'HRCR200 contradictory 80% debt label must remain visible separately from the amounts')
 assert.equal(rollingAudit.financingAlternativesInWorkbook.fundingSummaryTabEquitySharePercent, 70,
-  'HRCR200 alternative financing split must remain visible')
+  'HRCR200 funding-summary actual amounts must preserve 70% equity')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.fundingSummaryTabDebtLabelSharePercent, 20,
+  'HRCR200 conflicting 20% debt label must remain visible')
+assert.equal(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingSourceConflict, true,
+  'HRCR200 working-capital funding gap must remain flagged')
+near(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingGap, 1286225.931577, 0.01,
+  'HRCR200 unidentified working-capital funding gap')
 near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryIrrPercent, 48.31, 0.001,
   'HRCR200 general-summary IRR')
 near(rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetProjectIrrPercent, 43.378234116396674, 1e-9,
