@@ -1461,6 +1461,10 @@ assert.ok(reportVisualsSource.includes('Sensitivity Analysis Chart')
   && reportVisualsSource.includes('24,675.80')
   && reportVisualsSource.includes('12.15'),
   'Project report must include sensitivity, break-even and source-backed OPEX specification outputs with conflicts preserved')
+assert.ok(reportVisualsSource.includes('1,286,225.93')
+  && reportVisualsSource.includes('80% وام /20% آورده')
+  && reportVisualsSource.includes('70% آورده / 30% وام'),
+  'Project report must disclose amount-derived 70/30 financing and the contradictory 80/20 label plus working-capital funding gap')
 assert.ok(reportVisualsSource.includes('HOT_ROLLING_COMFAR_OUTPUT_AUDIT')
   && reportVisualsSource.includes('comfarTaxScheduleMatches')
   && reportVisualsSource.includes('Tax schedule')
