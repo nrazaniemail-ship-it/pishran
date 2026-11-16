@@ -61,7 +61,7 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
  }
  const addAsset=()=>onChange({...value,assets:[...value.assets,createBlankFixedAssetFormDraft(crypto.randomUUID())]})
  const addCost=()=>onChange({...value,productionCosts:[...value.productionCosts,createBlankProductionCostFormDraft(crypto.randomUUID())]})
- const addSales=()=>onChange({...value,sales:[...value.sales,createBlankSalesProductFormDraft('')]})
+ const addSales=()=>onChange({...value,sales:[...value.sales,createBlankSalesProductFormDraft(products[0]?.id??'')]})
  const addWorking=()=>onChange({...value,workingCapital:[...value.workingCapital,createBlankWorkingCapitalComponentFormDraft(crypto.randomUUID())]})
  const addLoan=()=>onChange({...value,loans:[...value.loans,createBlankLoanFacilityFormDraft(crypto.randomUUID())]})
  return <section className="fw-card" style={{marginTop:16}}>
