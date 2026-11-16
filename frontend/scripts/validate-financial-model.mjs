@@ -1077,6 +1077,7 @@ const benchmarkCases=[
 ]
 for (const benchmark of benchmarkCases) {
   const asset={...monthlyAsset,id:'analytic-'+benchmark.method,name:'Analytic '+benchmark.method,
+    originalValue:1000,initialBookValue:1000,scrapPercent:10,
     method:benchmark.method,lengthYears:benchmark.life,lengthMonths:0,
     ratePercent:benchmark.method==='none'||benchmark.method==='sum-of-years-digits'?undefined:50}
   const result=engine.calculateComfarCalendarDepreciationSchedule([asset],benchmarkCalendar,1)
