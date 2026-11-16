@@ -369,22 +369,22 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const displayDebtRows=activeFinanceResult?activeFinanceResult.years.filter(r=>r.year>Math.ceil(m.project.constructionYears)).map(r=>({period:'بهره‌برداری '+(r.year-Math.ceil(m.project.constructionYears)),debtOpening:r.debtBalance+r.principal-r.debtDrawdown-r.capitalizedInterest,interest:r.interest,principal:r.principal,project:r.cfads,dscr:r.dscr})):model.annualRows.map(r=>({...r,dscr:r.interest+r.principal>0?(r.project+r.interest)/(r.interest+r.principal):null}))
  const current=steps.findIndex(s=>s[0]===step)
  const required:Record<Step,string[]>={profile:['مشخصات پروژه','اطلاعات بازار'],stage:['محصول اصلی','ظرفیت اسمی'],process:['فناوری و مسیر تولید'],balance:['موازنه مواد و یوتیلیتی'],capex:['سرمایه‌گذاری دوره ساخت'],opex:['هزینه‌های دوره بهره‌برداری'],finance:['ساختار سرمایه و نرخ تنزیل'],cashflow:['جریان نقدی و شاخص‌ها'],results:['ارزیابی نهایی'],reports:['گزارش آماده ارائه']}
- const partnerSetupValid=!m.scope.jointVenture||(m.partners.length>0&&m.partners.length<=20&&m.partners.every(p=>p.name.trim()&&Number.isFinite(p.capitalContribution)&&p.capitalContribution>=0&&p.sharePercent>=0&&p.sharePercent<=100&&p.profitSharePercent>=0&&p.profitSharePercent<=100)&&Math.abs(m.partners.reduce((sum,p)=>sum+p.sharePercent,0)-100)<=0.01&&Math.abs(m.partners.reduce((sum,p)=>sum+p.profitSharePercent,0)-100)<=0.01&&m.partnerDistributionPercent>=0&&m.partnerDistributionPercent<=100)
+ const partnerSetupValid=!m.scope.jointVenture||(m.partners.length>0&&m.partners.length<=20&&m.partners.every(p=>String(p.name??'').trim()&&Number.isFinite(p.capitalContribution)&&p.capitalContribution>=0&&p.sharePercent>=0&&p.sharePercent<=100&&p.profitSharePercent>=0&&p.profitSharePercent<=100)&&Math.abs(m.partners.reduce((sum,p)=>sum+p.sharePercent,0)-100)<=0.01&&Math.abs(m.partners.reduce((sum,p)=>sum+p.profitSharePercent,0)-100)<=0.01&&m.partnerDistributionPercent>=0&&m.partnerDistributionPercent<=100)
  const hasPricedRows=(rows:Row[])=>rows.some(row=>Number.isFinite(row.quantity)&&row.quantity>0&&Number.isFinite(row.unitPrice)&&row.unitPrice>0)
  const hasTechnicalInputs=m.technical.some(row=>row.quantity>0||row.unitPrice>0)
  const financeRatesValid=(m.finance.equity===0||m.finance.equityCost>0)&&(m.finance.debt===0||m.finance.debtCost>0)&&m.finance.tax>=0&&m.finance.tax<=100&&m.finance.depreciationYears>0&&(m.finance.method==='manual'?m.finance.manualRate>0:m.finance.method==='wacc'?wacc>0:false)
  const periodicModelValid=reportPeriodicFinance?.valid===true&&reportPeriodicFinance.rows.length===projectCalendarPeriods.length&&projectCalendarPeriods.length>0
  const done:Record<Step,boolean>={
-  profile:!!m.project.name.trim()&&!!m.project.location.trim()&&(m.market.domesticPrice>0||m.market.exportPrice>0)&&partnerSetupValid,
-  stage:!!m.stage&&m.products.some(r=>r.name.trim()&&r.quantity>0)&&m.capacity.nameplate>0,
-  process:(!!m.process.technology.trim()||!!m.process.route.trim())&&hasTechnicalInputs&&m.balance.some(r=>r.quantity>0),
+  profile:!!String(m.project.name??'').trim()&&!!String(m.project.location??'').trim()&&(m.market.domesticPrice>0||m.market.exportPrice>0)&&partnerSetupValid,
+  stage:!!m.stage&&m.products.some(r=>String(r.name??'').trim()&&r.quantity>0)&&m.capacity.nameplate>0,
+  process:(!!String(m.process.technology??'').trim()||!!String(m.process.route??'').trim())&&hasTechnicalInputs&&m.balance.some(r=>r.quantity>0),
   balance:hasPricedRows(m.utilities),
   capex:capex>0,
   opex:sum(m.opex)>0,
   finance:m.finance.equity>=0&&m.finance.debt>=0&&m.finance.equity+m.finance.debt===100&&financeRatesValid,
   cashflow:periodicModelValid,
   results:periodicModelValid&&model.flows.length>0&&model.flows.every(Number.isFinite),
-  reports:periodicModelValid&&!!m.project.name.trim()
+  reports:periodicModelValid&&!!String(m.project.name??'').trim()
  }
  const completed=Object.values(done).filter(Boolean).length
  const go=(direction:number)=>{const next=Math.max(0,Math.min(steps.length-1,current+direction));setStep(steps[next][0])}
