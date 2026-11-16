@@ -182,8 +182,33 @@ const integratedPeriodic = engine.calculateIntegratedPeriodicFinance({
   mirrFinanceRatePercent: 10,
   mirrReinvestmentRatePercent: 12,
   salvageValue: 1500,
+  salvageBookValue: 1000,
 })
 assert.equal(integratedPeriodic.valid, true, 'Integrated period model must accept valid quarterly inputs')
+
+const periodicStatements = engine.buildPeriodicThreeFinancialStatements(integratedPeriodic)
+assert.equal(periodicStatements.length,4,'Periodic three-statement builder must produce one linked statement per project period')
+for (const statement of periodicStatements) {
+  assert.ok(Math.abs(statement.balanceSheet.balanceDifference)<=0.01,
+    'Quarterly balance sheet must reconcile without a plug in period '+statement.period)
+  assert.ok(statement.balanceSheet.reconciled,'Quarterly balance sheet and movement checks must pass in period '+statement.period)
+  for (const [movement,value] of Object.entries(statement.movementChecks))
+    assert.ok(Math.abs(value)<=0.01,'Quarterly roll-forward '+movement+' must reconcile in period '+statement.period)
+  assert.ok(Math.abs(statement.cashFlowStatement.closingCash-statement.openingBalances.cash-
+    statement.cashFlowStatement.netChangeInCash)<=0.01,'Opening and closing cash must reconcile in period '+statement.period)
+}
+assert.equal(periodicStatements[3].balanceSheet.debt,
+  Object.values(integratedPeriodic.loanSchedules).reduce((sum,schedule)=>sum+schedule[3].closingBalance,0),
+  'Periodic balance sheet debt must tie to the actual loan schedule')
+assert.equal(periodicStatements[3].incomeStatement.assetDisposalGainLoss,
+  integratedPeriodic.rows[3].assetSaleOtherIncomeLoss+integratedPeriodic.rows[3].salvageGainLoss,
+  'Asset and terminal salvage gains must enter the periodic income statement')
+const openingBalanceStatements=engine.buildPeriodicThreeFinancialStatements(integratedPeriodic,{
+  cash:100,netFixedAssets:250,netWorkingCapital:20,deferredPreOperatingAssets:30,paidInCapital:400,retainedEarnings:0
+})
+assert.equal(openingBalanceStatements.length,4,'Existing-enterprise opening balances must be supported')
+assert.equal(engine.buildPeriodicThreeFinancialStatements({...integratedPeriodic,valid:false}).length,0,
+  'Invalid periodic finance results must not produce statements')
 assert.equal(integratedPeriodic.rows.length, 4)
 assert.ok(Math.abs(integratedPeriodic.rows.reduce((sum,row)=>sum+row.revenue,0)-4800)<1e-7,
   'Quarterly revenue must reconcile to the source annual total')
