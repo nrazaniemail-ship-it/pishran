@@ -174,6 +174,25 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
   if(typeof v.firstDepreciationYearMonths==='number'&&(!Number.isInteger(v.firstDepreciationYearMonths)||v.firstDepreciationYearMonths<1||v.firstDepreciationYearMonths>12))errors.push('invalid-first-depreciation-year-months')
   if(v.startMode==='specified-date'&&(!v.startDate||v.startDate===''))errors.push('depreciation-start-date-required')
  }
+ const globalEconomic=(value.sections?.['economic-global']??[])[0]?.values
+ if(globalEconomic){
+  const scf=globalEconomic.standardConversionFactor,fccf=globalEconomic.foreignCurrencyConversionFactor
+  if(typeof scf==='number'&&typeof fccf==='number'&&Math.abs(scf*fccf-1)>1e-8)errors.push('economic-global:scf-fccf-must-be-reciprocal')
+  if(globalEconomic.numeraireType==='foreign-border-prices'&&(!globalEconomic.numeraireCurrency||globalEconomic.numeraireCurrency===''))errors.push('economic-global:foreign-numeraire-currency-required')
+ }
+ for(const row of value.sections?.['economic-items']??[]){
+  const v=row.values
+  const direction=v.direction,market=v.market,category=v.tradeCategory
+  if(typeof direction==='string'&&typeof market==='string'&&typeof category==='string'&&category){
+   const allowed=direction==='input'
+    ? (market==='foreign'?['imported']:['non-traded','importable','exportable'])
+    : (market==='foreign'?['exported']:['non-traded','exportable','importable'])
+   if(!allowed.includes(category))errors.push('economic-item:invalid-trade-category:'+direction+':'+market+':'+category)
+  }
+  if(typeof v.disaggregationLevel==='number'&&(!Number.isInteger(v.disaggregationLevel)||v.disaggregationLevel<1||v.disaggregationLevel>3))errors.push('economic-item:disaggregation-level-must-be-1-to-3')
+  if(category==='non-traded'&&typeof v.fxExposure==='number'&&v.fxExposure!==0)errors.push('economic-item:non-traded-fx-exposure-must-be-zero')
+  if(direction==='output'&&typeof v.taxesDutiesIncludedPercent==='number'&&v.taxesDutiesIncludedPercent!==0)errors.push('economic-output:taxes-duties-included-not-entered-here')
+ }
  for(const row of value.sections?.['profit-distribution']??[]){
   const retained=row.values.retainedPercent,distributed=row.values.distributedPercent
   if(typeof retained==='number'&&typeof distributed==='number'&&Math.abs(retained+distributed-100)>1e-8)errors.push('profit-retention-and-distribution-must-equal-100')
