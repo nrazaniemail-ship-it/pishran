@@ -8,6 +8,7 @@ import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, fisca
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
   calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, calculateComfarAssetLifecycle,
+  calculateComfarCalendarAssetLifecycle,
   type IntegratedFinanceInput, type IntegratedFinanceResult, type IntegratedLoanInput, type DepreciationAssetInput,
   type ComfarDepreciationAssetInput, type ComfarAssetSaleInput, type OneWaySensitivityAnalysis,
 } from '../steel/financialModel'
@@ -142,15 +143,18 @@ export default function AdvancedFinancePanel(props: Props) {
   const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی جدید',cost:0,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line',decliningRate:20}]}))
 
   const depreciation = useMemo(()=>calculateAssetDepreciationSchedule(state.assets.filter(a=>a.cost>0&&!a.name.includes('زمین')),years),[state.assets,years])
-  const comfarLifecycle = useMemo(()=>props.comfarDepreciationAssets?.length
+  const comfarCalendarLifecycle = useMemo(()=>props.comfarDepreciationAssets?.length && projectPeriods.length && props.fiscalYearStartMonth!=null
+    ? calculateComfarCalendarAssetLifecycle(props.comfarDepreciationAssets,props.comfarAssetSales??[],projectPeriods,props.fiscalYearStartMonth)
+    : null,[JSON.stringify(props.comfarDepreciationAssets??[]),JSON.stringify(props.comfarAssetSales??[]),JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
+  const comfarLifecycle = comfarCalendarLifecycle ?? (props.comfarDepreciationAssets?.length
     ? calculateComfarAssetLifecycle(props.comfarDepreciationAssets,props.comfarAssetSales??[],years)
-    : null,[JSON.stringify(props.comfarDepreciationAssets??[]),JSON.stringify(props.comfarAssetSales??[]),years])
-  const depreciationValues = comfarLifecycle
-    ? comfarLifecycle.depreciation.periods.map(row=>row.depreciation)
-    : props.useFixedInvestmentRegister ? Array(years).fill(0) : depreciation.map(row=>row.depreciation)
-  const assetSaleSchedule = comfarLifecycle
-    ? Array.from({length:years},(_,index)=>{
-        const rows=comfarLifecycle.sales.filter(sale=>sale.period===index+1)
+    : null)
+  const periodDepreciationSchedule = comfarCalendarLifecycle
+    ? comfarCalendarLifecycle.depreciation.periods.map(row=>row.depreciation)
+    : undefined
+  const periodAssetSaleSchedule = comfarCalendarLifecycle
+    ? projectPeriods.map((period,index)=>{
+        const rows=comfarCalendarLifecycle.sales.filter(sale=>sale.period===index+1)
         return {
           saleProceeds:rows.reduce((sum,row)=>sum+row.saleProceeds,0),
           returnOfCapital:rows.reduce((sum,row)=>sum+row.returnOfCapital,0),
@@ -159,6 +163,34 @@ export default function AdvancedFinancePanel(props: Props) {
         }
       })
     : undefined
+  const depreciationValues = comfarCalendarLifecycle
+    ? Array.from({length:years},(_,year)=>comfarCalendarLifecycle.depreciation.periods.reduce((sum,row,index)=>
+        fiscalYearIndexForPeriod(projectPeriods[index],projectPeriods,props.fiscalYearStartMonth!)===year?sum+row.depreciation:sum,0))
+    : comfarLifecycle
+      ? comfarLifecycle.depreciation.periods.map(row=>row.depreciation)
+      : props.useFixedInvestmentRegister ? Array(years).fill(0) : depreciation.map(row=>row.depreciation)
+  const assetSaleSchedule = comfarCalendarLifecycle
+    ? Array.from({length:years},(_,year)=>{
+        const rows=comfarCalendarLifecycle.sales.filter(sale=>
+          fiscalYearIndexForPeriod(projectPeriods[sale.period-1],projectPeriods,props.fiscalYearStartMonth!)===year)
+        return {
+          saleProceeds:rows.reduce((sum,row)=>sum+row.saleProceeds,0),
+          returnOfCapital:rows.reduce((sum,row)=>sum+row.returnOfCapital,0),
+          otherIncomeLoss:rows.reduce((sum,row)=>sum+row.otherIncomeLoss,0),
+          bookValueDisposed:rows.reduce((sum,row)=>sum+row.bookValueAtSale,0),
+        }
+      })
+    : comfarLifecycle
+      ? Array.from({length:years},(_,index)=>{
+          const rows=comfarLifecycle.sales.filter(sale=>sale.period===index+1)
+          return {
+            saleProceeds:rows.reduce((sum,row)=>sum+row.saleProceeds,0),
+            returnOfCapital:rows.reduce((sum,row)=>sum+row.returnOfCapital,0),
+            otherIncomeLoss:rows.reduce((sum,row)=>sum+row.otherIncomeLoss,0),
+            bookValueDisposed:rows.reduce((sum,row)=>sum+row.bookValueAtSale,0),
+          }
+        })
+      : undefined
   const utilization = Array.from({length:years},(_,i)=>i<construction?0:Math.max(0,Math.min(100,props.ramp[i-construction]??100))/100)
   const fixedInvestmentSchedule = capexSchedule
   const workingCapitalPolicy = useMemo(()=>({
@@ -223,6 +255,7 @@ export default function AdvancedFinancePanel(props: Props) {
       annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
       annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:taxRates,annualEquityContributions:equityContributions,
       annualAssetSaleSchedule:assetSaleSchedule,
+      periodDepreciationSchedule,periodAssetSaleSchedule,
       workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
