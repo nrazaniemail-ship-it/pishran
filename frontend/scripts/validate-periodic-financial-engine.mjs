@@ -203,6 +203,38 @@ assert.ok(Number.isFinite(integratedPeriodic.npvProject))
 assert.ok(Number.isFinite(integratedPeriodic.irrProject), 'Periodic project IRR must use actual period dates')
 assert.ok(Number.isFinite(integratedPeriodic.mirrProject), 'Periodic project MIRR must use actual period dates')
 assert.ok(Number.isFinite(integratedPeriodic.npvEquity))
+const periodicAssetDisposal = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400],
+  annualDepreciation: [400], annualFixedInvestment: [0], annualPreOperatingCost: [0],
+  annualMaintenanceCapex: [0], annualTaxRates: [25], annualEquityContributions: [0],
+  workingCapitalByPeriod: [0, 0, 0, 0], loans: [],
+  annualAssetSaleSchedule: [{
+    saleProceeds: 500, returnOfCapital: 400, otherIncomeLoss: 100, bookValueDisposed: 400
+  }]
+})
+assert.equal(periodicAssetDisposal.valid, true, 'Periodic finance must accept a reconciled asset disposal schedule')
+assert.equal(periodicAssetDisposal.rows[2].assetSaleProceeds, 0, 'Annual asset disposals must not be spread across quarters')
+assert.equal(periodicAssetDisposal.rows[3].assetSaleProceeds, 500, 'Annual asset disposal proceeds must be assigned to the fiscal-year closing period')
+assert.equal(periodicAssetDisposal.rows[3].assetReturnOfCapital, 400)
+assert.equal(periodicAssetDisposal.rows[3].assetBookValueDisposed, 400)
+assert.equal(periodicAssetDisposal.rows[3].assetSaleOtherIncomeLoss, 100)
+assert.equal(periodicAssetDisposal.rows[3].ebit, 700, 'Asset disposal gain must enter taxable EBIT')
+assert.equal(periodicAssetDisposal.rows[3].tax, 175, 'Asset disposal gain must be included in period tax')
+assert.equal(periodicAssetDisposal.rows[3].cfads, 1025, 'Disposal proceeds must be included in cash flow available for debt service')
+assert.equal(periodicAssetDisposal.rows[3].projectFreeCashFlow, 1025, 'Project cash flow must include disposal proceeds once, excluding double-counted accounting gain')
+assert.equal(periodicAssetDisposal.rows[3].equityFreeCashFlow, 1025, 'Equity cash flow must include disposal proceeds')
+const invalidPeriodicAssetDisposal = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400],
+  annualDepreciation: [400], annualFixedInvestment: [0], annualPreOperatingCost: [0],
+  annualMaintenanceCapex: [0], annualTaxRates: [25], annualEquityContributions: [0],
+  workingCapitalByPeriod: [0, 0, 0, 0], loans: [],
+  annualAssetSaleSchedule: [{
+    saleProceeds: 500, returnOfCapital: 300, otherIncomeLoss: 100, bookValueDisposed: 400
+  }]
+})
+assert.equal(invalidPeriodicAssetDisposal.valid, false, 'Unreconciled asset disposal schedules must fail closed')
 const expectedEquityFlow = -integratedPeriodic.rows[0].equityContribution
   + integratedPeriodic.rows[0].revenue - integratedPeriodic.rows[0].variableCost
   - integratedPeriodic.rows[0].fixedCost - integratedPeriodic.rows[0].tax
