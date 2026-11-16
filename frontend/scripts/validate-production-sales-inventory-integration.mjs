@@ -76,7 +76,7 @@ const benchmarkPeriods=benchmark.periods.map((year,index)=>({
 const benchmarkSales=benchmark.products.map(product=>({
  productId:product.productId,
  periods:benchmark.periods.map((period,index)=>({
-  period:String(period),salesQuantity:product.sales[index],netUnitPrice:product.unitPrice,
+  period:benchmarkPeriods[index].startDate,salesQuantity:product.sales[index],netUnitPrice:product.unitPrice,
   salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,
   finishedGoodsClosingQuantity:product.closingFinishedGoods[index],
  })),
