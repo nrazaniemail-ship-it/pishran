@@ -113,5 +113,13 @@ const badCostSplit = engine.calculateProductionCostItem({
   variablePercent: 30,
 }, [{ index: 1, months: 12, salesQuantity: 10, productionQuantity: 10 }])
 assert.equal(badCostSplit.valid, false)
+assert.equal(engine.calculateProductionCostItem(null, periods).valid, false,
+  'Malformed persisted production-cost records must fail validation without throwing')
+assert.equal(engine.calculateProductionCostItem({
+  id: 'bad-periods', basis: 'nominal-capacity', activityBasis: 'sales',
+  standardQuantity: 1, standardUnitPrices: [100], nominalCapacity: 100,
+  fixedPercent: 50, variablePercent: 50,
+}, null).valid, false,
+  'Missing period arrays must fail validation without throwing')
 
 console.log('PASS: Help-driven finished-goods production, stock roll-forward, production interval and production-cost formulas')
