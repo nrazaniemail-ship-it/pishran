@@ -1273,3 +1273,58 @@ assert.ok(advancedFinanceUi.includes('rateChanges:loan.rateChanges??[]')
   && advancedFinanceUi.includes('Rate Effective Date')
   && advancedFinanceUi.includes('Capitalized Fees'),
   'Loan UI must persist, configure and display effective-dated rate resets and financing fee treatments')
+
+
+// Dated events must preserve the loan's selected rate-conversion convention.
+const effectiveAnnualBaseLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[0,0],openingBalance:100,repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  rateConversion:'effective-annual-by-actual-days',
+},loanEventPeriods,365)
+const effectiveAnnualSameRateResetLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,rateChanges:[{effectiveDate:'2025-07-01',annualRatePercent:10}],
+  drawdowns:[0,0],openingBalance:100,repaymentMethod:'bullet',repaymentStartPeriod:2,
+  gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  rateConversion:'effective-annual-by-actual-days',
+},loanEventPeriods,365)
+assert.equal(effectiveAnnualBaseLoan.valid,true,effectiveAnnualBaseLoan.issues.join('; '))
+assert.equal(effectiveAnnualSameRateResetLoan.valid,true,effectiveAnnualSameRateResetLoan.issues.join('; '))
+assert.ok(Math.abs(effectiveAnnualSameRateResetLoan.rows[0].interestExpense-effectiveAnnualBaseLoan.rows[0].interestExpense)<1e-8,
+  'A same-rate reset must not change the effective-annual-by-actual-days result')
+const effectiveAnnualChangedRateLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,rateChanges:[{effectiveDate:'2025-07-01',annualRatePercent:20}],
+  drawdowns:[0,0],openingBalance:100,repaymentMethod:'bullet',repaymentStartPeriod:2,
+  gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  rateConversion:'effective-annual-by-actual-days',
+},loanEventPeriods,365)
+const expectedEffectiveAnnualResetInterest=100*(Math.pow(1.1,181/365)*Math.pow(1.2,184/365)-1)
+assert.ok(Math.abs(effectiveAnnualChangedRateLoan.rows[0].interestExpense-expectedEffectiveAnnualResetInterest)<1e-8,
+  'Effective annual rates must compound by segment on the exact reset date')
+const feeOnlyEffectiveAnnualLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[0,0],openingBalance:100,repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  rateConversion:'effective-annual-by-actual-days',
+  fees:[{date:'2025-07-01',amount:5,treatment:'expense'}],
+},loanEventPeriods,365)
+assert.equal(feeOnlyEffectiveAnnualLoan.valid,true,feeOnlyEffectiveAnnualLoan.issues.join('; '))
+assert.ok(Math.abs(feeOnlyEffectiveAnnualLoan.rows[0].interestExpense-10)<1e-8,
+  'Adding an expense-only fee must not switch effective annual interest to simple nominal accrual')
+assert.equal(feeOnlyEffectiveAnnualLoan.rows[0].financingFeeExpense,5)
+
+const quarterlyRatePeriods=[
+  {index:1,startDate:'2025-01-01',endDate:'2025-03-31',days:90,partial:false},
+  {index:2,startDate:'2025-04-01',endDate:'2025-06-30',days:91,partial:false},
+  {index:3,startDate:'2025-07-01',endDate:'2025-09-30',days:92,partial:false},
+  {index:4,startDate:'2025-10-01',endDate:'2025-12-31',days:92,partial:false},
+]
+const frequencyDividedResetLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:12,rateChanges:[{effectiveDate:'2025-02-15',annualRatePercent:24}],
+  drawdowns:[0,0,0,0],openingBalance:100,repaymentMethod:'bullet',
+  repaymentStartPeriod:4,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  rateConversion:'effective-annual-divided-by-frequency',periodsPerYear:4,
+},quarterlyRatePeriods,365)
+assert.equal(frequencyDividedResetLoan.valid,true,frequencyDividedResetLoan.issues.join('; '))
+assert.ok(Math.abs(frequencyDividedResetLoan.rows[0].interestExpense-4.5)<1e-8,
+  'Frequency-divided annual rates must prorate the quarterly rate across the two dated reset segments')
+assert.ok(Math.abs(frequencyDividedResetLoan.rows[0].periodRatePercent-4.5)<1e-8,
+  'Annuity period-rate input must reflect the same intra-period rate reset calculation')
