@@ -150,7 +150,7 @@ export function calculateHelpMirr(cashFlows:number[],reinvestmentRatePercent:num
  const positiveFuture=cashFlows.reduce((sum,flow,index)=>flow>0?sum+flow*Math.pow(reinvest,Math.max(0,horizon+1-(index+1)/periodsPerYear)):sum,0)
  const negativePresent=cashFlows.reduce((sum,flow,index)=>flow<0?sum+(-flow)/Math.pow(borrow,Math.max(0,(index+1)/periodsPerYear-referenceShift)):sum,0)
  if(negativePresent===0)return null
- return Math.pow(positiveFuture/negativePresent,1/(horizon+1-referenceShift))-1
+ return Math.pow(positiveFuture/negativePresent,1/horizon)-1
 }
 export function calculateDividendPool(netProfit:number,retainedPercent:number,preferredDividends:number[],jointVentureCount:number){
  if(!finite(netProfit)||!nonNegative(retainedPercent)||retainedPercent>100||!preferredDividends.every(nonNegative)||!Number.isInteger(jointVentureCount)||jointVentureCount<0||jointVentureCount>preferredDividends.length)throw new Error('invalid-dividend-input')
