@@ -917,6 +917,7 @@ export function calculateComfarCalendarDepreciationSchedule(
   assets: ComfarDepreciationAssetInput[],
   periods: ProjectCalendarPeriod[],
   fiscalYearStartMonth: number,
+  stopDatesByAsset: Record<string,string> = {},
 ): ComfarCalendarDepreciationSchedule {
   const warnings: string[] = []
   const validCalendar = periods.length > 0 && periods.every((period,index) =>
@@ -1025,7 +1026,9 @@ export function calculateComfarCalendarAssetLifecycle(
   periods: ProjectCalendarPeriod[],
   fiscalYearStartMonth: number,
 ): ComfarAssetLifecycle & { depreciation: ComfarCalendarDepreciationSchedule } {
-  const depreciation=calculateComfarCalendarDepreciationSchedule(assets,periods,fiscalYearStartMonth)
+  const stopDatesByAsset:Record<string,string>={}
+  for (const sale of sales) if (sale.saleDate) stopDatesByAsset[sale.assetId]=sale.saleDate
+  const depreciation=calculateComfarCalendarDepreciationSchedule(assets,periods,fiscalYearStartMonth,stopDatesByAsset)
   const warnings=[...depreciation.warnings]
   const results:ComfarAssetSaleResult[]=[]
   const salesByAsset=new Map<string,ComfarAssetSaleResult>()
