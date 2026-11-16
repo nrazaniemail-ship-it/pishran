@@ -1473,6 +1473,10 @@ assert.ok(reportVisualsSource.includes('HOT_ROLLING_COMFAR_OUTPUT_AUDIT')
   && reportVisualsSource.includes('Tax schedule')
   && reportVisualsSource.includes('5% in 1405–1409; 25% in 1410–1419'),
   'COMFAR reconciliation must compare the original five-year 5% tax period and subsequent 25% schedule, not only the uniform 25% sponsor scenario')
+assert.ok(reportVisualsSource.includes('Construction financing split')
+  && reportVisualsSource.includes('props.equityPercent - 70')
+  && reportVisualsSource.includes('props.debtPercent - 30'),
+  'Exact COMFAR basis matching must require the amount-derived 70/30 construction financing, while the sponsor 20/80 scenario remains separate')
 assert.ok(reportVisualsSource.includes('Period-by-period cash-flow and driver reconciliation')
   && reportVisualsSource.includes('projectFreeCashFlow-referenceCashFlow')
   && reportVisualsSource.includes('depreciationByOperatingYear')
