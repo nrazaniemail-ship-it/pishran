@@ -26,7 +26,7 @@ const projects=[
  {id:'sample-dri',name:'واحد احیاء مستقیم',capacity:'',location:'',industry:'فولاد',status:'draft',createdAt:'',updatedAt:''},
  {id:'sample-dash',name:'پروژه نورد گرم ورق – تولید کلاف',capacity:'',location:'',industry:'فولاد',status:'draft',createdAt:'',updatedAt:''},
  {id:'user-hotrolling',name:'نورد گرم ورق توسعه فاز دوم',templateId:'raw',capacity:'',location:'',industry:'صنعتی',status:'draft',createdAt:'',updatedAt:''},
- {id:'user-raw',name:'پروژه آزمایشی کاربر',templateId:'raw',capacity:'',location:'',industry:'سایر صنایع',status:'draft',createdAt:'',updatedAt:''}
+ {id:'user-raw',name:'پروژه آزمایشی کاربر',templateId:'raw',capacity:'',location:'',industry:'سایر صنایع',status:'draft',createdAt:'',updatedAt:''},
  {id:'legacy-user',name:'کارخانه فولاد توسعه',steelStage:'نورد گرم ورق',capacity:'350000',location:'',industry:'فولاد و صنایع معدنی',status:'draft',createdAt:'',updatedAt:''}
 ]
 state.set('projects:list:v1',projects)
