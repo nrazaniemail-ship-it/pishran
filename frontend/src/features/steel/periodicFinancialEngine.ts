@@ -296,9 +296,11 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Frequency-based rate conversion requires 1, 2, 4 or 12 periods per year.')
   if (input.drawdowns.some(value => !validFinite(value) || value < 0))
     issues.push('Every period drawdown must be finite and non-negative.')
-  const interestConvention = input.interestConvention ?? 'comfar-months-plus-360'
-  if (!['comfar-months-plus-360','actual-360','actual-365'].includes(interestConvention))
+  const interestConvention = input.interestConvention
+  if (interestConvention != null && !['comfar-months-plus-360','actual-360','actual-365'].includes(interestConvention))
     issues.push('Unsupported loan interest day-count convention.')
+  if (input.datedDrawdowns && !interestConvention)
+    issues.push('Exact dated drawdowns require an explicit interest day-count convention.')
   if (input.datedDrawdowns) {
     if (input.datedDrawdowns.some(item => !item || !parseIsoDateUtc(item.date) || !validFinite(item.amount) || item.amount <= 0))
       issues.push('Exact loan drawdowns require valid dates and positive finite amounts.')
@@ -357,12 +359,12 @@ export function calculatePeriodicLoanSchedule(
       interestAccrued = 0
       for (const event of events) {
         interestAccrued += interestBalance * (input.annualRatePercent / 100)
-          * loanYearFraction(cursor, event.date, interestConvention)
+          * loanYearFraction(cursor, event.date, interestConvention!)
         interestBalance += event.amount
         cursor = event.date
       }
       interestAccrued += interestBalance * (input.annualRatePercent / 100)
-        * loanYearFraction(cursor, period.endDate, interestConvention)
+        * loanYearFraction(cursor, period.endDate, interestConvention!)
     } else {
       const interestBase = openingBalance + drawdown * 0.5
       interestAccrued = interestBase * periodRates[index]
