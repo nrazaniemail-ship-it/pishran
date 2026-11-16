@@ -337,6 +337,10 @@ assert.ok(projectsViewSource.indexOf('value={projectType}') < projectsViewSource
   && projectsViewSource.includes("t('نام پروژه','Project Name')")
   && !projectsViewSource.includes("مرحله زنجیره فولاد"),
   'Raw project creation must ask for project type then a manually entered project name, without a steel-chain-stage field')
+assert.ok(projectsViewSource.includes("value={projectType} onChange={e => setProjectType(e.target.value)}")
+  && projectsViewSource.includes("!isSteel && projectType.trim() ? { steelStage: projectType.trim() }")
+  && projectsViewSource.includes("value={name} onChange={e => setName(e.target.value)}"),
+  'Non-steel raw templates must also keep project type and manually entered project name as separate persisted fields')
 assert.ok(wizardSource.includes("!isRawTemplate&&project.industry==='فولاد و صنایع معدنی'")
   && wizardSource.includes('technical:rawProject?[]')
   && wizardSource.includes('balance:rawProject?[]')
@@ -344,6 +348,9 @@ assert.ok(wizardSource.includes("!isRawTemplate&&project.industry==='فولاد 
   && wizardSource.includes('capex:rawProject?[]')
   && wizardSource.includes('opex:rawProject?[]'),
   'Raw template must hide stage-specific selector and start technical, material, utility, CAPEX and OPEX rows blank')
+assert.ok(['mining','concentrate','pellet','dri','steelmaking','dri-steelmaking-slab','hot-rolling','hot-plate','cold-rolling','rebar-rolling','angle-rolling','beam-rolling']
+  .every(id=>wizardSource.includes("id:'"+id+"'")&&wizardSource.includes(id+':{')),
+  'Every requested steel-chain stage must have a matching stage-specific form definition')
 assert.ok(wizardSource.includes("id:'dri-steelmaking-slab'")
   && wizardSource.includes("id:'hot-plate'")
   && wizardSource.includes("const stageFormDefinitions")
