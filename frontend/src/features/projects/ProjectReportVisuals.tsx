@@ -78,7 +78,7 @@ const fmt = (value: number | null | undefined, language: 'fa'|'en', digits = 2) 
 
 function FormRowsTable({title,rows,language,kind='cost'}:{title:string;rows:ReportFormRow[];language:'fa'|'en';kind?:'technical'|'material'|'cost'}){
   if(!rows.length)return null
-  const direction=(row:ReportFormRow)=>row.flowType==='output'||(row.flowType==null&&/(تولیدی|قابل فروش|باطله|ضایعات|نرمه و برگشتی|سرباره|پرت|برگشتی)/.test(row.name))
+  const direction=(row:ReportFormRow)=>row.flowType==='output'||(row.flowType==null&&/(تولیدی|قابل فروش|باطله|ضایعات|نرمه و برگشتی|سرباره|پرت|برگشتی|گندله سالم|آهن اسفنجی سرد)/.test(row.name))
     ?t('خروجی / محصول','Output / Product',language):t('ورودی / مصرف','Input / Consumption',language)
   return <div className="fw-card"><h4>{title}</h4><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
     <th>{t('قلم / پارامتر','Item / Parameter',language)}</th><th>{t('مقدار / مشخصه','Quantity / Value',language)}</th><th>{t('واحد','Unit',language)}</th><th>{t('قیمت واحد','Unit price',language)}</th><th>{t('جمع','Total',language)}</th><th>{t('منبع','Source',language)}</th>{kind==='material'&&<th>{t('جهت جریان','Flow direction',language)}</th>}
