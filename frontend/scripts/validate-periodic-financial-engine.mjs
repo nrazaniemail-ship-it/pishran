@@ -715,6 +715,31 @@ assert.equal(equityWorkingCapitalResult.rows[1].equityWorkingCapitalContribution
 assert.equal(equityWorkingCapitalResult.rows[1].projectFreeCashFlow, 0)
 assert.equal(equityWorkingCapitalResult.rows[1].equityFreeCashFlow, 70)
 assert.equal(equityWorkingCapitalResult.totalEquityContribution, 30)
+
+// HRCR200 reference: the first production-year shareholder WC cash contribution
+// is distinct from the full net working-capital requirement.
+const hrcr200WorkingCapitalResult = engine.calculateIntegratedPeriodicFinance({
+  periods: [{ index: 1, startDate: '2026-01-01', endDate: '2026-12-31', days: 365, partial: false }],
+  fiscalYearStartMonth: 1,
+  dayCountBasis: 365,
+  cashFlowTiming: 'period-end',
+  annualRevenue: [0],
+  annualVariableCost: [0],
+  annualFixedCost: [0],
+  annualDepreciation: [0],
+  annualFixedInvestment: [0],
+  annualPreOperatingCost: [0],
+  annualMaintenanceCapex: [0],
+  annualTaxRates: [0],
+  annualEquityContributions: [0],
+  annualEquityWorkingCapitalContributions: [3309144.53],
+  workingCapitalByPeriod: [4595370.46],
+  loans: [],
+})
+assert.equal(hrcr200WorkingCapitalResult.valid, true, hrcr200WorkingCapitalResult.warnings.join('; '))
+assert.ok(Math.abs(hrcr200WorkingCapitalResult.rows[0].equityFreeCashFlow + 3309144.53) < 0.01,
+  'HRCR200 equity cash flow must deduct the shareholder-funded WC contribution once, not the full 4,595,370.46 requirement')
+assert.ok(Math.abs(hrcr200WorkingCapitalResult.totalEquityContribution - 3309144.53) < 0.01)
 const excessiveEquityWorkingCapitalResult = engine.calculateIntegratedPeriodicFinance({
   periods: equityWorkingCapitalPeriods,
   fiscalYearStartMonth: 1,
