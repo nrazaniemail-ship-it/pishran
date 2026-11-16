@@ -44,6 +44,8 @@ assert.equal(partnerAllocation.totalProjectEquityCashFlow,200)
 assert.equal(partnerAllocation.totalDeclaredCapitalContribution,100)
 assert.equal(partnerAllocation.totalScheduledEquityContribution,100)
 assert.equal(partnerAllocation.declaredCapitalContributionVariance,0)
+assert.equal(partnerAllocation.positiveCashFlowDistributionPercent,50)
+assert.equal(partnerAllocation.allocationReconciliationVariance,0)
 assert.equal(partnerAllocation.rows.reduce((sum,row)=>sum+row.netCashFlow,0)+partnerAllocation.retainedPositiveCashFlow,200,
   'Partner net cash flows plus retained cash must reconcile to total project equity cash flow')
 const invalidPartnerAllocation=partnerFinance.allocateJointVentureCashFlows({
@@ -682,10 +684,15 @@ assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
 assert.ok(feasibilityWizardSource.includes('partnerDistributionPercent={m.partnerDistributionPercent??100}')
   && feasibilityWizardSource.includes('درصد جریان نقدی مثبت قابل تقسیم')
   && advancedFinanceSource.includes('allocateJointVentureCashFlows')
+  && advancedFinanceSource.includes('onPartnerFinanceResult')
+  && feasibilityWizardSource.includes('reportPartnerFinance')
+  && feasibilityWizardSource.includes('partnerFinanceResult={reportPartnerFinance}')
   && advancedFinanceSource.includes('Partner net CF'),
   'Joint-venture partner shares and distribution policy must connect to period-level equity cash flows')
 assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
-  && projectReportSource.includes('periodicResult.rows.map'),
+  && projectReportSource.includes('periodicResult.rows.map')
+  && projectReportSource.includes('Joint-Venture Partner Cash-Flow Allocation')
+  && projectReportSource.includes('allocationReconciliationVariance'),
   'Project report must include the period-level financial schedule and key output metrics')
 assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
   && projectReportSource.includes('hasCompleteFiscalYearCoverage')
