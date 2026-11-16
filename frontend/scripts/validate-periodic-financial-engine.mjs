@@ -7,6 +7,12 @@ const output = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
 }).outputText
 const engine = await import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
+const benchmarkSource = await readFile(new URL('../src/features/steel/hotRollingExcelBenchmark.ts', import.meta.url), 'utf8')
+const benchmarkOutput = ts.transpileModule(benchmarkSource, {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
+}).outputText
+const benchmark = await import('data:text/javascript;base64,' + Buffer.from(benchmarkOutput).toString('base64'))
+const comfarReference = benchmark.HOT_ROLLING_COMFAR_OUTPUT_AUDIT
 
 const year = [{ index: 1, startDate: '2025-01-01', endDate: '2025-12-31', days: 365, partial: false }]
 const quarter = [
@@ -352,22 +358,19 @@ const comfarAnnualPeriods = Array.from({ length: 17 }, (_, index) => {
     partial: false,
   }
 })
-const comfarCashFlows = [
-  -13907805.03,-8093664.03,9602342.59,14451793.80,16364704.85,
-  18303107.76,18712850.68,15024064.82,15024064.82,15024064.82,
-  15024064.82,14719546.80,14719546.80,14719546.80,14718471.78,
-  14710023.10,14708024.54 + 13735466.82,
-]
+const comfarCashFlows = [...comfarReference.projectCashFlowsForIrr]
 const comfarValuationDate = comfarAnnualPeriods[1].endDate
 const comfarNpv = engine.calculatePeriodicNpv(
   comfarCashFlows, comfarAnnualPeriods, 25, 365, 'period-end',
   comfarValuationDate, 'period-count', 1,
 )
-assert.equal(comfarValuationDate, '2026-03-20', '12/1404 must map to the end of Iranian fiscal year 1404')
-assert.ok(Math.abs(comfarNpv - 31399764.27) < 0.05,
+assert.equal(comfarValuationDate, comfarReference.valuationDate, '12/1404 must map to the COMFAR valuation date')
+assert.equal(comfarReference.projectCashFlowsByYear.length, 17, 'COMFAR source schedule must cover construction years 1403–1404 and operating years 1405–1419')
+assert.deepEqual(comfarReference.taxScheduleByOperatingYear.map(row=>row.ratePercent), [...Array(5).fill(5),...Array(10).fill(25)], 'COMFAR tax schedule must preserve five years at 5% followed by ten years at 25%')
+assert.ok(Math.abs(comfarNpv - comfarReference.projectNpvAt25) < 0.05,
   'COMFAR HRCR200 NPV at 25% and valuation date 12/1404 must reconcile within rounding')
 const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
-assert.ok(comfarIrr !== null && Math.abs(comfarIrr - 48.31) < 0.01,
+assert.ok(comfarIrr !== null && Math.abs(comfarIrr*100 - comfarReference.projectIrrPercent) < 0.01,
   'COMFAR HRCR200 project IRR must reconcile to 48.31% within displayed precision')
 assert.ok(Math.abs(engine.calculatePeriodicNpv([100,100],comfarAnnualPeriods.slice(0,2),25,365,'period-end',comfarAnnualPeriods[1].endDate,'period-count',1)-225) < 1e-8,
   'A cash flow before the valuation date must be compounded forward to the valuation date')
