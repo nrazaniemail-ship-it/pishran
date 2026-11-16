@@ -677,3 +677,54 @@ assert.ok(financingAuditDoc.includes('one-off or recurring')
   && financingAuditDoc.includes('3,309,144.53'),
   'HRCR200 financing audit must keep issuance-fee ambiguity and shareholder working-capital funding explicit')
 console.log('PASS: asset-level monthly/quarterly depreciation, disposals and integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
+
+// Shareholder-funded working capital is recorded once as an equity injection;
+// the equity cash flow must not also deduct the full project WC movement.
+const equityWorkingCapitalPeriods = [
+  { index: 1, startDate: '2025-01-01', endDate: '2025-12-31', days: 365, partial: false },
+  { index: 2, startDate: '2026-01-01', endDate: '2026-12-31', days: 365, partial: false },
+]
+const equityWorkingCapitalResult = engine.calculateIntegratedPeriodicFinance({
+  periods: equityWorkingCapitalPeriods,
+  fiscalYearStartMonth: 1,
+  dayCountBasis: 365,
+  cashFlowTiming: 'period-end',
+  annualRevenue: [0, 100],
+  annualVariableCost: [0, 0],
+  annualFixedCost: [0, 0],
+  annualDepreciation: [0, 0],
+  annualFixedInvestment: [0, 0],
+  annualPreOperatingCost: [0, 0],
+  annualMaintenanceCapex: [0, 0],
+  annualTaxRates: [0, 0],
+  annualEquityContributions: [0, 0],
+  annualEquityWorkingCapitalContributions: [0, 30],
+  workingCapitalByPeriod: [0, 100],
+  loans: [],
+})
+assert.equal(equityWorkingCapitalResult.valid, true, equityWorkingCapitalResult.warnings.join('; '))
+assert.equal(equityWorkingCapitalResult.rows[1].changeInWorkingCapital, 100)
+assert.equal(equityWorkingCapitalResult.rows[1].equityWorkingCapitalContribution, 30)
+assert.equal(equityWorkingCapitalResult.rows[1].projectFreeCashFlow, 0)
+assert.equal(equityWorkingCapitalResult.rows[1].equityFreeCashFlow, 70)
+assert.equal(equityWorkingCapitalResult.totalEquityContribution, 30)
+const excessiveEquityWorkingCapitalResult = engine.calculateIntegratedPeriodicFinance({
+  periods: equityWorkingCapitalPeriods,
+  fiscalYearStartMonth: 1,
+  dayCountBasis: 365,
+  cashFlowTiming: 'period-end',
+  annualRevenue: [0, 100],
+  annualVariableCost: [0, 0],
+  annualFixedCost: [0, 0],
+  annualDepreciation: [0, 0],
+  annualFixedInvestment: [0, 0],
+  annualPreOperatingCost: [0, 0],
+  annualMaintenanceCapex: [0, 0],
+  annualTaxRates: [0, 0],
+  annualEquityContributions: [0, 0],
+  annualEquityWorkingCapitalContributions: [0, 101],
+  workingCapitalByPeriod: [0, 100],
+  loans: [],
+})
+assert.equal(excessiveEquityWorkingCapitalResult.valid, false)
+
