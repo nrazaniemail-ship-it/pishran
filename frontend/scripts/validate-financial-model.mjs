@@ -806,6 +806,60 @@ const hrcrAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItem
   hrcrDepreciationAssets,1403,17,'annual',reference.createHotRollingCoilProjectFoundation()
 )
 assert.ok(hrcrAssetBuild.assets.length>=18,'HRCR reference must create asset acquisition vintages from the CAPEX workbook')
+
+const monthlyCalendar=foundation.buildProjectCalendarPeriods('2025-01-01','2025-12-31','monthly',1)
+const monthlyAsset={id:'monthly-asset',name:'Monthly asset',originalValue:1200,initialBookValue:1200,
+  scrapPercent:10,lengthYears:2,lengthMonths:0,ratePercent:50,method:'linear-to-scrap',
+  acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'2025-02-15',startingAtDate:'2025-03-01'}
+const monthlyRun=engine.calculateComfarCalendarDepreciationSchedule([monthlyAsset],monthlyCalendar,1)
+assert.equal(monthlyRun.valid,true,'Date-driven monthly straight-line schedule must validate')
+near(monthlyRun.periods[0].depreciation,0,1e-9,'Monthly depreciation must not begin before acquisition')
+near(monthlyRun.periods[1].depreciation,0,1e-9,'Monthly depreciation must respect the explicit March start date')
+near(monthlyRun.periods[2].depreciation,540*31/365.2425,0.01,'Monthly depreciation must use the actual days in the first eligible month')
+near(monthlyRun.periods.reduce((sum,row)=>sum+row.depreciation,0),540*306/365.2425,0.02,
+  'Monthly depreciation must use actual eligible days through year end')
+near(monthlyRun.periods[11].assets[0].closingBookValue,1200-monthlyRun.periods.reduce((sum,row)=>sum+row.depreciation,0),0.02,
+  'Monthly closing book value must reconcile to opening cost less accumulated depreciation')
+
+const quarterlyCalendar=foundation.buildProjectCalendarPeriods('2025-01-01','2025-12-31','quarterly',1)
+const quarterlyAsset={id:'quarterly-asset',name:'Quarterly asset',originalValue:1000,initialBookValue:1000,
+  scrapPercent:10,lengthYears:2,lengthMonths:0,ratePercent:50,method:'linear-to-scrap',
+  acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'2025-01-15',startingAtDate:'2025-02-01'}
+const quarterlyRun=engine.calculateComfarCalendarDepreciationSchedule([quarterlyAsset],quarterlyCalendar,1)
+assert.equal(quarterlyRun.valid,true,'Date-driven quarterly schedule must validate')
+near(quarterlyRun.periods[0].depreciation,450*59/365.2425,0.02,
+  'Quarterly depreciation must begin on the actual February start date')
+near(quarterlyRun.periods[1].depreciation,450*91/365.2425,0.02,
+  'Quarterly depreciation must use the actual length of the second quarter')
+
+const quarterlySale=engine.calculateComfarCalendarAssetLifecycle([quarterlyAsset],[{
+  id:'quarterly-sale',assetId:'quarterly-asset',period:3,priceMode:'self-defined',
+  selfDefinedPrice:500,exchangeRateToLocal:1,saleDate:'2025-07-15'
+}],quarterlyCalendar,1)
+assert.equal(quarterlySale.valid,true,'A dated asset sale must be accepted on the quarterly calendar')
+const expectedQuarterlySaleBook=1000-450*(59+91+15)/365.2425
+near(quarterlySale.sales[0].bookValueAtSale,expectedQuarterlySaleBook,0.03,
+  'Asset book value at sale must include depreciation only through the actual disposal date')
+near(quarterlySale.depreciation.periods[2].depreciation,450*15/365.2425,0.02,
+  'Quarterly sale-period depreciation must stop on the actual sale date')
+near(quarterlySale.sales[0].returnOfCapital,500,0.01,
+  'Sale proceeds below book value must be treated as return of capital up to proceeds')
+near(quarterlySale.sales[0].otherIncomeLoss,500-expectedQuarterlySaleBook,0.03,
+  'Sale loss must reconcile proceeds to book value')
+near(quarterlySale.depreciation.periods[2].closingBookValue,0,1e-9,
+  'Disposed asset must be derecognised in the sale period')
+near(quarterlySale.depreciation.periods[3].assets[0].closingBookValue,0,1e-9,
+  'Disposed asset must not carry a book value into later periods')
+
+for (const method of ['none','linear-to-zero','linear-to-scrap','accelerated','sum-of-years-digits']) {
+  const methodAsset={...monthlyAsset,id:'method-'+method,name:'Method '+method,method,
+    lengthYears:method==='sum-of-years-digits'?3:2,lengthMonths:0,
+    ratePercent:method==='none'?undefined:method==='sum-of-years-digits'?undefined:50}
+  const methodRun=engine.calculateComfarCalendarDepreciationSchedule([methodAsset],monthlyCalendar,1)
+  assert.equal(methodRun.valid,true,'Directory depreciation method '+method+' must have an independently executable calendar path')
+  assert.ok(methodRun.periods.every(row=>Number.isFinite(row.depreciation)&&row.depreciation>=0),
+    'Directory depreciation method '+method+' must produce finite non-negative period charges')
+}
 const hrcrDepreciationRun=engine.calculateComfarAssetDepreciationSchedule(hrcrAssetBuild.assets,17)
 assert.equal(hrcrDepreciationRun.valid,true,'Fractional useful lives from HRCR depreciation rates must be accepted by the XI.H engine')
 near(hrcrDepreciationRun.periods[2].depreciation,reference.HOT_ROLLING_FIXED_ASSET_REFERENCE.seededRegisterFirstYearDepreciation,0.01,
