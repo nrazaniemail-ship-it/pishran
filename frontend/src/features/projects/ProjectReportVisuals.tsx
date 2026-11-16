@@ -1,5 +1,5 @@
 import type { OneWaySensitivityAnalysis } from '../steel/financialModel'
-import { aggregatePeriodicFinanceByFiscalYear, type PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
+import { aggregatePeriodicFinanceByFiscalYear, hasCompleteFiscalYearCoverage, type PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
 import { HOT_ROLLING_200KT_AUDIT } from '../steel/workbookReconciliation'
 import { HOT_ROLLING_COMFAR_OUTPUT_AUDIT } from '../steel/hotRollingExcelBenchmark'
 
@@ -172,7 +172,7 @@ export default function ProjectReportVisuals(props: Props) {
   const annualComparisonRows = aggregatePeriodicFinanceByFiscalYear(
     props.periodicResult?.rows??[],props.fiscalYearStartMonth??1,17
   )
-  const comfarAnnualRows = annualComparisonRows.length===17&&annualComparisonRows.every(row=>row.rows.length>0)
+  const comfarAnnualRows = hasCompleteFiscalYearCoverage(props.periodicResult?.rows??[],props.fiscalYearStartMonth??1,17)&&annualComparisonRows.length===17&&annualComparisonRows.every(row=>row.rows.length>0)
     ? annualComparisonRows.map(row=>({...row,year:1403+row.fiscalYearIndex})) : []
   const quarterlyDebtRows = (props.periodicResult?.rows??[]).map((row,index)=>({
     row,index,
