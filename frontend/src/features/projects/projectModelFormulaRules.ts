@@ -87,11 +87,28 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
  }else if(method==='sum-of-years-digits'){
   const Y=Math.floor(usefulLifeMonths/12),m=usefulLifeMonths%12,m1=firstYearMonths,base=depreciableBase
   if(m===0){
+   // Annual SYD tranches must be prorated across fiscal reporting periods.
+   // A partial first year shifts later period boundaries, so subsequent
+   // periods include the unused tail of the prior tranche and the head
+   // of the next tranche. Monthly overlap preserves the exact SYD total.
    const divisor=Y*(Y+1)/2
-   const segments=[m1,...Array(Math.max(0,Y-1)).fill(12)]
-   const schedule=segments.map((_,i)=>(Y-i)/divisor*base*(segments[i]/12))
-   const cursorStart=0;let cursor=cursorStart
-   for(let i=0;i<schedule.length;i++){const overlap=Math.max(0,Math.min(monthsElapsed+activeMonths,cursor+segments[i])-Math.max(monthsElapsed,cursor));if(segments[i]>0)charge+=schedule[i]*overlap/segments[i];cursor+=segments[i]}
+   const trancheAmounts=Array.from({length:Y},(_,i)=>(Y-i)/divisor*base)
+   const requestedStart=monthsElapsed
+   const requestedEnd=monthsElapsed+activeMonths
+   const bucketStarts:number[]=[0]
+   const bucketLengths:number[]=[m1]
+   let next=m1
+   while(next<usefulLifeMonths){bucketStarts.push(next);const length=Math.min(12,usefulLifeMonths-next);bucketLengths.push(length);next+=length}
+   for(let bucket=0;bucket<bucketStarts.length;bucket++){
+    const bucketStart=bucketStarts[bucket],bucketEnd=bucketStart+bucketLengths[bucket]
+    const overlapStart=Math.max(requestedStart,bucketStart),overlapEnd=Math.min(requestedEnd,bucketEnd)
+    if(overlapEnd<=overlapStart)continue
+    for(let tranche=0;tranche<Y;tranche++){
+     const trancheStart=tranche*12,trancheEnd=trancheStart+12
+     const overlap=Math.max(0,Math.min(overlapEnd,trancheEnd)-Math.max(overlapStart,trancheStart))
+     if(overlap>0)charge+=trancheAmounts[tranche]*overlap/12
+    }
+   }
   }else{
    const sodl=(Y+1)*(Y+2*m/12)/2,sodlAdj=(Y+1)*Y/2
    const d1=(Y+m/12)/sodl*(m/12)*base
