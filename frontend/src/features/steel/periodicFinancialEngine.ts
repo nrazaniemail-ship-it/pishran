@@ -393,14 +393,15 @@ export function calculatePeriodicLoanSchedule(
     const end = parseIsoDateUtc(endDateExclusive)!
     return Math.max(0, (end.getTime() - start.getTime()) / 86400000)
   }
-  const segmentInterest = (balance: number, annualRate: number, startDate: string, endDateExclusive: string) => {
+  const segmentInterest = (balance: number, annualRate: number, startDate: string, endDateExclusive: string, period: ProjectCalendarPeriod) => {
     if (interestConvention) {
       return balance * annualRate / 100 * loanYearFraction(startDate, endDateExclusive, interestConvention)
     }
     const days = segmentDays(startDate, endDateExclusive)
     if (rateConversion === 'effective-annual-divided-by-frequency') {
       const periodsPerYear = input.periodsPerYear as 1 | 2 | 4 | 12
-      return balance * annualRate / 100 / periodsPerYear * days / (dayCountBasis / periodsPerYear)
+      const periodFraction=days/period.days*(period.partial?period.days/(dayCountBasis/periodsPerYear):1)
+      return balance * annualRate / 100 / periodsPerYear * periodFraction
     }
     return balance * (Math.pow(1 + annualRate / 100, days / dayCountBasis) - 1)
   }
@@ -422,7 +423,8 @@ export function calculatePeriodicLoanSchedule(
           simpleFactor+=rate/100*loanYearFraction(from,to,interestConvention)
         } else if(rateConversion==='effective-annual-divided-by-frequency') {
           const periodsPerYear=input.periodsPerYear as 1|2|4|12
-          simpleFactor+=rate/100/periodsPerYear*segmentDays(from,to)/(dayCountBasis/periodsPerYear)
+          const periodFraction=segmentDays(from,to)/period.days*(period.partial?period.days/(dayCountBasis/periodsPerYear):1)
+          simpleFactor+=rate/100/periodsPerYear*periodFraction
         } else {
           combinedFactor*=Math.pow(1+rate/100,segmentDays(from,to)/dayCountBasis)
         }
@@ -460,7 +462,7 @@ export function calculatePeriodicLoanSchedule(
       const endExclusive=addDays(period.endDate,1)
       const accrueUntil=(nextDate:string) => {
         if(nextDate<=cursor) return
-        const accrued=segmentInterest(interestBalance,activeRate,cursor,nextDate)
+        const accrued=segmentInterest(interestBalance,activeRate,cursor,nextDate,period)
         interestAccrued+=accrued
         // Effective-annual conversion represents a compounded effective rate.
         // Explicit day-count conventions and frequency-divided rates remain simple.
