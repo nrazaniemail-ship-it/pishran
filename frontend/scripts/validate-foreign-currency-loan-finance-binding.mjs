@@ -86,11 +86,23 @@ assert.equal(run.statements.length,3)
 assert.ok(run.statements.every(row=>row.balanceSheet.reconciled))
 assert.ok(run.fxPosting.valid)
 
+const feeBinding=binding.buildPeriodicLoanFacilityBinding({
+ loan:{...loan,facilityLimit:2000,fees:[
+  {id:'agency-cap',type:'agency',ratePercent:1,currencyCode:'USD',paymentDate:'2025-01-01',treatment:'capitalize'},
+  {id:'guarantee-exp',type:'guarantee',ratePercent:1,currencyCode:'USD',paymentDate:'2025-12-31',treatment:'expense'},
+ ]},
+ foundation,periods,dayCountBasis:365,
+})
+assert.equal(feeBinding.valid,true,feeBinding.issues.join('; '))
+assert.ok(feeBinding.fxTranslation.rows[0].capitalizedFeesLocal>0)
+assert.ok(feeBinding.localSchedule[0].capitalizedFinancingFees>0)
+assert.ok(feeBinding.localSchedule[0].financingFeeExpense>0)
+
 const feeBlocked=binding.buildPeriodicLoanFacilityBinding({
  loan:{...loan,fees:[{id:'agency',type:'agency',ratePercent:1,currencyCode:'USD'}]},
  foundation,periods,dayCountBasis:365,
 })
 assert.equal(feeBlocked.valid,false)
-assert.ok(feeBlocked.issues.some(x=>x.includes('payment dates')))
+assert.ok(feeBlocked.issues.some(x=>x.includes('payment date')))
 
 console.log('Loan-form binding, partial interest capitalization, periodic FX translation and three-statement orchestration validation passed.')
