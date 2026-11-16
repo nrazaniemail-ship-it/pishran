@@ -27,11 +27,14 @@ const projects=[
  {id:'sample-dash',name:'پروژه نورد گرم ورق – تولید کلاف',capacity:'',location:'',industry:'فولاد',status:'draft',createdAt:'',updatedAt:''},
  {id:'user-hotrolling',name:'نورد گرم ورق توسعه فاز دوم',templateId:'raw',capacity:'',location:'',industry:'صنعتی',status:'draft',createdAt:'',updatedAt:''},
  {id:'user-raw',name:'پروژه آزمایشی کاربر',templateId:'raw',capacity:'',location:'',industry:'سایر صنایع',status:'draft',createdAt:'',updatedAt:''}
+ {id:'legacy-user',name:'کارخانه فولاد توسعه',steelStage:'نورد گرم ورق',capacity:'350000',location:'',industry:'فولاد و صنایع معدنی',status:'draft',createdAt:'',updatedAt:''}
 ]
 state.set('projects:list:v1',projects)
 const remaining=await repository.removeSampleProjects()
-assert.deepEqual(remaining.map(x=>x.id),['user-hotrolling','user-raw'])
-assert.deepEqual((await repository.listProjects()).map(x=>x.id),['user-hotrolling','user-raw'])
+assert.deepEqual(remaining.map(x=>x.id),['user-hotrolling','user-raw','legacy-user'])
+assert.deepEqual((await repository.listProjects()).map(x=>x.id),['user-hotrolling','user-raw','legacy-user'])
+assert.ok(remaining.every(project=>project.templateId==='raw'))
+assert.equal(remaining.find(project=>project.id==='legacy-user')?.steelStage,undefined)
 assert.ok(removed.includes('feasibility:project:sample-hr:v1'))
 assert.ok(removed.includes('feasibility:project:sample-old-template:v1'))
 assert.ok(removed.includes('feasibility:project:sample-dash:v1'))
