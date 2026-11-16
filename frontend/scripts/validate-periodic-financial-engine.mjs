@@ -1266,3 +1266,10 @@ assert.equal(integratedRateResetAndFees.rows[0].debtService,integratedRateResetA
 const integratedFeeStatements=engine.buildPeriodicThreeFinancialStatements(integratedRateResetAndFees)
 assert.ok(integratedFeeStatements.every(row=>row.balanceSheet.reconciled),
   'Capitalized fees must increase deferred pre-operating assets and debt by the same amount')
+
+assert.ok(advancedFinanceUi.includes('rateChanges:loan.rateChanges??[]')
+  && advancedFinanceUi.includes('financingFees:(loan.financingFees??[])')
+  && advancedFinanceUi.includes('periodInterestConvention')
+  && advancedFinanceUi.includes('Rate Effective Date')
+  && advancedFinanceUi.includes('Capitalized Fees'),
+  'Loan UI must persist, configure and display effective-dated rate resets and financing fee treatments')
