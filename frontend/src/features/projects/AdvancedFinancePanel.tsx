@@ -509,12 +509,12 @@ export default function AdvancedFinancePanel(props: Props) {
         </table></div>
         <div style={{overflowX:'auto',maxHeight:360}}><table className="fw-table"><thead><tr>
           <th>{t('دوره','Period')}</th><th>{t('تاریخ','Date')}</th><th>{t('جریان نقد سهامداران','Total equity CF')}</th>
-          <th>{t('خالص تخصیص به شرکا','Partner net CF')}</th><th>{t('وجه نقد نگه‌داشته‌شده','Retained cash')}</th>
+          <th>{t('خالص تخصیص به شرکا','Partner net CF')}</th><th>{t('توزیع مثبت به شرکا','Positive distributions')}</th><th>{t('وجه نقد نگه‌داشته‌شده','Retained cash')}</th>
           <th>{t('اختلاف کنترل','Reconciliation variance')}</th>{partnerFinanceResult.rows.map(row=><th key={row.partnerId}>{row.partnerName}</th>)}
         </tr></thead>
           <tbody>{partnerFinanceResult.periods.map((period,index)=><tr key={period.period}>
             <td>{period.period}</td><td>{period.startDate} – {period.endDate}</td><td>{money(period.totalEquityCashFlow)}</td>
-            <td>{money(period.partnerNetCashFlow)}</td><td>{money(period.retainedPositiveCashFlow)}</td><td>{money(period.reconciliationVariance)}</td>
+            <td>{money(period.partnerNetCashFlow)}</td><td>{money(period.distributedPositiveCashFlow)}</td><td>{money(period.retainedPositiveCashFlow)}</td><td>{money(period.reconciliationVariance)}</td>
             {partnerFinanceResult.rows.map(row=><td key={row.partnerId}>{money(row.periods[index]?.allocatedCashFlow??0)}</td>)}
           </tr>)}</tbody>
         </table></div>
