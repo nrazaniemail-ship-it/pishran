@@ -64,6 +64,7 @@ type SavedState = {
   loans: Loan[]
   assets: Asset[]
   equityContributions: number[]
+  equityWorkingCapitalContributions: number[]
   workingCapitalDays: { raw: number; energy:number; spareParts:number; wip: number; finished: number; receivable: number; cash: number; payable: number }
   workingCapitalBases: { rawMaterials: number; energy:number; spareParts:number; conversion: number; finishedGoods: number; cash: number; payables: number }
   wipCompletion: { material: number; conversion: number }
@@ -104,8 +105,8 @@ export default function AdvancedFinancePanel(props: Props) {
   const initialCapexSchedule = activeFixedInvestmentSchedule.map((amount,i)=>amount+activePreOperatingSchedule[i])
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
-    loans:[{id:'loan-1',label:'تسهیلات اصلی و سرمایه در گردش',drawdowns:initialCapexSchedule.map((v,i)=>v*initialDebtShare+(i===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0)),drawdownMode:'annual-day-weighted',annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
-    assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map((v,i)=>v*Math.max(0,Math.min(100,props.equityPercent))/100+(i===construction?Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100:0)),
+    loans:[{id:'loan-1',label:'تسهیلات اصلی و سرمایه در گردش',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),drawdownMode:'annual-day-weighted',annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
+    assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100:0),
     workingCapitalDays:props.workingCapitalDefaults?.days??{raw:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
     workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
     wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),
@@ -267,6 +268,7 @@ export default function AdvancedFinancePanel(props: Props) {
       annualFixedCost:result.years.map(row=>row.fixedCashCost),annualDepreciation:depreciationValues,
       annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
       annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:taxRates,annualEquityContributions:equityContributions,
+      annualEquityWorkingCapitalContributions:state.equityWorkingCapitalContributions,
       annualAssetSaleSchedule:assetSaleSchedule,
       periodDepreciationSchedule,periodAssetSaleSchedule,
       workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
@@ -278,7 +280,7 @@ export default function AdvancedFinancePanel(props: Props) {
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     })
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(state.equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
   useEffect(()=>{props.onPeriodicResult?.(periodicFinanceResult)},[periodicFinanceResult,props.onPeriodicResult])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
@@ -290,6 +292,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const updateAsset=(id:string,patch:Partial<Asset>)=>setState(s=>({...s,assets:s.assets.map(a=>a.id===id?{...a,...patch}:a)}))
   const updateDay=(key:keyof SavedState['workingCapitalDays'],value:number)=>setState(s=>({...s,workingCapitalDays:{...s.workingCapitalDays,[key]:Math.max(0,value)}}))
   const setEquity=(index:number,value:number)=>setState(s=>({...s,equityContributions:Array.from({length:years},(_,i)=>i===index?Math.max(0,value):(s.equityContributions[i]??0))}))
+  const setWorkingCapitalEquity=(index:number,value:number)=>setState(s=>({...s,equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===index?Math.max(0,value):(s.equityWorkingCapitalContributions[i]??0))}))
   const totalBalanceChecks=statements.filter(r=>r.balanceSheet.reconciled).length
   const totalMovementChecks=statements.filter(r=>Object.values(r.movementChecks).every(value=>Math.abs(value)<=0.01)).length
 
@@ -341,7 +344,10 @@ export default function AdvancedFinancePanel(props: Props) {
     <div className="fw-card">
       <h4>{t('آورده نقدی سهامدار به تفکیک سال','Annual Shareholder Equity Contributions')}</h4>
       <div className="fw-grid">{Array.from({length:construction},(_,i)=><label className="fw-field" key={i}><span>{tr('آورده سال ساخت')} {i+1}</span><input type="number" min="0" value={equityContributions[i]??0} onChange={e=>setEquity(i,Number(e.target.value))}/></label>)}</div>
-      <p className="fw-hint">{tr('آورده سهامدار را جدا از برداشت وام وارد کنید. کسری منابع، در خروجی هشدار داده می‌شود.')}</p>
+      <p className="fw-hint">{tr('آورده سهامدار برای CAPEX را جدا از برداشت وام وارد کنید. سرمایه در گردش در بخش مستقل زیر ثبت می‌شود.')}</p>
+      <h4>{t('آورده سهامدار برای سرمایه در گردش','Shareholder Equity for Working Capital')}</h4>
+      <div className="fw-grid">{Array.from({length:opYears},(_,i)=>{const yearIndex=construction+i;return <label className="fw-field" key={yearIndex}><span>{tr('آورده سرمایه در گردش سال بهره‌برداری')} {i+1}</span><input type="number" min="0" value={state.equityWorkingCapitalContributions[yearIndex]??0} onChange={e=>setWorkingCapitalEquity(yearIndex,Number(e.target.value))}/></label>})}</div>
+      <p className="fw-hint">{tr('این مبلغ، سهم واقعی تأمین‌شده توسط سهامدار از افزایش سرمایه در گردش خالص همان سال است؛ آن را فقط یک‌بار وارد کنید. مبلغ نمی‌تواند از افزایش خالص سرمایه در گردش همان دوره بیشتر باشد. سهم تأمین‌شده از محل وام در این قسمت وارد نمی‌شود.')}</p>
     </div>
 
     <h4>{t('۲. سرمایه در گردش دوره‌ای','2. Periodic Working Capital')}</h4>
