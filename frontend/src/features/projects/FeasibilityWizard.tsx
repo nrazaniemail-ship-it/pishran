@@ -343,7 +343,9 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const wacc=(m.finance.equity/100)*(m.finance.equityCost/100)+(m.finance.debt/100)*(m.finance.debtCost/100)*(1-m.finance.tax/100)
  const rate=m.finance.method==='wacc'?wacc:m.finance.method==='manual'?m.finance.manualRate/100:0
  const marketSize=m.market.domesticProduction+m.market.imports-m.market.exports
- const revenuePrice=isHotRollingCoil?sum(m.products)/Math.max(1,m.capacity.nameplate):m.market.domesticPrice*(m.market.domesticShare/100)+m.market.exportPrice*(1-m.market.domesticShare/100)
+ const productPricingComplete=m.products.length>0&&m.products.every(row=>row.quantity>0&&row.unitPrice>0)
+ const productWeightedRevenuePrice=productPricingComplete?sum(m.products)/Math.max(1,m.capacity.nameplate):null
+ const revenuePrice=productWeightedRevenuePrice??(m.market.domesticPrice*(m.market.domesticShare/100)+m.market.exportPrice*(1-m.market.domesticShare/100))
  const model=useMemo(()=>{
   const constructionPeriods=Math.max(1,Math.ceil(m.project.constructionYears||1))
   const operatingPeriods=Math.max(1,Math.ceil(m.project.operatingYears||1))
