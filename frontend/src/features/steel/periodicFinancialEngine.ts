@@ -784,11 +784,14 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     unleveredTaxLoss = unleveredPeriodTax.closingLossCarryForward
     const closingWorkingCapital = input.workingCapitalByPeriod[index]
     const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
-    const equityWorkingCapitalAmount = input.annualEquityWorkingCapitalContributions
-      ? equityWorkingCapitalContribution[index]
-      : changeInWorkingCapital
-    if (!validFinite(equityWorkingCapitalAmount) || equityWorkingCapitalAmount < 0 ||
-        equityWorkingCapitalAmount > Math.max(0, changeInWorkingCapital) + 0.01) {
+    const equityWorkingCapitalAmount = changeInWorkingCapital < 0
+      ? changeInWorkingCapital
+      : input.annualEquityWorkingCapitalContributions
+        ? equityWorkingCapitalContribution[index]
+        : changeInWorkingCapital
+    if (input.annualEquityWorkingCapitalContributions &&
+        (!validFinite(equityWorkingCapitalContribution[index]) || equityWorkingCapitalContribution[index] < 0 ||
+         equityWorkingCapitalContribution[index] > Math.max(0, changeInWorkingCapital) + 0.01)) {
       warnings.push('Shareholder-funded working capital must be finite, non-negative and no greater than the period increase in net working capital (period ' + (index + 1) + ').')
       return empty()
     }
