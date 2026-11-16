@@ -86,6 +86,18 @@ const run=binding.calculatePeriodicFinanceWithForeignCurrencyLoans({
 assert.equal(run.valid,true,run.issues.join('; '))
 assert.equal(run.statements.length,3)
 assert.ok(run.statements.every(row=>row.balanceSheet.reconciled))
+const secondForeignLoan={...loan,id:'foreign-facility-2',name:'Second USD Facility',
+  disbursements:[{date:'2025-01-01',amount:500}]}
+const multipleForeignRun=binding.calculatePeriodicFinanceWithForeignCurrencyLoans({
+  finance:baseFinance,loans:[loan,secondForeignLoan],foundation,
+  openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+  taxTreatment:'non-deductible',
+})
+assert.equal(multipleForeignRun.valid,true,multipleForeignRun.issues.join('; '))
+assert.equal(multipleForeignRun.fxPosting.debtTranslations.length,2)
+assert.ok(multipleForeignRun.statements.every(row=>row.balanceSheet.reconciled))
+assert.ok(multipleForeignRun.statements.every(row=>Object.values(row.movementChecks).every(value=>Math.abs(value)<0.01)),
+  'Multiple foreign facilities must aggregate without duplicating FX movements in the three statements')
 assert.ok(run.statements.every(row=>Object.values(row.movementChecks).every(value=>Math.abs(value)<0.01)))
 assert.ok(run.statements.every((row,index)=>Math.abs(row.balanceSheet.retainedEarnings-row.openingBalances.retainedEarnings-row.incomeStatement.netIncome)<0.01))
 assert.ok(run.fxPosting.valid)
