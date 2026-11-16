@@ -408,3 +408,40 @@ export function calculateFixedAssetRevaluation(initialLocalValue:number,acquisit
  const indexAt=(year:number)=>localInflationPercent.slice(0,year).reduce((factor,rate)=>factor*(1+rate/100),1)
  return initialLocalValue*indexAt(currentYearIndex)/indexAt(acquisitionYearIndex)
 }
+
+
+function parseIsoDate(value:string){
+ const time=Date.parse(value+'T00:00:00Z')
+ if(!Number.isFinite(time)||new Date(time).toISOString().slice(0,10)!==value)throw new Error('invalid-financial-date')
+ return time
+}
+function daysBetween30_360(from:string,to:string){
+ const a=new Date(parseIsoDate(from)),b=new Date(parseIsoDate(to))
+ const dayA=Math.min(a.getUTCDate(),30),dayB=Math.min(b.getUTCDate(),30)
+ return (b.getUTCFullYear()-a.getUTCFullYear())*360+(b.getUTCMonth()-a.getUTCMonth())*30+dayB-dayA
+}
+export function calculateDiscountFactor30_360(annualRatePercent:number,referenceDate:string,transactionDate:string){
+ if(!finite(annualRatePercent)||annualRatePercent<=-100)throw new Error('invalid-dated-discount-rate')
+ const months=daysBetween30_360(referenceDate,transactionDate)/30
+ return Math.pow(1+annualRatePercent/100,months/12)
+}
+export function calculateDatedNpv(input:{cashFlows:{date:string;amount:number}[];discountRatePercent:number;referenceDate:string;salvageValue?:number;salvageDate?:string}){
+ if(!input.cashFlows.every(x=>finite(x.amount))||!finite(input.discountRatePercent)||input.discountRatePercent<=-100)throw new Error('invalid-dated-npv')
+ const discountedCashFlows=input.cashFlows.map(flow=>({date:flow.date,amount:flow.amount,discountFactor:calculateDiscountFactor30_360(input.discountRatePercent,input.referenceDate,flow.date),presentValue:flow.amount/calculateDiscountFactor30_360(input.discountRatePercent,input.referenceDate,flow.date)}))
+ let discountedSalvageValue=0
+ if(input.salvageValue!==undefined){
+  if(!finite(input.salvageValue)||!input.salvageDate)throw new Error('invalid-dated-salvage')
+  discountedSalvageValue=input.salvageValue/calculateDiscountFactor30_360(input.discountRatePercent,input.referenceDate,input.salvageDate)
+ }
+ return {npv:discountedCashFlows.reduce((sum,x)=>sum+x.presentValue,0)+discountedSalvageValue,discountedCashFlows,discountedSalvageValue}
+}
+export function calculateDatedMirr(input:{cashFlows:{date:string;amount:number}[];reinvestmentRatePercent:number;borrowingRatePercent:number;referenceDate:string;recoveryDate:string;planningHorizonYears:number}){
+ if(!input.cashFlows.every(x=>finite(x.amount))||!nonNegative(input.reinvestmentRatePercent)||!nonNegative(input.borrowingRatePercent)||!Number.isInteger(input.planningHorizonYears)||input.planningHorizonYears<=0)throw new Error('invalid-dated-mirr')
+ const horizonDays=daysBetween30_360(input.referenceDate,input.recoveryDate)
+ if(horizonDays<=0)throw new Error('invalid-mirr-horizon')
+ const reinvest=1+input.reinvestmentRatePercent/100,borrow=1+input.borrowingRatePercent/100
+ const positiveFuture=input.cashFlows.reduce((sum,flow)=>flow.amount>0?sum+flow.amount*Math.pow(reinvest,daysBetween30_360(flow.date,input.recoveryDate)/360):sum,0)
+ const negativePresent=input.cashFlows.reduce((sum,flow)=>flow.amount<0?sum+(-flow.amount)/Math.pow(borrow,daysBetween30_360(input.referenceDate,flow.date)/360):sum,0)
+ if(negativePresent===0)return null
+ return Math.pow(positiveFuture/negativePresent,1/input.planningHorizonYears)-1
+}
