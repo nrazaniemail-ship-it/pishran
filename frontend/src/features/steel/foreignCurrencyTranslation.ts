@@ -408,7 +408,7 @@ export function resolveLoanFacilityCurrency(
 ): LoanFacilityCurrencyResolution {
   if (loan.marketOrigin === 'local') {
     if (loan.currencyCode && loan.currencyCode.trim().toUpperCase() !== foundation.currencies.localCurrencyCode.trim().toUpperCase())
-      return { valid: false, currency: null, issues: ['A local loan must use the project's local currency.'] }
+      return { valid: false, currency: null, issues: ["A local loan must use the project's local currency."] }
     return { valid: true, currency: null, issues: [] }
   }
   if (loan.marketOrigin !== 'foreign')
