@@ -77,7 +77,8 @@ export function allocateJointVentureCashFlows(
     const parsed=new Date(`${value}T00:00:00.000Z`)
     return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===value
   }
-  const scheduleRowsValid=Array.isArray(finance?.rows)&&finance.rows.length>0&&finance.rows.every((period,index)=>{
+  const financeRows=Array.isArray(finance?.rows)?finance.rows:[]
+  const scheduleRowsValid=financeRows.length>0&&financeRows.every((period,index)=>{
     if(!period||typeof period!=='object')return false
     const start=validIsoDate(period.startDate),end=validIsoDate(period.endDate)
     const startTime=start?Date.parse(`${period.startDate}T00:00:00.000Z`):NaN
@@ -92,7 +93,7 @@ export function allocateJointVentureCashFlows(
       start&&end&&endTime>=startTime&&
       (!previous||(period.period===previous.period+1&&startTime===previousEnd+86400000))
   })
-  const rowScheduledEquityContribution=finance.rows.reduce((sum,period)=>
+  const rowScheduledEquityContribution=financeRows.reduce((sum,period)=>
     sum+(Number.isFinite(period.equityContribution)?period.equityContribution:0)+
       (Number.isFinite(period.equityWorkingCapitalContribution)?period.equityWorkingCapitalContribution:0),0)
   if (!finance || !finance.valid || !Array.isArray(finance.rows) || !scheduleRowsValid ||
