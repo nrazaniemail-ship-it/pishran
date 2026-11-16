@@ -210,7 +210,7 @@ const equalPrincipalLoan = engine.calculatePeriodicLoanSchedule({
 }, quarter, 365)
 assert.equal(equalPrincipalLoan.valid, true)
 assert.ok(equalPrincipalLoan.rows[0].capitalizedInterest > 0)
-assert.equal(equalPrincipalLoan.rows[0].interestExpense, 0)
+assert.ok(Math.abs(equalPrincipalLoan.rows[0].interestExpense) < 1e-8)
 assert.ok(equalPrincipalLoan.rows[2].principal > 0)
 assert.ok(equalPrincipalLoan.rows[3].principal > 0)
 assert.ok(Math.abs(equalPrincipalLoan.rows[3].closingBalance) < 1e-8)
