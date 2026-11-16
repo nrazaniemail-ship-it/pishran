@@ -791,6 +791,18 @@ const annualDepreciationPeriods=Array.from({length:3},(_,index)=>{
   const end=new Date(Date.UTC(year+1,0,1)-86400000)
   return {index:index+1,startDate:start.toISOString().slice(0,10),endDate:end.toISOString().slice(0,10),days:Math.round((end-start)/86400000)+1,partial:false}
 })
+
+const periodicTaxLossRollForward=engine.calculateIntegratedPeriodicFinance({
+  periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,150],annualVariableCost:[0,0,0],annualFixedCost:[100,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],discountRatePercent:10,
+})
+assert.equal(periodicTaxLossRollForward.valid,true,periodicTaxLossRollForward.warnings.join('; '))
+assert.deepEqual(periodicTaxLossRollForward.rows.map(row=>row.taxLossCarryForward),[100,100,0])
+assert.deepEqual(periodicTaxLossRollForward.rows.map(row=>row.tax),[0,0,12.5],
+  'Periodic integrated tax must carry operating losses forward and tax only the remaining taxable profit')
 const periodicSensitivityInput={
   periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
   annualRevenue:[0,1000,1200],annualVariableCost:[0,300,350],annualFixedCost:[0,100,100],
