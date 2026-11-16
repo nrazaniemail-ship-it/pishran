@@ -212,6 +212,65 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
   const retained=row.values.retainedPercent,distributed=row.values.distributedPercent
   if(typeof retained==='number'&&typeof distributed==='number'&&Math.abs(retained+distributed-100)>1e-8)errors.push('profit-retention-and-distribution-must-equal-100')
  }
+
+ // Stable row identities and cross-row checks for the remaining generic modules.
+ for(const [sectionId,rows] of Object.entries(value.sections??{})){
+  const ids=rows.map(row=>row.id)
+  if(ids.some(id=>!id))errors.push(sectionId+':blank-row-id')
+  if(new Set(ids).size!==ids.length)errors.push(sectionId+':duplicate-row-id')
+ }
+ const costCentres=value.sections?.['cost-centres']??[]
+ const centreNames=costCentres.map(row=>row.values.name).filter((name):name is string=>typeof name==='string'&&name.trim()!=='')
+ if(new Set(centreNames).size!==centreNames.length)errors.push('cost-centres:duplicate-name')
+ const centreSet=new Set(centreNames)
+ for(const row of costCentres){
+  const parent=row.values.parentId
+  if(typeof parent==='string'&&parent.trim()&&!centreSet.has(parent))errors.push('cost-centre:unknown-parent:'+parent)
+ }
+ for(const row of value.sections?.['cost-allocation']??[]){
+  const v=row.values
+  if(typeof v.allocationPercent==='number'&&(!Number.isFinite(v.allocationPercent)||v.allocationPercent<0||v.allocationPercent>100))errors.push('cost-allocation:invalid-percent')
+  if(typeof v.costCentreId==='string'&&v.costCentreId.trim()&&!centreSet.has(v.costCentreId))errors.push('cost-allocation:unknown-cost-centre:'+v.costCentreId)
+ }
+ for(const row of value.sections?.['equity-grants']??[]){
+  const v=row.values
+  if(v.sourceType==='grant'||v.sourceType==='subsidy'){
+   if(typeof v.sourceName!=='string'||!v.sourceName.trim())errors.push('equity-grant:source-name-required')
+   if(typeof v.period!=='string'||!v.period.trim())errors.push('equity-grant:period-required')
+   if(v.paidIn!==null&&v.paidIn!==undefined&&(typeof v.paidIn!=='number'||!Number.isFinite(v.paidIn)||v.paidIn<0))errors.push('equity-grant:invalid-amount')
+   if(v.paidOut!==null&&v.paidOut!==undefined&&(typeof v.paidOut!=='number'||!Number.isFinite(v.paidOut)||v.paidOut<0))errors.push('equity-grant:invalid-refund')
+  }
+ }
+ for(const row of value.sections?.['joint-venture']??[]){
+  const v=row.values
+  for(const key of ['preferredDividendPercent','profitSharePercent','repatriationPercent'] as const){
+   const amount=v[key]
+   if(typeof amount==='number'&&(!Number.isFinite(amount)||amount<0||amount>100))errors.push('joint-venture:invalid-'+key)
+  }
+  for(const key of ['paidIn','paidOut','preferredDividendAbsolute'] as const){
+   const amount=v[key]
+   if(typeof amount==='number'&&(!Number.isFinite(amount)||amount<0))errors.push('joint-venture:invalid-'+key)
+  }
+ }
+ const incremental=value.sections?.['incremental-analysis']??[]
+ const incrementalKeys=incremental.map(row=>[row.values.alternative,row.values.view,row.values.period].join('|'))
+ if(incrementalKeys.some(key=>key==='||'))errors.push('incremental-analysis:alternative-view-and-period-required')
+ if(new Set(incrementalKeys).size!==incrementalKeys.length)errors.push('incremental-analysis:duplicate-alternative-view-period')
+ for(const row of value.sections?.['sensitivity']??[]){
+  const v=row.values
+  for(const key of ['quantityChange','priceChange','valueChange','maxIncrease','maxDecrease'] as const){
+   const amount=v[key]
+   if(typeof amount==='number'&&(!Number.isFinite(amount)||(key==='maxIncrease'||key==='maxDecrease'?amount<0:amount< -100)))errors.push('sensitivity:invalid-'+key)
+  }
+  if(typeof v.order==='number'&&(!Number.isInteger(v.order)||v.order<1))errors.push('sensitivity:invalid-variable-order')
+ }
+ for(const row of value.sections?.['economic-effects']??[]){
+  const v=row.values
+  if(typeof v.headcount==='number'&&(!Number.isFinite(v.headcount)||v.headcount<0))errors.push('economic-effects:invalid-headcount')
+  if(typeof v.shadowWageFactor==='number'&&(!Number.isFinite(v.shadowWageFactor)||v.shadowWageFactor<=0))errors.push('economic-effects:invalid-shadow-wage-factor')
+  if(typeof v.amount==='number'&&!Number.isFinite(v.amount))errors.push('economic-effects:non-finite-amount')
+ }
+
  return errors
 }
 export function updateHelpFormRow(value:HelpDrivenProjectForms,sectionId:string,rowId:string,fieldKey:string,next:HelpFieldValue):HelpDrivenProjectForms{
