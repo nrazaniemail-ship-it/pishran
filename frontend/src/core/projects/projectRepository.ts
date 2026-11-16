@@ -101,7 +101,10 @@ export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
     || remaining.some((project,index) => project.templateId !== projects[index]?.templateId || Boolean(project.steelStage))
   if (indexChanged) await localStore.set(PROJECTS_KEY, remaining)
   if (samples.length) {
-    await Promise.all(samples.map(project => localStore.remove('feasibility:project:' + project.id + ':v1')))
+    await Promise.all(samples.flatMap(project => [
+      localStore.remove('feasibility:project:' + project.id + ':v1'),
+      localStore.list('feasibility:advanced-finance:' + project.id).then(records => Promise.all(records.map(record => localStore.remove(record.key))))
+    ]))
   }
   // Retire the old seed markers so sample projects are never recreated.
   await localStore.remove(WORKBOOK_SEED_KEY)
