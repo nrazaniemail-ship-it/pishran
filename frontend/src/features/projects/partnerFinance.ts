@@ -27,10 +27,22 @@ export type PartnerCashFlowAllocation = {
   }[]
 }
 
+export type PartnerFinancePeriodSummary = {
+  period:number
+  startDate:string
+  endDate:string
+  totalEquityCashFlow:number
+  partnerNetCashFlow:number
+  distributedPositiveCashFlow:number
+  retainedPositiveCashFlow:number
+  reconciliationVariance:number
+}
+
 export type PartnerFinanceResult = {
   valid: boolean
   warnings: string[]
   rows: PartnerCashFlowAllocation[]
+  periods: PartnerFinancePeriodSummary[]
   totalProjectEquityCashFlow: number
   positiveCashFlowDistributionPercent: number
   allocationReconciliationVariance: number
@@ -55,7 +67,7 @@ export function allocateJointVentureCashFlows(
 ): PartnerFinanceResult {
   const warnings: string[] = []
   const empty = (): PartnerFinanceResult => ({
-    valid: false, warnings, rows: [], totalProjectEquityCashFlow: 0,
+    valid: false, warnings, rows: [], periods:[], totalProjectEquityCashFlow: 0,
     positiveCashFlowDistributionPercent:0,allocationReconciliationVariance:0,
     totalScheduledEquityContribution: 0,totalDeclaredCapitalContribution: 0,
     declaredCapitalContributionVariance: 0,distributedPositiveCashFlow: 0,retainedPositiveCashFlow: 0,
@@ -96,6 +108,7 @@ export function allocateJointVentureCashFlows(
     capitalContributionVariance:partner.capitalContribution-totalScheduledEquityContribution*partner.sharePercent/100,
     negativeCashFlowAllocation:0,positiveCashFlowDistribution:0,netCashFlow:0,periods:[],
   }))
+  const periods:PartnerFinancePeriodSummary[]=[]
   let totalProjectEquityCashFlow=0
   let distributedPositiveCashFlow=0
   let retainedPositiveCashFlow=0
@@ -105,12 +118,14 @@ export function allocateJointVentureCashFlows(
     const distributionPool=Math.max(0,investorCashFlow)*positiveCashFlowDistributionPercent/100
     retainedPositiveCashFlow+=Math.max(0,investorCashFlow)-distributionPool
     distributedPositiveCashFlow+=distributionPool
+    let partnerNetCashFlow=0
     rows.forEach((row,index)=>{
       const partner=partners[index]
       const negativeAllocation=investorCashFlow<0
         ? investorCashFlow*partner.sharePercent/100 : 0
       const positiveDistribution=distributionPool*partner.profitSharePercent/100
       const allocatedCashFlow=negativeAllocation+positiveDistribution
+      partnerNetCashFlow+=allocatedCashFlow
       row.negativeCashFlowAllocation+=negativeAllocation
       row.positiveCashFlowDistribution+=positiveDistribution
       row.netCashFlow+=allocatedCashFlow
@@ -120,13 +135,20 @@ export function allocateJointVentureCashFlows(
         positiveCashFlowDistribution:positiveDistribution,
       })
     })
+    periods.push({
+      period:period.period,startDate:period.startDate,endDate:period.endDate,
+      totalEquityCashFlow:investorCashFlow,partnerNetCashFlow,
+      distributedPositiveCashFlow:distributionPool,
+      retainedPositiveCashFlow:Math.max(0,investorCashFlow)-distributionPool,
+      reconciliationVariance:partnerNetCashFlow+Math.max(0,investorCashFlow)-distributionPool-investorCashFlow,
+    })
   })
   const totalDeclaredCapitalContribution=partners.reduce((sum,partner)=>sum+partner.capitalContribution,0)
   const allocatedPartnerNetCashFlow=rows.reduce((sum,row)=>sum+row.netCashFlow,0)
   const allocationReconciliationVariance=allocatedPartnerNetCashFlow+retainedPositiveCashFlow-totalProjectEquityCashFlow
   if(Math.abs(allocationReconciliationVariance)>0.01)warnings.push('Partner cash-flow allocations and retained cash do not reconcile to total equity cash flow.')
   return {
-    valid:Math.abs(allocationReconciliationVariance)<=0.01,warnings,rows,totalProjectEquityCashFlow,
+    valid:Math.abs(allocationReconciliationVariance)<=0.01,warnings,rows,periods,totalProjectEquityCashFlow,
     positiveCashFlowDistributionPercent,allocationReconciliationVariance,totalScheduledEquityContribution,
     totalDeclaredCapitalContribution,
     declaredCapitalContributionVariance:totalDeclaredCapitalContribution-totalScheduledEquityContribution,
