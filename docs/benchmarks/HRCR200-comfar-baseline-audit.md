@@ -3,7 +3,7 @@
 ## Source
 - User-supplied report: `HRCR200.Kashan.1402.08.01. rev01.pdf`
 - Report date: 1402/08/01
-- Relevant pages: 130–132 (construction funding and COMFAR summary outputs)
+- Relevant printed pages: 129–132 (loan conditions, funding sources and COMFAR summary outputs)
 - The original PDF is retained as the user-supplied Library attachment; this note records the extracted benchmark pending a binary repository upload.
 
 ## Funding-ratio reconciliation
@@ -26,7 +26,7 @@ The numeric amounts establish a **70% equity / 30% loan-principal** funding stru
 - 13,091,985 / 18,702,835 = approximately 70%.
 - 5,610,851 / 18,702,835 = approximately 30%.
 
-The report's narrative label beside the 5,610,851 loan amount says “20%”. That label conflicts with the amount: 20% of 18,702,835 would be 3,740,567, not 5,610,851. Until another underlying source schedule proves otherwise, treat “20%” as a report-text error and use the arithmetic 30% for the COMFAR reference case.
+The report labels beside the 5,610,851 loan amount conflict: page 130 says “20%” and page 131 says “80%”. Neither matches the amount against the stated construction cost: 5,610,851 / 18,702,835 is approximately 30%. The corresponding 13,091,985 equity amount is approximately 70%. The numerical source amounts therefore define the 70/30 construction-funding case; retain the printed percentage labels as source inconsistencies.
 
 Capitalized interest of 3,298,633 is not an additional principal drawdown. It is shown separately as financing cost and brings the reported total cost/funding to approximately 22,001,468/22,001,469. When representing the debt balance, the capitalized interest may increase the outstanding balance; do not count it again as a fresh cash drawdown.
 
@@ -72,6 +72,14 @@ where `P = 8,909,484.06`, `r = 0.07`, and `n = 20`. The calculated first-year in
 This is strong numerical evidence that the repayment method used in the reference output is annuity, not equal-principal. Pishran now stores the gross balance as an opening loan balance (not a new cash drawdown) and tests all four first-year controls plus full amortization after 20 instalments.
 
 **Remaining fee classification caveat:** the report states 23% interest plus 5% bond issuance cost and says 28% total. The output proves that 28%/4 = 7% is the rate that reproduces the annuity interest line. The report pages do not separately show whether the 5% is configured in COMFAR as a recurring service/financing fee or incorporated into the loan's effective annual rate. Keep the 23% coupon and 5% issuance fee as separately traceable source fields; do not count the 5% twice.
+
+### Repayment schedule reconstruction
+
+The report gives a 5-year repayment term with 20 quarterly instalments starting in the first quarter of 1405. The COMFAR output benchmark used by the project workbook reports first-year interest of 2,399,043.44, principal repayment of 964,925.63 and total debt service of 3,363,969.07 million IRR.
+
+Using the gross debt balance of 8,909,484.06 million IRR (principal plus construction-capitalized interest), a 28% annual rate divided into 7% per quarter, and the standard COMFAR annuity formula yields a quarterly payment of 840,992.27. Aggregating the first four payments reproduces the reported first-year interest, principal and debt service to rounding precision. This identifies the reference repayment type as **annuity**, rather than equal principal.
+
+The implementation models the gross debt as an opening balance, not as a new drawdown, so construction-capitalized interest is not double-counted as a fresh financing inflow. The 23% coupon and 5% issuance cost remain separate source fields for audit traceability; the repayment-rate calculation uses the report's explicitly stated 28% combined rate. The original COMFAR loan-fee configuration is still needed to split the 5% between recurring service charge and one-time issuance fee in detailed fee reporting.
 
 ## COMFAR output benchmark (report page 132)
 
