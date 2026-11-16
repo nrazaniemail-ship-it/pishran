@@ -70,7 +70,7 @@ export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
     'واحد احیاء مستقیم'
   ])
   const isSample = (project: FeasibilityProject) => {
-    if (project.templateId === 'hot-rolling-200kt') return true
+    if (String(project.templateId) === 'hot-rolling-200kt') return true
     const normalizedName = project.name.normalize('NFKC').replace(/[\u200c\s_-]/g, '').toLowerCase()
     if (sampleNames.has(project.name.trim())) return true
     if (normalizedName.includes('hrcr200') || normalizedName.includes('نوردگرم') || normalizedName.includes('واحداحیاءمستقیم')) return true
