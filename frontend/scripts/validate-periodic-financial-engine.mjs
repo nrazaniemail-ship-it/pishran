@@ -885,6 +885,22 @@ assert.ok(soldAsset.sales[0].gainLoss>0)
 assert.equal(soldAsset.periods[9].assets[0].depreciation,450,'Disposal at the period balance date must prorate the current depreciation year by elapsed months')
 assert.equal(soldAsset.periods[9].closingBookValue,0)
 assert.ok(soldAsset.periods.slice(10).every(period=>period.closingBookValue===0))
+const duplicateAssetDisposal=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-duplicate-sale',name:'Duplicate disposal guard',assetClass:'fixed',
+  originalValue:1000,initialBookValue:1000,scrapPercent:0,lengthYears:2,lengthMonths:0,
+  firstDepreciationMonths:12,ratePercent:null,method:'linear-to-zero',
+  acquisitionDate:'2024-01-15',startingAtDate:'2024-01-01'
+}],[
+  {id:'sale-duplicate-a',assetId:'asset-duplicate-sale',saleDate:'2024-10-31',priceMode:'book-value',selfDefinedPrice:null,exchangeRateToLocal:1},
+  {id:'sale-duplicate-b',assetId:'asset-duplicate-sale',saleDate:'2024-12-31',priceMode:'book-value',selfDefinedPrice:null,exchangeRateToLocal:1},
+],monthlyDepreciationPeriods)
+assert.equal(duplicateAssetDisposal.valid,false,'An asset vintage cannot be disposed twice')
+const invalidPeriodSequence=engine.calculatePeriodicComfarAssetLifecycle([],[],[
+  {...annualDepreciationPeriods[0],index:1},
+  {...annualDepreciationPeriods[1],index:3},
+  {...annualDepreciationPeriods[2],index:4},
+])
+assert.equal(invalidPeriodSequence.valid,false,'Period indexes must be consecutive and ordered')
 const invalidPeriodicAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   id:'asset-invalid-date',name:'Invalid date asset',assetClass:'fixed',
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
