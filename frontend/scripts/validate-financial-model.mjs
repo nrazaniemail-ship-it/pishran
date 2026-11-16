@@ -333,6 +333,20 @@ assert.ok(rollingWorkspaceSource.includes("project.templateId==='hot-rolling-200
   'Only explicit hot-rolling template or legacy hot-rolling projects may load benchmark defaults')
 assert.ok(wizardSource.includes("project.templateId==='raw'"),
   'Raw template must initialize an empty feasibility model')
+assert.ok(projectsViewSource.indexOf('value={projectType}') < projectsViewSource.indexOf('{steelStage && <label>')
+  && projectsViewSource.includes("t('نام پروژه','Project Name')")
+  && !projectsViewSource.includes("مرحله زنجیره فولاد"),
+  'Raw project creation must ask for project type then a manually entered project name, without a steel-chain-stage field')
+assert.ok(wizardSource.includes("!isRawTemplate&&project.industry==='فولاد و صنایع معدنی'")
+  && wizardSource.includes('technical:rawProject?[]')
+  && wizardSource.includes('balance:rawProject?[]')
+  && wizardSource.includes('utilities:rawProject?[]')
+  && wizardSource.includes('capex:rawProject?[]')
+  && wizardSource.includes('opex:rawProject?[]'),
+  'Raw template must hide stage-specific selector and start technical, material, utility, CAPEX and OPEX rows blank')
+assert.ok(wizardSource.includes("unit={project.industry==='انرژی و نیروگاه'?'مگاوات':project.industry==='فولاد و صنایع معدنی'?'تن/سال':'واحد/سال'}")
+  && projectsViewSource.includes('inputMode="numeric" pattern="[0-9]*"'),
+  'Capacity must use MW for energy projects and tonnes/year for steel/mining with numeric-only entry')
 assert.ok(wizardSource.includes("value=\"industrial\"")
   && wizardSource.includes("value=\"maritime\"")
   && wizardSource.includes("value=\"agricultural\"")
