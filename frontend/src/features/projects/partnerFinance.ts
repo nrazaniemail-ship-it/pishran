@@ -119,7 +119,7 @@ export function allocateJointVentureCashFlows(
   const totalDeclaredCapitalContribution=partners.reduce((sum,partner)=>sum+partner.capitalContribution,0)
   const totalScheduledEquityContribution=finance.totalEquityContribution
   const allocatedPartnerNetCashFlow=rows.reduce((sum,row)=>sum+row.netCashFlow,0)
-  const allocationReconciliationVariance=totalProjectEquityCashFlow-allocatedPartnerNetCashFlow-retainedPositiveCashFlow
+  const allocationReconciliationVariance=allocatedPartnerNetCashFlow+retainedPositiveCashFlow-totalProjectEquityCashFlow
   if(Math.abs(allocationReconciliationVariance)>0.01)warnings.push('Partner cash-flow allocations and retained cash do not reconcile to total equity cash flow.')
   return {
     valid:Math.abs(allocationReconciliationVariance)<=0.01,warnings,rows,totalProjectEquityCashFlow,
