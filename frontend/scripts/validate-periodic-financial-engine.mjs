@@ -1456,6 +1456,10 @@ assert.ok(integratedCombinedLoan.rows.every((row,index)=>
 assert.ok(integratedCombinedLoan.rows.every((row,index)=>
   Math.abs(row.debtService-integratedLoanRows[index].debtService)<1e-8),
   'Integrated debt service and DSCR denominator must preserve loan-level cash debt service')
+assert.ok(integratedCombinedLoan.rows.every(row=>
+  row.dscr===null || Math.abs(row.dscr-row.cfads/row.debtService)<1e-10),
+  'Period DSCR must use integrated CFADS divided by the full debt service including commitment fees')
+
 
 const integratedCombinedStatements=engine.buildPeriodicThreeFinancialStatements(integratedCombinedLoan)
 assert.ok(integratedCombinedStatements.every(row=>row.balanceSheet.reconciled),
