@@ -912,8 +912,11 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   let priorWorkingCapital = Math.max(0, input.openingWorkingCapital ?? 0)
   for (let index = 0; index < periods.length; index++) {
     const loanRows = Object.values(loanSchedules).map(schedule => schedule[index])
-    const interestExpense = loanRows.reduce((sum,row)=>sum+row.interestExpense,0)
-    const capitalizedInterest = loanRows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
+    // Financing fees paid as period expenses are deductible financing costs;
+    // capitalized fees remain separately visible in each loan schedule and are
+    // included in the period's capitalized financing balance.
+    const interestExpense = loanRows.reduce((sum,row)=>sum+row.interestExpense+row.financingFeeExpense,0)
+    const capitalizedInterest = loanRows.reduce((sum,row)=>sum+row.capitalizedInterest+row.capitalizedFinancingFees,0)
     const principal = loanRows.reduce((sum,row)=>sum+row.principal,0)
     const debtDrawdown = loanRows.reduce((sum,row)=>sum+row.drawdown,0)
     const assetSale = assetSalesByPeriod[index]
