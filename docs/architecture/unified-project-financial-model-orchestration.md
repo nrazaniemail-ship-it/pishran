@@ -14,7 +14,7 @@ The greenfield wizard passes the saved project financial forms and project found
 ## Current constraints
 
 - The current orchestration is enabled for greenfield projects with zero opening balance sheet. Existing-enterprise opening balances still require a dedicated opening-balance form and reconciliation path.
-- Foreign-currency loan fee rows remain blocked until fee payment dates and expense/capitalization treatment are captured.
+- Facility fee amounts use the explicit fee date, fee type, currency, commitment limit and expense/capitalization treatment; fee bases are calculated from the preliminary principal schedule before fee posting.
 - Repayment frequency must match project period frequency.
 - Foreign exchange uses the period rate for aggregated movements and closing remeasurement.
 - Asset acquisition is dated at period-end because the form records acquisition periods rather than exact dates; disposal losses and multi-vintage disposal require additional accounting detail.
