@@ -1494,8 +1494,13 @@ assert.ok(reportVisualsSource.includes('Construction financing split')
   && reportVisualsSource.includes('props.equityPercent - 70')
   && reportVisualsSource.includes('props.debtPercent - 30'),
   'Exact COMFAR basis matching must require the amount-derived 70/30 construction financing, while the sponsor 20/80 scenario remains separate')
+assert.ok(periodicEngineSource.includes('npvTotalCapitalInvested')
+  && periodicEngineSource.includes('irrTotalCapitalInvested')
+  && periodicEngineSource.includes('constructionInterestCost')
+  && reportVisualsSource.includes('totalCapitalInvestedCashFlow'),
+  'COMFAR report must compare total-capital NPV/IRR and cash flows including construction-period interest')
 assert.ok(reportVisualsSource.includes('Period-by-period cash-flow and driver reconciliation')
-  && reportVisualsSource.includes('projectFreeCashFlow-referenceCashFlow')
+  && reportVisualsSource.includes('totalCapitalInvestedCashFlow-referenceCashFlow')
   && reportVisualsSource.includes('depreciationByOperatingYear')
   && reportVisualsSource.includes('changeInWorkingCapitalByOperatingYear')
   && wizardSource.includes('periodFrequency={m.foundation.planning.periodFrequency}'),
