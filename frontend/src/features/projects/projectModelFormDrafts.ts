@@ -110,6 +110,8 @@ export function validateFixedAssetFormDraft(value:FixedAssetFormDraft):string[]{
  if(d.ratePercent!==null&&(!Number.isFinite(d.ratePercent)||d.ratePercent<0||d.ratePercent>100))errors.push('invalid-depreciation-rate')
  if(d.usefulLifeMonths!==null&&(!Number.isInteger(d.usefulLifeMonths)||d.usefulLifeMonths<=0))errors.push('invalid-useful-life-months')
  if(d.salvagePercent!==null&&(!Number.isFinite(d.salvagePercent)||d.salvagePercent<0||d.salvagePercent>100))errors.push('invalid-salvage-percent')
+ if(d.firstDepreciationYearMonths!==null&&(!Number.isInteger(d.firstDepreciationYearMonths)||d.firstDepreciationYearMonths<1||d.firstDepreciationYearMonths>12))errors.push('invalid-first-depreciation-year-months')
+ if(d.startMode==='specified-date'&&!d.startDate)errors.push('depreciation-start-date-required')
  if(d.method==='sum-of-years-digits'&&d.ratePercent!==null)errors.push('sum-of-years-digits-does-not-use-rate')
  for(const row of value.acquisitionPeriods){
   if(row.quantity!==null&&(!Number.isFinite(row.quantity)||row.quantity<0))errors.push('invalid-asset-acquisition-quantity')
