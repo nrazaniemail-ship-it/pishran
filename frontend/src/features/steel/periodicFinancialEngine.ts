@@ -1299,6 +1299,66 @@ function depreciationForAnniversarySegments(
   return total
 }
 
+type HelpDepreciationSegment={startDate:Date;endDate:Date;months:number;amount:number}
+
+/**
+ * Applies the reference annual depreciation formula using the explicitly entered
+ * number of months in the first depreciation year. Depreciation is posted at the
+ * end of each depreciation-year segment, not spread evenly over every month.
+ */
+function buildHelpDepreciationSegments(
+  asset:PeriodicDepreciationAssetInput,
+  startDate:Date|null,
+  lifeMonths:number,
+  salvageValue:number,
+):HelpDepreciationSegment[] {
+  if(asset.method==='none'||!startDate||lifeMonths<=0)return []
+  if(asset.method==='sum-of-years-digits'&&(lifeMonths%12!==0||asset.firstDepreciationMonths!==12))return []
+  const base=Math.max(0,asset.initialBookValue-salvageValue)
+  const segments:HelpDepreciationSegment[]=[]
+  let elapsedMonths=0
+  let bookValue=asset.initialBookValue
+  let segmentIndex=0
+  while(elapsedMonths<lifeMonths&&bookValue>salvageValue+1e-9) {
+    const months=Math.min(segmentIndex===0?asset.firstDepreciationMonths:12,lifeMonths-elapsedMonths)
+    const segmentStart=addUtcMonthsClamped(startDate,elapsedMonths)
+    const segmentEndExclusive=addUtcMonthsClamped(startDate,elapsedMonths+months)
+    const segmentEnd=new Date(segmentEndExclusive.getTime()-86400000)
+    let amount=0
+    if(asset.method==='linear-to-zero'||asset.method==='linear-to-scrap') {
+      amount=base*months/lifeMonths
+    } else if(asset.method==='accelerated') {
+      if(segmentIndex===0) {
+        amount=asset.initialBookValue*(asset.ratePercent??0)/100*months/12
+      } else {
+        const remainingYears=(lifeMonths-elapsedMonths)/12
+        const straightLineAnnual=remainingYears>0?(bookValue-salvageValue)/remainingYears:bookValue-salvageValue
+        const acceleratedAnnual=bookValue*(asset.ratePercent??0)/100
+        amount=(acceleratedAnnual>straightLineAnnual?acceleratedAnnual:straightLineAnnual)*months/12
+      }
+    } else if(asset.method==='sum-of-years-digits') {
+      const years=lifeMonths/12
+      const divisor=years*(years+1)/2
+      amount=base*(years-segmentIndex)/divisor
+    }
+    amount=Math.min(Math.max(0,bookValue-salvageValue),Math.max(0,amount))
+    segments.push({startDate:segmentStart,endDate:segmentEnd,months,amount})
+    bookValue=Math.max(salvageValue,bookValue-amount)
+    elapsedMonths+=months
+    segmentIndex++
+  }
+  if(segments.length&&bookValue>salvageValue+1e-7) {
+    const last=segments[segments.length-1]
+    last.amount+=bookValue-salvageValue
+  }
+  return segments
+}
+
+function monthsElapsedToBalanceDate(start:Date,end:Date):number {
+  const months=(end.getUTCFullYear()-start.getUTCFullYear())*12+end.getUTCMonth()-start.getUTCMonth()+1
+  return Math.max(0,Math.min(12,months))
+}
+
 /**
  * Asset-by-asset depreciation on actual monthly/quarterly dates.
  * New acquisitions begin depreciation in the period after acquisition unless a later
@@ -1384,8 +1444,12 @@ export function calculatePeriodicComfarAssetLifecycle(
       warnings.push(asset.name+': disposal date is outside the project calendar.')
       continue
     }
+    if(sale&&saleDate&&periods[saleIndex].endDate!==sale.saleDate){
+      warnings.push(asset.name+': disposal must be recorded on a project balance date (period end).')
+      continue
+    }
+    const depreciationSegments=buildHelpDepreciationSegments(asset,depreciationStartDate,lifeMonths,salvageValue)
     let bookValue=0
-    const annualOpeningBookValues:number[]=[]
     for(let index=0;index<periods.length;index++){
       const period=periods[index]
       const periodStart=parseIsoDateUtc(period.startDate)!
@@ -1399,19 +1463,20 @@ export function calculatePeriodicComfarAssetLifecycle(
       const openingBookValue=bookValue
       const saleInThisPeriod=!!sale&&saleIndex===index
       let depreciation=0
-      if(asset.method!=='none'&&depreciationStartDate&&lifeEndExclusive&&bookValue>salvageValue&&
-        index>=acquisitionIndex&&(!saleDate||periodStart.getTime()<=saleDate.getTime())){
-        const activeStart=new Date(Math.max(periodStart.getTime(),depreciationStartDate.getTime()))
-        const lifeEndInclusive=new Date(lifeEndExclusive.getTime()-86400000)
-        const effectiveEnd=new Date(Math.min(periodEnd.getTime(),lifeEndInclusive.getTime(),saleDate&&saleInThisPeriod?saleDate.getTime():periodEnd.getTime()))
-        if(activeStart.getTime()<=effectiveEnd.getTime()){
-          if(asset.method==='linear-to-zero'||asset.method==='linear-to-scrap'){
-            const totalLifeDays=Math.max(1,Math.round((lifeEndExclusive.getTime()-depreciationStartDate.getTime())/86400000))
-            depreciation=Math.min(bookValue-salvageValue,depreciableBase*inclusiveDays(activeStart,effectiveEnd)/totalLifeDays)
+      if(asset.method!=='none'&&bookValue>salvageValue&&index>=acquisitionIndex){
+        const saleSegment=saleInThisPeriod&&saleDate
+          ?depreciationSegments.find(segment=>saleDate.getTime()>=segment.startDate.getTime()&&saleDate.getTime()<=segment.endDate.getTime())
+          :undefined
+        const completedSegment=!saleInThisPeriod
+          ?depreciationSegments.find(segment=>periodEnd.getTime()>=segment.endDate.getTime()&&periodStart.getTime()<=segment.endDate.getTime())
+          :undefined
+        const segment=saleSegment??completedSegment
+        if(segment){
+          if(saleInThisPeriod&&saleDate){
+            const elapsedMonths=monthsElapsedToBalanceDate(segment.startDate,saleDate)
+            depreciation=Math.min(bookValue-salvageValue,segment.amount*elapsedMonths/segment.months)
           } else {
-            depreciation=depreciationForAnniversarySegments(asset.method,bookValue,salvageValue,depreciableBase,
-              depreciationStartDate,lifeEndExclusive,activeStart,effectiveEnd,lifeMonths,asset.ratePercent,annualOpeningBookValues)
-            depreciation=Math.min(bookValue-salvageValue,depreciation)
+            depreciation=Math.min(bookValue-salvageValue,segment.amount)
           }
           bookValue=Math.max(salvageValue,bookValue-depreciation)
         }
