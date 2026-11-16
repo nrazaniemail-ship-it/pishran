@@ -410,7 +410,7 @@ export function calculatePeriodicLoanSchedule(
   if (rateChanges.length > 0) {
     for (let index=0; index<periods.length; index++) {
       const period=periods[index]
-      const endExclusive=addDays(period.endDate,1)
+      const endExclusive=input.datedDrawdowns?period.endDate:addDays(period.endDate,1)
       const boundaries=[period.startDate,...rateChanges.map(item=>item.effectiveDate)
         .filter(date=>date>period.startDate&&date<=period.endDate),endExclusive]
         .sort().filter((date,i,array)=>i===0||date!==array[i-1])
@@ -459,7 +459,8 @@ export function calculatePeriodicLoanSchedule(
       let interestBalance=openingBalance
       let activeRate=effectiveRateForDate(period.startDate)
       interestAccrued=0
-      const endExclusive=addDays(period.endDate,1)
+      // Exact dated drawdowns retain the engine's established end-exclusive accrual rule.
+      const endExclusive=input.datedDrawdowns?period.endDate:addDays(period.endDate,1)
       const accrueUntil=(nextDate:string) => {
         if(nextDate<=cursor) return
         const accrued=segmentInterest(interestBalance,activeRate,cursor,nextDate,period)
