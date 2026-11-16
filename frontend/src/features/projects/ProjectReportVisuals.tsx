@@ -1,5 +1,6 @@
 import type { OneWaySensitivityAnalysis } from '../steel/financialModel'
-import type { PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
+import { fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
+import type { ProjectCalendarPeriod } from './projectFoundation'
 import { HOT_ROLLING_200KT_AUDIT } from '../steel/workbookReconciliation'
 import { HOT_ROLLING_COMFAR_OUTPUT_AUDIT } from '../steel/hotRollingExcelBenchmark'
 
@@ -29,6 +30,7 @@ type Props = {
   valuationDate: string
   discountConvention: 'actual-days' | 'period-count'
   periodFrequency: string
+  fiscalYearStartMonth: number | null
 }
 
 const referenceRows: [string,string,string,string][] = [
@@ -168,14 +170,22 @@ export default function ProjectReportVisuals(props: Props) {
   const fmtValue=(value:number|null|undefined,digits=2)=>fmt(value,language,digits)
   const comfarReference = HOT_ROLLING_200KT_AUDIT.alternativeMetricsInWorkbook
   const expectedComfarTaxRates = HOT_ROLLING_COMFAR_OUTPUT_AUDIT.taxScheduleByOperatingYear.map(row=>row.ratePercent)
-  const comfarAnnualRows = props.periodFrequency==='annual' && props.periodicResult?.rows.length===17 ? props.periodicResult.rows : []
+  const comparisonPeriods: ProjectCalendarPeriod[] = (props.periodicResult?.rows??[]).map(row=>({index:row.period,startDate:row.startDate,endDate:row.endDate,days:row.days,partial:false}))
+  const annualComparisonRows = Array.from({length:17},(_,yearIndex)=>{
+    const grouped=(props.periodicResult?.rows??[]).filter((row,index)=>fiscalYearIndexForPeriod(comparisonPeriods[index],comparisonPeriods,props.fiscalYearStartMonth??1)===yearIndex)
+    const sum=(key:'projectFreeCashFlow'|'depreciation'|'changeInWorkingCapital'|'interestExpense'|'principal'|'debtService'|'cfads')=>grouped.reduce((total,row)=>total+row[key],0)
+    const taxRates=[...new Set(grouped.map(row=>Number(row.taxRatePercent.toFixed(4))))]
+    const debtService=sum('debtService'), cfads=sum('cfads')
+    return {year:1403+yearIndex,rows:grouped,projectFreeCashFlow:sum('projectFreeCashFlow'),taxRatePercent:taxRates.length===1?taxRates[0]:null,depreciation:sum('depreciation'),changeInWorkingCapital:sum('changeInWorkingCapital'),interestExpense:sum('interestExpense'),principal:sum('principal'),debtService,cfads,dscr:debtService>0?cfads/debtService:null}
+  })
+  const comfarAnnualRows = annualComparisonRows.every(row=>row.rows.length>0) ? annualComparisonRows : []
   const currentOperatingTaxRates = comfarAnnualRows.slice(2).map(row=>row.taxRatePercent)
   const comfarTaxScheduleMatches = currentOperatingTaxRates.length === expectedComfarTaxRates.length &&
     expectedComfarTaxRates.every((rate,index)=>Math.abs((currentOperatingTaxRates[index]??NaN)-rate)<0.001)
   const currentTaxScheduleLabel = [...new Set(currentOperatingTaxRates.map(rate=>Number(rate.toFixed(2))))]
     .map(rate=>fmtValue(rate,2)+'%').join(' → ') || '—'
   const comfarBasisMatches = isHotRollingCoil && props.periodicResult?.valid === true &&
-    props.periodicResult.rows.length === 17 && props.periodFrequency==='annual' &&
+    comfarAnnualRows.length === 17 &&
     Math.abs(props.capacity - HOT_ROLLING_200KT_AUDIT.capacityTpy) < 1 &&
     Math.abs(props.equityPercent - 70) < 0.001 && Math.abs(props.debtPercent - 30) < 0.001 &&
     Math.abs(props.taxPercent - 25) < 0.001 && comfarTaxScheduleMatches &&
@@ -224,19 +234,19 @@ export default function ProjectReportVisuals(props: Props) {
        </tbody></table></div>
        <p className="fw-hint">{t("مرجع NPV و IRR از جریان نقدی کل سرمایه‌گذاری‌شده در صفحات ۶۷ تا ۷۱ استخراج شده است. برنامه مالیاتی COMFAR در صفحات ۵۹ تا ۶۲ پنج سال نخست بهره‌برداری را با نرخ ۵٪ و سال‌های بعد را با نرخ ۲۵٪ نشان می‌دهد؛ سناریوی یکنواخت ۲۵٪ پیشران جداگانه است. MIRR مرجع ۲۸٫۰۳٪ است، اما تا زمان تطبیق نرخ‌های finance و reinvestment اختلاف آن تأیید نمی‌شود.","Reference NPV and IRR are transcribed from the total-investment cash-flow schedule on pages 67–71. COMFAR's tax schedule on pages 59–62 applies 5% for the first five operating years and 25% thereafter; Pishran's uniform 25% scenario is separate. Reference MIRR is 28.03%, but its variance is not verified until finance and reinvestment rates are matched.",language)}</p>
        {isHotRollingCoil&&<div className="fw-card">
-        <h4>{t("تطبیق دوره‌به‌دوره جریان نقدی و محرک‌ها","Period-by-period cash-flow and driver reconciliation",language)}</h4>
+        <h4>{t("تطبیق سال‌به‌سال جریان نقدی و محرک‌ها","Year-by-year cash-flow and driver reconciliation",language)}</h4>
         {comfarAnnualRows.length===17?<div style={{overflowX:"auto"}}><table className="fw-table"><thead><tr>
           <th>{t("سال مالی","Fiscal year",language)}</th><th>{t("جریان نقدی مرجع","COMFAR cash flow",language)}</th><th>{t("جریان نقدی پیشران","Pishran cash flow",language)}</th><th>{t("اختلاف","Variance",language)}</th>
           <th>{t("مالیات مرجع","Reference tax",language)}</th><th>{t("مالیات پیشران","Pishran tax",language)}</th>
           <th>{t("استهلاک مرجع","Reference depreciation",language)}</th><th>{t("استهلاک پیشران","Pishran depreciation",language)}</th>
-          <th>{t("تغییر سرمایه در گردش مرجع","Reference change in working capital",language)}</th><th>{t("تغییر سرمایه در گردش پیشران","Pishran change in working capital",language)}</th>
+          <th>{t("تغییر سرمایه در گردش مرجع","Reference change in working capital",language)}</th><th>{t("تغییر سرمایه در گردش پیشران","Pishran change in working capital",language)}</th><th>{t("بهره پیشران","Pishran interest",language)}</th><th>{t("اصل وام پیشران","Pishran principal",language)}</th><th>CFADS</th><th>DSCR</th>
         </tr></thead><tbody>{comfarAnnualRows.map((row,index)=>{
           const year=1403+index
           const referenceCashFlow=HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectCashFlowsForIrr[index]
           const referenceTax=index<2?null:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.taxScheduleByOperatingYear[index-2]?.ratePercent
           const referenceDepreciation=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.depreciationByOperatingYear[index-2]?.[1]??0
           const referenceWorkingCapital=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.changeInWorkingCapitalByOperatingYear[index-2]?.[1]??0
-          return <tr key={row.period}><td>{index===16?t('۱۴۱۹ + ارزش اسقاط ۱۴۲۰','1419 + terminal salvage 1420',language):year}</td><td>{fmtValue(referenceCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow-referenceCashFlow)}</td><td>{referenceTax==null?'—':fmtValue(referenceTax,2)+'%'}</td><td>{fmtValue(row.taxRatePercent,2)+'%'}</td><td>{fmtValue(referenceDepreciation)}</td><td>{fmtValue(row.depreciation)}</td><td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td></tr>
+          return <tr key={index}><td>{index===16?t('۱۴۱۹ + ارزش اسقاط ۱۴۲۰','1419 + terminal salvage 1420',language):year}</td><td>{fmtValue(referenceCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow-referenceCashFlow)}</td><td>{referenceTax==null?'—':fmtValue(referenceTax,2)+'%'}</td><td>{row.taxRatePercent==null?'—':fmtValue(row.taxRatePercent,2)+'%'}</td><td>{fmtValue(referenceDepreciation)}</td><td>{fmtValue(row.depreciation)}</td><td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td><td>{fmtValue(row.interestExpense)}</td><td>{fmtValue(row.principal)}</td><td>{fmtValue(row.cfads)}</td><td>{row.dscr==null?'—':fmtValue(row.dscr,3)+'x'}</td></tr>
         })}</tbody></table></div>:<p className="fw-hint">{t("تطبیق ردیف‌به‌ردیف با خروجی سالانه COMFAR فقط در تناوب سالانه و با ۱۷ دوره (دو سال ساخت و ۱۵ سال بهره‌برداری) انجام می‌شود. در تناوب ماهانه، فصلی یا نیم‌سالانه ابتدا باید جریان‌ها به سال مالی مرجع تجمیع شوند.","Row-by-row COMFAR comparison is available only for an annual schedule with 17 periods (two construction years and 15 operating years). Monthly, quarterly and semiannual outputs must first be aggregated to the reference fiscal years.",language)}</p>}
        </div>}
      </div>}
