@@ -784,14 +784,17 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     unleveredTaxLoss = unleveredPeriodTax.closingLossCarryForward
     const closingWorkingCapital = input.workingCapitalByPeriod[index]
     const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
-    const equityWorkingCapitalAmount = changeInWorkingCapital < 0
+    const equityWorkingCapitalContributionAmount = input.annualEquityWorkingCapitalContributions
+      ? equityWorkingCapitalContribution[index]
+      : 0
+    const equityWorkingCapitalCashFlow = changeInWorkingCapital < 0
       ? changeInWorkingCapital
       : input.annualEquityWorkingCapitalContributions
-        ? equityWorkingCapitalContribution[index]
+        ? equityWorkingCapitalContributionAmount
         : changeInWorkingCapital
     if (input.annualEquityWorkingCapitalContributions &&
-        (!validFinite(equityWorkingCapitalContribution[index]) || equityWorkingCapitalContribution[index] < 0 ||
-         equityWorkingCapitalContribution[index] > Math.max(0, changeInWorkingCapital) + 0.01)) {
+        (!validFinite(equityWorkingCapitalContributionAmount) || equityWorkingCapitalContributionAmount < 0 ||
+         equityWorkingCapitalContributionAmount > Math.max(0, changeInWorkingCapital) + 0.01)) {
       warnings.push('Shareholder-funded working capital must be finite, non-negative and no greater than the period increase in net working capital (period ' + (index + 1) + ').')
       return empty()
     }
@@ -804,7 +807,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
     const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
-      - equityWorkingCapitalAmount + assetSale.saleProceeds + terminalSalvage
+      - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
       revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
@@ -814,7 +817,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
-      equityWorkingCapitalContribution:equityWorkingCapitalAmount,
+      equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
       salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,projectFreeCashFlow,equityFreeCashFlow
     })
     priorWorkingCapital = closingWorkingCapital
