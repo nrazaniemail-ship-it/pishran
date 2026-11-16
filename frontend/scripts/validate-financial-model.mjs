@@ -338,9 +338,10 @@ assert.ok(projectsViewSource.indexOf('value={projectType}') < projectsViewSource
   && !projectsViewSource.includes("مرحله زنجیره فولاد"),
   'Raw project creation must ask for project type then a manually entered project name, without a steel-chain-stage field')
 assert.ok(projectsViewSource.includes("value={projectType} onChange={e => setProjectType(e.target.value)}")
-  && projectsViewSource.includes("!isSteel && projectType.trim() ? { steelStage: projectType.trim() }")
-  && projectsViewSource.includes("value={name} onChange={e => setName(e.target.value)}"),
-  'Non-steel raw templates must also keep project type and manually entered project name as separate persisted fields')
+  && projectsViewSource.includes("projectType: projectType.trim()")
+  && projectsViewSource.includes("value={name} onChange={e => setName(e.target.value)}")
+  && projectRepositorySource.includes("projectType?: string"),
+  'Non-steel raw templates must persist project type separately from the manually entered project name')
 assert.ok(!wizardSource.includes("مرحله اصلی زنجیره فولاد")
   && wizardSource.includes('technical:rawProject?[]')
   && wizardSource.includes('balance:rawProject?[]')
