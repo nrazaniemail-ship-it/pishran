@@ -30,6 +30,9 @@ export type PartnerFinanceResult = {
   warnings: string[]
   rows: PartnerCashFlowAllocation[]
   totalProjectEquityCashFlow: number
+  totalScheduledEquityContribution: number
+  totalDeclaredCapitalContribution: number
+  declaredCapitalContributionVariance: number
   distributedPositiveCashFlow: number
   retainedPositiveCashFlow: number
 }
@@ -49,7 +52,8 @@ export function allocateJointVentureCashFlows(
   const warnings: string[] = []
   const empty = (): PartnerFinanceResult => ({
     valid: false, warnings, rows: [], totalProjectEquityCashFlow: 0,
-    distributedPositiveCashFlow: 0, retainedPositiveCashFlow: 0,
+    totalScheduledEquityContribution: 0,totalDeclaredCapitalContribution: 0,
+    declaredCapitalContributionVariance: 0,distributedPositiveCashFlow: 0,retainedPositiveCashFlow: 0,
   })
   if (!finance.valid || !finance.rows.length) {
     warnings.push('A valid periodic equity cash-flow schedule is required before partner allocations can be calculated.')
@@ -109,5 +113,12 @@ export function allocateJointVentureCashFlows(
       })
     })
   })
-  return {valid:true,warnings,rows,totalProjectEquityCashFlow,distributedPositiveCashFlow,retainedPositiveCashFlow}
+  const totalDeclaredCapitalContribution=partners.reduce((sum,partner)=>sum+partner.capitalContribution,0)
+  const totalScheduledEquityContribution=finance.totalEquityContribution
+  return {
+    valid:true,warnings,rows,totalProjectEquityCashFlow,totalScheduledEquityContribution,
+    totalDeclaredCapitalContribution,
+    declaredCapitalContributionVariance:totalDeclaredCapitalContribution-totalScheduledEquityContribution,
+    distributedPositiveCashFlow,retainedPositiveCashFlow
+  }
 }
