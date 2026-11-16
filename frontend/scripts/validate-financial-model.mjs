@@ -1065,7 +1065,7 @@ for (const method of ['none','linear-to-zero','linear-to-scrap','accelerated','s
 // The asset is acquired before the calendar and starts depreciation on 1 March;
 // only 306 eligible days in 2025 are charged. These checks validate the formula
 // implementations without misrepresenting them as an HRCR200/COMFAR output match.
-const benchmarkCalendar=foundation.buildProjectCalendarPeriods('2025-01-01','2025-12-31','monthly',1)
+const benchmarkCalendar=foundation.buildProjectCalendarPeriods('2025-03-01','2025-12-31','annual',1)
 const benchmarkDays=306
 const yearFraction=benchmarkDays/365.2425
 const benchmarkCases=[
@@ -1077,14 +1077,14 @@ const benchmarkCases=[
 ]
 for (const benchmark of benchmarkCases) {
   const asset={...monthlyAsset,id:'analytic-'+benchmark.method,name:'Analytic '+benchmark.method,
-    originalValue:1000,initialBookValue:1000,scrapPercent:10,
+    originalValue:1000,initialBookValue:1000,scrapPercent:10,acquisitionPeriod:0,
     method:benchmark.method,lengthYears:benchmark.life,lengthMonths:0,
     ratePercent:benchmark.method==='none'||benchmark.method==='sum-of-years-digits'?undefined:50}
   const result=engine.calculateComfarCalendarDepreciationSchedule([asset],benchmarkCalendar,1)
   assert.equal(result.valid,true,'Analytical benchmark calendar must validate for '+benchmark.method)
   near(result.periods.reduce((sum,row)=>sum+row.depreciation,0),benchmark.expected,1e-7,
     'Independent 306-day analytical depreciation benchmark '+benchmark.method)
-  assert.equal(result.periods.reduce((rows,row)=>rows.concat(row.assets),[])[2].methodApplied,benchmark.applied,
+  assert.equal(result.periods[0].assets[0].methodApplied,benchmark.applied,
     'Analytical benchmark must report the selected method '+benchmark.method)
   assert.ok(result.periods.every(row=>row.assets[0].openingBookValue===0||row.assets[0].closingBookValue>=100-1e-8),
     'Analytical benchmark must never depreciate an acquired asset below salvage '+benchmark.method)
