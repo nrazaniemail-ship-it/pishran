@@ -434,6 +434,20 @@ export function mergeHotRollingCoilProjectFoundation(saved: unknown): ProjectFou
 }
 
 
+/** Reconstructed 20-quarter 7%-per-quarter annuity control from the PDF's 28% annual rate and OPEX annual principal schedule. */
+const hrcr200QuarterlyPayment = 840_992.2672863001
+const hrcr200QuarterlyAnnuityReference = (() => {
+  let openingBalance = 8_909_484.06
+  return Array.from({length:20},(_,index)=>{
+    const interestExpense = openingBalance * 0.07
+    const principal = Math.min(openingBalance,hrcr200QuarterlyPayment-interestExpense)
+    const closingBalance = Math.max(0,openingBalance-principal)
+    const row = {quarter:index+1,openingBalance,interestExpense,principal,debtService:hrcr200QuarterlyPayment,closingBalance}
+    openingBalance = closingBalance
+    return row
+  })
+})()
+
 /** Exact annual project cash-flow and tax controls transcribed from COMFAR III output. */
 export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
   source: 'COMFAR III - 001 - نتایج تحلیل مالی و اقتصادی طرح · pages 2, 24–27, 59–62 and 67–73; OPEX workbook · جریانات نقدی مالی (کامفار), periods 1–17',
@@ -516,6 +530,7 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
     installmentCount: 20,
     repaymentMethod: 'annuity' as const,
     quarterlyPayment: 840_992.2672863001,
+    quarterlySchedule: hrcr200QuarterlyAnnuityReference,
     firstOperatingYearInterest: 2_399_043.4359598644,
     firstOperatingYearPrincipal: 964_925.6331853358,
     firstOperatingYearDebtService: 3_363_969.0691452003,
