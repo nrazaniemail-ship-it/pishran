@@ -34,6 +34,9 @@ type Props = {
   fixedInvestmentSchedule?: number[]
   preOperatingSchedule?: number[]
   initialWorkingCapital?: number
+  initialWorkingCapitalEquityContribution?: number
+  initialLoanRatePercent?: number
+  initialRepaymentMethod?: Loan['repaymentMethod']
   loanTermYears?: number
   depreciationAssets?: Asset[]
   comfarDepreciationAssets?: ComfarDepreciationAssetInput[]
@@ -80,6 +83,7 @@ type SavedState = {
   opexEscalationPercent: number
   periodTaxRates?: number[]
   periodTaxRateDates?: string[]
+  fundingStructureVersion?: number
 }
 const money = (v: number) => Number.isFinite(v) ? v.toLocaleString(typeof document!=='undefined'&&document.documentElement.lang==='en'?'en-US':'fa-IR',{maximumFractionDigits:1}) : '—'
 const directoryRepaymentMethod: Record<string, Loan['repaymentMethod']> = {
@@ -109,15 +113,15 @@ export default function AdvancedFinancePanel(props: Props) {
   const initialCapexSchedule = activeFixedInvestmentSchedule.map((amount,i)=>amount+activePreOperatingSchedule[i])
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
-    loans:[{id:'loan-1',label:'تسهیلات اصلی و سرمایه در گردش',drawdowns:initialCapexSchedule.map((v,i)=>v*initialDebtShare+(i===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0)),drawdownMode:'annual-day-weighted',annualRate:props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}],
-    assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array(years).fill(0),
+    loans:[{id:'loan-1',label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),drawdownMode:'annual-day-weighted',annualRate:props.initialLoanRatePercent??props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:props.initialRepaymentMethod??'equal-principal',capitalizeInterest:true}],
+    assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??0):0),fundingStructureVersion:2,
     workingCapitalDays:props.workingCapitalDefaults?.days??{raw:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
     workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
     wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),
     discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0
   }))
   const [loaded,setLoaded]=useState(false)
-  useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const migratedAmount=Math.min(legacyWorkingCapitalEquity,legacyContribution);restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-migratedAmount):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?migratedAmount:0)}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
+  useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const matchesLegacyDefault=Math.abs(legacyContribution-legacyWorkingCapitalEquity)<0.01;restored.equityWorkingCapitalContributions=Array(years).fill(0);if(matchesLegacyDefault){restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-legacyWorkingCapitalEquity):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??legacyWorkingCapitalEquity):0)}}if((saved.fundingStructureVersion??0)<2){const legacyDrawdowns=initialCapexSchedule.map((value,index)=>value*initialDebtShare+(index===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0));restored.loans=restored.loans.map(loan=>{const untouchedLegacyDefault=loan.label==='تسهیلات اصلی و سرمایه در گردش'&&loan.drawdowns.length===years&&loan.drawdowns.every((value,index)=>Math.abs(value-legacyDrawdowns[index])<0.01)&&Math.abs(loan.annualRate-props.costOfDebt)<0.0001&&loan.repaymentMethod==='equal-principal';return untouchedLegacyDefault?{...loan,label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(value=>value*initialDebtShare),annualRate:props.initialLoanRatePercent??props.costOfDebt,repaymentMethod:props.initialRepaymentMethod??'equal-principal'}:loan});if(props.initialWorkingCapitalEquityContribution&&restored.equityWorkingCapitalContributions.every(value=>value===0)){restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?props.initialWorkingCapitalEquityContribution!:0)}restored.fundingStructureVersion=2}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
   const capexSchedule = activeFixedInvestmentSchedule
@@ -355,7 +359,7 @@ export default function AdvancedFinancePanel(props: Props) {
       <p className="fw-hint">{tr('آورده سهامدار برای CAPEX را جدا از برداشت وام وارد کنید. سرمایه در گردش در بخش مستقل زیر ثبت می‌شود.')}</p>
       <h4>{t('آورده سهامدار برای سرمایه در گردش','Shareholder Equity for Working Capital')}</h4>
       <div className="fw-grid">{Array.from({length:opYears},(_,i)=>{const yearIndex=construction+i;return <label className="fw-field" key={yearIndex}><span>{tr('آورده سرمایه در گردش سال بهره‌برداری')} {i+1}</span><input type="number" min="0" value={equityWorkingCapitalContributions[yearIndex]??0} onChange={e=>setWorkingCapitalEquity(yearIndex,Number(e.target.value))}/></label>})}</div>
-      <p className="fw-hint">{tr('این مبلغ، سهم واقعی تأمین‌شده توسط سهامدار از افزایش سرمایه در گردش خالص همان سال است؛ آن را فقط یک‌بار وارد کنید. مبلغ نمی‌تواند از افزایش خالص سرمایه در گردش همان دوره بیشتر باشد. سهم تأمین‌شده از محل وام در این قسمت وارد نمی‌شود.')}</p>
+      <p className="fw-hint">{tr('این مبلغ، آورده نقدی سهامدار برای تأمین سرمایه در گردش است و فقط یک‌بار ثبت می‌شود. اگر از افزایش خالص سرمایه در گردش بیشتر باشد، مازاد در مانده نقد ترازنامه دیده می‌شود؛ اگر کمتر باشد، کسری نقدینگی باقی می‌ماند. سهم تأمین‌شده از محل وام در این قسمت وارد نمی‌شود.','This is the shareholder cash contribution to working capital; enter it only once. Any amount above the net working-capital increase remains as cash on the balance sheet; any shortfall remains visible as a cash deficit. Do not enter debt-funded amounts here.')}</p>
     </div>
 
     <h4>{t('۲. سرمایه در گردش دوره‌ای','2. Periodic Working Capital')}</h4>
