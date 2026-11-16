@@ -928,6 +928,10 @@ assert.equal(hrcrAnnualAggregation[2].equityContribution,3309144.53)
 assert.equal(comfarReference.loanRepaymentAudit.annualPrincipalRepaymentsByYear.length,5)
 assert.equal(comfarReference.loanRepaymentAudit.annualInterestByYear.length,5)
 assert.ok(Math.abs(comfarReference.loanRepaymentAudit.annualInterestByYear[0]-comfarReference.loanRepaymentAudit.firstOperatingYearInterest)<0.01)
+assert.equal(comfarReference.loanRepaymentAudit.annualDebtServiceByYear.length,5)
+assert.ok(comfarReference.loanRepaymentAudit.annualDebtServiceByYear.every((service,index)=>
+  Math.abs(service-comfarReference.loanRepaymentAudit.annualInterestByYear[index]-comfarReference.loanRepaymentAudit.annualPrincipalRepaymentsByYear[index])<0.01),
+  'Annual debt service must equal reconstructed cash interest plus the OPEX-reconciled principal in all five repayment years')
 assert.ok(Math.abs(comfarReference.loanRepaymentAudit.annualPrincipalRepaymentsByYear.reduce((sum,value)=>sum+value,0)-comfarReference.loanRepaymentAudit.openingRepaymentBalance)<0.1,
   'Five annual principal repayments must amortize the reconstructed gross opening debt balance')
 const capexLoanAlternative=comfarReference.firstOperatingYearWorkingCapitalFunding.capexWorkbookAlternativeLoanSchedule
