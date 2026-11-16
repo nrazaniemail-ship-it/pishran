@@ -815,6 +815,7 @@ assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
   && projectReportSource.includes('opexWorkingCapitalByYear')
   && projectReportSource.includes('COMFAR reference working-capital movement')
   && projectReportSource.includes('derivedDscr')
+  && projectReportSource.includes('annualDebtServiceByYear')
   && projectReportSource.includes('Quarter-by-quarter reconstructed debt-service reconciliation')
   && projectReportSource.includes('quarterlyDebtRows')
   && projectReportSource.includes('quarterlySchedule'),
