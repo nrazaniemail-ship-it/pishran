@@ -134,6 +134,14 @@ const malformedPartnerName=partnerFinance.allocateJointVentureCashFlows({
 ],100)
 assert.equal(malformedPartnerName.valid,false,'Non-string persisted partner names must be rejected safely')
 
+const malformedPeriodicRow=partnerFinance.allocateJointVentureCashFlows({
+  valid:true,totalEquityContribution:100,rows:[null],
+},[
+  {id:'p1',name:'Partner A',sharePercent:100,capitalContribution:100,profitSharePercent:100},
+],100)
+assert.equal(malformedPeriodicRow.valid,false,'Malformed periodic rows must return validation errors instead of throwing')
+
+
 
 
 
