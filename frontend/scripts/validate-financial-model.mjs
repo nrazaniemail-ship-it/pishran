@@ -1086,8 +1086,8 @@ for (const benchmark of benchmarkCases) {
     'Independent 306-day analytical depreciation benchmark '+benchmark.method)
   assert.equal(result.periods.reduce((rows,row)=>rows.concat(row.assets),[])[2].methodApplied,benchmark.applied,
     'Analytical benchmark must report the selected method '+benchmark.method)
-  assert.ok(result.periods.every(row=>row.assets[0].closingBookValue>=100-1e-8),
-    'Analytical benchmark must never depreciate below salvage '+benchmark.method)
+  assert.ok(result.periods.every(row=>row.assets[0].openingBookValue===0||row.assets[0].closingBookValue>=100-1e-8),
+    'Analytical benchmark must never depreciate an acquired asset below salvage '+benchmark.method)
 }
 const hrcrDepreciationRun=engine.calculateComfarAssetDepreciationSchedule(hrcrAssetBuild.assets,17)
 assert.equal(hrcrDepreciationRun.valid,true,'Fractional useful lives from HRCR depreciation rates must be accepted by the XI.H engine')
