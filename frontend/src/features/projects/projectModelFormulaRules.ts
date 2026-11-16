@@ -59,8 +59,9 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
  if(![acquisitionCost,salvageValue,usefulLifeMonths,monthsElapsed,periodMonths,openingBookValue].every(Number.isFinite)||acquisitionCost<0||salvageValue<0||salvageValue>acquisitionCost||!Number.isInteger(usefulLifeMonths)||usefulLifeMonths<=0||monthsElapsed<0||periodMonths<0||openingBookValue<0)throw new Error('invalid-depreciation-input')
  const remainingLifeMonths=Math.max(0,usefulLifeMonths-monthsElapsed)
  const activeMonths=Math.min(periodMonths,remainingLifeMonths)
+ const bookFloor=method==='linear-to-zero'?0:salvageValue
  const depreciableBase=acquisitionCost-salvageValue
- if(activeMonths===0||openingBookValue<=salvageValue)return {charge:0,closingBookValue:Math.max(salvageValue,openingBookValue),remainingLifeMonths,methodUsed:method}
+ if(activeMonths===0||openingBookValue<=bookFloor)return {charge:0,closingBookValue:Math.max(bookFloor,openingBookValue),remainingLifeMonths,methodUsed:method}
  let charge=0,methodUsed=method
  if(method==='linear-to-zero')charge=acquisitionCost/usefulLifeMonths*activeMonths
  else if(method==='linear-to-scrap')charge=depreciableBase/usefulLifeMonths*activeMonths
@@ -82,8 +83,8 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
   if(decliningCharge>=straightLineCharge)charge=decliningCharge
   else {charge=straightLineCharge;methodUsed='linear-to-scrap'}
  }
- charge=Math.min(Math.max(0,charge),Math.max(0,openingBookValue-salvageValue))
- const closingBookValue=Math.max(salvageValue,openingBookValue-charge)
+ charge=Math.min(Math.max(0,charge),Math.max(0,openingBookValue-bookFloor))
+ const closingBookValue=Math.max(bookFloor,openingBookValue-charge)
  return {charge,closingBookValue,remainingLifeMonths:Math.max(0,remainingLifeMonths-activeMonths),methodUsed}
 }
 export type AnnuityLoanPeriod={period:number;openingBalance:number;payment:number;interest:number;principal:number;closingBalance:number}
