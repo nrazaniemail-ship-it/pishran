@@ -670,6 +670,11 @@ assert.ok(advancedFinanceSource.includes('calculateIntegratedPeriodicFinance')
   && advancedFinanceSource.includes('periodDrawdownDates')
   && advancedFinanceSource.includes('periodTaxRateDates'),
   'Advanced finance panel must connect period schedules, rate conventions, working capital and the integrated periodic engine')
+assert.ok(feasibilityWizardSource.includes('resolveProjectStage')
+  && feasibilityWizardSource.includes("has('پلیت')")
+  && feasibilityWizardSource.includes("has('نوردسرد')")
+  && feasibilityWizardSource.includes('stage:defaults.stage'),
+  'Steel-chain aliases must resolve to their correct specialist form, including saved projects')
 assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
   && feasibilityWizardSource.includes('projectPeriods={projectCalendarPeriods}')
   && feasibilityWizardSource.includes('cashFlowTiming={m.foundation.planning.cashFlowTiming}'),
