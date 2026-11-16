@@ -344,6 +344,7 @@ export default function ProjectReportVisuals(props: Props) {
     </div>}
     {props.partnerFinanceResult?.valid&&<div className="fw-card">
       <h4>{t('جریان نقدی و تخصیص شرکای مشارکت','Joint-Venture Partner Cash-Flow Allocation',language)}</h4>
+      <p className="fw-hint">{t('جریان‌های نقدی منفی بر اساس سهم سرمایه و جریان‌های مثبتِ قابل تقسیم بر اساس سهم سود تخصیص یافته‌اند. وجه نقد تقسیم‌نشده در پروژه باقی می‌ماند. این محاسبه، جایگزین قرارداد مشارکت، مصوبه تقسیم سود یا ثبت حسابداری شرکا نیست.','Negative cash flows are allocated by capital share and distributable positive cash flows by profit share. Undistributed cash remains in the project. This calculation does not replace the JV agreement, a dividend resolution or partner accounting records.',language)}</p>
       <div className="fw-grid">
         <div className="fw-result">{t('جریان نقدی کل سهامداران','Total equity cash flow',language)} · {fmtValue(props.partnerFinanceResult.totalProjectEquityCashFlow)} {project.currency}</div>
         <div className="fw-result">{t('وجه نقد توزیع‌شده','Cash distributed',language)} · {fmtValue(props.partnerFinanceResult.distributedPositiveCashFlow)} {project.currency}</div>
