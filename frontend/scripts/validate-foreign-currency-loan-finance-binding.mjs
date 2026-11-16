@@ -103,6 +103,6 @@ const feeBlocked=binding.buildPeriodicLoanFacilityBinding({
  foundation,periods,dayCountBasis:365,
 })
 assert.equal(feeBlocked.valid,false)
-assert.ok(feeBlocked.issues.some(x=>x.includes('payment date')))
+assert.ok(feeBlocked.issues.some(x=>x.includes('payment-date')))
 
 console.log('Loan-form binding, partial interest capitalization, periodic FX translation and three-statement orchestration validation passed.')
