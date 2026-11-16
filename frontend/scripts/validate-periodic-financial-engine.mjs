@@ -655,6 +655,7 @@ assert.equal(invalidPeriodicAsset.valid,false,'Non-ISO acquisition dates must fa
 
 const advancedFinanceSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 const feasibilityWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+const projectsViewSource = await readFile(new URL('../src/features/projects/ProjectsView.tsx', import.meta.url), 'utf8')
 const projectReportSource = await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx', import.meta.url), 'utf8')
 assert.ok(projectReportSource.includes('equityIrrPercent')
   && projectReportSource.includes('20-quarter repayment schedule'),
@@ -677,6 +678,22 @@ assert.ok(feasibilityWizardSource.includes('resolveProjectStage')
   && feasibilityWizardSource.includes("has('نوردسرد')")
   && feasibilityWizardSource.includes('stage:defaults.stage'),
   'Steel-chain aliases must resolve to their correct specialist form, including saved projects')
+assert.ok(feasibilityWizardSource.includes("project.templateId==='raw'")
+  && feasibilityWizardSource.includes('technical:rawProject?[]')
+  && feasibilityWizardSource.includes('balance:rawProject?[]')
+  && feasibilityWizardSource.includes('utilities:rawProject?[]')
+  && feasibilityWizardSource.includes('capex:rawProject?[]')
+  && feasibilityWizardSource.includes('opex:rawProject?[]')
+  && feasibilityWizardSource.includes('blankZero={isRawTemplate}')
+  && feasibilityWizardSource.includes('stageFormDefinitions[selectedStage.id]?.materials')
+  && feasibilityWizardSource.includes('stageFormDefinitions[selectedStage.id]?.utilities')
+  && feasibilityWizardSource.includes('stageFormDefinitions[selectedStage.id]?.capex')
+  && feasibilityWizardSource.includes('stageFormDefinitions[selectedStage.id]?.opex'),
+  'Blank projects must start with empty data while specialist projects receive stage-specific engineering rows')
+assert.ok(projectsViewSource.includes("{steelStage && <label>")
+  && projectsViewSource.includes("t('نام پروژه','Project Name')")
+  && projectsViewSource.includes('placeholder={t(\'نام دلخواه پروژه را وارد کنید\''),
+  'Steel project creation must request a manually entered project name immediately after project type selection')
 assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
   && feasibilityWizardSource.includes('projectPeriods={projectCalendarPeriods}')
   && feasibilityWizardSource.includes('cashFlowTiming={m.foundation.planning.cashFlowTiming}'),
