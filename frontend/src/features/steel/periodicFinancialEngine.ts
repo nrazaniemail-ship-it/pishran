@@ -1345,9 +1345,21 @@ export function calculatePeriodicComfarAssetLifecycle(
     warnings.push('Periodic depreciation asset and sale identifiers must be unique.')
     return empty()
   }
+  if(assets.some(asset=>!asset.id.trim())||sales.some(sale=>!sale.id.trim())) {
+    warnings.push('Periodic depreciation asset and sale identifiers cannot be blank.')
+    return empty()
+  }
   const assetIds=new Set(assets.map(asset=>asset.id))
   if (sales.some(sale=>!assetIds.has(sale.assetId))) {
     warnings.push('Every periodic asset sale must reference an existing asset vintage.')
+    return empty()
+  }
+  if(new Set(sales.map(sale=>sale.assetId)).size!==sales.length) {
+    warnings.push('An asset vintage can be disposed only once; multiple disposal rows for one asset are not permitted.')
+    return empty()
+  }
+  if(periods.some((period,index)=>!Number.isInteger(period.index)||period.index!==periods[0].index+index)) {
+    warnings.push('Project period indexes must be consecutive and ordered.')
     return empty()
   }
   const periodRows=periods.map(period=>({
