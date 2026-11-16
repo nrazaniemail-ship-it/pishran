@@ -116,3 +116,29 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
  if(value.fees.some(fee=>fee.ratePercent!==null&&(!Number.isFinite(fee.ratePercent)||fee.ratePercent<0)))errors.push('invalid-loan-fee-rate')
  return errors
 }
+
+
+export type ProjectModelFinancialFormDrafts = {
+ assets: FixedAssetFormDraft[]
+ productionCosts: ProductionCostFormDraft[]
+ sales: SalesProductFormDraft[]
+ workingCapital: WorkingCapitalComponentFormDraft[]
+ loans: LoanFacilityFormDraft[]
+ tax: ProjectTaxFormDraft
+}
+export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
+ return {assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft()}
+}
+export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinancialFormDrafts):string[] {
+ const errors:string[]=[]
+ value.assets.forEach((item,index)=>validateFixedAssetFormDraft(item).forEach(error=>errors.push('asset-'+index+':'+error)))
+ value.productionCosts.forEach((item,index)=>validateProductionCostFormDraft(item).forEach(error=>errors.push('production-cost-'+index+':'+error)))
+ value.loans.forEach((item,index)=>validateLoanFacilityFormDraft(item).forEach(error=>errors.push('loan-'+index+':'+error)))
+ for(const [index,item] of value.workingCapital.entries()) {
+  if(item.minimumDaysCoverage!==null&&(!Number.isFinite(item.minimumDaysCoverage)||item.minimumDaysCoverage<=0))errors.push('working-capital-'+index+':invalid-days-coverage')
+  if(item.turnoverCoefficient!==null&&(!Number.isFinite(item.turnoverCoefficient)||item.turnoverCoefficient<0))errors.push('working-capital-'+index+':invalid-turnover')
+ }
+ for(const [index,row] of value.tax.rates.entries())if(row.ratePercent!==null&&(!Number.isFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100))errors.push('tax-rate-'+index+':invalid-tax-rate')
+ if(value.tax.lossCarryForwardYears!==null&&(!Number.isInteger(value.tax.lossCarryForwardYears)||value.tax.lossCarryForwardYears<0))errors.push('invalid-loss-carry-forward-years')
+ return errors
+}
