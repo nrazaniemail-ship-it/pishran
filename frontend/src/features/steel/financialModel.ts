@@ -997,6 +997,7 @@ export function calculateComfarCalendarDepreciationSchedule(
       eligible=acquiredIndex>=0?addCalendarDays(calendarDate(periods[acquiredIndex].endDate)!,1):addCalendarDays(acquired,1)
     }
     let bookValue=0
+    let bookValueInitialized=false
     const lifeDays=length*365.2425
     for (let index=0;index<periods.length;index++) {
       const period=periods[index]
@@ -1006,7 +1007,10 @@ export function calculateComfarCalendarDepreciationSchedule(
         rowsByPeriod[index].push({id:asset.id,name:asset.name,methodApplied:null,openingBookValue:0,depreciation:0,closingBookValue:0})
         continue
       }
-      if (bookValue===0) bookValue=asset.initialBookValue
+      if (!bookValueInitialized) {
+        bookValue=asset.initialBookValue
+        bookValueInitialized=true
+      }
       const opening=bookValue
       const activeStart=eligible>pStart?eligible:pStart
       const stopDate=stopDatesByAsset[asset.id]?calendarDate(stopDatesByAsset[asset.id]):null
