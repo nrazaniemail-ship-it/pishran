@@ -79,5 +79,82 @@ const missingRate = module.translatePeriodicForeignCurrencyLoan({
   })),
 })
 assert.equal(missingRate.valid, false, 'Every project period must have an explicit currency rate')
-console.log('Periodic foreign-currency translation and loan-schedule integration validation passed.')
+
+const baseStatement = {
+  period: 1, startDate: '2025-01-01', endDate: '2025-12-31',
+  openingBalances: {
+    cash: 0, debt: 30, netFixedAssets: 60, netWorkingCapital: 0,
+    deferredPreOperatingAssets: 0, paidInCapital: 30, retainedEarnings: 0,
+  },
+  incomeStatement: {
+    revenue: 100, cashOperatingCosts: 20, ebitda: 80, depreciation: 10,
+    assetDisposalGainLoss: 0, ebit: 70, interest: 5, cashInterestExpense: 5,
+    financingFeeExpense: 0, commitmentFeeExpense: 0,
+    profitBeforeTax: 65, tax: 13, netIncome: 52,
+  },
+  cashFlowStatement: {
+    operatingCashFlow: 62, investingCashFlow: 0, financingCashFlow: 0,
+    netChangeInCash: 62, closingCash: 62,
+  },
+  balanceSheet: {
+    cash: 62, netWorkingCapital: 0, netFixedAssets: 50, deferredPreOperatingAssets: 0,
+    totalAssets: 112, debt: 30, totalLiabilities: 30, paidInCapital: 30,
+    retainedEarnings: 52, totalEquity: 82, totalLiabilitiesAndEquity: 112,
+    balanceDifference: 0, reconciled: true,
+  },
+  movementChecks: {
+    cash: 62, debt: 0, netWorkingCapital: 0, netFixedAssets: -10,
+    deferredPreOperatingAssets: 0, paidInCapital: 0, retainedEarnings: 52,
+  },
+}
+const posted = module.postForeignExchangeIntoThreeStatements({
+  statements: [baseStatement],
+  debtTranslation: {
+    valid: true,
+    rows: [{ period: 1, foreignExchangeLossLocal: 10 }],
+    issues: [],
+    totalForeignExchangeLossLocal: 10,
+  },
+  taxRatesPercent: [20],
+  openingTaxLossCarryForward: 0,
+  taxTreatment: 'deductible',
+})
+assert.equal(posted.valid, true, posted.issues.join('; '))
+const statement = posted.statements[0]
+assert.equal(statement.incomeStatement.foreignExchangeGainLoss, -10)
+assert.equal(statement.incomeStatement.profitBeforeTax, 55)
+assert.equal(statement.incomeStatement.tax, 11)
+assert.equal(statement.incomeStatement.netIncome, 44)
+assert.equal(statement.cashFlowStatement.operatingCashFlow, 64,
+  'Non-cash FX loss must be added back to operating cash flow after tax')
+assert.equal(statement.balanceSheet.debt, 40)
+assert.equal(statement.balanceSheet.cash, 64)
+assert.equal(statement.balanceSheet.retainedEarnings, 44)
+assert.equal(statement.balanceSheet.totalAssets, statement.balanceSheet.totalLiabilitiesAndEquity)
+assert.equal(statement.balanceSheet.reconciled, true)
+assert.equal(posted.closingTaxLossCarryForward, 0)
+
+const nondeductible = module.postForeignExchangeIntoThreeStatements({
+  statements: [baseStatement],
+  debtTranslation: {
+    valid: true, rows: [{ period: 1, foreignExchangeLossLocal: 10 }],
+    issues: [], totalForeignExchangeLossLocal: 10,
+  },
+  taxRatesPercent: [20],
+  taxTreatment: 'non-deductible',
+})
+assert.equal(nondeductible.valid, true, nondeductible.issues.join('; '))
+assert.equal(nondeductible.statements[0].incomeStatement.tax, 13,
+  'Non-deductible FX losses must not reduce taxable profit')
+assert.equal(nondeductible.statements[0].balanceSheet.totalAssets,
+  nondeductible.statements[0].balanceSheet.totalLiabilitiesAndEquity)
+assert.equal(module.postForeignExchangeIntoThreeStatements({
+  statements: [baseStatement], debtTranslation: {
+    valid: true, rows: [{ period: 2, foreignExchangeLossLocal: 10 }],
+    issues: [], totalForeignExchangeLossLocal: 10,
+  },
+  taxRatesPercent: [20], taxTreatment: 'deductible',
+}).valid, false, 'Statement and FX period numbers must match')
+console.log('Periodic FX translation, loan integration and three-statement posting validation passed.')
+
 
