@@ -262,12 +262,12 @@ function loanYearFraction(startDate: string, endDate: string, convention: 'comfa
   const days = (end.getTime() - start.getTime()) / 86400000
   if (convention === 'actual-360') return days / 360
   if (convention === 'actual-365') return days / 365
-  let months = 0
-  while (months < 1200) {
-    const next = loanDateAddMonthsClamped(start, months + 1)
-    if (next > end) break
-    months++
-  }
+  // COMFAR splits each interval into completed calendar months and residual
+  // days. A month is completed only when the ending day-of-month reaches the
+  // starting day; residual days are then converted on a 30-day-month basis.
+  let months = (end.getUTCFullYear() - start.getUTCFullYear()) * 12
+    + end.getUTCMonth() - start.getUTCMonth()
+  if (end.getUTCDate() < start.getUTCDate()) months -= 1
   const wholeMonthDate = loanDateAddMonthsClamped(start, months)
   const extraDays = (end.getTime() - wholeMonthDate.getTime()) / 86400000
   return months / 12 + extraDays / 360
