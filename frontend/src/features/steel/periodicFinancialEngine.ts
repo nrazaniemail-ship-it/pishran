@@ -566,6 +566,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   if (assetSaleSchedule.some(row =>
     ![row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(validFinite) ||
     row.saleProceeds < 0 || row.returnOfCapital < 0 || row.bookValueDisposed < 0 ||
+    row.returnOfCapital > row.saleProceeds + 0.01 || row.returnOfCapital > row.bookValueDisposed + 0.01 ||
     Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss) > 0.01
   )) {
     warnings.push('Annual asset disposals must reconcile sale proceeds to return of capital and other income/loss.')
