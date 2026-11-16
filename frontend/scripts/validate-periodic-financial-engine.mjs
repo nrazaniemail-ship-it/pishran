@@ -258,4 +258,14 @@ assert.ok(projectFoundationPanelSource.includes('Day-count Basis')
 assert.ok(advancedFinanceSource.includes('Values in the period tax schedule override the annual rate.')
   && !advancedFinanceSource.includes('Monthly/quarterly calculation will be enabled after the period engine is complete'),
   'Tax UI must explain period-specific overrides rather than claim monthly/quarterly support is unavailable')
+const advancedFinanceUi = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+assert.ok(advancedFinanceUi.includes('Annual-to-Period Rate Convention')
+  && advancedFinanceUi.includes('effective-annual-by-actual-days')
+  && advancedFinanceUi.includes('effective-annual-divided-by-frequency')
+  && advancedFinanceUi.includes('periodRateConversion'),
+  'Periodic loan UI must expose both rate-conversion conventions and persist the explicit selection')
+assert.ok(advancedFinanceUi.includes('financing.effective-annual-frequency-rate')
+  && advancedFinanceUi.includes('periodicRateMethod.formula')
+  && advancedFinanceUi.includes('periodicRateMethod.limitations'),
+  'Frequency-based loan convention must display its source formula and limitations')
 console.log('PASS: integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
