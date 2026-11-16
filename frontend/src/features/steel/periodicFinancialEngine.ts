@@ -387,6 +387,12 @@ export type PeriodicProjectFinanceInput = {
   mirrFinanceRatePercent?: number | null
   mirrReinvestmentRatePercent?: number | null
   salvageValue?: number
+  annualAssetSaleSchedule?: {
+    saleProceeds: number
+    returnOfCapital: number
+    otherIncomeLoss: number
+    bookValueDisposed: number
+  }[]
 }
 export type PeriodicProjectFinanceRow = {
   period: number
@@ -398,6 +404,10 @@ export type PeriodicProjectFinanceRow = {
   fixedCost: number
   depreciation: number
   ebit: number
+  assetSaleProceeds: number
+  assetReturnOfCapital: number
+  assetSaleOtherIncomeLoss: number
+  assetBookValueDisposed: number
   interestExpense: number
   capitalizedInterest: number
   principal: number
@@ -552,6 +562,30 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Annual model horizon does not cover every project fiscal period; annual flows cannot be allocated.')
     return empty()
   }
+  const assetSaleSchedule = input.annualAssetSaleSchedule ?? []
+  if (assetSaleSchedule.some(row =>
+    ![row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(validFinite) ||
+    row.saleProceeds < 0 || row.returnOfCapital < 0 || row.bookValueDisposed < 0 ||
+    Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss) > 0.01
+  )) {
+    warnings.push('Annual asset disposals must reconcile sale proceeds to return of capital and other income/loss.')
+    return empty()
+  }
+  const assetSalesByPeriod = periods.map(() => ({saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0}))
+  for (let year = 0; year < assetSaleSchedule.length; year++) {
+    const row = assetSaleSchedule[year]
+    const matchingPeriods = periods.map((period,index)=>({period,index}))
+      .filter(({period})=>fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)===year)
+    if (!matchingPeriods.length) {
+      if (row.saleProceeds !== 0 || row.returnOfCapital !== 0 || row.otherIncomeLoss !== 0 || row.bookValueDisposed !== 0) {
+        warnings.push('An annual asset disposal falls outside the project calendar.')
+        return empty()
+      }
+      continue
+    }
+    const target = matchingPeriods[matchingPeriods.length-1].index
+    assetSalesByPeriod[target] = {...row}
+  }
   const [revenue, variableCost, fixedCost, depreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution] = allocated
   const taxRates = input.taxRatesByPeriod ? [...input.taxRatesByPeriod] : periods.map(period => {
     const index = fiscalYearIndexForPeriod(period, periods, fiscalYearStartMonth)
@@ -596,7 +630,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const capitalizedInterest = loanRows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
     const principal = loanRows.reduce((sum,row)=>sum+row.principal,0)
     const debtDrawdown = loanRows.reduce((sum,row)=>sum+row.drawdown,0)
-    const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index]
+    const assetSale = assetSalesByPeriod[index]
+    const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] + assetSale.otherIncomeLoss
     const periodTax = calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
     const unleveredPeriodTax = calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
     if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
@@ -609,18 +644,20 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
     const terminalSalvage = index === periods.length - 1 ? Math.max(0,input.salvageValue ?? 0) : 0
     const cfads = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
-      - maintenanceCapex[index] - changeInWorkingCapital
+      - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
-    const projectFreeCashFlow = ebit - unleveredPeriodTax.tax + depreciation[index]
+    const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
-      - changeInWorkingCapital + terminalSalvage
+      - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
     const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
-      - changeInWorkingCapital + terminalSalvage
+      - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
       revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
+      assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
+      assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,capitalizedInterest,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
