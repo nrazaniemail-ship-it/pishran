@@ -1402,6 +1402,7 @@ export function calculatePeriodicComfarAssetLifecycle(
     const sale=sales.find(row=>row.assetId===asset.id)
     const saleDate=sale?parseIsoDateUtc(sale.saleDate):null
     if(sale&&(!saleDate||saleDate.getTime()<acquisitionDate.getTime()||
+      !['book-value','self-defined'].includes(sale.priceMode)||
       (sale.priceMode==='self-defined'&&(sale.selfDefinedPrice==null||!validFinite(sale.selfDefinedPrice)||sale.selfDefinedPrice<0||
        !validFinite(sale.exchangeRateToLocal)||sale.exchangeRateToLocal<=0)))) {
       warnings.push(asset.name+': periodic disposal date or proceeds are invalid.')
