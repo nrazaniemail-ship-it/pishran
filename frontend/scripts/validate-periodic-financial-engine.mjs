@@ -791,6 +791,8 @@ assert.ok(feasibilityWizardSource.includes('partnerDistributionPercent={m.partne
 assert.ok(projectReportSource.includes('Project Technical & Cost Form Details')
   && projectReportSource.includes('Technical Parameters')
   && projectReportSource.includes('Material Balance & Feed')
+  && projectReportSource.includes('Market Information Summary')
+  && feasibilityWizardSource.includes('marketSummary={m.market}')
   && feasibilityWizardSource.includes('technicalParameters={m.technical}')
   && feasibilityWizardSource.includes('materialBalance={m.balance}')
   && feasibilityWizardSource.includes('capexItems={m.capex}')
