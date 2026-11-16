@@ -815,6 +815,9 @@ const hrcrAssetBuild=engine.buildComfarDepreciationAssetsFromFixedInvestmentItem
 assert.ok(hrcrAssetBuild.assets.length>=18,'HRCR reference must create asset acquisition vintages from the CAPEX workbook')
 
 const monthlyCalendar=foundation.buildProjectCalendarPeriods('2025-01-01','2025-12-31','monthly',1)
+const invalidMonthlyCalendar=monthlyCalendar.map((period,index)=>index===1?{...period,days:period.days+1}:period)
+assert.equal(engine.calculateComfarCalendarDepreciationSchedule([],invalidMonthlyCalendar,1).valid,false,
+  'Calendar periods with inconsistent day counts must be rejected')
 const monthlyAsset={id:'monthly-asset',name:'Monthly asset',originalValue:1200,initialBookValue:1200,
   scrapPercent:10,lengthYears:2,lengthMonths:0,ratePercent:50,method:'linear-to-scrap',
   acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'2025-02-15',startingAtDate:'2025-03-01'}
@@ -840,6 +843,12 @@ const quarterlyCalendar=foundation.buildProjectCalendarPeriods('2025-01-01','202
 const quarterlyAsset={id:'quarterly-asset',name:'Quarterly asset',originalValue:1000,initialBookValue:1000,
   scrapPercent:10,lengthYears:2,lengthMonths:0,ratePercent:50,method:'linear-to-scrap',
   acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'2025-01-15',startingAtDate:'2025-02-01'}
+const invalidCalendarSale=engine.calculateComfarCalendarAssetLifecycle([quarterlyAsset],[{
+  id:'invalid-calendar-sale',assetId:'quarterly-asset',period:3,priceMode:'self-defined',
+  selfDefinedPrice:500,saleDate:'2025-07-15'
+}],quarterlyCalendar,1)
+assert.equal(invalidCalendarSale.valid,false,
+  'Self-defined calendar disposal must require a positive exchange rate')
 const quarterlyRun=engine.calculateComfarCalendarDepreciationSchedule([quarterlyAsset],quarterlyCalendar,1)
 assert.equal(quarterlyRun.valid,true,'Date-driven quarterly schedule must validate')
 near(quarterlyRun.periods[0].depreciation,450*59/365.2425,0.02,
