@@ -128,12 +128,50 @@ export function bindFixedAssetDraftsToPeriodicFinance(input:{
   if(periodYears.some(year=>year<0||year>=years))
     return {valid:false,issues:['Asset schedules could not be allocated to the project fiscal years.'],financeInput:null,assets,sales,lifecycle}
   const annualize=(series:number[])=>Array.from({length:years},(_,year)=>series.reduce((sum,value,index)=>sum+(periodYears[index]===year?value:0),0))
-  const periodDepreciation=(finance.periodDepreciationSchedule??Array(periods.length).fill(0)).map((value,index)=>value+lifecycle.depreciationByPeriod[index])
+  const fiscalStart=(date:Date)=>{
+    const year=date.getUTCMonth()+1<finance.fiscalYearStartMonth?date.getUTCFullYear()-1:date.getUTCFullYear()
+    return new Date(Date.UTC(year,finance.fiscalYearStartMonth-1,1))
+  }
+  const allocateAnnual=(annual:number[])=>periods.map((period,index)=>{
+    const start=new Date(period.startDate+'T00:00:00.000Z')
+    const end=new Date(period.endDate+'T00:00:00.000Z')
+    let cursor=start.getTime(),allocated=0
+    while(cursor<=end.getTime()) {
+      const current=new Date(cursor),yearStart=fiscalStart(current)
+      const nextYear=new Date(Date.UTC(yearStart.getUTCFullYear()+1,finance.fiscalYearStartMonth-1,1))
+      const segmentEnd=Math.min(end.getTime(),nextYear.getTime()-86400000)
+      const year=periodYears[index]
+      const yearDays=Math.round((nextYear.getTime()-yearStart.getTime())/86400000)
+      const segmentDays=Math.round((segmentEnd-cursor)/86400000)+1
+      if(year<0||year>=annual.length)return Number.NaN
+      allocated+=annual[year]*segmentDays/yearDays
+      cursor=segmentEnd+86400000
+    }
+    return allocated
+  })
+  const basePeriodDepreciation=finance.periodDepreciationSchedule??allocateAnnual(finance.annualDepreciation)
+  if(basePeriodDepreciation.length!==periods.length||basePeriodDepreciation.some(value=>!nonNegative(value)))
+    return {valid:false,issues:['Existing annual depreciation cannot be allocated to the project periods.'],financeInput:null,assets,sales,lifecycle}
+  const periodDepreciation=basePeriodDepreciation.map((value,index)=>value+lifecycle.depreciationByPeriod[index])
   const annualDepreciation=annualize(periodDepreciation)
   const periodFixedInvestment=lifecycle.fixedInvestmentByPeriod
   const periodPreOperating=lifecycle.preOperatingCostByPeriod
   const periodSales=periods.map((_,index)=>lifecycle.periods[index])
-  const existingSales=finance.periodAssetSaleSchedule??periods.map(()=>({saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0}))
+  const existingSales=finance.periodAssetSaleSchedule
+    ?finance.periodAssetSaleSchedule.map(row=>({...row}))
+    :periods.map(()=>({saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0}))
+  if(!finance.periodAssetSaleSchedule&&finance.annualAssetSaleSchedule) {
+    finance.annualAssetSaleSchedule.forEach((row,year)=>{
+      const matching=periods.map((period,index)=>({period,index})).filter(({period})=>periodYears[periods.indexOf(period)]===year)
+      const target=matching[matching.length-1]?.index
+      if(target!==undefined) {
+        existingSales[target].saleProceeds+=row.saleProceeds
+        existingSales[target].returnOfCapital+=row.returnOfCapital
+        existingSales[target].otherIncomeLoss+=row.otherIncomeLoss
+        existingSales[target].bookValueDisposed+=row.bookValueDisposed
+      }
+    })
+  }
   const periodAssetSaleSchedule=periodSales.map((row,index)=>{
     const gain=row.saleGainLoss
     if(gain < -0.01)issues.push('Asset disposal loss cannot be represented by the current sale posting schema; extend the disposal form/accounting mapping before posting '+row.period+'.')
