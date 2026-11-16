@@ -212,14 +212,19 @@ export function calculateProductionCostItem(
   periods: ProductionCostPeriodInput[],
 ): ProductionCostItemResult {
   const issues: string[] = []
-  if (!item?.id?.trim()) issues.push('Production cost item requires an identifier.')
+  if (!item || typeof item !== 'object') {
+    return { id: '', valid: false, rows: [], totalFixedCost: 0, totalVariableCost: 0, totalCost: 0,
+      issues: ['Production cost item must be a valid object.'] }
+  }
+  const periodRows = Array.isArray(periods) ? periods : []
+  if (!item.id?.trim()) issues.push('Production cost item requires an identifier.')
   if (!['nominal-capacity', 'per-unit-output', 'period-adjustments'].includes(item?.basis))
     issues.push('Unsupported production-cost basis.')
   if (!['sales', 'production'].includes(item?.activityBasis))
     issues.push('Production-cost activity basis must be sales or production.')
-  if (!Array.isArray(periods) || !periods.length)
+  if (!periodRows.length)
     issues.push('At least one production-cost period is required.')
-  if (periods?.some((period, index) => !period || period.index !== index + 1 ||
+  if (periodRows.some((period, index) => !period || period.index !== index + 1 ||
       !finite(period.months) || period.months <= 0 || period.months > 12 ||
       !finite(period.salesQuantity) || period.salesQuantity < 0 ||
       !finite(period.productionQuantity) || period.productionQuantity < 0))
@@ -230,7 +235,7 @@ export function calculateProductionCostItem(
       issues.push('Nominal-capacity basis requires a non-negative standard quantity.')
     if (!finite(item.nominalCapacity ?? Number.NaN) || (item.nominalCapacity ?? 0) <= 0)
       issues.push('Nominal-capacity basis requires positive nominal capacity.')
-    if (!Array.isArray(item.standardUnitPrices) || item.standardUnitPrices.length !== periods.length ||
+    if (!Array.isArray(item.standardUnitPrices) || item.standardUnitPrices.length !== periodRows.length ||
         item.standardUnitPrices.some(price => !finite(price) || price < 0))
       issues.push('Nominal-capacity basis requires one non-negative current standard price per period.')
     if (!validPercent(item.fixedPercent ?? Number.NaN) || !validPercent(item.variablePercent ?? Number.NaN))
@@ -247,8 +252,10 @@ export function calculateProductionCostItem(
     if (!finite(item.standardFixedCost ?? Number.NaN) || (item.standardFixedCost ?? 0) < 0)
       issues.push('Per-unit-output basis requires a non-negative standard fixed cost.')
   }
-  const adjustments = item.adjustments ?? []
-  if (!Array.isArray(adjustments) || adjustments.some((row, index) => !row ||
+  if (item.adjustments != null && !Array.isArray(item.adjustments))
+    issues.push('Adjustments must be supplied as a period-indexed list.')
+  const adjustments = Array.isArray(item.adjustments) ? item.adjustments : []
+  if (adjustments.some((row, index) => !row ||
       !Number.isInteger(row.period) || row.period < 1 || row.period > periods.length ||
       (index > 0 && adjustments[index - 1].period >= row.period) ||
       ![row.quantity, row.unitPrice, row.fixedPercent, row.variablePercent].every(finite) ||
@@ -259,7 +266,7 @@ export function calculateProductionCostItem(
     issues.push('Each adjustment fixed and variable percentage pair must total 100%.')
   if (issues.length) return { id: item?.id ?? '', valid: false, rows: [], totalFixedCost: 0, totalVariableCost: 0, totalCost: 0, issues }
 
-  const rows = periods.map((period, index): ProductionCostPeriodResult => {
+  const rows = periodRows.map((period, index): ProductionCostPeriodResult => {
     const adjustment = adjustments.find(row => row.period === period.index)
     const adjustmentAmount = adjustment ? adjustment.quantity * adjustment.unitPrice : 0
     const activity = item.activityBasis === 'sales' ? period.salesQuantity : period.productionQuantity
