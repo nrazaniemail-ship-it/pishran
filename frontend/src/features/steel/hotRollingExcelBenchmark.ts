@@ -505,8 +505,19 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
     fullCapacityWorkingCapital:4_595_370.46,
     opexFirstYearWorkingCapitalRequirement:3_216_759.32004,
     excessFundingAgainstOpexFirstYearRequirement:92_385.20996,
+    /** This is a source/use timing difference, not additional working-capital consumption. */
+    fundingBufferPendingReconciliation:92_385.20996,
     shortTermFinancingInComfarSchedule:0,
     capexWorkbookAlternativeLongTermWorkingCapitalLoan:3_309_144.525623,
+    /** OPEX workbook sheet "سرمایه در گردش": balance and annual increases are distinct from COMFAR financing-source equity. */
+    opexWorkingCapitalByYear: [
+      {year:1405,closingRequirement:3_216_759.32004,annualIncrease:3_216_759.32004},
+      {year:1406,closingRequirement:3_676_296.36576,annualIncrease:459_537.04572},
+      {year:1407,closingRequirement:4_135_833.41148,annualIncrease:459_537.04572},
+      {year:1408,closingRequirement:4_595_370.4572,annualIncrease:459_537.04572},
+      {year:1409,closingRequirement:4_595_370.4572,annualIncrease:0},
+      ...Array.from({length:10},(_,index)=>({year:1410+index,closingRequirement:4_595_370.4572,annualIncrease:0}))
+    ] as const,
     capexWorkbookAlternativeLoanSchedule: {
       fixedAssetLoan1Principal:3_816_495.99,
       fixedAssetLoan2Principal:1_794_354.81,
