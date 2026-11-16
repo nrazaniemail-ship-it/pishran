@@ -8,7 +8,7 @@ import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
 import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
-  calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, calculateComfarAssetLifecycle,
+  calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
   calculateComfarCalendarAssetLifecycle,
   type IntegratedFinanceInput, type IntegratedFinanceResult, type IntegratedLoanInput, type DepreciationAssetInput,
   type ComfarDepreciationAssetInput, type ComfarAssetSaleInput, type OneWaySensitivityAnalysis,
@@ -68,6 +68,7 @@ type Props = {
   mirrReinvestmentRate?: number
   onResult?: (result:IntegratedFinanceResult)=>void
   onSensitivity?: (analysis:OneWaySensitivityAnalysis)=>void
+  onScenarioAnalysis?: (matrix:SensitivityCell[][], scenarios:ReturnType<typeof calculateFinancialScenarios>)=>void
   onPeriodicResult?: (result:PeriodicProjectFinanceResult|null)=>void
   onPartnerFinanceResult?: (result:PartnerFinanceResult|null)=>void
   equityPercent: number
@@ -328,6 +329,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult):[],[periodicFinanceResult])
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
+  useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
   const updateAsset=(id:string,patch:Partial<Asset>)=>setState(s=>({...s,assets:s.assets.map(a=>a.id===id?{...a,...patch}:a)}))
   const updateDay=(key:keyof SavedState['workingCapitalDays'],value:number)=>setState(s=>({...s,workingCapitalDays:{...s.workingCapitalDays,[key]:Math.max(0,value)}}))
   const setEquity=(index:number,value:number)=>setState(s=>({...s,equityContributions:Array.from({length:years},(_,i)=>i===index?Math.max(0,value):(s.equityContributions[i]??0))}))
