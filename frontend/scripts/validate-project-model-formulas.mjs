@@ -66,10 +66,10 @@ const declining=formulas.calculateAssetDepreciationPeriod({
 assert.equal(declining.charge,120)
 assert.equal(declining.closingBookValue,1080)
 const decliningSecond=formulas.calculateAssetDepreciationPeriod({method:'accelerated-declining-balance',acquisitionCost:1200,salvageValue:100,usefulLifeMonths:120,monthsElapsed:12,periodMonths:12,openingBookValue:1080,annualRatePercent:10})
-assert.equal(decliningSecond.charge,120)
+assert.ok(Math.abs(decliningSecond.charge-(980/9))<1e-9)
 assert.equal(decliningSecond.methodUsed,'linear-to-scrap')
 const decliningPartialFirst=formulas.calculateAssetDepreciationPeriod({method:'accelerated-declining-balance',acquisitionCost:1200,salvageValue:100,usefulLifeMonths:120,monthsElapsed:0,periodMonths:12,openingBookValue:1200,annualRatePercent:10,firstDepreciationYearMonths:6})
-assert.equal(decliningPartialFirst.charge,117)
+assert.equal(decliningPartialFirst.charge,60)
 
 const annuity=formulas.buildAnnuityLoanSchedule(1000,12,12,12)
 assert.equal(annuity.length,12)
