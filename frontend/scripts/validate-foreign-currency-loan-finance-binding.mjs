@@ -94,7 +94,7 @@ const multipleForeignRun=binding.calculatePeriodicFinanceWithForeignCurrencyLoan
   taxTreatment:'non-deductible',
 })
 assert.equal(multipleForeignRun.valid,true,multipleForeignRun.issues.join('; '))
-assert.equal(multipleForeignRun.fxPosting.debtTranslations.length,2)
+assert.equal(Object.keys(multipleForeignRun.finance.loanSchedules).filter(id=>id.startsWith('foreign-facility')).length,2)
 assert.ok(multipleForeignRun.statements.every(row=>row.balanceSheet.reconciled))
 assert.ok(multipleForeignRun.statements.every(row=>Object.values(row.movementChecks).every(value=>Math.abs(value)<0.01)),
   'Multiple foreign facilities must aggregate without duplicating FX movements in the three statements')
