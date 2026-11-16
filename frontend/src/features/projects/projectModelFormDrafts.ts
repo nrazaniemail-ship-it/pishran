@@ -62,7 +62,7 @@ export function resolveLoanFeeBasis(type:LoanFeeType):LoanFeeBasis{
  return 'total-loan-at-first-disbursement'
 }
 export type LoanFacilityFormDraft={
- id:string; name:string; currencyCode:string|null; marketOrigin:'local'|'foreign'|null
+ id:string; name:string; currencyCode:string|null; facilityLimit?:number|null; marketOrigin:'local'|'foreign'|null
  loanType:'annuity'|'constant-principal'|'profile'|null
  repaymentInterval:'annual'|'semiannual'|'quarterly'|'monthly'|null
  firstRepaymentDate:string; numberOfRepayments:number|null
@@ -71,10 +71,10 @@ export type LoanFacilityFormDraft={
  interestRateChanges:{effectiveDate:string;annualRatePercent:number|null}[]
  interestPaymentMonth:number|null
  capitalizedInterestPercent:number|null; capitalizeUntilDate:string
- fees:{id:string;type:LoanFeeType|null;ratePercent:number|null;currencyCode:string|null}[]
+ fees:{id:string;type:LoanFeeType|null;ratePercent:number|null;currencyCode:string|null;paymentDate?:string;treatment?:'expense'|'capitalize'|null}[]
 }
 export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{return{
- id,name:'',currencyCode:null,marketOrigin:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',numberOfRepayments:null,
+ id,name:'',currencyCode:null,facilityLimit:null,marketOrigin:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',numberOfRepayments:null,
  disbursements:[],profileMovements:[],interestRateChanges:[],interestPaymentMonth:null,
  capitalizedInterestPercent:null,capitalizeUntilDate:'',fees:[]
 }}
@@ -127,6 +127,7 @@ export function validateFixedAssetFormDraft(value:FixedAssetFormDraft):string[]{
 }
 export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):string[]{
  const errors:string[]=[]
+ if(value.facilityLimit!==undefined&&value.facilityLimit!==null&&(!Number.isFinite(value.facilityLimit)||value.facilityLimit<=0))errors.push('invalid-facility-limit')
  if(value.loanType==='profile'&&value.numberOfRepayments!==null)errors.push('profile-loan-uses-dated-movements')
  if(value.loanType!=='profile'&&value.loanType!==null&&value.numberOfRepayments!==null&&(!Number.isInteger(value.numberOfRepayments)||value.numberOfRepayments<=0))errors.push('invalid-number-of-repayments')
  if(value.capitalizedInterestPercent!==null&&(!Number.isFinite(value.capitalizedInterestPercent)||value.capitalizedInterestPercent<0||value.capitalizedInterestPercent>100))errors.push('invalid-capitalized-interest-percent')
