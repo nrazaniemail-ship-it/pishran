@@ -57,6 +57,9 @@ const drafts={
  workingCapital:[{id:'cash',name:'Operating cash',category:'cash',openingBalance:0,minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',
   periodBalances:[{period:'1',amount:0},{period:'2',amount:0}]}],
  assets:[],loans:[],
+ tax:{system:'corporate',rates:[{period:'1',ratePercent:25},{period:'2',ratePercent:20}],
+  allowances:[{id:'investment-allowance',name:'Investment allowance',periodAmounts:[{period:'2',amount:100}]}],
+  lossCarryForward:true,lossCarryForwardYears:2},
 }
 const result=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts,foundation,productionStartDate:'2025-01-01',
@@ -66,6 +69,12 @@ const result=orchestrator.calculateProjectFinancialModelFromDrafts({
 })
 assert.equal(result.valid,true,result.issues.join('; '))
 assert.deepEqual(result.financeInput.annualRevenue,[1000,2000])
+assert.deepEqual(result.financeInput.taxRatesByPeriod,[25,20])
+assert.deepEqual(result.financeInput.taxAllowancesByPeriod,[0,100])
+assert.equal(result.financeInput.taxLossCarryForwardEnabled,true)
+assert.equal(result.financeInput.taxLossCarryForwardYears,2)
+assert.equal(result.finalRun.finance.rows[0].tax,250)
+assert.equal(result.finalRun.finance.rows[1].tax,380)
 assert.deepEqual(result.financeInput.workingCapitalByPeriod,[0,0])
 assert.equal(result.finalRun.finance.valid,true)
 assert.equal(result.finalRun.statements.length,2)
