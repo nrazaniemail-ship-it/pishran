@@ -223,6 +223,8 @@ export type PeriodicLoanInput = {
   capitalizeInterest: boolean
   rateConversion?: 'effective-annual-by-actual-days' | 'effective-annual-divided-by-frequency'
   periodsPerYear?: 1 | 2 | 4 | 12
+  /** Existing principal balance at the start of the first modeled period; not a new cash drawdown. */
+  openingBalance?: number
   /** Exact cash draw dates; when supplied, amounts must reconcile to drawdowns by period. */
   datedDrawdowns?: { date: string; amount: number }[]
   interestConvention?: 'comfar-months-plus-360' | 'actual-360' | 'actual-365'
@@ -305,6 +307,8 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Frequency-based rate conversion requires 1, 2, 4 or 12 periods per year.')
   if (input.drawdowns.some(value => !validFinite(value) || value < 0))
     issues.push('Every period drawdown must be finite and non-negative.')
+  if (input.openingBalance != null && (!validFinite(input.openingBalance) || input.openingBalance < 0))
+    issues.push('Opening loan balance must be a finite non-negative amount.')
   const interestConvention = input.interestConvention
   if (interestConvention != null && !['comfar-months-plus-360','actual-360','actual-365'].includes(interestConvention))
     issues.push('Unsupported loan interest day-count convention.')
@@ -353,7 +357,7 @@ export function calculatePeriodicLoanSchedule(
     }
     return annualEffectiveRateToPeriodRate(input.annualRatePercent, period.days, dayCountBasis) / 100
   })
-  let balance = 0
+  let balance = input.openingBalance ?? 0
   let annuityPayment: number | null = null
   let equalPrincipalAmount: number | null = null
   const rows: PeriodicLoanRow[] = []
