@@ -247,6 +247,16 @@ const calendarAssetLifecycleFinance = engine.calculateIntegratedPeriodicFinance(
 assert.equal(calendarAssetLifecycleFinance.valid,true,'Period-specific depreciation and disposals must be accepted together')
 assert.deepEqual(calendarAssetLifecycleFinance.rows.map(row=>row.depreciation),[10,20,30,40],
   'Actual calendar depreciation must override annual day-prorated depreciation in every project period')
+const inconsistentCalendarDepreciation=engine.calculateIntegratedPeriodicFinance({
+  periods:quarter,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[4800],annualVariableCost:[1600],annualFixedCost:[400],annualDepreciation:[999],
+  periodDepreciationSchedule:[10,20,30,40],annualFixedInvestment:[0],annualPreOperatingCost:[0],
+  annualMaintenanceCapex:[0],annualTaxRates:[25],annualEquityContributions:[0],
+  workingCapitalByPeriod:[0,0,0,0],loans:[]
+})
+assert.equal(inconsistentCalendarDepreciation.valid,false,
+  'Annual and period depreciation totals must reconcile before the period tax model can run')
+
 const calendarSaleRow=calendarAssetLifecycleFinance.rows[2]
 assert.ok(Math.abs(calendarSaleRow.ebit-(calendarSaleRow.revenue-calendarSaleRow.variableCost-calendarSaleRow.fixedCost-30+200))<1e-8,
   'Actual-period disposal gain must enter taxable EBIT alongside the period depreciation charge')
