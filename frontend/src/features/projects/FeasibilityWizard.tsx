@@ -407,9 +407,9 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
   capex:validRows(m.capex)&&capex>0,
   opex:validRows(m.opex)&&sum(m.opex)>0,
   finance:m.finance.equity>=0&&m.finance.debt>=0&&m.finance.equity+m.finance.debt===100&&financeRatesValid,
-  cashflow:periodicModelValid,
-  results:periodicModelValid&&model.flows.length>0&&model.flows.every(Number.isFinite),
-  reports:periodicModelValid&&!!String(m.project.name??'').trim()
+  cashflow:periodicModelValid&&(!m.scope.jointVenture||reportPartnerFinance?.valid===true),
+  results:periodicModelValid&&model.flows.length>0&&model.flows.every(Number.isFinite)&&(!m.scope.jointVenture||reportPartnerFinance?.valid===true),
+  reports:periodicModelValid&&!!String(m.project.name??'').trim()&&(!m.scope.jointVenture||reportPartnerFinance?.valid===true)
  }
  const completed=Object.values(done).filter(Boolean).length
  const go=(direction:number)=>{const next=Math.max(0,Math.min(steps.length-1,current+direction));setStep(steps[next][0])}
