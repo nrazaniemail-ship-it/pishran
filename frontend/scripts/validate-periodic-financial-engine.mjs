@@ -131,7 +131,24 @@ const monthEndLoan = engine.calculatePeriodicLoanSchedule({
   capitalizeInterest: true,
 }, monthEndPeriods, 360)
 assert.equal(monthEndLoan.valid, true, monthEndLoan.issues.join('; '))
-assert.ok(Math.abs(monthEndLoan.rows[0].capitalizedInterest - 1) < 1e-8, 'month-end accrual should clamp 31 January to 28 February as one full month')
+assert.ok(Math.abs(monthEndLoan.rows[0].capitalizedInterest - (100 * 0.12 * 28 / 360)) < 1e-8, '31 January to 28 February is 28 residual days when the ending day is earlier than the starting day')
+const comfarMonthDayPeriod = [
+  { index: 1, startDate: '2025-01-15', endDate: '2025-04-20', days: 96, partial: true },
+]
+const comfarMonthDayLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: 12,
+  drawdowns: [100],
+  datedDrawdowns: [{ date: '2025-01-15', amount: 100 }],
+  interestConvention: 'comfar-months-plus-360',
+  repaymentMethod: 'bullet',
+  repaymentStartPeriod: 2,
+  gracePeriods: 0,
+  termPeriods: 1,
+  capitalizeInterest: true,
+}, comfarMonthDayPeriod, 360)
+assert.equal(comfarMonthDayLoan.valid, true, comfarMonthDayLoan.issues.join('; '))
+assert.ok(Math.abs(comfarMonthDayLoan.rows[0].capitalizedInterest - 3.05) < 1e-8, 'COMFAR interval 15 January to 20 April is 3 months and 5 days')
+
 const mismatchedDatedLoan = engine.calculatePeriodicLoanSchedule({
   annualRatePercent: 12,
   drawdowns: [100, 0, 0, 0],
