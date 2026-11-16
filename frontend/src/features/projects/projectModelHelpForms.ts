@@ -133,13 +133,50 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
  }
  const allocations=value.sections?.['cost-allocation']??[]
  for(const row of allocations){
-  const name=row.values.name
+  const name=row.values.name,centre=row.values.costCentreId
   if(typeof name!=='string'||!name)continue
-  const same=allocations.filter(x=>x.values.name===name)
+  const same=allocations.filter(x=>x.values.name===name&&x.values.costCentreId===centre)
   if(same.every(x=>typeof x.values.allocationPercent==='number')){
    const sum=same.reduce((n,x)=>n+(x.values.allocationPercent as number),0)
    if(Math.abs(sum-100)>1e-8)errors.push('cost-allocation:'+name+':allocation-must-equal-100')
   }
+ }
+ for(const row of value.sections?.['loan-conditions']??[]){
+  const v=row.values
+  if(v.kind==='short-term'&&v.repaymentType!==''&&v.repaymentType!=='profile')errors.push('short-term-loan-must-use-profile')
+  if((v.repaymentType==='annuity'||v.repaymentType==='constant-principal')&&typeof v.numberOfRepayments==='number'&&(!Number.isInteger(v.numberOfRepayments)||v.numberOfRepayments<=0))errors.push('invalid-number-of-repayments')
+  if(typeof v.firstRepaymentDate==='string'&&v.firstRepaymentDate){
+   const date=new Date(v.firstRepaymentDate+'T00:00:00Z')
+   if(!Number.isFinite(date.getTime())||date.getUTCDate()!==new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)).getUTCDate())errors.push('first-repayment-date-must-be-month-end')
+  }
+ }
+ for(const row of value.sections?.['loan-disbursements']??[]){
+  const amount=row.values.amount,kind=row.values.flowType
+  if(typeof amount==='number'&&kind==='drawdown'&&amount<=0)errors.push('loan-drawdown-must-be-positive')
+  if(typeof amount==='number'&&kind==='profile-repayment'&&amount>=0)errors.push('profile-repayment-must-be-negative')
+ }
+ const feeBasis:Record<string,string>={agency:'each-positive-disbursement',guarantee:'outstanding-loan-including-current-disbursement-excluding-current-repayment',commitment:'undisbursed-commitment',other:'total-loan'}
+ const feePayment:Record<string,string>={agency:'at-each-disbursement',guarantee:'with-interest',commitment:'with-interest',other:'at-first-disbursement'}
+ for(const row of value.sections?.['loan-fees']??[]){
+  const v=row.values
+  if(typeof v.type==='string'&&v.type&&v.basis!==''&&v.basis!==feeBasis[v.type])errors.push('loan-fee-basis-mismatch:'+v.type)
+  if(typeof v.type==='string'&&v.type&&v.payment!==''&&v.payment!==feePayment[v.type])errors.push('loan-fee-payment-mismatch:'+v.type)
+ }
+ const restrictedUnits=new Set(['work-in-progress','accounts-receivable','cash-in-hand-local','cash-in-hand-foreign','accounts-payable'])
+ for(const row of value.sections?.['working-capital']??[]){
+  const v=row.values
+  if(v.mode==='units'&&typeof v.category==='string'&&restrictedUnits.has(v.category))errors.push('working-capital-category-value-mode-only:'+v.category)
+  if((v.initialStockQuantity!==null||v.initialStockValue!==null)&&typeof v.category==='string'&&!['raw-materials','factory-supplies','utilities'].includes(v.category))errors.push('initial-stock-not-supported-for-category:'+v.category)
+  if(typeof v.daysCoverage==='number'&&v.daysCoverage<=0)errors.push('working-capital-days-coverage-must-be-positive')
+ }
+ for(const row of value.sections?.['fixed-investment']??[]){
+  const v=row.values
+  if(typeof v.firstDepreciationYearMonths==='number'&&(!Number.isInteger(v.firstDepreciationYearMonths)||v.firstDepreciationYearMonths<1||v.firstDepreciationYearMonths>12))errors.push('invalid-first-depreciation-year-months')
+  if(v.startMode==='specified-date'&&(!v.startDate||v.startDate===''))errors.push('depreciation-start-date-required')
+ }
+ for(const row of value.sections?.['profit-distribution']??[]){
+  const retained=row.values.retainedPercent,distributed=row.values.distributedPercent
+  if(typeof retained==='number'&&typeof distributed==='number'&&Math.abs(retained+distributed-100)>1e-8)errors.push('profit-retention-and-distribution-must-equal-100')
  }
  return errors
 }
