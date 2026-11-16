@@ -16,7 +16,19 @@ import {
 
 type CapexRow = { id: string; name: string; amount: number }
 type Asset = DepreciationAssetInput
-type Loan = IntegratedLoanInput & { periodDrawdowns?: number[]; periodDrawdownDates?: string[]; drawdownMode?: 'annual-day-weighted'|'period-manual'; periodRepaymentStart?: number; periodGracePeriods?: number; periodTerm?: number; periodRateConversion?: 'effective-annual-by-actual-days'|'effective-annual-divided-by-frequency'; exactDrawdownDates?: string[] }
+type Loan = IntegratedLoanInput & {
+  periodDrawdowns?: number[]
+  periodDrawdownDates?: string[]
+  drawdownMode?: 'annual-day-weighted'|'period-manual'
+  periodRepaymentStart?: number
+  periodGracePeriods?: number
+  periodTerm?: number
+  periodRateConversion?: 'effective-annual-by-actual-days'|'effective-annual-divided-by-frequency'
+  periodInterestConvention?: 'comfar-months-plus-360'|'actual-360'|'actual-365'
+  exactDrawdownDates?: string[]
+  rateChanges?: {effectiveDate:string;annualRatePercent:number}[]
+  financingFees?: {date:string;amount:number;treatment:'expense'|'capitalize';label?:string}[]
+}
 type Props = {
   projectId: string
   jointVenture?: boolean
@@ -260,7 +272,9 @@ export default function AdvancedFinancePanel(props: Props) {
         capitalizeInterest:loan.capitalizeInterest,
         rateConversion:loan.periodRateConversion??'effective-annual-by-actual-days',periodsPerYear,
         datedDrawdowns:loan.drawdownMode==='period-manual'?periods.map((period,index)=>({date:loan.exactDrawdownDates?.[index]??period.startDate,amount:Math.max(0,drawdowns[index]??0)})).filter(item=>item.amount>0):undefined,
-        interestConvention:loan.drawdownMode==='period-manual'?'comfar-months-plus-360':undefined
+        rateChanges:loan.rateChanges??[],
+        fees:(loan.financingFees??[]).filter(fee=>fee.amount>0).map(({date,amount,treatment,label})=>({date,amount,treatment,label})),
+        interestConvention:loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':((loan.rateChanges?.length??0)>0||(loan.financingFees?.some(fee=>fee.amount>0)??false)?(props.dayCountBasis===360?'actual-360':'actual-365'):undefined))
       } as PeriodicLoanInput}
     })
     const workingCapitalByPeriod=periods.map(period=>{
@@ -348,6 +362,29 @@ export default function AdvancedFinancePanel(props: Props) {
           <label className="fw-field"><span>{t('مدت بازپرداخت (تعداد دوره)','Repayment Term (Periods)')}</span><input type="number" min="1" value={loan.periodTerm??loan.termYears*periodsPerYear} onChange={e=>updateLoan(loan.id,{periodTerm:Number(e.target.value)})}/></label>
         </div>
         {loan.periodRateConversion==='effective-annual-divided-by-frequency'&&periodicRateMethod&&<p className="fw-hint">{t('فرمول روش:','Method formula:')} {periodicRateMethod.formula} · {t('منبع:','Source:')} {periodicRateMethod.source} · {t('محدودیت:','Limitation:')} {periodicRateMethod.limitations}</p>}
+        <div className="fw-grid">
+          <label className="fw-field"><span>{t('مبنای روزشمار بهره و هزینه تأمین مالی','Interest & Financing Fee Day-Count')}</span><select value={loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':props.dayCountBasis===360?'actual-360':'actual-365')} onChange={e=>updateLoan(loan.id,{periodInterestConvention:e.target.value as Loan['periodInterestConvention']})}>
+            <option value="comfar-months-plus-360">{t('ماه‌های کامل + روزهای با مبنای ۳۶۰ (کامفار)','Completed months + residual days / 360 (COMFAR)')}</option>
+            <option value="actual-360">Actual / 360</option><option value="actual-365">Actual / 365</option>
+          </select></label>
+        </div>
+        <h5>{t('تغییرات نرخ بهره در طول تسهیلات','Effective-Dated Interest Rate Resets')}</h5>
+        {(loan.rateChanges??[]).map((change,index)=><div className="fw-grid" key={'rate-'+index}>
+          <label className="fw-field"><span>{t('تاریخ اثر نرخ','Rate Effective Date')}</span><input type="date" min={props.projectPeriods?.[0]?.startDate} max={props.projectPeriods?.at(-1)?.endDate} value={change.effectiveDate} onChange={e=>updateLoan(loan.id,{rateChanges:(loan.rateChanges??[]).map((item,i)=>i===index?{...item,effectiveDate:e.target.value}:item)})}/></label>
+          <label className="fw-field"><span>{t('نرخ سالانه جدید (%)','New Annual Rate (%)')}</span><input type="number" min="0" step="0.01" value={change.annualRatePercent} onChange={e=>updateLoan(loan.id,{rateChanges:(loan.rateChanges??[]).map((item,i)=>i===index?{...item,annualRatePercent:Number(e.target.value)}:item)})}/></label>
+          <button className="secondary-button" onClick={()=>updateLoan(loan.id,{rateChanges:(loan.rateChanges??[]).filter((_,i)=>i!==index)})}>{t('حذف تغییر نرخ','Remove Rate Reset')}</button>
+        </div>)}
+        <button className="secondary-button" onClick={()=>updateLoan(loan.id,{rateChanges:[...(loan.rateChanges??[]),{effectiveDate:props.projectPeriods?.[0]?.startDate??'',annualRatePercent:loan.annualRate}]})}>{t('افزودن تغییر نرخ','Add Rate Reset')}</button>
+        <h5>{t('کارمزدها و هزینه‌های تأمین مالی','Financing Fees & Issuance Costs')}</h5>
+        {(loan.financingFees??[]).map((fee,index)=><div className="fw-grid" key={'fee-'+index}>
+          <label className="fw-field"><span>{t('شرح هزینه','Fee Description')}</span><input value={fee.label??''} onChange={e=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).map((item,i)=>i===index?{...item,label:e.target.value}:item)})}/></label>
+          <label className="fw-field"><span>{t('تاریخ پرداخت','Payment Date')}</span><input type="date" min={props.projectPeriods?.[0]?.startDate} max={props.projectPeriods?.at(-1)?.endDate} value={fee.date} onChange={e=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).map((item,i)=>i===index?{...item,date:e.target.value}:item)})}/></label>
+          <label className="fw-field"><span>{t('مبلغ','Amount')}</span><input type="number" min="0" step="0.01" value={fee.amount} onChange={e=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).map((item,i)=>i===index?{...item,amount:Number(e.target.value)}:item)})}/></label>
+          <label className="fw-field"><span>{t('نحوه شناسایی','Accounting Treatment')}</span><select value={fee.treatment} onChange={e=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).map((item,i)=>i===index?{...item,treatment:e.target.value as 'expense'|'capitalize'}:item)})}><option value="expense">{t('هزینه نقدی دوره','Period Expense')}</option><option value="capitalize">{t('سرمایه‌ای و افزوده به بدهی','Capitalize into Debt')}</option></select></label>
+          <button className="secondary-button" onClick={()=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).filter((_,i)=>i!==index)})}>{t('حذف هزینه','Remove Fee')}</button>
+        </div>)}
+        <button className="secondary-button" onClick={()=>updateLoan(loan.id,{financingFees:[...(loan.financingFees??[]),{date:props.projectPeriods?.[0]?.startDate??'',amount:0,treatment:'expense'}]})}>{t('افزودن کارمزد / هزینه انتشار','Add Financing / Issuance Fee')}</button>
+        <p className="fw-hint">{t('تغییر نرخ از تاریخ مؤثر اعمال می‌شود. کارمزد هزینه‌ای در جریان نقد و خدمت بدهی دوره ثبت می‌شود؛ هزینه سرمایه‌ای به مانده بدهی و دارایی‌های قبل از بهره‌برداری افزوده می‌شود.','Rate resets apply from their effective dates. Expense fees are recorded in period financing costs and debt service; capitalized fees increase debt and deferred pre-operating assets.')}</p>
         <p className="fw-hint">{t('تغییرات برداشت دوره‌ای در موتور ماهانه/فصلی اعمال می‌شوند؛ جدول سالانه برای کنترل و گزارش سالانه مستقل باقی می‌ماند.','Period drawdown edits affect the monthly/quarterly engine; the annual schedule remains separately available for annual reporting.')}</p>
         {loan.drawdownMode==='period-manual'&&!periodDrawdownDatesMatch(loan)&&<div className="fw-hint">{t('تقویم پروژه تغییر کرده است؛ برنامه برداشت قبلی به تاریخ‌های جدید متصل نیست. برای بازسازی از برنامه سالانه استفاده کنید.','The project calendar changed; the prior drawdown schedule is not mapped to the new dates. Rebuild it from the annual schedule.')} <button className="secondary-button" onClick={()=>updateLoan(loan.id,{periodDrawdowns:allocateAnnualFlowsToPeriods(loan.drawdowns,props.projectPeriods??[],props.fiscalYearStartMonth??1),periodDrawdownDates:(props.projectPeriods??[]).map(period=>period.startDate)})}>{t('بازسازی برنامه دوره‌ای','Rebuild period schedule')}</button></div>}
         {loan.drawdownMode==='period-manual'?<div className="fw-grid">{props.projectPeriods.map((period,index)=><div className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} تا {period.endDate}</span><input type="number" min="0" value={periodDrawdownDatesMatch(loan)?loan.periodDrawdowns?.[index]??0:0} onChange={e=>updatePeriodDraw(loan.id,index,Number(e.target.value))}/><span>{t('تاریخ دقیق برداشت','Exact drawdown date')}</span><input type="date" min={period.startDate} max={period.endDate} value={periodDrawdownDatesMatch(loan)?loan.exactDrawdownDates?.[index]??period.startDate:period.startDate} onChange={e=>updatePeriodDrawDate(loan.id,index,e.target.value)}/></div>)}</div>:<p className="fw-hint">{t('برداشت‌های سالانه برای موتور دوره‌ای بر اساس تعداد روز واقعی هر دوره توزیع می‌شوند. برای برداشت‌های یک‌باره یا مرحله‌ای دقیق، ورود مستقیم برداشت هر دوره را انتخاب کنید.','Annual drawdowns are distributed by actual period days in the periodic engine. Select direct period entry for exact one-off or staged drawdowns.')}</p>}
