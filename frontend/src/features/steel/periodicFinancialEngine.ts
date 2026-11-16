@@ -393,6 +393,13 @@ export type PeriodicProjectFinanceInput = {
     otherIncomeLoss: number
     bookValueDisposed: number
   }[]
+  periodDepreciationSchedule?: number[]
+  periodAssetSaleSchedule?: {
+    saleProceeds: number
+    returnOfCapital: number
+    otherIncomeLoss: number
+    bookValueDisposed: number
+  }[]
 }
 export type PeriodicProjectFinanceRow = {
   period: number
@@ -563,31 +570,43 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     return empty()
   }
   const assetSaleSchedule = input.annualAssetSaleSchedule ?? []
-  if (assetSaleSchedule.some(row =>
-    ![row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(validFinite) ||
-    row.saleProceeds < 0 || row.returnOfCapital < 0 || row.bookValueDisposed < 0 ||
-    row.returnOfCapital > row.saleProceeds + 0.01 || row.returnOfCapital > row.bookValueDisposed + 0.01 ||
-    Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss) > 0.01
-  )) {
-    warnings.push('Annual asset disposals must reconcile sale proceeds to return of capital and other income/loss.')
+  const validateSaleRow = (row: {saleProceeds:number;returnOfCapital:number;otherIncomeLoss:number;bookValueDisposed:number}) =>
+    [row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(validFinite) &&
+    row.saleProceeds >= 0 && row.returnOfCapital >= 0 && row.bookValueDisposed >= 0 &&
+    row.returnOfCapital <= row.saleProceeds + 0.01 && row.returnOfCapital <= row.bookValueDisposed + 0.01 &&
+    Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss) <= 0.01
+  if (assetSaleSchedule.some(row=>!validateSaleRow(row)) ||
+      (input.periodAssetSaleSchedule && (input.periodAssetSaleSchedule.length!==periods.length ||
+        input.periodAssetSaleSchedule.some(row=>!validateSaleRow(row))))) {
+    warnings.push('Asset disposal schedules must reconcile proceeds, return of capital and other income/loss for every period.')
     return empty()
   }
-  const assetSalesByPeriod = periods.map(() => ({saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0}))
-  for (let year = 0; year < assetSaleSchedule.length; year++) {
-    const row = assetSaleSchedule[year]
-    const matchingPeriods = periods.map((period,index)=>({period,index}))
-      .filter(({period})=>fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)===year)
-    if (!matchingPeriods.length) {
-      if (row.saleProceeds !== 0 || row.returnOfCapital !== 0 || row.otherIncomeLoss !== 0 || row.bookValueDisposed !== 0) {
-        warnings.push('An annual asset disposal falls outside the project calendar.')
-        return empty()
+  const assetSalesByPeriod = input.periodAssetSaleSchedule
+    ? input.periodAssetSaleSchedule.map(row=>({...row}))
+    : periods.map(() => ({saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0}))
+  if (!input.periodAssetSaleSchedule) {
+    for (let year = 0; year < assetSaleSchedule.length; year++) {
+      const row = assetSaleSchedule[year]
+      const matchingPeriods = periods.map((period,index)=>({period,index}))
+        .filter(({period})=>fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)===year)
+      if (!matchingPeriods.length) {
+        if (row.saleProceeds !== 0 || row.returnOfCapital !== 0 || row.otherIncomeLoss !== 0 || row.bookValueDisposed !== 0) {
+          warnings.push('An annual asset disposal falls outside the project calendar.')
+          return empty()
+        }
+        continue
       }
-      continue
+      const target = matchingPeriods[matchingPeriods.length-1].index
+      assetSalesByPeriod[target] = {...row}
     }
-    const target = matchingPeriods[matchingPeriods.length-1].index
-    assetSalesByPeriod[target] = {...row}
   }
-  const [revenue, variableCost, fixedCost, depreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution] = allocated
+  const [revenue, variableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution] = allocated
+  const depreciation = input.periodDepreciationSchedule ? [...input.periodDepreciationSchedule] : allocatedDepreciation
+  if (input.periodDepreciationSchedule && (input.periodDepreciationSchedule.length!==periods.length ||
+      input.periodDepreciationSchedule.some(value=>!validFinite(value)||value<0))) {
+    warnings.push('Period depreciation schedule must contain one finite non-negative value for every project period.')
+    return empty()
+  }
   const taxRates = input.taxRatesByPeriod ? [...input.taxRatesByPeriod] : periods.map(period => {
     const index = fiscalYearIndexForPeriod(period, periods, fiscalYearStartMonth)
     return index >= 0 ? input.annualTaxRates[index] : Number.NaN
