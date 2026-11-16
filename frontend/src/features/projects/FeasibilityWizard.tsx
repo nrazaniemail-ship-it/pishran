@@ -396,7 +396,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const financeRatesValid=(m.finance.equity===0||m.finance.equityCost>0)&&(m.finance.debt===0||m.finance.debtCost>0)&&m.finance.tax>=0&&m.finance.tax<=100&&m.finance.depreciationYears>0&&(m.finance.method==='manual'?m.finance.manualRate>0:m.finance.method==='wacc'?wacc>0:false)
  const periodicModelValid=reportPeriodicFinance?.valid===true&&reportPeriodicFinance.rows.length===projectCalendarPeriods.length&&projectCalendarPeriods.length>0
  const done:Record<Step,boolean>={
-  profile:!!String(m.project.name??'').trim()&&!!String(m.project.location??'').trim()&&(m.market.domesticPrice>0||m.market.exportPrice>0)&&partnerSetupValid,
+  profile:!!String(m.project.name??'').trim()&&!!String(m.project.location??'').trim()&&(m.market.domesticPrice>0||m.market.exportPrice>0||productPricingComplete)&&partnerSetupValid,
   stage:!!m.stage&&m.products.length>0&&validRows(m.products)&&m.products.some(r=>String(r.name??'').trim()&&r.quantity>0)&&m.capacity.nameplate>0,
   process:(!!String(m.process.technology??'').trim()||!!String(m.process.route??'').trim())&&hasTechnicalInputs&&technicalParametersComplete&&validRows(m.technical)&&validRows(m.balance)&&m.balance.some(r=>r.quantity>0),
   balance:validRows(m.utilities)&&hasPricedRows(m.utilities),
