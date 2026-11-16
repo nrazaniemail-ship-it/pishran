@@ -510,6 +510,11 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
     annualPrincipalRepaymentsByYear: [
       964_925.632872,1_264_820.669515,1_657_921.886966,2_173_197.394327,2_848_618.473426
     ],
+    /** Annual interest reconstructed as four equal quarterly annuity payments less the OPEX-reconciled annual principal. */
+    annualInterestByYear: [
+      2_399_043.436273,2_099_148.399630,1_706_047.182179,1_190_771.674818,515_350.595719
+    ],
+    annualDebtServiceByYear: Array(5).fill(3_363_969.069145) as readonly number[],
   },
   equityNpvAt30: 23_579_675.01,
   equityIrrPercent: 57.99,
