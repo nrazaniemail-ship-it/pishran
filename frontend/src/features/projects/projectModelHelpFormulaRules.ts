@@ -125,11 +125,13 @@ export function calculateComfarLoanInterest(input:{openingDebt:number;events:{da
  if(balance< -1e-8)throw new Error('negative-loan-balance')
  return {totalInterest,closingBalance:balance,segments}
 }
-export function calculateLoanFee(input:{type:'agency'|'guarantee'|'commitment'|'other';ratePercent:number;disbursement:number;outstandingBefore:number;repayment:number;undisbursedCommitment:number;totalLoan:number}){
+export function calculateLoanFee(input:{type:'agency'|'guarantee'|'commitment'|'other';ratePercent:number;disbursement:number;outstandingBefore:number;repayment:number;undisbursedCommitment:number;totalLoan:number;periodMonths?:number}){
  const {type,ratePercent,disbursement,outstandingBefore,repayment,undisbursedCommitment,totalLoan}=input
+ const periodMonths=input.periodMonths??12
+ if(!Number.isInteger(periodMonths)||periodMonths<0||periodMonths>12)throw new Error('invalid-fee-period')
  if(!nonNegative(ratePercent)||![disbursement,outstandingBefore,repayment,undisbursedCommitment,totalLoan].every(nonNegative))throw new Error('invalid-loan-fee-input')
  const basis=type==='agency'?disbursement:type==='guarantee'?Math.max(0,outstandingBefore+disbursement-repayment):type==='commitment'?undisbursedCommitment:totalLoan
- return {basis,fee:basis*ratePercent/100,paymentTiming:type==='agency'?'at-each-disbursement':type==='other'?'at-first-disbursement':'with-interest'}
+ return {basis,fee:basis*ratePercent/100*(type==='guarantee'||type==='commitment'?periodMonths/12:1),paymentTiming:type==='agency'?'at-each-disbursement':type==='other'?'at-first-disbursement':'with-interest'}
 }
 export function calculateHelpNpv(cashFlows:number[],discountRatePercent:number,periodsPerYear:number,referencePoint:'beginning-of-first-period'|'end-of-first-period'='beginning-of-first-period',salvageValue=0){
  if(!cashFlows.every(finite)||!nonNegative(discountRatePercent)||!Number.isInteger(periodsPerYear)||periodsPerYear<=0||!finite(salvageValue))throw new Error('invalid-npv-input')
