@@ -377,7 +377,11 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
   }
   return {flows:projectFlows,equityFlows,npv:npv(projectFlows,rate),irr:irr(projectFlows),mirr:mirr(projectFlows,(m.finance.financeRate??m.finance.debtCost)/100,(m.finance.reinvestmentRate??m.finance.equityCost)/100),equityNpv:npv(equityFlows,m.finance.equityCost/100),equityIrr:irr(equityFlows),equityMirr:mirr(equityFlows,(m.finance.financeRate??m.finance.debtCost)/100,(m.finance.reinvestmentRate??m.finance.equityCost)/100),annualRows,annualCapacity:cap,revenue:cap*revenuePrice,operatingCost:cap*variable+fixed,breakEven:revenuePrice>variable?fixed/(revenuePrice-variable):Number.POSITIVE_INFINITY,marketSize,capex,wacc,rate,totalUses,debtDraw}
  },[cap,capex,fixed,marketSize,m.finance,m.project.operatingYears,m.project.constructionYears,m.capacity.ramp,revenuePrice,rate,variable])
- const update=<K extends keyof Model>(key:K,value:Model[K])=>setM(old=>({...old,[key]:value}))
+ const update=<K extends keyof Model>(key:K,value:Model[K])=>{
+  if(key==='partners'||key==='partnerDistributionPercent'||
+    (key==='scope'&&(value as Model['scope']).jointVenture!==m.scope.jointVenture))setReportPartnerFinance(null)
+  setM(old=>({...old,[key]:value}))
+ }
  const activeFinanceResult=isHotRollingCoil?integratedFinanceResult:null
  const displayProjectFlows=activeFinanceResult?activeFinanceResult.years.map(r=>r.projectFreeCashFlow):model.flows
  const displayEquityFlows=activeFinanceResult?activeFinanceResult.years.map(r=>r.equityFreeCashFlow):model.equityFlows
