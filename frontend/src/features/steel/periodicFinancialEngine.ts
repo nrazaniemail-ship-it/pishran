@@ -833,7 +833,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       : 0
     const equityWorkingCapitalCashFlow = input.annualEquityWorkingCapitalContributions
       ? (changeInWorkingCapital < 0
-        ? changeInWorkingCapital - equityWorkingCapitalContributionAmount
+        ? changeInWorkingCapital + equityWorkingCapitalContributionAmount
         : equityWorkingCapitalContributionAmount)
       : changeInWorkingCapital
     if (input.annualEquityWorkingCapitalContributions &&
