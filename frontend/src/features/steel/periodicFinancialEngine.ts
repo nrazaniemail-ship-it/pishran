@@ -316,18 +316,18 @@ export function calculatePeriodicLoanSchedule(
   if (input.openingBalance != null && (!validFinite(input.openingBalance) || input.openingBalance < 0))
     issues.push('Opening loan balance must be a finite non-negative amount.')
   const interestConvention = input.interestConvention
+  const rateChanges = input.rateChanges ?? []
+  const fees = input.fees ?? []
   if (interestConvention != null && !['comfar-months-plus-360','actual-360','actual-365'].includes(interestConvention))
     issues.push('Unsupported loan interest day-count convention.')
   if (input.datedDrawdowns && !interestConvention)
     issues.push('Exact dated drawdowns require an explicit interest day-count convention.')
   if ((rateChanges.length > 0 || fees.length > 0) && !interestConvention)
     issues.push('Dated rate resets and financing fees require an explicit interest day-count convention.')
-  const rateChanges = input.rateChanges ?? []
   if (rateChanges.some((change,index) => !change || !parseIsoDateUtc(change.effectiveDate) ||
       !validFinite(change.annualRatePercent) || change.annualRatePercent < 0 ||
       (index > 0 && rateChanges[index - 1].effectiveDate >= change.effectiveDate)))
     issues.push('Rate resets must have valid dates, non-negative finite rates and strictly increasing effective dates.')
-  const fees = input.fees ?? []
   if (fees.some(fee => !fee || !parseIsoDateUtc(fee.date) || !validFinite(fee.amount) ||
       fee.amount <= 0 || !['expense','capitalize'].includes(fee.treatment)))
     issues.push('Financing fees require valid dates, positive finite amounts and a supported treatment.')
