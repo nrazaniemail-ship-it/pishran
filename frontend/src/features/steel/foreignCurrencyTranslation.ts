@@ -354,8 +354,6 @@ export function postForeignExchangeIntoThreeStatements(
     const totalEquity = statement.balanceSheet.totalEquity + cumulativeRetainedEarningsAdjustment
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
-    const reconciled = statement.balanceSheet.reconciled && Math.abs(balanceDifference) <= 0.01
-
     const cashFlowStatement = {
       ...statement.cashFlowStatement,
       operatingCashFlow: statement.cashFlowStatement.operatingCashFlow + netIncomeDelta + fxLoss,
@@ -368,6 +366,7 @@ export function postForeignExchangeIntoThreeStatements(
       debt: statement.movementChecks.debt + (input.debtAlreadyRemeasured?0:fxLoss),
       retainedEarnings: statement.movementChecks.retainedEarnings + netIncomeDelta,
     }
+    const reconciled=Math.abs(balanceDifference)<=0.01&&Object.values(movementChecks).every(value=>Math.abs(value)<=0.01)
     posted.push({
       ...statement,
       openingBalances,
