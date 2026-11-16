@@ -218,7 +218,7 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
  * These checks deliberately validate references without supplying defaults:
  * an omitted optional module stays omitted, while a referenced item must exist.
  */
-export function validateProjectModelCrossReferences(value:ProjectModelFinancialFormDrafts):string[] {
+export function validateProjectModelCrossReferences(value:Pick<ProjectModelFinancialFormDrafts,'assets'|'productionCosts'|'workingCapital'|'loans'|'sales'>):string[] {
  const errors:string[]=[]
  const checkUnique=(items:{id:string}[],label:string)=>{
   const ids=items.map(item=>item.id.trim())
@@ -249,12 +249,6 @@ export function validateProjectModelCrossReferences(value:ProjectModelFinancialF
   if(new Set(periods).size!==periods.length)errors.push('production-cost-'+index+':duplicate-adjustment-period')
  })
  value.workingCapital.forEach((component,index)=>{
-  if(component.category==='finished-goods'&&component.productId&&!knownProducts.has(component.productId))
-   errors.push('working-capital-'+index+':unknown-product-reference')
-  if(component.category==='payables'&&component.productId&&!knownProducts.has(component.productId))
-   errors.push('working-capital-'+index+':unknown-product-reference')
-  if(component.costItemId&&!knownCosts.has(component.costItemId))
-   errors.push('working-capital-'+index+':unknown-cost-item-reference')
   const periods=component.periodBalances.map(row=>row.period.trim()).filter(Boolean)
   if(new Set(periods).size!==periods.length)errors.push('working-capital-'+index+':duplicate-period-key')
  })
