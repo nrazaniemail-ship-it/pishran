@@ -139,3 +139,11 @@ The automated audit now enforces the following controls independently of the spo
 ### Current audit boundary
 
 The 20-quarter debt schedule is independently checked against the reconstructed 7%-per-quarter annuity and the annual COMFAR principal totals. This validates the debt-service reconstruction to the documented tolerance, but it does **not** complete the shareholder cash-flow reconciliation. Completion of gate 4 requires the detailed COMFAR equity cash-flow output (or the original COMFAR C30 project file) with matching quarter dates, equity injections, operating cash flows, tax, cash interest, and principal. Until then, 57.99% is not marked as reproduced by Pishran.
+
+## COMFAR shareholder-return calculation rule
+
+COMFAR III's *Discounted cash flow – total equity capital invested* schedule defines each period's shareholder net cash return as:
+
+**Cash surplus/deficit from financial planning + dividends paid + equity capital refunded − equity capital paid.**
+
+The financial-planning surplus/deficit already includes cash interest and principal repayment. Those debt-service amounts must therefore reduce shareholder cash flow once through the surplus/deficit; subtracting them again in the equity-return schedule would double-count financing costs. The periodic engine now also accepts explicit period-dated dividend and equity-capital-refund inflows, validates their period coverage, and includes them in equity cash flow. The HRCR200 baseline currently records no dividend or equity-capital refund in the available reference, so both remain zero unless source schedules establish otherwise.
