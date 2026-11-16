@@ -543,6 +543,23 @@ near(integrated.totalFunding, 1000, 1e-9, 'Integrated funding')
 near(integrated.peakWorkingCapital, 108.243216, 1e-9, 'Integrated working capital with OPEX escalation')
 near(integrated.fundingGap, 208.243216, 1e-9, 'Integrated funding gap with OPEX escalation')
 near(integrated.loanSchedules['test-loan'][1].principal, 200, 1e-9, 'Equal principal repayment')
+const openingBalanceInput = {...taxSeparationInput,loans:[{
+  id:'opening-balance-loan',label:'Opening balance loan',drawdowns:[0,0,0],
+  openingBalance:400,drawdownTiming:'beginning',annualRate:10,graceYears:0,termYears:2,
+  repaymentStartYear:2,repaymentMethod:'equal-principal',capitalizeInterest:false
+}]}
+const openingBalanceModel = engine.calculateIntegratedFinance(openingBalanceInput)
+near(openingBalanceModel.totalDebtDrawdown,400,1e-9,'Opening balance must be included in total debt funding')
+near(openingBalanceModel.loanSchedules['opening-balance-loan'][0].openingBalance,400,1e-9,'Opening loan balance at project start')
+near(openingBalanceModel.loanSchedules['opening-balance-loan'][0].interestExpense,40,1e-9,'Opening balance accrues a full-year interest charge')
+const beginningDrawdownModel = engine.calculateIntegratedFinance({...taxSeparationInput,loans:[{
+  ...openingBalanceInput.loans[0],id:'beginning-drawdown',openingBalance:0,drawdowns:[400,0,0],drawdownTiming:'beginning'
+}]})
+const midpointDrawdownModel = engine.calculateIntegratedFinance({...taxSeparationInput,loans:[{
+  ...openingBalanceInput.loans[0],id:'midpoint-drawdown',openingBalance:0,drawdowns:[400,0,0],drawdownTiming:'mid-period'
+}]})
+near(beginningDrawdownModel.loanSchedules['beginning-drawdown'][0].interestExpense,40,1e-9,'Beginning-period drawdown accrues a full-period interest charge')
+near(midpointDrawdownModel.loanSchedules['midpoint-drawdown'][0].interestExpense,20,1e-9,'Mid-period drawdown accrues half-period interest')
 near(integrated.years[1].revenue, 2000, 1e-9, 'First operating year sales')
 near(integrated.years[2].revenue, 2020, 1e-9, 'Sales escalation')
 near(integrated.years[2].variableCashCost, 612, 1e-9, 'OPEX escalation')
