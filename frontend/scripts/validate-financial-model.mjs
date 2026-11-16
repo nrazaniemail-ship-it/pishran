@@ -338,10 +338,12 @@ assert.ok(rollingWorkspaceSource.includes("(project.templateId as string)==='hot
   'Legacy project detection remains isolated from new raw-template projects')
 assert.ok(wizardSource.includes("project.templateId==='raw'"),
   'Raw template must initialize an empty feasibility model')
-assert.ok(projectsViewSource.indexOf('value={projectType}') < projectsViewSource.indexOf('{steelStage && <label>')
-  && projectsViewSource.includes("t('نام پروژه','Project Name')")
-  && !projectsViewSource.includes("مرحله زنجیره فولاد"),
-  'Raw project creation must ask for project type then a manually entered project name, without a steel-chain-stage field')
+assert.ok(projectsViewSource.indexOf("t('نوع پروژه','Project Type')") < projectsViewSource.indexOf("t('نام پروژه','Project Name')")
+  && projectsViewSource.includes("value={projectType} onChange={e => setProjectType(e.target.value)}")
+  && projectsViewSource.includes("value={name} onChange={e => setName(e.target.value)}")
+  && !projectsViewSource.includes('steelStage')
+  && !projectsViewSource.includes('نورد ورق گرم'),
+  'Raw project creation must ask for a generic project type and manually entered name without specialized steel stages')
 assert.ok(projectsViewSource.includes("value={projectType} onChange={e => setProjectType(e.target.value)}")
   && projectsViewSource.includes("projectType: projectType.trim()")
   && projectsViewSource.includes("value={name} onChange={e => setName(e.target.value)}")
