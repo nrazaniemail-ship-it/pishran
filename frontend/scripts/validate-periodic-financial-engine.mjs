@@ -904,6 +904,10 @@ const projectFoundationPanelSource = await readFile(new URL('../src/features/pro
 assert.ok(advancedFinanceSource.includes('equityDiscountRatePercent:props.costOfEquity'),
   'Advanced finance panel must discount shareholder NPV at the cost of equity, independently of project WACC')
 assert.ok(advancedFinanceSource.includes('calculateIntegratedPeriodicFinance')
+  && advancedFinanceSource.includes('calculatePeriodicSensitivity')
+  && advancedFinanceSource.includes('sensitivityInput:orchestration.financeInput??financeInput')
+  && advancedFinanceSource.includes('periodicSensitivityResult.pessimistic')
+  && advancedFinanceSource.includes('periodicSensitivityResult.optimistic')
   && advancedFinanceSource.includes('periodicFinanceResult')
   && advancedFinanceSource.includes('periodDrawdowns')
   && advancedFinanceSource.includes('periodRateConversion')
