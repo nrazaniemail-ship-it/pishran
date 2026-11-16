@@ -122,7 +122,7 @@ const feeBlocked=binding.buildPeriodicLoanFacilityBinding({
  foundation,periods,dayCountBasis:365,
 })
 assert.equal(feeBlocked.valid,false)
-assert.ok(feeBlocked.issues.some(x=>x.includes('payment date')),
- 'A fee without an explicit payment date must be rejected with a clear validation issue')
+assert.ok(feeBlocked.issues.some(x=>x.includes('loan-fee-payment-date-required')),
+ 'A fee without an explicit payment date must return the stable loan-fee-payment-date-required validation code')
 
 console.log('Loan-form binding, partial interest capitalization, periodic FX translation and three-statement orchestration validation passed.')
