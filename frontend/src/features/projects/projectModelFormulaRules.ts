@@ -59,7 +59,7 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
  if(![acquisitionCost,salvageValue,usefulLifeMonths,monthsElapsed,periodMonths,openingBookValue].every(Number.isFinite)||acquisitionCost<0||salvageValue<0||salvageValue>acquisitionCost||!Number.isInteger(usefulLifeMonths)||usefulLifeMonths<=0||monthsElapsed<0||periodMonths<0||openingBookValue<0)throw new Error('invalid-depreciation-input')
  const remainingLifeMonths=Math.max(0,usefulLifeMonths-monthsElapsed)
  const activeMonths=Math.min(periodMonths,remainingLifeMonths)
- const bookFloor=method==='linear-to-zero'?0:salvageValue
+ const bookFloor=salvageValue
  const depreciableBase=acquisitionCost-salvageValue
  if(activeMonths===0||openingBookValue<=bookFloor)return {charge:0,closingBookValue:Math.max(bookFloor,openingBookValue),remainingLifeMonths,methodUsed:method}
  let charge=0,methodUsed=method
