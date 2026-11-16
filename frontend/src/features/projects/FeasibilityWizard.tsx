@@ -395,13 +395,14 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const validRows=(rows:Row[])=>rows.every(row=>String(row.name??'').trim()&&String(row.unit??'').trim()&&[row.quantity,row.unitPrice].every(value=>Number.isFinite(value)&&value>=0))
  const hasPricedRows=(rows:Row[])=>rows.some(row=>Number.isFinite(row.quantity)&&row.quantity>0&&Number.isFinite(row.unitPrice)&&row.unitPrice>0)
  const hasTechnicalInputs=m.technical.some(row=>(row.valueText??'').trim()!==''||row.quantity>0||row.unitPrice>0)
+ const hasMaterialInput=m.balance.some(row=>row.quantity>0&&(row.flowType==='input'||(row.flowType==null&&!isOutputMaterial(row.name))))
  const technicalParametersComplete=m.technical.length>0&&m.technical.every(row=>String(row.name??'').trim()&&(row.valueText??(row.quantity!==0?String(row.quantity):'')).trim()!==''&&String(row.unit??'').trim()!==''&&String(row.source??'').trim()!=='')
  const financeRatesValid=(m.finance.equity===0||m.finance.equityCost>0)&&(m.finance.debt===0||m.finance.debtCost>0)&&m.finance.tax>=0&&m.finance.tax<=100&&m.finance.depreciationYears>0&&(m.finance.method==='manual'?m.finance.manualRate>0:m.finance.method==='wacc'?wacc>0:false)
  const periodicModelValid=reportPeriodicFinance?.valid===true&&reportPeriodicFinance.rows.length===projectCalendarPeriods.length&&projectCalendarPeriods.length>0
  const done:Record<Step,boolean>={
   profile:!!String(m.project.name??'').trim()&&!!String(m.project.location??'').trim()&&(m.market.domesticPrice>0||m.market.exportPrice>0||productPricingComplete)&&partnerSetupValid,
   stage:!!m.stage&&m.products.length>0&&validRows(m.products)&&m.products.some(r=>String(r.name??'').trim()&&r.quantity>0)&&m.capacity.nameplate>0,
-  process:(!!String(m.process.technology??'').trim()||!!String(m.process.route??'').trim())&&hasTechnicalInputs&&technicalParametersComplete&&validRows(m.technical)&&validRows(m.balance)&&m.balance.some(r=>r.quantity>0),
+  process:(!!String(m.process.technology??'').trim()||!!String(m.process.route??'').trim())&&hasTechnicalInputs&&technicalParametersComplete&&validRows(m.technical)&&validRows(m.balance)&&hasMaterialInput,
   balance:validRows(m.utilities)&&hasPricedRows(m.utilities),
   capex:validRows(m.capex)&&capex>0,
   opex:validRows(m.opex)&&sum(m.opex)>0,
