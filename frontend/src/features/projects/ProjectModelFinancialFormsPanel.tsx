@@ -34,6 +34,10 @@ function MetadataFields({metadata,onChange,language}:{metadata:CommonFinancialIt
 export default function ProjectModelFinancialFormsPanel({value,onChange,language='fa',foundation}:Props) {
  const en=language==='en'
  const t=(fa:string,english:string)=>en?english:fa
+  const planning=foundation?.planning
+  const helpDrivenPeriods=planning&&planning.periodFrequency!=='unspecified'&&planning.fiscalYearStartMonth!==null&&planning.projectStartDate&&planning.projectEndDate
+   ?buildProjectCalendarPeriods(planning.projectStartDate,planning.projectEndDate,planning.periodFrequency,planning.fiscalYearStartMonth)
+   :[]
  const errors=validateProjectModelFinancialFormDrafts(value)
  const patchAsset=(id:string,patch:Partial<FixedAssetFormDraft>)=>onChange({...value,assets:value.assets.map(x=>x.id===id?{...x,...patch}:x)})
  const patchCost=(id:string,patch:Partial<ProductionCostFormDraft>)=>onChange({...value,productionCosts:value.productionCosts.map(x=>x.id===id?{...x,...patch}:x)})
