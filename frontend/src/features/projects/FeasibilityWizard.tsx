@@ -129,7 +129,7 @@ const stageFormDefinitions:Record<string,{materials:[string,string][];utilities:
   opex:[['شمش یا بلوم','میلیون ریال/تن'],['گاز و برق','میلیون ریال/تن'],['غلتک و قطعات مصرفی','میلیون ریال/تن'],['نیروی انسانی','میلیون ریال/سال'],['تعمیرات و نگهداری','میلیون ریال/سال'],['بسته‌بندی و حمل','میلیون ریال/سال']]
  }
 }
-const isOutputMaterial=(name:string)=>/(تولیدی|قابل فروش|باطله|ضایعات|نرمه و برگشتی|سرباره|پرت|برگشتی)/.test(name)
+const isOutputMaterial=(name:string)=>/(تولیدی|قابل فروش|باطله|ضایعات|نرمه و برگشتی|سرباره|پرت|برگشتی|گندله سالم|آهن اسفنجی سرد)/.test(name)
 const stageRows=(items:[string,string][],source:string)=>items.map(([name,unit])=>({...makeRow(name,unit,0,0,source),flowType:isOutputMaterial(name)?'output' as const:'input' as const}))
 const stageCapexRows=(items:string[],currency:string,source:string)=>items.map(name=>makeRow(name,currency,0,0,source))
 
