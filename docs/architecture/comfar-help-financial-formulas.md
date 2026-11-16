@@ -124,3 +124,31 @@ The current change provides a comprehensive reference-mapped input catalogue, pe
 6. Reconcile period by period against independently supplied COMFAR output files, using tolerances and traceable source pages.
 
 Therefore, the forms now cover the documented input domains, but the entire model must not be described as calculation-equivalent to COMFAR until these integrations and output reconciliations pass. The uploaded project output and spreadsheets remain excluded from the design baseline and are reserved for a later simulation stage.
+
+
+### Foreign-currency debt translation
+
+Foreign-currency debt must be carried in its contractual currency and remeasured into the accounting currency at each period end. Principal drawdowns, repayments and capitalized interest are translated at their respective transaction rates; the closing foreign-currency balance is translated at the period-end rate. The residual movement is the exchange gain/loss on the liability (positive = loss, negative = gain):
+
+`FX loss = closing debt at closing rate - opening carrying amount - translated drawdowns - translated capitalized interest + translated principal repayments`
+
+The engine helper in `frontend/src/features/steel/foreignCurrencyTranslation.ts` implements this bridge with explicit per-period rates and balance conservation. It does not infer exchange rates from inflation, choose official/market rates, or yet post the resulting FX gain/loss into the integrated income statement and balance sheet. Those are separate model-integration steps and remain unverified until connected to the project currency and loan forms.
+
+
+#### Connection to project currency and periodic loan schedules
+
+`translatePeriodicForeignCurrencyLoan` now adapts a calculated `PeriodicLoanRow[]` and the project's `ProjectCurrency.exchangeRates` directory into the debt remeasurement calculation. It resolves only explicit period keys (1-based period number, exact start date, exact end date, or YYYY-MM) and rejects missing/duplicate rates, mismatched period sequences, invalid dates, or non-positive rates. The opening foreign balance still requires its own explicit opening carrying rate.
+
+Capitalized financing fees are included separately from capitalized interest in the foreign-currency debt roll-forward. Since the existing periodic loan engine aggregates movements by project period, this adapter uses the resolved period rate for all movements in that period and for its closing remeasurement. It does not claim to reproduce exact intraperiod spot-rate accounting.
+
+This is an engine-level adapter, not yet a user-interface binding or a posting into the linked income statement, cash-flow statement, and balance sheet. FX tax deductibility and loss carry-forward treatment must be applied under the project's tax policy before claiming full three-statement integration.
+
+
+#### Posting FX remeasurement to linked financial statements
+
+`postForeignExchangeIntoThreeStatements` accepts a reconciled local-currency statement set, one FX remeasurement row per period, period tax rates, an opening tax-loss carry-forward and an explicit FX tax treatment. It records FX losses as financing-related profit-and-loss charges (gains as income), recalculates tax and loss carry-forward, adds back the non-cash FX charge in operating cash flow, adjusts the carrying value of debt, and rolls the after-tax retained-earnings effect. The posting is rejected when period keys do not match or when it breaks a previously reconciled balance sheet.
+
+The posting precondition is important: the base statement debt balances must already include the foreign debt at transaction-date carrying values; the FX result passed to this function must contain only the remeasurement difference. Tax deductibility is an explicit project-policy input. This function is an engine-level posting primitive and is not yet wired to the project wizard's UI or automatically called by every project calculation.
+
+
+The `resolveLoanFacilityCurrency` adapter validates a financing form's `currencyCode` and `marketOrigin` against the shared project foundation. It rejects undefined or ambiguous foreign currencies and prevents a local facility from silently being treated as foreign currency. The adapter returns the matched currency definition for the periodic translation routine; it does not mutate the form or choose missing rates.
