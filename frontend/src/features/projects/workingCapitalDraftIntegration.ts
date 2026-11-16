@@ -1,4 +1,5 @@
 import type { ProjectCalendarPeriod } from './projectFoundation'
+import type { PeriodicProjectFinanceInput } from '../steel/periodicFinancialEngine'
 import type { ProjectModelFinancialFormDrafts, WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 
 export type WorkingCapitalComponentPeriodRow = {
@@ -143,5 +144,33 @@ export function buildWorkingCapitalScheduleFromDrafts(
     closingWorkingCapital: totals,
     changeInWorkingCapital,
     openingWorkingCapital,
+  }
+}
+
+
+export type PeriodicFinanceWorkingCapitalBinding = {
+  valid: boolean
+  issues: string[]
+  financeInput: PeriodicProjectFinanceInput | null
+  schedule: WorkingCapitalDraftSchedule
+}
+
+/** Bind the validated form-derived working-capital roll-forward to the sole periodic finance engine input. */
+export function bindWorkingCapitalDraftsToPeriodicFinance(
+  input: PeriodicProjectFinanceInput,
+  drafts: Pick<ProjectModelFinancialFormDrafts, 'workingCapital'>,
+  openingWorkingCapital: number,
+): PeriodicFinanceWorkingCapitalBinding {
+  const schedule = buildWorkingCapitalScheduleFromDrafts(drafts, input.periods, openingWorkingCapital)
+  if (!schedule.valid) return { valid: false, issues: schedule.issues, financeInput: null, schedule }
+  return {
+    valid: true,
+    issues: [],
+    financeInput: {
+      ...input,
+      workingCapitalByPeriod: schedule.closingWorkingCapital,
+      openingWorkingCapital: schedule.openingWorkingCapital,
+    },
+    schedule,
   }
 }
