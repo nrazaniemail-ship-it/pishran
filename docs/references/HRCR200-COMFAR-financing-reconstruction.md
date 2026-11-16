@@ -64,6 +64,18 @@ The OPEX workbook sheet "جریانات نقدی مالی (کامفار)" contai
 
 The five annual principal repayments sum to the gross opening repayment balance of 8,909,484.06 million IRR (the unrounded annual sequence totals 8,909,484.057 million IRR). The 20-quarter 7%-per-quarter annuity schedule reproduces the annual principal sequence to rounding: 964,925.63; 1,264,820.67; 1,657,921.89; 2,173,197.39; 2,848,618.47. This is a materially stronger acceptance check than first-year totals alone.
 
+The annual interest and debt-service totals are reconstructed by subtracting the OPEX-reconciled principal from four equal quarterly instalments of 840,992.2673 million IRR (annual service 3,363,969.0691). Construction years 1403–1404 have no scheduled cash principal repayment in the COMFAR financial-flow schedule; construction interest is capitalized. The five operating repayment years are:
+
+| Fiscal year | Cash interest (reconstructed) | Principal (OPEX COMFAR flow) | Debt service |
+|---|---:|---:|---:|
+| 1405 | 2,399,043.44 | 964,925.63 | 3,363,969.07 |
+| 1406 | 2,099,148.40 | 1,264,820.67 | 3,363,969.07 |
+| 1407 | 1,706,047.18 | 1,657,921.89 | 3,363,969.07 |
+| 1408 | 1,190,771.67 | 2,173,197.39 | 3,363,969.07 |
+| 1409 | 515,350.60 | 2,848,618.47 | 3,363,969.07 |
+
+The CAPEX workbook's three-loan repayment schedule is a separate financing alternative, not the COMFAR baseline: two fixed-asset loans (3,816,495.99 and 1,794,354.81) plus a working-capital loan (3,309,144.53), each with 20 quarterly annuity instalments at 7.3333496% effective quarterly rate. Their combined instalment is 863,922.73 per quarter, which differs from the PDF-based COMFAR reconstruction of 840,992.27. The workbook labels its repayment periods 1404–1408, while the OPEX COMFAR financing-flow schedule records principal repayment in 1405–1409; preserve the timing difference rather than shifting one schedule silently.
+
 ## Repayment and interest reconstruction
 
 The economic evaluation PDF, printed p.129 (PDF p.140), states: 23% loan rate plus 5% bond-issuance cost, 28% total rate, first quarterly payment in Q1 1405, five-year repayment term, no grace period, and 20 quarterly instalments. This is direct evidence for the repayment horizon and stated 28% combined rate. The exact legal/economic treatment of the 5% remains unresolved: it may be an issuance fee or a rate add-on, and must not be charged twice. Other workbook references to 26% remain a separate unresolved source discrepancy.
