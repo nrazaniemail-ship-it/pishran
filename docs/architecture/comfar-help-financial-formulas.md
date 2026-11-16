@@ -1,100 +1,113 @@
-# COMFAR help-driven financial form and formula blueprint
+# COMFAR III Expert reference-driven form and formula coverage
 
-## Scope
+## Controlling source and interpretation
 
-This specification is derived from the COMFAR III Expert Reference Manual's input and calculation chapters. It is not a reproduction claim and it does not use any project-specific report or spreadsheet. Formula implementations must be separately unit-tested against these definitions before any COMFAR-output simulation begins.
+This design is based on the English COMFAR III Expert Reference Manual held in the project reference library ('Reference_Eng.pdf'), with the Tutorial Manual used only to clarify the workflow of entering data. The manual describes the on-line Help as context-sensitive procedural assistance; the detailed data definitions and algorithms are in the Reference Manual. This is therefore not a claim that an independently supplied CHM/Help archive has been read.
 
-## 1. Project calendar and input grain
+No project report, CAPEX/OPEX workbook, sample model or project-specific financial assumption is used as a design baseline. All form values are blank until entered by an analyst.
 
-The planning horizon runs from the beginning of construction through the end of production. Input data are period-dated; construction and production phases are distinct, and periods may be annual, semiannual, quarterly or monthly. The calendar is the master index for all period series. The form layer must preserve exact dates and partial periods; it must not silently spread annual values into shorter periods.
+## Form coverage catalogue
 
-## 2. Common financial-item form
+The file frontend/src/features/projects/projectModelHelpForms.ts defines source-traceable sections, field metadata, blank-row constructors and validation. ProjectModelHelpCoveragePanel.tsx renders these sections in the project financial forms. The existing item-level asset/cost/sales/working-capital/loan/tax forms remain available alongside the comprehensive reference catalogue.
 
-Each reusable cost, revenue, asset or financing item carries common metadata where applicable: description, currency, local/foreign origin (or product market), price escalation, remarks and optional cost-centre assignment. Currency, origin and escalation are item attributes, not global assumptions copied into every item. If inflation and escalation are both used, the engine must apply both according to their separate meanings and warn against double counting.
+| Reference subject | Form coverage | Source |
+|---|---|---|
+| Project class, opportunity/feasibility depth, optional analysis features | Project identification and feature activation | VI, VII.F |
+| Construction, start-up and production phases; balance month; period frequency | Planning horizon and calendar | VII.G |
+| Product-specific actual production dates and nominal capacity | Products | VII.H |
+| Local/foreign currencies, accounting currency/unit, exchange rates | Currencies | VII.I |
+| Six cost-centre groups, hierarchy, product assignment | Cost centres | VII.J |
+| Standard and user-defined indirect-cost allocation keys | Cost allocation | VII.J, XI.G |
+| Inflation by currency and period; item price escalation remains separate | Inflation | VII.K, XI.A, XI.C |
+| Joint-venture partners, share classes, contributions and preferred dividend data | Joint venture | VII.L, VII.R.1, XI.Q |
+| Total investment/equity discount rates, short NPV length, reference point, MIRR rates | Discounting | VII.M, XI.E, XI.F |
+| Fixed assets, acquisition dates, currency/origin, depreciation and disposal | Fixed investment | VII.N, XI.H, XI.I |
+| Pre-production expenditure and amortization | Pre-production expenditure | X, XI |
+| Direct/indirect cost items; nominal capacity and per-unit basis; annual adjustments | Production costs | VII.O, XI.J |
+| Product-level sales quantity, net price, sales tax/export duties, subsidy | Sales programme | VII.P, XI.L |
+| Material inventories, WIP, finished goods, receivables, cash, payables; units/value mode; days coverage | Working capital | VII.Q, XI.K |
+| Equity classes, grants and subsidies | Equity and grants | VII.R.1 |
+| Long-/short-term loans; annuity, constant principal and profile; repayment frequency, first repayment and count | Loan conditions | VII.R.2-3, XI.M |
+| Dated drawdowns/profile repayments and dated interest-rate changes | Loan disbursements and interest | VII.R.2, XI.M |
+| Capitalized interest share/end date and depreciation of capitalized interest | Loan interest | VII.R.2, XI.M |
+| Agency, guarantee, commitment and other fees; fee currency and amortization | Loan fees | VII.R.2, XI.M |
+| Retained profit, distribution, shareholder shares and repatriation | Profit distribution | VII.R.4, XI.Q |
+| Tax holidays, loss carry-forward, period adjustments and tax currency | Income tax | VII.S, XI.P |
+| Progressive tax brackets and tax rates by period | Tax brackets | VII.S, XI.P |
+| Investment and depreciation allowances | Tax allowances | VII.S, XI.R |
+| Local/foreign depreciation adjustments | Depreciation adjustments | VII.S, XI.R |
+| Existing assets, inventory, WIP, receivables, cash, payables, debt and equity | Starting balances | VII.T, XI.F, XI.K |
+| Cost-benefit/value-added method, numeraire, official/shadow FX and economic discount rate | Economic global parameters | VIII.E, XII |
+| Traded/imported/importable/exportable/non-traded input/output classification, adjustment factors, tax and subsidy treatment | Economic items | VIII.F-H, XII |
+| Foreign loans, indirect effects and employment | Economic effects | VIII, XII |
+| Global data variations, target IRR/NPV, one-variable parametric charts | Sensitivity | XIII |
+| Existing enterprise without project, with project, and project in isolation | Incremental analysis | VII.T, XIV |
 
-### Quantity / price / total
+## Source-derived calculation rules
 
-For a row with exactly two of the three inputs:
-- Total = Quantity × Unit price
-- Unit price = Total / Quantity when quantity is non-zero
-- Quantity = Total / Unit price when unit price is non-zero
+### Standard production cost at nominal capacity
 
-If fewer or all three values are entered, do not auto-correct the row. A zero divisor leaves the third value unresolved and triggers validation. Currency and unit are shown beside the input values.
+For a cost item and production period j:
 
-## 3. Fixed investment and asset lifecycle
+- SC_j = Q × C_j
+- A_j = Q_adj_j × C_adj_j
+- FC_j = f × SC_j + f_adj_j × A_j
+- VC_j = v × SC_j × (S_j or P_j) / PC + v_adj_j × A_j
 
-Every asset item has its own acquisition schedule, currency, depreciation start, method, rate or useful life, salvage value, and disposal event. Asset additions are dated in the project calendar. Depreciation starts no earlier than the configured start date and never before commissioning; it stops at salvage book value or asset disposal.
+Here Q,C are standard quantity and price, PC is product nominal capacity, S_j sales quantity, P_j production quantity, and f,v are fixed/variable shares. The relevant activity basis follows the item and inventory treatment. For a period shorter than one year, the standard fixed-cost component is prorated by months/12. Period adjustments remain separate from standard cost.
 
-Supported COMFAR III methods:
-1. Linear to zero
-2. Linear to scrap
-3. Accelerated (declining balance), switching to linear-to-scrap when the accelerated charge is no longer greater than the linear-to-scrap charge
-4. Sum of years' digits
+### Standard production cost per unit of output
 
-For linear-to-scrap, depreciable basis is initial book value less salvage value. For sum-of-years'-digits, the period weight is (remaining life periods) / sum(1..n). Partial first/last years are prorated by the applicable months, and depreciation is charged at the balance date. Disposal gain/loss is sale proceeds less book value; recovery of book value is return of capital. These rules require an asset-by-asset ledger and a period roll-forward, not a single project-wide depreciation percentage.
+Variable cost is quantity per unit × period price × sales or production volume, plus the variable part of period adjustments. Fixed cost is the standard fixed amount plus the fixed part of adjustments. The standard fixed amount is prorated by months/12 for a period shorter than one year.
 
-## 4. Production-cost forms
+### Production and sales / finished-goods inventory
 
-Direct costs are associated with a product. Indirect costs are entered separately and are not automatically assigned to a product. Cost allocation is optional; where user-defined allocation is used, percentages must sum to exactly 100% before acceptance.
+Sales and production are not assumed equal. In the default production interval, required finished-goods stock is sales quantity divided by the turnover coefficient. If sales are less than opening finished-goods inventory, production is zero and inventory is reduced by sales. Otherwise production equals sales plus required closing stock less opening stock. A user-defined production interval has additional cases and must be implemented separately before certification.
 
-For direct costs the form offers two bases:
-- At nominal capacity: standard quantity and price/total are defined for the product's nominal capacity; the user specifies either fixed or variable percentage and the other is derived as 100% minus the entered percentage.
-- Per unit of output: unit input quantity and price define variable cost per unit of output; fixed costs are entered separately.
+### Working capital
 
-For nominal-capacity basis, the help describes:
-- Standard cost SC_j = Q × C_j
-- Period adjustment A_j = Q_adj_j × C_adj_j
-- Fixed cost FC_j = f × SC_j + f_adj_j × A_j
-- Variable cost VC_j = v × SC_j × (S_j or P_j) / PC + v_adj_j × A_j
+The reference uses a 360-day year and period turnover c=(m×30)/Mdc, where m is period months and Mdc is minimum days coverage. Working-capital components do not all use the same basis: finished goods and receivables use cost of products sold (with the relevant operating/marketing cost basis); WIP and materials use cost of products produced and item-specific bases. Material weighted-average unit value uses standard and adjustment quantities/prices. Increases in current assets are cash outflows; decreases are releases. Increases in current liabilities are cash inflows.
 
-where Q is standard input quantity, C is its period price, PC is product nominal capacity, S is sales volume, P is production volume, and f / v are fixed and variable shares. The choice of sales or production volume follows the COMFAR schedule definition for the item and stock treatment.
+### Loan interest, capitalization and fees
 
-For per-unit basis, variable cost scales with output quantity; fixed costs remain period costs. For periods shorter than a year, fixed costs are prorated by months/12. Indirect cost items use period adjustments rather than product nominal-capacity standard costs.
+Interest periods are segmented whenever the interest rate or loan balance changes. The manual uses 12 months of 30 days per year; the rate fraction for a sub-interval is annual rate × (months + excess days/30)/12. Annuity, constant-principal and profile loans have different repayment rules. Profile repayments are entered as negative movements. Capitalized interest increases loan balance and pre-production expenditure, but is excluded from the investment cash outflow used for total-investment NPV/IRR. The fee bases are not interchangeable:
+- Agency: each positive disbursement, paid at each disbursement.
+- Guarantee: outstanding loan including current disbursement and excluding current repayment, annualized and paid with interest.
+- Commitment: undisbursed balance, annualized and paid with interest.
+- Other: total loan, paid at first disbursement.
 
-The forms must keep separate: direct cost item vs indirect cost item; standard cost vs period adjustment; fixed portion vs variable portion; cost of products produced (CPP) vs cost of products sold (CPS).
+Fees are paid when due and cannot be capitalized; depreciation can be defined separately for fees and capitalized interest.
 
-## 5. Production and sales programme
+### Income tax and loss carry-forward
 
-Sales quantity, net unit price, sales tax and subsidy are period inputs by product. Production is calculated from sales and finished-goods inventory movement; it is not assumed equal to sales when inventory changes. Sales tax and subsidy must be separately represented so net sales, gross sales display and economic-analysis treatment remain distinguishable.
+Tax is computed on taxable profit using progressive brackets. Each bracket rate applies only to the amount above its lower limit and below the next bracket's lower limit. Tax holidays suspend tax during the defined production years. Losses are carried forward for the specified number of years and offset profits at the earliest opportunity. Investment allowances reduce taxable profit; depreciation allowances reduce taxable profit and book value. Depreciation adjustments are algebraically added to asset depreciation and may be positive or negative.
 
-## 6. Working capital
+### NPV, MIRR and cash-flow perimeter
 
-Working capital is modelled by component and period: raw materials and other input inventories; work in progress; finished goods; accounts receivable; cash in hand; accounts payable and other current liabilities.
+NPV sums discounted net flows by period. For discounting to the beginning of the first period, period one is discounted; for discounting to the end of the first project year, first-year flows are not discounted. MIRR compounds surpluses at the reinvestment rate to the year after production ends and discounts deficits at the borrowing rate to the temporal reference point. Total-investment, total-equity and shareholder-class cash flows have different perimeters. Total-investment cash flow excludes equity, loan disbursements/repayments, interest/fees and dividends; starting balances and residual value apply where relevant.
 
-At each period:
-- NWC_j = Current assets_j − Current liabilities_j
-- Change in NWC_j = NWC_j − NWC_(j−1)
-- Turnover coefficient = 360 / Minimum days coverage
+### Dividends
 
-The help describes the 360-day convention and automatic adjustment of turnover for periods shorter than one year. The model must make the day-count convention explicit and not silently mix it with a 365-day basis. Inventory valuation and receivables use the correct production/sales cost basis, not one common denominator for every component. Working-capital increases are financing uses; decreases/recovery are financing sources. Recovery timing is an explicit input, not a hidden terminal plug.
+Retained profit is deducted from positive after-tax profit before dividends. No dividends are paid in a loss period. Preferred dividends are paid before ordinary dividends; joint-venture partners have priority over other shareholder classes if distributable profit is insufficient. Ordinary dividends are allocated from the remaining pool. Repatriated dividends are a defined percentage of each class's dividends.
 
-## 7. Sources of finance and debt
+### Sensitivity and incremental analysis
 
-Separate equity/risk capital, grants/subsidies, medium/long-term loans, short-term loans and profit distribution. Each loan has currency and local/foreign designation; loan type (annuity, constant principal or profile); dated disbursements; repayment interval, first repayment date and number of repayments where relevant; dated interest-rate conditions; interest payment convention; capitalization percentage and end date; fee definitions and bases; and asset/cost treatment of capitalized interest and fees where relevant.
+Global sensitivity changes quantity and/or price for fixed investment, production costs and sales programme; indirect effects use a value variation. Desired IRR/NPV searches alter selected variables in 1% steps within user-defined maximum increases/decreases and restore original values after the calculation. Parametric chart analysis varies one parameter at a time and does not recompute working-capital and financing interactions or cash-deficit effects; it is not a substitute for full sensitivity analysis. Incremental analysis compares the existing enterprise without the project, the enterprise with the project, and the project in isolation.
 
-Core balance identity:
-- Debt_j = Debt_(j−1) + Disbursements_j − Principal repayments_j + Capitalized interest_j
+## Implemented formula primitives and test scope
 
-For an annuity loan with non-zero periodic rate i and n repayments:
-- A = D × i(1+i)^n / ((1+i)^n − 1)
-- Interest_j = Opening debt_j × i
-- Principal_j = Payment_j − Interest_j
+projectModelHelpFormulaRules.ts includes deterministic helpers for nominal-capacity and per-unit cost build-up, 360-day working-capital turnover, NWC movement, the default sales/production inventory bridge, graduated income tax, loss carry-forward, segmented loan interest, fee bases, NPV timing, MIRR, dividend priority pools, and total-investment cash-flow perimeter. Tests are in validate-project-model-help-formulas.mjs. The previous depreciation and debt primitives remain in projectModelFormulaRules.ts.
 
-For zero-rate annuity cases, use the constant-principal limit rather than divide by zero. A profile loan takes dated positive drawdowns and negative repayments as user-entered movements. Interest must be segmented at dated changes in rate and loan balance. Capitalized interest increases debt and pre-production expenditure, but is not a second cash disbursement and must not be included as an investment cash outflow in total-capital NPV/IRR. Fee bases differ: agency on each positive drawdown, commitment on undisbursed balance, guarantee on outstanding loan amount, and other fees on total loan amount as defined by the manual.
+The form catalogue and tests are added to npm run test:financial. All values remain blank by default.
 
-## 8. Taxes, allowances and starting balances
+## Explicit implementation boundary
 
-Tax is a period schedule with selectable tax system, period rates, allowances and loss carry-forward policy. Do not hard-code a tax rate. Tax allowances are separate from accounting depreciation and must flow through taxable income and asset book values only according to the selected rule. Opening balances appear only for expansion/rehabilitation projects and require a balanced opening statement.
+The current change provides a comprehensive reference-mapped input catalogue, persistence through the existing financialForms model, form-level validation and independently tested formula primitives. It does **not** yet constitute a complete reproduction of every COMFAR III Expert calculation or report. In particular, the following remain separate integration work:
+1. Connect every new field to a single period-indexed calculation graph.
+2. Implement all non-default product production-interval cases, all working-capital sub-item algorithms and their starting-stock interactions.
+3. Complete foreign-currency loan revaluation, cash-deficit automatic equity/overdraft behaviour, all opening-balance accounting and full residual-value calculation.
+4. Complete full balance-sheet, net-income and financial-planning cash-flow generation, including every capitalized-interest/fee/depreciation/tax/dividend interaction.
+5. Complete the full economic appraisal algorithms, sensitivity target search and parametric chart output.
+6. Reconcile period by period against independently supplied COMFAR output files, using tolerances and traceable source pages.
 
-## 9. Required output graph before calculation
-
-A validated project must be able to trace each output back to source inputs: project calendar and assumptions; asset acquisition and depreciation schedules; direct/indirect production cost build-up; production/sales/inventory bridge; working-capital component and NWC bridge; equity, debt drawdown, interest, fees and principal schedule; tax computation and loss carry-forward; income statement, financial-planning cash flow and balance sheet.
-
-No return metric is certified unless its underlying dated cash-flow perimeter, currency and discount convention are explicit.
-
-## Source sections
-
-UNIDO, COMFAR III Expert Reference Manual:
-- Chapter VI: Data structures and standard input data structures.
-- Chapter VII: Financial data input (project identification, planning horizon, products, currencies, cost centres, inflation, joint ventures, discounting, fixed investment, production costs, sales programme, working capital, sources of finance and taxes/allowances).
-- Chapter XI: Financial calculation rules (depreciation, asset disposals, production costs, working capital and debt calculations).
+Therefore, the forms now cover the documented input domains, but the entire model must not be described as calculation-equivalent to COMFAR until these integrations and output reconciliations pass. The uploaded project output and spreadsheets remain excluded from the design baseline and are reserved for a later simulation stage.
