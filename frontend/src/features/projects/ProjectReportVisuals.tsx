@@ -174,7 +174,7 @@ export default function ProjectReportVisuals(props: Props) {
   )
   const comfarAnnualRows = annualComparisonRows.length===17&&annualComparisonRows.every(row=>row.rows.length>0)
     ? annualComparisonRows.map(row=>({...row,year:1403+row.fiscalYearIndex})) : []
-  const currentOperatingTaxRates = comfarAnnualRows.slice(2).map(row=>row.taxRatePercent)
+  const currentOperatingTaxRates = comfarAnnualRows.slice(2).map(row=>row.taxRatePercent).filter((rate):rate is number=>rate!==null)
   const comfarTaxScheduleMatches = currentOperatingTaxRates.length === expectedComfarTaxRates.length &&
     expectedComfarTaxRates.every((rate,index)=>Math.abs((currentOperatingTaxRates[index]??NaN)-rate)<0.001)
   const currentTaxScheduleLabel = [...new Set(currentOperatingTaxRates.map(rate=>Number(rate.toFixed(2))))]
@@ -242,7 +242,20 @@ export default function ProjectReportVisuals(props: Props) {
           const referenceDepreciation=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.depreciationByOperatingYear[index-2]?.[1]??0
           const referenceWorkingCapital=index<2?0:HOT_ROLLING_COMFAR_OUTPUT_AUDIT.changeInWorkingCapitalByOperatingYear[index-2]?.[1]??0
           return <tr key={index}><td>{index===16?t('۱۴۱۹ + ارزش اسقاط ۱۴۲۰','1419 + terminal salvage 1420',language):year}</td><td>{fmtValue(referenceCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow-referenceCashFlow)}</td><td>{referenceTax==null?'—':fmtValue(referenceTax,2)+'%'}</td><td>{row.taxRatePercent==null?'—':fmtValue(row.taxRatePercent,2)+'%'}</td><td>{fmtValue(referenceDepreciation)}</td><td>{fmtValue(row.depreciation)}</td><td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td><td>{fmtValue(row.interestExpense)}</td><td>{fmtValue(row.principal)}</td><td>{fmtValue(row.cfads)}</td><td>{row.dscr==null?'—':fmtValue(row.dscr,3)+'x'}</td></tr>
-        })}</tbody></table></div>:<p className="fw-hint">{t("تطبیق ردیف‌به‌ردیف با خروجی سالانه COMFAR فقط در تناوب سالانه و با ۱۷ دوره (دو سال ساخت و ۱۵ سال بهره‌برداری) انجام می‌شود. در تناوب ماهانه، فصلی یا نیم‌سالانه ابتدا باید جریان‌ها به سال مالی مرجع تجمیع شوند.","Row-by-row COMFAR comparison is available only for an annual schedule with 17 periods (two construction years and 15 operating years). Monthly, quarterly and semiannual outputs must first be aggregated to the reference fiscal years.",language)}</p>}
+        })}</tbody></table></div>:<p className="fw-hint">{t("خروجی دوره‌ای پیشران باید تمام ۱۷ سال مالی ۱۴۰۳ تا ۱۴۱۹ را پوشش دهد. تناوب‌های ماهانه، فصلی و نیم‌سالانه بر اساس ماه آغاز سال مالی تجمیع می‌شوند؛ دوره‌های مفقود یا پوشش ناقص، مانع تطبیق است.","Pishran's periodic output must cover all 17 fiscal years 1403–1419. Monthly, quarterly and semiannual periods are aggregated using the fiscal-year start month; missing periods or incomplete coverage prevent reconciliation.",language)}</p>}
+        {comfarAnnualRows.length===17&&<div className="fw-card">
+          <h4>{t("کنترل تفصیلی خدمت بدهی در سال اول بهره‌برداری (۱۴۰۵)","First Operating-Year Debt-Service Check (1405)")}</h4>
+          <p className="fw-hint">{t("اقلام مرجع بهره و اصل از جمع چهار قسط فصلی بازسازی‌شده‌اند. CFADS و DSCR مرجع در این نما مشتق شده‌اند، نه ارقام مستقلاً چاپ‌شده در گزارش؛ مبنا: درآمد منهای هزینه عملیاتی، بازاریابی، مالیات ۵٪ و افزایش سرمایه در گردش.","Reference interest and principal are reconstructed from the four quarterly instalments. Reference CFADS and DSCR shown here are derived, not separately printed report values: revenue less operating costs, marketing, 5% tax and working-capital increase.")}</p>
+          <table className="fw-table"><thead><tr><th>{t("شاخص","Metric")}</th><th>{t("مرجع / بازسازی‌شده","Reference / reconstructed")}</th><th>{t("پیشران","Pishran")}</th><th>{t("اختلاف","Variance")}</th></tr></thead><tbody>
+            {[
+              [t("بهره نقدی","Cash interest"),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.firstOperatingYearInterest,comfarAnnualRows[2].interestExpense],
+              [t("بازپرداخت اصل","Principal repayment"),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.firstOperatingYearPrincipal,comfarAnnualRows[2].principal],
+              [t("خدمت بدهی","Debt service"),HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.firstOperatingYearDebtService,comfarAnnualRows[2].debtService],
+              [t("CFADS مشتق‌شده","Derived CFADS"),HOT_ROLLING_200KT_AUDIT.financingAlternativesInWorkbook.firstOperatingYear1405.derivedCfads,comfarAnnualRows[2].cfads],
+              [t("DSCR مشتق‌شده","Derived DSCR"),HOT_ROLLING_200KT_AUDIT.financingAlternativesInWorkbook.firstOperatingYear1405.derivedDscr,comfarAnnualRows[2].dscr],
+            ].map(([label,reference,current])=><tr key={String(label)}><td>{label}</td><td>{fmtValue(Number(reference))}</td><td>{current==null?"—":fmtValue(Number(current))}</td><td>{current==null?"—":fmtValue(Number(current)-Number(reference))}</td></tr>)}
+          </tbody></table>
+        </div>}
        </div>}
      </div>}
      {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ محور نمایش تا ۸۳ هزار تن است، اما درصد ظرفیت بر مبنای ظرفیت واقعی ۲۰۰ هزار تن محاسبه می‌شود.','Reconstructed from the OPEX “Break-even Analysis” sheet. The visible axis ends at 83,000 tonnes, while the capacity percentage uses the actual 200,000-tonne project capacity.',language)}</p><BreakEvenChart capacity={200000} chartMaxQuantity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language}/></>}
