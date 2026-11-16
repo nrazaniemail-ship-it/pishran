@@ -1052,6 +1052,9 @@ assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   && projectReportSource.includes('expectedCapitalContribution')
   && projectReportSource.includes('partnerFinanceResult.periods.map'),
   'Project report must include the period-level financial schedule and key output metrics')
+assert.ok(projectReportSource.includes('external period-by-period HRCR200 balance-sheet parity remains unverified')
+  && projectReportSource.includes('The financial engine performs an internal assets = liabilities + equity control'),
+  'The HRCR200 report must distinguish internal balance-sheet reconciliation from external period-by-period parity')
 assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
   && projectReportSource.includes('hasCompleteFiscalYearCoverage')
   && projectReportSource.includes('fiscalYearStartMonth')
