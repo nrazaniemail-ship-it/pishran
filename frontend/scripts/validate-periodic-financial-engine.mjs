@@ -143,4 +143,14 @@ assert.equal(invalidDrawdownLoan.valid, false)
 assert.ok(invalidDrawdownLoan.issues.some(issue => issue.includes('after principal repayment')))
 
 
+const advancedFinanceUi = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+assert.ok(advancedFinanceUi.includes('Annual-to-Period Rate Convention')
+  && advancedFinanceUi.includes('effective-annual-by-actual-days')
+  && advancedFinanceUi.includes('effective-annual-divided-by-frequency')
+  && advancedFinanceUi.includes('periodRateConversion'),
+  'Periodic loan UI must expose both rate-conversion conventions and persist the explicit selection')
+assert.ok(advancedFinanceUi.includes('financing.effective-annual-frequency-rate')
+  && advancedFinanceUi.includes('periodicRateMethod.formula')
+  && advancedFinanceUi.includes('periodicRateMethod.limitations'),
+  'Frequency-based loan convention must display its source formula and limitations')
 console.log('PASS: periodic loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
