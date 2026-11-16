@@ -198,6 +198,37 @@ assert.ok(Math.abs(hrcr200Loan.rows[1].debtService - 369636.70168048906) < 1e-6)
 assert.ok(Math.abs(hrcr200Loan.rows[20].closingBalance) < 1e-7)
 assert.ok(Math.abs(hrcr200Loan.rows.slice(1).reduce((sum, row) => sum + row.principal, 0) - hrcr200Principal) < 1e-6)
 
+// Reverse-engineered COMFAR HRCR200 long-term loan: gross opening balance includes
+// the reported construction-capitalized interest; it is not a new-period cash drawdown.
+const hrcr200ComfarLoanPeriods = buildQuarterPeriods(2026, 20)
+const hrcr200ComfarLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent: comfarReference.loanRepaymentAudit.statedAnnualRatePercent,
+  openingBalance: comfarReference.loanRepaymentAudit.openingRepaymentBalance,
+  drawdowns: Array(20).fill(0),
+  repaymentMethod: 'annuity',
+  repaymentStartPeriod: 1,
+  gracePeriods: 0,
+  termPeriods: 20,
+  capitalizeInterest: false,
+  rateConversion: 'effective-annual-divided-by-frequency',
+  periodsPerYear: 4,
+}, hrcr200ComfarLoanPeriods, 360)
+assert.equal(hrcr200ComfarLoan.valid, true, hrcr200ComfarLoan.issues.join('; '))
+const hrcr200ComfarFirstYear = hrcr200ComfarLoan.rows.slice(0, 4)
+const sumHrcr200Comfar = field => hrcr200ComfarFirstYear.reduce((sum, row) => sum + row[field], 0)
+assert.ok(Math.abs(hrcr200ComfarLoan.rows[0].debtService - comfarReference.loanRepaymentAudit.quarterlyPayment) < 0.1,
+  'HRCR200 COMFAR quarterly annuity payment must match the reconstructed source')
+assert.ok(Math.abs(sumHrcr200Comfar('interestExpense') - comfarReference.loanRepaymentAudit.firstOperatingYearInterest) < 0.1,
+  'HRCR200 first-year interest must match COMFAR')
+assert.ok(Math.abs(sumHrcr200Comfar('principal') - comfarReference.loanRepaymentAudit.firstOperatingYearPrincipal) < 0.1,
+  'HRCR200 first-year principal must match COMFAR')
+assert.ok(Math.abs(sumHrcr200Comfar('debtService') - comfarReference.loanRepaymentAudit.firstOperatingYearDebtService) < 0.1,
+  'HRCR200 first-year total debt service must match COMFAR')
+assert.ok(Math.abs(hrcr200ComfarLoan.rows.at(-1).closingBalance) < 1e-7,
+  'HRCR200 COMFAR annuity must fully amortize the gross opening loan balance after 20 quarters')
+assert.equal(hrcr200ComfarLoan.rows.reduce((sum, row) => sum + row.drawdown, 0), 0,
+  'Opening debt balance must not be double-counted as a new cash drawdown')
+
 const invalidDrawdownLoan = engine.calculatePeriodicLoanSchedule({
   annualRatePercent: 12,
   drawdowns: [100000, 0, 10000, 0],
