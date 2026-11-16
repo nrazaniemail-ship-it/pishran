@@ -1,5 +1,6 @@
 import type { OneWaySensitivityAnalysis } from '../steel/financialModel'
 import type { PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
+import { HOT_ROLLING_200KT_AUDIT } from '../steel/workbookReconciliation'
 
 type Props = {
   language: 'fa' | 'en'
@@ -24,6 +25,8 @@ type Props = {
   mirrEquity: number | null
   sensitivity: OneWaySensitivityAnalysis | null
   periodicResult: PeriodicProjectFinanceResult | null
+  valuationDate: string
+  discountConvention: 'actual-days' | 'period-count'
 }
 
 const referenceRows: [string,string,string,string][] = [
@@ -158,6 +161,18 @@ function BreakEvenChart({ capacity, price, variable, fixed, breakEven, currency,
 export default function ProjectReportVisuals(props: Props) {
   const { language, isHotRollingCoil, project } = props
   const fmtValue=(value:number|null|undefined,digits=2)=>fmt(value,language,digits)
+  const comfarReference = HOT_ROLLING_200KT_AUDIT.alternativeMetricsInWorkbook
+  const comfarBasisMatches = isHotRollingCoil && props.periodicResult?.valid === true &&
+    Math.abs(props.capacity - HOT_ROLLING_200KT_AUDIT.capacityTpy) < 1 &&
+    Math.abs(props.taxPercent - 25) < 0.001 &&
+    Math.abs(props.discountRatePercent - 25) < 0.001 &&
+    Math.abs(project.constructionYears - 2) < 0.001 &&
+    Math.abs(project.operatingYears - 15) < 0.001 &&
+    project.startYear === 1403 && props.valuationDate === '2026-03-20' &&
+    props.discountConvention === 'period-count' &&
+    /million\s*IRR|میلیون\s*ریال/i.test(project.currency)
+  const comfarCurrentNpv = props.periodicResult?.npvProject ?? null
+  const comfarCurrentIrr = props.periodicResult?.irrProject ?? null
   const currentRows: [string,string,string][] = [
     [t('ظرفیت عملی قابل فروش','Saleable capacity',language),fmtValue(props.capacity,0),t('تن در سال','tonnes/year',language)],
     [t('سرمایه‌گذاری ثبت‌شده','Recorded investment',language),fmtValue(props.capex),props.project.currency],
@@ -181,7 +196,18 @@ export default function ProjectReportVisuals(props: Props) {
     </div>
     <div className="fw-card">
       <h4>{t('نمودار نقطه سربه‌سر','Break-Even Chart',language)}</h4>
-      {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ مقادیر مستقل از مفروضات جاری نگهداری می‌شوند.','Reconstructed from the OPEX “Break-even Analysis” sheet; these source values remain separate from current model assumptions.',language)}</p><BreakEvenChart capacity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language}/></>}
+      {isHotRollingCoil&&<div className="fw-card">
+       <h4>{t("تطبیق با خروجی مرجع COMFAR","COMFAR Output Reconciliation",language)}</h4>
+       <p className="fw-hint">{t("مبنای مرجع: ظرفیت ۲۰۰ هزار تن در سال، دو سال ساخت، ۱۵ سال بهره‌برداری، مالیات ۲۵٪، نرخ تنزیل ۲۵٪ و تاریخ ارزش‌گذاری ۱۲/۱۴۰۴. برای مقایسه عددی NPV و IRR، تاریخ و قرارداد تنزیل نیز باید با همین مبنا تنظیم شوند.","Reference basis: 200,000 tonnes/year, two construction years, 15 operating years, 25% tax, 25% discount rate and valuation date 12/1404. Numerical NPV and IRR comparison also requires the same valuation date and discount convention.",language)}</p>
+       <div className="fw-validation"><span>{t("وضعیت تطبیق مفروضات","Assumption match status",language)}</span><b>{comfarBasisMatches?t("مبنای اصلی منطبق؛ اختلاف خروجی قابل بررسی است","Core basis aligned; output variance can be reviewed"):t("تطبیق کامل مفروضات هنوز برقرار نیست","Full benchmark assumptions are not yet aligned")}</b></div>
+       <div style={{overflowX:"auto"}}><table className="fw-table"><thead><tr><th>{t("شاخص","Metric",language)}</th><th>{t("مرجع COMFAR","COMFAR reference",language)}</th><th>{t("خروجی دوره‌ای پیشران","Pishran periodic output",language)}</th><th>{t("اختلاف","Variance",language)}</th></tr></thead><tbody>
+         <tr><td>NPV @ 25%</td><td>{fmtValue(comfarReference.generalSummaryNpvAt25)} {t("میلیون ریال","million IRR",language)}</td><td>{comfarCurrentNpv==null?"—":fmtValue(comfarCurrentNpv)+" "+project.currency}</td><td>{comfarBasisMatches&&comfarCurrentNpv!=null?fmtValue(comfarCurrentNpv-comfarReference.generalSummaryNpvAt25):"—"}</td></tr>
+         <tr><td>IRR</td><td>{fmtValue(comfarReference.generalSummaryIrrPercent)}%</td><td>{comfarCurrentIrr==null?"—":fmtValue(comfarCurrentIrr)+"%"}</td><td>{comfarBasisMatches&&comfarCurrentIrr!=null?fmtValue(comfarCurrentIrr-comfarReference.generalSummaryIrrPercent)+" pp":"—"}</td></tr>
+         <tr><td>MIRR</td><td>{fmtValue(comfarReference.generalSummaryMirrPercent)}%</td><td>{props.periodicResult?.mirrProject==null?"—":fmtValue(props.periodicResult.mirrProject)+"%"}</td><td>{t("غیرقابل مقایسه مستقیم بدون نرخ‌های تأمین مالی و سرمایه‌گذاری مجدد مرجع","Not directly comparable without the reference finance and reinvestment rates",language)}</td></tr>
+       </tbody></table></div>
+       <p className="fw-hint">{t("مرجع NPV و IRR از خروجی نقدی کل سرمایه‌گذاری‌شده در صفحه ۶۷ گزارش COMFAR و جدول جریان نقدی صفحات ۶۷ تا ۷۱ استخراج شده است. MIRR مرجع ۲۸٫۰۳٪ است، اما تا زمان تطبیق نرخ‌های finance و reinvestment اختلاف آن تأیید نمی‌شود.","Reference NPV and IRR are transcribed from the total-investment discounted cash-flow output on COMFAR page 67 and its schedule on pages 67–71. Reference MIRR is 28.03%, but its variance is not verified until finance and reinvestment rates are matched.",language)}</p>
+     </div>}
+     {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ مقادیر مستقل از مفروضات جاری نگهداری می‌شوند.','Reconstructed from the OPEX “Break-even Analysis” sheet; these source values remain separate from current model assumptions.',language)}</p><BreakEvenChart capacity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language}/></>}
       <h4>{t('نقطه سربه‌سر بر اساس مفروضات جاری پروژه','Break-even Based on Current Project Assumptions',language)}</h4>
       <BreakEvenChart capacity={props.capacity} price={props.sellingPrice} variable={props.variableCostPerUnit} fixed={props.fixedAnnualCost} breakEven={props.breakEvenQuantity} currency={project.currency} language={language}/>
     </div>
