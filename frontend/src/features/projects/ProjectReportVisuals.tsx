@@ -123,21 +123,22 @@ function ReferenceSensitivityChart({ language }: { language:'fa'|'en' }) {
   </div>
 }
 
-function BreakEvenChart({ capacity, price, variable, fixed, breakEven, currency, language }: { capacity:number; price:number; variable:number; fixed:number; breakEven:number; currency:string; language:'fa'|'en' }) {
-  const valid = capacity > 0 && price >= 0 && variable >= 0 && fixed >= 0
+function BreakEvenChart({ capacity, chartMaxQuantity, price, variable, fixed, breakEven, currency, language }: { capacity:number; chartMaxQuantity?:number; price:number; variable:number; fixed:number; breakEven:number; currency:string; language:'fa'|'en' }) {
+  const chartMax = chartMaxQuantity ?? capacity
+  const valid = capacity > 0 && chartMax > 0 && price >= 0 && variable >= 0 && fixed >= 0
   if (!valid) return <p className="fw-hint">{t('برای ترسیم نمودار، ظرفیت، قیمت فروش و هزینه‌ها را تکمیل کنید.','Enter capacity, selling price and costs to draw the chart.',language)}</p>
-  const maxRevenue = capacity * price
-  const maxCost = fixed + capacity * variable
+  const maxRevenue = chartMax * price
+  const maxCost = fixed + chartMax * variable
   const maxY = Math.max(1, maxRevenue, maxCost) * 1.08
-  const x = (q:number) => 64 + (q / capacity) * 620
+  const x = (q:number) => 64 + (q / chartMax) * 620
   const y = (amount:number) => 258 - (amount / maxY) * 210
-  const samples = Array.from({length:7},(_,i)=>capacity*i/6)
+  const samples = Array.from({length:7},(_,i)=>chartMax*i/6)
   const path = (values:number[]) => values.map((value,index)=>`${index===0?'M':'L'} ${x(samples[index])} ${y(value)}`).join(' ')
   const revenuePath = path(samples.map(q=>q*price))
   const variablePath = path(samples.map(q=>q*variable))
   const totalPath = path(samples.map(q=>fixed+q*variable))
   const fixedPath = path(samples.map(()=>fixed))
-  const markerVisible = Number.isFinite(breakEven) && breakEven >= 0 && breakEven <= capacity
+  const markerVisible = Number.isFinite(breakEven) && breakEven >= 0 && breakEven <= chartMax
   return <div>
     <svg viewBox="0 0 740 310" role="img" aria-label={t('نمودار نقطه سربه‌سر','Break-even chart',language)} style={{width:'100%',height:'auto',minHeight:230}}>
       {[0,1,2,3,4].map(i=><g key={i}><line x1="64" x2="684" y1={258-i*52.5} y2={258-i*52.5} stroke="currentColor" strokeOpacity=".12"/><text x="56" y={262-i*52.5} textAnchor="end" fontSize="10" fill="currentColor">{fmt(maxY*i/4,language,0)}</text></g>)}
@@ -207,7 +208,7 @@ export default function ProjectReportVisuals(props: Props) {
        </tbody></table></div>
        <p className="fw-hint">{t("مرجع NPV و IRR از خروجی نقدی کل سرمایه‌گذاری‌شده در صفحه ۶۷ گزارش COMFAR و جدول جریان نقدی صفحات ۶۷ تا ۷۱ استخراج شده است. MIRR مرجع ۲۸٫۰۳٪ است، اما تا زمان تطبیق نرخ‌های finance و reinvestment اختلاف آن تأیید نمی‌شود.","Reference NPV and IRR are transcribed from the total-investment discounted cash-flow output on COMFAR page 67 and its schedule on pages 67–71. Reference MIRR is 28.03%, but its variance is not verified until finance and reinvestment rates are matched.",language)}</p>
      </div>}
-     {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ مقادیر مستقل از مفروضات جاری نگهداری می‌شوند.','Reconstructed from the OPEX “Break-even Analysis” sheet; these source values remain separate from current model assumptions.',language)}</p><BreakEvenChart capacity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language}/></>}
+     {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ محور نمایش تا ۸۳ هزار تن است، اما درصد ظرفیت بر مبنای ظرفیت واقعی ۲۰۰ هزار تن محاسبه می‌شود.','Reconstructed from the OPEX “Break-even Analysis” sheet. The visible axis ends at 83,000 tonnes, while the capacity percentage uses the actual 200,000-tonne project capacity.',language)}</p><BreakEvenChart capacity={200000} chartMaxQuantity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language}/></>}
       <h4>{t('نقطه سربه‌سر بر اساس مفروضات جاری پروژه','Break-even Based on Current Project Assumptions',language)}</h4>
       <BreakEvenChart capacity={props.capacity} price={props.sellingPrice} variable={props.variableCostPerUnit} fixed={props.fixedAnnualCost} breakEven={props.breakEvenQuantity} currency={project.currency} language={language}/>
     </div>
