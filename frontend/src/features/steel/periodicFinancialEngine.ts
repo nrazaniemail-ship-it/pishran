@@ -387,6 +387,7 @@ export type PeriodicProjectFinanceInput = {
   mirrFinanceRatePercent?: number | null
   mirrReinvestmentRatePercent?: number | null
   salvageValue?: number
+  salvageBookValue?: number
   annualAssetSaleSchedule?: {
     saleProceeds: number
     returnOfCapital: number
@@ -431,6 +432,8 @@ export type PeriodicProjectFinanceRow = {
   changeInWorkingCapital: number
   equityContribution: number
   salvageValue: number
+  salvageBookValueDisposed: number
+  salvageGainLoss: number
   cfads: number
   dscr: number | null
   projectFreeCashFlow: number
@@ -539,7 +542,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     npvEquity: null, irrEquity: null, mirrEquity: null, totalDebtDrawdown: 0,
     totalEquityContribution: 0, totalCapitalizedInterest: 0, peakWorkingCapital: 0, warnings
   })
-  if (!periods.length || (dayCountBasis !== 360 && dayCountBasis !== 365) ||
+  if (!periods.length || (input.salvageValue != null && (!validFinite(input.salvageValue) || input.salvageValue < 0)) ||
+      (input.salvageBookValue != null && (!validFinite(input.salvageBookValue) || input.salvageBookValue < 0)) ||
+      (dayCountBasis !== 360 && dayCountBasis !== 365) ||
       !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12 ||
       !['period-end','mid-period'].includes(cashFlowTiming)) {
     warnings.push('Project periods, fiscal-year start month, day-count basis or cash-flow timing are invalid.')
@@ -683,7 +688,11 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const principal = loanRows.reduce((sum,row)=>sum+row.principal,0)
     const debtDrawdown = loanRows.reduce((sum,row)=>sum+row.drawdown,0)
     const assetSale = assetSalesByPeriod[index]
-    const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] + assetSale.otherIncomeLoss
+    const terminalSalvage = index === periods.length - 1 ? Math.max(0,input.salvageValue ?? 0) : 0
+    const salvageBookValueDisposed = index === periods.length - 1 ? Math.max(0,input.salvageBookValue ?? 0) : 0
+    const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
+    const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
+      assetSale.otherIncomeLoss + salvageGainLoss
     const periodTax = calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
     const unleveredPeriodTax = calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
     if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
@@ -694,12 +703,11 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     unleveredTaxLoss = unleveredPeriodTax.closingLossCarryForward
     const closingWorkingCapital = input.workingCapitalByPeriod[index]
     const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
-    const terminalSalvage = index === periods.length - 1 ? Math.max(0,input.salvageValue ?? 0) : 0
     const cfads = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
-    const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - unleveredPeriodTax.tax + depreciation[index]
+    const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
     const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
@@ -714,7 +722,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
-      salvageValue:terminalSalvage,cfads,dscr,projectFreeCashFlow,equityFreeCashFlow
+      salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,projectFreeCashFlow,equityFreeCashFlow
     })
     priorWorkingCapital = closingWorkingCapital
   }
@@ -1018,4 +1026,117 @@ export function calculatePeriodicComfarAssetLifecycle(
     bookValueDisposedByPeriod:periodRows.map(row=>row.bookValueDisposed),
     sales:salesResult
   }
+}
+
+
+export type PeriodicStatementOpeningBalances = {
+  cash?: number
+  debt?: number
+  netFixedAssets?: number
+  netWorkingCapital?: number
+  deferredPreOperatingAssets?: number
+  paidInCapital?: number
+  retainedEarnings?: number
+}
+export type PeriodicFinancialStatement = {
+  period: number
+  startDate: string
+  endDate: string
+  openingBalances: Required<PeriodicStatementOpeningBalances>
+  incomeStatement: {
+    revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number
+    assetDisposalGainLoss: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; netIncome: number
+  }
+  cashFlowStatement: {
+    operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number
+    netChangeInCash: number; closingCash: number
+  }
+  balanceSheet: {
+    cash: number; netWorkingCapital: number; netFixedAssets: number; deferredPreOperatingAssets: number
+    totalAssets: number; debt: number; totalLiabilities: number; paidInCapital: number
+    retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number
+    balanceDifference: number; reconciled: boolean
+  }
+  movementChecks: {
+    cash: number; debt: number; netWorkingCapital: number; netFixedAssets: number
+    deferredPreOperatingAssets: number; paidInCapital: number; retainedEarnings: number
+  }
+}
+
+/**
+ * Builds period-level linked statements. Working capital is represented as net working
+ * capital (current assets less operating payables); no unsupported gross split is inferred.
+ * Capitalized interest is a non-cash addition to both deferred pre-operating assets and debt.
+ */
+export function buildPeriodicThreeFinancialStatements(
+  result: PeriodicProjectFinanceResult,
+  opening: PeriodicStatementOpeningBalances = {},
+  tolerance = 0.01,
+): PeriodicFinancialStatement[] {
+  if (!result.valid || !Number.isFinite(tolerance) || tolerance < 0) return []
+  const balances: Required<PeriodicStatementOpeningBalances> = {
+    cash: opening.cash ?? 0, debt: opening.debt ?? 0, netFixedAssets: opening.netFixedAssets ?? 0,
+    netWorkingCapital: opening.netWorkingCapital ?? 0, deferredPreOperatingAssets: opening.deferredPreOperatingAssets ?? 0,
+    paidInCapital: opening.paidInCapital ?? 0, retainedEarnings: opening.retainedEarnings ?? 0,
+  }
+  if (Object.values(balances).some(value => !validFinite(value))) return []
+  let cash = balances.cash, debt = balances.debt, netFixedAssets = balances.netFixedAssets
+  let netWorkingCapital = balances.netWorkingCapital, deferredPreOperatingAssets = balances.deferredPreOperatingAssets
+  let paidInCapital = balances.paidInCapital, retainedEarnings = balances.retainedEarnings
+  const statements: PeriodicFinancialStatement[] = []
+  for (let index = 0; index < result.rows.length; index++) {
+    const row = result.rows[index]
+    const loanClosing = Object.values(result.loanSchedules).reduce((sum, schedule) => sum + (schedule[index]?.closingBalance ?? 0), 0)
+    const closingDebt = loanClosing + (Object.keys(result.loanSchedules).length ? 0 : debt + row.debtDrawdown + row.capitalizedInterest - row.principal)
+    const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
+    const cashOperatingCosts = row.variableCost + row.fixedCost
+    const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
+    const ebitda = row.revenue - cashOperatingCosts
+    const ebit = ebitda - row.depreciation + assetDisposalGainLoss
+    const profitBeforeTax = ebit - row.interestExpense
+    const netIncome = profitBeforeTax - row.tax
+    const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital
+    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex +
+      row.assetSaleProceeds + row.salvageValue
+    const financingCashFlow = row.debtDrawdown + row.equityContribution - row.principal
+    const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
+    const closingCash = cash + netChangeInCash
+    const closingWorkingCapital = row.closingWorkingCapital
+    const closingNetFixedAssets = netFixedAssets + row.fixedInvestment + row.maintenanceCapex -
+      row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed
+    const closingPreOperatingAssets = deferredPreOperatingAssets + row.preOperatingCost + row.capitalizedInterest
+    const closingPaidInCapital = paidInCapital + row.equityContribution
+    const closingRetainedEarnings = retainedEarnings + netIncome
+    const totalAssets = closingCash + closingWorkingCapital + closingNetFixedAssets + closingPreOperatingAssets
+    const totalLiabilities = closingDebt
+    const totalEquity = closingPaidInCapital + closingRetainedEarnings
+    const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
+    const balanceDifference = totalAssets - totalLiabilitiesAndEquity
+    const movementChecks = {
+      cash: closingCash - cash - netChangeInCash,
+      debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest - row.principal),
+      netWorkingCapital: closingWorkingCapital - netWorkingCapital - row.changeInWorkingCapital,
+      netFixedAssets: closingNetFixedAssets - netFixedAssets -
+        (row.fixedInvestment + row.maintenanceCapex - row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed),
+      deferredPreOperatingAssets: closingPreOperatingAssets - deferredPreOperatingAssets - row.preOperatingCost - row.capitalizedInterest,
+      paidInCapital: closingPaidInCapital - paidInCapital - row.equityContribution,
+      retainedEarnings: closingRetainedEarnings - retainedEarnings - netIncome,
+    }
+    statements.push({
+      period: row.period, startDate: row.startDate, endDate: row.endDate, openingBalances,
+      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation,
+        assetDisposalGainLoss, ebit, interest: row.interestExpense, profitBeforeTax, tax: row.tax, netIncome },
+      cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash, closingCash },
+      balanceSheet: { cash: closingCash, netWorkingCapital: closingWorkingCapital, netFixedAssets: closingNetFixedAssets,
+        deferredPreOperatingAssets: closingPreOperatingAssets, totalAssets, debt: closingDebt, totalLiabilities,
+        paidInCapital: closingPaidInCapital, retainedEarnings: closingRetainedEarnings, totalEquity,
+        totalLiabilitiesAndEquity, balanceDifference,
+        reconciled: Math.abs(balanceDifference) <= tolerance && Object.values(movementChecks).every(value => Math.abs(value) <= tolerance) },
+      movementChecks,
+    })
+    cash = closingCash; debt = closingDebt; netFixedAssets = closingNetFixedAssets
+    netWorkingCapital = closingWorkingCapital; deferredPreOperatingAssets = closingPreOperatingAssets
+    paidInCapital = closingPaidInCapital; retainedEarnings = closingRetainedEarnings
+  }
+  return statements
 }
