@@ -320,6 +320,8 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Unsupported loan interest day-count convention.')
   if (input.datedDrawdowns && !interestConvention)
     issues.push('Exact dated drawdowns require an explicit interest day-count convention.')
+  if ((rateChanges.length > 0 || fees.length > 0) && !interestConvention)
+    issues.push('Dated rate resets and financing fees require an explicit interest day-count convention.')
   const rateChanges = input.rateChanges ?? []
   if (rateChanges.some((change,index) => !change || !parseIsoDateUtc(change.effectiveDate) ||
       !validFinite(change.annualRatePercent) || change.annualRatePercent < 0 ||
