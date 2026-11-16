@@ -821,6 +821,14 @@ near(monthlyRun.periods.reduce((sum,row)=>sum+row.depreciation,0),540*306/365.24
 near(monthlyRun.periods[11].assets[0].closingBookValue,1200-monthlyRun.periods.reduce((sum,row)=>sum+row.depreciation,0),0.02,
   'Monthly closing book value must reconcile to opening cost less accumulated depreciation')
 
+const annualOnlyAcquisition=engine.calculateComfarCalendarDepreciationSchedule([{
+  ...monthlyAsset,acquisitionDate:undefined,startingAtDate:undefined
+}],monthlyCalendar,1)
+assert.equal(annualOnlyAcquisition.valid,false,
+  'Annual-only acquisition timing must not be silently treated as an exact monthly acquisition date')
+assert.ok(annualOnlyAcquisition.warnings.some(warning=>warning.includes('تاریخ دقیق')),
+  'Missing subannual acquisition dates must be disclosed as a blocking reconciliation warning')
+
 const quarterlyCalendar=foundation.buildProjectCalendarPeriods('2025-01-01','2025-12-31','quarterly',1)
 const quarterlyAsset={id:'quarterly-asset',name:'Quarterly asset',originalValue:1000,initialBookValue:1000,
   scrapPercent:10,lengthYears:2,lengthMonths:0,ratePercent:50,method:'linear-to-scrap',
