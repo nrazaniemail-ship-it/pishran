@@ -396,7 +396,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const done:Record<Step,boolean>={
   profile:!!String(m.project.name??'').trim()&&!!String(m.project.location??'').trim()&&(m.market.domesticPrice>0||m.market.exportPrice>0)&&partnerSetupValid,
   stage:!!m.stage&&m.products.length>0&&validRows(m.products)&&m.products.some(r=>String(r.name??'').trim()&&r.quantity>0)&&m.capacity.nameplate>0,
-  process:(!!String(m.process.technology??'').trim()||!!String(m.process.route??'').trim())&&hasTechnicalInputs&&technicalParametersComplete&&validRows(m.balance)&&m.balance.some(r=>r.quantity>0),
+  process:(!!String(m.process.technology??'').trim()||!!String(m.process.route??'').trim())&&hasTechnicalInputs&&technicalParametersComplete&&validRows(m.technical)&&validRows(m.balance)&&m.balance.some(r=>r.quantity>0),
   balance:validRows(m.utilities)&&hasPricedRows(m.utilities),
   capex:validRows(m.capex)&&capex>0,
   opex:validRows(m.opex)&&sum(m.opex)>0,
