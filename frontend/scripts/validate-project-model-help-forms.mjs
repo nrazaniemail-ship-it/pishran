@@ -151,6 +151,16 @@ try {
  calendarDraft=h.updateHelpFormRow(calendarDraft,'sales-programme','calendar-sale','period','2027-01-01')
  assert.ok(h.validateHelpDrivenProjectPeriods(calendarDraft,calendar).some(issue=>issue.includes('period-outside-project-calendar')))
 
+
+ let partialLoan=h.addHelpFormRow(draft.helpDriven,'loan-conditions','partial-loan')
+ partialLoan=h.updateHelpFormRow(partialLoan,'loan-conditions','partial-loan','loanName','Facility')
+ assert.ok(h.validateHelpDrivenProjectForms(partialLoan).includes('loan-conditions:0:required-field:repaymentType'))
+ let completeProduct=h.addHelpFormRow(draft.helpDriven,'products','required-product')
+ completeProduct=h.updateHelpFormRow(completeProduct,'products','required-product','name','Output')
+ assert.ok(h.validateHelpDrivenProjectForms(completeProduct).includes('products:0:required-field:unit'))
+ completeProduct=h.updateHelpFormRow(completeProduct,'products','required-product','unit','tonne')
+ assert.equal(h.validateHelpDrivenProjectForms(completeProduct).length,0)
+
  console.log('COMFAR help form coverage tests passed')
 } finally {
  await rm(temp,{recursive:true,force:true})
