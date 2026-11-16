@@ -35,7 +35,7 @@ export type SalesProductFormDraft={
  openingFinishedGoodsQuantity?:number|null
  periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;finishedGoodsClosingQuantity:number|null}[]
 }
-export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,openingFinishedGoodsQuantity:0,periods:[]}}
+export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,openingFinishedGoodsQuantity:null,periods:[]}}
 
 export type WorkingCapitalComponentFormDraft={
  id:string; name:string; category:'inventory'|'work-in-progress'|'finished-goods'|'receivables'|'cash'|'payables'|'other-current-asset'|'other-current-liability'|null
@@ -45,7 +45,7 @@ export type WorkingCapitalComponentFormDraft={
  periodBalances:{period:string;amount:number|null}[]
 }
 export function createBlankWorkingCapitalComponentFormDraft(id=''):WorkingCapitalComponentFormDraft{return{
- id,name:'',category:null,openingBalance:0,minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:null,periodBalances:[]
+ id,name:'',category:null,openingBalance:null,minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:null,periodBalances:[]
 }}
 /** COMFAR reference uses a 360-day year for days coverage / turnover. */
 export function deriveWorkingCapitalTurnover(daysCoverage:number|null,periodDays=360):number|null{
