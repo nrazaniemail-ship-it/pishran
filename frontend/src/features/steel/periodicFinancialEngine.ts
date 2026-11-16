@@ -34,6 +34,35 @@ export function prorateAnnualFlowByDays(
   return annualAmount * periodDays / dayCountBasis
 }
 
+type TaxLossVintage={fiscalYear:number;amount:number}
+function calculatePeriodTaxWithVintages(
+  taxableProfit:number,
+  taxRatePercent:number,
+  openingVintages:TaxLossVintage[],
+  fiscalYear:number,
+  enabled:boolean,
+  carryForwardYears:number|null,
+):{tax:number;closingLossCarryForward:number;vintages:TaxLossVintage[]}|null {
+  if(![taxableProfit,taxRatePercent,fiscalYear].every(validFinite)||taxRatePercent<0||taxRatePercent>100||
+    (carryForwardYears!==null&&(!Number.isInteger(carryForwardYears)||carryForwardYears<1)))return null
+  let vintages=enabled?openingVintages.filter(vintage=>fiscalYear-vintage.fiscalYear<= (carryForwardYears??Infinity))
+    .map(vintage=>({...vintage})): []
+  let remainingProfit=taxableProfit
+  if(enabled&&remainingProfit>0) {
+    vintages.sort((a,b)=>a.fiscalYear-b.fiscalYear)
+    for(const vintage of vintages) {
+      const used=Math.min(vintage.amount,remainingProfit)
+      vintage.amount-=used
+      remainingProfit-=used
+      if(remainingProfit<=1e-9)break
+    }
+    vintages=vintages.filter(vintage=>vintage.amount>1e-9)
+  }
+  if(enabled&&remainingProfit<0)vintages.push({fiscalYear,amount:-remainingProfit})
+  return {tax:Math.max(0,remainingProfit)*taxRatePercent/100,
+    closingLossCarryForward:vintages.reduce((sum,vintage)=>sum+vintage.amount,0),vintages}
+}
+
 /** Apply tax-loss carry-forward to one financial period without allowing negative tax. */
 export function calculatePeriodTax(
   taxableProfitBeforeLoss: number,
@@ -635,6 +664,8 @@ export type PeriodicProjectFinanceInput = {
   openingWorkingCapital?: number
   openingTaxLoss?: number
   openingUnleveredTaxLoss?: number
+  taxLossCarryForwardEnabled?: boolean
+  taxLossCarryForwardYears?: number | null
   loans: PeriodicProjectLoan[]
   /** Validated local-currency schedules prepared by adapters (e.g. foreign-currency translation). */
   precomputedLoanSchedules?: Record<string, PeriodicLoanRow[]>
@@ -1073,13 +1104,18 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   }
   const openingLoss = input.openingTaxLoss ?? 0
   const openingUnleveredLoss = input.openingUnleveredTaxLoss ?? 0
-  if (!validFinite(openingLoss) || openingLoss < 0 || !validFinite(openingUnleveredLoss) || openingUnleveredLoss < 0) {
-    warnings.push('Opening tax-loss balances must be finite and non-negative.')
+  const carryForwardEnabled=input.taxLossCarryForwardEnabled??true
+  const carryForwardYears=input.taxLossCarryForwardYears??null
+  if (!validFinite(openingLoss) || openingLoss < 0 || !validFinite(openingUnleveredLoss) || openingUnleveredLoss < 0||
+    (carryForwardYears!==null&&(!Number.isInteger(carryForwardYears)||carryForwardYears<1))) {
+    warnings.push('Opening tax-loss balances or carry-forward duration are invalid.')
     return empty()
   }
   const rows: PeriodicProjectFinanceRow[] = []
   let taxLoss = openingLoss
   let unleveredTaxLoss = openingUnleveredLoss
+  let taxLossVintages:TaxLossVintage[]=openingLoss>0?[{fiscalYear:-1,amount:openingLoss}]:[]
+  let unleveredTaxLossVintages:TaxLossVintage[]=openingUnleveredLoss>0?[{fiscalYear:-1,amount:openingUnleveredLoss}]:[]
   let priorWorkingCapital = Math.max(0, input.openingWorkingCapital ?? 0)
   for (let index = 0; index < periods.length; index++) {
     const loanRows = Object.values(loanSchedules).map(schedule => schedule[index])
@@ -1103,14 +1139,19 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
     const taxAllowances=input.taxAllowancesByPeriod?.[index]??0
-    const periodTax = calculatePeriodTax(ebit - interestExpense - taxAllowances, taxRates[index], taxLoss)
-    const unleveredPeriodTax = calculatePeriodTax(ebit - taxAllowances, taxRates[index], unleveredTaxLoss)
-    if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
-      warnings.push('Tax calculation failed in project period ' + (index + 1) + '.')
+    const fiscalYear=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
+    const periodTax=calculatePeriodTaxWithVintages(ebit-interestExpense-taxAllowances,taxRates[index],
+      taxLossVintages,fiscalYear,carryForwardEnabled,carryForwardYears)
+    const unleveredPeriodTax=calculatePeriodTaxWithVintages(ebit-taxAllowances,taxRates[index],
+      unleveredTaxLossVintages,fiscalYear,carryForwardEnabled,carryForwardYears)
+    if(!periodTax||!unleveredPeriodTax) {
+      warnings.push('Tax calculation failed in project period '+(index+1)+'.')
       return empty()
     }
-    taxLoss = periodTax.closingLossCarryForward
-    unleveredTaxLoss = unleveredPeriodTax.closingLossCarryForward
+    taxLossVintages=periodTax.vintages
+    unleveredTaxLossVintages=unleveredPeriodTax.vintages
+    taxLoss=periodTax.closingLossCarryForward
+    unleveredTaxLoss=unleveredPeriodTax.closingLossCarryForward
     const closingWorkingCapital = input.workingCapitalByPeriod[index]
     const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
     const equityWorkingCapitalContributionAmount = input.annualEquityWorkingCapitalContributions
