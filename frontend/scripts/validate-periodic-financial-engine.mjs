@@ -70,6 +70,31 @@ const invalidPartnerAllocation=partnerFinance.allocateJointVentureCashFlows({
 ],100)
 assert.equal(invalidPartnerAllocation.valid,false,'Partner equity and profit shares must each total 100%')
 
+const mismatchedPartnerCapital=partnerFinance.allocateJointVentureCashFlows({
+  valid:true,totalEquityContribution:100,
+  rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:-100}],
+},[
+  {id:'p1',name:'Partner A',sharePercent:60,capitalContribution:50,profitSharePercent:60},
+  {id:'p2',name:'Partner B',sharePercent:40,capitalContribution:50,profitSharePercent:40},
+],100)
+assert.equal(mismatchedPartnerCapital.totalDeclaredCapitalContribution,100,
+  'Aggregate declared capital may match while individual partner contributions are wrong')
+assert.equal(mismatchedPartnerCapital.rows[0].capitalContributionVariance,-10)
+assert.equal(mismatchedPartnerCapital.rows[1].capitalContributionVariance,10)
+assert.equal(mismatchedPartnerCapital.valid,false,
+  'Each partner declared contribution must reconcile to the agreed capital-share allocation')
+assert.ok(mismatchedPartnerCapital.warnings.some(warning=>warning.includes('Each partner declared capital contribution')),
+  'Partner-level capital contribution mismatch must be disclosed')
+
+const malformedPartnerFinance=partnerFinance.allocateJointVentureCashFlows({
+  valid:true,rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:100}],
+},[
+  {id:'p1',name:'Partner A',sharePercent:100,capitalContribution:0,profitSharePercent:100},
+],100)
+assert.equal(malformedPartnerFinance.valid,false,
+  'Partner allocation must reject missing/non-finite scheduled equity contribution totals')
+
+
 const year = [{ index: 1, startDate: '2025-01-01', endDate: '2025-12-31', days: 365, partial: false }]
 const quarter = [
   { index: 1, startDate: '2025-01-01', endDate: '2025-03-31', days: 90, partial: false },
