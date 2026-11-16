@@ -583,3 +583,282 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     peakWorkingCapital:Math.max(0,...input.workingCapitalByPeriod),warnings
   }
 }
+
+
+export type PeriodicDepreciationAssetInput = {
+  id: string
+  name: string
+  assetClass: 'fixed' | 'preproduction'
+  originalValue: number
+  initialBookValue: number
+  scrapPercent: number
+  lengthYears: number
+  lengthMonths: number
+  firstDepreciationMonths: number
+  ratePercent: number | null
+  method: 'none' | 'linear-to-zero' | 'linear-to-scrap' | 'accelerated' | 'sum-of-years-digits'
+  acquisitionDate: string
+  startingAtDate?: string
+}
+export type PeriodicDepreciationSaleInput = {
+  id: string
+  assetId: string
+  saleDate: string
+  priceMode: 'book-value' | 'self-defined'
+  selfDefinedPrice: number | null
+  exchangeRateToLocal: number
+}
+export type PeriodicDepreciationAssetRow = {
+  assetId: string
+  assetName: string
+  acquisitionValue: number
+  openingBookValue: number
+  depreciation: number
+  closingBookValue: number
+  methodApplied: PeriodicDepreciationAssetInput['method'] | null
+}
+export type PeriodicDepreciationSaleRow = {
+  id: string
+  assetId: string
+  period: number
+  saleDate: string
+  saleProceeds: number
+  bookValueDisposed: number
+  gainLoss: number
+}
+export type PeriodicComfarAssetLifecycleResult = {
+  valid: boolean
+  warnings: string[]
+  periods: Array<{
+    period: number
+    startDate: string
+    endDate: string
+    depreciation: number
+    fixedInvestment: number
+    preOperatingCost: number
+    saleProceeds: number
+    saleGainLoss: number
+    bookValueDisposed: number
+    closingBookValue: number
+    assets: PeriodicDepreciationAssetRow[]
+  }>
+  depreciationByPeriod: number[]
+  fixedInvestmentByPeriod: number[]
+  preOperatingCostByPeriod: number[]
+  saleProceedsByPeriod: number[]
+  saleGainLossByPeriod: number[]
+  bookValueDisposedByPeriod: number[]
+  sales: PeriodicDepreciationSaleRow[]
+}
+
+function addUtcMonthsClamped(date: Date, months: number): Date {
+  const targetMonth = date.getUTCMonth() + months
+  const firstOfTarget = new Date(Date.UTC(date.getUTCFullYear(), targetMonth, 1))
+  const lastDay = new Date(Date.UTC(firstOfTarget.getUTCFullYear(), firstOfTarget.getUTCMonth() + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(firstOfTarget.getUTCFullYear(), firstOfTarget.getUTCMonth(), Math.min(date.getUTCDate(), lastDay)))
+}
+function inclusiveDays(start: Date, end: Date): number {
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86400000) + 1)
+}
+function firstPeriodContainingDate(date: Date, periods: ProjectCalendarPeriod[]): number {
+  return periods.findIndex(period => {
+    const start = parseIsoDateUtc(period.startDate)
+    const end = parseIsoDateUtc(period.endDate)
+    return !!start && !!end && date.getTime() >= start.getTime() && date.getTime() <= end.getTime()
+  })
+}
+function nextPeriodStartAfter(date: Date, periods: ProjectCalendarPeriod[]): Date | null {
+  const index = firstPeriodContainingDate(date, periods)
+  if (index < 0 || index + 1 >= periods.length) return null
+  return parseIsoDateUtc(periods[index + 1].startDate)
+}
+function depreciationForAnniversarySegments(
+  method: 'accelerated' | 'sum-of-years-digits',
+  openingBookValue: number,
+  salvageValue: number,
+  depreciableBase: number,
+  lifeStart: Date,
+  lifeEndExclusive: Date,
+  segmentStart: Date,
+  segmentEnd: Date,
+  lifeMonths: number,
+  ratePercent: number | null,
+  annualOpeningBookValues: number[],
+): number {
+  let cursor = new Date(segmentStart.getTime())
+  let bookValue = openingBookValue
+  let total = 0
+  const lifeYears = Math.max(1, Math.ceil(lifeMonths / 12))
+  const sumYears = lifeYears * (lifeYears + 1) / 2
+  while (cursor.getTime() <= segmentEnd.getTime() && bookValue > salvageValue + 1e-9) {
+    const monthsFromStart = Math.max(0, (cursor.getUTCFullYear() - lifeStart.getUTCFullYear()) * 12 + cursor.getUTCMonth() - lifeStart.getUTCMonth())
+    const ageYear = Math.min(lifeYears - 1, Math.floor(monthsFromStart / 12))
+    const yearStart = addUtcMonthsClamped(lifeStart, ageYear * 12)
+    const nextYear = addUtcMonthsClamped(lifeStart, (ageYear + 1) * 12)
+    const yearEndExclusive = nextYear.getTime() > lifeEndExclusive.getTime() ? lifeEndExclusive : nextYear
+    const yearDays = Math.max(1, Math.round((yearEndExclusive.getTime() - yearStart.getTime()) / 86400000))
+    const segmentEndExclusive = new Date(segmentEnd.getTime() + 86400000)
+    const endExclusive = segmentEndExclusive.getTime() < yearEndExclusive.getTime() ? segmentEndExclusive : yearEndExclusive
+    const segmentDays = Math.max(0, Math.round((endExclusive.getTime() - cursor.getTime()) / 86400000))
+    if (segmentDays <= 0) break
+    const remainingMonths = Math.max(1, lifeMonths - ageYear * 12)
+    if (annualOpeningBookValues[ageYear] == null) annualOpeningBookValues[ageYear] = bookValue
+    const annualOpeningBookValue = annualOpeningBookValues[ageYear]
+    const annualDepreciation = method === 'sum-of-years-digits'
+      ? depreciableBase * (lifeYears - ageYear) / sumYears
+      : Math.max(annualOpeningBookValue * ((ratePercent ?? 0) / 100), (annualOpeningBookValue - salvageValue) / (remainingMonths / 12))
+    const amount = Math.min(bookValue - salvageValue, annualDepreciation * segmentDays / yearDays)
+    total += amount
+    bookValue -= amount
+    cursor = new Date(endExclusive.getTime())
+  }
+  return total
+}
+
+/**
+ * Asset-by-asset depreciation on actual monthly/quarterly dates.
+ * New acquisitions begin depreciation in the period after acquisition unless a later
+ * explicit startingAtDate is supplied; pre-project assets must be loaded as opening balances.
+ */
+export function calculatePeriodicComfarAssetLifecycle(
+  assets: PeriodicDepreciationAssetInput[],
+  sales: PeriodicDepreciationSaleInput[],
+  periods: ProjectCalendarPeriod[],
+): PeriodicComfarAssetLifecycleResult {
+  const warnings: string[] = []
+  const empty = (): PeriodicComfarAssetLifecycleResult => ({
+    valid: false, warnings, periods: [], depreciationByPeriod: [], fixedInvestmentByPeriod: [],
+    preOperatingCostByPeriod: [], saleProceedsByPeriod: [], saleGainLossByPeriod: [],
+    bookValueDisposedByPeriod: [], sales: []
+  })
+  if (!periods.length || periods.some((period,index) => {
+    const start=parseIsoDateUtc(period.startDate),end=parseIsoDateUtc(period.endDate)
+    return !start||!end||!Number.isInteger(period.days)||period.days<=0||inclusiveDays(start,end)!==period.days||
+      end.getTime()<start.getTime()||(index>0&&start.getTime()!==parseIsoDateUtc(periods[index-1].endDate)!.getTime()+86400000)
+  })) {
+    warnings.push('Periodic depreciation requires valid contiguous project periods with inclusive day counts.')
+    return empty()
+  }
+  if (new Set(assets.map(asset=>asset.id)).size!==assets.length || new Set(sales.map(sale=>sale.id)).size!==sales.length) {
+    warnings.push('Periodic depreciation asset and sale identifiers must be unique.')
+    return empty()
+  }
+  const assetIds=new Set(assets.map(asset=>asset.id))
+  if (sales.some(sale=>!assetIds.has(sale.assetId))) {
+    warnings.push('Every periodic asset sale must reference an existing asset vintage.')
+    return empty()
+  }
+  const periodRows=periods.map(period=>({
+    period:period.index,startDate:period.startDate,endDate:period.endDate,depreciation:0,
+    fixedInvestment:0,preOperatingCost:0,saleProceeds:0,saleGainLoss:0,
+    bookValueDisposed:0,closingBookValue:0,assets:[] as PeriodicDepreciationAssetRow[]
+  }))
+  const salesResult:PeriodicDepreciationSaleRow[]=[]
+  for(const asset of assets){
+    const acquisitionDate=parseIsoDateUtc(asset.acquisitionDate)
+    const startingAtDate=asset.startingAtDate?parseIsoDateUtc(asset.startingAtDate):null
+    const lifeMonths=asset.lengthYears*12+asset.lengthMonths
+    if(!acquisitionDate|| (asset.startingAtDate&&!startingAtDate) ||
+      !validFinite(asset.originalValue)||asset.originalValue<0||
+      !validFinite(asset.initialBookValue)||asset.initialBookValue<0||asset.initialBookValue>asset.originalValue||
+      !validFinite(asset.scrapPercent)||asset.scrapPercent<0||asset.scrapPercent>100||
+      !Number.isInteger(asset.lengthYears)||asset.lengthYears<0||
+      !Number.isInteger(asset.lengthMonths)||asset.lengthMonths<0||asset.lengthMonths>11||
+      !Number.isInteger(asset.firstDepreciationMonths)||asset.firstDepreciationMonths<1||asset.firstDepreciationMonths>12||
+      !['fixed','preproduction'].includes(asset.assetClass)||
+      !['none','linear-to-zero','linear-to-scrap','accelerated','sum-of-years-digits'].includes(asset.method)||
+      (asset.method!=='none'&&lifeMonths<1)||
+      (asset.method==='accelerated'&&(asset.ratePercent==null||!validFinite(asset.ratePercent)||asset.ratePercent<=0||asset.ratePercent>100))||
+      (asset.method==='sum-of-years-digits'&&(asset.lengthMonths!==0||asset.lengthYears<1||asset.firstDepreciationMonths!==12))) {
+      warnings.push(asset.name+': periodic depreciation asset parameters or acquisition/start dates are invalid.')
+      continue
+    }
+    const acquisitionIndex=firstPeriodContainingDate(acquisitionDate,periods)
+    if(acquisitionIndex<0){
+      warnings.push(asset.name+': acquisition date is outside the project calendar; pre-project assets must be entered as opening balances.')
+      continue
+    }
+    let depreciationStartDate:Date|null=null
+    if(startingAtDate&&startingAtDate.getTime()>acquisitionDate.getTime()){
+      depreciationStartDate=startingAtDate
+    } else {
+      depreciationStartDate=nextPeriodStartAfter(acquisitionDate,periods)
+    }
+    const lifeEndExclusive=depreciationStartDate&&lifeMonths>0?addUtcMonthsClamped(depreciationStartDate,lifeMonths):null
+    const salvageValue=asset.method==='linear-to-zero'?0:asset.initialBookValue*asset.scrapPercent/100
+    const depreciableBase=Math.max(0,asset.initialBookValue-salvageValue)
+    const sale=sales.find(row=>row.assetId===asset.id)
+    const saleDate=sale?parseIsoDateUtc(sale.saleDate):null
+    if(sale&&(!saleDate||saleDate.getTime()<acquisitionDate.getTime()||
+      (sale.priceMode==='self-defined'&&(sale.selfDefinedPrice==null||!validFinite(sale.selfDefinedPrice)||sale.selfDefinedPrice<0||
+       !validFinite(sale.exchangeRateToLocal)||sale.exchangeRateToLocal<=0)))) {
+      warnings.push(asset.name+': periodic disposal date or proceeds are invalid.')
+      continue
+    }
+    const saleIndex=sale&&saleDate?firstPeriodContainingDate(saleDate,periods):-1
+    if(sale&&saleIndex<0){
+      warnings.push(asset.name+': disposal date is outside the project calendar.')
+      continue
+    }
+    let bookValue=0
+    const annualOpeningBookValues:number[]=[]
+    for(let index=0;index<periods.length;index++){
+      const period=periods[index]
+      const periodStart=parseIsoDateUtc(period.startDate)!
+      const periodEnd=parseIsoDateUtc(period.endDate)!
+      const acquisitionValue=index===acquisitionIndex?asset.originalValue:0
+      if(index===acquisitionIndex){
+        if(asset.assetClass==='preproduction') periodRows[index].preOperatingCost+=asset.originalValue
+        else periodRows[index].fixedInvestment+=asset.originalValue
+        bookValue+=asset.initialBookValue
+      }
+      const openingBookValue=bookValue
+      const saleInThisPeriod=!!sale&&saleIndex===index
+      let depreciation=0
+      if(asset.method!=='none'&&depreciationStartDate&&lifeEndExclusive&&bookValue>salvageValue&&
+        index>=acquisitionIndex&&(!saleDate||periodStart.getTime()<=saleDate.getTime())){
+        const activeStart=new Date(Math.max(periodStart.getTime(),depreciationStartDate.getTime()))
+        const lifeEndInclusive=new Date(lifeEndExclusive.getTime()-86400000)
+        const effectiveEnd=new Date(Math.min(periodEnd.getTime(),lifeEndInclusive.getTime(),saleDate&&saleInThisPeriod?saleDate.getTime():periodEnd.getTime()))
+        if(activeStart.getTime()<=effectiveEnd.getTime()){
+          if(asset.method==='linear-to-zero'||asset.method==='linear-to-scrap'){
+            const totalLifeDays=Math.max(1,Math.round((lifeEndExclusive.getTime()-depreciationStartDate.getTime())/86400000))
+            depreciation=Math.min(bookValue-salvageValue,depreciableBase*inclusiveDays(activeStart,effectiveEnd)/totalLifeDays)
+          } else {
+            depreciation=depreciationForAnniversarySegments(asset.method,bookValue,salvageValue,depreciableBase,
+              depreciationStartDate,lifeEndExclusive,activeStart,effectiveEnd,lifeMonths,asset.ratePercent,annualOpeningBookValues)
+            depreciation=Math.min(bookValue-salvageValue,depreciation)
+          }
+          bookValue=Math.max(salvageValue,bookValue-depreciation)
+        }
+      }
+      let saleProceeds=0,bookValueDisposed=0,gainLoss=0
+      if(saleInThisPeriod&&sale&&saleDate){
+        bookValueDisposed=bookValue
+        saleProceeds=sale.priceMode==='book-value'?bookValueDisposed:(sale.selfDefinedPrice??0)*sale.exchangeRateToLocal
+        gainLoss=saleProceeds-bookValueDisposed
+        bookValue=0
+        periodRows[index].saleProceeds+=saleProceeds
+        periodRows[index].saleGainLoss+=gainLoss
+        periodRows[index].bookValueDisposed+=bookValueDisposed
+        salesResult.push({id:sale.id,assetId:asset.id,period:period.index,saleDate:sale.saleDate,saleProceeds,bookValueDisposed,gainLoss})
+      }
+      periodRows[index].depreciation+=depreciation
+      periodRows[index].closingBookValue+=bookValue
+      periodRows[index].assets.push({
+        assetId:asset.id,assetName:asset.name,acquisitionValue,openingBookValue,
+        depreciation,closingBookValue:bookValue,methodApplied:asset.method
+      })
+    }
+  }
+  return {
+    valid:warnings.length===0,warnings,periods:periodRows,
+    depreciationByPeriod:periodRows.map(row=>row.depreciation),
+    fixedInvestmentByPeriod:periodRows.map(row=>row.fixedInvestment),
+    preOperatingCostByPeriod:periodRows.map(row=>row.preOperatingCost),
+    saleProceedsByPeriod:periodRows.map(row=>row.saleProceeds),
+    saleGainLossByPeriod:periodRows.map(row=>row.saleGainLoss),
+    bookValueDisposedByPeriod:periodRows.map(row=>row.bookValueDisposed),
+    sales:salesResult
+  }
+}
