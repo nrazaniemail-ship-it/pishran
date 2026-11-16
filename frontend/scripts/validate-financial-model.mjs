@@ -1026,6 +1026,21 @@ near(quarterlySale.depreciation.periods[2].closingBookValue,0,1e-9,
 near(quarterlySale.depreciation.periods[3].assets[0].closingBookValue,0,1e-9,
   'Disposed asset must not carry a book value into later periods')
 
+const zeroMethodAsset={id:'linear-zero-salvage-check',name:'Linear to zero asset',originalValue:1000,initialBookValue:1000,
+  scrapPercent:10,lengthYears:2,lengthMonths:0,ratePercent:50,method:'linear-to-zero',
+  acquisitionPeriod:1,startingAtPeriod:1,acquisitionDate:'2025-01-01',startingAtDate:'2025-01-01'}
+const annualZeroMethod=engine.calculateComfarAssetDepreciationSchedule([zeroMethodAsset],3)
+near(annualZeroMethod.periods[0].depreciation,500,1e-9,'Linear-to-zero must depreciate full original cost in year one, ignoring scrap')
+near(annualZeroMethod.periods[1].depreciation,500,1e-9,'Linear-to-zero must depreciate full original cost in year two')
+near(annualZeroMethod.periods[1].closingBookValue,0,1e-9,'Linear-to-zero must close at zero, not at the configured scrap value')
+const threeYearMonthlyCalendar=foundation.buildProjectCalendarPeriods('2025-01-01','2027-12-31','monthly',1)
+const calendarZeroMethod=engine.calculateComfarCalendarDepreciationSchedule([zeroMethodAsset],threeYearMonthlyCalendar,1)
+assert.equal(calendarZeroMethod.valid,true,'Calendar linear-to-zero depreciation must accept a valid dated asset')
+near(calendarZeroMethod.periods.reduce((sum,row)=>sum+row.depreciation,0),1000,1e-6,
+  'Calendar linear-to-zero must depreciate the entire original cost over the useful life')
+near(calendarZeroMethod.periods[calendarZeroMethod.periods.length-1].assets[0].closingBookValue,0,1e-6,
+  'Calendar linear-to-zero must not retain scrap value after useful life')
+
 for (const method of ['none','linear-to-zero','linear-to-scrap','accelerated','sum-of-years-digits']) {
   const methodAsset={...monthlyAsset,id:'method-'+method,name:'Method '+method,method,
     lengthYears:method==='sum-of-years-digits'?3:2,lengthMonths:0,
