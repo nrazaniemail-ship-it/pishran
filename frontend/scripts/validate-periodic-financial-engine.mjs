@@ -1330,3 +1330,73 @@ assert.ok(Math.abs(frequencyDividedResetLoan.rows[0].interestExpense-4.5)<1e-8,
   'Frequency-divided annual rates must prorate the quarterly rate across the two dated reset segments')
 assert.ok(Math.abs(frequencyDividedResetLoan.rows[0].periodRatePercent-4.5)<1e-8,
   'Annuity period-rate input must reflect the same intra-period rate reset calculation')
+
+// Undrawn commitment fees, bespoke principal installments and DSCR covenants.
+const commitmentFeeLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  facilityLimit:200,commitmentFeeAnnualRatePercent:2,
+},loanEventPeriods,365)
+assert.equal(commitmentFeeLoan.valid,true,commitmentFeeLoan.issues.join('; '))
+const expectedCommitmentFee=200*0.02*182/365+100*0.02*183/365
+assert.ok(Math.abs(commitmentFeeLoan.rows[0].commitmentFeeExpense-expectedCommitmentFee)<1e-8,
+  'Undrawn commitment fees must accrue on the time-weighted unused facility balance around staged drawdowns')
+assert.equal(commitmentFeeLoan.rows[0].financingFeeExpense,commitmentFeeLoan.rows[0].commitmentFeeExpense,
+  'Commitment fees must flow into financing expense exactly once')
+assert.ok(Math.abs(commitmentFeeLoan.rows[0].debtService-commitmentFeeLoan.rows[0].interestExpense-commitmentFeeLoan.rows[0].commitmentFeeExpense)<1e-8,
+  'Commitment fees must be included in period debt service')
+const invalidCommitmentFee=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  commitmentFeeAnnualRatePercent:2,
+},loanEventPeriods,365)
+assert.equal(invalidCommitmentFee.valid,false,
+  'A commitment fee rate without a facility limit must be rejected')
+const customBalloonLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:0,drawdowns:[120,0,0,0],repaymentMethod:'custom',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:3,capitalizeInterest:false,
+  customPrincipalRepayments:[{period:2,amount:20},{period:3,amount:30}],
+  balloonAtMaturity:true,
+},quarterlyRatePeriods,365)
+assert.equal(customBalloonLoan.valid,true,customBalloonLoan.issues.join('; '))
+assert.deepEqual(customBalloonLoan.rows.map(row=>row.principal),[0,20,30,70],
+  'Custom interim principal payments must be followed by a final balloon for the residual balance')
+const incompleteCustomLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:0,drawdowns:[120,0,0,0],repaymentMethod:'custom',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:3,capitalizeInterest:false,
+  customPrincipalRepayments:[{period:2,amount:20},{period:3,amount:30}],
+},quarterlyRatePeriods,365)
+assert.equal(incompleteCustomLoan.valid,false,
+  'A custom schedule that leaves unpaid principal at maturity must be rejected unless balloon repayment is enabled')
+const invalidCustomRepayment=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:0,drawdowns:[120,0,0,0],repaymentMethod:'custom',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:3,capitalizeInterest:false,
+  customPrincipalRepayments:[{period:2,amount:200}],balloonAtMaturity:true,
+},quarterlyRatePeriods,365)
+assert.equal(invalidCustomRepayment.valid,false,
+  'Custom principal installments may not exceed the outstanding loan balance')
+const dscrCovenantResult=engine.calculateIntegratedPeriodicFinance({
+  periods:loanEventPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0],annualVariableCost:[0,0],annualFixedCost:[0,0],
+  annualDepreciation:[0,0],annualFixedInvestment:[0,0],annualPreOperatingCost:[0,0],
+  annualMaintenanceCapex:[0,0],annualTaxRates:[0,0],annualEquityContributions:[0,0],
+  workingCapitalByPeriod:[0,0],minimumDscr:1.2,
+  loans:[{id:'covenant-loan',input:{
+    annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
+    repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  }}],
+})
+assert.equal(dscrCovenantResult.valid,true,dscrCovenantResult.warnings.join('; '))
+assert.equal(dscrCovenantResult.rows[0].dscrCovenantStatus,'breach')
+assert.ok(dscrCovenantResult.warnings.some(message=>message.includes('Minimum DSCR covenant breached in period 1')),
+  'A period below the configured minimum DSCR must produce an explicit covenant breach warning')
+assert.equal(dscrCovenantResult.rows[1].dscrCovenantStatus,'breach')
+assert.ok(dscrCovenantResult.rows.every(row=>row.dscrCovenantStatus==='breach'),
+  'Covenant evaluation must be visible at each period with debt service')
+assert.ok(advancedFinanceUi.includes('facilityLimit:loan.facilityLimit')
+  && advancedFinanceUi.includes('commitmentFeeAnnualRatePercent:loan.commitmentFeeAnnualRatePercent')
+  && advancedFinanceUi.includes('Custom Principal Repayment by Period')
+  && advancedFinanceUi.includes('minimumDscr:state.minimumDscr')
+  && advancedFinanceUi.includes('Minimum Debt Service Coverage Ratio (DSCR)'),
+  'Advanced finance UI must expose facility fees, custom/balloon repayments and minimum DSCR covenant controls')
+
