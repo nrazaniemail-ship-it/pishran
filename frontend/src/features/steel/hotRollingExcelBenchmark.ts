@@ -484,3 +484,33 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
     'The active Pishran user scenario with a uniform 25% tax rate is a separate case and must not be labelled as an exact COMFAR tax-basis match.'
   ]
 } as const
+
+
+/** Quarterly annuity schedule transcribed from the HRCR200 CAPEX workbook; kept separate from the COMFAR annual loan output. */
+export const HOT_ROLLING_CAPEX_LOAN_SCHEDULE_AUDIT = {
+  source: 'CAPEX-HRCR200 workbook · sheet «برنامه زمانی بازپرداخت اقساط» and «مکانیزم تأمین سرمایه»',
+  nominalAnnualRatePercent: 26,
+  effectiveAnnualRatePercent: 29.333398475149375,
+  effectiveQuarterRatePercent: 7.333349618787344,
+  rateConversion: 'effective-annual-divided-by-frequency' as const,
+  periodsPerYear: 4,
+  repaymentMethod: 'annuity' as const,
+  termPeriods: 20,
+  firstRepaymentYearInRepaymentSheet: 1404,
+  drawdownYearsInRepaymentSheet: [1402,1403,1404],
+  drawdownYearsInMechanismSheet: [1403,1404,1405],
+  graceQuartersInRepaymentSheet: [8,4,0],
+  loans: [
+    {id:'fixed-loan-1',kind:'fixed-investment',principal:3_816_495.99,firstInstallment:369_636.70168048923,firstInterest:279_876.9941336993,firstPrincipal:89_759.70754678996,totalRepayment:7_392_734.033609785,totalInterest:3_576_238.043609785},
+    {id:'fixed-loan-2',kind:'fixed-investment',principal:1_794_354.81,firstInstallment:173_787.52535068715,firstInterest:131_586.31161882737,firstPrincipal:42_201.21373185978,totalRepayment:3_475_750.507013743,totalInterest:1_681_395.6970137428},
+    {id:'working-capital-loan',kind:'working-capital',principal:3_309_144.525623,firstInstallment:320_498.5072800595,firstInterest:242_671.13745489655,firstPrincipal:77_827.36982516295,totalRepayment:6_409_970.145601191,totalInterest:3_100_825.6199781904}
+  ],
+  totalPrincipal: 8_919_995.325623,
+  comfarReportedLoanBalanceAt1404: 8_909_484.06,
+  sourceTimingConflict: true,
+  sourceNotes: [
+    'The repayment schedule labels drawdown years 1402, 1403 and 1404, while the capital-mechanism sheet labels the same tranches 1403, 1404 and 1405.',
+    'The CAPEX quarterly schedule includes a 3,309,144.53 working-capital loan; it must not be silently merged into the COMFAR annual long-term loan balance.',
+    'The quarterly annuity schedule is a separate source case; COMFAR annual debt balances, interest costs and principal repayments are audited independently.'
+  ]
+} as const
