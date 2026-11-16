@@ -795,7 +795,7 @@ const feasibilityWizardSource = await readFile(new URL('../src/features/projects
 const projectsViewSource = await readFile(new URL('../src/features/projects/ProjectsView.tsx', import.meta.url), 'utf8')
 const projectReportSource = await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx', import.meta.url), 'utf8')
 assert.ok(projectReportSource.includes('equityIrrPercent')
-  && projectReportSource.includes('20-quarter repayment schedule'),
+  && projectReportSource.includes('all 20 quarterly instalments and payment dates'),
   'COMFAR equity IRR must be disclosed with an explicit quarterly repayment comparability gate')
 const projectFoundationPanelSource = await readFile(new URL('../src/features/projects/ProjectFoundationPanel.tsx', import.meta.url), 'utf8')
 assert.ok(advancedFinanceSource.includes('equityDiscountRatePercent:props.costOfEquity'),
