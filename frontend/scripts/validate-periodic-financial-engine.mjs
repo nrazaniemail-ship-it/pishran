@@ -763,6 +763,17 @@ assert.equal(hrcrAnnualAggregation[2].taxRatePercent,5)
 assert.equal(hrcrAnnualAggregation[0].equityContribution,8905157.3)
 assert.ok(Math.abs(hrcrAnnualAggregation[2].netDebtFinancingFlow+964925.632872)<0.01)
 assert.equal(hrcrAnnualAggregation[2].equityContribution,3309144.53)
+assert.equal(comfarReference.loanRepaymentAudit.annualPrincipalRepaymentsByYear.length,5)
+assert.equal(comfarReference.loanRepaymentAudit.annualInterestByYear.length,5)
+assert.ok(Math.abs(comfarReference.loanRepaymentAudit.annualInterestByYear[0]-comfarReference.loanRepaymentAudit.firstOperatingYearInterest)<0.01)
+assert.ok(Math.abs(comfarReference.loanRepaymentAudit.annualPrincipalRepaymentsByYear.reduce((sum,value)=>sum+value,0)-comfarReference.loanRepaymentAudit.openingRepaymentBalance)<0.1,
+  'Five annual principal repayments must amortize the reconstructed gross opening debt balance')
+assert.ok(projectReportSource.includes('row.taxRatePercent-referenceTax')
+  && projectReportSource.includes('row.depreciation-referenceDepreciation')
+  && projectReportSource.includes('row.changeInWorkingCapital-referenceWorkingCapital')
+  && projectReportSource.includes('annualInterestByYear')
+  && projectReportSource.includes('annualPrincipalRepaymentsByYear'),
+  'The 17-year HRCR200 reconciliation must expose tax, depreciation, working-capital, interest and principal variances')
 assert.equal(hrcrAnnualAggregation[16].projectFreeCashFlow,comfarCashFlows[16])
 const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
 assert.ok(comfarIrr !== null && Math.abs(comfarIrr - comfarReference.projectIrrPercent) < 0.01,
