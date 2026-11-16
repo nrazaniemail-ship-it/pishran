@@ -23,7 +23,7 @@ export type ProjectFinancialModelOrchestrationInput={
   drafts:Pick<ProjectModelFinancialFormDrafts,'sales'|'productionCosts'|'workingCapital'|'assets'|'loans'>
   foundation:ProjectFoundation
   productionStartDate:string
-  openingFinishedGoodsByProduct:Record<string,number>
+  openingFinishedGoodsByProduct?:Record<string,number>
   openingWorkingCapital:number
   openingBalances:PeriodicStatementOpeningBalances
   taxTreatment:'deductible'|'non-deductible'
@@ -59,7 +59,8 @@ export function calculateProjectFinancialModelFromDrafts(
   })
 
   if(input.drafts.sales.length||input.drafts.productionCosts.length) {
-    const result=bindProductionSalesToPeriodicFinance(finance,input.drafts,input.openingFinishedGoodsByProduct)
+    const openingFinishedGoodsByProduct=input.openingFinishedGoodsByProduct??Object.fromEntries(input.drafts.sales.map(product=>[product.productId,product.openingFinishedGoodsQuantity??Number.NaN]))
+    const result=bindProductionSalesToPeriodicFinance(finance,input.drafts,openingFinishedGoodsByProduct)
     productionSales=result.schedule
     if(!result.valid||!result.financeInput)return fail(result.issues)
     finance=result.financeInput
