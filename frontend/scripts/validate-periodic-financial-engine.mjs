@@ -1527,20 +1527,20 @@ assert.ok(advancedFinanceUi.includes('facilityLimit:loan.facilityLimit')
 
 // HRCR200 five-gate shareholder financing audit. Amounts are million IRR.
 // Capitalized construction interest increases opening debt; it is not a second cash drawdown.
-const hrcr200ConstructionFunding = {
+const hrcr200FiveGateFunding = {
   constructionFundingBase: 18702835.36,
   equity: 13091985.20,
   originalLoanPrincipal: 5610850.80,
   capitalizedInterest: 3298633.06,
   grossOpeningRepaymentDebt: 8909484.06,
 }
-assert.ok(Math.abs(hrcr200ConstructionFunding.equity / hrcr200ConstructionFunding.constructionFundingBase * 100 - 70) < 0.001,
+assert.ok(Math.abs(hrcr200FiveGateFunding.equity / hrcr200FiveGateFunding.constructionFundingBase * 100 - 70) < 0.001,
   'HRCR200 construction equity must reconcile to the amount-derived 70% share')
-assert.ok(Math.abs(hrcr200ConstructionFunding.originalLoanPrincipal / hrcr200ConstructionFunding.constructionFundingBase * 100 - 30) < 0.001,
+assert.ok(Math.abs(hrcr200FiveGateFunding.originalLoanPrincipal / hrcr200FiveGateFunding.constructionFundingBase * 100 - 30) < 0.001,
   'HRCR200 construction loan principal must reconcile to the amount-derived 30% share')
-assert.ok(Math.abs(hrcr200ConstructionFunding.equity + hrcr200ConstructionFunding.originalLoanPrincipal - hrcr200ConstructionFunding.constructionFundingBase) < 0.01,
+assert.ok(Math.abs(hrcr200FiveGateFunding.equity + hrcr200FiveGateFunding.originalLoanPrincipal - hrcr200FiveGateFunding.constructionFundingBase) < 0.01,
   'HRCR200 70/30 construction sources must reconcile to the construction funding base')
-assert.ok(Math.abs(hrcr200ConstructionFunding.originalLoanPrincipal + hrcr200ConstructionFunding.capitalizedInterest - hrcr200ConstructionFunding.grossOpeningRepaymentDebt) < 0.01,
+assert.ok(Math.abs(hrcr200FiveGateFunding.originalLoanPrincipal + hrcr200FiveGateFunding.capitalizedInterest - hrcr200FiveGateFunding.grossOpeningRepaymentDebt) < 0.01,
   'Capitalized construction interest must increase the opening repayment debt without being treated as fresh principal')
 assert.equal(hrcr200ComfarLoan.rows.length, 20,
   'HRCR200 COMFAR debt-service audit must contain exactly 20 quarterly instalments')
@@ -1548,7 +1548,7 @@ assert.ok(hrcr200ComfarLoan.rows.every(row => row.drawdown === 0),
   'The gross post-capitalization opening balance must not be counted again as 20-quarter cash drawdowns')
 assert.ok(hrcr200ComfarLoan.rows.every(row => row.capitalizedInterest === 0),
   'Construction-capitalized interest is already embedded in opening debt and must not be capitalized a second time')
-assert.ok(Math.abs(hrcr200ComfarLoan.rows.reduce((sum,row)=>sum+row.principal,0) - hrcr200ConstructionFunding.grossOpeningRepaymentDebt) < 0.1,
+assert.ok(Math.abs(hrcr200ComfarLoan.rows.reduce((sum,row)=>sum+row.principal,0) - hrcr200FiveGateFunding.grossOpeningRepaymentDebt) < 0.1,
   'The 20 quarterly principal instalments must fully amortize principal plus capitalized construction interest')
 assert.ok(Math.abs(hrcr200ComfarLoan.rows.at(-1).closingBalance) < 0.01,
   'HRCR200 closing debt must be zero after the twentieth quarterly instalment')
@@ -1569,20 +1569,20 @@ assert.ok(projectReportSource.includes('equityIrrPercent')
  
 // HRCR200 five-gate shareholder financing audit. Amounts are million IRR.
 // Capitalized construction interest increases opening debt; it is not a second cash drawdown.
-const hrcr200ConstructionFunding = {
+const hrcr200FiveGateFunding = {
   constructionFundingBase: 18702835.36,
   equity: 13091985.20,
   originalLoanPrincipal: 5610850.80,
   capitalizedInterest: 3298633.06,
   grossOpeningRepaymentDebt: 8909484.06,
 }
-assert.ok(Math.abs(hrcr200ConstructionFunding.equity / hrcr200ConstructionFunding.constructionFundingBase * 100 - 70) < 0.001,
+assert.ok(Math.abs(hrcr200FiveGateFunding.equity / hrcr200FiveGateFunding.constructionFundingBase * 100 - 70) < 0.001,
   'HRCR200 construction equity must reconcile to the amount-derived 70% share')
-assert.ok(Math.abs(hrcr200ConstructionFunding.originalLoanPrincipal / hrcr200ConstructionFunding.constructionFundingBase * 100 - 30) < 0.001,
+assert.ok(Math.abs(hrcr200FiveGateFunding.originalLoanPrincipal / hrcr200FiveGateFunding.constructionFundingBase * 100 - 30) < 0.001,
   'HRCR200 construction loan principal must reconcile to the amount-derived 30% share')
-assert.ok(Math.abs(hrcr200ConstructionFunding.equity + hrcr200ConstructionFunding.originalLoanPrincipal - hrcr200ConstructionFunding.constructionFundingBase) < 0.01,
+assert.ok(Math.abs(hrcr200FiveGateFunding.equity + hrcr200FiveGateFunding.originalLoanPrincipal - hrcr200FiveGateFunding.constructionFundingBase) < 0.01,
   'HRCR200 70/30 construction sources must reconcile to the construction funding base')
-assert.ok(Math.abs(hrcr200ConstructionFunding.originalLoanPrincipal + hrcr200ConstructionFunding.capitalizedInterest - hrcr200ConstructionFunding.grossOpeningRepaymentDebt) < 0.01,
+assert.ok(Math.abs(hrcr200FiveGateFunding.originalLoanPrincipal + hrcr200FiveGateFunding.capitalizedInterest - hrcr200FiveGateFunding.grossOpeningRepaymentDebt) < 0.01,
   'Capitalized construction interest must increase the opening repayment debt without being treated as fresh principal')
 assert.equal(hrcr200ComfarLoan.rows.length, 20,
   'HRCR200 COMFAR debt-service audit must contain exactly 20 quarterly instalments')
@@ -1590,7 +1590,7 @@ assert.ok(hrcr200ComfarLoan.rows.every(row => row.drawdown === 0),
   'The gross post-capitalization opening balance must not be counted again as 20-quarter cash drawdowns')
 assert.ok(hrcr200ComfarLoan.rows.every(row => row.capitalizedInterest === 0),
   'Construction-capitalized interest is already embedded in opening debt and must not be capitalized a second time')
-assert.ok(Math.abs(hrcr200ComfarLoan.rows.reduce((sum,row)=>sum+row.principal,0) - hrcr200ConstructionFunding.grossOpeningRepaymentDebt) < 0.1,
+assert.ok(Math.abs(hrcr200ComfarLoan.rows.reduce((sum,row)=>sum+row.principal,0) - hrcr200FiveGateFunding.grossOpeningRepaymentDebt) < 0.1,
   'The 20 quarterly principal instalments must fully amortize principal plus capitalized construction interest')
 assert.ok(Math.abs(hrcr200ComfarLoan.rows.at(-1).closingBalance) < 0.01,
   'HRCR200 closing debt must be zero after the twentieth quarterly instalment')
