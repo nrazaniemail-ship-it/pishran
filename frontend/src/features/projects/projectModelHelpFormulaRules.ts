@@ -245,3 +245,37 @@ export function buildConstantPrincipalLoanSchedule(principal:number,annualRatePe
   return {period:index+1,openingBalance,principal:principalPaid,interest,payment:principalPaid+interest,closingBalance:balance}
  })
 }
+
+export type CostAllocationProduct={id:string;directCost:number;directFactoryCost:number;directMaterialCost:number;directLabourCost:number;salesRevenue:number}
+export function allocateIndirectCost(totalIndirectCost:number,products:CostAllocationProduct[],key:'direct-cost'|'direct-factory-cost'|'direct-material-cost'|'direct-labour-cost'|'sales-revenue'|'equal-products'|'user-defined',userPercentages?:Record<string,number>){
+ if(!nonNegative(totalIndirectCost)||products.length===0)throw new Error('invalid-cost-allocation-input')
+ if(products.some(p=>![p.directCost,p.directFactoryCost,p.directMaterialCost,p.directLabourCost,p.salesRevenue].every(nonNegative)))throw new Error('invalid-cost-allocation-basis')
+ if(key==='equal-products')return products.map(p=>({productId:p.id,allocatedCost:totalIndirectCost/products.length}))
+ if(key==='user-defined'){
+  const shares=products.map(p=>userPercentages?.[p.id])
+  if(shares.some(x=>x===undefined||!nonNegative(x!))||Math.abs(shares.reduce((sum,x)=>sum+(x??0),0)-100)>1e-8)throw new Error('invalid-user-allocation-percentages')
+  return products.map((p,i)=>({productId:p.id,allocatedCost:totalIndirectCost*(shares[i]??0)/100}))
+ }
+ const field=key==='direct-cost'?'directCost':key==='direct-factory-cost'?'directFactoryCost':key==='direct-material-cost'?'directMaterialCost':key==='direct-labour-cost'?'directLabourCost':'salesRevenue'
+ const denominator=products.reduce((sum,p)=>sum+p[field],0)
+ if(denominator<=0)throw new Error('zero-cost-allocation-denominator')
+ return products.map(p=>({productId:p.id,allocatedCost:totalIndirectCost*p[field]/denominator}))
+}
+export function calculateTaxableProfitAfterAllowances(grossProfit:number,investmentAllowance:number,depreciationAllowance:number){
+ if(!finite(grossProfit)||!nonNegative(investmentAllowance)||!nonNegative(depreciationAllowance))throw new Error('invalid-tax-allowance-input')
+ return {taxableProfit:grossProfit-investmentAllowance-depreciationAllowance,investmentAllowance,depreciationAllowance,bookValueAdjustment:-depreciationAllowance}
+}
+export function calculateIncomeTaxAfterHoliday(taxableProfit:number,brackets:{lowerLimit:number;ratePercent:number}[],productionYear:number,taxHolidayYears:number){
+ if(!finite(taxableProfit)||!Number.isInteger(productionYear)||productionYear<1||!Number.isInteger(taxHolidayYears)||taxHolidayYears<0)throw new Error('invalid-tax-holiday-input')
+ const exempt=productionYear<=taxHolidayYears
+ return {taxHolidayActive:exempt,taxBeforeAdjustments:exempt?0:calculateGraduatedIncomeTax(taxableProfit,brackets)}
+}
+export function calculatePreferredDividend(accumulatedPaidInEquity:number,preferredRatePercent:number,absolutePreferredDividend:number){
+ if(!nonNegative(accumulatedPaidInEquity)||!nonNegative(preferredRatePercent)||preferredRatePercent>100||!nonNegative(absolutePreferredDividend))throw new Error('invalid-preferred-dividend-input')
+ return accumulatedPaidInEquity*preferredRatePercent/100+absolutePreferredDividend
+}
+export function calculateDividendRepatriation(dividend:number,repatriationPercent:number){
+ if(!nonNegative(dividend)||!nonNegative(repatriationPercent)||repatriationPercent>100)throw new Error('invalid-dividend-repatriation')
+ const exported=dividend*repatriationPercent/100
+ return {exported,local:dividend-exported}
+}
