@@ -1178,3 +1178,225 @@ assert.equal(excessiveFundingStatements[1].balanceSheet.cash,101)
 assert.ok(excessiveFundingStatements.every(row=>row.balanceSheet.reconciled),
   'Working-capital funding above the requirement must reconcile as a cash buffer in the three statements')
 
+
+
+// Effective-dated loan rate resets and separately classified financing fees.
+const loanEventPeriods = [
+  { index:1,startDate:'2025-01-01',endDate:'2025-12-31',days:365,partial:false },
+  { index:2,startDate:'2026-01-01',endDate:'2026-12-31',days:365,partial:false },
+]
+const resetAndFeeLoan = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,
+  rateChanges:[{effectiveDate:'2025-07-01',annualRatePercent:20}],
+  drawdowns:[100,0],
+  datedDrawdowns:[{date:'2025-01-01',amount:100}],
+  repaymentMethod:'bullet',
+  repaymentStartPeriod:2,
+  gracePeriods:0,
+  termPeriods:1,
+  capitalizeInterest:false,
+  interestConvention:'actual-365',
+  fees:[
+    {date:'2025-04-01',amount:10,treatment:'expense',label:'Arrangement fee'},
+    {date:'2025-10-01',amount:5,treatment:'capitalize',label:'Capitalized issuance cost'},
+  ],
+},loanEventPeriods,365)
+assert.equal(resetAndFeeLoan.valid,true,resetAndFeeLoan.issues.join('; '))
+const expectedNominalResetInterest=100*(10*181/365+20*183/365)/100+5*(20/100)*91/365
+console.log('DEBUG reset fee interest', {actual:resetAndFeeLoan.rows[0].interestExpense,expected:expectedNominalResetInterest,row:resetAndFeeLoan.rows[0]})
+assert.ok(Math.abs(resetAndFeeLoan.rows[0].interestExpense-expectedNominalResetInterest)<1e-8,
+  'Exact dated drawdowns must preserve end-exclusive Actual/365 accrual, including interest on the capitalized fee from its payment date')
+assert.equal(resetAndFeeLoan.rows[0].financingFeeExpense,10,
+  'Expense-classified fees must remain separate from accrued interest')
+assert.equal(resetAndFeeLoan.rows[0].capitalizedFinancingFees,5,
+  'Capitalized issuance costs must be separately visible')
+assert.equal(resetAndFeeLoan.rows[0].closingBalance,105,
+  'Capitalized financing fees must increase the outstanding loan balance')
+assert.ok(Math.abs(resetAndFeeLoan.rows[0].debtService-(resetAndFeeLoan.rows[0].interestExpense+10))<0.01,
+  'Cash-paid financing fees must be added once to accrued interest in debt service')
+assert.equal(resetAndFeeLoan.rows[1].principal,105,
+  'Bullet maturity must repay principal including capitalized financing costs')
+const invalidLoanRateOrder = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,
+  rateChanges:[
+    {effectiveDate:'2025-08-01',annualRatePercent:15},
+    {effectiveDate:'2025-07-01',annualRatePercent:20},
+  ],
+  drawdowns:[100,0],repaymentMethod:'bullet',repaymentStartPeriod:2,
+  gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+},loanEventPeriods,365)
+assert.equal(invalidLoanRateOrder.valid,false,
+  'Rate reset events must be strictly chronological')
+const outOfCalendarFinancingFee = engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  fees:[{date:'2027-01-01',amount:1,treatment:'expense'}],
+},loanEventPeriods,365)
+assert.equal(outOfCalendarFinancingFee.valid,false,
+  'Financing fees outside the modeled calendar must be rejected')
+
+
+const integratedRateResetAndFees = engine.calculateIntegratedPeriodicFinance({
+  periods:loanEventPeriods,
+  fiscalYearStartMonth:1,
+  dayCountBasis:365,
+  cashFlowTiming:'period-end',
+  annualRevenue:[0,0],annualVariableCost:[0,0],annualFixedCost:[0,0],
+  annualDepreciation:[0,0],annualFixedInvestment:[0,0],annualPreOperatingCost:[0,0],
+  annualMaintenanceCapex:[0,0],annualTaxRates:[0,0],annualEquityContributions:[0,0],
+  workingCapitalByPeriod:[0,0],
+  loans:[{id:'reset-fee-loan',input:{
+    annualRatePercent:10,
+    rateChanges:[{effectiveDate:'2025-07-01',annualRatePercent:20}],
+    drawdowns:[100,0],
+    datedDrawdowns:[{date:'2025-01-01',amount:100}],
+    repaymentMethod:'bullet',repaymentStartPeriod:2,gracePeriods:0,
+    termPeriods:1,capitalizeInterest:false,interestConvention:'actual-365',
+    fees:[
+      {date:'2025-04-01',amount:10,treatment:'expense'},
+      {date:'2025-10-01',amount:5,treatment:'capitalize'},
+    ],
+  }}],
+})
+assert.equal(integratedRateResetAndFees.valid,true,integratedRateResetAndFees.warnings.join('; '))
+assert.equal(integratedRateResetAndFees.rows[0].interestExpense,integratedRateResetAndFees.loanSchedules['reset-fee-loan'][0].interestExpense+10,
+  'Expense financing fees must flow into periodic financing costs and taxable profit')
+assert.equal(integratedRateResetAndFees.rows[0].capitalizedFinancingFees,5,
+  'Capitalized financing fees must remain distinct from capitalized interest in project results')
+assert.equal(integratedRateResetAndFees.rows[0].debtService,integratedRateResetAndFees.loanSchedules['reset-fee-loan'][0].debtService,
+  'Debt service must include expense fees exactly once')
+const integratedFeeStatements=engine.buildPeriodicThreeFinancialStatements(integratedRateResetAndFees)
+assert.ok(integratedFeeStatements.every(row=>row.balanceSheet.reconciled),
+  'Capitalized fees must increase deferred pre-operating assets and debt by the same amount')
+
+assert.ok(advancedFinanceUi.includes('rateChanges:loan.rateChanges??[]')
+  && advancedFinanceUi.includes('financingFees:(loan.financingFees??[])')
+  && advancedFinanceUi.includes('periodInterestConvention')
+  && advancedFinanceUi.includes('Rate Effective Date')
+  && advancedFinanceUi.includes('Capitalized Fees'),
+  'Loan UI must persist, configure and display effective-dated rate resets and financing fee treatments')
+
+
+// Dated events must preserve the loan's selected rate-conversion convention.
+const effectiveAnnualBaseLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[0,0],openingBalance:100,repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  rateConversion:'effective-annual-by-actual-days',
+},loanEventPeriods,365)
+const effectiveAnnualSameRateResetLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,rateChanges:[{effectiveDate:'2025-07-01',annualRatePercent:10}],
+  drawdowns:[0,0],openingBalance:100,repaymentMethod:'bullet',repaymentStartPeriod:2,
+  gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  rateConversion:'effective-annual-by-actual-days',
+},loanEventPeriods,365)
+assert.equal(effectiveAnnualBaseLoan.valid,true,effectiveAnnualBaseLoan.issues.join('; '))
+assert.equal(effectiveAnnualSameRateResetLoan.valid,true,effectiveAnnualSameRateResetLoan.issues.join('; '))
+assert.ok(Math.abs(effectiveAnnualSameRateResetLoan.rows[0].interestExpense-effectiveAnnualBaseLoan.rows[0].interestExpense)<1e-8,
+  'A same-rate reset must not change the effective-annual-by-actual-days result')
+const effectiveAnnualChangedRateLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,rateChanges:[{effectiveDate:'2025-07-01',annualRatePercent:20}],
+  drawdowns:[0,0],openingBalance:100,repaymentMethod:'bullet',repaymentStartPeriod:2,
+  gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  rateConversion:'effective-annual-by-actual-days',
+},loanEventPeriods,365)
+const expectedEffectiveAnnualResetInterest=100*(Math.pow(1.1,181/365)*Math.pow(1.2,184/365)-1)
+assert.ok(Math.abs(effectiveAnnualChangedRateLoan.rows[0].interestExpense-expectedEffectiveAnnualResetInterest)<1e-8,
+  'Effective annual rates must compound by segment on the exact reset date')
+const feeOnlyEffectiveAnnualLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[0,0],openingBalance:100,repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  rateConversion:'effective-annual-by-actual-days',
+  fees:[{date:'2025-07-01',amount:5,treatment:'expense'}],
+},loanEventPeriods,365)
+assert.equal(feeOnlyEffectiveAnnualLoan.valid,true,feeOnlyEffectiveAnnualLoan.issues.join('; '))
+assert.ok(Math.abs(feeOnlyEffectiveAnnualLoan.rows[0].interestExpense-10)<1e-8,
+  'Adding an expense-only fee must not switch effective annual interest to simple nominal accrual')
+assert.equal(feeOnlyEffectiveAnnualLoan.rows[0].financingFeeExpense,5)
+
+const quarterlyRatePeriods=[
+  {index:1,startDate:'2025-01-01',endDate:'2025-03-31',days:90,partial:false},
+  {index:2,startDate:'2025-04-01',endDate:'2025-06-30',days:91,partial:false},
+  {index:3,startDate:'2025-07-01',endDate:'2025-09-30',days:92,partial:false},
+  {index:4,startDate:'2025-10-01',endDate:'2025-12-31',days:92,partial:false},
+]
+const frequencyDividedResetLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:12,rateChanges:[{effectiveDate:'2025-02-15',annualRatePercent:24}],
+  drawdowns:[0,0,0,0],openingBalance:100,repaymentMethod:'bullet',
+  repaymentStartPeriod:4,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  rateConversion:'effective-annual-divided-by-frequency',periodsPerYear:4,
+},quarterlyRatePeriods,365)
+assert.equal(frequencyDividedResetLoan.valid,true,frequencyDividedResetLoan.issues.join('; '))
+assert.ok(Math.abs(frequencyDividedResetLoan.rows[0].interestExpense-4.5)<1e-8,
+  'Frequency-divided annual rates must prorate the quarterly rate across the two dated reset segments')
+assert.ok(Math.abs(frequencyDividedResetLoan.rows[0].periodRatePercent-4.5)<1e-8,
+  'Annuity period-rate input must reflect the same intra-period rate reset calculation')
+
+// Undrawn commitment fees, bespoke principal installments and DSCR covenants.
+const commitmentFeeLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  facilityLimit:200,commitmentFeeAnnualRatePercent:2,
+},loanEventPeriods,365)
+assert.equal(commitmentFeeLoan.valid,true,commitmentFeeLoan.issues.join('; '))
+const expectedCommitmentFee=200*0.02*182/365+100*0.02*183/365
+assert.ok(Math.abs(commitmentFeeLoan.rows[0].commitmentFeeExpense-expectedCommitmentFee)<1e-8,
+  'Undrawn commitment fees must accrue on the time-weighted unused facility balance around staged drawdowns')
+assert.equal(commitmentFeeLoan.rows[0].financingFeeExpense,commitmentFeeLoan.rows[0].commitmentFeeExpense,
+  'Commitment fees must flow into financing expense exactly once')
+assert.ok(Math.abs(commitmentFeeLoan.rows[0].debtService-commitmentFeeLoan.rows[0].interestExpense-commitmentFeeLoan.rows[0].commitmentFeeExpense)<1e-8,
+  'Commitment fees must be included in period debt service')
+const invalidCommitmentFee=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  commitmentFeeAnnualRatePercent:2,
+},loanEventPeriods,365)
+assert.equal(invalidCommitmentFee.valid,false,
+  'A commitment fee rate without a facility limit must be rejected')
+const customBalloonLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:0,drawdowns:[120,0,0,0],repaymentMethod:'custom',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:3,capitalizeInterest:false,
+  customPrincipalRepayments:[{period:2,amount:20},{period:3,amount:30}],
+  balloonAtMaturity:true,
+},quarterlyRatePeriods,365)
+assert.equal(customBalloonLoan.valid,true,customBalloonLoan.issues.join('; '))
+assert.deepEqual(customBalloonLoan.rows.map(row=>row.principal),[0,20,30,70],
+  'Custom interim principal payments must be followed by a final balloon for the residual balance')
+const incompleteCustomLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:0,drawdowns:[120,0,0,0],repaymentMethod:'custom',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:3,capitalizeInterest:false,
+  customPrincipalRepayments:[{period:2,amount:20},{period:3,amount:30}],
+},quarterlyRatePeriods,365)
+assert.equal(incompleteCustomLoan.valid,false,
+  'A custom schedule that leaves unpaid principal at maturity must be rejected unless balloon repayment is enabled')
+const invalidCustomRepayment=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:0,drawdowns:[120,0,0,0],repaymentMethod:'custom',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:3,capitalizeInterest:false,
+  customPrincipalRepayments:[{period:2,amount:200}],balloonAtMaturity:true,
+},quarterlyRatePeriods,365)
+assert.equal(invalidCustomRepayment.valid,false,
+  'Custom principal installments may not exceed the outstanding loan balance')
+const dscrCovenantResult=engine.calculateIntegratedPeriodicFinance({
+  periods:loanEventPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0],annualVariableCost:[0,0],annualFixedCost:[0,0],
+  annualDepreciation:[0,0],annualFixedInvestment:[0,0],annualPreOperatingCost:[0,0],
+  annualMaintenanceCapex:[0,0],annualTaxRates:[0,0],annualEquityContributions:[0,0],
+  workingCapitalByPeriod:[0,0],minimumDscr:1.2,
+  loans:[{id:'covenant-loan',input:{
+    annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
+    repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
+  }}],
+})
+assert.equal(dscrCovenantResult.valid,true,dscrCovenantResult.warnings.join('; '))
+assert.equal(dscrCovenantResult.rows[0].dscrCovenantStatus,'breach')
+assert.ok(dscrCovenantResult.warnings.some(message=>message.includes('Minimum DSCR covenant breached in period 1')),
+  'A period below the configured minimum DSCR must produce an explicit covenant breach warning')
+assert.equal(dscrCovenantResult.rows[1].dscrCovenantStatus,'breach')
+assert.ok(dscrCovenantResult.rows.every(row=>row.dscrCovenantStatus==='breach'),
+  'Covenant evaluation must be visible at each period with debt service')
+assert.ok(advancedFinanceUi.includes('facilityLimit:loan.facilityLimit')
+  && advancedFinanceUi.includes('commitmentFeeAnnualRatePercent:loan.commitmentFeeAnnualRatePercent')
+  && advancedFinanceUi.includes('Custom Principal Repayment by Period')
+  && advancedFinanceUi.includes('minimumDscr:state.minimumDscr')
+  && advancedFinanceUi.includes('Minimum Debt Service Coverage Ratio (DSCR)'),
+  'Advanced finance UI must expose facility fees, custom/balloon repayments and minimum DSCR covenant controls')
+

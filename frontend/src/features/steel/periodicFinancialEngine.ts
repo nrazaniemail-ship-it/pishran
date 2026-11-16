@@ -216,7 +216,7 @@ export function allocateAnnualFlowsToPeriods(
 export type PeriodicLoanInput = {
   annualRatePercent: number
   drawdowns: number[]
-  repaymentMethod: 'equal-principal' | 'annuity' | 'bullet'
+  repaymentMethod: 'equal-principal' | 'annuity' | 'bullet' | 'custom'
   repaymentStartPeriod: number
   gracePeriods: number
   termPeriods: number
@@ -227,6 +227,16 @@ export type PeriodicLoanInput = {
   openingBalance?: number
   /** Exact cash draw dates; when supplied, amounts must reconcile to drawdowns by period. */
   datedDrawdowns?: { date: string; amount: number }[]
+  /** Effective-dated annual nominal rate resets; the base annualRatePercent applies before the first reset. */
+  rateChanges?: { effectiveDate: string; annualRatePercent: number }[]
+  /** Financing fees paid on a date; capitalized fees are added to debt, expense fees are paid in cash. */
+  fees?: { date: string; amount: number; treatment: 'expense' | 'capitalize'; label?: string }[]
+  /** Facility commitment limit; fees accrue on the time-weighted undrawn balance. */
+  facilityLimit?: number
+  commitmentFeeAnnualRatePercent?: number
+  /** Period numbers are 1-based; with balloonAtMaturity, remaining principal is due at final maturity. */
+  customPrincipalRepayments?: { period: number; amount: number }[]
+  balloonAtMaturity?: boolean
   interestConvention?: 'comfar-months-plus-360' | 'actual-360' | 'actual-365'
 }
 
@@ -237,6 +247,9 @@ export type PeriodicLoanRow = {
   periodRatePercent: number
   interestExpense: number
   capitalizedInterest: number
+  financingFeeExpense: number
+  commitmentFeeExpense: number
+  capitalizedFinancingFees: number
   principal: number
   closingBalance: number
   debtService: number
@@ -295,7 +308,7 @@ export function calculatePeriodicLoanSchedule(
       !Number.isInteger(firstPrincipalIndex) ||
       firstPrincipalIndex < 0 || firstPrincipalIndex + input.termPeriods > periods.length)
     issues.push('Repayment start, grace period and loan term exceed the available project periods.')
-  if (!['equal-principal', 'annuity', 'bullet'].includes(input.repaymentMethod))
+  if (!['equal-principal', 'annuity', 'bullet', 'custom'].includes(input.repaymentMethod))
     issues.push('Unsupported periodic repayment method.')
   if (typeof input.capitalizeInterest !== 'boolean')
     issues.push('Capitalized-interest option must be explicitly true or false.')
@@ -309,11 +322,32 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Every period drawdown must be finite and non-negative.')
   if (input.openingBalance != null && (!validFinite(input.openingBalance) || input.openingBalance < 0))
     issues.push('Opening loan balance must be a finite non-negative amount.')
+  if (input.facilityLimit != null && (!validFinite(input.facilityLimit) || input.facilityLimit < 0 || input.facilityLimit < (input.openingBalance ?? 0)))
+    issues.push('Facility limit must be finite, non-negative and at least the opening loan balance.')
+  if (input.commitmentFeeAnnualRatePercent != null && (!validFinite(input.commitmentFeeAnnualRatePercent) || input.commitmentFeeAnnualRatePercent < 0 || input.facilityLimit == null))
+    issues.push('A non-negative commitment fee rate requires a valid facility limit.')
+  const customRepayments = input.customPrincipalRepayments ?? []
+  if (input.repaymentMethod === 'custom' && !customRepayments.length)
+    issues.push('Custom repayment method requires at least one scheduled principal payment.')
+  if (customRepayments.some((item,index) => !item || !Number.isInteger(item.period) || item.period < firstPrincipalIndex + 1 || item.period > firstPrincipalIndex + input.termPeriods || !validFinite(item.amount) || item.amount <= 0 || (index > 0 && customRepayments[index - 1].period >= item.period)))
+    issues.push('Custom principal repayments must have unique increasing periods within the repayment term and positive finite amounts.')
   const interestConvention = input.interestConvention
+  const rateChanges = input.rateChanges ?? []
+  const fees = input.fees ?? []
   if (interestConvention != null && !['comfar-months-plus-360','actual-360','actual-365'].includes(interestConvention))
     issues.push('Unsupported loan interest day-count convention.')
   if (input.datedDrawdowns && !interestConvention)
     issues.push('Exact dated drawdowns require an explicit interest day-count convention.')
+  if (rateChanges.some((change,index) => !change || !parseIsoDateUtc(change.effectiveDate) ||
+      !validFinite(change.annualRatePercent) || change.annualRatePercent < 0 ||
+      (index > 0 && rateChanges[index - 1].effectiveDate >= change.effectiveDate)))
+    issues.push('Rate resets must have valid dates, non-negative finite rates and strictly increasing effective dates.')
+  if (fees.some(fee => !fee || !parseIsoDateUtc(fee.date) || !validFinite(fee.amount) ||
+      fee.amount <= 0 || !['expense','capitalize'].includes(fee.treatment)))
+    issues.push('Financing fees require valid dates, positive finite amounts and a supported treatment.')
+  if (periods.length && [...rateChanges.map(item=>item.effectiveDate),...fees.map(item=>item.date)]
+      .some(date => date < periods[0].startDate || date > periods[periods.length-1].endDate))
+    issues.push('Rate resets and financing fees must fall within the modeled project calendar.')
   if (input.datedDrawdowns) {
     if (input.datedDrawdowns.some(item => !item || !parseIsoDateUtc(item.date) || !validFinite(item.amount) || item.amount <= 0))
       issues.push('Exact loan drawdowns require valid dates and positive finite amounts.')
@@ -357,6 +391,65 @@ export function calculatePeriodicLoanSchedule(
     }
     return annualEffectiveRateToPeriodRate(input.annualRatePercent, period.days, dayCountBasis) / 100
   })
+  const effectiveRateForDate = (date: string) => {
+    let rate = input.annualRatePercent
+    for (const change of rateChanges) {
+      if (change.effectiveDate > date) break
+      rate = change.annualRatePercent
+    }
+    return rate
+  }
+  const hasDatedFinancingEvents = rateChanges.length > 0 || fees.length > 0 || (input.commitmentFeeAnnualRatePercent ?? 0) > 0
+  const addDays = (date: string, days: number) => {
+    const parsed = parseIsoDateUtc(date)!
+    return dateOnlyUtc(new Date(parsed.getTime() + days * 86400000))
+  }
+  const segmentDays = (startDate: string, endDateExclusive: string) => {
+    const start = parseIsoDateUtc(startDate)!
+    const end = parseIsoDateUtc(endDateExclusive)!
+    return Math.max(0, (end.getTime() - start.getTime()) / 86400000)
+  }
+  const segmentInterest = (balance: number, annualRate: number, startDate: string, endDateExclusive: string, period: ProjectCalendarPeriod) => {
+    if (interestConvention) {
+      return balance * annualRate / 100 * loanYearFraction(startDate, endDateExclusive, interestConvention)
+    }
+    const days = segmentDays(startDate, endDateExclusive)
+    if (rateConversion === 'effective-annual-divided-by-frequency') {
+      const periodsPerYear = input.periodsPerYear as 1 | 2 | 4 | 12
+      const periodFraction=days/period.days*(period.partial?period.days/(dayCountBasis/periodsPerYear):1)
+      return balance * annualRate / 100 / periodsPerYear * periodFraction
+    }
+    return balance * (Math.pow(1 + annualRate / 100, days / dayCountBasis) - 1)
+  }
+  // A rate reset splits a period into effective-rate segments. The resulting
+  // period rate is the combined effective rate used by the annuity calculation.
+  if (rateChanges.length > 0) {
+    for (let index=0; index<periods.length; index++) {
+      const period=periods[index]
+      const endExclusive=input.datedDrawdowns?period.endDate:addDays(period.endDate,1)
+      const boundaries=[period.startDate,...rateChanges.map(item=>item.effectiveDate)
+        .filter(date=>date>period.startDate&&date<=period.endDate),endExclusive]
+        .sort().filter((date,i,array)=>i===0||date!==array[i-1])
+      let combinedFactor=1
+      let simpleFactor=0
+      for(let segment=0;segment<boundaries.length-1;segment++) {
+        const from=boundaries[segment],to=boundaries[segment+1]
+        const rate=effectiveRateForDate(from)
+        if(interestConvention) {
+          simpleFactor+=rate/100*loanYearFraction(from,to,interestConvention)
+        } else if(rateConversion==='effective-annual-divided-by-frequency') {
+          const periodsPerYear=input.periodsPerYear as 1|2|4|12
+          const periodFraction=segmentDays(from,to)/period.days*(period.partial?period.days/(dayCountBasis/periodsPerYear):1)
+          simpleFactor+=rate/100/periodsPerYear*periodFraction
+        } else {
+          combinedFactor*=Math.pow(1+rate/100,segmentDays(from,to)/dayCountBasis)
+        }
+      }
+      periodRates[index]=interestConvention||rateConversion==='effective-annual-divided-by-frequency'
+        ? simpleFactor
+        : combinedFactor-1
+    }
+  }
   let balance = input.openingBalance ?? 0
   let annuityPayment: number | null = null
   let equalPrincipalAmount: number | null = null
@@ -364,30 +457,66 @@ export function calculatePeriodicLoanSchedule(
   for (let index = 0; index < periods.length; index++) {
     const drawdown = input.drawdowns[index]
     const openingBalance = balance
+    if (input.facilityLimit != null && openingBalance + drawdown > input.facilityLimit + 0.01)
+      issues.push('Period ' + (index + 1) + ' drawdown exceeds the committed facility limit.')
     let interestAccrued: number
-    if (input.datedDrawdowns) {
+    let financingFeeExpense = 0
+    let commitmentFeeExpense = 0
+    let capitalizedFinancingFees = 0
+    if (input.datedDrawdowns || hasDatedFinancingEvents) {
       const period = periods[index]
-      const events = input.datedDrawdowns.filter(item => item.date >= period.startDate && item.date <= period.endDate)
-        .sort((a,b) => a.date.localeCompare(b.date))
-      let cursor = period.startDate
-      let interestBalance = openingBalance
-      interestAccrued = 0
-      for (const event of events) {
-        interestAccrued += interestBalance * (input.annualRatePercent / 100)
-          * loanYearFraction(cursor, event.date, interestConvention!)
-        interestBalance += event.amount
-        cursor = event.date
+      const events: {date:string;kind:'rate'|'drawdown'|'fee';amount:number;treatment?:'expense'|'capitalize'}[] = []
+      for(const item of input.datedDrawdowns??[]) if(item.date>=period.startDate&&item.date<=period.endDate) events.push({date:item.date,kind:'drawdown',amount:item.amount})
+      for(const item of rateChanges) if(item.effectiveDate>=period.startDate&&item.effectiveDate<=period.endDate) events.push({date:item.effectiveDate,kind:'rate',amount:item.annualRatePercent})
+      for(const item of fees) if(item.date>=period.startDate&&item.date<=period.endDate) events.push({date:item.date,kind:'fee',amount:item.amount,treatment:item.treatment})
+      if(!input.datedDrawdowns && drawdown>0) {
+        const midpoint=new Date(Date.parse(period.startDate+'T00:00:00Z')+Math.floor((period.days-1)/2)*86400000).toISOString().slice(0,10)
+        events.push({date:midpoint,kind:'drawdown',amount:drawdown})
       }
-      interestAccrued += interestBalance * (input.annualRatePercent / 100)
-        * loanYearFraction(cursor, period.endDate, interestConvention!)
+      events.sort((a,b)=>a.date.localeCompare(b.date)||({rate:0,drawdown:1,fee:2}[a.kind]-{rate:0,drawdown:1,fee:2}[b.kind]))
+      let cursor=period.startDate
+      let interestBalance=openingBalance
+      let committedAmount=openingBalance
+      let activeRate=effectiveRateForDate(period.startDate)
+      interestAccrued=0
+      // Exact dated drawdowns retain the engine's established end-exclusive accrual rule.
+      const endExclusive=input.datedDrawdowns?period.endDate:addDays(period.endDate,1)
+      const accrueUntil=(nextDate:string) => {
+        if(nextDate<=cursor) return
+        const accrued=segmentInterest(interestBalance,activeRate,cursor,nextDate,period)
+        interestAccrued+=accrued
+        if ((input.commitmentFeeAnnualRatePercent ?? 0) > 0 && input.facilityLimit != null) {
+          const unusedCommitment = Math.max(0, input.facilityLimit - committedAmount)
+          const days = segmentDays(cursor,nextDate)
+          commitmentFeeExpense += unusedCommitment * (input.commitmentFeeAnnualRatePercent as number) / 100 * days / dayCountBasis
+        }
+        // Effective-annual conversion represents a compounded effective rate.
+        // Explicit day-count conventions and frequency-divided rates remain simple.
+        if(!interestConvention && rateConversion==='effective-annual-by-actual-days')
+          interestBalance+=accrued
+        cursor=nextDate
+      }
+      for(const event of events) {
+        accrueUntil(event.date)
+        if(event.kind==='rate') activeRate=event.amount
+        else if(event.kind==='drawdown') { interestBalance+=event.amount; committedAmount+=event.amount }
+        else if(event.treatment==='capitalize') { capitalizedFinancingFees+=event.amount; interestBalance+=event.amount }
+        else financingFeeExpense+=event.amount
+      }
+      accrueUntil(endExclusive)
     } else {
       const interestBase = openingBalance + drawdown * 0.5
       interestAccrued = interestBase * periodRates[index]
+      if ((input.commitmentFeeAnnualRatePercent ?? 0) > 0 && input.facilityLimit != null) {
+        const averageUndrawn = Math.max(0, input.facilityLimit - (openingBalance + drawdown / 2))
+        commitmentFeeExpense = averageUndrawn * (input.commitmentFeeAnnualRatePercent as number) / 100 * periods[index].days / dayCountBasis
+      }
     }
+    financingFeeExpense += commitmentFeeExpense
     const beforePrincipal = index < firstPrincipalIndex
     const capitalizedInterest = beforePrincipal && input.capitalizeInterest ? interestAccrued : 0
     const interestExpense = capitalizedInterest > 0 ? 0 : interestAccrued
-    const availableBalance = openingBalance + drawdown + capitalizedInterest
+    const availableBalance = openingBalance + drawdown + capitalizedInterest + capitalizedFinancingFees
     let principal = 0
     const repaymentIndex = index - firstPrincipalIndex
     if (repaymentIndex >= 0 && repaymentIndex < input.termPeriods) {
@@ -398,6 +527,14 @@ export function calculatePeriodicLoanSchedule(
         principal = repaymentIndex === input.termPeriods - 1
           ? availableBalance
           : Math.min(availableBalance, equalPrincipalAmount)
+      } else if (input.repaymentMethod === 'custom') {
+        const scheduled = customRepayments.find(item => item.period === index + 1)?.amount ?? 0
+        principal = input.balloonAtMaturity && repaymentIndex === input.termPeriods - 1
+          ? availableBalance
+          : Math.min(availableBalance, scheduled)
+        if (scheduled > availableBalance + 0.01) issues.push('Custom principal repayment exceeds the outstanding balance in period ' + (index + 1) + '.')
+        if (!input.balloonAtMaturity && repaymentIndex === input.termPeriods - 1 && Math.abs(principal - availableBalance) > 0.01)
+          issues.push('Custom repayment schedule must fully repay the balance at maturity or enable the balloon payment.')
       } else {
         if (annuityPayment === null) {
           let discountFactor = 1
@@ -421,12 +558,15 @@ export function calculatePeriodicLoanSchedule(
       periodRatePercent: periodRates[index] * 100,
       interestExpense,
       capitalizedInterest,
+      financingFeeExpense,
+      commitmentFeeExpense,
+      capitalizedFinancingFees,
       principal,
       closingBalance: balance,
-      debtService: interestExpense + principal,
+      debtService: interestExpense + financingFeeExpense + principal,
     })
   }
-  return { rows, valid: true, issues: [] }
+  return issues.length ? { rows: [], valid: false, issues } : { rows, valid: true, issues: [] }
 }
 
 
@@ -456,6 +596,8 @@ export type PeriodicProjectFinanceInput = {
   openingTaxLoss?: number
   openingUnleveredTaxLoss?: number
   loans: PeriodicProjectLoan[]
+  /** Minimum covenant DSCR as a multiple (e.g. 1.20); breaches are warnings, not automatic cash-flow changes. */
+  minimumDscr?: number
   discountRatePercent?: number | null
   equityDiscountRatePercent?: number | null
   valuationDate?: string
@@ -495,6 +637,7 @@ export type PeriodicProjectFinanceRow = {
   assetBookValueDisposed: number
   interestExpense: number
   capitalizedInterest: number
+  capitalizedFinancingFees: number
   principal: number
   debtDrawdown: number
   debtService: number
@@ -514,6 +657,7 @@ export type PeriodicProjectFinanceRow = {
   salvageGainLoss: number
   cfads: number
   dscr: number | null
+  dscrCovenantStatus: 'not-tested' | 'pass' | 'breach'
   projectFreeCashFlow: number
   equityFreeCashFlow: number
 }
@@ -707,10 +851,12 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     npvEquity: null, irrEquity: null, mirrEquity: null, totalDebtDrawdown: 0,
     totalEquityContribution: 0, totalCapitalizedInterest: 0, peakWorkingCapital: 0, warnings
   })
+  if (input.minimumDscr != null && (!validFinite(input.minimumDscr) || input.minimumDscr <= 0)) warnings.push('Minimum DSCR covenant must be a positive finite multiple.')
   if (!periods.length || (input.salvageValue != null && (!validFinite(input.salvageValue) || input.salvageValue < 0)) ||
       (input.salvageBookValue != null && (!validFinite(input.salvageBookValue) || input.salvageBookValue < 0)) ||
       (dayCountBasis !== 360 && dayCountBasis !== 365) ||
       !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12 ||
+      (input.minimumDscr != null && (!validFinite(input.minimumDscr) || input.minimumDscr <= 0)) ||
       !['period-end','mid-period'].includes(cashFlowTiming)) {
     warnings.push('Project periods, fiscal-year start month, day-count basis or cash-flow timing are invalid.')
     return empty()
@@ -851,8 +997,12 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   let priorWorkingCapital = Math.max(0, input.openingWorkingCapital ?? 0)
   for (let index = 0; index < periods.length; index++) {
     const loanRows = Object.values(loanSchedules).map(schedule => schedule[index])
-    const interestExpense = loanRows.reduce((sum,row)=>sum+row.interestExpense,0)
+    // Financing fees paid as period expenses are deductible financing costs;
+    // capitalized fees remain separately visible in each loan schedule and are
+    // included in the period's capitalized financing balance.
+    const interestExpense = loanRows.reduce((sum,row)=>sum+row.interestExpense+row.financingFeeExpense,0)
     const capitalizedInterest = loanRows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
+    const capitalizedFinancingFees = loanRows.reduce((sum,row)=>sum+row.capitalizedFinancingFees,0)
     const principal = loanRows.reduce((sum,row)=>sum+row.principal,0)
     const debtDrawdown = loanRows.reduce((sum,row)=>sum+row.drawdown,0)
     const assetSale = assetSalesByPeriod[index]
@@ -888,6 +1038,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
+    const dscrCovenantStatus: 'not-tested' | 'pass' | 'breach' = input.minimumDscr == null || dscr == null
+      ? 'not-tested' : dscr + 1e-9 >= input.minimumDscr ? 'pass' : 'breach'
+    if (dscrCovenantStatus === 'breach') warnings.push('Minimum DSCR covenant breached in period ' + (index + 1) + ': actual ' + dscr!.toFixed(4) + ', minimum ' + input.minimumDscr!.toFixed(4) + '.')
     const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
@@ -899,12 +1052,12 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
-      interestExpense,capitalizedInterest,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
+      interestExpense,capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
       equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
-      salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,projectFreeCashFlow,equityFreeCashFlow
+      salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,dscrCovenantStatus,projectFreeCashFlow,equityFreeCashFlow
     })
     priorWorkingCapital = closingWorkingCapital
   }
@@ -1271,7 +1424,7 @@ export function buildPeriodicThreeFinancialStatements(
   for (let index = 0; index < result.rows.length; index++) {
     const row = result.rows[index]
     const loanClosing = Object.values(result.loanSchedules).reduce((sum, schedule) => sum + (schedule[index]?.closingBalance ?? 0), 0)
-    const closingDebt = Object.keys(result.loanSchedules).length ? openingDebtBase + loanClosing : debt + row.debtDrawdown + row.capitalizedInterest - row.principal
+    const closingDebt = Object.keys(result.loanSchedules).length ? openingDebtBase + loanClosing : debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
     const cashOperatingCosts = row.variableCost + row.fixedCost
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
@@ -1288,7 +1441,7 @@ export function buildPeriodicThreeFinancialStatements(
     const closingWorkingCapital = row.closingWorkingCapital
     const closingNetFixedAssets = netFixedAssets + row.fixedInvestment + row.maintenanceCapex -
       row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed
-    const closingPreOperatingAssets = deferredPreOperatingAssets + row.preOperatingCost + row.capitalizedInterest
+    const closingPreOperatingAssets = deferredPreOperatingAssets + row.preOperatingCost + row.capitalizedInterest + row.capitalizedFinancingFees
     const closingPaidInCapital = paidInCapital + row.equityContribution + row.equityWorkingCapitalContribution
     const closingRetainedEarnings = retainedEarnings + netIncome
     const totalAssets = closingCash + closingWorkingCapital + closingNetFixedAssets + closingPreOperatingAssets
@@ -1298,11 +1451,11 @@ export function buildPeriodicThreeFinancialStatements(
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
     const movementChecks = {
       cash: closingCash - cash - netChangeInCash,
-      debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest - row.principal),
+      debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal),
       netWorkingCapital: closingWorkingCapital - netWorkingCapital - row.changeInWorkingCapital,
       netFixedAssets: closingNetFixedAssets - netFixedAssets -
         (row.fixedInvestment + row.maintenanceCapex - row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed),
-      deferredPreOperatingAssets: closingPreOperatingAssets - deferredPreOperatingAssets - row.preOperatingCost - row.capitalizedInterest,
+      deferredPreOperatingAssets: closingPreOperatingAssets - deferredPreOperatingAssets - row.preOperatingCost - row.capitalizedInterest - row.capitalizedFinancingFees,
       paidInCapital: closingPaidInCapital - paidInCapital - row.equityContribution - row.equityWorkingCapitalContribution,
       retainedEarnings: closingRetainedEarnings - retainedEarnings - netIncome,
     }
