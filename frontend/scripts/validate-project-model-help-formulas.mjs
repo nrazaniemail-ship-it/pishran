@@ -77,7 +77,7 @@ assert.ok(Math.abs(f.calculateRelativeInflationFactor([10,10],[5,5],1)-1.0476190
 assert.ok(Math.abs(f.calculateCurrentExchangeRate(2,[10],[5],1)-2.0952380952380953)<1e-10)
 assert.equal(f.calculateInflatedEscalatedPrice({enteredPrice:100,inflationRatesPercent:[5,6],periodIndex:0,escalationPercent:2,firstYearEscalator:0}),105)
 assert.ok(Math.abs(f.calculateInflatedEscalatedPrice({enteredPrice:100,inflationRatesPercent:[5,6],periodIndex:1,escalationPercent:2,firstYearEscalator:1})-115.56)<1e-6)
-assert.equal(f.calculateFixedAssetRevaluation(100,0,2,[10,10]),121)
+assert.ok(Math.abs(f.calculateFixedAssetRevaluation(100,0,2,[10,10])-121)<1e-9)
 assert.equal(f.calculateEconomicFinancialValue(10,'foreign',2),20)
 assert.equal(f.calculateEconomicFinancialValue(10,'local',1),10)
 assert.equal(f.calculateAdjustedMarketValue(100,0.8),80)
