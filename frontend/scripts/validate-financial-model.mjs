@@ -1457,4 +1457,17 @@ assert.ok(foundationPanel.includes('Project Start Date')
   && foundationPanel.includes('buildProjectCalendarPeriods')
   && foundationPanel.includes('Generated Financial Calendar'),
   'Project foundation must expose project dates, fiscal-year start month and generated-period preview')
+assert.ok(reportWizardSource.includes("valuationDate={m.foundation.planning.valuationDate}")
+  && reportWizardSource.includes("discountConvention={m.foundation.planning.discountConvention}"),
+  'Project reports and periodic finance must receive the same foundation valuation date and discount convention')
+assert.ok(reportVisualsSource.includes('COMFAR Output Reconciliation')
+  && reportVisualsSource.includes('generalSummaryNpvAt25')
+  && reportVisualsSource.includes('generalSummaryIrrPercent')
+  && reportVisualsSource.includes('comfarBasisMatches')
+  && reportVisualsSource.includes('period-count'),
+  'The report must disclose COMFAR NPV/IRR references and gate variances on matching assumptions')
+assert.ok(foundationPanel.includes('Period Discounting Convention')
+  && foundationPanel.includes('actual-days')
+  && foundationPanel.includes('period-count'),
+  'The project foundation must let users explicitly select actual-day or period-count discounting')
 console.log('PASS: industry-independent project foundation schema, blank defaults, validation and wizard persistence')
