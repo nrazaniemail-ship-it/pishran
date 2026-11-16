@@ -234,7 +234,6 @@ export function validateProjectModelCrossReferences(value:Pick<ProjectModelFinan
  if(productIds.some(id=>!id))errors.push('sales:blank-product-id')
  if(new Set(productIds).size!==productIds.length)errors.push('sales:duplicate-product-id')
  const knownProducts=new Set(productIds.filter(Boolean))
- const knownCosts=new Set(value.productionCosts.map(item=>item.id))
  value.productionCosts.forEach((cost,index)=>{
   if(cost.classification==='direct'&&cost.productId&&!knownProducts.has(cost.productId))
    errors.push('production-cost-'+index+':unknown-product-reference')
