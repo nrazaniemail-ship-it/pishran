@@ -1345,6 +1345,43 @@ assert.equal(commitmentFeeLoan.rows[0].financingFeeExpense,commitmentFeeLoan.row
   'Commitment fees must flow into financing expense exactly once')
 assert.ok(Math.abs(commitmentFeeLoan.rows[0].debtService-commitmentFeeLoan.rows[0].interestExpense-commitmentFeeLoan.rows[0].commitmentFeeExpense)<1e-8,
   'Commitment fees must be included in period debt service')
+// Capitalized fees consume the total-outstanding facility from their effective date.
+const capitalizedFeeCommitmentLoan=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:0,
+  drawdowns:[100,0],
+  datedDrawdowns:[{date:'2025-01-01',amount:100}],
+  repaymentMethod:'bullet',repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,
+  capitalizeInterest:false,interestConvention:'actual-365',
+  facilityLimit:200,commitmentFeeAnnualRatePercent:2,
+  fees:[{date:'2025-04-01',amount:20,treatment:'capitalize'}],
+},loanEventPeriods,365)
+assert.equal(capitalizedFeeCommitmentLoan.valid,true,capitalizedFeeCommitmentLoan.issues.join('; '))
+const expectedFeeAfterCapitalization=100*0.02*90/365+80*0.02*274/365
+assert.ok(Math.abs(capitalizedFeeCommitmentLoan.rows[0].commitmentFeeExpense-expectedFeeAfterCapitalization)<1e-8,
+  'Capitalized fees must reduce undrawn facility utilization only from their effective date')
+assert.equal(capitalizedFeeCommitmentLoan.rows[0].closingBalance,120,
+  'A capitalized fee must increase total outstanding debt and facility utilization')
+
+const capitalizedFeeOverLimit=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:0,
+  drawdowns:[100,0],
+  datedDrawdowns:[{date:'2025-01-01',amount:100}],
+  repaymentMethod:'bullet',repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,
+  capitalizeInterest:false,interestConvention:'actual-365',
+  facilityLimit:110,commitmentFeeAnnualRatePercent:0,
+  fees:[{date:'2025-04-01',amount:20,treatment:'capitalize'}],
+},loanEventPeriods,365)
+assert.equal(capitalizedFeeOverLimit.valid,false,
+  'A mid-period capitalized fee that takes total outstanding debt above the facility limit must be rejected')
+
+const capitalizedInterestOverLimit=engine.calculatePeriodicLoanSchedule({
+  annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
+  repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:true,
+  facilityLimit:105,
+},loanEventPeriods,365)
+assert.equal(capitalizedInterestOverLimit.valid,false,
+  'Period-end capitalized interest must not silently exceed the total-outstanding facility limit')
+
 const invalidCommitmentFee=engine.calculatePeriodicLoanSchedule({
   annualRatePercent:10,drawdowns:[100,0],repaymentMethod:'bullet',
   repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,
