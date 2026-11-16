@@ -1,5 +1,5 @@
 import type { ProjectCalendarPeriod, ProjectCurrency } from '../projects/projectFoundation'
-import type { PeriodicLoanRow } from './periodicFinancialEngine'
+import type { PeriodicLoanRow, PeriodicFinancialStatement } from './periodicFinancialEngine'
 
 export type PeriodicForeignCurrencyDebtInput = {
   /** Opening principal and capitalized charges in the foreign currency. */
@@ -253,4 +253,143 @@ export function translatePeriodicForeignCurrencyLoan(
     capitalizedFeesExchangeRates: rates,
     closingExchangeRates: rates,
   }, periods)
+}
+
+
+export type ForeignExchangeStatementPostingInput = {
+  statements: PeriodicFinancialStatement[]
+  debtTranslation: PeriodicForeignCurrencyDebtResult
+  taxRatesPercent: number[]
+  openingTaxLossCarryForward?: number
+  taxTreatment: 'deductible' | 'non-deductible'
+}
+
+export type ForeignExchangeStatementPostingResult = {
+  valid: boolean
+  statements: (PeriodicFinancialStatement & {
+    incomeStatement: PeriodicFinancialStatement['incomeStatement'] & { foreignExchangeGainLoss: number }
+  })[]
+  closingTaxLossCarryForward: number
+  issues: string[]
+}
+
+/**
+ * Posts debt remeasurement into an already-built local-currency statement set.
+ *
+ * Preconditions: the base statements' debt balances include the foreign debt at
+ * transaction-date carrying values, while debtTranslation contains only the
+ * remeasurement differences. FX gains/losses are non-cash; they adjust debt and
+ * retained earnings. Only the cash-tax difference changes cash. Tax deductibility
+ * and opening tax losses are explicit inputs, never inferred.
+ */
+export function postForeignExchangeIntoThreeStatements(
+  input: ForeignExchangeStatementPostingInput,
+): ForeignExchangeStatementPostingResult {
+  const issues: string[] = []
+  const { statements, debtTranslation, taxRatesPercent } = input
+  if (!Array.isArray(statements) || !statements.length)
+    issues.push('At least one linked financial statement is required.')
+  if (!debtTranslation?.valid || debtTranslation.rows.length !== statements.length)
+    issues.push('A valid foreign-currency debt translation row is required for every statement period.')
+  if (taxRatesPercent.length !== statements.length ||
+      taxRatesPercent.some(rate => !finite(rate) || rate < 0 || rate > 100))
+    issues.push('A valid tax rate from 0 to 100 percent is required for every statement period.')
+  const openingLoss = input.openingTaxLossCarryForward ?? 0
+  if (!finite(openingLoss) || openingLoss < 0)
+    issues.push('Opening tax loss carry-forward must be finite and non-negative.')
+  if (input.taxTreatment !== 'deductible' && input.taxTreatment !== 'non-deductible')
+    issues.push('FX tax treatment must be explicitly deductible or non-deductible.')
+  if (issues.length) return { valid: false, statements: [], closingTaxLossCarryForward: Number.NaN, issues }
+
+  let taxLossCarryForward = openingLoss
+  let cumulativeFx = 0
+  let cumulativeCashTaxAdjustment = 0
+  let cumulativeRetainedEarningsAdjustment = 0
+  const posted: ForeignExchangeStatementPostingResult['statements'] = []
+
+  for (let index = 0; index < statements.length; index++) {
+    const statement = statements[index]
+    const fxLoss = debtTranslation.rows[index].foreignExchangeLossLocal
+    const taxRate = taxRatesPercent[index]
+    if (!finite(fxLoss) || statement.period !== debtTranslation.rows[index].period) {
+      issues.push('FX translation and financial statement periods do not reconcile at period ' + (index + 1) + '.')
+      break
+    }
+    const taxableProfitBeforeLoss = statement.incomeStatement.profitBeforeTax
+      - (input.taxTreatment === 'deductible' ? fxLoss : 0)
+    const taxableProfitAfterLoss = taxableProfitBeforeLoss - taxLossCarryForward
+    const tax = Math.max(0, taxableProfitAfterLoss) * taxRate / 100
+    taxLossCarryForward = taxableProfitAfterLoss < 0 ? -taxableProfitAfterLoss : 0
+    const taxDelta = tax - statement.incomeStatement.tax
+    const profitBeforeTax = statement.incomeStatement.profitBeforeTax - fxLoss
+    const netIncome = profitBeforeTax - tax
+    const netIncomeDelta = netIncome - statement.incomeStatement.netIncome
+    const periodCashAdjustment = -taxDelta
+
+    cumulativeFx += fxLoss
+    cumulativeCashTaxAdjustment += periodCashAdjustment
+    cumulativeRetainedEarningsAdjustment += netIncomeDelta
+
+    const openingBalances = {
+      ...statement.openingBalances,
+      cash: statement.openingBalances.cash + cumulativeCashTaxAdjustment - periodCashAdjustment,
+      debt: statement.openingBalances.debt + cumulativeFx - fxLoss,
+      retainedEarnings: statement.openingBalances.retainedEarnings +
+        cumulativeRetainedEarningsAdjustment - netIncomeDelta,
+    }
+    const cash = statement.balanceSheet.cash + cumulativeCashTaxAdjustment
+    const debt = statement.balanceSheet.debt + cumulativeFx
+    const retainedEarnings = statement.balanceSheet.retainedEarnings + cumulativeRetainedEarningsAdjustment
+    const totalAssets = statement.balanceSheet.totalAssets + cumulativeCashTaxAdjustment
+    const totalLiabilities = statement.balanceSheet.totalLiabilities + cumulativeFx
+    const totalEquity = statement.balanceSheet.totalEquity + cumulativeRetainedEarningsAdjustment
+    const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
+    const balanceDifference = totalAssets - totalLiabilitiesAndEquity
+    const priorBalanceDifference = statement.balanceSheet.balanceDifference
+    const reconciled = Math.abs(balanceDifference) <= Math.max(0.01, Math.abs(priorBalanceDifference) + 0.01)
+
+    const cashFlowStatement = {
+      ...statement.cashFlowStatement,
+      operatingCashFlow: statement.cashFlowStatement.operatingCashFlow + netIncomeDelta + fxLoss,
+      netChangeInCash: statement.cashFlowStatement.netChangeInCash + periodCashAdjustment,
+      closingCash: statement.cashFlowStatement.closingCash + cumulativeCashTaxAdjustment,
+    }
+    const movementChecks = {
+      ...statement.movementChecks,
+      cash: statement.movementChecks.cash + periodCashAdjustment,
+      debt: statement.movementChecks.debt + fxLoss,
+      retainedEarnings: statement.movementChecks.retainedEarnings + netIncomeDelta,
+    }
+    posted.push({
+      ...statement,
+      openingBalances,
+      incomeStatement: {
+        ...statement.incomeStatement,
+        foreignExchangeGainLoss: -fxLoss,
+        profitBeforeTax,
+        tax,
+        netIncome,
+      },
+      cashFlowStatement,
+      balanceSheet: {
+        ...statement.balanceSheet,
+        cash,
+        debt,
+        totalAssets,
+        totalLiabilities,
+        retainedEarnings,
+        totalEquity,
+        totalLiabilitiesAndEquity,
+        balanceDifference,
+        reconciled,
+      },
+      movementChecks,
+    })
+    if (!reconciled) {
+      issues.push('Foreign-exchange posting did not preserve the balance sheet in period ' + (index + 1) + '.')
+      break
+    }
+  }
+  if (issues.length) return { valid: false, statements: [], closingTaxLossCarryForward: Number.NaN, issues }
+  return { valid: true, statements: posted, closingTaxLossCarryForward: taxLossCarryForward, issues: [] }
 }
