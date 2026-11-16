@@ -1424,11 +1424,13 @@ export function calculatePeriodicComfarAssetLifecycle(
         // (for example, a partial first year followed by a full year inside an
         // annual reporting period). Accumulate every segment due in this period.
         for(const segment of depreciationSegments){
-          if(segment.endDate.getTime()<periodStart.getTime()||segment.endDate.getTime()>periodEnd.getTime())continue
+          const dueAtPeriodEnd=segment.endDate.getTime()>=periodStart.getTime()&&segment.endDate.getTime()<=periodEnd.getTime()
+          const disposedInsideSegment=!!(saleInThisPeriod&&saleDate&&
+            saleDate.getTime()>=segment.startDate.getTime()&&saleDate.getTime()<=segment.endDate.getTime())
+          if(!dueAtPeriodEnd&&!disposedInsideSegment)continue
           if(saleDate&&segment.startDate.getTime()>saleDate.getTime())continue
           let segmentCharge=segment.amount
-          if(saleInThisPeriod&&saleDate&&saleDate.getTime()<segment.endDate.getTime()){
-            if(saleDate.getTime()<segment.startDate.getTime())continue
+          if(disposedInsideSegment&&saleDate&&saleDate.getTime()<segment.endDate.getTime()){
             const elapsedMonths=monthsElapsedToBalanceDate(segment.startDate,saleDate)
             segmentCharge=segment.amount*elapsedMonths/segment.months
           }
