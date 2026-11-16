@@ -566,7 +566,9 @@ export default function AdvancedFinancePanel(props: Props) {
     {result.warnings.length>0&&<ul className="fw-checklist">{result.warnings.map((w,i)=><li key={i}>{tr(w)}</li>)}</ul>}
 
     <h4>{t('۵. تحلیل حساسیت چندمتغیره','5. Multivariable Sensitivity Analysis')}</h4>
-    <p className="fw-hint">{tr('جدول پایهٔ حجم/قیمت در کنار تحلیل دوره‌ای مدل یکپارچه نمایش داده می‌شود؛ شوک‌ها روی جریان‌های دوره‌ایِ پس از اتصال فرم‌ها اعمال می‌شوند.')}</p>
+    {periodicSensitivityResult?.valid
+      ?<p className="fw-hint">{tr('حساسیت دوره‌ای بر مبنای جریان‌های پس از اتصال فرم‌های پروژه محاسبه شده است؛ جدول سالانهٔ قدیمی در این حالت نمایش داده نمی‌شود.')}</p>
+      :<p className="fw-hint">{tr('تحلیل دوره‌ای در دسترس نیست؛ جدول حجم/قیمت زیر صرفاً محاسبهٔ سالانهٔ پایه است و جایگزین خروجی دوره‌ای فرم‌های تخصصی نیست.')}</p>}
     {periodicSensitivityResult?.valid&&<div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('متغیر')}</th><th>{tr('کاهش ۱۰٪')}</th><th>{tr('مبنا')}</th><th>{tr('افزایش ۱۰٪')}</th></tr></thead><tbody>{(['revenue','variable-cost','fixed-cost','investment','working-capital','tax-rate','discount-rate','loan-interest-rate'] as PeriodicSensitivityVariable[]).filter(variable=>periodicSensitivityResult.points.some(point=>point.variable===variable)).map(variable=>{
       const points=periodicSensitivityResult.points.filter(point=>point.variable===variable)
       const down=points.find(point=>point.variationPercent===-10)
@@ -575,7 +577,7 @@ export default function AdvancedFinancePanel(props: Props) {
       return <tr key={variable}><th>{labels[variable]}</th><td>{down?.metric==null?'—':money(down.metric)}</td><td>{money(periodicSensitivityResult.baseline.npvProject??NaN)}</td><td>{up?.metric==null?'—':money(up.metric)}</td></tr>
     })}</tbody></table></div>}
     {periodicSensitivityResult&&!periodicSensitivityResult.valid&&<p className="fw-hint">{tr(periodicSensitivityResult.issues.join('; '))}</p>}
-    <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('حجم \\ قیمت')}</th>{[-20,-10,0,10,20].map(v=><th key={v}>{v}%</th>)}</tr></thead><tbody>{sensitivity.map((row,i)=><tr key={i}><th>{[-20,-10,0,10,20][i]}%</th>{row.map((cell,j)=><td key={j}>{cell.npv==null?'—':money(cell.npv)}</td>)}</tr>)}</tbody></table></div>
+    {!periodicSensitivityResult?.valid&&<div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('حجم \\ قیمت')}</th>{[-20,-10,0,10,20].map(v=><th key={v}>{v}%</th>)}</tr></thead><tbody>{sensitivity.map((row,i)=><tr key={i}><th>{[-20,-10,0,10,20][i]}%</th>{row.map((cell,j)=><td key={j}>{cell.npv==null?'—':money(cell.npv)}</td>)}</tr>)}</tbody></table></div>}
     <h4>{t('۶. سناریوهای خوش‌بینانه و بدبینانه','6. Optimistic & Pessimistic Scenarios')}</h4>
     {periodicSensitivityResult?.valid?<div className="fw-grid">
       <div className="fw-result">{tr('بدبینانه')} · NPV {money(periodicSensitivityResult.pessimistic.npvProject??NaN)} · IRR {periodicSensitivityResult.pessimistic.irrProject==null?'—':money(periodicSensitivityResult.pessimistic.irrProject*100)+'٪'}</div>
