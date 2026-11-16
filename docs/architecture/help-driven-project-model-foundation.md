@@ -12,18 +12,21 @@ The model is organized as a project tree, not as a single long form. Its standar
 2. Planning horizon and period calendar
 3. Products and capacity definitions
 4. Currencies and period exchange rates
-5. Optional cost-centre structure
-6. Optional inflation indices
-7. Optional joint-venture partners
-8. Discounting and valuation conventions
+5. Optional cost-centre structure and allocation keys
+6. Optional inflation indices and currency escalation
+7. Optional joint-venture partners and share classes
+8. Discounting, short NPV and MIRR conventions
 9. Fixed investment and asset register
-10. Production costs (direct and indirect)
-11. Production and sales programme
-12. Working capital
-13. Sources of finance
-14. Taxes and allowances
-15. Conditional starting balances for expansion/rehabilitation
-16. Optional economic analysis
+10. Pre-production expenditure
+11. Production costs (direct and indirect)
+12. Product-specific sales and production programme
+13. Working capital by inventory, receivables, cash and payables
+14. Equity, grants, long-term loans and short-term finance
+15. Profit distribution and dividend repatriation
+16. Taxes, progressive brackets, holidays, losses and allowances
+17. Conditional starting balances for expansion/rehabilitation
+18. Optional economic global parameters, input/output adjustments and indirect effects
+19. Sensitivity analysis and incremental analysis
 
 The optional modules are activated explicitly. Their absence must not be interpreted as a zero-valued assumption or as a completed input.
 
@@ -43,7 +46,7 @@ The optional modules are activated explicitly. Their absence must not be interpr
 
 ## Current implementation
 
-`frontend/src/features/projects/projectModelSchema.ts` provides the initial typed module tree, conditional module visibility, empty draft factory, common financial-item metadata, and quantity/price/total derivation.
+`frontend/src/features/projects/projectModelSchema.ts` provides the typed module tree, conditional module visibility, empty draft factory, common financial-item metadata, and quantity/price/total derivation. `projectModelHelpForms.ts` supplies the complete reference-mapped form catalogue and validation, and `ProjectModelHelpCoveragePanel.tsx` renders the catalogue as editable forms.
 
 `frontend/scripts/validate-project-model-schema.mjs` checks that:
 - a new draft contains no seeded project data;
@@ -68,16 +71,24 @@ UNIDO, *COMFAR III Expert Reference Manual*, especially chapter VI (Data Structu
 
 The wizard now stores a separate `financialForms` draft alongside the legacy feasibility model. The draft is initialized empty for every new project and is backfilled as empty when older saved projects are loaded, so the schema migration does not overwrite prior user-entered project data.
 
-The editable form panel currently covers:
-- Asset register, dated acquisitions, asset-level depreciation method/life/rate/salvage percentage, and disposal events.
-- Direct and indirect cost items, product association, nominal-capacity or per-unit basis, fixed/variable split, standard inputs and period adjustments.
-- Product sales by period, net price, sales tax, subsidy and finished-goods closing quantity.
-- Working-capital components, days coverage, turnover coefficient, valuation basis and dated balances.
-- Loan facilities, repayment type/interval, dated drawdowns, custom profile movements, dated rate resets, capitalization share and fee items.
-- Tax system, period tax rates, allowances and loss carry-forward settings.
+The reference-mapped editable form catalogue covers:
+- Project status, class, analysis level and optional modules; construction/start-up/production horizon and period frequency.
+- Multiple products and nominal capacities; local/foreign currencies, accounting currency/unit and dated exchange rates.
+- Six cost-centre groups, cost-centre hierarchy, standard and user-defined indirect-cost allocation keys.
+- Currency-specific inflation, joint-venture partners, equity classes, paid-in/refunded capital, preferred dividends and repatriation.
+- Total-investment/equity discount rates, short NPV length, reference point, MIRR borrowing and reinvestment rates.
+- Fixed assets, currency/origin, dated acquisitions, all four depreciation methods, depreciation start, life/rate/scrap, asset disposal; separate pre-production expenditure.
+- Direct/indirect production costs, nominal-capacity and per-unit standard cost modes, fixed/variable split, sales/production basis, annual adjustments and initial stocks.
+- Product-specific sales quantities, prices, taxes/duties, subsidies and finished-goods balances.
+- Working-capital units/value modes, materials, supplies, utilities, WIP, finished products, receivables, cash, payables, initial stocks, starting balances and short-term deposits.
+- Equity, grants/subsidies, long-/short-term loan conditions, dated drawdowns/profile repayments/rate resets, interest capitalization and depreciation, fee bases/currency/payment/depreciation, and profit distribution.
+- Progressive tax brackets by period, tax holidays, loss carry-forward, investment/depreciation allowances and local/foreign depreciation adjustments.
+- Expansion/rehabilitation opening assets, inventories, receivables, cash, deposits, payables, debt and equity.
+- Economic method, numeraire, official/shadow FX, standard conversion factor, economic discount rate, trade categories, price adjustment factors, taxes/subsidies, foreign loans, indirect effects and employment.
+- Global sensitivity, target IRR/NPV searches, parametric chart variables and incremental-analysis perspectives.
 
 The common quantity / unit-price / total rule is applied interactively to asset acquisitions, standard cost inputs and period cost adjustments. Only the missing value is derived when exactly two values are present.
 
-`frontend/src/features/projects/projectModelFormulaRules.ts` contains independent, pure calculation primitives for nominal-capacity costs, per-unit costs, 360-day working-capital turnover and movements, asset depreciation methods, annuity repayments and debt roll-forward. The regression suite checks these formulas, including zero-interest loans and the distinction between straight-line-to-zero and straight-line-to-salvage.
+`frontend/src/features/projects/projectModelFormulaRules.ts` retains the original asset depreciation and debt primitives. `projectModelHelpFormulaRules.ts` adds reference-based cost build-up, working-capital turnover/movement, the default sales-production inventory bridge, progressive tax, loss carry-forward, segmented 30/360 loan interest, fee bases, NPV/MIRR timing, dividend priority, asset disposal, foreign-currency debt adjustment, automatic construction equity/operating overdraft and short-term deposit interest. The regression suites exercise these formula primitives. The Linear to Zero method uses the original-book-value annual charge and preserves the terminal scrap value through the final-period adjustment, as specified in XI.H; it is not an instruction to force book value to zero.
 
 **Calculation boundary:** these new forms are persisted and validated, but they are not yet the authoritative inputs to the existing project cash-flow engine or the three financial statements. The formula primitives are separately tested. The next integration phase must map validated form data to the calculation graph and reconcile every period with a genuine COMFAR output file. Until that work is completed, these new form entries must not be presented as recalculated project metrics.
