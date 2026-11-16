@@ -781,6 +781,14 @@ assert.ok(feasibilityWizardSource.includes('partnerDistributionPercent={m.partne
   && feasibilityWizardSource.includes('partnerFinanceResult={reportPartnerFinance}')
   && advancedFinanceSource.includes('Partner net CF'),
   'Joint-venture partner shares and distribution policy must connect to period-level equity cash flows')
+assert.ok(projectReportSource.includes('Project Technical & Cost Form Details')
+  && projectReportSource.includes('Technical Parameters')
+  && projectReportSource.includes('Material Balance & Feed')
+  && feasibilityWizardSource.includes('technicalParameters={m.technical}')
+  && feasibilityWizardSource.includes('materialBalance={m.balance}')
+  && feasibilityWizardSource.includes('capexItems={m.capex}')
+  && feasibilityWizardSource.includes('opexItems={m.opex}'),
+  'Project reports must include the populated raw and specialist technical, material-balance, utility, CAPEX and OPEX forms')
 assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   && projectReportSource.includes('periodicResult.rows.map')
   && projectReportSource.includes('Joint-Venture Partner Cash-Flow Allocation')
