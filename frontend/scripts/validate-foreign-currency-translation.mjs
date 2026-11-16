@@ -44,6 +44,6 @@ assert.equal(module.calculatePeriodicForeignCurrencyDebt({
   drawdowns: [0], principalRepayments: [0], capitalizedInterest: [0],
   drawdownExchangeRates: [1], repaymentExchangeRates: [1],
   capitalizedInterestExchangeRates: [1], closingExchangeRates: [1],
-}, [{ index: 1, startDate: '2025-01-01', endDate: '2025-06-30', days: 181, partial: false }]).valid,
+}, [{ index: 1, startDate: '2025-01-01', endDate: '2025-06-30', days: 180, partial: false }]).valid,
 false, 'Invalid calendar day counts must be rejected')
 console.log('Periodic foreign-currency translation validation passed.')
