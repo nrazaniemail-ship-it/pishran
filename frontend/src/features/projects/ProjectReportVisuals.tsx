@@ -355,11 +355,13 @@ export default function ProjectReportVisuals(props: Props) {
       <p className="fw-hint">{t('اختلاف کنترل تخصیص کل (جمع جریان نقدی خالص شرکا به‌علاوه وجه نقد نگه‌داشته‌شده منهای جریان نقدی کل سهامداران): ','Allocation reconciliation variance: ')}<b>{fmtValue(props.partnerFinanceResult.allocationReconciliationVariance)}</b> {project.currency}. {t('مقدار مورد انتظار صفر است.','Expected value is zero.')}</p>
       <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
         <th>{t('شریک','Partner',language)}</th><th>{t('آورده قراردادی','Declared capital',language)}</th>
+        <th>{t('آورده مورد انتظار بر اساس سهم','Expected capital by share',language)}</th><th>{t('اختلاف آورده شریک','Partner capital variance',language)}</th>
         <th>{t('جریان نقدی منفی تخصیص‌یافته','Allocated negative cash flow',language)}</th>
         <th>{t('توزیع جریان نقدی مثبت','Positive cash flow distribution',language)}</th>
         <th>{t('خالص جریان نقدی شریک','Partner net cash flow',language)}</th>
       </tr></thead><tbody>{props.partnerFinanceResult.rows.map(row=><tr key={row.partnerId}>
         <td>{row.partnerName}</td><td>{fmtValue(row.declaredCapitalContribution)}</td>
+        <td>{fmtValue(row.expectedCapitalContribution)}</td><td>{fmtValue(row.capitalContributionVariance)}</td>
         <td>{fmtValue(row.negativeCashFlowAllocation)}</td><td>{fmtValue(row.positiveCashFlowDistribution)}</td><td>{fmtValue(row.netCashFlow)}</td>
       </tr>)}</tbody></table></div>
       <div style={{overflowX:'auto',maxHeight:360}}><table className="fw-table"><thead><tr>
