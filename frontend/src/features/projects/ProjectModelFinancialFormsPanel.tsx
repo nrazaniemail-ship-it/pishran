@@ -4,8 +4,9 @@ import {
  createBlankLoanFacilityFormDraft, type ProjectModelFinancialFormDrafts,
  type FixedAssetFormDraft, type ProductionCostFormDraft,
  type WorkingCapitalComponentFormDraft, type LoanFacilityFormDraft,
- validateProjectModelFinancialFormDrafts, type CommonFinancialItemMetadata
+ validateProjectModelFinancialFormDrafts
 } from './projectModelFormDrafts'
+import type { CommonFinancialItemMetadata } from './projectModelSchema'
 
 type Props={value:ProjectModelFinancialFormDrafts;onChange:(value:ProjectModelFinancialFormDrafts)=>void;language?:'fa'|'en'}
 const parseNumber=(value:string):number|null=>value.trim()===''?null:Number.isFinite(Number(value))?Number(value):null
