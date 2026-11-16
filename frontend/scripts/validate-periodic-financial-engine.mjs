@@ -569,7 +569,7 @@ const openingDebtWithScheduledFacility = engine.calculateIntegratedPeriodicFinan
 })
 assert.equal(openingDebtWithScheduledFacility.valid,true,openingDebtWithScheduledFacility.warnings.join('; '))
 const openingDebtWithFacilityStatements = engine.buildPeriodicThreeFinancialStatements(
-  openingDebtWithScheduledFacility,{cash:100,debt:150,paidInCapital:50},
+  openingDebtWithScheduledFacility,{cash:200,debt:150,paidInCapital:50},
 )
 assert.equal(openingDebtWithFacilityStatements.length,4,
   'Existing opening debt must include the opening balance of every modelled loan facility')
@@ -578,7 +578,7 @@ assert.deepEqual(openingDebtWithFacilityStatements.map(row=>row.balanceSheet.deb
 assert.ok(openingDebtWithFacilityStatements.every(row=>row.balanceSheet.reconciled),
   'Three statements must reconcile when opening debt contains both scheduled and legacy facilities')
 assert.equal(engine.buildPeriodicThreeFinancialStatements(
-  openingDebtWithScheduledFacility,{cash:100,debt:50,paidInCapital:50},
+  openingDebtWithScheduledFacility,{cash:200,debt:50,paidInCapital:50},
 ).length,0,
   'Statement generation must reject a scheduled opening loan balance that exceeds the opening debt liability')
 assert.equal(engine.buildPeriodicThreeFinancialStatements({...integratedPeriodic,valid:false}).length,0,
