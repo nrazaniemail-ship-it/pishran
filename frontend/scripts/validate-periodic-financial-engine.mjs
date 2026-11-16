@@ -1443,6 +1443,24 @@ const integratedCombinedLoan=engine.calculateIntegratedPeriodicFinance({
 assert.equal(integratedCombinedLoan.valid,true,integratedCombinedLoan.warnings.join('; '))
 assert.deepEqual(integratedCombinedLoan.loanSchedules['combined-floating-capitalized-custom'],combinedLoanOracle.rows,
   'Integrated project finance must preserve the independently verified combined loan schedule')
+const integratedLoanRows=integratedCombinedLoan.loanSchedules['combined-floating-capitalized-custom']
+assert.ok(integratedCombinedLoan.rows.every((row,index)=>
+  Math.abs(row.commitmentFeeExpense-integratedLoanRows[index].commitmentFeeExpense)<1e-8),
+  'Project-period output must expose commitment fees separately without losing their loan-level amounts')
+assert.ok(integratedCombinedLoan.rows.every((row,index)=>
+  Math.abs(row.financingFeeExpense-(integratedLoanRows[index].financingFeeExpense-integratedLoanRows[index].commitmentFeeExpense))<1e-8),
+  'Other cash financing fees must exclude commitment fees to prevent double counting')
+assert.ok(integratedCombinedLoan.rows.every((row,index)=>
+  Math.abs(row.interestExpense-(integratedLoanRows[index].interestExpense+integratedLoanRows[index].financingFeeExpense))<1e-8),
+  'All-in deductible finance expense must include interest, cash fees and commitment fees exactly once')
+assert.ok(integratedCombinedLoan.rows.every((row,index)=>
+  Math.abs(row.debtService-integratedLoanRows[index].debtService)<1e-8),
+  'Integrated debt service and DSCR denominator must preserve loan-level cash debt service')
+assert.ok(integratedCombinedLoan.rows.every(row=>
+  row.dscr===null || Math.abs(row.dscr-row.cfads/row.debtService)<1e-10),
+  'Period DSCR must use integrated CFADS divided by the full debt service including commitment fees')
+
+
 const integratedCombinedStatements=engine.buildPeriodicThreeFinancialStatements(integratedCombinedLoan)
 assert.ok(integratedCombinedStatements.every(row=>row.balanceSheet.reconciled),
   'Combined floating-rate, capitalized-fee and custom-repayment financing must reconcile all three statements')
