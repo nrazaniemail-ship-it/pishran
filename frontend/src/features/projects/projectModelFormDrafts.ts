@@ -79,6 +79,44 @@ export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{re
  capitalizedInterestPercent:null,capitalizeUntilDate:'',fees:[]
 }}
 
+export type OpeningBalanceSheetDraft={
+ enabled:boolean
+ cash:number|null
+ inventory:number|null
+ workInProgress:number|null
+ finishedGoods:number|null
+ receivables:number|null
+ otherCurrentAssets:number|null
+ tradePayables:number|null
+ otherCurrentLiabilities:number|null
+ grossFixedAssets:number|null
+ accumulatedDepreciation:number|null
+ deferredPreOperatingAssets:number|null
+ shortTermDebt:number|null
+ longTermDebt:number|null
+ shareCapital:number|null
+ retainedEarnings:number|null
+}
+export function createBlankOpeningBalanceSheetDraft():OpeningBalanceSheetDraft{return{
+ enabled:false,cash:null,inventory:null,workInProgress:null,finishedGoods:null,receivables:null,
+ otherCurrentAssets:null,tradePayables:null,otherCurrentLiabilities:null,grossFixedAssets:null,
+ accumulatedDepreciation:null,deferredPreOperatingAssets:null,shortTermDebt:null,longTermDebt:null,
+ shareCapital:null,retainedEarnings:null
+}}
+export function validateOpeningBalanceSheetDraft(value:OpeningBalanceSheetDraft):string[]{
+ if(!value.enabled)return []
+ const fields=(Object.keys(value) as (keyof OpeningBalanceSheetDraft)[]).filter(key=>key!=='enabled')
+ const errors=fields.filter(key=>value[key]===null||!Number.isFinite(value[key])||(value[key] as number)<0).map(key=>'opening-balance-required-or-negative:'+key)
+ if(errors.length)return errors
+ const currentAssets=(value.inventory!+value.workInProgress!+value.finishedGoods!+value.receivables!+value.otherCurrentAssets!)
+ const currentLiabilities=value.tradePayables!+value.otherCurrentLiabilities!
+ const netFixedAssets=value.grossFixedAssets!-value.accumulatedDepreciation!
+ if(netFixedAssets<0)errors.push('opening-accumulated-depreciation-exceeds-gross-assets')
+ const totalAssets=value.cash!+currentAssets-currentLiabilities+netFixedAssets+value.deferredPreOperatingAssets!
+ const totalLiabilitiesAndEquity=value.shortTermDebt!+value.longTermDebt!+value.shareCapital!+value.retainedEarnings!
+ if(Math.abs(totalAssets-totalLiabilitiesAndEquity)>0.01)errors.push('opening-balance-sheet-does-not-balance')
+ return errors
+}
 export type ProjectTaxFormDraft={
  system:'corporate'|'none'|'custom'|null
  rates:{period:string;ratePercent:number|null}[]
@@ -152,12 +190,14 @@ export type ProjectModelFinancialFormDrafts = {
  workingCapital: WorkingCapitalComponentFormDraft[]
  loans: LoanFacilityFormDraft[]
  tax: ProjectTaxFormDraft
+ openingBalanceSheet?:OpeningBalanceSheetDraft
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft()}
+ return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),openingBalanceSheet:createBlankOpeningBalanceSheetDraft()}
 }
 export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinancialFormDrafts):string[] {
  const errors:string[]=[]
+ if(value.openingBalanceSheet)errors.push(...validateOpeningBalanceSheetDraft(value.openingBalanceSheet))
  errors.push(...validateHelpDrivenProjectForms(value.helpDriven ?? createBlankHelpDrivenProjectForms()))
  value.assets.forEach((item,index)=>validateFixedAssetFormDraft(item).forEach(error=>errors.push('asset-'+index+':'+error)))
  value.productionCosts.forEach((item,index)=>validateProductionCostFormDraft(item).forEach(error=>errors.push('production-cost-'+index+':'+error)))
