@@ -22,7 +22,7 @@ Foreign-currency remeasurement is posted after the base statements are built. Th
 - Profile forms map to dated custom principal repayments.
 - Partial interest capitalization and its inclusive end date are supported by the periodic loan engine.
 
-The project calendar must match the selected repayment frequency. The current loan form does not specify fee payment dates or whether each fee is expensed or capitalized. Facilities containing fee rows are therefore rejected by this adapter rather than silently assigning a fee date or treatment. A future form revision must capture those two dimensions before fee automation is enabled.
+The project calendar must match the selected repayment frequency. The loan form now captures each fee's payment date, currency and expense/capitalization treatment, plus the facility commitment limit needed for commitment fees. The adapter calculates agency, guarantee, commitment and other fees using the help fee-basis function. Agency fees must align with positive disbursement dates; other fees must align with the first positive disbursement date. Fee bases are calculated from the preliminary principal schedule before fee posting, so capitalized fees do not recursively alter their own basis.
 
 ## Exchange-rate convention
 
