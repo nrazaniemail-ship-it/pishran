@@ -222,6 +222,7 @@ export const HOT_ROLLING_200KT_AUDIT = {
       comfarPrincipal: 964_925.63,
       comfarAnnualDebtService: 3_363_969.07
     }
+  }
 } as const
 
 /** Exact cash-flow rows transcribed from OPEX workbook sheet "IRR-NPV" (million IRR). */
