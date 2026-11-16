@@ -313,17 +313,17 @@ export function calculateNetForeignExchangeEffect(input:{price:number;officialEx
 export function calculateValueAdded(input:{grossSalesRevenue:number;salesTaxes:number;subsidiesOnSales:number;otherIncome:number;materialInputs:number;fixedInvestment:number;preproductionExInterest:number;inventoryIncrease:number;repatriatedPayments:number}){
  const values=Object.values(input)
  if(!values.every(finite)||input.materialInputs<0||input.fixedInvestment<0||input.preproductionExInterest<0)throw new Error('invalid-value-added-input')
- const output=input.grossSalesRevenue+input.salesTaxes-input.subsidiesOnSales
+ const output=input.grossSalesRevenue+input.salesTaxes
  const grossDomesticValueAdded=output+input.otherIncome-input.materialInputs
  const investment=input.fixedInvestment+input.preproductionExInterest+input.inventoryIncrease
  const netDomesticValueAdded=grossDomesticValueAdded-investment
  const netNationalValueAdded=netDomesticValueAdded-input.repatriatedPayments
  return {output,grossDomesticValueAdded,investment,netDomesticValueAdded,netNationalValueAdded}
 }
-export function calculateEconomicPresentValue(periodAmounts:number[],annualDiscountRatePercent:number){
- if(!periodAmounts.every(finite)||!nonNegative(annualDiscountRatePercent))throw new Error('invalid-economic-present-value')
+export function calculateEconomicPresentValue(periodAmounts:number[],annualDiscountRatePercent:number,firstYearIndex=0){
+ if(!periodAmounts.every(finite)||!nonNegative(annualDiscountRatePercent)||!Number.isInteger(firstYearIndex)||firstYearIndex<0)throw new Error('invalid-economic-present-value')
  const rate=annualDiscountRatePercent/100
- return periodAmounts.reduce((sum,amount,year)=>sum+amount/Math.pow(1+rate,year),0)
+ return periodAmounts.reduce((sum,amount,index)=>sum+amount/Math.pow(1+rate,index+firstYearIndex),0)
 }
 export function calculateEconomicAppraisalLevels(input:{financialValue:number[];adjustedMarketValue:number[];foreignExchangeAdjustment:number[];indirectEffects:number[];discountRatePercent:number}){
  const lengths=[input.financialValue.length,input.adjustedMarketValue.length,input.foreignExchangeAdjustment.length,input.indirectEffects.length]
@@ -478,4 +478,19 @@ export function calculateEconomicCalculationSupport(input:{direction:'input'|'ou
  const foreignPart=input.borderPriceLocal+sign*(input.transportAdjustedValue*input.transportForeignExposurePercent/100+input.otherAdjustedValue*input.otherForeignExposurePercent/100)
  const foreignCurrencyExposurePercent=Math.max(0,Math.min(100,foreignPart/adjustedMarketValue*100))
  return {adjustedMarketValue,foreignCurrencyExposurePercent,adjustmentFactor:null}
+}
+
+
+export function calculateValueAddedDistribution(input:{netNationalValueAdded:number;domesticWages:number;profitDividendsInterest:number;corporateTax:number;outputIndirectTax:number;materialInputIndirectTax:number;investmentIndirectTax:number;subsidyOnOutput:number;subsidyOnInvestment:number;subsidyOnInput:number}){
+ if(!Object.values(input).every(finite))throw new Error('invalid-value-added-distribution')
+ const government=input.corporateTax+input.outputIndirectTax+input.materialInputIndirectTax+input.investmentIndirectTax-input.subsidyOnOutput-input.subsidyOnInvestment-input.subsidyOnInput
+ const other=input.netNationalValueAdded-input.domesticWages-input.profitDividendsInterest-government
+ return {domesticWages:input.domesticWages,profitDividendsInterest:input.profitDividendsInterest,government,other,check:input.domesticWages+input.profitDividendsInterest+government+other-input.netNationalValueAdded}
+}
+export function calculateEconomicCostBenefitPeriod(input:{salesRevenue:number;shortTermDepositInterest:number;otherIncome:number;foreignLoanDisbursements:number;indirectBenefits:number;fixedInvestment:number;preproductionExInterest:number;increaseInNetWorkingCapital:number;operatingCosts:number;marketingCosts:number;foreignDebtService:number;corporateTax:number;indirectCosts:number}){
+ const values=Object.values(input)
+ if(!values.every(finite))throw new Error('invalid-cost-benefit-period')
+ const cashInflows=input.salesRevenue+input.shortTermDepositInterest+input.otherIncome+input.foreignLoanDisbursements+input.indirectBenefits
+ const cashOutflows=input.fixedInvestment+input.preproductionExInterest+input.increaseInNetWorkingCapital+input.operatingCosts+input.marketingCosts+input.foreignDebtService+input.corporateTax+input.indirectCosts
+ return {cashInflows,cashOutflows,netCashFlow:cashInflows-cashOutflows}
 }
