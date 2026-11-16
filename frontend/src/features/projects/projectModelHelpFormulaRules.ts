@@ -98,6 +98,7 @@ export function calculateComfarLoanInterest(input:{openingDebt:number;events:{da
  const {openingDebt,events,rateChanges,startDate,endDate}=input
  if(!nonNegative(openingDebt))throw new Error('invalid-opening-debt')
  const parse=(d:string)=>{const v=Date.parse(d+'T00:00:00Z');if(!Number.isFinite(v))throw new Error('invalid-loan-date');return v}
+ const days360=(a:number,b:number)=>{const x=new Date(a),y=new Date(b);const xDay=Math.min(x.getUTCDate(),30),yDay=Math.min(y.getUTCDate(),30);return (y.getUTCFullYear()-x.getUTCFullYear())*360+(y.getUTCMonth()-x.getUTCMonth())*30+(yDay-xDay)}
  const start=parse(startDate),end=parse(endDate)
  if(end<=start)throw new Error('invalid-loan-interval')
  const boundaries=new Set<number>([start,end])
@@ -112,13 +113,16 @@ export function calculateComfarLoanInterest(input:{openingDebt:number;events:{da
   const event=events.filter(e=>parse(e.date)===a).reduce((sum,e)=>sum+(e.type==='drawdown'?e.amount:-e.amount),0)
   balance+=event
   if(balance< -1e-8)throw new Error('negative-loan-balance')
-  const days=(b-a)/86400000
+  const days=days360(a,b)
   const rate=getRate(a)
   if(!nonNegative(rate))throw new Error('invalid-interest-rate')
   const interest=balance*(rate/100)*(days/360)
   totalInterest+=interest
   segments.push({startDate:new Date(a).toISOString().slice(0,10),endDate:new Date(b).toISOString().slice(0,10),openingBalance:balance,annualRatePercent:rate,days360:days,interest})
  }
+ const endEvents=events.filter(e=>parse(e.date)===end).reduce((sum,e)=>sum+(e.type==='drawdown'?e.amount:-e.amount),0)
+ balance+=endEvents
+ if(balance< -1e-8)throw new Error('negative-loan-balance')
  return {totalInterest,closingBalance:balance,segments}
 }
 export function calculateLoanFee(input:{type:'agency'|'guarantee'|'commitment'|'other';ratePercent:number;disbursement:number;outstandingBefore:number;repayment:number;undisbursedCommitment:number;totalLoan:number}){
@@ -139,7 +143,7 @@ export function calculateHelpMirr(cashFlows:number[],reinvestmentRatePercent:num
  if(!cashFlows.every(finite)||!nonNegative(reinvestmentRatePercent)||!nonNegative(borrowingRatePercent)||!nonNegative(planningHorizonYears)||planningHorizonYears===0||!Number.isInteger(periodsPerYear)||periodsPerYear<=0)throw new Error('invalid-mirr-input')
  const reinvest=reinvestmentRatePercent/100,borrow=borrowingRatePercent/100
  const horizon=planningHorizonYears
- const positiveFuture=cashFlows.reduce((sum,flow,index)=>flow>0?sum+flow*Math.pow(1+reinvest,horizon-(index+1)/periodsPerYear):sum,0)
+ const positiveFuture=cashFlows.reduce((sum,flow,index)=>flow>0?sum+flow*Math.pow(1+reinvest,horizon+1-(index+1)/periodsPerYear):sum,0)
  const negativePresent=cashFlows.reduce((sum,flow,index)=>flow<0?sum+(-flow)/Math.pow(1+borrow,(index+1)/periodsPerYear):sum,0)
  if(negativePresent===0)return null
  return Math.pow(positiveFuture/negativePresent,1/horizon)-1
@@ -158,8 +162,8 @@ export function calculateDividendPool(netProfit:number,retainedPercent:number,pr
  const ordinary=remaining
  return {retained,distributable,preferredRequested:totalPreferred,preferredPaid:paidPreferred,partnerPreferredPaid:partnerPaid,shareholderPreferredPaid:shareholderPaid,ordinaryDividendPool:ordinary,undistributedShortfall:totalPreferred-paidPreferred}
 }
-export function composeTotalInvestmentCashFlow(input:{netCashFlow:number;equity:number;loanDrawdowns:number;principalRepayments:number;interestAndFees:number;dividends:number;preproductionInterestAndFees:number}){
- const {netCashFlow,equity,loanDrawdowns,principalRepayments,interestAndFees,dividends,preproductionInterestAndFees}=input
+export function composeTotalInvestmentCashFlow(input:{netCashFlow:number;equity:number;loanDrawdowns:number;principalRepayments:number;interestAndFees:number;dividends:number;}){
+ const {netCashFlow,equity,loanDrawdowns,principalRepayments,interestAndFees,dividends}=input
  if(![netCashFlow,equity,loanDrawdowns,principalRepayments,interestAndFees,dividends,preproductionInterestAndFees].every(finite))throw new Error('invalid-total-investment-flow')
  return netCashFlow-equity-loanDrawdowns+principalRepayments+interestAndFees+dividends
 }
