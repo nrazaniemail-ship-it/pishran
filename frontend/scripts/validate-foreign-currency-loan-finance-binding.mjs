@@ -90,6 +90,18 @@ assert.ok(run.fxPosting.valid)
 assert.ok(run.finance.loanSchedules['foreign-facility'][2].foreignExchangeLoss>0)
 assert.ok(Math.abs(run.statements[2].balanceSheet.debt-run.fxPosting.statements[2].balanceSheet.debt)<1e-8)
 assert.ok(run.statements.every(row=>row.balanceSheet.reconciled))
+const openingForeignFacility=binding.buildPeriodicLoanFacilityBinding({
+ loan:{...loan,disbursements:[],numberOfRepayments:2},
+ foundation,periods,dayCountBasis:365,openingForeignBalance:100,openingExchangeRateToLocal:0.85,
+})
+assert.equal(openingForeignFacility.valid,true,openingForeignFacility.issues.join('; '))
+assert.equal(openingForeignFacility.openingCarryingAmountLocal,85)
+const missingOpeningRate=binding.buildPeriodicLoanFacilityBinding({
+ loan:{...loan,disbursements:[],numberOfRepayments:2},
+ foundation,periods,dayCountBasis:365,openingForeignBalance:100,
+})
+assert.equal(missingOpeningRate.valid,false)
+assert.ok(missingOpeningRate.issues.some(issue=>issue.includes('opening exchange rate')))
 
 const feeBinding=binding.buildPeriodicLoanFacilityBinding({
  loan:{...loan,facilityLimit:2000,fees:[
