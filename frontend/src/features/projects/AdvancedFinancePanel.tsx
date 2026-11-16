@@ -274,7 +274,7 @@ export default function AdvancedFinancePanel(props: Props) {
         datedDrawdowns:loan.drawdownMode==='period-manual'?periods.map((period,index)=>({date:loan.exactDrawdownDates?.[index]??period.startDate,amount:Math.max(0,drawdowns[index]??0)})).filter(item=>item.amount>0):undefined,
         rateChanges:loan.rateChanges??[],
         fees:(loan.financingFees??[]).filter(fee=>fee.amount>0).map(({date,amount,treatment,label})=>({date,amount,treatment,label})),
-        interestConvention:loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':((loan.rateChanges?.length??0)>0||(loan.financingFees?.some(fee=>fee.amount>0)??false)?(props.dayCountBasis===360?'actual-360':'actual-365'):undefined))
+        interestConvention:loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':undefined)
       } as PeriodicLoanInput}
     })
     const workingCapitalByPeriod=periods.map(period=>{
@@ -363,7 +363,8 @@ export default function AdvancedFinancePanel(props: Props) {
         </div>
         {loan.periodRateConversion==='effective-annual-divided-by-frequency'&&periodicRateMethod&&<p className="fw-hint">{t('فرمول روش:','Method formula:')} {periodicRateMethod.formula} · {t('منبع:','Source:')} {periodicRateMethod.source} · {t('محدودیت:','Limitation:')} {periodicRateMethod.limitations}</p>}
         <div className="fw-grid">
-          <label className="fw-field"><span>{t('مبنای روزشمار بهره و هزینه تأمین مالی','Interest & Financing Fee Day-Count')}</span><select value={loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':props.dayCountBasis===360?'actual-360':'actual-365')} onChange={e=>updateLoan(loan.id,{periodInterestConvention:e.target.value as Loan['periodInterestConvention']})}>
+          <label className="fw-field"><span>{t('مبنای روزشمار بهره و هزینه تأمین مالی','Interest & Financing Fee Day-Count')}</span><select value={loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':'')} onChange={e=>updateLoan(loan.id,{periodInterestConvention:e.target.value?(e.target.value as Loan['periodInterestConvention']):undefined})}>
+            <option value="">{t('استفاده از روش تبدیل نرخ انتخاب‌شده','Use selected rate-conversion method')}</option>
             <option value="comfar-months-plus-360">{t('ماه‌های کامل + روزهای با مبنای ۳۶۰ (کامفار)','Completed months + residual days / 360 (COMFAR)')}</option>
             <option value="actual-360">Actual / 360</option><option value="actual-365">Actual / 365</option>
           </select></label>
