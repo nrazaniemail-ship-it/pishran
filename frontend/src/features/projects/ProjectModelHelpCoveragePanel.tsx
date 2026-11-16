@@ -26,7 +26,13 @@ function referenceOptionsFor(fieldKey:string,model:HelpDrivenProjectForms):{valu
  if(fieldKey==='costItemId')return rows('production-costs').filter(row=>name(row,'item')).map(row=>({value:row.id,label:name(row,'item')}))
  if(fieldKey==='loanName')return rows('loan-conditions').filter(row=>name(row,'loanName')).map(row=>({value:name(row,'loanName'),label:name(row,'loanName')}))
  if(fieldKey==='currency'||fieldKey==='currencyCode')return rows('currencies').filter(row=>name(row,'code')).map(row=>({value:name(row,'code'),label:name(row,'code')+(name(row,'name')?' — '+name(row,'name'):'')}))
- if(fieldKey==='financialItemId'||fieldKey==='parentEconomicItemId')return rows('economic-items').filter(row=>name(row,'item')).map(row=>({value:row.id,label:name(row,'item')}))
+ if(fieldKey==='financialItemId')return [
+  ...rows('fixed-investment').filter(row=>name(row,'assetName')).map(row=>({value:row.id,label:name(row,'assetName')})),
+  ...rows('production-costs').filter(row=>name(row,'item')).map(row=>({value:row.id,label:name(row,'item')})),
+  ...rows('sales-programme').filter(row=>name(row,'productId')).map(row=>({value:row.id,label:'Sales: '+name(row,'productId')})),
+  ...rows('products').filter(row=>name(row,'name')).map(row=>({value:row.id,label:name(row,'name')})),
+ ]
+ if(fieldKey==='parentEconomicItemId')return rows('economic-items').filter(row=>name(row,'item')).map(row=>({value:row.id,label:name(row,'item')}))
  if(fieldKey==='shareClass')return rows('joint-venture').filter(row=>name(row,'name')).map(row=>({value:name(row,'name'),label:name(row,'name')}))
  return undefined
 }
