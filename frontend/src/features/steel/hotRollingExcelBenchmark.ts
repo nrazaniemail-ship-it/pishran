@@ -408,7 +408,7 @@ export function mergeHotRollingCoilProjectFoundation(saved: unknown): ProjectFou
       periodFrequency: planning.periodFrequency === 'unspecified' ? defaults.planning.periodFrequency : planning.periodFrequency,
       balanceDateMonth: planning.balanceDateMonth ?? defaults.planning.balanceDateMonth,
       dayCountBasis: planning.dayCountBasis ?? defaults.planning.dayCountBasis,
-      valuationDate: /^\\d{4}-\\d{2}-\\d{2}$/.test(planning.valuationDate || '') ? planning.valuationDate : defaults.planning.valuationDate,
+      valuationDate: /^\d{4}-\d{2}-\d{2}$/.test(planning.valuationDate || '') ? planning.valuationDate : defaults.planning.valuationDate,
       cashFlowTiming: planning.cashFlowTiming === 'unspecified' ? defaults.planning.cashFlowTiming : planning.cashFlowTiming
     },
     currencies: {
