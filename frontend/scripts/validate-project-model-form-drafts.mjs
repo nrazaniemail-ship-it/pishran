@@ -33,6 +33,11 @@ assert.equal(forms.resolveLoanFeeBasis('commitment'),'undisbursed-commitment')
 assert.equal(forms.resolveLoanFeeBasis('guarantee'),'outstanding-loan-including-current-disbursement-excluding-current-repayment')
 assert.equal(forms.resolveLoanFeeBasis('other'),'total-loan-at-first-disbursement')
 assert.deepEqual(forms.validateLoanFacilityFormDraft(loan),[])
+assert.ok(forms.validateProductionCostFormDraft({...direct,classification:'direct',productId:'p1',fixedPercent:120,variablePercent:-20}).includes('invalid-fixed-cost-percent'))
+assert.ok(forms.validateFixedAssetFormDraft({...asset,disposal:{date:'2026-01-01',proceeds:-1}}).includes('invalid-asset-disposal-proceeds'))
+assert.ok(forms.validateLoanFacilityFormDraft({...loan,fees:[{id:'fee-1',type:null,ratePercent:2,currencyCode:null}]}).includes('loan-fee-type-required'))
+assert.ok(forms.validateLoanFacilityFormDraft({...loan,disbursements:[{date:'',amount:-1}]}).includes('invalid-loan-disbursement'))
+
 
 const tax=forms.createBlankProjectTaxFormDraft()
 assert.equal(tax.system,null)
