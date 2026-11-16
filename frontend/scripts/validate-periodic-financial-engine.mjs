@@ -1210,8 +1210,8 @@ assert.equal(resetAndFeeLoan.rows[0].capitalizedFinancingFees,5,
   'Capitalized issuance costs must be separately visible')
 assert.equal(resetAndFeeLoan.rows[0].closingBalance,105,
   'Capitalized financing fees must increase the outstanding loan balance')
-assert.equal(resetAndFeeLoan.rows[0].debtService,10,
-  'Cash-paid financing fees must be included in debt service')
+assert.ok(Math.abs(resetAndFeeLoan.rows[0].debtService-(resetAndFeeLoan.rows[0].interestExpense+10))<0.01,
+  'Cash-paid financing fees must be added once to accrued interest in debt service')
 assert.equal(resetAndFeeLoan.rows[1].principal,105,
   'Bullet maturity must repay principal including capitalized financing costs')
 const invalidLoanRateOrder = engine.calculatePeriodicLoanSchedule({
