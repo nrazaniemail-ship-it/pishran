@@ -153,6 +153,7 @@ export function buildPeriodicLoanFacilityBinding(input:{
     rateConversion:'effective-annual-by-actual-days',
     periodsPerYear:periodsPerYear as 1|2|4|12,
     rateChanges,
+    facilityLimit:loan.facilityLimit??undefined,
     interestConvention:'comfar-months-plus-360',
     ...(repaymentMethod==='custom'?{customPrincipalRepayments:profileRows}:{}),
   }
