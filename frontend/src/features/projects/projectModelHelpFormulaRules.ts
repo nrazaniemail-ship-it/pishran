@@ -381,3 +381,30 @@ export function calculateIncrementalSeries(base:number[],alternative:number[]){
  if(base.length!==alternative.length||!base.every(finite)||!alternative.every(finite))throw new Error('incremental-analysis-horizon-mismatch')
  return alternative.map((value,index)=>value-base[index])
 }
+
+
+/** Relative inflation is local-currency inflation divided by input-currency inflation. */
+export function calculateRelativeInflationFactor(localInflationPercent:number[],inputInflationPercent:number[],periodIndex:number){
+ if(!Number.isInteger(periodIndex)||periodIndex<0||periodIndex>localInflationPercent.length||periodIndex>inputInflationPercent.length||!localInflationPercent.every(finite)||!inputInflationPercent.every(finite)||[...localInflationPercent,...inputInflationPercent].some(x=>x<=-100))throw new Error('invalid-relative-inflation-input')
+ let factor=1
+ for(let year=0;year<periodIndex;year++)factor*=(1+localInflationPercent[year]/100)/(1+inputInflationPercent[year]/100)
+ return factor
+}
+export function calculateCurrentExchangeRate(baseLocalPerInput:number,localInflationPercent:number[],inputInflationPercent:number[],periodIndex:number){
+ if(!nonNegative(baseLocalPerInput)||baseLocalPerInput===0)throw new Error('invalid-base-exchange-rate')
+ return baseLocalPerInput*calculateRelativeInflationFactor(localInflationPercent,inputInflationPercent,periodIndex)
+}
+/** COMFAR's first-year escalator is separate from subsequent annual inflation + escalation. */
+export function calculateInflatedEscalatedPrice(input:{enteredPrice:number;inflationRatesPercent:number[];periodIndex:number;escalationPercent:number;firstYearEscalator:number}){
+ const {enteredPrice,inflationRatesPercent,periodIndex,escalationPercent,firstYearEscalator}=input
+ if(!nonNegative(enteredPrice)||!finite(escalationPercent)||escalationPercent<=-100||!Number.isInteger(periodIndex)||periodIndex<0||periodIndex>=inflationRatesPercent.length||!finite(firstYearEscalator)||firstYearEscalator<0||inflationRatesPercent.some(x=>!finite(x)||x<=-100))throw new Error('invalid-inflation-escalation-input')
+ const escalation=escalationPercent/100
+ let factor=1+inflationRatesPercent[0]/100+(firstYearEscalator===0?0:Math.pow(1+escalation,firstYearEscalator)-1)
+ for(let year=1;year<=periodIndex;year++)factor*=1+inflationRatesPercent[year]/100+escalation
+ return enteredPrice*factor
+}
+export function calculateFixedAssetRevaluation(initialLocalValue:number,acquisitionYearIndex:number,currentYearIndex:number,localInflationPercent:number[]){
+ if(!nonNegative(initialLocalValue)||!Number.isInteger(acquisitionYearIndex)||!Number.isInteger(currentYearIndex)||acquisitionYearIndex<0||currentYearIndex<acquisitionYearIndex||currentYearIndex>localInflationPercent.length||!localInflationPercent.every(x=>finite(x)&&x>-100))throw new Error('invalid-fixed-asset-revaluation')
+ const indexAt=(year:number)=>localInflationPercent.slice(0,year).reduce((factor,rate)=>factor*(1+rate/100),1)
+ return initialLocalValue*indexAt(currentYearIndex)/indexAt(acquisitionYearIndex)
+}
