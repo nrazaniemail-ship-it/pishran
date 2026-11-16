@@ -4,7 +4,7 @@ import type { FeasibilityProject } from '../../core/projects/projectRepository'
 
 interface Props {
   projects: FeasibilityProject[]
-  onCreate: (input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'location' | 'steelStage' | 'templateId'>) => Promise<void>
+  onCreate: (input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'location' | 'templateId'>) => Promise<void>
   onDelete: (id: string) => Promise<void>
   confirmBeforeDelete: boolean
   onOpenProject: (project: FeasibilityProject) => void
