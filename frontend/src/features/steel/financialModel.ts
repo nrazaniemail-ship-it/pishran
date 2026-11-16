@@ -997,7 +997,10 @@ export function calculateComfarCalendarDepreciationSchedule(
       if (bookValue===0) bookValue=asset.initialBookValue
       const opening=bookValue
       const activeStart=eligible>pStart?eligible:pStart
-      const activeDays=Math.max(0,Math.min(period.days,Math.round((pEndExclusive.getTime()-activeStart.getTime())/86400000)))
+      const stopDate=stopDatesByAsset[asset.id]?calendarDate(stopDatesByAsset[asset.id]):null
+      const stopExclusive=stopDate?addCalendarDays(stopDate,1):pEndExclusive
+      const activeEnd=stopExclusive<pEndExclusive?stopExclusive:pEndExclusive
+      const activeDays=activeStart>=activeEnd?0:Math.max(0,Math.min(period.days,Math.round((activeEnd.getTime()-activeStart.getTime())/86400000)))
       const ageDays=Math.max(0,(activeStart.getTime()-eligible.getTime())/86400000)
       let amount=0
       let applied:ComfarDepreciationMethod|null=null
