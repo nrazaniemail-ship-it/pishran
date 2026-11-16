@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Factory, Plus, Trash2, FolderOpen, FileText } from 'lucide-react'
-import type { FeasibilityProject, ProjectTemplateId } from '../../core/projects/projectRepository'
+import type { FeasibilityProject } from '../../core/projects/projectRepository'
 
 interface Props {
   projects: FeasibilityProject[]
@@ -36,7 +36,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   const stageNames: Record<string,string> = { 'استخراج سنگ‌آهن':'Iron Ore Mining', 'فرآوری و کنسانتره':'Processing & Concentration', 'گندله‌سازی':'Pelletizing', 'احیای مستقیم':'Direct Reduction', 'فولادسازی و ریخته‌گری':'Steelmaking & Casting', 'مجتمع احیاء و فولادسازی - تولید اسلب':'DRI & Steelmaking – Slab', 'نورد گرم ورق - تولید پلیت':'Hot-Rolled Plate', 'نورد گرم ورق - تولید کلاف':'Hot-Rolled Coil', 'نورد سرد و پوشش‌دهی':'Cold Rolling & Coating', 'نورد میلگرد':'Rebar Rolling', 'نورد نبشی':'Angle Rolling', 'نورد تیرآهن':'Beam Rolling', 'سایر':'Other' }
   const [showForm, setShowForm] = useState(false)
   const [showTemplateChooser, setShowTemplateChooser] = useState(false)
-  const [templateId, setTemplateId] = useState<ProjectTemplateId>('raw')
+  const templateId = 'raw' as const
   const [name, setName] = useState('')
   const [projectType, setProjectType] = useState('')
   const [steelStage, setSteelStage] = useState('')
@@ -46,24 +46,15 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   const isSteel = industry === STEEL_INDUSTRY
   const isEnergy = industry === 'انرژی و نیروگاه'
 
-  function chooseTemplate(value: ProjectTemplateId) {
-    setTemplateId(value)
+  function chooseTemplate() {
     setShowTemplateChooser(false)
     setShowForm(true)
     setIndustry(STEEL_INDUSTRY)
-    if (value === 'hot-rolling-200kt') {
-      setProjectType('نورد ورق گرم- تولید کلاف')
-      setName('نورد ورق گرم- تولید کلاف')
-      setSteelStage('نورد گرم ورق - تولید کلاف')
-      setCapacity('200000')
-      setLocation('کاشان، ایران')
-    } else {
-      setName('')
-      setProjectType('')
-      setSteelStage('')
-      setCapacity('')
-      setLocation('')
-    }
+    setName('')
+    setProjectType('')
+    setSteelStage('')
+    setCapacity('')
+    setLocation('')
   }
 
   function changeIndustry(value: string) {
@@ -93,17 +84,17 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
       location: location.trim(),
       templateId
     })
-    setName(''); setProjectType(''); setSteelStage(''); setCapacity(''); setLocation(''); setShowForm(false); setShowTemplateChooser(false); setTemplateId('raw')
+    setName(''); setProjectType(''); setSteelStage(''); setCapacity(''); setLocation(''); setShowForm(false); setShowTemplateChooser(false)
   }
 
   return <section className="projects-page">
     <div className="page-heading"><div><h1>{t('پروژه‌های امکان‌سنجی','Feasibility Projects')}</h1><p>{t('پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.','Manage your projects and investment studies on this device.')}</p></div><div className="projects-head-actions"><button className="primary" onClick={() => { setShowForm(false); setShowTemplateChooser(v => !v) }}><Plus size={17}/> {t('پروژه جدید','New Project')}</button></div></div>
-    {showTemplateChooser && <section className="project-form template-chooser" aria-label={t('انتخاب قالب پروژه','Choose a project template')}><h3>{t('قالب پروژه جدید را انتخاب کنید','Choose a template for your new project')}</h3><p>{t('می‌خواهید از یک پروژه خالی شروع کنید یا اطلاعات مرجع نورد ورق گرم بارگذاری شود؟','Start with a blank project or load the hot-rolling reference data?')}</p><div className="project-grid"><article className="project-card"><div className="module-icon"><FileText size={21}/></div><h3>{t('قالب خام','Blank Template')}</h3><p>{t('ساختار استاندارد و خالی؛ بدون فرض‌ها و داده‌های اختصاصی پروژه نورد گرم','A clean standard structure without hot-rolling-specific assumptions or data')}</p><button type="button" className="secondary-button" onClick={() => chooseTemplate('raw')}>{t('انتخاب قالب خام','Use Blank Template')}</button></article><article className="project-card"><div className="module-icon"><Factory size={21}/></div><h3>{t('قالب پروژه نورد ورق گرم','Hot-Rolling Project Template')}</h3><p>{t('بارگذاری داده‌های مرجع HRCR200 با ظرفیت ۲۰۰ هزار تن در سال و امکان ویرایش همه مفروضات','Load HRCR200 reference data at 200,000 tonnes per year; all assumptions remain editable')}</p><button type="button" className="primary" onClick={() => chooseTemplate('hot-rolling-200kt')}>{t('انتخاب قالب نورد ورق گرم','Use Hot-Rolling Template')}</button></article></div><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowTemplateChooser(false)}>{t('انصراف','Cancel')}</button></div></section>}
+    {showTemplateChooser && <section className="project-form template-chooser" aria-label={t('انتخاب قالب پروژه','Choose a project template')}><h3>{t('قالب پروژه جدید را انتخاب کنید','Choose a template for your new project')}</h3><p>{t('یک پروژه جدید با ساختار خالی و بدون مفروضات از پیش تعیین‌شده ایجاد کنید.','Create a new project with a blank structure and no preset assumptions.')}</p><div className="project-grid"><article className="project-card"><div className="module-icon"><FileText size={21}/></div><h3>{t('قالب خام','Blank Template')}</h3><p>{t('ساختار عمومی و خالی؛ تمام اطلاعات و مفروضات توسط تحلیلگر وارد می‌شود.','A neutral blank structure; all inputs and assumptions are supplied by the analyst.')}</p><button type="button" className="primary" onClick={chooseTemplate}>{t('انتخاب قالب خام','Use Blank Template')}</button></article></div><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowTemplateChooser(false)}>{t('انصراف','Cancel')}</button></div></section>}
     {showForm && <form className="project-form" onSubmit={submit}>
-      <h3>{t('تعریف پروژه جدید','Create New Project')} · {templateId === 'raw' ? t('قالب خام','Blank Template') : t('قالب پروژه نورد ورق گرم','Hot-Rolling Project Template')}</h3>
+      <h3>{t('تعریف پروژه جدید','Create New Project')} · {t('قالب خام','Blank Template')}</h3>
       <div className="form-grid">
         <label>{t('صنعت','Industry')}
-          <select value={industry} disabled={templateId === 'hot-rolling-200kt'} onChange={e => changeIndustry(e.target.value)}>
+          <select value={industry} onChange={e => changeIndustry(e.target.value)}>
             {Object.entries(industryNames).map(([value,label]) => <option key={value} value={value}>{en ? label : value}</option>)}
           </select>
         </label>
