@@ -1420,21 +1420,21 @@ export function calculatePeriodicComfarAssetLifecycle(
       const saleInThisPeriod=!!sale&&saleIndex===index
       let depreciation=0
       if(asset.method!=='none'&&bookValue>salvageValue&&index>=acquisitionIndex){
-        const saleSegment=saleInThisPeriod&&saleDate
-          ?depreciationSegments.find(segment=>saleDate.getTime()>=segment.startDate.getTime()&&saleDate.getTime()<=segment.endDate.getTime())
-          :undefined
-        const completedSegment=!saleInThisPeriod
-          ?depreciationSegments.find(segment=>periodEnd.getTime()>=segment.endDate.getTime()&&periodStart.getTime()<=segment.endDate.getTime())
-          :undefined
-        const segment=saleSegment??completedSegment
-        if(segment){
-          if(saleInThisPeriod&&saleDate){
+        // A project period can contain more than one depreciation-year boundary
+        // (for example, a partial first year followed by a full year inside an
+        // annual reporting period). Accumulate every segment due in this period.
+        for(const segment of depreciationSegments){
+          if(segment.endDate.getTime()<periodStart.getTime()||segment.endDate.getTime()>periodEnd.getTime())continue
+          if(saleDate&&segment.startDate.getTime()>saleDate.getTime())continue
+          let segmentCharge=segment.amount
+          if(saleInThisPeriod&&saleDate&&saleDate.getTime()<segment.endDate.getTime()){
+            if(saleDate.getTime()<segment.startDate.getTime())continue
             const elapsedMonths=monthsElapsedToBalanceDate(segment.startDate,saleDate)
-            depreciation=Math.min(bookValue-salvageValue,segment.amount*elapsedMonths/segment.months)
-          } else {
-            depreciation=Math.min(bookValue-salvageValue,segment.amount)
+            segmentCharge=segment.amount*elapsedMonths/segment.months
           }
-          bookValue=Math.max(salvageValue,bookValue-depreciation)
+          depreciation+=Math.min(Math.max(0,bookValue-salvageValue),Math.max(0,segmentCharge))
+          bookValue=Math.max(salvageValue,bookValue-Math.max(0,segmentCharge))
+          if(bookValue<=salvageValue+1e-9)break
         }
       }
       let saleProceeds=0,bookValueDisposed=0,gainLoss=0
