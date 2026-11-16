@@ -387,7 +387,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const partnerSetupValid=!m.scope.jointVenture||(m.partners.length>0&&m.partners.length<=20&&m.partners.every(p=>String(p.name??'').trim()&&Number.isFinite(p.capitalContribution)&&p.capitalContribution>=0&&p.sharePercent>=0&&p.sharePercent<=100&&p.profitSharePercent>=0&&p.profitSharePercent<=100)&&Math.abs(m.partners.reduce((sum,p)=>sum+p.sharePercent,0)-100)<=0.01&&Math.abs(m.partners.reduce((sum,p)=>sum+p.profitSharePercent,0)-100)<=0.01&&m.partnerDistributionPercent>=0&&m.partnerDistributionPercent<=100)
  const hasPricedRows=(rows:Row[])=>rows.some(row=>Number.isFinite(row.quantity)&&row.quantity>0&&Number.isFinite(row.unitPrice)&&row.unitPrice>0)
  const hasTechnicalInputs=m.technical.some(row=>(row.valueText??'').trim()!==''||row.quantity>0||row.unitPrice>0)
- const technicalParametersComplete=m.technical.length>0&&m.technical.every(row=>String(row.name??'').trim()&&(row.valueText??(row.quantity!==0?String(row.quantity):'')).trim()!=='')
+ const technicalParametersComplete=m.technical.length>0&&m.technical.every(row=>String(row.name??'').trim()&&(row.valueText??(row.quantity!==0?String(row.quantity):'')).trim()!==''&&String(row.unit??'').trim()!==''&&String(row.source??'').trim()!=='')
  const financeRatesValid=(m.finance.equity===0||m.finance.equityCost>0)&&(m.finance.debt===0||m.finance.debtCost>0)&&m.finance.tax>=0&&m.finance.tax<=100&&m.finance.depreciationYears>0&&(m.finance.method==='manual'?m.finance.manualRate>0:m.finance.method==='wacc'?wacc>0:false)
  const periodicModelValid=reportPeriodicFinance?.valid===true&&reportPeriodicFinance.rows.length===projectCalendarPeriods.length&&projectCalendarPeriods.length>0
  const done:Record<Step,boolean>={
