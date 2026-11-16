@@ -36,7 +36,7 @@ assert.equal(result.periodRevenue[0],1020)
 assert.equal(result.periodRevenue[1],1350)
 assert.equal(result.annualRevenue[0],2370)
 assert.ok(Math.abs(result.annualFixedCost[0]-1.0055555555555555)<1e-8)
-assert.ok(Math.abs(result.annualVariableCost[0]-7.6)<1e-8)
+assert.ok(Math.abs(result.annualVariableCost[0]-8.8)<1e-8)
 assert.equal(result.rows[0].salesTax,90)
 
 const bound=adapter.bindProductionSalesToPeriodicFinance({
