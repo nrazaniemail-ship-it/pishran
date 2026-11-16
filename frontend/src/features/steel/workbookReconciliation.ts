@@ -221,7 +221,10 @@ export const HOT_ROLLING_200KT_AUDIT = {
       taxableProfitAfterComfarDebtInterest: 9_557_778.26,
       comfarInterest: 2_399_043.44,
       comfarPrincipal: 964_925.63,
-      comfarAnnualDebtService: 3_363_969.07
+      comfarAnnualDebtService: 3_363_969.07,
+      /** Derived from the reported 5% tax basis and first-year operating/WC lines; not a separately printed COMFAR DSCR. */
+      derivedCfads: 9_602_342.587,
+      derivedDscr: 2.8544681556777816
     }
   }
 } as const
