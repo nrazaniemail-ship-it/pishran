@@ -36,6 +36,8 @@ export type ProjectFoundation = {
     lossCarryForward: boolean | null
     lossCarryForwardYears: number | null
     rates: ProjectTaxRate[]
+    /** Tax treatment of realized foreign-exchange losses; required only when FX debt is modeled. */
+    foreignExchangeLossTreatment?: 'unspecified' | 'deductible' | 'non-deductible'
   }
 }
 
@@ -65,7 +67,7 @@ export function createBlankProjectFoundation(): ProjectFoundation {
     costCentres: { active: false, items: [] },
     inflation: { active: false, indices: [] },
     discounting: { method: 'unspecified', financialRatePercent: null, economicRatePercent: null },
-    taxation: { system: 'unspecified', lossCarryForward: null, lossCarryForwardYears: null, rates: [] },
+    taxation: { system: 'unspecified', lossCarryForward: null, lossCarryForwardYears: null, rates: [], foreignExchangeLossTreatment: 'unspecified' },
   }
 }
 
