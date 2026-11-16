@@ -507,8 +507,16 @@ export default function AdvancedFinancePanel(props: Props) {
         <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('شریک','Partner')}</th><th>{t('آورده قراردادی','Declared capital')}</th><th>{t('آورده مورد انتظار بر اساس سهم','Expected capital by share')}</th><th>{t('اختلاف آورده شریک','Partner capital variance')}</th><th>{t('جریان نقدی منفی تخصیص‌یافته','Allocated negative CF')}</th><th>{t('توزیع جریان نقدی مثبت','Positive CF distribution')}</th><th>{t('خالص جریان نقدی شریک','Partner net CF')}</th></tr></thead>
           <tbody>{partnerFinanceResult.rows.map(row=><tr key={row.partnerId}><td>{row.partnerName}</td><td>{money(row.declaredCapitalContribution)}</td><td>{money(row.expectedCapitalContribution)}</td><td>{money(row.capitalContributionVariance)}</td><td>{money(row.negativeCashFlowAllocation)}</td><td>{money(row.positiveCashFlowDistribution)}</td><td>{money(row.netCashFlow)}</td></tr>)}</tbody>
         </table></div>
-        <div style={{overflowX:'auto',maxHeight:360}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ','Date')}</th>{partnerFinanceResult.rows.map(row=><th key={row.partnerId}>{row.partnerName}</th>)}</tr></thead>
-          <tbody>{periodicFinanceResult?.rows.map((period,index)=><tr key={period.period}><td>{period.period}</td><td>{period.startDate} – {period.endDate}</td>{partnerFinanceResult.rows.map(row=><td key={row.partnerId}>{money(row.periods[index]?.allocatedCashFlow??0)}</td>)}</tr>)}</tbody>
+        <div style={{overflowX:'auto',maxHeight:360}}><table className="fw-table"><thead><tr>
+          <th>{t('دوره','Period')}</th><th>{t('تاریخ','Date')}</th><th>{t('جریان نقد سهامداران','Total equity CF')}</th>
+          <th>{t('خالص تخصیص به شرکا','Partner net CF')}</th><th>{t('وجه نقد نگه‌داشته‌شده','Retained cash')}</th>
+          <th>{t('اختلاف کنترل','Reconciliation variance')}</th>{partnerFinanceResult.rows.map(row=><th key={row.partnerId}>{row.partnerName}</th>)}
+        </tr></thead>
+          <tbody>{partnerFinanceResult.periods.map((period,index)=><tr key={period.period}>
+            <td>{period.period}</td><td>{period.startDate} – {period.endDate}</td><td>{money(period.totalEquityCashFlow)}</td>
+            <td>{money(period.partnerNetCashFlow)}</td><td>{money(period.retainedPositiveCashFlow)}</td><td>{money(period.reconciliationVariance)}</td>
+            {partnerFinanceResult.rows.map(row=><td key={row.partnerId}>{money(row.periods[index]?.allocatedCashFlow??0)}</td>)}
+          </tr>)}</tbody>
         </table></div>
       </>:<ul className="fw-checklist">{(partnerFinanceResult?.warnings??[t('برای تخصیص جریان نقدی شرکا، ابتدا موتور دوره‌ای معتبر را فعال کنید.','Activate a valid periodic finance schedule before allocating partner cash flows.')]).map((warning,index)=><li key={index}>{tr(warning)}</li>)}</ul>}
     </div>}
