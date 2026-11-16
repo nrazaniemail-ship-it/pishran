@@ -349,6 +349,7 @@ export type IntegratedFinanceInput = {
   equityMirrFinanceRate?: number
   equityMirrReinvestmentRate?: number
   salvageValue?: number
+  salvageBookValue?: number
   assetSaleSchedule?: { saleProceeds: number; returnOfCapital: number; otherIncomeLoss: number; bookValueDisposed: number }[]
 }
 
@@ -386,6 +387,7 @@ export type IntegratedFinanceYear = {
   closingWorkingCapital: number
   workingCapitalBreakdown: WorkingCapitalBreakdown
   salvageProceeds: number
+  salvageBookValueDisposed: number
   assetSaleProceeds: number
   assetReturnOfCapital: number
   assetSaleOtherIncomeLoss: number
@@ -555,6 +557,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : Math.max(0, unleveredTaxLoss - ebit)
 
     const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
+    const salvageBookValueDisposed = year === years ? Math.max(0, Number(input.salvageBookValue) || 0) : 0
     const terminalValue = salvageProceeds + assetSaleProceeds
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
     const projectFreeCashFlow = ebit - assetSaleOtherIncomeLoss - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
@@ -576,7 +579,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
-      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
+      equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, salvageBookValueDisposed, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
     })
   }
@@ -1442,6 +1445,8 @@ export function reconcileFixedInvestmentRegister(
 
 export type FinancialStatementYear = {
   year: number
+  openingBalances: { cash: number; debt: number; netFixedAssets: number; workingCapitalAssets: number; paidInCapital: number; retainedEarnings: number }
+  movementChecks: { cash: number; debt: number; netFixedAssets: number; workingCapital: number; paidInCapital: number; retainedEarnings: number }
   incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; otherIncomeLoss: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
   cashFlowStatement: { operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number; netChangeInCash: number; closingCash: number }
   balanceSheet: { cash: number; workingCapitalAssets: number; netFixedAssets: number; deferredPreOperatingAssets: number; totalAssets: number; tradePayables: number; debt: number; totalLiabilities: number; paidInCapital: number; retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number; balanceDifference: number; reconciled: boolean }
@@ -1455,6 +1460,12 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
   let cumulativePreOperatingAssets = 0
   let accumulatedDepreciation = 0
   let cumulativeBookValueDisposed = 0
+  let previousCash = 0
+  let previousDebt = 0
+  let previousNetFixedAssets = 0
+  let previousWorkingCapitalAssets = 0
+  let previousPaidInCapital = 0
+  let previousRetainedEarnings = 0
   return years.map(row => {
     const cashOperatingCosts = row.variableCashCost + row.fixedCashCost
     const ebitda = row.revenue - cashOperatingCosts
@@ -1470,27 +1481,43 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     const currentAssets = row.workingCapitalBreakdown.rawMaterials + (row.workingCapitalBreakdown.energy ?? 0) + (row.workingCapitalBreakdown.spareParts ?? 0) + row.workingCapitalBreakdown.workInProgress
       + row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables + row.workingCapitalBreakdown.minimumCash
     const tradePayables = row.workingCapitalBreakdown.payables
-    const netFixedAssets = Math.max(0, cumulativeGrossFixedAssets - accumulatedDepreciation - cumulativeBookValueDisposed - row.salvageProceeds)
+    cumulativeBookValueDisposed += row.salvageBookValueDisposed ?? 0
+    const netFixedAssets = cumulativeGrossFixedAssets - accumulatedDepreciation - cumulativeBookValueDisposed
     const deferredPreOperatingAssets = cumulativePreOperatingAssets
     const totalAssets = row.cashBalance + currentAssets + netFixedAssets + deferredPreOperatingAssets
     const totalLiabilities = row.debtBalance + tradePayables
     const totalEquity = paidInCapital + retainedEarnings
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
+    const movementChecks = {
+      cash: row.cashBalance - previousCash - (row.cashBalance - previousCash),
+      debt: row.debtBalance - previousDebt - (row.debtDrawdown + row.capitalizedInterest - row.principal),
+      netFixedAssets: netFixedAssets - previousNetFixedAssets - (row.fixedInvestment + row.maintenanceCapex - row.depreciation - (row.assetBookValueDisposed ?? 0) - (row.salvageBookValueDisposed ?? 0)),
+      workingCapital: currentAssets - previousWorkingCapitalAssets - row.changeInWorkingCapital,
+      paidInCapital: paidInCapital - previousPaidInCapital - row.equityContribution,
+      retainedEarnings: retainedEarnings - previousRetainedEarnings - netIncome,
+    }
+    const openingBalances = { cash: previousCash, debt: previousDebt, netFixedAssets: previousNetFixedAssets, workingCapitalAssets: previousWorkingCapitalAssets, paidInCapital: previousPaidInCapital, retainedEarnings: previousRetainedEarnings }
     const operatingCashFlow = netIncome + row.depreciation - (row.assetSaleOtherIncomeLoss ?? 0) - row.changeInWorkingCapital
     const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex + row.salvageProceeds + (row.assetSaleProceeds ?? 0)
     const financingCashFlow = row.debtDrawdown + row.equityContribution - row.principal
     const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
     return {
       year: row.year,
+      openingBalances,
+      movementChecks,
       incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation, otherIncomeLoss: row.assetSaleOtherIncomeLoss ?? 0, ebit, interest: row.interest, profitBeforeTax, tax: row.tax, taxLossCarryForward: row.taxLossCarryForward, netIncome },
       cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash, closingCash: row.cashBalance },
       balanceSheet: {
         cash: row.cashBalance, workingCapitalAssets: currentAssets, netFixedAssets, deferredPreOperatingAssets,
         totalAssets, tradePayables, debt: row.debtBalance, totalLiabilities, paidInCapital, retainedEarnings,
-        totalEquity, totalLiabilitiesAndEquity, balanceDifference, reconciled: Math.abs(balanceDifference) <= Math.max(0, tolerance),
+        totalEquity, totalLiabilitiesAndEquity, balanceDifference,
+        reconciled: Math.abs(balanceDifference) <= Math.max(0, tolerance) && Object.values(movementChecks).every(value => Math.abs(value) <= Math.max(0,tolerance)),
       },
     }
+    previousCash=row.cashBalance; previousDebt=row.debtBalance; previousNetFixedAssets=netFixedAssets;
+    previousWorkingCapitalAssets=currentAssets; previousPaidInCapital=paidInCapital; previousRetainedEarnings=retainedEarnings;
+    return result
   })
 }
 
