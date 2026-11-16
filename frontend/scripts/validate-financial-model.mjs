@@ -344,6 +344,24 @@ assert.ok(wizardSource.includes("!isRawTemplate&&project.industry==='فولاد 
   && wizardSource.includes('capex:rawProject?[]')
   && wizardSource.includes('opex:rawProject?[]'),
   'Raw template must hide stage-specific selector and start technical, material, utility, CAPEX and OPEX rows blank')
+assert.ok(wizardSource.includes("id:'dri-steelmaking-slab'")
+  && wizardSource.includes("id:'hot-plate'")
+  && wizardSource.includes("const stageFormDefinitions")
+  && wizardSource.includes("dri:{")
+  && wizardSource.includes("'dri-steelmaking-slab':{")
+  && wizardSource.includes("'hot-plate':{")
+  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.materials")
+  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.utilities")
+  && wizardSource.includes("stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex")
+  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.opex"),
+  'Mining, concentration, pelletizing, DRI, steelmaking, integrated slab, hot plate, hot coil and rolling forms must use stage-specific input rows')
+assert.ok(wizardSource.includes("stageOptions.find(s=>s.id==='other')")
+  && !wizardSource.includes("stageOptions[10]"),
+  'Blank-template stage selection must use stable stage IDs, not a fragile array index')
+assert.ok(wizardSource.includes("خرید زمین (۱۳ هکتار؛ ۱۳۰٬۰۰۰ مترمربع)")
+  && wizardSource.includes("حقوق و دستمزد ۲۵۰ نفر")
+  && wizardSource.includes("کلاف گرم (ماده اولیه اصلی)"),
+  'Existing cold-rolling source-based CAPEX, payroll and material-balance fields must be preserved')
 assert.ok(wizardSource.includes("unit={project.industry==='انرژی و نیروگاه'?'مگاوات':project.industry==='فولاد و صنایع معدنی'?'تن/سال':'واحد/سال'}")
   && projectsViewSource.includes('inputMode="numeric" pattern="[0-9]*"'),
   'Capacity must use MW for energy projects and tonnes/year for steel/mining with numeric-only entry')
