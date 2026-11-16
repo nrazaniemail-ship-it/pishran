@@ -393,7 +393,7 @@ export function postForeignExchangeIntoThreeStatements(
       movementChecks,
     })
     if (!reconciled) {
-      issues.push('Foreign-exchange posting did not preserve the balance sheet in period ' + (index + 1) + '.')
+      issues.push('Foreign-exchange posting did not preserve the balance sheet in period ' + (index + 1) + '. Difference=' + balanceDifference + '; movement checks=' + JSON.stringify(movementChecks) + '; FX=' + fxLoss + '; tax delta=' + taxDelta + '.')
       break
     }
   }
