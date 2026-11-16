@@ -454,7 +454,7 @@ export default function AdvancedFinancePanel(props: Props) {
         <div className="fw-grid">
           <label className="fw-field"><span>{t('مبنای روزشمار بهره و هزینه تأمین مالی','Interest & Financing Fee Day-Count')}</span><select value={loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':'')} onChange={e=>updateLoan(loan.id,{periodInterestConvention:e.target.value?(e.target.value as Loan['periodInterestConvention']):undefined})}>
             <option value="">{t('استفاده از روش تبدیل نرخ انتخاب‌شده','Use selected rate-conversion method')}</option>
-            <option value="comfar-months-plus-360">{t('ماه‌های کامل + روزهای با مبنای ۳۶۰ (کامفار)','Completed months + residual days / 360 (COMFAR)')}</option>
+            <option value="comfar-months-plus-360">{t('ماه‌های کامل + روزهای با مبنای ۳۶۰','Completed months + residual days / 360')}</option>
             <option value="actual-360">Actual / 360</option><option value="actual-365">Actual / 365</option>
           </select></label>
         </div>
