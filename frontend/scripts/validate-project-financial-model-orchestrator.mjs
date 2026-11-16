@@ -47,18 +47,18 @@ const finance={
  openingWorkingCapital:0,loans:[],discountRatePercent:10,
 }
 const drafts={
- sales:[{productId:'finished-product',periods:[
+ sales:[{productId:'finished-product',openingFinishedGoodsQuantity:0,periods:[
   {period:'1',salesQuantity:10,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:0},
   {period:'2',salesQuantity:20,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:0},
  ]}],
  productionCosts:[],
- workingCapital:[{id:'cash',name:'Operating cash',category:'cash',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',
+ workingCapital:[{id:'cash',name:'Operating cash',category:'cash',openingBalance:0,minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',
   periodBalances:[{period:'1',amount:0},{period:'2',amount:0}]}],
  assets:[],loans:[],
 }
 const result=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts,foundation,productionStartDate:'2025-01-01',
- openingFinishedGoodsByProduct:{'finished-product':0},openingWorkingCapital:0,
+ 
  openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
  taxTreatment:'non-deductible',
 })
