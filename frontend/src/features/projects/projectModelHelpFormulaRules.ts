@@ -494,3 +494,64 @@ export function calculateEconomicCostBenefitPeriod(input:{salesRevenue:number;sh
  const cashOutflows=input.fixedInvestment+input.preproductionExInterest+input.increaseInNetWorkingCapital+input.operatingCosts+input.marketingCosts+input.foreignDebtService+input.corporateTax+input.indirectCosts
  return {cashInflows,cashOutflows,netCashFlow:cashInflows-cashOutflows}
 }
+
+
+export function calculateInternalRateOfReturn(cashFlows:number[],periodsPerYear=1,referencePoint:'beginning-of-first-period'|'end-of-first-period'='beginning-of-first-period'){
+ if(!cashFlows.every(finite)||!Number.isInteger(periodsPerYear)||periodsPerYear<=0)throw new Error('invalid-irr-input')
+ if(!cashFlows.some(x=>x<0)||!cashFlows.some(x=>x>0))return []
+ const shift=referencePoint==='end-of-first-period'?1/periodsPerYear:0
+ const npvAtLogRate=(logFactor:number)=>cashFlows.reduce((sum,flow,index)=>sum+flow/Math.exp(logFactor*Math.max(0,(index+1)/periodsPerYear-shift)),0)
+ const low=Math.log(0.0001),high=Math.log(101),samples=1600
+ const roots:number[]=[]
+ let prevX=low,prev=npvAtLogRate(prevX)
+ for(let i=1;i<=samples;i++){
+  const x=low+(high-low)*i/samples,value=npvAtLogRate(x)
+  if(value===0)roots.push(Math.exp(x)-1)
+  else if(prev===0)roots.push(Math.exp(prevX)-1)
+  else if(Math.sign(value)!==Math.sign(prev)){
+   let a=prevX,b=x,fa=prev
+   for(let k=0;k<100;k++){
+    const mid=(a+b)/2,fm=npvAtLogRate(mid)
+    if(Math.abs(fm)<1e-10||Math.abs(b-a)<1e-12){a=mid;b=mid;break}
+    if(Math.sign(fm)===Math.sign(fa)){a=mid;fa=fm}else b=mid
+   }
+   const root=Math.exp((a+b)/2)-1
+   if(!roots.some(existing=>Math.abs(existing-root)<1e-7))roots.push(root)
+  }
+  prevX=x;prev=value
+ }
+ return roots.sort((a,b)=>a-b)
+}
+export function calculateSimplePayback(cashFlows:number[]){
+ if(!cashFlows.every(finite))throw new Error('invalid-simple-payback')
+ let cumulative=0
+ for(let i=0;i<cashFlows.length;i++){
+  const previous=cumulative;cumulative+=cashFlows[i]
+  if(cumulative>=0&&previous<0&&cashFlows[i]>0)return {period:i+1,years:i+(Math.abs(previous)/cashFlows[i])}
+ }
+ return null
+}
+export function calculateDynamicPayback(cashFlows:number[],discountRatePercent:number,periodsPerYear=1,referencePoint:'beginning-of-first-period'|'end-of-first-period'='beginning-of-first-period'){
+ const npv=calculateHelpNpv(cashFlows,discountRatePercent,periodsPerYear,referencePoint)
+ let cumulative=0
+ for(let i=0;i<npv.discountedCashFlows.length;i++){
+  const previous=cumulative;cumulative+=npv.discountedCashFlows[i]
+  if(cumulative>=0&&previous<0&&npv.discountedCashFlows[i]>0)return {period:i+1,years:i+Math.abs(previous)/npv.discountedCashFlows[i],cumulativeNpv:cumulative}
+ }
+ return null
+}
+export function calculateShortNpv(cashFlows:number[],discountRatePercent:number,years:number,periodsPerYear=1,referencePoint:'beginning-of-first-period'|'end-of-first-period'='beginning-of-first-period'){
+ if(!Number.isInteger(years)||years<1||!Number.isInteger(periodsPerYear)||periodsPerYear<=0)throw new Error('invalid-short-npv-horizon')
+ return calculateHelpNpv(cashFlows.slice(0,years*periodsPerYear),discountRatePercent,periodsPerYear,referencePoint).npv
+}
+export function calculateNpvRatio(npv:number,investmentByPeriod:number[],discountRatePercent:number,periodsPerYear=1,referencePoint:'beginning-of-first-period'|'end-of-first-period'='beginning-of-first-period'){
+ if(!finite(npv)||!investmentByPeriod.every(nonNegative)||!nonNegative(discountRatePercent)||!Number.isInteger(periodsPerYear)||periodsPerYear<=0)throw new Error('invalid-npv-ratio')
+ const shift=referencePoint==='end-of-first-period'?1/periodsPerYear:0
+ const pvi=investmentByPeriod.reduce((sum,value,index)=>sum+value/Math.pow(1+discountRatePercent/100,Math.max(0,(index+1)/periodsPerYear-shift)),0)
+ return {npv,presentValueOfInvestment:pvi,ratio:pvi===0?null:npv/pvi}
+}
+export function calculateBreakEven(input:{fixedCost:number;variableCostPerUnit:number;salesPricePerUnit:number;capacity:number}){
+ if(![input.fixedCost,input.variableCostPerUnit,input.salesPricePerUnit,input.capacity].every(nonNegative)||input.salesPricePerUnit<=input.variableCostPerUnit)throw new Error('invalid-break-even-input')
+ const quantity=input.fixedCost/(input.salesPricePerUnit-input.variableCostPerUnit)
+ return {quantity,capacityPercent:input.capacity===0?null:quantity/input.capacity*100,revenue:quantity*input.salesPricePerUnit}
+}
