@@ -103,7 +103,7 @@ export function allocateJointVentureCashFlows(
         ? investorCashFlow*partner.sharePercent/100 : 0
       const positiveDistribution=distributionPool*partner.profitSharePercent/100
       const allocatedCashFlow=negativeAllocation+positiveDistribution
-      row.negativeCashFlowAllocation+=Math.abs(negativeAllocation)
+      row.negativeCashFlowAllocation+=negativeAllocation
       row.positiveCashFlowDistribution+=positiveDistribution
       row.netCashFlow+=allocatedCashFlow
       row.periods.push({
