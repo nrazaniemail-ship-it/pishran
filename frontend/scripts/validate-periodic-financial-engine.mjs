@@ -785,6 +785,12 @@ function buildMonthlyPeriods(startYear,startMonth,endYear,endMonth) {
   return periods
 }
 const monthlyDepreciationPeriods=buildMonthlyPeriods(2024,1,2026,1)
+const annualDepreciationPeriods=Array.from({length:3},(_,index)=>{
+  const year=2024+index
+  const start=new Date(Date.UTC(year,0,1))
+  const end=new Date(Date.UTC(year+1,0,1)-86400000)
+  return {index:index+1,startDate:start.toISOString().slice(0,10),endDate:end.toISOString().slice(0,10),days:Math.round((end-start)/86400000)+1,partial:false}
+})
 const periodicSensitivityInput={
   periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
   annualRevenue:[0,1000,1200],annualVariableCost:[0,300,350],annualFixedCost:[0,100,100],
@@ -807,12 +813,6 @@ const targetSearch=periodicSensitivity.searchPeriodicFinanceTarget({
 })
 assert.equal(targetSearch.achieved,true,targetSearch.issues.join('; '))
 assert.ok((targetSearch.achievedValue??-Infinity)>=(targetSearch.target-0.001))
-const annualDepreciationPeriods=Array.from({length:3},(_,index)=>{
-  const year=2024+index
-  const start=new Date(Date.UTC(year,0,1))
-  const end=new Date(Date.UTC(year+1,0,1)-86400000)
-  return {index:index+1,startDate:start.toISOString().slice(0,10),endDate:end.toISOString().slice(0,10),days:Math.round((end-start)/86400000)+1,partial:false}
-})
 const straightLineAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   id:'asset-sl-01',name:'Monthly straight-line asset',assetClass:'fixed',
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:1,lengthMonths:0,
