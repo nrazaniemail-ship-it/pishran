@@ -41,6 +41,11 @@ assert.equal(partnerAllocation.rows[1].netCashFlow,65)
 assert.equal(partnerAllocation.distributedPositiveCashFlow,150)
 assert.equal(partnerAllocation.retainedPositiveCashFlow,150)
 assert.equal(partnerAllocation.totalProjectEquityCashFlow,200)
+assert.equal(partnerAllocation.totalDeclaredCapitalContribution,100)
+assert.equal(partnerAllocation.totalScheduledEquityContribution,100)
+assert.equal(partnerAllocation.declaredCapitalContributionVariance,0)
+assert.equal(partnerAllocation.rows.reduce((sum,row)=>sum+row.netCashFlow,0)+partnerAllocation.retainedPositiveCashFlow,200,
+  'Partner net cash flows plus retained cash must reconcile to total project equity cash flow')
 const invalidPartnerAllocation=partnerFinance.allocateJointVentureCashFlows({
   valid:true,rows:[{period:1,startDate:'2025-01-01',endDate:'2025-12-31',equityFreeCashFlow:100}],
 },[
@@ -659,8 +664,9 @@ assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   && projectReportSource.includes('periodicResult.rows.map'),
   'Project report must include the period-level financial schedule and key output metrics')
 assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
-  && projectReportSource.includes('fiscalYearStartMonth'),
-  'HRCR200 benchmark reconciliation must aggregate monthly and quarterly model periods to the 17 fiscal-year reference schedule')
+  && projectReportSource.includes('fiscalYearStartMonth')
+  && projectReportSource.includes('derivedDscr'),
+  'HRCR200 benchmark reconciliation must aggregate periodic results and expose the derived first-year DSCR check')
 assert.ok(projectFoundationPanelSource.includes('Day-count Basis')
   && projectFoundationPanelSource.includes('Cash Flow Timing for Discounting'),
   'Project foundation must require a day-count basis and cash-flow timing before periodic valuation')
@@ -726,6 +732,20 @@ assert.equal(fiscalQuarterAggregation[0].dscr,2)
 assert.equal(fiscalQuarterAggregation[1].projectFreeCashFlow,70)
 assert.equal(fiscalQuarterAggregation[1].taxRatePercent,null,
   'Mixed intra-year tax rates must not be presented as one annual tax rate')
+
+const hrcrAnnualAggregation = engine.aggregatePeriodicFinanceByFiscalYear(
+  comfarAnnualPeriods.map((period,index)=>({
+    period:index+1,startDate:period.startDate,endDate:period.endDate,days:period.days,
+    taxRatePercent:index<2?25:comfarReference.taxScheduleByOperatingYear[index-2].ratePercent,
+    projectFreeCashFlow:comfarCashFlows[index],depreciation:index<2?0:comfarReference.depreciationByOperatingYear[index-2][1],
+    changeInWorkingCapital:index<2?0:comfarReference.changeInWorkingCapitalByOperatingYear[index-2][1],
+    interestExpense:0,principal:0,debtService:0,cfads:0,
+  })),3,17
+)
+assert.equal(hrcrAnnualAggregation.length,17)
+assert.equal(hrcrAnnualAggregation[0].projectFreeCashFlow,comfarCashFlows[0])
+assert.equal(hrcrAnnualAggregation[2].taxRatePercent,5)
+assert.equal(hrcrAnnualAggregation[16].projectFreeCashFlow,comfarCashFlows[16])
 const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
 assert.ok(comfarIrr !== null && Math.abs(comfarIrr - comfarReference.projectIrrPercent) < 0.01,
   'COMFAR HRCR200 project IRR must reconcile to 48.31% within displayed precision')
