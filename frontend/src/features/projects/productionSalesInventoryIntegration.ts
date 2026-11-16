@@ -169,7 +169,9 @@ export function buildProductionSalesInventorySchedule(
     for (let i=0;i<periods.length;i++) {
       const sales=salesMap.get(i)!
       const required=[sales.salesQuantity,sales.netUnitPrice,sales.finishedGoodsClosingQuantity]
-      if (!required.every(nonNegative) ||
+      if (!required.every(nonNegative) || sales.salesTaxPercent===null ||
+          (sales.subsidyPercent===null&&sales.subsidyAmount===null) ||
+          (sales.subsidyPercent!==null&&sales.subsidyAmount!==null) ||
           (sales.salesTaxPercent!==null && (!nonNegative(sales.salesTaxPercent)||sales.salesTaxPercent>100)) ||
           (sales.subsidyPercent!==null && (!nonNegative(sales.subsidyPercent)||sales.subsidyPercent>100)) ||
           (sales.subsidyAmount!==null && !nonNegative(sales.subsidyAmount))) {
