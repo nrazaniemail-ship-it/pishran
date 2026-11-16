@@ -931,10 +931,15 @@ export function calculateComfarCalendarDepreciationSchedule(
     method,calculationImplemented:true,numericalBenchmark:'pending',
     controlNote:'Formula path and regression behavior are tested; independent reference-output reconciliation is pending.'
   }))
-  const validCalendar = periods.length > 0 && periods.every((period,index) =>
-    period.index === index+1 && !!calendarDate(period.startDate) && !!calendarDate(period.endDate) &&
-    period.days > 0 && period.endDate >= period.startDate) &&
-    Number.isInteger(fiscalYearStartMonth) && fiscalYearStartMonth >= 1 && fiscalYearStartMonth <= 12
+  const validCalendar = periods.length > 0 && periods.every((period,index) => {
+    const start=calendarDate(period.startDate)
+    const end=calendarDate(period.endDate)
+    const previousEnd=index>0?calendarDate(periods[index-1].endDate):null
+    const exactDays=start&&end?Math.round((end.getTime()-start.getTime())/86400000)+1:0
+    return period.index===index+1 && !!start && !!end && period.days===exactDays &&
+      exactDays>0 && period.endDate>=period.startDate &&
+      (!previousEnd || period.startDate===dateOnly(addCalendarDays(previousEnd,1)))
+  }) && Number.isInteger(fiscalYearStartMonth) && fiscalYearStartMonth >= 1 && fiscalYearStartMonth <= 12
   if (!validCalendar) return { valid:false,warnings:["تقویم مالی یا ماه شروع سال مالی معتبر نیست."],periods:[],methodControls }
   const firstDate = calendarDate(periods[0].startDate)!
   const rowsByPeriod = periods.map(()=>[] as ComfarAssetDepreciationRow[])
@@ -1056,6 +1061,16 @@ export function calculateComfarCalendarAssetLifecycle(
   for (const sale of sales) {
     const asset=assets.find(row=>row.id===sale.assetId)
     if (!asset) { warnings.push('Sale '+sale.id+': linked acquisition vintage was not found.'); continue }
+    if (sale.priceMode!=='book-value' && sale.priceMode!=='self-defined') {
+      warnings.push(asset.name+': sale price mode is not supported.'); continue
+    }
+    if (sale.priceMode==='self-defined' && (!Number.isFinite(sale.selfDefinedPrice) || (sale.selfDefinedPrice??-1)<0 ||
+      !Number.isFinite(sale.exchangeRateToLocal) || (sale.exchangeRateToLocal??0)<=0)) {
+      warnings.push(asset.name+': self-defined sale price and positive exchange rate are required.'); continue
+    }
+    if (sale.saleDate && asset.acquisitionDate && sale.saleDate<asset.acquisitionDate) {
+      warnings.push(asset.name+': sale date cannot be earlier than its acquisition date.'); continue
+    }
     if (seen.has(sale.assetId)) { warnings.push(asset.name+': multiple sales for one acquisition vintage are not supported.'); continue }
     seen.add(sale.assetId)
     let periodIndex=sale.period-1
