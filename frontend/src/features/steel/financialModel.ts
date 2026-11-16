@@ -308,6 +308,8 @@ export type IntegratedLoanInput = {
   id: string
   label: string
   drawdowns: number[]
+  openingBalance?: number
+  drawdownTiming?: 'beginning' | 'mid-period' | 'end-period'
   annualRate: number
   graceYears: number
   termYears: number
@@ -431,7 +433,8 @@ function integratedLoanSchedule(loan: IntegratedLoanInput, years: number, constr
   const start = Math.max(constructionYears + 1, Math.floor(loan.repaymentStartYear || constructionYears + 1))
   const firstPrincipalYear = start + Math.max(0, Math.floor(loan.graceYears || 0))
   const totalDrawdown = loan.drawdowns.reduce((total, value) => total + Math.max(0, Number(value) || 0), 0)
-  let balance = 0
+  let balance = Math.max(0, Number(loan.openingBalance) || 0)
+  const drawdownFactor = loan.drawdownTiming === 'beginning' ? 1 : loan.drawdownTiming === 'end-period' ? 0 : 0.5
   let annuityPayment: number | null = null
   let equalPrincipalPayment: number | null = null
   const result: IntegratedLoanYear[] = []
@@ -439,7 +442,7 @@ function integratedLoanSchedule(loan: IntegratedLoanInput, years: number, constr
     const year = index + 1
     const drawdown = Math.max(0, Number(loan.drawdowns[index]) || 0)
     const openingBalance = balance
-    const interestAccrued = (openingBalance + drawdown * 0.5) * rate
+    const interestAccrued = (openingBalance + drawdown * drawdownFactor) * rate
     const capitalize = Boolean(loan.capitalizeInterest) && year < firstPrincipalYear
     const interestExpense = capitalize ? 0 : interestAccrued
     const capitalizedInterest = capitalize ? interestAccrued : 0
@@ -474,12 +477,14 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   input.loans.forEach(loan => { loanSchedules[loan.id] = integratedLoanSchedule(loan, years, constructionYears) })
 
   const totalDebtDrawdown = input.loans.reduce((sum, loan) =>
-    sum + loan.drawdowns.reduce((a, b) => a + Math.max(0, Number(b) || 0), 0), 0)
+    sum + Math.max(0, Number(loan.openingBalance) || 0)
+      + loan.drawdowns.reduce((a, b) => a + Math.max(0, Number(b) || 0), 0), 0)
   const totalEquityContribution = input.equityContributions.reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0)
   const totalFunding = totalDebtDrawdown + totalEquityContribution
   const totalInvestment = Math.max(0, input.fixedInvestment) + Math.max(0, input.preOperatingCost)
   const weightedCostOfDebt = totalDebtDrawdown > 0
-    ? input.loans.reduce((sum, loan) => sum + loan.drawdowns.reduce((a, b) => a + Math.max(0, Number(b) || 0), 0) * Math.max(0, loan.annualRate), 0) / totalDebtDrawdown
+    ? input.loans.reduce((sum, loan) => sum + (Math.max(0, Number(loan.openingBalance) || 0)
+      + loan.drawdowns.reduce((a, b) => a + Math.max(0, Number(b) || 0), 0)) * Math.max(0, loan.annualRate), 0) / totalDebtDrawdown
     : 0
   const equityWeight = totalFunding > 0 ? totalEquityContribution / totalFunding * 100 : 0
   const debtWeight = totalFunding > 0 ? totalDebtDrawdown / totalFunding * 100 : 0
