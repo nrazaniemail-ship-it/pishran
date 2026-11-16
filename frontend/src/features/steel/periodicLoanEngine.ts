@@ -131,6 +131,8 @@ export function calculatePeriodicLoan(input: PeriodicLoanInput): PeriodicLoanRes
   let repaymentBase: number | null = null
   let repaymentNumber = 0
   let rowStart = iso(previousDate)
+  let rowDrawdowns = 0
+  let rowInterestAccrued = 0
 
   for (const eventDate of events) {
     const eventTime = dateMs(eventDate)
@@ -138,6 +140,7 @@ export function calculatePeriodicLoan(input: PeriodicLoanInput): PeriodicLoanRes
     const convention = input.interestConvention ?? 'comfar-months-plus-360'
     const intervalInterest = principal * rate * yearFraction(iso(previousDate), eventDate, convention, input.dayCountBasis)
     accrued += intervalInterest
+    rowInterestAccrued += intervalInterest
     cumulativeAccrued += intervalInterest
 
     let periodDrawdown = 0
@@ -146,6 +149,7 @@ export function calculatePeriodicLoan(input: PeriodicLoanInput): PeriodicLoanRes
       drawIndex++
     }
     principal += periodDrawdown
+    rowDrawdowns += periodDrawdown
 
     let capitalizedInterest = 0
     let interestPaid = 0
@@ -187,10 +191,10 @@ export function calculatePeriodicLoan(input: PeriodicLoanInput): PeriodicLoanRes
         period: rows.length + 1,
         startDate: rowStart,
         endDate: eventDate,
-        days,
-        openingPrincipal: Math.max(0, principal + principalPaid - periodDrawdown - capitalizedInterest),
-        drawdowns: periodDrawdown,
-        interestAccrued: intervalInterest,
+        days: Math.max(0, (eventTime - dateMs(rowStart)) / DAY),
+        openingPrincipal: Math.max(0, principal + principalPaid - rowDrawdowns - capitalizedInterest),
+        drawdowns: rowDrawdowns,
+        interestAccrued: rowInterestAccrued,
         capitalizedInterest,
         interestPaid,
         principalPaid,
@@ -199,6 +203,8 @@ export function calculatePeriodicLoan(input: PeriodicLoanInput): PeriodicLoanRes
         closingAccruedInterest: accrued,
       })
       rowStart = eventDate
+      rowDrawdowns = 0
+      rowInterestAccrued = 0
     }
     previousDate = eventTime
   }
