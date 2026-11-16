@@ -4,7 +4,8 @@ This document records the stage-specific input structure currently wired into th
 
 ## Template rules
 
-- The raw template starts with empty product, technical, material-balance, utility, CAPEX and OPEX row collections. It does not inherit hot-rolling defaults or show the steel-chain stage selector inside the wizard.
+- The raw template starts with empty product, technical, material-balance, utility, CAPEX and OPEX row collections. It does not inherit hot-rolling defaults.
+- The project type selected during project creation is the single source of truth for stage-specific forms. The wizard does not expose a second steel-chain-stage selector that could disagree with the selected project type.
 - Project creation asks for the project type first and a manually entered project name second. Non-steel industries use the same separate type/name pattern.
 - Steel/mining capacity is entered as numeric tonnes per year; energy and power capacity is numeric MW; other industries use a generic unit/year label.
 - The `سایر` project type intentionally remains empty and requires user-defined rows.
