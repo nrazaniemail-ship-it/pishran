@@ -135,19 +135,12 @@ export function bindFixedAssetDraftsToPeriodicFinance(input:{
   const allocateAnnual=(annual:number[])=>periods.map((period,index)=>{
     const start=new Date(period.startDate+'T00:00:00.000Z')
     const end=new Date(period.endDate+'T00:00:00.000Z')
-    let cursor=start.getTime(),allocated=0
-    while(cursor<=end.getTime()) {
-      const current=new Date(cursor),yearStart=fiscalStart(current)
-      const nextYear=new Date(Date.UTC(yearStart.getUTCFullYear()+1,finance.fiscalYearStartMonth-1,1))
-      const segmentEnd=Math.min(end.getTime(),nextYear.getTime()-86400000)
-      const year=periodYears[index]
-      const yearDays=Math.round((nextYear.getTime()-yearStart.getTime())/86400000)
-      const segmentDays=Math.round((segmentEnd-cursor)/86400000)+1
-      if(year<0||year>=annual.length)return Number.NaN
-      allocated+=annual[year]*segmentDays/yearDays
-      cursor=segmentEnd+86400000
-    }
-    return allocated
+    const startOfFiscal=fiscalStart(start)
+    const nextFiscalStart=new Date(Date.UTC(startOfFiscal.getUTCFullYear()+1,finance.fiscalYearStartMonth-1,1))
+    if(end.getTime()>=nextFiscalStart.getTime())return Number.NaN
+    const year=periodYears[index]
+    const yearDays=Math.round((nextFiscalStart.getTime()-startOfFiscal.getTime())/86400000)
+    return year<0||year>=annual.length?Number.NaN:annual[year]*period.days/yearDays
   })
   const basePeriodDepreciation=finance.periodDepreciationSchedule??allocateAnnual(finance.annualDepreciation)
   if(basePeriodDepreciation.length!==periods.length||basePeriodDepreciation.some(value=>!nonNegative(value)))
@@ -162,7 +155,7 @@ export function bindFixedAssetDraftsToPeriodicFinance(input:{
     :periods.map(()=>({saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0}))
   if(!finance.periodAssetSaleSchedule&&finance.annualAssetSaleSchedule) {
     finance.annualAssetSaleSchedule.forEach((row,year)=>{
-      const matching=periods.map((period,index)=>({period,index})).filter(({period})=>periodYears[periods.indexOf(period)]===year)
+      const matching=periods.map((period,index)=>({period,index})).filter(({index})=>periodYears[index]===year)
       const target=matching[matching.length-1]?.index
       if(target!==undefined) {
         existingSales[target].saleProceeds+=row.saleProceeds
