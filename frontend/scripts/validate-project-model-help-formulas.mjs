@@ -34,6 +34,7 @@ assert.equal(quantityWc.increment,-450)
 assert.ok(Math.abs(f.calculateWeightedAverageMaterialUnitValue(100,2,10,3).unitValue-230/110)<1e-9)
 assert.deepEqual(f.calculateWorkingCapitalValueRequirement({openingValue:500,basis:300,turnover:3}),{requiredValue:100,balanceAfterBasis:200,closingValue:200,increment:-300})
 assert.deepEqual(f.calculateWorkingCapitalPeriodTotals([100,50],[20],80),{currentAssets:150,currentLiabilities:20,netWorkingCapital:130,change:50,cashOutflow:50,cashInflow:0})
+assert.deepEqual(f.calculateSalesProductionPeriod({sales:8,openingFinishedGoods:10,daysCoverage:30,periodMonths:12,productionActive:false,salesEndsBeforeProductionPhase:false}),{production:0,closingFinishedGoods:2,requiredStock:0,turnover:12})
 
 assert.equal(f.calculateGraduatedIncomeTax(1500,[{lowerLimit:0,ratePercent:10},{lowerLimit:1000,ratePercent:20}]),200)
 const loss=f.applyLossCarryForward([-200,130,100],2)
