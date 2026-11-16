@@ -69,4 +69,29 @@ assert.deepEqual(result.financeInput.workingCapitalByPeriod,[0,0])
 assert.equal(result.finalRun.finance.valid,true)
 assert.equal(result.finalRun.statements.length,2)
 assert.ok(result.finalRun.statements.every(row=>row.balanceSheet.reconciled))
-console.log('Unified project form orchestration validation passed.')
+const openingBalanceSheet={
+ enabled:true,cash:100,inventory:20,workInProgress:10,finishedGoods:30,receivables:40,
+ otherCurrentAssets:0,tradePayables:10,otherCurrentLiabilities:5,grossFixedAssets:200,
+ accumulatedDepreciation:50,deferredPreOperatingAssets:0,shortTermDebt:20,longTermDebt:50,
+ shareCapital:200,retainedEarnings:65,
+}
+const existingEnterprise=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,openingBalanceSheet},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(existingEnterprise.valid,true,existingEnterprise.issues.join('; '))
+assert.equal(existingEnterprise.finalRun.statements[0].openingBalances.cash,100)
+assert.equal(existingEnterprise.finalRun.statements[0].openingBalances.debt,70)
+assert.equal(existingEnterprise.finalRun.statements[0].openingBalances.netFixedAssets,150)
+assert.equal(existingEnterprise.finalRun.statements[0].openingBalances.netWorkingCapital,85)
+assert.ok(existingEnterprise.finalRun.statements.every(row=>row.balanceSheet.reconciled))
+const unbalancedOpening=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,openingBalanceSheet:{...openingBalanceSheet,retainedEarnings:66}},foundation,
+ productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(unbalancedOpening.valid,false)
+assert.ok(unbalancedOpening.issues.some(issue=>issue.includes('opening-balance-sheet-does-not-balance')))
+console.log('Unified project form orchestration and opening-balance-sheet validation passed.')
