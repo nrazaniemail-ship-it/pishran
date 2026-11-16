@@ -30,6 +30,8 @@ export type PartnerFinanceResult = {
   warnings: string[]
   rows: PartnerCashFlowAllocation[]
   totalProjectEquityCashFlow: number
+  positiveCashFlowDistributionPercent: number
+  allocationReconciliationVariance: number
   totalScheduledEquityContribution: number
   totalDeclaredCapitalContribution: number
   declaredCapitalContributionVariance: number
@@ -52,6 +54,7 @@ export function allocateJointVentureCashFlows(
   const warnings: string[] = []
   const empty = (): PartnerFinanceResult => ({
     valid: false, warnings, rows: [], totalProjectEquityCashFlow: 0,
+    positiveCashFlowDistributionPercent:0,allocationReconciliationVariance:0,
     totalScheduledEquityContribution: 0,totalDeclaredCapitalContribution: 0,
     declaredCapitalContributionVariance: 0,distributedPositiveCashFlow: 0,retainedPositiveCashFlow: 0,
   })
@@ -115,8 +118,12 @@ export function allocateJointVentureCashFlows(
   })
   const totalDeclaredCapitalContribution=partners.reduce((sum,partner)=>sum+partner.capitalContribution,0)
   const totalScheduledEquityContribution=finance.totalEquityContribution
+  const allocatedPartnerNetCashFlow=rows.reduce((sum,row)=>sum+row.netCashFlow,0)
+  const allocationReconciliationVariance=totalProjectEquityCashFlow-allocatedPartnerNetCashFlow-retainedPositiveCashFlow
+  if(Math.abs(allocationReconciliationVariance)>0.01)warnings.push('Partner cash-flow allocations and retained cash do not reconcile to total equity cash flow.')
   return {
-    valid:true,warnings,rows,totalProjectEquityCashFlow,totalScheduledEquityContribution,
+    valid:Math.abs(allocationReconciliationVariance)<=0.01,warnings,rows,totalProjectEquityCashFlow,
+    positiveCashFlowDistributionPercent,allocationReconciliationVariance,totalScheduledEquityContribution,
     totalDeclaredCapitalContribution,
     declaredCapitalContributionVariance:totalDeclaredCapitalContribution-totalScheduledEquityContribution,
     distributedPositiveCashFlow,retainedPositiveCashFlow
