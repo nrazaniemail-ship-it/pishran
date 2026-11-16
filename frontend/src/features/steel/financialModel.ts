@@ -892,8 +892,15 @@ export function calculateComfarAssetDepreciationSchedule(
 
 
 
+export type ComfarCalendarMethodControl = {
+  method: ComfarDepreciationMethod
+  calculationImplemented: boolean
+  numericalBenchmark: 'pending'
+  controlNote: string
+}
 export type ComfarCalendarDepreciationSchedule = ComfarDepreciationSchedule & {
   periods: (ComfarDepreciationPeriod & { startDate: string; endDate: string; days: number })[]
+  methodControls: ComfarCalendarMethodControl[]
 }
 function calendarDate(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -920,11 +927,15 @@ export function calculateComfarCalendarDepreciationSchedule(
   stopDatesByAsset: Record<string,string> = {},
 ): ComfarCalendarDepreciationSchedule {
   const warnings: string[] = []
+  const methodControls:ComfarCalendarMethodControl[] = (['none','linear-to-zero','linear-to-scrap','accelerated','sum-of-years-digits'] as ComfarDepreciationMethod[]).map(method=>({
+    method,calculationImplemented:true,numericalBenchmark:'pending',
+    controlNote:'Formula path and regression behavior are tested; independent reference-output reconciliation is pending.'
+  }))
   const validCalendar = periods.length > 0 && periods.every((period,index) =>
     period.index === index+1 && !!calendarDate(period.startDate) && !!calendarDate(period.endDate) &&
     period.days > 0 && period.endDate >= period.startDate) &&
     Number.isInteger(fiscalYearStartMonth) && fiscalYearStartMonth >= 1 && fiscalYearStartMonth <= 12
-  if (!validCalendar) return { valid:false,warnings:["تقویم مالی یا ماه شروع سال مالی معتبر نیست."],periods:[] }
+  if (!validCalendar) return { valid:false,warnings:["تقویم مالی یا ماه شروع سال مالی معتبر نیست."],periods:[],methodControls }
   const firstDate = calendarDate(periods[0].startDate)!
   const rowsByPeriod = periods.map(()=>[] as ComfarAssetDepreciationRow[])
   const yearStartPeriod = (yearIndex:number) => periods.findIndex(period =>
@@ -1022,7 +1033,7 @@ export function calculateComfarCalendarDepreciationSchedule(
       depreciation:rows.reduce((sum,row)=>sum+row.depreciation,0),
       closingBookValue:rows.reduce((sum,row)=>sum+row.closingBookValue,0),assets:rows}
   })
-  return {valid:warnings.length===0,warnings,periods:resultPeriods}
+  return {valid:warnings.length===0,warnings,periods:resultPeriods,methodControls}
 }
 
 /** Asset lifecycle on the actual project calendar, including period-specific disposals. */
