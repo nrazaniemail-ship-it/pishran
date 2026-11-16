@@ -212,3 +212,34 @@ export function calculateShortTermDepositInterest(cashInHand:number,portionPerce
  if(!nonNegative(cashInHand)||!nonNegative(portionPercent)||portionPercent>100||!nonNegative(annualRatePercent)||!nonNegative(periodMonths)||periodMonths>12)throw new Error('invalid-short-term-deposit')
  return cashInHand*portionPercent/100*annualRatePercent/100*periodMonths/12
 }
+
+export function calculateInterestCapitalization(totalInterest:number,capitalizedPercent:number,capitalizationStillActive:boolean){
+ if(!nonNegative(totalInterest)||!nonNegative(capitalizedPercent)||capitalizedPercent>100)throw new Error('invalid-interest-capitalization')
+ const capitalized=capitalizationStillActive?totalInterest*capitalizedPercent/100:0
+ return {capitalized,paid:totalInterest-capitalized}
+}
+export function calculateLoanDisbursementPhaseEnd(type:'annuity'|'constant-principal'|'profile',firstRepaymentDate:string,interval:'yearly'|'half-yearly'|'quarterly'|'monthly'){
+ if(type==='profile')return null
+ const timestamp=Date.parse(firstRepaymentDate+'T00:00:00Z')
+ if(!Number.isFinite(timestamp))throw new Error('invalid-first-repayment-date')
+ const date=new Date(timestamp)
+ const isMonthEnd=date.getUTCDate()===new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)).getUTCDate()
+ if(!isMonthEnd)throw new Error('first-repayment-must-be-month-end')
+ if(type==='constant-principal')return new Date(timestamp-86400000).toISOString().slice(0,10)
+ const months=interval==='yearly'?12:interval==='half-yearly'?6:interval==='quarterly'?3:1
+ const targetMonth=date.getUTCFullYear()*12+date.getUTCMonth()-months
+ const year=Math.floor(targetMonth/12),month=((targetMonth%12)+12)%12
+ return new Date(Date.UTC(year,month+1,0)).toISOString().slice(0,10)
+}
+export function buildConstantPrincipalLoanSchedule(principal:number,annualRatePercent:number,periodsPerYear:number,numberOfPayments:number){
+ if(!nonNegative(principal)||!nonNegative(annualRatePercent)||!Number.isInteger(periodsPerYear)||periodsPerYear<=0||!Number.isInteger(numberOfPayments)||numberOfPayments<=0)throw new Error('invalid-constant-principal-input')
+ const principalPayment=principal/numberOfPayments
+ let balance=principal
+ return Array.from({length:numberOfPayments},(_,index)=>{
+  const openingBalance=balance
+  const principalPaid=index===numberOfPayments-1?balance:Math.min(balance,principalPayment)
+  const interest=openingBalance*annualRatePercent/100/periodsPerYear
+  balance=Math.max(0,openingBalance-principalPaid)
+  return {period:index+1,openingBalance,principal:principalPaid,interest,payment:principalPaid+interest,closingBalance:balance}
+ })
+}
