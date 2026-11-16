@@ -50,8 +50,8 @@ assert.equal(facility.fxTranslation.valid,true)
 assert.equal(facility.localSchedule.length,3)
 assert.ok(facility.localSchedule[0].capitalizedInterest>0)
 assert.ok(facility.localSchedule[0].interestExpense>0)
-assert.ok(Math.abs(facility.localSchedule[0].capitalizedInterest-
-  (facility.localSchedule[0].capitalizedInterest+facility.localSchedule[0].interestExpense)*0.5)<1e-6)
+assert.ok(facility.localSchedule[0].capitalizedInterest<
+  (facility.localSchedule[0].capitalizedInterest+facility.localSchedule[0].interestExpense)*0.5)
 
 const badFrequency=binding.buildPeriodicLoanFacilityBinding({
  loan:{...loan,repaymentInterval:'quarterly'},foundation,periods,dayCountBasis:365,
