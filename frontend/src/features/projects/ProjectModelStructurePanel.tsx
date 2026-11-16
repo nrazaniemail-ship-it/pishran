@@ -38,7 +38,7 @@ export default function ProjectModelStructurePanel({configuration,language='fa'}
  const groups=[...new Set(nodes.map(node=>node.group))]
  const label=(node:ProjectModelNodeDefinition)=>labels[node.id]?.[en?1:0]??node.id
  return <section className="fw-card" style={{marginTop:16}}>
-  <h3>{en?'COMFAR-style project model tree':'درخت ساختاری مدل پروژه بر مبنای راهنمای COMFAR'}</h3>
+  <h3>{en?'Project model structure':'درخت ساختاری مدل پروژه'}</h3>
   <p className="fw-hint">{en?'The structure is metadata only. It does not prefill project figures, prices, capacities, rates or financial assumptions. Modules are displayed according to the selected analysis features.':'این بخش نقشه ماژول‌های مدل است، نه داده آماده پروژه. هیچ مبلغ، قیمت، ظرفیت، نرخ یا فرض مالی از پیش وارد نمی‌شود؛ ماژول‌های اختیاری فقط با فعال‌بودن قابلیت مربوط نمایش داده می‌شوند.'}</p>
   {groups.map(group=><div key={group} style={{marginTop:12}}>
    <h4>{groupLabels[group]?.[en?1:0]??group}</h4>
