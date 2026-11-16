@@ -1,4 +1,5 @@
-import type { ProjectCalendarPeriod } from '../projects/projectFoundation'
+import type { ProjectCalendarPeriod, ProjectCurrency } from '../projects/projectFoundation'
+import type { PeriodicLoanRow } from './periodicFinancialEngine'
 
 export type PeriodicForeignCurrencyDebtInput = {
   /** Opening principal and capitalized charges in the foreign currency. */
@@ -9,10 +10,13 @@ export type PeriodicForeignCurrencyDebtInput = {
   drawdowns: number[]
   principalRepayments: number[]
   capitalizedInterest: number[]
+  /** Capitalized financing fees added to the contractual debt balance. */
+  capitalizedFees?: number[]
   /** Transaction rates for each movement; all rates are local currency per one foreign unit. */
   drawdownExchangeRates: number[]
   repaymentExchangeRates: number[]
   capitalizedInterestExchangeRates: number[]
+  capitalizedFeesExchangeRates?: number[]
   /** Closing rates used to remeasure the foreign-currency debt liability. */
   closingExchangeRates: number[]
 }
@@ -23,11 +27,13 @@ export type PeriodicForeignCurrencyDebtRow = {
   drawdownForeign: number
   principalRepaymentForeign: number
   capitalizedInterestForeign: number
+  capitalizedFeesForeign: number
   closingForeignBalance: number
   openingCarryingAmountLocal: number
   drawdownLocal: number
   principalRepaymentLocal: number
   capitalizedInterestLocal: number
+  capitalizedFeesLocal: number
   closingCarryingAmountLocal: number
   /** Positive is an FX loss (increase in the local-currency debt liability); negative is a gain. */
   foreignExchangeLossLocal: number
@@ -95,6 +101,12 @@ export function calculatePeriodicForeignCurrencyDebt(
     ['capitalizedInterestExchangeRates', input.capitalizedInterestExchangeRates],
     ['closingExchangeRates', input.closingExchangeRates],
   ]
+  const capitalizedFees = input.capitalizedFees ?? Array(count).fill(0)
+  const capitalizedFeesExchangeRates = input.capitalizedFeesExchangeRates ?? input.capitalizedInterestExchangeRates
+  if (capitalizedFees.length !== count || capitalizedFees.some(value => !finite(value) || value < 0))
+    issues.push('capitalizedFees must contain one finite non-negative value per project period.')
+  if (capitalizedFeesExchangeRates.length !== count || capitalizedFeesExchangeRates.some(value => !finite(value) || value <= 0))
+    issues.push('capitalizedFeesExchangeRates must contain one positive exchange rate per project period.')
   if (!finite(input.openingForeignBalance) || input.openingForeignBalance < 0)
     issues.push('Opening foreign-currency debt must be finite and non-negative.')
   if (!finite(input.openingExchangeRateToLocal) || input.openingExchangeRateToLocal <= 0)
@@ -122,7 +134,8 @@ export function calculatePeriodicForeignCurrencyDebt(
     const drawdown = input.drawdowns[index]
     const repayment = input.principalRepayments[index]
     const capitalizedInterest = input.capitalizedInterest[index]
-    const availableForeignBalance = foreignBalance + drawdown + capitalizedInterest
+    const capitalizedFee = capitalizedFees[index]
+    const availableForeignBalance = foreignBalance + drawdown + capitalizedInterest + capitalizedFee
     if (repayment > availableForeignBalance + 1e-8) {
       issues.push('Principal repayment exceeds available foreign-currency debt in period ' + (index + 1) + '.')
       break
@@ -131,20 +144,23 @@ export function calculatePeriodicForeignCurrencyDebt(
     const drawdownLocal = drawdown * input.drawdownExchangeRates[index]
     const repaymentLocal = repayment * input.repaymentExchangeRates[index]
     const capitalizedInterestLocal = capitalizedInterest * input.capitalizedInterestExchangeRates[index]
+    const capitalizedFeesLocal = capitalizedFee * capitalizedFeesExchangeRates[index]
     const closingCarryingAmountLocal = closingForeignBalance * input.closingExchangeRates[index]
     const foreignExchangeLossLocal = closingCarryingAmountLocal
-      - openingCarryingAmountLocal - drawdownLocal - capitalizedInterestLocal + repaymentLocal
+      - openingCarryingAmountLocal - drawdownLocal - capitalizedInterestLocal - capitalizedFeesLocal + repaymentLocal
     rows.push({
       period: index + 1,
       openingForeignBalance: foreignBalance,
       drawdownForeign: drawdown,
       principalRepaymentForeign: repayment,
       capitalizedInterestForeign: capitalizedInterest,
+      capitalizedFeesForeign: capitalizedFee,
       closingForeignBalance,
       openingCarryingAmountLocal,
       drawdownLocal,
       principalRepaymentLocal: repaymentLocal,
       capitalizedInterestLocal,
+      capitalizedFeesLocal,
       closingCarryingAmountLocal,
       foreignExchangeLossLocal,
     })
@@ -169,4 +185,72 @@ export function translateForeignCurrencyFlowsToLocal(
       foreignAmounts.some(value => !finite(value)) ||
       exchangeRatesToLocal.some(rate => !finite(rate) || rate <= 0)) return []
   return foreignAmounts.map((amount, index) => amount * exchangeRatesToLocal[index])
+}
+
+
+export type PeriodicForeignCurrencyLoanTranslationInput = {
+  currency: ProjectCurrency
+  periods: ProjectCalendarPeriod[]
+  schedule: PeriodicLoanRow[]
+  openingForeignBalance: number
+  openingExchangeRateToLocal: number
+}
+
+/**
+ * Connect the project's explicit currency-rate directory to one already-calculated
+ * periodic loan schedule. The directory must contain an explicit rate for each
+ * period; accepted keys are period number, exact start/end date, or YYYY-MM.
+ * For each period the same supplied rate is used for period movements and closing
+ * remeasurement because the schedule aggregates movements at period granularity.
+ * This is an explicit period-rate convention, not a substitute for dated spot rates.
+ */
+export function translatePeriodicForeignCurrencyLoan(
+  input: PeriodicForeignCurrencyLoanTranslationInput,
+): PeriodicForeignCurrencyDebtResult {
+  const { currency, periods, schedule } = input
+  const issues: string[] = []
+  if (!currency?.code?.trim()) issues.push('A foreign currency code is required.')
+  if (!Array.isArray(currency?.exchangeRates)) issues.push('The foreign currency must have an exchange-rate directory.')
+  if (!Array.isArray(schedule) || schedule.length !== periods.length)
+    issues.push('The loan schedule must contain exactly one row per project period.')
+  if (issues.length) return { valid: false, rows: [], issues, totalForeignExchangeLossLocal: Number.NaN }
+
+  const rates: number[] = []
+  for (let index = 0; index < periods.length; index++) {
+    const period = periods[index]
+    const monthKey = period.startDate.slice(0, 7)
+    const candidates = [String(period.index), period.startDate, period.endDate, monthKey]
+    let resolved: number | undefined
+    for (const key of candidates) {
+      const matches = currency.exchangeRates.filter(rate => rate.period.trim() === key)
+      if (matches.length > 1) {
+        issues.push('Duplicate exchange-rate entries exist for key ' + key + '.')
+        break
+      }
+      if (matches.length === 1) {
+        resolved = matches[0].rateToLocal
+        break
+      }
+    }
+    if (resolved === undefined || !finite(resolved) || resolved <= 0)
+      issues.push('A positive explicit exchange rate is missing for project period ' + period.index + '.')
+    else rates.push(resolved)
+    if (schedule[index]?.period !== period.index)
+      issues.push('Loan schedule period sequence does not match the project calendar at period ' + period.index + '.')
+  }
+  if (issues.length) return { valid: false, rows: [], issues, totalForeignExchangeLossLocal: Number.NaN }
+
+  return calculatePeriodicForeignCurrencyDebt({
+    openingForeignBalance: input.openingForeignBalance,
+    openingExchangeRateToLocal: input.openingExchangeRateToLocal,
+    drawdowns: schedule.map(row => row.drawdown),
+    principalRepayments: schedule.map(row => row.principal),
+    capitalizedInterest: schedule.map(row => row.capitalizedInterest),
+    capitalizedFees: schedule.map(row => row.capitalizedFinancingFees),
+    drawdownExchangeRates: rates,
+    repaymentExchangeRates: rates,
+    capitalizedInterestExchangeRates: rates,
+    capitalizedFeesExchangeRates: rates,
+    closingExchangeRates: rates,
+  }, periods)
 }
