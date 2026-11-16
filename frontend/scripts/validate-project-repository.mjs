@@ -31,6 +31,9 @@ const projects=[
  {id:'legacy-user',name:'کارخانه فولاد توسعه',steelStage:'نورد گرم ورق',capacity:'350000',location:'',industry:'فولاد و صنایع معدنی',status:'draft',createdAt:'',updatedAt:''}
 ]
 state.set('projects:list:v1',projects)
+state.set('feasibility:project:sample-hr:v1',{name:'sample-hr'})
+state.set('feasibility:project:sample-old-template:v1',{name:'sample-old-template'})
+state.set('feasibility:project:sample-dash:v1',{name:'sample-dash'})
 state.set('feasibility:advanced-finance:sample-hr:hrcr-workbook-v1-legacy',{loans:[{annualRate:28}]})
 state.set('feasibility:advanced-finance:sample-old-template:hrcr-workbook-v1-old',{loans:[{annualRate:26}]})
 state.set('feasibility:project:orphan-sample:v2',{name:'Orphan sample'})
