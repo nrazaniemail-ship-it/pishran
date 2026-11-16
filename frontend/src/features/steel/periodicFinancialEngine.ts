@@ -626,6 +626,8 @@ export type PeriodicProjectFinanceInput = {
   annualMaintenanceCapex: number[]
   annualTaxRates: number[]
   taxRatesByPeriod?: number[]
+  /** Explicit deductible tax allowances by project period, applied before loss carry-forward. */
+  taxAllowancesByPeriod?: number[]
   annualEquityContributions: number[]
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
@@ -689,6 +691,7 @@ export type PeriodicProjectFinanceRow = {
   debtDrawdown: number
   debtService: number
   taxRatePercent: number
+  taxAllowances: number
   tax: number
   unleveredTax: number
   taxLossCarryForward: number
@@ -1013,6 +1016,11 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Annual tax-rate schedule does not cover every project fiscal period.')
     return empty()
   }
+  if(input.taxAllowancesByPeriod&&(input.taxAllowancesByPeriod.length!==periods.length||
+    input.taxAllowancesByPeriod.some(amount=>!validFinite(amount)||amount<0))) {
+    warnings.push('Tax allowances must contain one finite non-negative amount for every project period.')
+    return empty()
+  }
   const loanSchedules: Record<string, PeriodicLoanRow[]> = {}
   const suppliedSchedules = input.precomputedLoanSchedules ?? {}
   const loanIds = new Set(input.loans.map(loan => loan.id))
@@ -1094,8 +1102,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
     const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
-    const periodTax = calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
-    const unleveredPeriodTax = calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
+    const taxAllowances=input.taxAllowancesByPeriod?.[index]??0
+    const periodTax = calculatePeriodTax(ebit - interestExpense - taxAllowances, taxRates[index], taxLoss)
+    const unleveredPeriodTax = calculatePeriodTax(ebit - taxAllowances, taxRates[index], unleveredTaxLoss)
     if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
       warnings.push('Tax calculation failed in project period ' + (index + 1) + '.')
       return empty()
@@ -1137,7 +1146,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
       capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
-      tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
+      taxAllowances,tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
       equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
