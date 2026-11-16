@@ -41,6 +41,10 @@ The optional modules are activated explicitly. Their absence must not be interpr
 - Quantity, unit price and total use the two-of-three rule. The third value is calculated only when exactly two values are entered; incomplete and over-specified rows are not silently adjusted.
 - Period series use the project's generated calendar. No annual-to-quarterly or quarterly-to-monthly interpolation is permitted unless the user explicitly selects and confirms an allocation method.
 - Fixed/variable cost split, depreciation policy, tax rates, exchange rates, escalation and discount rates remain blank until supplied.
+- Opening finished-goods quantity and opening working-capital balances remain `null` (unspecified) in a raw project. They must never default to numeric zero, because zero is a substantive financial assumption rather than an empty input.
+- Empty repeatable collections (products, assets, cost items, loan facilities, partners and period rows) remain empty until the analyst explicitly adds a row. A row's stable ID is structural metadata, not a financial value.
+- Blank forms must distinguish an unknown value (`null`/empty) from an explicit zero entered by the analyst; validation and calculation orchestration must preserve that distinction.
+
 - Expansion/rehabilitation opening balances and economic-analysis adjustments appear only when the respective feature is selected.
 - Validation distinguishes missing information (warning) from contradictory or invalid input (error).
 
