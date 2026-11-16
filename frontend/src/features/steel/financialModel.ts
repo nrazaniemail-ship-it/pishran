@@ -1445,8 +1445,8 @@ export function reconcileFixedInvestmentRegister(
 
 export type FinancialStatementYear = {
   year: number
-  openingBalances: { cash: number; debt: number; netFixedAssets: number; workingCapitalAssets: number; paidInCapital: number; retainedEarnings: number }
-  movementChecks: { cash: number; debt: number; netFixedAssets: number; workingCapital: number; paidInCapital: number; retainedEarnings: number }
+  openingBalances: { cash: number; debt: number; netFixedAssets: number; workingCapitalAssets: number; preOperatingAssets: number; paidInCapital: number; retainedEarnings: number }
+  movementChecks: { cash: number; debt: number; netFixedAssets: number; workingCapital: number; preOperatingAssets: number; paidInCapital: number; retainedEarnings: number }
   incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; otherIncomeLoss: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
   cashFlowStatement: { operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number; netChangeInCash: number; closingCash: number }
   balanceSheet: { cash: number; workingCapitalAssets: number; netFixedAssets: number; deferredPreOperatingAssets: number; totalAssets: number; tradePayables: number; debt: number; totalLiabilities: number; paidInCapital: number; retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number; balanceDifference: number; reconciled: boolean }
