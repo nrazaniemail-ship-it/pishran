@@ -112,7 +112,6 @@ export function calculatePeriodicLoan(input: PeriodicLoanInput): PeriodicLoanRes
   const drawdowns = [...input.drawdowns].sort((a, b) => dateMs(a.date) - dateMs(b.date))
   const repaymentDates = Array.from({ length: input.repaymentCount }, (_, index) => addMonths(input.firstRepaymentDate, index * input.repaymentIntervalMonths))
   const cutoff = dateMs(input.capitalizationDate)
-  const firstRepayment = dateMs(input.firstRepaymentDate)
   const rate = input.annualInterestRatePercent / 100
   const periodicRate = rate * input.repaymentIntervalMonths / 12
   const totalDrawdowns = drawdowns.reduce((sum, item) => sum + item.amount, 0)
@@ -128,7 +127,6 @@ export function calculatePeriodicLoan(input: PeriodicLoanInput): PeriodicLoanRes
 
   // Accrue interest from each cash event date to the next, applying dated drawdowns.
   const events = [...new Set([...drawdowns.map(item => item.date), input.capitalizationDate, ...repaymentDates])].sort((a, b) => dateMs(a) - dateMs(b))
-  const openingAtCutoff = () => principal
   let capitalizedAtCutoff = false
   let repaymentBase: number | null = null
   let repaymentNumber = 0
