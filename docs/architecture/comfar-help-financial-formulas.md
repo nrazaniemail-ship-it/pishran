@@ -142,3 +142,10 @@ The engine helper in `frontend/src/features/steel/foreignCurrencyTranslation.ts`
 Capitalized financing fees are included separately from capitalized interest in the foreign-currency debt roll-forward. Since the existing periodic loan engine aggregates movements by project period, this adapter uses the resolved period rate for all movements in that period and for its closing remeasurement. It does not claim to reproduce exact intraperiod spot-rate accounting.
 
 This is an engine-level adapter, not yet a user-interface binding or a posting into the linked income statement, cash-flow statement, and balance sheet. FX tax deductibility and loss carry-forward treatment must be applied under the project's tax policy before claiming full three-statement integration.
+
+
+#### Posting FX remeasurement to linked financial statements
+
+`postForeignExchangeIntoThreeStatements` accepts a reconciled local-currency statement set, one FX remeasurement row per period, period tax rates, an opening tax-loss carry-forward and an explicit FX tax treatment. It records FX losses as financing-related profit-and-loss charges (gains as income), recalculates tax and loss carry-forward, adds back the non-cash FX charge in operating cash flow, adjusts the carrying value of debt, and rolls the after-tax retained-earnings effect. The posting is rejected when period keys do not match or when it breaks a previously reconciled balance sheet.
+
+The posting precondition is important: the base statement debt balances must already include the foreign debt at transaction-date carrying values; the FX result passed to this function must contain only the remeasurement difference. Tax deductibility is an explicit project-policy input. This function is an engine-level posting primitive and is not yet wired to the project wizard's UI or automatically called by every project calculation.
