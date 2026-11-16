@@ -831,15 +831,14 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const equityWorkingCapitalContributionAmount = input.annualEquityWorkingCapitalContributions
       ? equityWorkingCapitalContribution[index]
       : 0
-    const equityWorkingCapitalCashFlow = changeInWorkingCapital < 0
-      ? changeInWorkingCapital
-      : input.annualEquityWorkingCapitalContributions
-        ? equityWorkingCapitalContributionAmount
-        : changeInWorkingCapital
+    const equityWorkingCapitalCashFlow = input.annualEquityWorkingCapitalContributions
+      ? (changeInWorkingCapital < 0
+        ? changeInWorkingCapital - equityWorkingCapitalContributionAmount
+        : equityWorkingCapitalContributionAmount)
+      : changeInWorkingCapital
     if (input.annualEquityWorkingCapitalContributions &&
-        (!validFinite(equityWorkingCapitalContributionAmount) || equityWorkingCapitalContributionAmount < 0 ||
-         equityWorkingCapitalContributionAmount > Math.max(0, changeInWorkingCapital) + 0.01)) {
-      warnings.push('Shareholder-funded working capital must be finite, non-negative and no greater than the period increase in net working capital (period ' + (index + 1) + ').')
+        (!validFinite(equityWorkingCapitalContributionAmount) || equityWorkingCapitalContributionAmount < 0)) {
+      warnings.push('Shareholder working-capital funding must be finite and non-negative (period ' + (index + 1) + ').')
       return empty()
     }
     const cfads = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
@@ -1240,14 +1239,14 @@ export function buildPeriodicThreeFinancialStatements(
     const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital
     const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex +
       row.assetSaleProceeds + row.salvageValue
-    const financingCashFlow = row.debtDrawdown + row.equityContribution - row.principal
+    const financingCashFlow = row.debtDrawdown + row.equityContribution + row.equityWorkingCapitalContribution - row.principal
     const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
     const closingCash = cash + netChangeInCash
     const closingWorkingCapital = row.closingWorkingCapital
     const closingNetFixedAssets = netFixedAssets + row.fixedInvestment + row.maintenanceCapex -
       row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed
     const closingPreOperatingAssets = deferredPreOperatingAssets + row.preOperatingCost + row.capitalizedInterest
-    const closingPaidInCapital = paidInCapital + row.equityContribution
+    const closingPaidInCapital = paidInCapital + row.equityContribution + row.equityWorkingCapitalContribution
     const closingRetainedEarnings = retainedEarnings + netIncome
     const totalAssets = closingCash + closingWorkingCapital + closingNetFixedAssets + closingPreOperatingAssets
     const totalLiabilities = closingDebt
@@ -1261,7 +1260,7 @@ export function buildPeriodicThreeFinancialStatements(
       netFixedAssets: closingNetFixedAssets - netFixedAssets -
         (row.fixedInvestment + row.maintenanceCapex - row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed),
       deferredPreOperatingAssets: closingPreOperatingAssets - deferredPreOperatingAssets - row.preOperatingCost - row.capitalizedInterest,
-      paidInCapital: closingPaidInCapital - paidInCapital - row.equityContribution,
+      paidInCapital: closingPaidInCapital - paidInCapital - row.equityContribution - row.equityWorkingCapitalContribution,
       retainedEarnings: closingRetainedEarnings - retainedEarnings - netIncome,
     }
     statements.push({
