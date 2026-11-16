@@ -124,7 +124,7 @@ export function calculateAssetDepreciationPeriod(input:DepreciationPeriodInput):
    const declining=book*(rate/100)*length/12
    const straight=Math.max(0,book-salvageValue)/remaining*length
    let segmentCharge:number
-   if(!switched&&declining>=straight)segmentCharge=declining
+   if(!switched&&declining>straight)segmentCharge=declining
    else{switched=true;segmentCharge=straight}
    segmentCharge=Math.min(segmentCharge,Math.max(0,book-salvageValue))
    const overlap=Math.max(0,Math.min(requestedEnd,cursor+length)-Math.max(monthsElapsed,cursor))
