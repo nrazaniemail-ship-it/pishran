@@ -88,9 +88,18 @@ export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
     return false
   }
   const samples = projects.filter(isSample)
-  const remaining = projects.filter(project => !isSample(project))
-  if (remaining.length !== projects.length) {
-    await localStore.set(PROJECTS_KEY, remaining)
+  // Every surviving project is migrated onto the sole supported raw template.
+  // Legacy steel-stage metadata is intentionally removed from the project index;
+  // user-entered financial drafts remain intact unless the project was a sample.
+  const remaining = projects.filter(project => !isSample(project)).map(project => ({
+    ...project,
+    templateId: 'raw' as const,
+    steelStage: undefined
+  }))
+  const indexChanged = remaining.length !== projects.length
+    || remaining.some((project,index) => project.templateId !== projects[index]?.templateId || Boolean(project.steelStage))
+  if (indexChanged) await localStore.set(PROJECTS_KEY, remaining)
+  if (samples.length) {
     await Promise.all(samples.map(project => localStore.remove('feasibility:project:' + project.id + ':v1')))
   }
   // Retire the old seed markers so sample projects are never recreated.
