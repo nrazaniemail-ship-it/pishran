@@ -8,17 +8,24 @@ const labels: Record<string,[string,string]> = {
  'products':['محصولات و ظرفیت‌ها','Products and capacities'],
  'currencies':['ارزها و نرخ‌های تبدیل','Currencies and exchange rates'],
  'cost-centre-structure':['ساختار مراکز هزینه','Cost-centre structure'],
+ 'cost-allocation':['کلیدهای تخصیص هزینه','Cost allocation keys'],
  'inflation':['شاخص‌های تورم','Inflation indices'],
  'joint-venture-partners':['شرکای مشارکت','Joint-venture partners'],
  'discounting':['تنزیل و تاریخ ارزش‌گذاری','Discounting and valuation date'],
  'fixed-investment':['سرمایه‌گذاری ثابت و دفتر دارایی‌ها','Fixed investment and asset register'],
+ 'preproduction-expenditure':['مخارج پیش از تولید','Pre-production expenditure'],
  'production-costs':['هزینه‌های تولید مستقیم و غیرمستقیم','Direct and indirect production costs'],
  'sales-programme':['برنامه تولید و فروش','Production and sales programme'],
  'working-capital':['سرمایه در گردش','Working capital'],
  'sources-of-finance':['منابع تأمین مالی','Sources of finance'],
+ 'profit-distribution':['تقسیم سود و بازگشت سرمایه','Profit distribution and repatriation'],
  'taxes-allowances':['مالیات و معافیت‌ها','Taxes and allowances'],
  'starting-balances':['مانده‌های افتتاحیه','Starting balances'],
- 'economic-analysis':['تحلیل اقتصادی','Economic analysis'],
+ 'economic-analysis':['پارامترهای کلان ارزیابی اقتصادی','Global economic appraisal'],
+ 'economic-items':['تعدیل اقتصادی نهاده‌ها و محصولات','Economic input/output adjustments'],
+ 'economic-effects':['آثار غیرمستقیم و اشتغال','Indirect effects and employment'],
+ 'sensitivity-analysis':['تحلیل حساسیت','Sensitivity analysis'],
+ 'incremental-analysis':['تحلیل افزایشی','Incremental analysis'],
 }
 const groupLabels: Record<string,[string,string]> = {
  identification:['تعریف پروژه','Project definition'],
@@ -28,6 +35,7 @@ const groupLabels: Record<string,[string,string]> = {
  financing:['تأمین مالی','Financing'],
  'tax-opening':['مالیات و مانده‌های افتتاحیه','Tax and opening balances'],
  economic:['ارزیابی اقتصادی','Economic appraisal'],
+ analysis:['تحلیل و ارزیابی گزینه‌ها','Analysis and alternatives'],
 }
 
 export default function ProjectModelStructurePanel({configuration,language='fa'}:Props) {
