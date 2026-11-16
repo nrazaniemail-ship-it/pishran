@@ -97,9 +97,9 @@ try {
  assert.ok(h.validateHelpDrivenProjectForms(centres).includes('cost-centre:unknown-parent:Missing'))
 
 
- let products=h.addHelpFormRow(draft.helpDriven,'products','product-1')
- products=h.updateHelpFormRow(products,'products','product-1','name','Steel')
- let sales=h.addHelpFormRow(products,'sales-programme','sale-1')
+ let linkedProducts=h.addHelpFormRow(draft.helpDriven,'products','product-1')
+ linkedProducts=h.updateHelpFormRow(linkedProducts,'products','product-1','name','Steel')
+ let sales=h.addHelpFormRow(linkedProducts,'sales-programme','sale-1')
  sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','productId','Unknown')
  assert.ok(h.validateHelpDrivenProjectForms(sales).includes('sales-programme:0:unknown-product-reference:Unknown'))
  sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','productId','Steel')
