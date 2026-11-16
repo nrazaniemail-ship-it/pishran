@@ -212,3 +212,51 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
  if(value.tax.lossCarryForwardYears!==null&&(!Number.isInteger(value.tax.lossCarryForwardYears)||value.tax.lossCarryForwardYears<0))errors.push('invalid-loss-carry-forward-years')
  return errors
 }
+
+/**
+ * Cross-form integrity checks for the raw project model.
+ * These checks deliberately validate references without supplying defaults:
+ * an omitted optional module stays omitted, while a referenced item must exist.
+ */
+export function validateProjectModelCrossReferences(value:ProjectModelFinancialFormDrafts):string[] {
+ const errors:string[]=[]
+ const checkUnique=(items:{id:string}[],label:string)=>{
+  const ids=items.map(item=>item.id.trim())
+  if(ids.some(id=>!id))errors.push(label+':blank-id')
+  if(new Set(ids).size!==ids.length)errors.push(label+':duplicate-id')
+ }
+ checkUnique(value.assets,'assets')
+ checkUnique(value.productionCosts,'production-costs')
+ checkUnique(value.workingCapital,'working-capital')
+ checkUnique(value.loans,'loans')
+
+ const productIds=value.sales.map(item=>item.productId.trim())
+ if(productIds.some(id=>!id))errors.push('sales:blank-product-id')
+ if(new Set(productIds).size!==productIds.length)errors.push('sales:duplicate-product-id')
+ const knownProducts=new Set(productIds.filter(Boolean))
+ const knownCosts=new Set(value.productionCosts.map(item=>item.id))
+ value.productionCosts.forEach((cost,index)=>{
+  if(cost.classification==='direct'&&cost.productId&&!knownProducts.has(cost.productId))
+   errors.push('production-cost-'+index+':unknown-product-reference')
+ })
+ value.sales.forEach((product,index)=>{
+  const periods=product.periods.map(row=>row.period.trim())
+  if(periods.some(period=>!period))errors.push('sales-'+index+':blank-period-key')
+  if(new Set(periods).size!==periods.length)errors.push('sales-'+index+':duplicate-period-key')
+ })
+ value.productionCosts.forEach((cost,index)=>{
+  const periods=cost.adjustments.map(row=>row.period.trim()).filter(Boolean)
+  if(new Set(periods).size!==periods.length)errors.push('production-cost-'+index+':duplicate-adjustment-period')
+ })
+ value.workingCapital.forEach((component,index)=>{
+  if(component.category==='finished-goods'&&component.productId&&!knownProducts.has(component.productId))
+   errors.push('working-capital-'+index+':unknown-product-reference')
+  if(component.category==='payables'&&component.productId&&!knownProducts.has(component.productId))
+   errors.push('working-capital-'+index+':unknown-product-reference')
+  if(component.costItemId&&!knownCosts.has(component.costItemId))
+   errors.push('working-capital-'+index+':unknown-cost-item-reference')
+  const periods=component.periodBalances.map(row=>row.period.trim()).filter(Boolean)
+  if(new Set(periods).size!==periods.length)errors.push('working-capital-'+index+':duplicate-period-key')
+ })
+ return errors
+}
