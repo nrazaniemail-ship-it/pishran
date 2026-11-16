@@ -147,31 +147,49 @@ export function applyLossCarryForward(profits:number[],carryForwardYears:number)
 export function calculateComfarLoanInterest(input:{openingDebt:number;events:{date:string;type:'drawdown'|'repayment';amount:number}[];rateChanges:{effectiveDate:string;annualRatePercent:number}[];startDate:string;endDate:string}){
  const {openingDebt,events,rateChanges,startDate,endDate}=input
  if(!nonNegative(openingDebt))throw new Error('invalid-opening-debt')
- const parse=(d:string)=>{const v=Date.parse(d+'T00:00:00Z');if(!Number.isFinite(v))throw new Error('invalid-loan-date');return v}
- const days360=(a:number,b:number)=>{const x=new Date(a),y=new Date(b);const xDay=Math.min(x.getUTCDate(),30),yDay=Math.min(y.getUTCDate(),30);return (y.getUTCFullYear()-x.getUTCFullYear())*360+(y.getUTCMonth()-x.getUTCMonth())*30+(yDay-xDay)}
+ const parse=(value:string)=>{
+  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(value))throw new Error('invalid-loan-date')
+  const timestamp=Date.parse(value+'T00:00:00Z')
+  if(!Number.isFinite(timestamp)||new Date(timestamp).toISOString().slice(0,10)!==value)throw new Error('invalid-loan-date')
+  return timestamp
+ }
+ const days360=(from:number,to:number)=>{
+  const a=new Date(from),b=new Date(to)
+  const dayA=Math.min(a.getUTCDate(),30),dayB=Math.min(b.getUTCDate(),30)
+  return (b.getUTCFullYear()-a.getUTCFullYear())*360+(b.getUTCMonth()-a.getUTCMonth())*30+(dayB-dayA)
+ }
  const start=parse(startDate),end=parse(endDate)
  if(end<=start)throw new Error('invalid-loan-interval')
+ const normalizedEvents=events.map(event=>{
+  const date=parse(event.date)
+  if((event.type!=='drawdown'&&event.type!=='repayment')||!nonNegative(event.amount)||event.amount===0||date<start||date>end)throw new Error('invalid-loan-event')
+  return {...event,timestamp:date}
+ })
+ const normalizedRates=rateChanges.map(rate=>{
+  const effective=parse(rate.effectiveDate)
+  if(!nonNegative(rate.annualRatePercent)||effective>end)throw new Error('invalid-interest-rate')
+  return {...rate,timestamp:effective}
+ }).sort((a,b)=>a.timestamp-b.timestamp)
+ if(normalizedRates.length===0||!normalizedRates.some(rate=>rate.timestamp<=start))throw new Error('missing-interest-rate-at-period-start')
+ for(let i=1;i<normalizedRates.length;i++)if(normalizedRates[i].timestamp===normalizedRates[i-1].timestamp)throw new Error('duplicate-interest-rate-effective-date')
  const boundaries=new Set<number>([start,end])
- for(const e of events){const d=parse(e.date);if(d>start&&d<end)boundaries.add(d)}
- for(const r of rateChanges){const d=parse(r.effectiveDate);if(d>start&&d<end)boundaries.add(d)}
+ for(const event of normalizedEvents)if(event.timestamp>start&&event.timestamp<end)boundaries.add(event.timestamp)
+ for(const rate of normalizedRates)if(rate.timestamp>start&&rate.timestamp<end)boundaries.add(rate.timestamp)
  const dates=[...boundaries].sort((a,b)=>a-b)
- const getRate=(date:number)=>rateChanges.filter(r=>parse(r.effectiveDate)<=date).sort((a,b)=>parse(b.effectiveDate)-parse(a.effectiveDate))[0]?.annualRatePercent??rateChanges[0]?.annualRatePercent??0
+ const rateAt=(date:number)=>normalizedRates.reduce((selected,rate)=>rate.timestamp<=date?rate:selected,normalizedRates[0]).annualRatePercent
+ const eventsAt=(date:number)=>normalizedEvents.filter(event=>event.timestamp===date).reduce((sum,event)=>sum+(event.type==='drawdown'?event.amount:-event.amount),0)
  let balance=openingDebt,totalInterest=0
- const segments=[]
+ const segments:{startDate:string;endDate:string;openingBalance:number;annualRatePercent:number;days360:number;interest:number}[]=[]
  for(let i=0;i<dates.length-1;i++){
-  const a=dates[i],b=dates[i+1]
-  const event=events.filter(e=>parse(e.date)===a).reduce((sum,e)=>sum+(e.type==='drawdown'?e.amount:-e.amount),0)
-  balance+=event
+  const from=dates[i],to=dates[i+1]
+  balance+=eventsAt(from)
   if(balance< -1e-8)throw new Error('negative-loan-balance')
-  const days=days360(a,b)
-  const rate=getRate(a)
-  if(!nonNegative(rate))throw new Error('invalid-interest-rate')
+  const days=days360(from,to),rate=rateAt(from)
   const interest=balance*(rate/100)*(days/360)
   totalInterest+=interest
-  segments.push({startDate:new Date(a).toISOString().slice(0,10),endDate:new Date(b).toISOString().slice(0,10),openingBalance:balance,annualRatePercent:rate,days360:days,interest})
+  segments.push({startDate:new Date(from).toISOString().slice(0,10),endDate:new Date(to).toISOString().slice(0,10),openingBalance:balance,annualRatePercent:rate,days360:days,interest})
  }
- const endEvents=events.filter(e=>parse(e.date)===end).reduce((sum,e)=>sum+(e.type==='drawdown'?e.amount:-e.amount),0)
- balance+=endEvents
+ balance+=eventsAt(end)
  if(balance< -1e-8)throw new Error('negative-loan-balance')
  return {totalInterest,closingBalance:balance,segments}
 }
