@@ -419,6 +419,7 @@ export default function AdvancedFinancePanel(props: Props) {
 
     <p className="fw-lead">{t('برنامه وام، CFADS، سرمایه در گردش دوره‌ای، مالیات با انتقال زیان، استهلاک دارایی‌به‌دارایی، سناریوها و سه صورت مالی در یک مدل مشترک محاسبه می‌شوند. ارقام این بخش از مفروضات همین پروژه استفاده می‌کنند.','Loan schedules, CFADS, periodic working capital, tax-loss carry-forward, asset-level depreciation, scenarios and three financial statements are calculated in one shared model using this project’s assumptions.')}</p>
 
+    {!props.blankStart&&<>
     <h4>{t('۱. برنامه برداشت و بازپرداخت وام','1. Loan Drawdown & Repayment Schedule')}</h4>
     {state.loans.map(loan=><div className="fw-card" key={loan.id}>
       <div className="fw-grid">
@@ -486,6 +487,7 @@ export default function AdvancedFinancePanel(props: Props) {
       <label className="fw-field"><span>{t('حداقل نسبت پوشش خدمت بدهی (DSCR)','Minimum Debt Service Coverage Ratio (DSCR)')}</span><input type="number" min="0.01" step="0.01" placeholder={t('بدون محدودیت','No covenant')} value={state.minimumDscr??''} onChange={e=>setState(s=>({...s,minimumDscr:e.target.value===''?undefined:parseNumberInput(e.target.value)}))}/></label>
       <p className="fw-hint">{t('نقض حداقل DSCR در هر دوره به‌صورت هشدار قراردادی گزارش می‌شود و به‌طور خودکار جریان نقد یا اقساط را تغییر نمی‌دهد.','A minimum DSCR breach is reported as a covenant warning for the affected period; cash flows and repayments are not automatically altered.')}</p>
     </div>
+    </>}
     <div className="fw-card">
       <h4>{t('آورده نقدی سهامدار به تفکیک سال','Annual Shareholder Equity Contributions')}</h4>
       <div className="fw-grid">{Array.from({length:construction},(_,i)=><label className="fw-field" key={i}><span>{tr('آورده سال ساخت')} {i+1}</span><input type="number" min="0" value={blankNumber(equityContributions[i])} onChange={e=>setEquity(i,parseNumberInput(e.target.value))}/></label>)}</div>
@@ -495,6 +497,7 @@ export default function AdvancedFinancePanel(props: Props) {
       <p className="fw-hint">{tr('این مبلغ، آورده نقدی سهامدار برای تأمین سرمایه در گردش است و فقط یک‌بار ثبت می‌شود. اگر از افزایش خالص سرمایه در گردش بیشتر باشد، مازاد در مانده نقد ترازنامه دیده می‌شود؛ اگر کمتر باشد، کسری نقدینگی باقی می‌ماند. سهم تأمین‌شده از محل وام در این قسمت وارد نمی‌شود.','This is the shareholder cash contribution to working capital; enter it only once. Any amount above the net working-capital increase remains as cash on the balance sheet; any shortfall remains visible as a cash deficit. Do not enter debt-funded amounts here.')}</p>
     </div>
 
+    {!(props.blankStart&&(props.financialForms?.workingCapital.length??0)>0)&&<>
     <h4>{t('۲. سرمایه در گردش دوره‌ای','2. Periodic Working Capital')}</h4>
     <p className="fw-hint">{tr('مبنای روز ۳۶۰ روز است. روزهای نگهداری/وصول/پرداخت را از چرخه واقعی پروژه وارد کنید؛ مقدار صفر یعنی برای آن قلم سرمایه در گردش منظور نمی‌شود.')}</p>
     <div className="fw-grid">
@@ -509,6 +512,7 @@ export default function AdvancedFinancePanel(props: Props) {
     <div className="fw-result">{tr('اوج نیاز سرمایه در گردش')}: <b>{money(result.peakWorkingCapital)} {props.currency}</b> · {tr('کسری منابع')}: <b>{money(result.fundingGap)} {props.currency}</b></div>
     <div className="fw-card"><b>{t('جدول دوره‌ای سرمایه در گردش','Periodic Working Capital Schedule')}</b>{result.years.map(r=><div className="fw-validation" key={r.year}><span>{tr('سال')} {r.year} · {tr('مواد')} {money(r.workingCapitalBreakdown.rawMaterials)} · {tr('انرژی')} {money(r.workingCapitalBreakdown.energy??0)} · {tr('قطعات یدکی')} {money(r.workingCapitalBreakdown.spareParts??0)} · WIP {money(r.workingCapitalBreakdown.workInProgress)} · {tr('محصول')} {money(r.workingCapitalBreakdown.finishedGoods)} · {tr('مطالبات')} {money(r.workingCapitalBreakdown.receivables)} · {tr('پرداختنی')} {money(r.workingCapitalBreakdown.payables)}</span><b>نیاز طی سال {money(r.workingCapital)} · مانده پایان {money(r.closingWorkingCapital)} · تغییر خالص {money(r.changeInWorkingCapital)}</b></div>)}</div>
 
+    </>}
     <h4>{t('۳. استهلاک دارایی‌به‌دارایی و مالیات','3. Asset-Level Depreciation & Tax')}</h4>
     <p className="fw-hint">{tr('دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.')}</p>
     <div className="fw-grid">{taxRates.map((v,i)=><label className="fw-field" key={i}><span>{tr('نرخ مالیات سال')} {i+1} (%)</span><input type="number" min="0" max="100" value={blankNumber(v)} onChange={e=>setState(s=>({...s,taxRates:taxRates.map((rate,j)=>j===i?parseNumberInput(e.target.value):rate)}))}/></label>)}</div>
@@ -522,7 +526,7 @@ export default function AdvancedFinancePanel(props: Props) {
       {method.limitations&&<p className="fw-hint">{tr('محدودیت‌ها:','Limitations:')} {method.limitations}</p>}
     </div>)}
     <p className="fw-hint">{tr('نرخ سالانه در صورت نبود نرخ اختصاصی برای هر دوره، به دوره‌های همان سال مالی اعمال می‌شود. نرخ‌های واردشده در بخش «نرخ مالیات به تفکیک دوره» بر نرخ سالانه اولویت دارند.','Annual rates apply to periods in the corresponding fiscal year unless explicit period-specific rates are entered. Values in the period tax schedule override the annual rate.')}</p>
-    {!props.useFixedInvestmentRegister&&<>
+    {!props.blankStart&&!props.useFixedInvestmentRegister&&<>
           <button className="secondary-button" onClick={syncAssets}><RefreshCw size={14}/> {tr('همگام‌سازی دارایی‌ها از CAPEX')}</button>
           {comfarLifecycle&&<div className="fw-validation">
             <span>{tr('وضعیت دفتر دارایی و فروش','Fixed Asset Register & Disposal Status')}</span>
