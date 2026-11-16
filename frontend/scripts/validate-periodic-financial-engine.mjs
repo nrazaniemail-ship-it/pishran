@@ -348,6 +348,11 @@ assert.ok(advancedFinanceUi.includes('Annual-to-Period Rate Convention')
   && advancedFinanceUi.includes('effective-annual-divided-by-frequency')
   && advancedFinanceUi.includes('periodRateConversion'),
   'Periodic loan UI must expose both rate-conversion conventions and persist the explicit selection')
+assert.ok(advancedFinanceUi.includes('Opening loan balance at project start')
+  && advancedFinanceUi.includes('Drawdown timing within period')
+  && advancedFinanceUi.includes('constructionPeriodCount')
+  && advancedFinanceUi.includes('totalCapitalInvestedCashFlow'),
+  'Periodic finance UI must expose opening balances and drawdown timing and report construction-interest-adjusted total-capital cash flows')
 assert.ok(advancedFinanceUi.includes('financing.effective-annual-frequency-rate')
   && advancedFinanceUi.includes('periodicRateMethod.formula')
   && advancedFinanceUi.includes('periodicRateMethod.limitations'),
