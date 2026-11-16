@@ -380,6 +380,23 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
   if(typeof allocation==='string'&&allocation.trim()&&!(value.sections?.['cost-allocation']??[]).some(item=>item.id===allocation.trim()))
    errors.push('production-costs:'+index+':unknown-allocation-key:'+allocation)
  }
+ const allocationRows=value.sections?.['cost-allocation']??[]
+ const allocationGroups=new Map<string,typeof allocationRows>()
+ for(const row of allocationRows){
+  const key=typeof row.values.name==='string'?row.values.name.trim():''
+  if(key)allocationGroups.set(key,[...(allocationGroups.get(key)??[]),row])
+ }
+ for(const [key,rows] of allocationGroups){
+  const percentages=rows.map(row=>row.values.allocationPercent)
+  if(percentages.some(value=>value!==null&&value!=='')){
+   if(percentages.some(value=>typeof value!=='number'||!Number.isFinite(value)||value<0||value>100))
+    errors.push('cost-allocation:invalid-percentages:'+key)
+   else if(Math.abs((percentages as number[]).reduce((sum,value)=>sum+value,0)-100)>0.01)
+    errors.push('cost-allocation:percentages-must-equal-100:'+key)
+  }
+  const targets=rows.map(row=>[row.values.costCentreId,row.values.productId].join('|'))
+  if(new Set(targets).size!==targets.length)errors.push('cost-allocation:duplicate-target:'+key)
+ }
  const loanConditions=value.sections?.['loan-conditions']??[]
  const loanNames=loanConditions.map(row=>typeof row.values.loanName==='string'?row.values.loanName.trim():'').filter(Boolean)
  if(new Set(loanNames.map(name=>name.toLocaleLowerCase())).size!==loanNames.length)errors.push('loan-conditions:duplicate-loan-name')
@@ -421,7 +438,17 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
 export type HelpDrivenCalendarPeriod={index:number;startDate:string;endDate:string}
 export function validateHelpDrivenProjectPeriods(value:HelpDrivenProjectForms,periods:readonly HelpDrivenCalendarPeriod[]):string[]{
  const errors:string[]=[]
- if(!periods.length)return errors
+ if(!periods.length){
+  for(const [sectionId,rows] of Object.entries(value.sections??{})){
+   for(const [rowIndex,row] of rows.entries()){
+    for(const key of ['period','adjustmentPeriod','recoveryPeriod','date','effectiveDate','acquisitionDate','startDate','saleDate','firstRepaymentDate','disbursementUntil','capitalizeUntil','capitalizedInterestStart','depreciationStart']){
+     const raw=row.values[key]
+     if(typeof raw==='string'&&raw.trim())errors.push(sectionId+':'+rowIndex+':project-calendar-required-for:'+key)
+    }
+   }
+  }
+  return errors
+ }
  const validPeriods=periods.map((period,index)=>({period,index,start:Date.parse(period.startDate+'T00:00:00Z'),end:Date.parse(period.endDate+'T00:00:00Z')}))
  for(let i=0;i<validPeriods.length;i++){
   const current=validPeriods[i]
@@ -435,6 +462,7 @@ export function validateHelpDrivenProjectPeriods(value:HelpDrivenProjectForms,pe
   return matches.length===1?matches[0].index:-1
  }
  const datedFields:Record<string,string[]>={
+  'planning-horizon':['constructionStart','constructionEnd','productionStart','productionEnd','periodStart','periodEnd'],
   products:['actualStart','actualEnd','productionIntervalStart','productionIntervalEnd'],
   currencies:['effectiveDate'],inflation:['effectiveDate'],
   'fixed-investment':['acquisitionDate','startDate','saleDate'],
