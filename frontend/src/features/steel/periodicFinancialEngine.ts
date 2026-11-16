@@ -1087,7 +1087,7 @@ export function buildPeriodicThreeFinancialStatements(
   for (let index = 0; index < result.rows.length; index++) {
     const row = result.rows[index]
     const loanClosing = Object.values(result.loanSchedules).reduce((sum, schedule) => sum + (schedule[index]?.closingBalance ?? 0), 0)
-    const closingDebt = loanClosing + (Object.keys(result.loanSchedules).length ? 0 : debt + row.debtDrawdown + row.capitalizedInterest - row.principal)
+    const closingDebt = debt + (Object.keys(result.loanSchedules).length ? loanClosing : row.debtDrawdown + row.capitalizedInterest - row.principal)
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
     const cashOperatingCosts = row.variableCost + row.fixedCost
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
