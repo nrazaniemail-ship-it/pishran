@@ -60,7 +60,7 @@ assert.ok(missingPeriod.issues.some(x=>x.includes('every period')))
 
 const negativeStock=adapter.buildProductionSalesInventorySchedule({
  ...drafts,sales:[{...drafts.sales[0],periods:[
-  {...drafts.sales[0].periods[0],salesQuantity:20,finishedGoodsClosingQuantity:0},
+  {...drafts.sales[0].periods[0],salesQuantity:0,finishedGoodsClosingQuantity:0},
   drafts.sales[0].periods[1],
  ]}]
 },periods,1,{slab:2})
