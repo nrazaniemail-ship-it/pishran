@@ -361,6 +361,9 @@ export default function AdvancedFinancePanel(props: Props) {
             <span>{tr('وضعیت دفتر دارایی و فروش','Fixed Asset Register & Disposal Status')}</span>
             <b>{comfarLifecycle.valid&&!(props.comfarDepreciationWarnings?.length)?tr('معتبر','Valid'):tr('نیازمند اصلاح','Requires review')}</b>
             {comfarLifecycle.warnings.concat(props.comfarDepreciationWarnings??[]).map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
+            {comfarCalendarLifecycle?.depreciation.methodControls.map(control=><p className="fw-hint" key={control.method}>
+              {control.method}: {tr('فرمول اجرایی فعال؛ تطبیق عددی مستقل با خروجی مرجع در انتظار است.','Calculation implemented; independent numerical benchmark reconciliation is pending.')}
+            </p>)}
             {comfarLifecycle.sales.map(sale=><p className="fw-hint" key={sale.id}>{tr('فروش دوره','Sale period')} {sale.period}: {tr('ارزش دفتری','Book value')} {money(sale.bookValueAtSale)} · {tr('عواید فروش','Sale proceeds')} {money(sale.saleProceeds)} · {tr('سود/زیان واگذاری','Other income / loss')} {money(sale.otherIncomeLoss)}</p>)}
           </div>}
           {state.assets.map(asset=><div className="fw-grid" key={asset.id}>
