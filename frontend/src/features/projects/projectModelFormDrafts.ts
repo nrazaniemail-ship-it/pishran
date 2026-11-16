@@ -3,6 +3,7 @@
  * Every quantitative field is null until explicitly supplied by the analyst.
  */
 import type { CommonFinancialItemMetadata } from './projectModelSchema'
+import { createBlankHelpDrivenProjectForms, validateHelpDrivenProjectForms, type HelpDrivenProjectForms } from './projectModelHelpForms'
 const createBlankCommonFinancialItemMetadata=():CommonFinancialItemMetadata=>({description:'',currencyCode:null,marketOrigin:null,escalationPercent:null,remarks:'',costCentreId:null})
 
 export type DepreciationMethod='linear-to-zero'|'linear-to-scrap'|'accelerated-declining-balance'|'sum-of-years-digits'
@@ -133,6 +134,7 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
 
 
 export type ProjectModelFinancialFormDrafts = {
+ helpDriven: HelpDrivenProjectForms
  assets: FixedAssetFormDraft[]
  productionCosts: ProductionCostFormDraft[]
  sales: SalesProductFormDraft[]
@@ -141,10 +143,11 @@ export type ProjectModelFinancialFormDrafts = {
  tax: ProjectTaxFormDraft
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft()}
+ return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft()}
 }
 export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinancialFormDrafts):string[] {
  const errors:string[]=[]
+ errors.push(...validateHelpDrivenProjectForms(value.helpDriven ?? createBlankHelpDrivenProjectForms()))
  value.assets.forEach((item,index)=>validateFixedAssetFormDraft(item).forEach(error=>errors.push('asset-'+index+':'+error)))
  value.productionCosts.forEach((item,index)=>validateProductionCostFormDraft(item).forEach(error=>errors.push('production-cost-'+index+':'+error)))
  value.loans.forEach((item,index)=>validateLoanFacilityFormDraft(item).forEach(error=>errors.push('loan-'+index+':'+error)))
