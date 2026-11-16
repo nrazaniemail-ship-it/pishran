@@ -161,6 +161,64 @@ assert.equal(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingS
   'HRCR200 working-capital funding gap must remain flagged')
 near(rollingAudit.financingAlternativesInWorkbook.workingCapitalFundingGap, 1286225.931577, 0.01,
   'HRCR200 unidentified working-capital funding gap')
+const fundingAudit = rollingAudit.financingAlternativesInWorkbook
+near(fundingAudit.comfarOutputConstructionEquity + fundingAudit.comfarOutputWorkingCapitalEquity,
+  fundingAudit.comfarOutputTotalEquity, 0.01, 'HRCR200 COMFAR equity sources by construction and production phase')
+near(fundingAudit.comfarOutputTotalEquity + fundingAudit.comfarOutputLongTermDebtGross,
+  fundingAudit.comfarOutputTotalSources, 0.01, 'HRCR200 COMFAR total finance sources')
+near(fundingAudit.comfarOutputLongTermDebtGross - fundingAudit.comfarReferenceDebtAmount,
+  fundingAudit.comfarReferenceCapitalizedInterest, 0.02, 'HRCR200 gross COMFAR long-term debt includes capitalized construction interest')
+near(fundingAudit.comfarOutputEquitySharePercent + fundingAudit.comfarOutputDebtSharePercent,
+  100, 1e-9, 'HRCR200 COMFAR output gross source shares')
+near(fundingAudit.comfarOutputEquitySharePercent,
+  fundingAudit.comfarOutputTotalEquity / fundingAudit.comfarOutputTotalSources * 100, 1e-9,
+  'HRCR200 COMFAR equity share across total reported sources')
+assert.equal(fundingAudit.comfarOutputWorkingCapitalLoan, 0,
+  'HRCR200 COMFAR output classifies the production-phase working-capital contribution as equity, not a loan')
+near(fundingAudit.excelMechanismWorkingCapitalLoan, 3309144.525623, 0.01,
+  'HRCR200 Excel mechanism tab separately labels working capital as a loan')
+
+const comfar30_70Wacc = engine.calculateWacc({
+  equityWeight: 70, debtWeight: 30, costOfEquity: 30, costOfDebt: 26, taxRate: 25
+})
+near(comfar30_70Wacc.value, 0.2685, 1e-12, 'HRCR200 30/70 construction WACC with 25% debt tax shield')
+const workbook20_80Amounts = {
+  equity: 3740567.0717058936,
+  fixedDebt: 14962268.286823574,
+  workingCapitalDebt: 3309144.525623
+}
+const workbook20_80EquityWeight = workbook20_80Amounts.equity
+  / (workbook20_80Amounts.equity + workbook20_80Amounts.fixedDebt + workbook20_80Amounts.workingCapitalDebt) * 100
+const workbook20_80DebtWeight = 100 - workbook20_80EquityWeight
+const workbook20_80Wacc = engine.calculateWacc({
+  equityWeight: workbook20_80EquityWeight, debtWeight: workbook20_80DebtWeight,
+  costOfEquity: 30, costOfDebt: 26, taxRate: 25
+})
+near(workbook20_80Wacc.value, fundingAudit.excelWacc20_80WithWorkingCapitalDebtPercent / 100, 1e-12,
+  'HRCR200 Excel WACC sheet reproduces 20/80 fixed funding plus separate working-capital debt')
+near(engine.calculateWacc({equityWeight:20,debtWeight:80,costOfEquity:30,costOfDebt:26,taxRate:25}).value,
+  fundingAudit.excelWacc20_80FixedOnlyPercent / 100, 1e-12, 'Pure 20/80 fixed-capital WACC')
+
+const comfarReferenceFlows = [...reference.HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectCashFlowsForIrr]
+const comfarValuationNpv = (rate) => engine.calculateNpv(comfarReferenceFlows, rate) * (1 + rate)
+near(comfarValuationNpv(0.25), reference.HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectNpvAt25, 0.02,
+  'HRCR200 COMFAR cash flows reproduce reported NPV at the 25% valuation-date convention')
+near(engine.calculateIrr(comfarReferenceFlows),
+  reference.HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectIrrPercent / 100, 0.0001,
+  'HRCR200 COMFAR project IRR remains independent of the discount-rate scenario')
+const discountOnlyNpv20_80 = comfarValuationNpv(workbook20_80Wacc.value)
+const discountOnlyNpv30_70 = comfarValuationNpv(comfar30_70Wacc.value)
+near(discountOnlyNpv20_80, 41119481.85, 0.02,
+  'HRCR200 discount-only NPV at workbook 20/80 WACC, before recalculating capitalized interest')
+near(discountOnlyNpv30_70, 27342692.40, 0.02,
+  'HRCR200 discount-only NPV at 30/70 construction WACC, before recalculating capitalized interest')
+assert.ok(discountOnlyNpv20_80 > discountOnlyNpv30_70,
+  'Lower 20/80 WACC must raise NPV when the same unlevered cash-flow vector is held constant')
+console.log('FINANCING COMPARISON (discount-only; loan interest/capitalized interest not re-run):', {
+  WACC20_80: workbook20_80Wacc.value, WACC30_70: comfar30_70Wacc.value,
+  NPV20_80: discountOnlyNpv20_80, NPV30_70: discountOnlyNpv30_70,
+  NPVAt25Both: comfarValuationNpv(0.25)
+})
 near(rollingAudit.alternativeMetricsInWorkbook.generalSummaryIrrPercent, 48.31, 0.001,
   'HRCR200 general-summary IRR')
 near(rollingAudit.alternativeMetricsInWorkbook.irrNpvSheetProjectIrrPercent, 43.378234116396674, 1e-9,
