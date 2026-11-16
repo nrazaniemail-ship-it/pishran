@@ -607,6 +607,38 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Period depreciation schedule must contain one finite non-negative value for every project period.')
     return empty()
   }
+  if (input.periodDepreciationSchedule) {
+    for (let year=0;year<input.annualDepreciation.length;year++) {
+      const periodTotal=periods.reduce((sum,period,index)=>
+        fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)===year?sum+depreciation[index]:sum,0)
+      if (Math.abs(periodTotal-(input.annualDepreciation[year]??0))>0.01) {
+        warnings.push('Annual and period depreciation schedules do not reconcile for fiscal year '+(year+1)+'.')
+        return empty()
+      }
+    }
+  }
+  if (input.periodAssetSaleSchedule && assetSaleSchedule.length) {
+    for (let year=0;year<assetSaleSchedule.length;year++) {
+      const total={saleProceeds:0,returnOfCapital:0,otherIncomeLoss:0,bookValueDisposed:0}
+      periods.forEach((period,index)=>{
+        if (fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)===year) {
+          const row=input.periodAssetSaleSchedule![index]
+          total.saleProceeds+=row.saleProceeds
+          total.returnOfCapital+=row.returnOfCapital
+          total.otherIncomeLoss+=row.otherIncomeLoss
+          total.bookValueDisposed+=row.bookValueDisposed
+        }
+      })
+      const annual=assetSaleSchedule[year]
+      if (Math.abs(total.saleProceeds-annual.saleProceeds)>0.01 ||
+          Math.abs(total.returnOfCapital-annual.returnOfCapital)>0.01 ||
+          Math.abs(total.otherIncomeLoss-annual.otherIncomeLoss)>0.01 ||
+          Math.abs(total.bookValueDisposed-annual.bookValueDisposed)>0.01) {
+        warnings.push('Annual and period asset disposal schedules do not reconcile for fiscal year '+(year+1)+'.')
+        return empty()
+      }
+    }
+  }
   const taxRates = input.taxRatesByPeriod ? [...input.taxRatesByPeriod] : periods.map(period => {
     const index = fiscalYearIndexForPeriod(period, periods, fiscalYearStartMonth)
     return index >= 0 ? input.annualTaxRates[index] : Number.NaN
