@@ -3,9 +3,11 @@ import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { allocateJointVentureCashFlows, type JointVenturePartner, type PartnerFinanceResult } from './partnerFinance'
 import { listFinancialMethods } from './financialMethodDirectory'
-import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
+import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention, ProjectFoundation } from './projectFoundation'
+import type { ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
+import { calculateProjectFinancialModelFromDrafts } from './projectFinancialModelOrchestrator'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
-import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
+import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
   calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
@@ -85,6 +87,10 @@ type Props = {
   cashFlowTiming?: 'unspecified'|'period-end'|'mid-period'
   valuationDate?: string
   discountConvention?: ProjectDiscountConvention
+  financialForms?: ProjectModelFinancialFormDrafts
+  foundation?: ProjectFoundation
+  productionStartDate?: string
+  greenfield?: boolean
 }
 type SavedState = {
   loans: Loan[]
@@ -297,7 +303,7 @@ export default function AdvancedFinancePanel(props: Props) {
       const opexFactor=Math.pow(1+state.opexEscalationPercent/100,operatingYear)
       return calculateOperatingCycleWorkingCapital(workingCapitalPolicy,annualRow.utilization,salesFactor,opexFactor).netWorkingCapital
     })
-    return calculateIntegratedPeriodicFinance({
+    const financeInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
       annualRevenue:result.years.map(row=>row.revenue),annualVariableCost:result.years.map(row=>row.variableCashCost),
@@ -315,8 +321,30 @@ export default function AdvancedFinancePanel(props: Props) {
       discountConvention:props.discountConvention??'actual-days',
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
-    })
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
+    }
+    if(props.financialForms&&props.foundation&&props.greenfield) {
+      const hasForeignLoans=props.financialForms.loans.some(loan=>loan.marketOrigin==='foreign')
+      const fxTreatment=props.foundation.taxation.foreignExchangeLossTreatment??'unspecified'
+      if(hasForeignLoans&&fxTreatment==='unspecified')return {
+        valid:false,rows:[],loanSchedules:{},npvProject:null,irrProject:null,mirrProject:null,
+        npvEquity:null,irrEquity:null,mirrEquity:null,totalDebtDrawdown:0,totalEquityContribution:0,
+        totalCapitalizedInterest:0,peakWorkingCapital:0,warnings:['Select the tax treatment of foreign-exchange losses in Project Foundation.'],
+      }
+      const orchestration=calculateProjectFinancialModelFromDrafts({
+        finance:financeInput,drafts:props.financialForms,foundation:props.foundation,
+        productionStartDate:props.productionStartDate??'',
+        openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+        taxTreatment:fxTreatment==='deductible'?'deductible':'non-deductible',
+      })
+      if(!orchestration.valid||!orchestration.finalRun)return {
+        valid:false,rows:[],loanSchedules:{},npvProject:null,irrProject:null,mirrProject:null,
+        npvEquity:null,irrEquity:null,mirrEquity:null,totalDebtDrawdown:0,totalEquityContribution:0,
+        totalCapitalizedInterest:0,peakWorkingCapital:0,warnings:orchestration.issues,
+      }
+      return orchestration.finalRun.finance
+    }
+    return calculateIntegratedPeriodicFinance(financeInput)
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.financialForms??null),JSON.stringify(props.foundation??null),props.productionStartDate,props.greenfield])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
