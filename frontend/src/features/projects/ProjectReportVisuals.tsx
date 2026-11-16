@@ -177,6 +177,7 @@ export default function ProjectReportVisuals(props: Props) {
   const comfarBasisMatches = isHotRollingCoil && props.periodicResult?.valid === true &&
     props.periodicResult.rows.length === 17 && props.periodFrequency==='annual' &&
     Math.abs(props.capacity - HOT_ROLLING_200KT_AUDIT.capacityTpy) < 1 &&
+    Math.abs(props.equityPercent - 70) < 0.001 && Math.abs(props.debtPercent - 30) < 0.001 &&
     Math.abs(props.taxPercent - 25) < 0.001 && comfarTaxScheduleMatches &&
     Math.abs(props.discountRatePercent - HOT_ROLLING_COMFAR_OUTPUT_AUDIT.discountRatePercent) < 0.001 &&
     Math.abs(project.constructionYears - HOT_ROLLING_COMFAR_OUTPUT_AUDIT.constructionYears.length) < 0.001 &&
@@ -216,6 +217,7 @@ export default function ProjectReportVisuals(props: Props) {
        <div style={{overflowX:"auto"}}><table className="fw-table"><thead><tr><th>{t("شاخص","Metric",language)}</th><th>{t("مرجع COMFAR","COMFAR reference",language)}</th><th>{t("خروجی دوره‌ای پیشران","Pishran periodic output",language)}</th><th>{t("اختلاف","Variance",language)}</th></tr></thead><tbody>
          <tr><td>NPV @ 25%</td><td>{fmtValue(comfarReference.generalSummaryNpvAt25)} {t("میلیون ریال","million IRR",language)}</td><td>{comfarCurrentNpv==null?"—":fmtValue(comfarCurrentNpv)+" "+project.currency}</td><td>{comfarBasisMatches&&comfarCurrentNpv!=null?fmtValue(comfarCurrentNpv-comfarReference.generalSummaryNpvAt25):"—"}</td></tr>
          <tr><td>IRR</td><td>{fmtValue(comfarReference.generalSummaryIrrPercent)}%</td><td>{comfarCurrentIrr==null?"—":fmtValue(comfarCurrentIrr)+"%"}</td><td>{comfarBasisMatches&&comfarCurrentIrr!=null?fmtValue(comfarCurrentIrr-comfarReference.generalSummaryIrrPercent)+" pp":"—"}</td></tr>
+         <tr><td>{t("ساختار تأمین مالی ساخت","Construction financing split",language)}</td><td>70% {t("آورده","equity",language)} / 30% {t("وام","debt",language)}</td><td>{fmtValue(props.equityPercent,1)}% / {fmtValue(props.debtPercent,1)}%</td><td>{Math.abs(props.equityPercent-70)<0.001&&Math.abs(props.debtPercent-30)<0.001?t("منطبق","Matched",language):t("نامنطبق / سناریوی حامی ۲۰/۸۰ جداست","Mismatch / sponsor 20/80 case is separate",language)}</td></tr>
          <tr><td>{t("برنامه مالیاتی","Tax schedule",language)}</td><td>{t("۵٪ در ۱۴۰۵–۱۴۰۹؛ ۲۵٪ در ۱۴۱۰–۱۴۱۹","5% in 1405–1409; 25% in 1410–1419",language)}</td><td>{currentTaxScheduleLabel}</td><td>{comfarTaxScheduleMatches?t("منطبق","Matched",language):t("نامنطبق / سناریوی متفاوت","Mismatch / different scenario",language)}</td></tr>
          <tr><td>MIRR</td><td>{fmtValue(comfarReference.generalSummaryMirrPercent)}%</td><td>{props.periodicResult?.mirrProject==null?"—":fmtValue(props.periodicResult.mirrProject)+"%"}</td><td>{t("غیرقابل مقایسه مستقیم بدون نرخ‌های تأمین مالی و سرمایه‌گذاری مجدد مرجع","Not directly comparable without the reference finance and reinvestment rates",language)}</td></tr>
        </tbody></table></div>
