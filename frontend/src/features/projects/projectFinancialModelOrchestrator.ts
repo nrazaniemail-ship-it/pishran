@@ -1,6 +1,6 @@
 import type { ProjectFoundation } from './projectFoundation'
 import { validateOpeningBalanceSheetDraft, validateProjectModelCrossReferences, type ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
-import { validateHelpDrivenProjectForms, type HelpDrivenProjectForms } from './projectModelHelpForms'
+import { validateHelpDrivenProjectForms, validateHelpDrivenProjectPeriods, type HelpDrivenProjectForms } from './projectModelHelpForms'
 import type { PeriodicProjectFinanceInput, PeriodicStatementOpeningBalances } from '../steel/periodicFinancialEngine'
 import {
   bindProductionSalesToPeriodicFinance,
@@ -59,7 +59,7 @@ export function calculateProjectFinancialModelFromDrafts(
     valid:false,issues,financeInput:null,productionSales,workingCapital,fixedAssets,finalRun:null,
   })
   const openingDraft=input.drafts.openingBalanceSheet
-  const crossFormIssues=[...validateProjectModelCrossReferences(input.drafts),...(input.drafts.helpDriven?validateHelpDrivenProjectForms(input.drafts.helpDriven):[])]
+  const crossFormIssues=[...validateProjectModelCrossReferences(input.drafts),...(input.drafts.helpDriven?validateHelpDrivenProjectForms(input.drafts.helpDriven):[]),...(input.drafts.helpDriven?validateHelpDrivenProjectPeriods(input.drafts.helpDriven,input.finance.periods):[])]
   if(crossFormIssues.length)return fail(crossFormIssues)
   const resolveTaxPeriod=(key:string):number=>{
     const matches:number[]=[]
