@@ -1,5 +1,6 @@
 export type LoanRepaymentMethod = 'equal-principal' | 'annuity' | 'bullet'
 export type LoanDayCountBasis = 360 | 365
+export type LoanInterestConvention = 'comfar-months-plus-360' | 'actual-360' | 'actual-365'
 
 export type DatedLoanDrawdown = {
   date: string
@@ -10,6 +11,7 @@ export type PeriodicLoanInput = {
   drawdowns: DatedLoanDrawdown[]
   annualInterestRatePercent: number
   dayCountBasis: LoanDayCountBasis
+  interestConvention?: LoanInterestConvention
   capitalizationDate: string
   capitalizeConstructionInterest: boolean
   firstRepaymentDate: string
@@ -64,6 +66,20 @@ function addMonths(date: string, months: number): string {
   const normalizedMonth = ((targetMonth % 12) + 12) % 12
   const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate()
   return iso(Date.UTC(targetYear, normalizedMonth, Math.min(day, lastDay)))
+}
+
+function yearFraction(startDate: string, endDate: string, convention: LoanInterestConvention, basis: LoanDayCountBasis): number {
+  const start = dateMs(startDate)
+  const end = dateMs(endDate)
+  if (end <= start) return 0
+  if (convention === 'actual-360' || convention === 'actual-365') {
+    const divisor = convention === 'actual-360' ? 360 : 365
+    return (end - start) / DAY / divisor
+  }
+  let months = 0
+  while (months < 1200 && dateMs(addMonths(startDate, months + 1)) <= end) months++
+  const remainderDays = (end - dateMs(addMonths(startDate, months))) / DAY
+  return months / 12 + remainderDays / 360
 }
 
 function annuityPayment(principal: number, periodicRate: number, count: number): number {
@@ -121,7 +137,8 @@ export function calculatePeriodicLoan(input: PeriodicLoanInput): PeriodicLoanRes
   for (const eventDate of events) {
     const eventTime = dateMs(eventDate)
     const days = Math.max(0, (eventTime - previousDate) / DAY)
-    const intervalInterest = principal * rate * days / input.dayCountBasis
+    const convention = input.interestConvention ?? 'comfar-months-plus-360'
+    const intervalInterest = principal * rate * yearFraction(iso(previousDate), eventDate, convention, input.dayCountBasis)
     accrued += intervalInterest
     cumulativeAccrued += intervalInterest
 
