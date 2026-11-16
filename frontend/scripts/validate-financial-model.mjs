@@ -1445,6 +1445,10 @@ assert.ok(reportWizardSource.includes('ProjectReportVisuals')
   && reportWizardSource.includes('onSensitivity={setReportSensitivity}')
   && reportWizardSource.includes("display:step==='cashflow'?'block':'none'"),
   'Project reports must receive live integrated sensitivity analysis even when the report tab is opened directly')
+assert.ok(reportVisualsSource.includes('chartMaxQuantity?:number')
+  && reportVisualsSource.includes('capacity={200000} chartMaxQuantity={83000}')
+  && reportVisualsSource.includes('breakEven/capacity*100'),
+  'Reference break-even plot must use the workbook chart range separately from the actual 200,000-tonne capacity denominator')
 assert.ok(reportVisualsSource.includes('Sensitivity Analysis Chart')
   && reportVisualsSource.includes('Break-Even Chart')
   && reportVisualsSource.includes('General Project Specification')
