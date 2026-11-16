@@ -647,7 +647,14 @@ export type PeriodicProjectFinanceRow = {
   assetReturnOfCapital: number
   assetSaleOtherIncomeLoss: number
   assetBookValueDisposed: number
+  /** Legacy total financing expense: cash interest plus expensed financing fees. */
   interestExpense: number
+  /** Contractual interest before financing and commitment fees. */
+  cashInterestExpense: number
+  /** All expense-classified financing fees, including commitment fees. */
+  financingFeeExpense: number
+  /** Subset of financingFeeExpense attributable to undrawn commitment fees. */
+  commitmentFeeExpense: number
   capitalizedInterest: number
   capitalizedFinancingFees: number
   principal: number
@@ -1012,7 +1019,12 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     // Financing fees paid as period expenses are deductible financing costs;
     // capitalized fees remain separately visible in each loan schedule and are
     // included in the period's capitalized financing balance.
-    const interestExpense = loanRows.reduce((sum,row)=>sum+row.interestExpense+row.financingFeeExpense,0)
+    const cashInterestExpense = loanRows.reduce((sum,row)=>sum+row.interestExpense,0)
+    const financingFeeExpense = loanRows.reduce((sum,row)=>sum+row.financingFeeExpense,0)
+    const commitmentFeeExpense = loanRows.reduce((sum,row)=>sum+row.commitmentFeeExpense,0)
+    // Preserve the existing total-financing-cost field for downstream consumers,
+    // while exposing its components for audit trails and lender reporting.
+    const interestExpense = cashInterestExpense + financingFeeExpense
     const capitalizedInterest = loanRows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
     const capitalizedFinancingFees = loanRows.reduce((sum,row)=>sum+row.capitalizedFinancingFees,0)
     const principal = loanRows.reduce((sum,row)=>sum+row.principal,0)
@@ -1064,7 +1076,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
-      interestExpense,capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
+      interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
+      capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
@@ -1393,7 +1406,9 @@ export type PeriodicFinancialStatement = {
   openingBalances: Required<PeriodicStatementOpeningBalances>
   incomeStatement: {
     revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number
-    assetDisposalGainLoss: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; netIncome: number
+    assetDisposalGainLoss: number; ebit: number; interest: number
+    cashInterestExpense: number; financingFeeExpense: number; commitmentFeeExpense: number
+    profitBeforeTax: number; tax: number; netIncome: number
   }
   cashFlowStatement: {
     operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number
@@ -1474,7 +1489,10 @@ export function buildPeriodicThreeFinancialStatements(
     statements.push({
       period: row.period, startDate: row.startDate, endDate: row.endDate, openingBalances,
       incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation,
-        assetDisposalGainLoss, ebit, interest: row.interestExpense, profitBeforeTax, tax: row.tax, netIncome },
+        assetDisposalGainLoss, ebit, interest: row.interestExpense,
+        cashInterestExpense: row.cashInterestExpense, financingFeeExpense: row.financingFeeExpense,
+        commitmentFeeExpense: row.commitmentFeeExpense,
+        profitBeforeTax, tax: row.tax, netIncome },
       cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash, closingCash },
       balanceSheet: { cash: closingCash, netWorkingCapital: closingWorkingCapital, netFixedAssets: closingNetFixedAssets,
         deferredPreOperatingAssets: closingPreOperatingAssets, totalAssets, debt: closingDebt, totalLiabilities,

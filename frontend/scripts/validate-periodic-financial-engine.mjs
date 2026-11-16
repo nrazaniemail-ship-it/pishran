@@ -1443,7 +1443,30 @@ const integratedCombinedLoan=engine.calculateIntegratedPeriodicFinance({
 assert.equal(integratedCombinedLoan.valid,true,integratedCombinedLoan.warnings.join('; '))
 assert.deepEqual(integratedCombinedLoan.loanSchedules['combined-floating-capitalized-custom'],combinedLoanOracle.rows,
   'Integrated project finance must preserve the independently verified combined loan schedule')
+const combinedIntegratedSchedule=integratedCombinedLoan.loanSchedules['combined-floating-capitalized-custom']
+for(let i=0;i<integratedCombinedLoan.rows.length;i++){
+  const projectRow=integratedCombinedLoan.rows[i]
+  const loanRow=combinedIntegratedSchedule[i]
+  assert.ok(Math.abs(projectRow.cashInterestExpense-loanRow.interestExpense)<1e-8,
+    'Integrated reporting must retain contractual cash interest separately from fees')
+  assert.ok(Math.abs(projectRow.financingFeeExpense-loanRow.financingFeeExpense)<1e-8,
+    'Integrated reporting must expose all expense-classified financing fees')
+  assert.ok(Math.abs(projectRow.commitmentFeeExpense-loanRow.commitmentFeeExpense)<1e-8,
+    'Integrated reporting must expose the commitment-fee component separately')
+  assert.ok(Math.abs(projectRow.interestExpense-projectRow.cashInterestExpense-projectRow.financingFeeExpense)<1e-8,
+    'Legacy total financing expense must equal cash interest plus financing fees exactly once')
+  assert.ok(Math.abs(projectRow.debtService-loanRow.debtService)<1e-8,
+    'Integrated debt service must reconcile to the detailed loan schedule')
+}
 const integratedCombinedStatements=engine.buildPeriodicThreeFinancialStatements(integratedCombinedLoan)
+for(let i=0;i<integratedCombinedStatements.length;i++){
+  const statement=integratedCombinedStatements[i].incomeStatement
+  const projectRow=integratedCombinedLoan.rows[i]
+  assert.equal(statement.cashInterestExpense,projectRow.cashInterestExpense)
+  assert.equal(statement.financingFeeExpense,projectRow.financingFeeExpense)
+  assert.equal(statement.commitmentFeeExpense,projectRow.commitmentFeeExpense)
+  assert.equal(statement.interest,projectRow.interestExpense)
+}
 assert.ok(integratedCombinedStatements.every(row=>row.balanceSheet.reconciled),
   'Combined floating-rate, capitalized-fee and custom-repayment financing must reconcile all three statements')
 
