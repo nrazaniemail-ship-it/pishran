@@ -367,6 +367,10 @@ const comfarNpv = engine.calculatePeriodicNpv(
 assert.equal(comfarValuationDate, comfarReference.valuationDate, '12/1404 must map to the COMFAR valuation date')
 assert.equal(comfarReference.projectCashFlowsByYear.length, 17, 'COMFAR source schedule must cover construction years 1403–1404 and operating years 1405–1419')
 assert.deepEqual(comfarReference.taxScheduleByOperatingYear.map(row=>row.ratePercent), [...Array(5).fill(5),...Array(10).fill(25)], 'COMFAR tax schedule must preserve five years at 5% followed by ten years at 25%')
+assert.equal(comfarReference.depreciationByOperatingYear.length, 15, 'COMFAR depreciation audit must cover all operating years')
+assert.equal(comfarReference.depreciationByOperatingYear.find(([year])=>year===1414)?.[1], 98840.49, 'COMFAR depreciation must preserve the sharp 1414 reduction')
+assert.equal(comfarReference.changeInWorkingCapitalByOperatingYear.find(([year])=>year===1405)?.[1], 3309144.53, 'COMFAR working-capital build must start in 1405')
+assert.equal(comfarCashFlows.at(-1), comfarReference.projectCashFlowsByYear.at(-1)+comfarReference.terminalSalvage.amount, 'Terminal salvage shown in 1420 must be reconciled to the final operating-period cash-flow timing')
 assert.ok(Math.abs(comfarNpv - comfarReference.projectNpvAt25) < 0.05,
   'COMFAR HRCR200 NPV at 25% and valuation date 12/1404 must reconcile within rounding')
 const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
