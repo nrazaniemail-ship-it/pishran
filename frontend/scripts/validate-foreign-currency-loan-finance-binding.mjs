@@ -86,6 +86,8 @@ const run=binding.calculatePeriodicFinanceWithForeignCurrencyLoans({
 assert.equal(run.valid,true,run.issues.join('; '))
 assert.equal(run.statements.length,3)
 assert.ok(run.statements.every(row=>row.balanceSheet.reconciled))
+assert.ok(run.statements.every(row=>Object.values(row.movementChecks).every(value=>Math.abs(value)<0.01)))
+assert.ok(run.statements.every((row,index)=>Math.abs(row.balanceSheet.retainedEarnings-row.openingBalances.retainedEarnings-row.incomeStatement.netIncome)<0.01))
 assert.ok(run.fxPosting.valid)
 assert.ok(run.finance.loanSchedules['foreign-facility'][2].foreignExchangeLoss>0)
 assert.ok(Math.abs(run.statements[2].balanceSheet.debt-run.fxPosting.statements[2].balanceSheet.debt)<1e-8)
