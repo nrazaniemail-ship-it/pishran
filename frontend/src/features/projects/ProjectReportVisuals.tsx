@@ -327,7 +327,7 @@ export default function ProjectReportVisuals(props: Props) {
           <h4>{t("تطبیق سرمایه در گردش و مانده نقدی تأمین‌شده (۱۴۰۵)","Working-Capital Funding and Cash-Buffer Reconciliation (1405)",language)}</h4>
           <p className="fw-hint">{t("در شیت سرمایه در گردش OPEX، نیاز خالص سال اول ۳٬۲۱۶٬۷۵۹٫۳۲ است؛ شیت جریان نقدی مالی COMFAR، آورده سهامدار ۳٬۳۰۹٬۱۴۴٫۵۳ را ثبت می‌کند. اختلاف ۹۲٬۳۸۵٫۲۱ به‌عنوان وجه نقد باقی‌مانده نمایش داده می‌شود، نه هزینه سرمایه در گردش یا منبع مالی فرضی.","The OPEX working-capital sheet reports 3,216,759.32 net working-capital use in year one; the COMFAR finance cash-flow sheet records 3,309,144.53 of shareholder funding. The 92,385.21 difference is shown as retained cash, not as additional working-capital expense or an assumed financing source.",language)}</p>
           {(()=>{
-            const reference=HOT_ROLLING_200KT_AUDIT.financingAlternativesInWorkbook.firstOperatingYear1405
+            const reference=HOT_ROLLING_COMFAR_OUTPUT_AUDIT.firstOperatingYearWorkingCapitalFunding
             const pishranYear=comfarAnnualRows[2]
             const pishranContribution=pishranYear.rows.reduce((sum,row)=>sum+row.equityWorkingCapitalContribution,0)
             const pishranBuffer=pishranContribution-pishranYear.changeInWorkingCapital
