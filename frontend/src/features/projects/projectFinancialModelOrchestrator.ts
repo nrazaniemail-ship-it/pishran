@@ -109,8 +109,15 @@ export function calculateProjectFinancialModelFromDrafts(
       retainedEarnings:openingDraft.retainedEarnings!,
     }
   }
+  const openingForeignBalances=Object.fromEntries(input.drafts.loans
+    .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
+    .map(loan=>[loan.id,loan.openingForeignBalance as number]))
+  const openingExchangeRatesToLocal=Object.fromEntries(input.drafts.loans
+    .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
+    .map(loan=>[loan.id,loan.openingExchangeRateToLocal as number]))
   const finalRun=calculatePeriodicFinanceWithForeignCurrencyLoans({
     finance,loans:input.drafts.loans,foundation:input.foundation,
+    openingForeignBalances,openingExchangeRatesToLocal,
     openingBalances,taxTreatment:input.taxTreatment,
     openingTaxLossCarryForward:input.openingTaxLossCarryForward,
     openingForeignBalances:input.openingForeignBalances,
