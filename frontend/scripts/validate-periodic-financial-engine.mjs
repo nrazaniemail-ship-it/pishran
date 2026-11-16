@@ -801,11 +801,12 @@ const soldAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
   firstDepreciationMonths:12,ratePercent:null,method:'linear-to-scrap',
   acquisitionDate:'2024-01-15',startingAtDate:'2024-01-01'
-}],[{id:'sale-01',assetId:'asset-sale-01',saleDate:'2024-10-15',priceMode:'self-defined',selfDefinedPrice:1500,exchangeRateToLocal:1}],monthlyDepreciationPeriods)
+}],[{id:'sale-01',assetId:'asset-sale-01',saleDate:'2024-10-31',priceMode:'self-defined',selfDefinedPrice:1500,exchangeRateToLocal:1}],monthlyDepreciationPeriods)
 assert.equal(soldAsset.valid,true)
 assert.equal(soldAsset.sales.length,1)
 assert.equal(soldAsset.sales[0].saleProceeds,1500)
 assert.ok(soldAsset.sales[0].gainLoss>0)
+assert.equal(soldAsset.periods[9].assets[0].depreciation,450,'Disposal at the period balance date must prorate the current depreciation year by elapsed months')
 assert.equal(soldAsset.periods[9].closingBookValue,0)
 assert.ok(soldAsset.periods.slice(10).every(period=>period.closingBookValue===0))
 const invalidPeriodicAsset=engine.calculatePeriodicComfarAssetLifecycle([{
