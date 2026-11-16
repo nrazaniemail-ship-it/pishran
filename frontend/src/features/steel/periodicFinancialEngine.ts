@@ -1080,6 +1080,7 @@ export function buildPeriodicThreeFinancialStatements(
     paidInCapital: opening.paidInCapital ?? 0, retainedEarnings: opening.retainedEarnings ?? 0,
   }
   if (Object.values(balances).some(value => !validFinite(value))) return []
+  const openingDebtBase = balances.debt
   let cash = balances.cash, debt = balances.debt, netFixedAssets = balances.netFixedAssets
   let netWorkingCapital = balances.netWorkingCapital, deferredPreOperatingAssets = balances.deferredPreOperatingAssets
   let paidInCapital = balances.paidInCapital, retainedEarnings = balances.retainedEarnings
@@ -1087,7 +1088,7 @@ export function buildPeriodicThreeFinancialStatements(
   for (let index = 0; index < result.rows.length; index++) {
     const row = result.rows[index]
     const loanClosing = Object.values(result.loanSchedules).reduce((sum, schedule) => sum + (schedule[index]?.closingBalance ?? 0), 0)
-    const closingDebt = debt + (Object.keys(result.loanSchedules).length ? loanClosing : row.debtDrawdown + row.capitalizedInterest - row.principal)
+    const closingDebt = Object.keys(result.loanSchedules).length ? openingDebtBase + loanClosing : debt + row.debtDrawdown + row.capitalizedInterest - row.principal
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
     const cashOperatingCosts = row.variableCost + row.fixedCost
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
