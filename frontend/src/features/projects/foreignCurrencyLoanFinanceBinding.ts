@@ -1,6 +1,7 @@
 import type { ProjectCalendarPeriod, ProjectFoundation } from '../projects/projectFoundation'
 import type { LoanFacilityFormDraft } from '../projects/projectModelFormDrafts'
 import { validateLoanFacilityFormDraft } from '../projects/projectModelFormDrafts'
+import { calculateLoanFee } from './projectModelHelpFormulaRules'
 import {
   calculateIntegratedPeriodicFinance,
   calculatePeriodicLoanSchedule,
@@ -139,7 +140,7 @@ export function buildPeriodicLoanFacilityBinding(input:{
   const rateChanges=rateRows.slice(1).map(row=>({effectiveDate:row.effectiveDate,annualRatePercent:row.annualRatePercent as number}))
   const repaymentMethod=loan.loanType==='annuity'?'annuity':loan.loanType==='constant-principal'?'equal-principal':'custom'
   const capitalizationPercent=loan.capitalizedInterestPercent??0
-  const loanInput:PeriodicLoanInput={
+  let loanInput:PeriodicLoanInput={
     annualRatePercent:baseRate,
     drawdowns,
     datedDrawdowns,
@@ -157,6 +158,55 @@ export function buildPeriodicLoanFacilityBinding(input:{
     ...(repaymentMethod==='custom'?{customPrincipalRepayments:profileRows}:{}),
   }
   const openingForeignBalance=input.openingForeignBalance??0
+  if(loan.fees.length) {
+    const openingForFeeBasis=input.openingForeignBalance??0
+    const preliminary=calculatePeriodicLoanSchedule({...loanInput,openingBalance:openingForFeeBasis,fees:[]},periods,dayCountBasis)
+    if(!preliminary.valid)issues.push(...preliminary.issues)
+    const feeEvents:{date:string;amount:number;treatment:'expense'|'capitalize';label:string}[]=[]
+    const totalDrawdowns=drawdowns.reduce((sum,value)=>sum+value,0)
+    const firstDisbursementDate=datedDrawdowns.map(row=>row.date).sort()[0]
+    for(const fee of loan.fees) {
+      if(!fee.type||fee.ratePercent===null||!nonNegative(fee.ratePercent)||!fee.paymentDate||
+        (fee.treatment!=='expense'&&fee.treatment!=='capitalize')) {
+        issues.push('Fee '+fee.id+' requires type, rate, payment date and accounting treatment.')
+        continue
+      }
+      if(fee.currencyCode&&loan.currencyCode&&fee.currencyCode!==loan.currencyCode) {
+        issues.push('Fee '+fee.id+' currency must match its facility currency.')
+        continue
+      }
+      const feePeriod=periodForDate(fee.paymentDate,periods)
+      if(feePeriod<0) {issues.push('Fee payment date falls outside the project calendar: '+fee.paymentDate);continue}
+      if(fee.type==='agency'&&!datedDrawdowns.some(row=>row.date===fee.paymentDate&&row.amount>0)) {
+        issues.push('Agency fee payment date must match a positive loan disbursement date.')
+        continue
+      }
+      if(fee.type==='other'&&fee.paymentDate!==firstDisbursementDate) {
+        issues.push('Other fee payment date must match the first positive disbursement date.')
+        continue
+      }
+      if(!preliminary.valid)continue
+      const scheduleRow=preliminary.rows[feePeriod]
+      const disbursement=datedDrawdowns.filter(row=>row.date===fee.paymentDate).reduce((sum,row)=>sum+row.amount,0)
+      const facilityLimit=loan.facilityLimit??totalDrawdowns
+      const undisbursedCommitment=fee.type==='commitment'
+        ?Math.max(0,(loan.facilityLimit??0)-scheduleRow.openingBalance-scheduleRow.drawdown):0
+      try {
+        const calculated=calculateLoanFee({
+          type:fee.type,ratePercent:fee.ratePercent,disbursement,
+          outstandingBefore:scheduleRow.openingBalance,repayment:scheduleRow.principal,
+          undisbursedCommitment,totalLoan:facilityLimit,periodMonths:12/periodsPerYear,
+        })
+        if(calculated.fee>0)feeEvents.push({
+          date:fee.paymentDate,amount:calculated.fee,treatment:fee.treatment,label:fee.type+' fee',
+        })
+      } catch(error) {
+        issues.push('Fee '+fee.id+': '+(error instanceof Error?error.message:'invalid fee input'))
+      }
+    }
+    if(issues.length)return {valid:false,issues,loan:null,localSchedule:null,fxTranslation:null,openingCarryingAmountLocal:0}
+    loanInput={...loanInput,fees:feeEvents}
+  }
   if(!nonNegative(openingForeignBalance))return {valid:false,issues:['Opening foreign debt must be finite and non-negative.'],loan:null,localSchedule:null,fxTranslation:null,openingCarryingAmountLocal:0}
   const resolvedCurrency=currencyResolution.currency
   if(!resolvedCurrency) {
