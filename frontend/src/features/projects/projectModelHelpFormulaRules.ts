@@ -167,3 +167,48 @@ export function composeTotalInvestmentCashFlow(input:{netCashFlow:number;equity:
  if(![netCashFlow,equity,loanDrawdowns,principalRepayments,interestAndFees,dividends].every(finite))throw new Error('invalid-total-investment-flow')
  return netCashFlow-equity-loanDrawdowns+principalRepayments+interestAndFees+dividends
 }
+
+/** Asset sale proceeds up to book value are return of capital; the excess/shortfall is other income/loss. */
+export function calculateAssetDisposal(bookValue:number,saleProceeds:number){
+ if(!nonNegative(bookValue)||!nonNegative(saleProceeds))throw new Error('invalid-asset-disposal')
+ return {returnOfCapital:Math.min(bookValue,saleProceeds),otherIncomeOrLoss:saleProceeds-bookValue}
+}
+/** Exchange-rate adjustment in the debt schedule: DBj - (DBj-1 + CIj + Dj - Rj). */
+export function calculateForeignCurrencyDebtAdjustment(input:{closingDebt:number;openingDebt:number;capitalizedInterest:number;disbursements:number;principalRepayments:number}){
+ const values=Object.values(input)
+ if(!values.every(nonNegative))throw new Error('invalid-fx-debt-adjustment')
+ return input.closingDebt-(input.openingDebt+input.capitalizedInterest+input.disbursements-input.principalRepayments)
+}
+/** Automatic local equity covers each construction-period cash deficit, including interest payable. */
+export function coverConstructionCashDeficit(periodCashBeforeCoverage:number[]){
+ if(!periodCashBeforeCoverage.every(finite))throw new Error('invalid-construction-cash')
+ let cumulative=0
+ return periodCashBeforeCoverage.map((netCash,period)=>{
+  const opening=cumulative
+  const before=opening+netCash
+  const automaticEquity=Math.max(0,-before)
+  cumulative=before+automaticEquity
+  return {period,openingCash:opening,netCashBeforeCoverage:netCash,automaticEquity,closingCash:cumulative}
+ })
+}
+/** Production-period overdraft is interest-free and is repaid as soon as cash surpluses occur. */
+export function coverOperatingCashDeficits(periodCashBeforeCoverage:number[]){
+ if(!periodCashBeforeCoverage.every(finite))throw new Error('invalid-operating-cash')
+ let cash=0,overdraft=0
+ return periodCashBeforeCoverage.map((netCash,period)=>{
+  const openingCash=cash,openingOverdraft=overdraft
+  cash+=netCash
+  const drawdown=Math.max(0,-cash)
+  overdraft+=drawdown
+  cash+=drawdown
+  const repayment=Math.min(cash,overdraft)
+  cash-=repayment
+  overdraft-=repayment
+  return {period,openingCash,openingOverdraft,netCashBeforeCoverage:netCash,automaticOverdraftDrawdown:drawdown,automaticOverdraftRepayment:repayment,closingCash:cash,closingOverdraft:overdraft,interest:0}
+ })
+}
+/** Short-term deposit interest on the specified portion of cash-in-hand. */
+export function calculateShortTermDepositInterest(cashInHand:number,portionPercent:number,annualRatePercent:number,periodMonths:number){
+ if(!nonNegative(cashInHand)||!nonNegative(portionPercent)||portionPercent>100||!nonNegative(annualRatePercent)||!nonNegative(periodMonths)||periodMonths>12)throw new Error('invalid-short-term-deposit')
+ return cashInHand*portionPercent/100*annualRatePercent/100*periodMonths/12
+}
