@@ -62,7 +62,7 @@ The OPEX workbook sheet "جریانات نقدی مالی (کامفار)" contai
 | 1409 | 0 | -2,848,618.47 | 0 | -2,848,618.47 |
 | 1410–1419 | 0 | 0 | 0 | 0 |
 
-The five annual principal repayments sum to the gross opening repayment balance of 8,909,484.36 million IRR (minor rounding versus the reconstructed 8,909,484.06 balance). The 20-quarter 7%-per-quarter annuity schedule reproduces the annual principal sequence to rounding: 964,925.63; 1,264,820.67; 1,657,921.89; 2,173,197.39; 2,848,618.47. This is a materially stronger acceptance check than first-year totals alone.
+The five annual principal repayments sum to the gross opening repayment balance of 8,909,484.06 million IRR (the unrounded annual sequence totals 8,909,484.057 million IRR). The 20-quarter 7%-per-quarter annuity schedule reproduces the annual principal sequence to rounding: 964,925.63; 1,264,820.67; 1,657,921.89; 2,173,197.39; 2,848,618.47. This is a materially stronger acceptance check than first-year totals alone.
 
 ## Repayment and interest reconstruction
 
