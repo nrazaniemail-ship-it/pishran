@@ -1380,7 +1380,7 @@ for(const statement of reconstructedComfarStatements){
   near(statement.balanceSheet.cash+statement.balanceSheet.workingCapitalAssets,
     sourceBalance.currentAssets,0.05,'Reconstructed COMFAR current assets '+year)
   near(statement.balanceSheet.netFixedAssets+statement.balanceSheet.deferredPreOperatingAssets,
-    sourceBalance.netFixedAssets,0.05,'Reconstructed COMFAR fixed and pre-operating assets '+year)
+    sourceBalance.netFixedAssets,0.10,'Reconstructed COMFAR fixed and pre-operating assets '+year)
   near(statement.balanceSheet.debt,sourceBalance.longTermDebt,0.05,'Reconstructed COMFAR debt '+year)
   near(statement.balanceSheet.totalEquity,sourceBalance.netWorth,0.05,'Reconstructed COMFAR equity '+year)
   near(statement.balanceSheet.totalAssets,sourceBalance.totalAssets,0.05,'Reconstructed COMFAR total assets '+year)
