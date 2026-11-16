@@ -71,6 +71,12 @@ try {
  assert.deepEqual(forms.validateProjectModelCrossReferences(complete),[])
 
  const wizardSource=await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx',import.meta.url),'utf8')
+ const projectViewSource=await readFile(new URL('../src/features/projects/ProjectsView.tsx',import.meta.url),'utf8')
+ assert.match(wizardSource,/projectCategory:project\.industry==='معدن'\?'mining'/,'Raw project category must derive from the selected industry')
+ assert.match(wizardSource,/nameplate:rawProject\?null as unknown as number:/,'Raw capacity must remain unset')
+ assert.match(wizardSource,/products:rawProject\?\[\]:/,'Raw product rows must start empty')
+ assert.match(wizardSource,/fixedInvestmentItems:hotRollingCoilProject\?createHotRollingCoilFixedInvestmentItems\(\):\[\]/,'Raw project fixed assets must not be seeded')
+ assert.doesNotMatch(projectViewSource,/HRCR200|نورد ورق گرم|STEEL_PROJECT_OPTIONS/,'Raw project creation UI must not contain sample project names')
  assert.match(wizardSource,/startYear:rawProject\?null as unknown as number:/,'Raw project start year must remain unset')
  assert.match(wizardSource,/constructionYears:rawProject\?null as unknown as number:/,'Raw construction duration must remain unset')
  assert.match(wizardSource,/nameplate:rawProject\?null as unknown as number:/,'Raw nameplate capacity must remain unset')
