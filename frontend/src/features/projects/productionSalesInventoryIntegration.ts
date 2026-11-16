@@ -1,0 +1,297 @@
+import type { ProjectCalendarPeriod } from './projectFoundation'
+import type { PeriodicProjectFinanceInput } from '../steel/periodicFinancialEngine'
+import { fiscalYearIndexForPeriod } from '../steel/periodicFinancialEngine'
+import { calculateHelpNominalCapacityCost, calculateHelpPerUnitOutputCost } from './projectModelHelpFormulaRules'
+import type { ProductionCostFormDraft, ProjectModelFinancialFormDrafts, SalesProductFormDraft } from './projectModelFormDrafts'
+
+export type ProductPeriodOperatingRow = {
+  productId: string
+  period: number
+  salesQuantity: number
+  productionQuantity: number
+  openingFinishedGoodsQuantity: number
+  closingFinishedGoodsQuantity: number
+  baseSalesRevenue: number
+  salesTax: number
+  subsidy: number
+  recognizedRevenue: number
+  directVariableCost: number
+  directFixedCost: number
+  indirectVariableCost: number
+  indirectFixedCost: number
+  totalProductionCost: number
+}
+
+export type ProductionSalesInventorySchedule = {
+  valid: boolean
+  issues: string[]
+  rows: ProductPeriodOperatingRow[]
+  annualRevenue: number[]
+  annualVariableCost: number[]
+  annualFixedCost: number[]
+  periodRevenue: number[]
+  periodProductionCost: number[]
+  periodSalesQuantity: number[]
+  periodProductionQuantity: number[]
+  closingFinishedGoodsQuantityByProduct: Record<string, number[]>
+}
+
+export type ProductionSalesFinanceBinding = {
+  valid: boolean
+  issues: string[]
+  financeInput: PeriodicProjectFinanceInput | null
+  schedule: ProductionSalesInventorySchedule
+}
+
+const finite = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x)
+const nonNegative = (x: unknown): x is number => finite(x) && x >= 0
+
+function resolvePeriod(key: string, periods: ProjectCalendarPeriod[]): number[] {
+  const result: number[] = []
+  periods.forEach((period, index) => {
+    if (key === String(index + 1) || key === String(period.index) ||
+        key === period.startDate || key === period.endDate ||
+        (key.length === 7 && key === period.startDate.slice(0, 7) && key === period.endDate.slice(0, 7))) result.push(index)
+  })
+  return result
+}
+
+function periodMonths(period: ProjectCalendarPeriod): number {
+  const start = new Date(period.startDate + 'T00:00:00.000Z')
+  const end = new Date(period.endDate + 'T00:00:00.000Z')
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return Number.NaN
+  const whole = (end.getUTCFullYear() - start.getUTCFullYear()) * 12 + end.getUTCMonth() - start.getUTCMonth()
+  const months = whole + (end.getUTCDate() - start.getUTCDate() + 1) / 30
+  return Math.min(12, Math.max(1 / 30, months))
+}
+
+function validCalendar(periods: ProjectCalendarPeriod[]): string[] {
+  const issues: string[] = []
+  if (!periods.length) return ['At least one project period is required.']
+  periods.forEach((p, i) => {
+    const start = new Date(p.startDate + 'T00:00:00.000Z')
+    const end = new Date(p.endDate + 'T00:00:00.000Z')
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) ||
+        !Number.isInteger(p.days) || p.days <= 0 || end < start ||
+        Math.round((end.getTime() - start.getTime()) / 86400000) + 1 !== p.days) {
+      issues.push('Invalid project calendar period ' + (i + 1) + '.')
+    }
+    if (i > 0) {
+      const previous = new Date(periods[i - 1].endDate + 'T00:00:00.000Z').getTime()
+      if (start.getTime() !== previous + 86400000) issues.push('Project periods are not contiguous at period ' + (i + 1) + '.')
+    }
+  })
+  return issues
+}
+
+function resolveRows<T extends {period:string}>(rows:T[], periods:ProjectCalendarPeriod[], label:string, issues:string[]):Map<number,T> {
+  const result = new Map<number,T>()
+  rows.forEach(row => {
+    const matches = resolvePeriod(row.period, periods)
+    if (matches.length !== 1) {
+      issues.push(label + (matches.length ? ' has an ambiguous period key: ' : ' has an unknown period key: ') + row.period)
+      return
+    }
+    const index = matches[0]
+    if (result.has(index)) {
+      issues.push(label + ' has duplicate data for period ' + (index + 1) + '.')
+      return
+    }
+    result.set(index, row)
+  })
+  return result
+}
+
+/**
+ * Reconcile product sales, production and finished-goods quantities period by period.
+ * Opening finished-goods quantities must be explicitly supplied; a missing value is
+ * never silently assumed to be zero. Closing quantities are read from the sales form.
+ */
+export function buildProductionSalesInventorySchedule(
+  drafts: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'>,
+  periods: ProjectCalendarPeriod[],
+  fiscalYearStartMonth: number,
+  openingFinishedGoodsByProduct: Record<string, number>,
+): ProductionSalesInventorySchedule {
+  const issues = validCalendar(periods)
+  const empty = (): ProductionSalesInventorySchedule => ({
+    valid:false,issues,rows:[],annualRevenue:[],annualVariableCost:[],annualFixedCost:[],
+    periodRevenue:[],periodProductionCost:[],periodSalesQuantity:[],periodProductionQuantity:[],
+    closingFinishedGoodsQuantityByProduct:{},
+  })
+  if (!Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12)
+    issues.push('Fiscal-year start month must be between 1 and 12.')
+  const productIds = drafts.sales.map(x=>x.productId)
+  if (productIds.some(x=>!x) || new Set(productIds).size !== productIds.length)
+    issues.push('Sales product identifiers must be present and unique.')
+  const fiscalIndexes = periods.map(p=>fiscalYearIndexForPeriod(p,periods,fiscalYearStartMonth))
+  if (fiscalIndexes.some(x=>x<0)) issues.push('Could not map every period to a fiscal year.')
+  const yearCount = Math.max(0,...fiscalIndexes)+1
+  const annualRevenue=Array(yearCount).fill(0) as number[]
+  const annualVariableCost=Array(yearCount).fill(0) as number[]
+  const annualFixedCost=Array(yearCount).fill(0) as number[]
+  const periodRevenue=Array(periods.length).fill(0) as number[]
+  const periodProductionCost=Array(periods.length).fill(0) as number[]
+  const periodSalesQuantity=Array(periods.length).fill(0) as number[]
+  const periodProductionQuantity=Array(periods.length).fill(0) as number[]
+  const rows:ProductPeriodOperatingRow[]=[]
+  const closingFinishedGoodsQuantityByProduct:Record<string,number[]>={}
+  const salesByProduct=new Map<string,Map<number,SalesProductFormDraft['periods'][number]>>()
+  for (const product of drafts.sales) {
+    const map=resolveRows(product.periods,periods,'Sales for product '+product.productId,issues)
+    if (map.size!==periods.length) issues.push('Sales and closing finished-goods data must be provided for every period for product '+product.productId+'.')
+    salesByProduct.set(product.productId,map)
+    if (!nonNegative(openingFinishedGoodsByProduct[product.productId]))
+      issues.push('Explicit opening finished-goods quantity is required for product '+product.productId+'.')
+  }
+  const costRowsByPeriod=new Map<ProductionCostFormDraft,Map<number,ProductionCostFormDraft['adjustments'][number]>>()
+  for (const cost of drafts.productionCosts) {
+    if (!cost.id || !cost.productId || !productIds.includes(cost.productId))
+      issues.push('Every production-cost item must identify an existing product: '+(cost.id||'(missing id)')+'.')
+    if (cost.classification !== 'direct' && cost.classification !== 'indirect')
+      issues.push('Cost classification is required for item '+cost.id+'.')
+    if (!cost.basis) issues.push('Cost calculation basis is required for item '+cost.id+'.')
+    if (cost.fixedPercent===null || cost.variablePercent===null ||
+        !nonNegative(cost.fixedPercent) || !nonNegative(cost.variablePercent) ||
+        Math.abs(cost.fixedPercent+cost.variablePercent-100)>1e-8)
+      issues.push('Fixed and variable shares must be explicitly supplied and total 100% for item '+cost.id+'.')
+    costRowsByPeriod.set(cost,resolveRows(cost.adjustments,periods,'Cost adjustment '+cost.id,issues))
+  }
+  if (issues.length) return empty()
+
+  const openingByProduct={...openingFinishedGoodsByProduct}
+  const closingByProduct:Record<string,number[]>={}
+  for (const product of drafts.sales) {
+    let opening=openingByProduct[product.productId]
+    const productClosings:number[]=[]
+    const salesMap=salesByProduct.get(product.productId)!
+    for (let i=0;i<periods.length;i++) {
+      const sales=salesMap.get(i)!
+      const required=[sales.salesQuantity,sales.netUnitPrice,sales.finishedGoodsClosingQuantity]
+      if (!required.every(nonNegative) ||
+          (sales.salesTaxPercent!==null && (!nonNegative(sales.salesTaxPercent)||sales.salesTaxPercent>100)) ||
+          (sales.subsidyPercent!==null && (!nonNegative(sales.subsidyPercent)||sales.subsidyPercent>100)) ||
+          (sales.subsidyAmount!==null && !nonNegative(sales.subsidyAmount))) {
+        issues.push('Sales quantity, net price and closing stock (plus valid tax/subsidy) are required for '+product.productId+' period '+(i+1)+'.')
+        continue
+      }
+      const closing=sales.finishedGoodsClosingQuantity as number
+      const production=sales.salesQuantity as number + closing - opening
+      if (production < -1e-8) {
+        issues.push('Sales exceed opening stock plus production for '+product.productId+' period '+(i+1)+'.')
+        continue
+      }
+      const quantity=sales.salesQuantity as number
+      const baseRevenue=quantity*(sales.netUnitPrice as number)
+      const salesTax=baseRevenue*(sales.salesTaxPercent??0)/100
+      const subsidy=(sales.subsidyAmount??(baseRevenue*(sales.subsidyPercent??0)/100))
+      const recognizedRevenue=baseRevenue+subsidy
+      const year=fiscalIndexes[i]
+      annualRevenue[year]+=recognizedRevenue
+      periodRevenue[i]+=recognizedRevenue
+      periodSalesQuantity[i]+=quantity
+      periodProductionQuantity[i]+=Math.max(0,production)
+      productClosings.push(closing)
+      rows.push({
+        productId:product.productId,period:i+1,salesQuantity:quantity,
+        productionQuantity:Math.max(0,production),openingFinishedGoodsQuantity:opening,
+        closingFinishedGoodsQuantity:closing,baseSalesRevenue:baseRevenue,salesTax,subsidy,
+        recognizedRevenue,directVariableCost:0,directFixedCost:0,indirectVariableCost:0,
+        indirectFixedCost:0,totalProductionCost:0,
+      })
+      opening=closing
+    }
+    closingByProduct[product.productId]=productClosings
+  }
+
+  const rowLookup=new Map(rows.map(r=>[r.productId+'|'+r.period,r]))
+  for (const cost of drafts.productionCosts) {
+    const product=cost.productId as string
+    const adjustments=costRowsByPeriod.get(cost)!
+    for (let i=0;i<periods.length;i++) {
+      const operating=rowLookup.get(product+'|'+(i+1))
+      if (!operating) continue
+      const months=periodMonths(periods[i])
+      const adjustment=adjustments.get(i)
+      let fixed=0,variable=0
+      try {
+        if (cost.basis==='nominal-capacity') {
+          if (![cost.standardQuantity,cost.standardUnitPrice,cost.nominalCapacity].every(nonNegative) ||
+              cost.nominalCapacity===0 || cost.fixedPercent===null || cost.variablePercent===null) throw new Error('incomplete nominal-capacity basis')
+          const calc=calculateHelpNominalCapacityCost({
+            standardQuantity:cost.standardQuantity as number,standardUnitPrice:cost.standardUnitPrice as number,
+            nominalCapacity:cost.nominalCapacity as number,activityVolume:operating.productionQuantity,
+            activityBasis:'production',fixedPercent:cost.fixedPercent,variablePercent:cost.variablePercent,
+            periodMonths:months,adjustmentQuantity:adjustment?.quantity??0,adjustmentUnitPrice:adjustment?.unitPrice??0,
+            adjustmentFixedPercent:adjustment?.fixedPercent??0,adjustmentVariablePercent:adjustment?.variablePercent??0,
+          })
+          fixed=calc.standardFixed+calc.adjustmentFixed
+          variable=calc.standardVariable+calc.adjustmentVariable
+        } else if (cost.basis==='per-unit-output') {
+          if (![cost.standardQuantity,cost.standardUnitPrice,cost.standardTotal].every(nonNegative) ||
+              cost.fixedPercent===null || cost.variablePercent===null) throw new Error('incomplete per-unit-output basis')
+          const adjustmentTotal=adjustment?.total??((adjustment?.quantity??0)*(adjustment?.unitPrice??0))
+          const calc=calculateHelpPerUnitOutputCost({
+            inputQuantityPerUnit:cost.standardQuantity as number,unitPrice:cost.standardUnitPrice as number,
+            outputVolume:operating.productionQuantity,
+            standardFixedCost:(cost.standardTotal as number)*cost.fixedPercent/100,
+            adjustmentTotal,adjustmentVariablePercent:adjustment?.variablePercent??0,periodMonths:months,
+          })
+          fixed=calc.fixed
+          variable=calc.variable
+        } else {
+          if (!adjustment || adjustment.total===null || !nonNegative(adjustment.total) ||
+              adjustment.fixedPercent===null || adjustment.variablePercent===null ||
+              !nonNegative(adjustment.fixedPercent)||!nonNegative(adjustment.variablePercent)||
+              Math.abs(adjustment.fixedPercent+adjustment.variablePercent-100)>1e-8)
+            throw new Error('period adjustment with total and 100% fixed/variable split is required')
+          fixed=adjustment.total*adjustment.fixedPercent/100
+          variable=adjustment.total*adjustment.variablePercent/100
+        }
+      } catch (error) {
+        issues.push('Cost item '+cost.id+' period '+(i+1)+': '+(error instanceof Error?error.message:'invalid cost input'))
+        continue
+      }
+      if (cost.classification==='direct') {
+        operating.directFixedCost+=fixed
+        operating.directVariableCost+=variable
+      } else {
+        operating.indirectFixedCost+=fixed
+        operating.indirectVariableCost+=variable
+      }
+      const year=fiscalIndexes[i]
+      annualFixedCost[year]+=fixed
+      annualVariableCost[year]+=variable
+      periodProductionCost[i]+=fixed+variable
+    }
+  }
+  for (const row of rows) {
+    row.totalProductionCost=row.directFixedCost+row.directVariableCost+row.indirectFixedCost+row.indirectVariableCost
+  }
+  if (issues.length) return empty()
+  return {
+    valid:true,issues:[],rows,annualRevenue,annualVariableCost,annualFixedCost,
+    periodRevenue,periodProductionCost,periodSalesQuantity,periodProductionQuantity,
+    closingFinishedGoodsQuantityByProduct:closingByProduct,
+  }
+}
+
+/** Bind the validated operating schedule into the annual series consumed by the periodic engine. */
+export function bindProductionSalesToPeriodicFinance(
+  input:PeriodicProjectFinanceInput,
+  drafts:Pick<ProjectModelFinancialFormDrafts,'sales'|'productionCosts'>,
+  openingFinishedGoodsByProduct:Record<string,number>,
+):ProductionSalesFinanceBinding {
+  const schedule=buildProductionSalesInventorySchedule(drafts,input.periods,input.fiscalYearStartMonth,openingFinishedGoodsByProduct)
+  if (!schedule.valid) return {valid:false,issues:schedule.issues,financeInput:null,schedule}
+  return {
+    valid:true,issues:[],
+    financeInput:{
+      ...input,
+      annualRevenue:schedule.annualRevenue,
+      annualVariableCost:schedule.annualVariableCost,
+      annualFixedCost:schedule.annualFixedCost,
+    },
+    schedule,
+  }
+}
