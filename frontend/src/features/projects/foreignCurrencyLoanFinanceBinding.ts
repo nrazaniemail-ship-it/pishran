@@ -230,26 +230,25 @@ export function buildPeriodicLoanFacilityBinding(input:{
     openingForeignBalance,openingExchangeRateToLocal:openingRate,
   })
   if(!fxTranslation.valid)return {valid:false,issues:fxTranslation.issues,loan:null,localSchedule:null,fxTranslation,openingCarryingAmountLocal:openingForeignBalance*openingRate}
-  let baseCarryingAmount=openingForeignBalance*openingRate
   const localSchedule=foreignSchedule.rows.map((row,index)=>{
     const translated=fxTranslation.rows[index]
     const rate=periodRates[index] as number
     const interestExpense=row.interestExpense*rate
     const financingFeeExpense=row.financingFeeExpense*rate
     const commitmentFeeExpense=row.commitmentFeeExpense*rate
-    // Keep the base statement schedule at transaction-date carrying values;
-    // period-end remeasurement is posted separately by the FX statement adapter.
-    const openingBalance=baseCarryingAmount
+    // Local debt roll-forward includes the non-cash period-end FX remeasurement.
+    // Cash debt service remains translated at the supplied period rate.
+    const openingBalance=translated.openingCarryingAmountLocal
     const drawdown=translated.drawdownLocal
     const capitalizedInterest=translated.capitalizedInterestLocal
     const capitalizedFinancingFees=translated.capitalizedFeesLocal
     const principal=translated.principalRepaymentLocal
-    const closingBalance=openingBalance+drawdown+capitalizedInterest+capitalizedFinancingFees-principal
-    baseCarryingAmount=closingBalance
+    const foreignExchangeLoss=translated.foreignExchangeLossLocal
+    const closingBalance=translated.closingCarryingAmountLocal
     return {
       period:index+1,drawdown,openingBalance,periodRatePercent:row.periodRatePercent,
       interestExpense,capitalizedInterest,financingFeeExpense,commitmentFeeExpense,
-      capitalizedFinancingFees,principal,closingBalance,
+      capitalizedFinancingFees,principal,foreignExchangeLoss,closingBalance,
       debtService:interestExpense+financingFeeExpense+principal,
     }
   })
@@ -319,6 +318,7 @@ export function calculatePeriodicFinanceWithForeignCurrencyLoans(input:{
   const fxPosting=postMultipleForeignCurrencyDebtsIntoThreeFinancialStatements({
     statements,debtTranslations:binding.fxTranslations,taxRatesPercent:taxRates,
     openingTaxLossCarryForward:input.openingTaxLossCarryForward,taxTreatment:input.taxTreatment,
+    debtAlreadyRemeasured:true,
   })
   if(!fxPosting.valid)return {valid:false,finance,statements,fxPosting,issues:fxPosting.issues}
   return {valid:true,finance,statements:fxPosting.statements,fxPosting,issues:[]}
