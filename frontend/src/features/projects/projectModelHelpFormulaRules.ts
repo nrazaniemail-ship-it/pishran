@@ -457,7 +457,7 @@ export function calculateForeignExchangeAdjustment(adjustedMarketValue:number,fo
 }
 export function calculateEconomicNumeraireValue(localCurrencyValue:number,officialNumeraireToLocalRate:number){
  if(!finite(localCurrencyValue)||!nonNegative(officialNumeraireToLocalRate)||officialNumeraireToLocalRate===0)throw new Error('invalid-numeraire-conversion')
- return localCurrencyValue/officialNumeraireToLocalRate
+ return localCurrencyValue*officialNumeraireToLocalRate
 }
 export function calculateIndirectEffectInLocalCurrency(amount:number,marketOrigin:'local'|'foreign',numeraire:EconomicNumeraire,shadowExchangeRate:number,standardConversionFactor:number){
  if(!finite(amount)||!nonNegative(shadowExchangeRate)||!nonNegative(standardConversionFactor))throw new Error('invalid-indirect-effect-conversion')
