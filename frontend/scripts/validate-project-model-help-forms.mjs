@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
-const source=await readFile(new URL('../src/features/projects/projectModelHelpForms.ts',import.meta.url),'utf8')
-const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
-const m=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
+const compilerOptions={module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}
+const encode=code=>'data:text/javascript;base64,'+Buffer.from(code).toString('base64')
+const dependency=await readFile(new URL('../src/features/projects/projectModelHelpForms.ts',import.meta.url),'utf8')
+const dependencyOutput=ts.transpileModule(dependency,{compilerOptions}).outputText
+const dependencyUrl=encode(dependencyOutput)
+const source=await readFile(new URL('../src/features/projects/projectModelFormDrafts.ts',import.meta.url),'utf8')
+const output=ts.transpileModule(source,{compilerOptions}).outputText.replaceAll("'./projectModelHelpForms'",'\''+dependencyUrl+'\'').replaceAll('"./projectModelHelpForms"','\"'+dependencyUrl+'\"')
+const m=await import(encode(output))
 const draft=m.createBlankHelpDrivenProjectForms()
 assert.ok(m.HELP_FORM_SECTIONS.length>=25)
 assert.deepEqual(m.validateHelpDrivenProjectForms(draft),[])
