@@ -100,12 +100,18 @@ export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
   const indexChanged = remaining.length !== projects.length
     || remaining.some((project,index) => project.templateId !== projects[index]?.templateId || Boolean(project.steelStage))
   if (indexChanged) await localStore.set(PROJECTS_KEY, remaining)
-  if (samples.length) {
-    await Promise.all(samples.flatMap(project => [
-      localStore.remove('feasibility:project:' + project.id + ':v1'),
-      localStore.list('feasibility:advanced-finance:' + project.id).then(records => Promise.all(records.map(record => localStore.remove(record.key))))
-    ]))
-  }
+  const retainedIds=new Set(remaining.map(project=>project.id))
+  const [projectDrafts,advancedFinanceDrafts,expansionDrafts]=await Promise.all([
+    localStore.list('feasibility:project:'),
+    localStore.list('feasibility:advanced-finance:'),
+    localStore.list('feasibility:expansion-rehabilitation:')
+  ])
+  const orphanedRecords=[
+    ...projectDrafts.filter(record=>!retainedIds.has(record.key.slice('feasibility:project:'.length).split(':')[0])),
+    ...advancedFinanceDrafts.filter(record=>!retainedIds.has(record.key.slice('feasibility:advanced-finance:'.length).split(':')[0])),
+    ...expansionDrafts.filter(record=>!retainedIds.has(record.key.slice('feasibility:expansion-rehabilitation:'.length).split(':')[0]))
+  ]
+  if(orphanedRecords.length)await Promise.all(orphanedRecords.map(record=>localStore.remove(record.key)))
   // Retire the old seed markers so sample projects are never recreated.
   await localStore.remove(WORKBOOK_SEED_KEY)
   await localStore.remove(DRI_PROJECT_SEED_KEY)
