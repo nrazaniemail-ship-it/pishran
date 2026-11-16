@@ -272,7 +272,7 @@ export default function ProjectReportVisuals(props: Props) {
           <th>{t("استهلاک مرجع","Reference depreciation",language)}</th><th>{t("استهلاک پیشران","Pishran depreciation",language)}</th><th>{t("اختلاف استهلاک","Depreciation variance",language)}</th>
           <th>{t("تغییر سرمایه در گردش مرجع COMFAR","COMFAR reference working-capital movement",language)}</th><th>{t("افزایش سالانه طبق شیت OPEX","Annual increase per OPEX sheet",language)}</th><th>{t("تغییر سرمایه در گردش پیشران","Pishran change in working capital",language)}</th><th>{t("اختلاف پیشران با COMFAR","Pishran vs COMFAR variance",language)}</th>
           <th>{t("بهره مرجع (بازسازی‌شده)","Reference interest (reconstructed)",language)}</th><th>{t("بهره پیشران","Pishran interest",language)}</th><th>{t("اختلاف بهره","Interest variance",language)}</th>
-          <th>{t("اصل مرجع (تطبیق‌شده با جریان مالی)","Reference principal (financing-flow reconciled)",language)}</th><th>{t("اصل وام پیشران","Pishran principal",language)}</th><th>{t("اختلاف اصل","Principal variance",language)}</th><th>CFADS</th><th>DSCR</th>
+          <th>{t("اصل مرجع (تطبیق‌شده با جریان مالی)","Reference principal (financing-flow reconciled)",language)}</th><th>{t("اصل وام پیشران","Pishran principal",language)}</th><th>{t("اختلاف اصل","Principal variance",language)}</th><th>{t("خدمت بدهی مرجع","Reference debt service",language)}</th><th>{t("خدمت بدهی پیشران","Pishran debt service",language)}</th><th>{t("اختلاف خدمت بدهی","Debt-service variance",language)}</th><th>CFADS</th><th>DSCR</th>
         </tr></thead><tbody>{comfarAnnualRows.map((row,index)=>{
           const year=1403+index
           const referenceCashFlow=HOT_ROLLING_COMFAR_OUTPUT_AUDIT.projectCashFlowsForIrr[index]
@@ -283,6 +283,7 @@ export default function ProjectReportVisuals(props: Props) {
           const loanYearIndex=index-2
           const referenceInterest=loanYearIndex>=0&&loanYearIndex<5?HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.annualInterestByYear[loanYearIndex]:0
           const referencePrincipal=loanYearIndex>=0&&loanYearIndex<5?HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.annualPrincipalRepaymentsByYear[loanYearIndex]:0
+          const referenceDebtService=loanYearIndex>=0&&loanYearIndex<5?HOT_ROLLING_COMFAR_OUTPUT_AUDIT.loanRepaymentAudit.annualDebtServiceByYear[loanYearIndex]:0
           return <tr key={index}><td>{index===16?t('۱۴۱۹ + ارزش اسقاط ۱۴۲۰','1419 + terminal salvage 1420',language):year}</td>
             <td>{fmtValue(referenceCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow)}</td><td>{fmtValue(row.projectFreeCashFlow-referenceCashFlow)}</td>
             <td>{referenceTax==null?'—':fmtValue(referenceTax,2)+'%'}</td><td>{row.taxRatePercent==null?'—':fmtValue(row.taxRatePercent,2)+'%'}</td><td>{referenceTax==null||row.taxRatePercent==null?'—':fmtValue(row.taxRatePercent-referenceTax,2)}</td>
@@ -290,6 +291,7 @@ export default function ProjectReportVisuals(props: Props) {
             <td>{fmtValue(referenceWorkingCapital)}</td><td>{fmtValue(opexWorkingCapitalIncrease)}</td><td>{fmtValue(row.changeInWorkingCapital)}</td><td>{fmtValue(row.changeInWorkingCapital-referenceWorkingCapital)}</td>
             <td>{fmtValue(referenceInterest)}</td><td>{fmtValue(row.interestExpense)}</td><td>{fmtValue(row.interestExpense-referenceInterest)}</td>
             <td>{fmtValue(referencePrincipal)}</td><td>{fmtValue(row.principal)}</td><td>{fmtValue(row.principal-referencePrincipal)}</td>
+            <td>{fmtValue(referenceDebtService)}</td><td>{fmtValue(row.debtService)}</td><td>{fmtValue(row.debtService-referenceDebtService)}</td>
             <td>{fmtValue(row.cfads)}</td><td>{row.dscr==null?'—':fmtValue(row.dscr,3)+'x'}</td></tr>
         })}</tbody></table></div>:<p className="fw-hint">{t("خروجی دوره‌ای پیشران باید تمام ۱۷ سال مالی ۱۴۰۳ تا ۱۴۱۹ را پوشش دهد. تناوب‌های ماهانه، فصلی و نیم‌سالانه بر اساس ماه آغاز سال مالی تجمیع می‌شوند؛ دوره‌های مفقود یا پوشش ناقص، مانع تطبیق است.","Pishran's periodic output must cover all 17 fiscal years 1403–1419. Monthly, quarterly and semiannual periods are aggregated using the fiscal-year start month; missing periods or incomplete coverage prevent reconciliation.",language)}</p>}
         {comfarAnnualRows.length===17&&<div className="fw-card">
