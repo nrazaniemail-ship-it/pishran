@@ -952,7 +952,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     }
     const cfads = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
-    const debtService = interestExpense + loanRows.reduce((sum,row)=>sum+row.financingFeeExpense,0) + principal
+    const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
     const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
