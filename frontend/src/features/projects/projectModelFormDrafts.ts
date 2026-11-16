@@ -176,7 +176,7 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
  if(value.interestRateChanges.some(row=>row.annualRatePercent!==null&&(!Number.isFinite(row.annualRatePercent)||row.annualRatePercent<0)))errors.push('invalid-loan-interest-rate')
  if(value.fees.some(fee=>fee.type===null))errors.push('loan-fee-type-required')
  if(value.fees.some(fee=>fee.ratePercent!==null&&(!Number.isFinite(fee.ratePercent)||fee.ratePercent<0)))errors.push('invalid-loan-fee-rate')
- if(value.fees.some(fee=>!fee.paymentDate||!/^\\d{4}-\\d{2}-\\d{2}$/.test(fee.paymentDate)))errors.push('loan-fee-payment-date-required')
+ if(value.fees.some(fee=>!fee.paymentDate||!/^\d{4}-\d{2}-\d{2}$/.test(fee.paymentDate)))errors.push('loan-fee-payment-date-required')
  if(value.fees.some(fee=>fee.treatment!=='expense'&&fee.treatment!=='capitalize'))errors.push('loan-fee-treatment-required')
  if(value.fees.some(fee=>fee.currencyCode&&value.currencyCode&&fee.currencyCode!==value.currencyCode))errors.push('loan-fee-currency-must-match-facility')
  if(value.fees.some(fee=>fee.type==='commitment')&&(value.facilityLimit==null||!Number.isFinite(value.facilityLimit)||value.facilityLimit<=0))errors.push('commitment-fee-requires-facility-limit')
