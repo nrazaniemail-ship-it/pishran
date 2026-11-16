@@ -733,11 +733,12 @@ assert.ok(feasibilityWizardSource.includes('resolveProjectStage')
   'Steel-chain aliases must resolve to their correct specialist form, including saved projects')
 assert.ok(feasibilityWizardSource.includes('hasPricedRows')
   && feasibilityWizardSource.includes('hasTechnicalInputs')
+  && feasibilityWizardSource.includes('validRows')
   && feasibilityWizardSource.includes('technicalParametersComplete')
   && feasibilityWizardSource.includes('TechnicalParameterEditor')
   && feasibilityWizardSource.includes("language={language}")
   && feasibilityWizardSource.includes('periodicModelValid')
-  && feasibilityWizardSource.includes('opex:sum(m.opex)>0'),
+  && feasibilityWizardSource.includes('opex:validRows(m.opex)&&sum(m.opex)>0'),
   'Completion indicators must require populated engineering, utility, OPEX and valid periodic finance inputs')
 assert.ok(feasibilityWizardSource.includes("project.templateId==='raw'")
   && feasibilityWizardSource.includes("process:{technology:rawProject?'':selectedStage.name,route:rawProject?'':selectedStage.route")
