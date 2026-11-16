@@ -916,6 +916,13 @@ assert.ok(feasibilityWizardUi.includes("cashflow:periodicModelValid&&(!m.scope.j
   && feasibilityWizardUi.includes("reports:periodicModelValid&&!!String(m.project.name??'').trim()&&(!m.scope.jointVenture||reportPartnerFinance?.valid===true)"),
   'Joint-venture cash flow, results and report steps must require a valid partner allocation')
 
+assert.ok(feasibilityWizardUi.includes('Array.isArray(m.partners)')
+  && feasibilityWizardUi.includes("typeof p.id==='string'")
+  && feasibilityWizardUi.includes("typeof p.name==='string'")
+  && feasibilityWizardUi.includes('Number.isFinite(m.partnerDistributionPercent)'),
+  'Joint-venture setup validation must safely reject malformed persisted partner records and invalid percentages')
+
+
 const advancedFinanceUi = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 assert.ok(advancedFinanceUi.includes('Annual-to-Period Rate Convention')
   && advancedFinanceUi.includes('effective-annual-by-actual-days')
