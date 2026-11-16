@@ -404,7 +404,7 @@ assert.ok(appSource.includes("onOpenProject={project => { setActiveProject({...p
 assert.ok(rollingWorkspaceSource.includes('ممیزی جریان نقدی خام و اصلاح‌شده مرجع مالی')
   && rollingWorkspaceSource.includes('HOT_ROLLING_reference_CASHFLOW_AUDIT'),
   'Active rolling workspace must expose the reference cash-flow audit')
-assert.ok(wizardSource.includes('useFixedInvestmentRegister={m.financialForms.assets.length===0}') && wizardSource.includes('comfarDepreciationAssets={m.financialForms.assets.length?undefined:fixedInvestmentLifecycleInputs.assets}'), 'Raw projects must use one asset source at a time and prefer the detailed asset form when populated')
+assert.ok(wizardSource.includes('useFixedInvestmentRegister={true}') && wizardSource.includes('comfarDepreciationAssets={fixedInvestmentLifecycleInputs.assets}') && wizardSource.includes('preOperatingOnly={m.financialForms.assets.length>0}') && wizardSource.includes('fixedInvestmentForFinance=m.financialForms.assets.length?0:capex-preOperatingCost'), 'Raw projects must use detailed assets and a separate pre-production-only schedule without double-counting')
 assert.ok(wizardSource.includes("method:'unspecified'") && wizardSource.includes("manualRate:null as unknown as number"), 'The raw template must leave discount-rate method and manual rate unset')
 
 const output = expected.capacity
