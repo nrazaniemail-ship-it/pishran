@@ -526,7 +526,7 @@ export function calculateEconomicCalculationSupport(input:{direction:'input'|'ou
  const adjustedMarketValue=input.borderPriceLocal+sign*(input.transportAdjustedValue+input.otherAdjustedValue)
  if(adjustedMarketValue===0)throw new Error('zero-economic-adjusted-market-value')
  const foreignPart=input.borderPriceLocal+sign*(input.transportAdjustedValue*input.transportForeignExposurePercent/100+input.otherAdjustedValue*input.otherForeignExposurePercent/100)
- const foreignCurrencyExposurePercent=Math.max(0,Math.min(100,foreignPart/adjustedMarketValue*100))
+ const foreignCurrencyExposurePercent=foreignPart/adjustedMarketValue*100
  return {adjustedMarketValue,foreignCurrencyExposurePercent,adjustmentFactor:null}
 }
 
