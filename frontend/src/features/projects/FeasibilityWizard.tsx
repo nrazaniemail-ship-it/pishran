@@ -14,9 +14,6 @@ import ProjectModelFinancialFormsPanel from './ProjectModelFinancialFormsPanel'
 import { createBlankProjectModelFinancialFormDrafts, type ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import FixedInvestmentPanel from './FixedInvestmentPanel'
 import { buildProjectCalendarPeriods, createBlankProjectFoundation, mergeProjectFoundation, type ProjectFoundation, type FixedInvestmentItem } from './projectFoundation'
-import { createHotRollingCoilFixedInvestmentItems, migrateHotRollingCoilFixedInvestmentItems, createHotRollingCoilProjectFoundation, mergeHotRollingCoilProjectFoundation, HOT_ROLLING_COMFAR_OUTPUT_AUDIT } from '../steel/hotRollingExcelBenchmark'
-import { HOT_ROLLING_COIL_REFERENCE as HR, type HotRollingCompetitor, type HotRollingExpansion, type HotRollingSlabBalance } from './hotRollingCoilReference'
-import { HOT_ROLLING_200KT_AUDIT } from '../steel/workbookReconciliation'
 
 type Row = { id:string; name:string; quantity:number; unit:string; unitPrice:number; source:string; valueText?:string; flowType?:'input'|'output' }
 type Model = {
@@ -28,7 +25,6 @@ type Model = {
   foundation: ProjectFoundation
   financialForms: ProjectModelFinancialFormDrafts
   fixedInvestmentItems: FixedInvestmentItem[]
-  fixedInvestmentSeedVersion: number
   project: { name:string; location:string; owner:string; startYear:number; constructionYears:number; operatingYears:number; currency:string; fxRate:number }
   stage: string
   products: Row[]
@@ -37,125 +33,13 @@ type Model = {
   technical: Row[]
   balance: Row[]
   utilities: Row[]
-  market: { demand:number; domesticProduction:number; imports:number; exports:number; targetShare:number; domesticPrice:number; exportPrice:number; domesticShare:number; growth:number; competitors:HotRollingCompetitor[]; expansions:HotRollingExpansion[]; slabBalance:HotRollingSlabBalance[] }
+  market: { demand:number; domesticProduction:number; imports:number; exports:number; targetShare:number; domesticPrice:number; exportPrice:number; domesticShare:number; growth:number; competitors:never[]; expansions:never[]; slabBalance:never[] }
   capex: Row[]
   opex: Row[]
   finance: { equity:number; debt:number; equityCost:number; debtCost:number; tax:number; manualRate:number; method:'unspecified'|'manual'|'wacc'; depreciationYears:number; workingCapital:number; financeRate:number; reinvestmentRate:number }
   risks: Row[]
 }
-const stageOptions = [
- {id:'mining',name:'استخراج سنگ‌آهن',route:'معدن روباز/زیرزمینی، حفاری، آتشباری، بارگیری و حمل',fields:['روش استخراج','ظرفیت استخراج ROM','عیار آهن خوراک','نسبت باطله‌برداری','بازیابی معدن','فاصله حمل تا کارخانه','مصرف مواد ناریه','مصرف سوخت ماشین‌آلات']},
- {id:'concentrate',name:'فرآوری و کنسانتره',route:'خردایش، آسیاکنی، جدایش مغناطیسی/فلوتاسیون، آبگیری',fields:['نوع کانسنگ','ظرفیت خوراک ورودی','عیار آهن خوراک','عیار آهن کنسانتره','بازیابی آهن','رطوبت کنسانتره','مصرف گلوله و لاینر','مصرف مواد شیمیایی']},
- {id:'pellet',name:'گندله‌سازی',route:'آماده‌سازی، اختلاط، دیسک/درام، پخت و خنک‌سازی',fields:['نوع و ظرفیت دیسک/درام','ظرفیت خوراک کنسانتره','عیار آهن گندله','قطر گندله','بنتونیت ویژه','رطوبت خوراک','دمای پخت','مصرف گاز ویژه']},
- {id:'dri',name:'احیای مستقیم',route:'شارژ گندله، احیای گازی/زغالی، خنک‌سازی و بریکت‌سازی',fields:['فناوری احیا','ظرفیت DRI','درجه فلزی‌شدن','درصد کربن محصول','مصرف گندله ویژه','مصرف گاز طبیعی','مصرف برق ویژه','دمای محصول خروجی']},
- {id:'steelmaking',name:'فولادسازی و ریخته‌گری',route:'EAF/IF/BOF، پالایش ثانویه، LF/VD و ریخته‌گری مداوم',fields:['نوع کوره ذوب','ظرفیت مذاب','سایز و تعداد ذوب','ترکیب شارژ DRI/قراضه','مصرف الکترود','مصرف فروآلیاژ','بازده مذاب به شمش','نوع ریخته‌گری و محصول']},
- {id:'dri-steelmaking-slab',name:'مجتمع احیاء و فولادسازی - تولید اسلب',route:'دریافت گندله، احیای مستقیم گازی، انتقال DRI، ذوب قوس الکتریکی، پالایش ثانویه و ریخته‌گری مداوم اسلب',fields:['ظرفیت DRI','ظرفیت فولاد مذاب','ظرفیت اسلب قابل فروش','فناوری احیای مستقیم','نسبت مصرف گندله به DRI','ترکیب شارژ DRI و قراضه','مصرف الکترود و فروآلیاژ','بازده مذاب به اسلب','ظرفیت ریخته‌گری مداوم','ظرفیت فروش مازاد DRI']},
- {id:'hot-rolling',name:'نورد گرم',route:'کوره پیش‌گرم، پوسته‌زدایی، نورد خشن/نهایی، خنک‌کاری و برش',fields:['خانواده محصول تخت/طویل','نوع خط نورد','ابعاد خوراک','محدوده ابعاد محصول','تعداد قفسه/پاس','دمای خروجی نورد','بازده محصول قابل فروش','سرعت خط و گلوگاه']},
- {id:'hot-plate',name:'نورد گرم ورق - تولید پلیت',route:'کوره پیش‌گرم اسلب، پوسته‌زدایی، نورد خشن و نهایی، خنک‌کاری، برش و تختال‌گیری ورق',fields:['ابعاد و گرید اسلب ورودی','ظرفیت کوره پیش‌گرم','تعداد قفسه‌های نورد','ضخامت و عرض پلیت','دمای خروجی نورد','ظرفیت برش و تخت‌کردن','بازده محصول قابل فروش','مصرف ویژه گاز و برق']},
- {id:'cold-rolling',name:'نورد سرد و پوشش‌دهی',route:'تبدیل کلاف گرم به کلاف سرد؛ جزئیات خطوط و عملیات تکمیلی باید با طراحی مهندسی پروژه تطبیق داده شود',fields:['نوع و گرید کلاف گرم ورودی','ظرفیت تأمین کلاف گرم (تن/سال)','ضخامت و عرض کلاف گرم ورودی','مشخصات ضخامت و عرض کلاف سرد','نوع و ظرفیت خط اسیدشویی','نوع و ظرفیت قفسه‌های نورد سرد','ظرفیت عملیات آنیل و تکمیل سطح','بازده و ضایعات خط','مصرف ویژه اسید و مواد شیمیایی','مصرف روغن نورد و روانکار','تعداد نیروی انسانی مستقیم']},
- {id:'rebar-rolling',name:'نورد میلگرد',route:'کوره پیش‌گرم، نورد خشن و میانی، بلوک نهایی، خنک‌کاری و بستر خنک‌کن',fields:['قطرهای میلگرد','گریدهای فولادی','تعداد خطوط و استندها','ظرفیت برش و بسته‌بندی','سرعت نورد','بازده محصول قابل فروش','مصرف انرژی ویژه']},
- {id:'angle-rolling',name:'نورد نبشی',route:'کوره پیش‌گرم، نورد مقاطع، خنک‌کاری و صافکاری',fields:['سایز و ضخامت نبشی','گرید فولادی','تعداد استندها','ظرفیت برش و بسته‌بندی','سرعت نورد','بازده محصول قابل فروش','مصرف انرژی ویژه']},
- {id:'beam-rolling',name:'نورد تیرآهن',route:'کوره پیش‌گرم، نورد یونیورسال/معمولی، خنک‌کاری و صافکاری',fields:['سایز و استاندارد تیرآهن','گرید فولادی','تعداد استندها','ظرفیت صافکاری و برش','سرعت نورد','بازده محصول قابل فروش','مصرف انرژی ویژه']},
- {id:'other',name:'فرآیند عمومی',route:'فرآیند و فناوری مطابق تعریف تحلیلگر',fields:[]}
-]
-const stageFormDefinitions:Record<string,{materials:[string,string][];utilities:[string,string][];capex:string[];opex:[string,string][]}> = {
- mining:{
-  materials:[['سنگ آهن خام ROM','تن/تن ماده معدنی'],['باطله استخراجی','تن/تن ماده معدنی'],['مواد ناریه','kg/تن استخراج'],['دیزل ماشین‌آلات','لیتر/تن استخراج'],['مته و قطعات حفاری','واحد/تن استخراج']],
-  utilities:[['برق حفاری و خردایش','kWh/تن'],['گازوئیل ناوگان معدنی','لیتر/تن'],['آب معدن و آبکشی','m³/تن'],['هوای فشرده','Nm³/تن']],
-  capex:['اکتشاف تکمیلی و آماده‌سازی معدن','حفاری و آتشباری','دامپتراک و ناوگان حمل','لودر و بیل مکانیکی','سنگ‌شکن اولیه و ثانویه','نوار نقاله و دپو','سیستم آبکشی و تهویه','کارگاه تعمیرات و ماشین‌آلات جانبی'],
-  opex:[['حفاری و آتشباری','میلیون ریال/تن'],['بارگیری و حمل','میلیون ریال/تن'],['سوخت و روانکار','میلیون ریال/تن'],['قطعات و تعمیرات','میلیون ریال/سال'],['نیروی انسانی معدن','میلیون ریال/سال'],['ایمنی و محیط زیست','میلیون ریال/سال']]
- },
- concentrate:{
-  materials:[['سنگ آهن خوراک','تن/تن کنسانتره'],['گلوله و لاینر آسیا','kg/تن'],['مواد شیمیایی فلوتاسیون','kg/تن'],['فلوکولانت و منعقدکننده','kg/تن'],['آهک و تنظیم‌کننده pH','kg/تن'],['کنسانتره تولیدی','تن/تن خوراک'],['باطله خشک','تن/تن خوراک']],
-  utilities:[['برق خردایش و آسیاکنی','kWh/تن'],['آب فرآیندی و آبگیری','m³/تن'],['گاز طبیعی','Nm³/تن'],['گازوئیل ماشین‌آلات','لیتر/تن'],['هوای فشرده','Nm³/تن']],
-  capex:['سنگ‌شکن و سرند','آسیای گلوله‌ای و تجهیزات خردایش','سپراتور مغناطیسی و فلوتاسیون','تیکنر و فیلترپرس','آبگیری و بازیافت آب','نوار نقاله و دپو','آزمایشگاه و کنترل کیفیت','تأسیسات برق و پست'],
-  opex:[['سنگ آهن خوراک','میلیون ریال/تن'],['گلوله، لاینر و قطعات سایشی','میلیون ریال/تن'],['مواد شیمیایی','میلیون ریال/تن'],['برق و آب','میلیون ریال/تن'],['نیروی انسانی','میلیون ریال/سال'],['تعمیرات و نگهداری','میلیون ریال/سال'],['باطله و محیط زیست','میلیون ریال/سال']]
- },
- pellet:{
-  materials:[['کنسانتره آهن','تن/تن گندله'],['بنتونیت','kg/تن'],['آهک و دولومیت','kg/تن'],['مواد افزودنی و چسباننده','kg/تن'],['گندله سالم','تن/تن خوراک'],['نرمه و برگشتی','درصد تولید']],
-  utilities:[['گاز طبیعی کوره پخت','Nm³/تن'],['برق دیسک، فن و نوار','kWh/تن'],['آب صنعتی','m³/تن'],['هوای فشرده','Nm³/تن']],
-  capex:['آماده‌سازی و اختلاط مواد','دیسک یا درام گندله‌سازی','خشک‌کن و پیش‌گرم‌کن','کوره پخت و خنک‌کن','سرند و برگشت نرمه','غبارگیر و فیلتراسیون','انبار و انتقال مواد','تأسیسات آب و انرژی'],
-  opex:[['کنسانتره آهن','میلیون ریال/تن'],['بنتونیت و افزودنی‌ها','میلیون ریال/تن'],['گاز طبیعی و برق','میلیون ریال/تن'],['نسوز و قطعات مصرفی','میلیون ریال/سال'],['نیروی انسانی','میلیون ریال/سال'],['تعمیرات و نگهداری','میلیون ریال/سال']]
- },
- dri:{
-  materials:[['گندله آهن ورودی','تن/تن DRI'],['نرمه آهک و دولومیت','kg/تن DRI'],['کاتالیست و لوله ریفرمر','kg/تن DRI'],['روغن صنعتی','kg/تن DRI'],['گریس','kg/تن DRI'],['آهن اسفنجی سرد CDRI','تن/تن محصول'],['نرمه و برگشتی احیا','درصد خوراک']],
-  utilities:[['گاز طبیعی احیا و ریفرمر','Nm³/تن DRI'],['برق واحد احیا','kWh/تن DRI'],['آب صنعتی و خنک‌کاری','m³/تن DRI'],['اکسیژن','Nm³/تن DRI'],['هوای فشرده','Nm³/تن DRI'],['نیتروژن و گاز خنثی','Nm³/تن DRI']],
-  capex:['دریافت، انباشت و برداشت گندله','واحد احیای مستقیم و کوره شفت','ریفرمر و سیستم گاز احیا','کمپرسورها و تجهیزات گاز','سیستم خنک‌کاری و غبارگیری','انتقال و انباشت آهن اسفنجی','تأسیسات آب و برق و گاز','ساختمان‌های صنعتی و غیرصنعتی','نصب، مهندسی و راه‌اندازی','هزینه‌های قبل از بهره‌برداری'],
-  opex:[['گندله آهن','میلیون ریال/تن'],['آهک و دولومیت','میلیون ریال/تن'],['گاز طبیعی','میلیون ریال/تن'],['برق و آب','میلیون ریال/تن'],['کاتالیست، لوله و نسوز','میلیون ریال/سال'],['روغن، گریس و مواد مصرفی','میلیون ریال/سال'],['نیروی انسانی و سربار','میلیون ریال/سال'],['تعمیرات و قطعات یدکی','میلیون ریال/سال']]
- },
- steelmaking:{
-  materials:[['آهن اسفنجی','تن/تن شمش'],['قراضه آهن','تن/تن شمش'],['آهک و دولومیت','kg/تن'],['فروآلیاژها و کربن','kg/تن'],['الکترود گرافیتی','kg/تن'],['مواد نسوز','kg/تن'],['اکسیژن و گازهای صنعتی','Nm³/تن'],['شمش یا بیلت تولیدی','تن/تن مذاب'],['سرباره و غبار','درصد شارژ']],
-  utilities:[['برق کوره و LF','kWh/تن'],['گاز طبیعی','Nm³/تن'],['اکسیژن','Nm³/تن'],['آب خنک‌کاری','m³/تن'],['آرگون و نیتروژن','Nm³/تن'],['هوای فشرده','Nm³/تن']],
-  capex:['کوره قوس الکتریکی یا القایی','سیستم شارژ و انتقال مواد','کوره پاتیلی LF و پالایش ثانویه','غبارگیر و تصفیه گاز','ماشین ریخته‌گری مداوم','برش و خنک‌کاری محصول','آزمایشگاه و کنترل کیفیت','تأسیسات آب، برق و اکسیژن','ساختمان و نصب تجهیزات'],
-  opex:[['آهن اسفنجی و قراضه','میلیون ریال/تن'],['فروآلیاژ و مواد افزودنی','میلیون ریال/تن'],['الکترود و نسوز','میلیون ریال/تن'],['برق، گاز و اکسیژن','میلیون ریال/تن'],['نیروی انسانی','میلیون ریال/سال'],['تعمیرات و قطعات یدکی','میلیون ریال/سال'],['سربار و آزمایشگاه','میلیون ریال/سال']]
- },
- 'dri-steelmaking-slab':{
-  materials:[['گندله آهن','تن/تن DRI'],['آهن اسفنجی مصرفی در فولادسازی','تن/تن اسلب'],['قراضه و آهن برگشتی','تن/تن اسلب'],['آهک، دولومیت و فروآلیاژ','kg/تن'],['الکترود گرافیتی','kg/تن'],['اسلب قابل فروش','تن/تن مذاب'],['مازاد آهن اسفنجی قابل فروش','تن/سال']],
-  utilities:[['گاز طبیعی احیا','Nm³/تن DRI'],['برق احیا','kWh/تن DRI'],['برق فولادسازی و ریخته‌گری','kWh/تن اسلب'],['اکسیژن','Nm³/تن'],['آب صنعتی و خنک‌کاری','m³/تن'],['آرگون، نیتروژن و هوای فشرده','Nm³/تن']],
-  capex:['واحد احیای مستقیم و ریفرمر','دریافت و انباشت گندله','کوره‌های قوس الکتریکی','پالایش ثانویه و LF','ریخته‌گری مداوم اسلب','غبارگیر و تصفیه گاز','تأسیسات برق، آب، گاز و اکسیژن','انبار و حمل مواد و محصول','ساختمان، نصب و مهندسی'],
-  opex:[['گندله آهن','میلیون ریال/تن'],['قراضه، فروآلیاژ و مواد افزودنی','میلیون ریال/تن'],['گاز طبیعی و برق احیا','میلیون ریال/تن'],['برق، اکسیژن و آب فولادسازی','میلیون ریال/تن'],['الکترود، نسوز و قطعات مصرفی','میلیون ریال/تن'],['نیروی انسانی و سربار','میلیون ریال/سال'],['تعمیرات و نگهداری','میلیون ریال/سال']]
- },
- 'hot-plate':{
-  materials:[['اسلب ورودی','تن/تن پلیت'],['گاز و مواد سوختی کوره','واحد/تن'],['آب پوسته‌زدایی و خنک‌کاری','m³/تن'],['غلتک و قطعات مصرفی','kg/تن'],['ضایعات برش و پوسته','درصد خوراک'],['پلیت قابل فروش','تن/تن اسلب']],
-  utilities:[['گاز طبیعی کوره پیش‌گرم','Nm³/تن'],['برق قفسه‌های نورد و برش','kWh/تن'],['آب خنک‌کاری','m³/تن'],['اکسیژن و هوای فشرده','Nm³/تن']],
-  capex:['کوره پیش‌گرم اسلب','پوسته‌زدایی پرفشار','قفسه‌های نورد خشن و نهایی','میز غلتکی و خنک‌کاری','قیچی و خط برش پلیت','صافکاری و تخت‌کردن','آزمایشگاه و کنترل کیفیت','تأسیسات آب، برق و گاز'],
-  opex:[['اسلب ورودی','میلیون ریال/تن'],['گاز طبیعی و برق','میلیون ریال/تن'],['غلتک، نسوز و قطعات مصرفی','میلیون ریال/تن'],['نیروی انسانی','میلیون ریال/سال'],['تعمیرات و نگهداری','میلیون ریال/سال'],['بسته‌بندی، حمل و سربار','میلیون ریال/سال']]
- },
- 'hot-rolling':{
-  materials:[['اسلب ورودی','تن/تن کلاف'],['گاز و سوخت کوره','واحد/تن'],['غلتک و قطعات مصرفی','kg/تن'],['روغن و روانکار','kg/تن'],['پوسته و ضایعات برش','درصد خوراک'],['کلاف قابل فروش','تن/تن اسلب']],
-  utilities:[['گاز طبیعی کوره','Nm³/تن'],['برق خط نورد','kWh/تن'],['آب خنک‌کاری','m³/تن'],['اکسیژن و هوای فشرده','Nm³/تن']],
-  capex:['کوره پیش‌گرم اسلب','پوسته‌زدایی','قفسه‌های نورد خشن','قفسه‌های نورد نهایی','کویلر و جمع‌کننده کلاف','سیستم خنک‌کاری و لوله‌کشی','تأسیسات آب و برق','انبار و بسته‌بندی کلاف'],
-  opex:[['اسلب ورودی','میلیون ریال/تن'],['گاز طبیعی و برق','میلیون ریال/تن'],['غلتک و قطعات مصرفی','میلیون ریال/تن'],['روغن و روانکار','میلیون ریال/تن'],['نیروی انسانی','میلیون ریال/سال'],['تعمیرات و نگهداری','میلیون ریال/سال'],['بسته‌بندی و حمل','میلیون ریال/سال']]
- },
- 'cold-rolling':{
-  materials:[['کلاف گرم ورودی','تن/تن کلاف سرد'],['اسید کلریدریک و مواد احیا','kg/تن'],['روغن نورد و روانکار','kg/تن'],['مواد شست‌وشو و پوشش‌دهی','kg/تن'],['ضایعات و افت خط','درصد خوراک'],['کلاف سرد قابل فروش','تن/تن خوراک']],
-  utilities:[['برق قفسه‌های نورد سرد','kWh/تن'],['گاز طبیعی کوره آنیل','Nm³/تن'],['آب صنعتی و خنک‌کاری','m³/تن'],['هوای فشرده و نیتروژن','Nm³/تن']],
-  capex:['خط اسیدشویی','قفسه‌های نورد سرد','کوره‌های آنیل و عملیات حرارتی','خط شست‌وشو و تمیزکاری','خط پوشش‌دهی و تکمیل سطح','صافکاری و برش','تصفیه اسید و پساب','تأسیسات آب، برق و گاز'],
-  opex:[['کلاف گرم ورودی','میلیون ریال/تن'],['اسید و مواد شیمیایی','میلیون ریال/تن'],['روغن نورد و روانکار','میلیون ریال/تن'],['برق، گاز و آب','میلیون ریال/تن'],['نیروی انسانی','میلیون ریال/سال'],['تعمیرات و قطعات یدکی','میلیون ریال/سال'],['بسته‌بندی و سربار','میلیون ریال/سال']]
- },
- 'rebar-rolling':{
-  materials:[['شمش یا بیلت ورودی','تن/تن میلگرد'],['گاز کوره پیش‌گرم','Nm³/تن'],['غلتک و قیچی','kg/تن'],['مواد بسته‌بندی','kg/تن'],['پرت و ضایعات','درصد خوراک']],
-  utilities:[['گاز طبیعی','Nm³/تن'],['برق نورد','kWh/تن'],['آب خنک‌کاری','m³/تن'],['هوای فشرده','Nm³/تن']],
-  capex:['کوره پیش‌گرم بیلت','قفسه‌های نورد خشن و میانی','بلوک نهایی و قیچی','بستر خنک‌کن','بسته‌بندی و باسکول','تأسیسات آب و برق'],
-  opex:[['شمش یا بیلت','میلیون ریال/تن'],['گاز و برق','میلیون ریال/تن'],['غلتک و قطعات مصرفی','میلیون ریال/تن'],['نیروی انسانی','میلیون ریال/سال'],['تعمیرات و نگهداری','میلیون ریال/سال'],['بسته‌بندی و حمل','میلیون ریال/سال']]
- },
- 'angle-rolling':{
-  materials:[['شمش یا بیلت ورودی','تن/تن نبشی'],['گاز کوره پیش‌گرم','Nm³/تن'],['غلتک و قطعات مصرفی','kg/تن'],['پرت و ضایعات','درصد خوراک']],
-  utilities:[['گاز طبیعی','Nm³/تن'],['برق نورد','kWh/تن'],['آب خنک‌کاری','m³/تن'],['هوای فشرده','Nm³/تن']],
-  capex:['کوره پیش‌گرم','قفسه‌های نورد مقاطع','قیچی و برش','بستر خنک‌کن و صافکاری','بسته‌بندی و باسکول','تأسیسات آب و برق'],
-  opex:[['شمش یا بیلت','میلیون ریال/تن'],['گاز و برق','میلیون ریال/تن'],['غلتک و قطعات مصرفی','میلیون ریال/تن'],['نیروی انسانی','میلیون ریال/سال'],['تعمیرات و نگهداری','میلیون ریال/سال'],['بسته‌بندی و حمل','میلیون ریال/سال']]
- },
- 'beam-rolling':{
-  materials:[['شمش یا بلوم ورودی','تن/تن تیرآهن'],['گاز کوره پیش‌گرم','Nm³/تن'],['غلتک و قطعات مصرفی','kg/تن'],['پرت و ضایعات','درصد خوراک']],
-  utilities:[['گاز طبیعی','Nm³/تن'],['برق نورد یونیورسال','kWh/تن'],['آب خنک‌کاری','m³/تن'],['هوای فشرده','Nm³/تن']],
-  capex:['کوره پیش‌گرم','قفسه‌های نورد یونیورسال','قفسه‌های نورد خشن و میانی','صافکاری و برش','بستر خنک‌کن','بسته‌بندی و باسکول','تأسیسات آب و برق'],
-  opex:[['شمش یا بلوم','میلیون ریال/تن'],['گاز و برق','میلیون ریال/تن'],['غلتک و قطعات مصرفی','میلیون ریال/تن'],['نیروی انسانی','میلیون ریال/سال'],['تعمیرات و نگهداری','میلیون ریال/سال'],['بسته‌بندی و حمل','میلیون ریال/سال']]
- }
-}
-const isOutputMaterial=(name:string)=>/(تولیدی|قابل فروش|باطله|ضایعات|نرمه و برگشتی|سرباره|پرت|برگشتی|گندله سالم|آهن اسفنجی سرد)/.test(name)
-const stageRows=(items:[string,string][],source:string)=>items.map(([name,unit])=>({...makeRow(name,unit,0,0,source),flowType:isOutputMaterial(name)?'output' as const:'input' as const}))
-const stageCapexRows=(items:string[],currency:string,source:string)=>items.map(name=>makeRow(name,currency,0,0,source))
-
-/** Resolve the user's steel-chain project labels to the correct technical form. */
-function resolveProjectStage(project:FeasibilityProject):typeof stageOptions[number] {
- const label=`${project.steelStage??''} ${project.name??''}`
-  .replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\s_-]/g,'').toLowerCase()
- const has=(value:string)=>label.includes(value)
- const id=has('نوردسرد')?'cold-rolling'
-  :has('پلیت')?'hot-plate'
-  :has('نوردگرم')&&has('کلاف')?'hot-rolling'
-  :has('میلگرد')?'rebar-rolling'
-  :has('نبشی')?'angle-rolling'
-  :has('تیرآهن')||has('تیر اهن')?'beam-rolling'
-  :((has('احیاء')||has('احیا'))&&has('فولادسازی'))||has('تولیداسلب')?'dri-steelmaking-slab'
-  :has('فولادسازی')||has('ذوب')||has('ریخته')?'steelmaking'
-  :has('احیاء')||has('احیا')||has('dri')?'dri'
-  :has('گندله')?'pellet'
-  :has('کنسانتره')||has('کنستانتره')?'concentrate'
-  :has('معدن')||has('سنگآهن')?'mining'
-  :'hot-rolling'
- return (stageOptions.find(stage=>stage.id===id)??stageOptions.find(stage=>stage.id==='hot-rolling')) as typeof stageOptions[number]
-}
+const isOutputMaterial=(name:string)=>/(تولیدی|قابل فروش|باطله|ضایعات|نرمه و برگشتی|سرباره|پرت|برگشتی)/.test(name)
 
 const steps = [
  ['profile','تعریف پروژه و بازار'],['stage','محصول و ظرفیت تولید'],['process','فرآیند تولید و موازنه مواد'],['balance','مصارف زیربنایی و فرآیندی'],['capex','هزینه‌های دوره ساخت'],['opex','هزینه‌های دوره بهره‌برداری'],['finance','تأمین مالی و نرخ تنزیل'],['cashflow','جریان نقدی و شاخص‌های مالی'],['results','جمع‌بندی و ارزیابی نهایی'],['reports','گزارش و خروجی‌ها']
@@ -165,45 +49,29 @@ const stepTitleEn:Record<string,string>={'تعریف پروژه و بازار':'
 type Step = typeof steps[number][0]
 const makeRow=(name:string,unit='تن',quantity=0,unitPrice=0,source='فرض کاربر'):Row=>({id:crypto.randomUUID?.()??String(Date.now()+Math.random()),name,quantity,unit,unitPrice,source,flowType:'input'})
 function baseModel(project:FeasibilityProject):Model {
- const rawProject=project.templateId==='raw'
- const selectedStage=rawProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
- const coldRollingProject=!rawProject&&selectedStage.id==='cold-rolling'
- const hotRollingCoilProject=!rawProject&&selectedStage.id==='hot-rolling'&&/کلاف/.test(project.steelStage??project.name)
+ const projectCategory:Model['projectCategory']=project.industry==='معدن'?'mining':project.industry==='کشاورزی'?'agricultural':project.industry==='ساختمان و زیرساخت'?'infrastructure':project.industry==='خدمات'?'other':'industrial'
  return {
-  projectCategory:project.industry==='معدن'?'mining':project.industry==='کشاورزی'?'agricultural':project.industry==='انرژی و نیروگاه'?'industrial':project.industry==='نفت، گاز و پتروشیمی'?'industrial':project.industry==='ساختمان و زیرساخت'?'infrastructure':project.industry==='خدمات'?'other':'industrial',
+  projectCategory,
   analysisMode:'unspecified',
   partners:[],
   partnerDistributionPercent:100,
   scope:{studyLevel:'unspecified',jointVenture:false,economicAnalysis:false,costCentreAnalysis:false,costAllocation:false,valueAddedAnalysis:false,foreignExchangeEffect:false,employmentEffects:false},
-  foundation:hotRollingCoilProject?createHotRollingCoilProjectFoundation():createBlankProjectFoundation(),
+  foundation:createBlankProjectFoundation(),
   financialForms:createBlankProjectModelFinancialFormDrafts(),
-  fixedInvestmentItems:hotRollingCoilProject?createHotRollingCoilFixedInvestmentItems():[],
-  fixedInvestmentSeedVersion:hotRollingCoilProject?2:0,
-  project:{name:project.name,location:project.location,owner:coldRollingProject?'نورد و لوله گالوانیزه فجر کویر کاشان':'',startYear:rawProject?null as unknown as number:(hotRollingCoilProject?HR.startYear:1403),constructionYears:rawProject?null as unknown as number:(hotRollingCoilProject?HR.constructionYears:(coldRollingProject?1.5:2)),operatingYears:rawProject?null as unknown as number:(hotRollingCoilProject?HR.operatingYears:(coldRollingProject?15:10)),currency:rawProject?'':'میلیون ریال',fxRate:rawProject?null as unknown as number:1},
-  stage:selectedStage.id,
-  products:rawProject?[]:hotRollingCoilProject?[makeRow('ورق کویل فولادی','تن/سال',200000,307,'OPEX › قیمت فروش › ردیف 2'),makeRow('محصولات فرعی و ضایعات قابل فروش','تن/سال',4000,214.9,'OPEX › قیمت فروش › ردیف 3')]:coldRollingProject?[makeRow('کلاف سرد','تن/سال',200000,0,'گزارش فنی-اقتصادی نورد سرد، مهر ۱۴۰۲')]:[makeRow('محصول اصلی','تن/سال',Number(project.capacity.replace(/[^0-9.]/g,''))||250000,0)],
-  capacity:{nameplate:rawProject?null as unknown as number:(hotRollingCoilProject?HR.capacity:(coldRollingProject?200000:(Number(project.capacity.replace(/[^0-9.]/g,''))||250000))),operatingDays:rawProject?null as unknown as number:330,hoursPerDay:rawProject?null as unknown as number:24,availability:rawProject?null as unknown as number:100,yield:rawProject?null as unknown as number:100,ramp:rawProject?[]:(hotRollingCoilProject?[...HR.ramp]:(coldRollingProject?[80,90,100]:[70,80,90,100]))},
-  process:{technology:rawProject?'':selectedStage.name,route:rawProject?'':selectedStage.route,equipment:'',bottleneck:rawProject?null as unknown as number:0,notes:''},
-  technical:rawProject?[]:selectedStage.fields.map(field=>makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',field.includes('نیروی انسانی')&&coldRollingProject?250:0,0,coldRollingProject?'نیازمند تکمیل مهندسی؛ گزارش فقط اشتغال مستقیم را مشخص کرده':'برآورد مهندسی')),
-  balance:rawProject?[]:hotRollingCoilProject?HR.materials.map(r=>({...makeRow(r[0],r[2],r[1],r[3],'OPEX › مواد خام › داده‌های مصرف ویژه و قیمت‌های مبنای 1402'),flowType:isOutputMaterial(r[0])?'output':'input'})):coldRollingProject?[makeRow('کلاف گرم (ماده اولیه اصلی)','تن/تن محصول',1,0,'گزارش: نیاز سالانه ۲۰۰ هزار تن برای تولید ۲۰۰ هزار تن کلاف سرد'),{...makeRow('ضایعات، افت و برگشتی خط','درصد',0,0,'نیازمند موازنه تفصیلی'),flowType:'output'}]:stageRows(stageFormDefinitions[selectedStage.id]?.materials??[], 'فرم تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
-  utilities:rawProject?[]:hotRollingCoilProject?HR.utilities.map(r=>makeRow(r[0],r[2],r[1],r[3],'OPEX › انرژی › داده‌های مصرف ویژه و تعرفه‌های مبنای 1402')):stageRows(stageFormDefinitions[selectedStage.id]?.utilities??[], 'فرم تخصصی یوتیلیتی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
-  market:{demand:rawProject?null as unknown as number:0,domesticProduction:rawProject?null as unknown as number:0,imports:rawProject?null as unknown as number:0,exports:rawProject?null as unknown as number:0,targetShare:rawProject?null as unknown as number:10,domesticPrice:rawProject?null as unknown as number:(hotRollingCoilProject?HR.pricePerTonne:0),exportPrice:rawProject?null as unknown as number:(hotRollingCoilProject?HR.pricePerTonne:0),domesticShare:rawProject?null as unknown as number:(hotRollingCoilProject?100:85),growth:rawProject?null as unknown as number:0,competitors:hotRollingCoilProject?HR.competitors.map((r,i)=>({id:'hr-competitor-'+i,name:r[0],installedCapacity:r[1],actualProduction:r[2],marketableCapacity:r[3],domesticSupply:r[4],thickness:r[5],width:r[6]})):[],expansions:hotRollingCoilProject?HR.expansions.map((r,i)=>({id:'hr-expansion-'+i,name:r[0],capacity:r[1]})):[],slabBalance:hotRollingCoilProject?HR.slabBalance.map((r,i)=>({id:'hr-slab-'+i,year:r[0],production:r[1],domesticConsumption:r[2],exports:r[3],imports:r[4]})):[]},
-  capex:rawProject?[]:hotRollingCoilProject?HR.capex.map(r=>makeRow(r[0],'میلیون ریال',r[1],1,r[2])):coldRollingProject?[
-   makeRow('خرید زمین (۱۳ هکتار؛ ۱۳۰٬۰۰۰ مترمربع)','میلیون ریال',2015000,1,'جدول ۱-۱ گزارش'),
-   makeRow('محوطه‌سازی و آماده‌سازی سایت','میلیون ریال',1092344,1,'جدول ۲-۱ گزارش'),
-   makeRow('ساختمان‌های صنعتی','میلیون ریال',1855680,1,'جدول ۴-۱ گزارش'),
-   makeRow('ساختمان‌های غیرصنعتی','میلیون ریال',57181,1,'جدول ۳-۱ گزارش'),
-   makeRow('ماشین‌آلات، تجهیزات، مهندسی و نصب','میلیون ریال',8114800,1,'جدول ۶-۱ گزارش'),
-   makeRow('وسائط نقلیه','میلیون ریال',162400,1,'جدول ۷-۱ گزارش'),
-   makeRow('تأسیسات زیربنایی و واحدهای جنبی','میلیون ریال',797500,1,'جدول ۸-۱ گزارش'),
-   makeRow('تجهیزات و وسایل اداری و خدماتی','میلیون ریال',10950,1,'جدول ۹-۱ گزارش'),
-   makeRow('هزینه‌های احتمالی متفرقه و پیش‌بینی‌نشده','میلیون ریال',282117,1,'جدول ۱۱-۱ گزارش'),
-   makeRow('هزینه‌های قبل از بهره‌برداری','میلیون ریال',302400,1,'جدول ۱۰-۱ گزارش'),
-   makeRow('هزینه تأمین مالی دوران ساخت (بهره وام)','میلیون ریال',350000,1,'جدول ۱-۳ گزارش')
-  ]:stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex??[],rawProject?'':'میلیون ریال','فرم سرمایه‌گذاری تخصصی مرحله '+selectedStage.name+'؛ مبلغ باید از CAPEX و استعلام‌های پروژه تکمیل شود'),
-  opex:rawProject?[]:hotRollingCoilProject?[...HR.variableOpexPerTonne.map(r=>makeRow(r[0],'میلیون ریال/تن',1,r[1],'OPEX › هزینه جاری سالیانه و سر به سری')), ...HR.fixedOpexAnnual.map(r=>makeRow(r[0],'میلیون ریال/سال',1,r[1],'OPEX › هزینه جاری سالیانه و سر به سری'))]:coldRollingProject?[makeRow('خرید کلاف گرم','میلیون ریال/تن',0,0,'قیمت و شرایط تأمین در گزارش درج نشده'),makeRow('اسید، روغن نورد و مواد مصرفی','میلیون ریال/تن',0,0,'نیازمند برآورد'),makeRow('برق، گاز و آب','میلیون ریال/تن',0,0,'نیازمند برآورد'),makeRow('حقوق و دستمزد ۲۵۰ نفر','میلیون ریال/سال',0,0,'گزارش: ۲۵۰ نفر اشتغال مستقیم؛ مبلغ هزینه درج نشده'),makeRow('تعمیرات و قطعات یدکی','میلیون ریال/سال',0,0,'نیازمند برآورد'),makeRow('اداری، فروش، حمل و سربار','میلیون ریال/سال',0,0,'نیازمند برآورد')]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[], 'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه'),
-  finance:{equity:rawProject?null as unknown as number:(hotRollingCoilProject?HR.equityPercent:(coldRollingProject?66:40)),debt:rawProject?null as unknown as number:(hotRollingCoilProject?HR.debtPercent:(coldRollingProject?34:60)),equityCost:rawProject?null as unknown as number:(hotRollingCoilProject?HR.equityCost:35),debtCost:rawProject?null as unknown as number:(hotRollingCoilProject?HR.debtCost:(coldRollingProject?28:23)),tax:rawProject?null as unknown as number:(hotRollingCoilProject?HR.taxRate:(coldRollingProject?0:20)),manualRate:rawProject?null as unknown as number:(hotRollingCoilProject?HR.discountRate:(coldRollingProject?28:30)),method:rawProject?'unspecified':(hotRollingCoilProject?'manual':(coldRollingProject?'manual':'wacc')),depreciationYears:rawProject?null as unknown as number:(coldRollingProject?15:10),workingCapital:rawProject?null as unknown as number:(hotRollingCoilProject?HR.workingCapitalAtFullCapacity:0),financeRate:rawProject?null as unknown as number:(hotRollingCoilProject?HR.debtCost:(coldRollingProject?28:23)),reinvestmentRate:rawProject?null as unknown as number:(hotRollingCoilProject?30:(coldRollingProject?28:30))},
-  risks:rawProject?[]:coldRollingProject?[makeRow('تأمین پایدار کلاف گرم و قیمت خرید','سناریو',0,0,'ریسک کلیدی؛ تحلیل حساسیت در گزارش مطرح شده'),makeRow('تغییر قیمت فروش کلاف سرد','درصد',0,0,'نیازمند داده بازار'),makeRow('دسترس‌پذیری خط و تحقق ظرفیت','درصد',0,0,'نیازمند برآورد مهندسی'),makeRow('تأخیر در ساخت و راه‌اندازی','ماه',0,0,'گزارش: دوره ساخت ۱۸ ماه')]:[makeRow('افزایش قیمت مواد اولیه','درصد',10),makeRow('کاهش قیمت فروش','درصد',10),makeRow('افت ظرفیت تولید','درصد',10),makeRow('تأخیر در راه‌اندازی','ماه',6)]
+  fixedInvestmentItems:[],
+  project:{name:project.name,location:project.location,owner:'',startYear:null as unknown as number,constructionYears:null as unknown as number,operatingYears:null as unknown as number,currency:'',fxRate:null as unknown as number},
+  stage:'other',
+  products:[],
+  capacity:{nameplate:null as unknown as number,operatingDays:null as unknown as number,hoursPerDay:null as unknown as number,availability:null as unknown as number,yield:null as unknown as number,ramp:[]},
+  process:{technology:'',route:'',equipment:'',bottleneck:null as unknown as number,notes:''},
+  technical:[],
+  balance:[],
+  utilities:[],
+  market:{demand:null as unknown as number,domesticProduction:null as unknown as number,imports:null as unknown as number,exports:null as unknown as number,targetShare:null as unknown as number,domesticPrice:null as unknown as number,exportPrice:null as unknown as number,domesticShare:null as unknown as number,growth:null as unknown as number,competitors:[],expansions:[],slabBalance:[]},
+  capex:[],
+  opex:[],
+  finance:{equity:null as unknown as number,debt:null as unknown as number,equityCost:null as unknown as number,debtCost:null as unknown as number,tax:null as unknown as number,manualRate:null as unknown as number,method:'unspecified',depreciationYears:null as unknown as number,workingCapital:null as unknown as number,financeRate:null as unknown as number,reinvestmentRate:null as unknown as number},
+  risks:[]
  }
 }
 const n=(v:number)=>Number.isFinite(v)?v:0
@@ -297,13 +165,6 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
   'فرض کاربر':'User Assumption','نیازمند طراحی مهندسی':'Engineering Design Required','نیازمند برآورد':'Estimate Required',
   'نیازمند داده بازار':'Market Data Required','نیازمند موازنه تفصیلی':'Detailed Balance Required'
  });
- const routeEnExtra:Record<string,string>={'تبدیل کلاف گرم به کلاف سرد؛ جزئیات خطوط و عملیات تکمیلی باید با طراحی مهندسی پروژه تطبیق داده شود':'Converting hot-rolled coil to cold-rolled coil; line details and finishing operations must align with the project engineering design','کوره پیش‌گرم، نورد خشن و میانی، بلوک نهایی، خنک‌کاری و بستر خنک‌کن':'Reheating furnace, roughing and intermediate stands, finishing block, cooling and cooling bed','کوره پیش‌گرم، نورد مقاطع، خنک‌کاری و صافکاری':'Reheating furnace, section rolling, cooling and straightening','کوره پیش‌گرم، نورد یونیورسال/معمولی، خنک‌کاری و صافکاری':'Reheating furnace, universal/conventional rolling, cooling and straightening','فرآیند اختصاصی مطابق تعریف کاربر':'Custom process as defined by the user'};
- Object.assign(fieldEnglish,fieldEn);
- const trField=(v:string)=>en?(fieldEn[v]??v):v
- const routeEn:Record<string,string>={'معدن روباز/زیرزمینی، حفاری، آتشباری، بارگیری و حمل':'Open-pit/underground mining, drilling, blasting, loading and haulage','خردایش، آسیاکنی، جدایش مغناطیسی/فلوتاسیون، آبگیری':'Crushing, grinding, magnetic separation/flotation and dewatering','آماده‌سازی، اختلاط، دیسک/درام، پخت و خنک‌سازی':'Preparation, mixing, disc/drum pelletizing, firing and cooling','شارژ گندله، احیای گازی/زغالی، خنک‌سازی و بریکت‌سازی':'Pellet charging, gas/coal-based reduction, cooling and briquetting','EAF/IF/BOF، پالایش ثانویه، LF/VD و ریخته‌گری مداوم':'EAF/IF/BOF, secondary refining, LF/VD and continuous casting','کوره پیش‌گرم، پوسته‌زدایی، نورد خشن/نهایی، خنک‌کاری و برش':'Reheating furnace, descaling, roughing/finishing, cooling and cutting','فرآیند اختصاصی مطابق تعریف کاربر':'Custom process defined by the user'}
-
- Object.assign(routeEn,routeEnExtra);
-
  const key='feasibility:project:'+project.id+':v1'
  const [m,setM]=useState<Model>(()=>baseModel(project)),[step,setStep]=useState<Step>('profile'),[loaded,setLoaded]=useState(false),[saved,setSaved]=useState(''),[reportPeriodicFinance,setReportPeriodicFinance]=useState<PeriodicProjectFinanceResult|null>(null),[reportPartnerFinance,setReportPartnerFinance]=useState<PartnerFinanceResult|null>(null)
   const isRawTemplate=project.templateId==='raw'
@@ -314,7 +175,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  useEffect(()=>{let alive=true;localStore.get<Model>(key).then(v=>{if(alive){if(v){const defaults=baseModel(project);const isHotRolling=project.templateId!=='raw'&&project.industry==='فولاد و صنایع معدنی'&&project.steelStage!=='سایر'&&/نورد.*گرم.*کلاف|گرم.*نورد.*کلاف/.test((project.steelStage+' '+project.name).replace(/\s/g,''));const savedFixedInvestmentItems=Array.isArray(v.fixedInvestmentItems)?v.fixedInvestmentItems:[];const savedFixedInvestmentSeedVersion=Number(v.fixedInvestmentSeedVersion??0);const migratedFixedInvestmentItems=isHotRolling?migrateHotRollingCoilFixedInvestmentItems(savedFixedInvestmentItems,savedFixedInvestmentSeedVersion):savedFixedInvestmentItems;const oldCapex=isHotRolling&&v.capex?.length===6&&v.capex.every(r=>r.quantity===1&&r.unitPrice===0);const oldOpex=isHotRolling&&v.opex?.length===4&&v.opex.every(r=>r.quantity===1&&r.unitPrice===0);const oldBalance=isHotRolling&&v.balance?.length===2&&v.balance.every(r=>r.unitPrice===0);const oldUtilities=isHotRolling&&v.utilities?.length===3&&v.utilities.every(r=>r.unitPrice===0);const oldFinance=isHotRolling&&v.finance?.equity===40&&v.finance?.debt===60&&v.finance?.tax===20;setM({...defaults,...v,partners:Array.isArray(v.partners)?v.partners:defaults.partners,partnerDistributionPercent:Number.isFinite(v.partnerDistributionPercent)?v.partnerDistributionPercent:defaults.partnerDistributionPercent,stage:defaults.stage,foundation:isHotRolling?mergeHotRollingCoilProjectFoundation(v.foundation):mergeProjectFoundation(v.foundation),financialForms:v.financialForms??defaults.financialForms,fixedInvestmentItems:(isHotRolling?migratedFixedInvestmentItems:savedFixedInvestmentItems).map(item=>({...item,depreciationBasis:item.depreciationBasis??'unresolved',acquisitions:item.acquisitions.map(acquisition=>({...acquisition,allocationBasis:acquisition.allocationBasis??'unallocated'})),depreciation:{...item.depreciation,lengthMonths:item.depreciation?.lengthMonths??0,firstDepreciationMonths:item.depreciation?.firstDepreciationMonths??12}})),fixedInvestmentSeedVersion:isHotRolling?2:savedFixedInvestmentSeedVersion,project:{...defaults.project,...v.project,...(isHotRolling&&v.project?.operatingYears===10?{startYear:defaults.project.startYear,constructionYears:defaults.project.constructionYears,operatingYears:defaults.project.operatingYears}: {})},capacity:isHotRolling&&(v.capacity?.nameplate===250000||JSON.stringify(v.capacity?.ramp)==='[70,80,90,100]')?defaults.capacity:{...defaults.capacity,...v.capacity},products:isHotRolling&&v.products?.length===1&&v.products[0].name==='محصول اصلی'?defaults.products:v.products,market:{...defaults.market,...v.market,domesticPrice:v.market?.domesticPrice||defaults.market.domesticPrice,exportPrice:v.market?.exportPrice||defaults.market.exportPrice,domesticShare:v.market?.domesticPrice?v.market.domesticShare:defaults.market.domesticShare,competitors:v.market?.competitors?.length?v.market.competitors:defaults.market.competitors,expansions:v.market?.expansions?.length?v.market.expansions:defaults.market.expansions,slabBalance:v.market?.slabBalance?.length?v.market.slabBalance:defaults.market.slabBalance},capex:oldCapex?defaults.capex:v.capex,opex:oldOpex?defaults.opex:v.opex,balance:oldBalance?defaults.balance:v.balance,utilities:oldUtilities?defaults.utilities:v.utilities,finance:oldFinance?defaults.finance:{...defaults.finance,...v.finance},scope:{...defaults.scope,...v.scope}})}else setM(baseModel(project));setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[key])
  useEffect(()=>{if(loaded){localStore.set(key,m).then(()=>setSaved(new Date().toLocaleTimeString(en?'en-US':'fa-IR',{hour:'2-digit',minute:'2-digit'}))) }},[m,loaded,key,en])
  const saveNow=async()=>{await localStore.set(key,m);setSaved(new Date().toLocaleTimeString(en?'en-US':'fa-IR',{hour:'2-digit',minute:'2-digit'}))}
- const stage=stageOptions.find(s=>s.id===m.stage)??stageOptions[5]
+ const stage={id:'other',name:'فرآیند عمومی',route:'فرآیند مطابق تعریف تحلیلگر',fields:[] as string[]}
  const cap=m.capacity.nameplate*Math.min(100,Math.max(0,m.capacity.availability))/100*Math.min(100,Math.max(0,m.capacity.yield))/100
  const capex=sum(m.capex),variable=m.opex.filter(r=>r.unit.includes('/تن')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)+sumMaterialInputs(m.balance)+sum(m.utilities),fixed=m.opex.filter(r=>r.unit.includes('/سال')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)
   const preOperatingCost=m.capex.filter(r=>r.name.includes('قبل از بهره‌برداری')).reduce((a,r)=>a+r.quantity*r.unitPrice,0)
