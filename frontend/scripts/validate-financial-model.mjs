@@ -1882,6 +1882,7 @@ assert.ok(foundationWizard.includes('FixedInvestmentPanel')
   && foundationWizard.includes('fixedInvestmentItems:savedAssets.map(item=>({...item,depreciationBasis:')
   && !/hotRollingCoilProject|isHotRolling|createHotRollingCoilFixedInvestmentItems/.test(foundationWizard),
   'The generic fixed investment register must start empty and restore only saved user-entered asset data')
+assert.ok(fixedInvestmentPanel.includes('preOperatingOnly') && fixedInvestmentPanel.includes('visibleAssetClasses') && fixedInvestmentPanel.includes("assetClass:'preproduction'") && fixedInvestmentPanel.includes('depreciationBuild.preOperatingSchedule.map'), 'The fixed investment register must switch to a pre-production-only schedule when detailed fixed assets are used')
 assert.ok(fixedInvestmentPanel.includes("listFinancialMethods('depreciation')")
   && fixedInvestmentPanel.includes('directoryMethodToAssetMethod')
   && fixedInvestmentPanel.includes('Depreciation Method Directory')
