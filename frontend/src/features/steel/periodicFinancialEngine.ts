@@ -216,7 +216,7 @@ export function allocateAnnualFlowsToPeriods(
 export type PeriodicLoanInput = {
   annualRatePercent: number
   drawdowns: number[]
-  repaymentMethod: 'equal-principal' | 'annuity' | 'bullet'
+  repaymentMethod: 'equal-principal' | 'annuity' | 'bullet' | 'custom'
   repaymentStartPeriod: number
   gracePeriods: number
   termPeriods: number
@@ -231,6 +231,12 @@ export type PeriodicLoanInput = {
   rateChanges?: { effectiveDate: string; annualRatePercent: number }[]
   /** Financing fees paid on a date; capitalized fees are added to debt, expense fees are paid in cash. */
   fees?: { date: string; amount: number; treatment: 'expense' | 'capitalize'; label?: string }[]
+  /** Facility commitment limit; fees accrue on the time-weighted undrawn balance. */
+  facilityLimit?: number
+  commitmentFeeAnnualRatePercent?: number
+  /** Period numbers are 1-based; with balloonAtMaturity, remaining principal is due at final maturity. */
+  customPrincipalRepayments?: { period: number; amount: number }[]
+  balloonAtMaturity?: boolean
   interestConvention?: 'comfar-months-plus-360' | 'actual-360' | 'actual-365'
 }
 
@@ -242,6 +248,7 @@ export type PeriodicLoanRow = {
   interestExpense: number
   capitalizedInterest: number
   financingFeeExpense: number
+  commitmentFeeExpense: number
   capitalizedFinancingFees: number
   principal: number
   closingBalance: number
@@ -301,7 +308,7 @@ export function calculatePeriodicLoanSchedule(
       !Number.isInteger(firstPrincipalIndex) ||
       firstPrincipalIndex < 0 || firstPrincipalIndex + input.termPeriods > periods.length)
     issues.push('Repayment start, grace period and loan term exceed the available project periods.')
-  if (!['equal-principal', 'annuity', 'bullet'].includes(input.repaymentMethod))
+  if (!['equal-principal', 'annuity', 'bullet', 'custom'].includes(input.repaymentMethod))
     issues.push('Unsupported periodic repayment method.')
   if (typeof input.capitalizeInterest !== 'boolean')
     issues.push('Capitalized-interest option must be explicitly true or false.')
@@ -315,6 +322,15 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Every period drawdown must be finite and non-negative.')
   if (input.openingBalance != null && (!validFinite(input.openingBalance) || input.openingBalance < 0))
     issues.push('Opening loan balance must be a finite non-negative amount.')
+  if (input.facilityLimit != null && (!validFinite(input.facilityLimit) || input.facilityLimit < 0 || input.facilityLimit < (input.openingBalance ?? 0)))
+    issues.push('Facility limit must be finite, non-negative and at least the opening loan balance.')
+  if (input.commitmentFeeAnnualRatePercent != null && (!validFinite(input.commitmentFeeAnnualRatePercent) || input.commitmentFeeAnnualRatePercent < 0 || input.facilityLimit == null))
+    issues.push('A non-negative commitment fee rate requires a valid facility limit.')
+  const customRepayments = input.customPrincipalRepayments ?? []
+  if (input.repaymentMethod === 'custom' && !customRepayments.length)
+    issues.push('Custom repayment method requires at least one scheduled principal payment.')
+  if (customRepayments.some((item,index) => !item || !Number.isInteger(item.period) || item.period < firstPrincipalIndex + 1 || item.period > firstPrincipalIndex + input.termPeriods || !validFinite(item.amount) || item.amount <= 0 || (index > 0 && customRepayments[index - 1].period >= item.period)))
+    issues.push('Custom principal repayments must have unique increasing periods within the repayment term and positive finite amounts.')
   const interestConvention = input.interestConvention
   const rateChanges = input.rateChanges ?? []
   const fees = input.fees ?? []
@@ -383,7 +399,7 @@ export function calculatePeriodicLoanSchedule(
     }
     return rate
   }
-  const hasDatedFinancingEvents = rateChanges.length > 0 || fees.length > 0
+  const hasDatedFinancingEvents = rateChanges.length > 0 || fees.length > 0 || (input.commitmentFeeAnnualRatePercent ?? 0) > 0
   const addDays = (date: string, days: number) => {
     const parsed = parseIsoDateUtc(date)!
     return dateOnlyUtc(new Date(parsed.getTime() + days * 86400000))
@@ -443,6 +459,7 @@ export function calculatePeriodicLoanSchedule(
     const openingBalance = balance
     let interestAccrued: number
     let financingFeeExpense = 0
+    let commitmentFeeExpense = 0
     let capitalizedFinancingFees = 0
     if (input.datedDrawdowns || hasDatedFinancingEvents) {
       const period = periods[index]
@@ -465,6 +482,11 @@ export function calculatePeriodicLoanSchedule(
         if(nextDate<=cursor) return
         const accrued=segmentInterest(interestBalance,activeRate,cursor,nextDate,period)
         interestAccrued+=accrued
+        if ((input.commitmentFeeAnnualRatePercent ?? 0) > 0 && input.facilityLimit != null) {
+          const unusedCommitment = Math.max(0, input.facilityLimit - interestBalance)
+          const days = segmentDays(cursor,nextDate)
+          commitmentFeeExpense += unusedCommitment * (input.commitmentFeeAnnualRatePercent as number) / 100 * days / dayCountBasis
+        }
         // Effective-annual conversion represents a compounded effective rate.
         // Explicit day-count conventions and frequency-divided rates remain simple.
         if(!interestConvention && rateConversion==='effective-annual-by-actual-days')
@@ -482,7 +504,12 @@ export function calculatePeriodicLoanSchedule(
     } else {
       const interestBase = openingBalance + drawdown * 0.5
       interestAccrued = interestBase * periodRates[index]
+      if ((input.commitmentFeeAnnualRatePercent ?? 0) > 0 && input.facilityLimit != null) {
+        const averageUndrawn = Math.max(0, input.facilityLimit - (openingBalance + drawdown / 2))
+        commitmentFeeExpense = averageUndrawn * (input.commitmentFeeAnnualRatePercent as number) / 100 * periods[index].days / dayCountBasis
+      }
     }
+    financingFeeExpense += commitmentFeeExpense
     const beforePrincipal = index < firstPrincipalIndex
     const capitalizedInterest = beforePrincipal && input.capitalizeInterest ? interestAccrued : 0
     const interestExpense = capitalizedInterest > 0 ? 0 : interestAccrued
@@ -497,6 +524,14 @@ export function calculatePeriodicLoanSchedule(
         principal = repaymentIndex === input.termPeriods - 1
           ? availableBalance
           : Math.min(availableBalance, equalPrincipalAmount)
+      } else if (input.repaymentMethod === 'custom') {
+        const scheduled = customRepayments.find(item => item.period === index + 1)?.amount ?? 0
+        principal = input.balloonAtMaturity && repaymentIndex === input.termPeriods - 1
+          ? availableBalance
+          : Math.min(availableBalance, scheduled)
+        if (scheduled > availableBalance + 0.01) issues.push('Custom principal repayment exceeds the outstanding balance in period ' + (index + 1) + '.')
+        if (!input.balloonAtMaturity && repaymentIndex === input.termPeriods - 1 && Math.abs(principal - availableBalance) > 0.01)
+          issues.push('Custom repayment schedule must fully repay the balance at maturity or enable the balloon payment.')
       } else {
         if (annuityPayment === null) {
           let discountFactor = 1
@@ -521,6 +556,7 @@ export function calculatePeriodicLoanSchedule(
       interestExpense,
       capitalizedInterest,
       financingFeeExpense,
+      commitmentFeeExpense,
       capitalizedFinancingFees,
       principal,
       closingBalance: balance,
@@ -557,6 +593,8 @@ export type PeriodicProjectFinanceInput = {
   openingTaxLoss?: number
   openingUnleveredTaxLoss?: number
   loans: PeriodicProjectLoan[]
+  /** Minimum covenant DSCR as a multiple (e.g. 1.20); breaches are warnings, not automatic cash-flow changes. */
+  minimumDscr?: number
   discountRatePercent?: number | null
   equityDiscountRatePercent?: number | null
   valuationDate?: string
@@ -616,6 +654,7 @@ export type PeriodicProjectFinanceRow = {
   salvageGainLoss: number
   cfads: number
   dscr: number | null
+  dscrCovenantStatus: 'not-tested' | 'pass' | 'breach'
   projectFreeCashFlow: number
   equityFreeCashFlow: number
 }
@@ -809,6 +848,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     npvEquity: null, irrEquity: null, mirrEquity: null, totalDebtDrawdown: 0,
     totalEquityContribution: 0, totalCapitalizedInterest: 0, peakWorkingCapital: 0, warnings
   })
+  if (input.minimumDscr != null && (!validFinite(input.minimumDscr) || input.minimumDscr <= 0)) warnings.push('Minimum DSCR covenant must be a positive finite multiple.')
   if (!periods.length || (input.salvageValue != null && (!validFinite(input.salvageValue) || input.salvageValue < 0)) ||
       (input.salvageBookValue != null && (!validFinite(input.salvageBookValue) || input.salvageBookValue < 0)) ||
       (dayCountBasis !== 360 && dayCountBasis !== 365) ||
@@ -994,6 +1034,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
+    const dscrCovenantStatus: 'not-tested' | 'pass' | 'breach' = input.minimumDscr == null || dscr == null
+      ? 'not-tested' : dscr + 1e-9 >= input.minimumDscr ? 'pass' : 'breach'
+    if (dscrCovenantStatus === 'breach') warnings.push('Minimum DSCR covenant breached in period ' + (index + 1) + ': actual ' + dscr!.toFixed(4) + ', minimum ' + input.minimumDscr!.toFixed(4) + '.')
     const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
@@ -1010,7 +1053,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
       equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
-      salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,projectFreeCashFlow,equityFreeCashFlow
+      salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,dscrCovenantStatus,projectFreeCashFlow,equityFreeCashFlow
     })
     priorWorkingCapital = closingWorkingCapital
   }
