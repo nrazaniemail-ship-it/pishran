@@ -61,6 +61,15 @@ try {
  assert.deepEqual(tax.rates,[])
  const complete=forms.createBlankProjectModelFinancialFormDrafts()
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts(complete),[])
+
+ const duplicateAssets={...complete,assets:[{...asset,id:'same'},{...asset,id:'same'}]}
+ assert.ok(forms.validateProjectModelCrossReferences(duplicateAssets).includes('assets:duplicate-id'))
+ const missingProductCost={...complete,productionCosts:[{...direct,id:'cost-1',classification:'direct',productId:'missing'}]}
+ assert.ok(forms.validateProjectModelCrossReferences(missingProductCost).includes('production-cost-0:unknown-product-reference'))
+ const duplicateSales={...complete,sales:[{productId:'p1',periods:[{period:'2027-01-01',salesQuantity:null,netUnitPrice:null,salesTaxPercent:null,subsidyPercent:null,subsidyAmount:null,finishedGoodsClosingQuantity:null},{period:'2027-01-01',salesQuantity:null,netUnitPrice:null,salesTaxPercent:null,subsidyPercent:null,subsidyAmount:null,finishedGoodsClosingQuantity:null}]}]}
+ assert.ok(forms.validateProjectModelCrossReferences(duplicateSales).includes('sales-0:duplicate-period-key'))
+ assert.deepEqual(forms.validateProjectModelCrossReferences(complete),[])
+
  console.log('Help-driven item-level finance forms: all assertions passed.')
 } finally {
  await rm(temp,{recursive:true,force:true})
