@@ -479,7 +479,7 @@ export const HOT_ROLLING_COMFAR_OUTPUT_AUDIT = {
   loanRepaymentAudit: {
     principalDisbursed: 5_610_850.80,
     constructionCapitalizedInterest: 3_298_633.06,
-    openingRepaymentBalance: 8_909_483.86,
+    openingRepaymentBalance: 8_909_484.06,
     statedAnnualRatePercent: 28,
     repaymentFrequencyPerYear: 4,
     installmentCount: 20,
