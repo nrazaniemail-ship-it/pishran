@@ -1256,49 +1256,6 @@ function nextPeriodStartAfter(date: Date, periods: ProjectCalendarPeriod[]): Dat
   if (index < 0 || index + 1 >= periods.length) return null
   return parseIsoDateUtc(periods[index + 1].startDate)
 }
-function depreciationForAnniversarySegments(
-  method: 'accelerated' | 'sum-of-years-digits',
-  openingBookValue: number,
-  salvageValue: number,
-  depreciableBase: number,
-  lifeStart: Date,
-  lifeEndExclusive: Date,
-  segmentStart: Date,
-  segmentEnd: Date,
-  lifeMonths: number,
-  ratePercent: number | null,
-  annualOpeningBookValues: number[],
-): number {
-  let cursor = new Date(segmentStart.getTime())
-  let bookValue = openingBookValue
-  let total = 0
-  const lifeYears = Math.max(1, Math.ceil(lifeMonths / 12))
-  const sumYears = lifeYears * (lifeYears + 1) / 2
-  while (cursor.getTime() <= segmentEnd.getTime() && bookValue > salvageValue + 1e-9) {
-    const monthsFromStart = Math.max(0, (cursor.getUTCFullYear() - lifeStart.getUTCFullYear()) * 12 + cursor.getUTCMonth() - lifeStart.getUTCMonth())
-    const ageYear = Math.min(lifeYears - 1, Math.floor(monthsFromStart / 12))
-    const yearStart = addUtcMonthsClamped(lifeStart, ageYear * 12)
-    const nextYear = addUtcMonthsClamped(lifeStart, (ageYear + 1) * 12)
-    const yearEndExclusive = nextYear.getTime() > lifeEndExclusive.getTime() ? lifeEndExclusive : nextYear
-    const yearDays = Math.max(1, Math.round((yearEndExclusive.getTime() - yearStart.getTime()) / 86400000))
-    const segmentEndExclusive = new Date(segmentEnd.getTime() + 86400000)
-    const endExclusive = segmentEndExclusive.getTime() < yearEndExclusive.getTime() ? segmentEndExclusive : yearEndExclusive
-    const segmentDays = Math.max(0, Math.round((endExclusive.getTime() - cursor.getTime()) / 86400000))
-    if (segmentDays <= 0) break
-    const remainingMonths = Math.max(1, lifeMonths - ageYear * 12)
-    if (annualOpeningBookValues[ageYear] == null) annualOpeningBookValues[ageYear] = bookValue
-    const annualOpeningBookValue = annualOpeningBookValues[ageYear]
-    const annualDepreciation = method === 'sum-of-years-digits'
-      ? depreciableBase * (lifeYears - ageYear) / sumYears
-      : Math.max(annualOpeningBookValue * ((ratePercent ?? 0) / 100), (annualOpeningBookValue - salvageValue) / (remainingMonths / 12))
-    const amount = Math.min(bookValue - salvageValue, annualDepreciation * segmentDays / yearDays)
-    total += amount
-    bookValue -= amount
-    cursor = new Date(endExclusive.getTime())
-  }
-  return total
-}
-
 type HelpDepreciationSegment={startDate:Date;endDate:Date;months:number;amount:number}
 
 /**
