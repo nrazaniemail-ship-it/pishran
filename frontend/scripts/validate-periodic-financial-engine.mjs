@@ -826,6 +826,12 @@ assert.ok(projectFoundationPanelSource.includes('Day-count Basis')
 assert.ok(advancedFinanceSource.includes('Values in the period tax schedule override the annual rate.')
   && !advancedFinanceSource.includes('Monthly/quarterly calculation will be enabled after the period engine is complete'),
   'Tax UI must explain period-specific overrides rather than claim monthly/quarterly support is unavailable')
+const feasibilityWizardUi = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+assert.ok(feasibilityWizardUi.includes("cashflow:periodicModelValid&&(!m.scope.jointVenture||reportPartnerFinance?.valid===true)")
+  && feasibilityWizardUi.includes("results:periodicModelValid&&model.flows.length>0&&model.flows.every(Number.isFinite)&&(!m.scope.jointVenture||reportPartnerFinance?.valid===true)")
+  && feasibilityWizardUi.includes("reports:periodicModelValid&&!!String(m.project.name??'').trim()&&(!m.scope.jointVenture||reportPartnerFinance?.valid===true)"),
+  'Joint-venture cash flow, results and report steps must require a valid partner allocation')
+
 const advancedFinanceUi = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 assert.ok(advancedFinanceUi.includes('Annual-to-Period Rate Convention')
   && advancedFinanceUi.includes('effective-annual-by-actual-days')
