@@ -337,13 +337,18 @@ assert.ok(advancedFinanceUi.includes('financing.effective-annual-frequency-rate'
   && advancedFinanceUi.includes('periodicRateMethod.limitations'),
   'Frequency-based loan convention must display its source formula and limitations')
 const comfarAnnualPeriods = Array.from({ length: 17 }, (_, index) => {
-  const start = new Date(Date.UTC(2024, 0, 1 + index * 365))
-  const end = new Date(start.getTime() + 364 * 86400000)
+  // Iranian project year 1403 begins on 2024-03-20 and includes 366 days;
+  // year 1404 begins on 2025-03-21. 12/1404 therefore ends on 2026-03-20.
+  const start = new Date(Date.UTC(2024, 2, 20))
+  const startOffsetDays = index === 0 ? 0 : 366 + (index - 1) * 365
+  const periodStart = new Date(start.getTime() + startOffsetDays * 86400000)
+  const periodDays = index === 0 ? 366 : 365
+  const end = new Date(periodStart.getTime() + (periodDays - 1) * 86400000)
   return {
     index: index + 1,
-    startDate: start.toISOString().slice(0, 10),
+    startDate: periodStart.toISOString().slice(0, 10),
     endDate: end.toISOString().slice(0, 10),
-    days: 365,
+    days: periodDays,
     partial: false,
   }
 })
@@ -358,6 +363,7 @@ const comfarNpv = engine.calculatePeriodicNpv(
   comfarCashFlows, comfarAnnualPeriods, 25, 365, 'period-end',
   comfarValuationDate, 'period-count', 1,
 )
+assert.equal(comfarValuationDate, '2026-03-20', '12/1404 must map to the end of Iranian fiscal year 1404')
 assert.ok(Math.abs(comfarNpv - 31399764.27) < 0.05,
   'COMFAR HRCR200 NPV at 25% and valuation date 12/1404 must reconcile within rounding')
 const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
