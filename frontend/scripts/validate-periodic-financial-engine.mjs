@@ -134,10 +134,11 @@ assert.equal(monthEndLoan.valid, true, monthEndLoan.issues.join('; '))
 assert.ok(Math.abs(monthEndLoan.rows[0].capitalizedInterest - (100 * 0.12 * 28 / 360)) < 1e-8, '31 January to 28 February is 28 residual days when the ending day is earlier than the starting day')
 const comfarMonthDayPeriod = [
   { index: 1, startDate: '2025-01-15', endDate: '2025-04-20', days: 96, partial: true },
+  { index: 2, startDate: '2025-04-21', endDate: '2025-04-21', days: 1, partial: true },
 ]
 const comfarMonthDayLoan = engine.calculatePeriodicLoanSchedule({
   annualRatePercent: 12,
-  drawdowns: [100],
+  drawdowns: [100, 0],
   datedDrawdowns: [{ date: '2025-01-15', amount: 100 }],
   interestConvention: 'comfar-months-plus-360',
   repaymentMethod: 'bullet',
