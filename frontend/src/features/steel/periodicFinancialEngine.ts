@@ -546,6 +546,10 @@ export type PeriodicFiscalYearSummary = {
   fiscalYearIndex: number
   rows: PeriodicProjectFinanceRow[]
   projectFreeCashFlow: number
+  /** Total shareholder funding, including separately identified shareholder-funded working capital. */
+  equityContribution: number
+  /** Net financing cash flow: drawdowns plus capitalized interest less principal repayments. */
+  netDebtFinancingFlow: number
   taxRatePercent: number | null
   depreciation: number
   changeInWorkingCapital: number
@@ -575,10 +579,13 @@ export function aggregatePeriodicFinanceByFiscalYear(
   return grouped.map((yearRows,fiscalYearIndex)=>{
     const sum=(key:'projectFreeCashFlow'|'depreciation'|'changeInWorkingCapital'|'interestExpense'|'principal'|'debtService'|'cfads')=>
       yearRows.reduce((total,row)=>total+row[key],0)
+    const equityContribution=yearRows.reduce((total,row)=>total+row.equityContribution+row.equityWorkingCapitalContribution,0)
+    const netDebtFinancingFlow=yearRows.reduce((total,row)=>total+row.debtDrawdown+row.capitalizedInterest-row.principal,0)
     const taxRates=[...new Set(yearRows.map(row=>Number(row.taxRatePercent.toFixed(4))))]
     const debtService=sum('debtService'),cfads=sum('cfads')
     return {
       fiscalYearIndex,rows:yearRows,projectFreeCashFlow:sum('projectFreeCashFlow'),
+      equityContribution,netDebtFinancingFlow,
       taxRatePercent:taxRates.length===1?taxRates[0]:null,depreciation:sum('depreciation'),
       changeInWorkingCapital:sum('changeInWorkingCapital'),interestExpense:sum('interestExpense'),
       principal:sum('principal'),debtService,cfads,dscr:debtService>0?cfads/debtService:null
