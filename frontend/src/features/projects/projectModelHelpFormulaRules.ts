@@ -330,7 +330,7 @@ export function calculateEconomicAppraisalLevels(input:{financialValue:number[];
  if(new Set(lengths).size!==1||![...input.financialValue,...input.adjustedMarketValue,...input.foreignExchangeAdjustment,...input.indirectEffects].every(finite)||!nonNegative(input.discountRatePercent))throw new Error('invalid-economic-appraisal')
  const economicValue1=input.adjustedMarketValue.map((value,i)=>value+input.foreignExchangeAdjustment[i])
  const economicValue2=economicValue1.map((value,i)=>value+input.indirectEffects[i])
- return {financialPresentValue:calculateEconomicPresentValue(input.financialValue,input.discountRatePercent),adjustedMarketPresentValue:calculateEconomicPresentValue(input.adjustedMarketValue,input.discountRatePercent),economicValue1:calculateEconomicPresentValue(economicValue1,input.discountRatePercent),economicValue2:calculateEconomicPresentValue(economicValue2,input.discountRatePercent)}
+ return {financialPresentValue:calculateEconomicPresentValue(input.financialValue,input.discountRatePercent,1),adjustedMarketPresentValue:calculateEconomicPresentValue(input.adjustedMarketValue,input.discountRatePercent,1),economicValue1:calculateEconomicPresentValue(economicValue1,input.discountRatePercent,1),economicValue2:calculateEconomicPresentValue(economicValue2,input.discountRatePercent,1)}
 }
 export function calculateEmploymentIndicators(input:{unskilledJobs:number;skilledJobs:number;investment:number;unskilledWages:number;skilledWages:number;totalWages:number}){
  if(!Object.values(input).every(nonNegative)||input.investment===0||input.unskilledWages===0||input.skilledWages===0||input.totalWages===0)throw new Error('invalid-employment-indicators')
