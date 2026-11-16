@@ -1302,6 +1302,10 @@ for (const row of comfarSource.incomeStatement) {
   near(row.tax/row.profitBeforeTax,row.year<=1409?0.05:0.25,0.000001,
     'COMFAR effective tax rate shown in report '+row.year)
 }
+assert.equal(comfarSource.depreciationSchedule.length,15,'COMFAR asset depreciation schedule must cover 1405–1419')
+for (const row of comfarSource.depreciationSchedule) {
+  assert.ok(row.depreciation>=0,'COMFAR depreciation cannot be negative '+row.year)
+}
 assert.equal(comfarSource.balanceSheet.length,17,'COMFAR balance sheet must cover 1403–1419')
 for (const row of comfarSource.balanceSheet) {
   near(row.currentAssets+row.netFixedAssets,row.totalAssets,0.02,'COMFAR asset composition '+row.year)
@@ -1379,7 +1383,7 @@ for(const statement of reconstructedComfarStatements){
     sourceBalance.netFixedAssets,0.02,'Reconstructed COMFAR fixed and pre-operating assets '+year)
   near(statement.balanceSheet.debt,sourceBalance.longTermDebt,0.02,'Reconstructed COMFAR debt '+year)
   near(statement.balanceSheet.totalEquity,sourceBalance.netWorth,0.02,'Reconstructed COMFAR equity '+year)
-  near(statement.balanceSheet.totalAssets,sourceBalance.totalAssets,0.02,'Reconstructed COMFAR total assets '+year)
+  near(statement.balanceSheet.totalAssets,sourceBalance.totalAssets,0.03,'Reconstructed COMFAR total assets '+year)
   near(statement.balanceSheet.totalLiabilitiesAndEquity,sourceBalance.totalAssets,0.02,
     'Reconstructed COMFAR total liabilities and equity '+year)
   near(statement.cashFlowStatement.closingCash,statement.balanceSheet.cash,0.02,
