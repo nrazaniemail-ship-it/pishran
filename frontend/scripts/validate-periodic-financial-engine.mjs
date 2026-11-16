@@ -166,6 +166,7 @@ const integratedPeriodic = engine.calculateIntegratedPeriodicFinance({
   annualTaxRates: [25],
   annualEquityContributions: [1200],
   workingCapitalByPeriod: [0, 10, 20, 15],
+  constructionPeriodCount: 2,
   openingWorkingCapital: 0,
   loans: [{
     id: 'integrated-periodic-loan',
@@ -180,6 +181,9 @@ const integratedPeriodic = engine.calculateIntegratedPeriodicFinance({
     }
   }],
   discountRatePercent: 25,
+  valuationDate: quarter[1].endDate,
+  discountConvention: 'period-count',
+  discountPeriodsPerYear: 4,
   mirrFinanceRatePercent: 10,
   mirrReinvestmentRatePercent: 12,
   salvageValue: 1500,
@@ -201,6 +205,11 @@ assert.ok(integratedPeriodic.rows[2].dscr !== null && Number.isFinite(integrated
 assert.ok(Math.abs(integratedPeriodic.totalDebtDrawdown - 1800) < 1e-9)
 assert.ok(Math.abs(integratedPeriodic.totalEquityContribution - 1200) < 1e-9)
 assert.ok(Number.isFinite(integratedPeriodic.npvProject))
+assert.ok(Number.isFinite(integratedPeriodic.npvTotalCapitalInvested),'Total-capital NPV must include construction-period interest')
+assert.ok(Number.isFinite(integratedPeriodic.irrTotalCapitalInvested),'Total-capital IRR must use the selected period-count convention')
+near(integratedPeriodic.totalConstructionInterestCost,integratedPeriodic.rows.slice(0,2).reduce((sum,row)=>sum+row.interestExpense+row.capitalizedInterest,0),1e-8,'Construction interest cost must include all loan interest during construction periods')
+assert.ok(integratedPeriodic.rows[0].totalCapitalInvestedCashFlow<integratedPeriodic.rows[0].projectFreeCashFlow,'Total-capital cash flow must deduct construction interest separately from unlevered project cash flow')
+
 assert.ok(Number.isFinite(integratedPeriodic.irrProject), 'Periodic project IRR must use actual period dates')
 assert.ok(Number.isFinite(integratedPeriodic.mirrProject), 'Periodic project MIRR must use actual period dates')
 assert.ok(Number.isFinite(integratedPeriodic.npvEquity))
