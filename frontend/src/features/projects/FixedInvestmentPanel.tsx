@@ -6,7 +6,7 @@ import {
 import { listFinancialMethods, type FinancialMethodDefinition } from './financialMethodDirectory'
 import { buildComfarDepreciationAssetsFromFixedInvestmentItems, calculateComfarAssetLifecycle, reconcileFixedInvestmentRegister } from '../steel/financialModel'
 
-type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; projectStartYear: number; periodCount: number; capexTotal: number; preOperatingCost?: number; referenceDepreciationByYear?: ReadonlyArray<readonly [number, number]>; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean }
+type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; projectStartYear: number; periodCount: number; capexTotal: number; preOperatingCost?: number; referenceDepreciationByYear?: ReadonlyArray<readonly [number, number]>; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean; preOperatingOnly?: boolean }
 const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
 const assetClasses: { value: FixedInvestmentItem['assetClass']; fa: string; en: string }[] = [
   { value: 'land', fa: 'زمین', en: 'Land' },
@@ -32,9 +32,10 @@ const methods: { value: FixedInvestmentDepreciationMethod; definition: Financial
     .filter(definition => directoryMethodToAssetMethod[definition.id] !== undefined)
     .map(definition => ({ value: directoryMethodToAssetMethod[definition.id], definition }))
 
-export default function FixedInvestmentPanel({ value, foundation, projectStartYear, periodCount, capexTotal, preOperatingCost = 0, referenceDepreciationByYear, onChange, language = 'fa', blankTemplate = false }: Props) {
+export default function FixedInvestmentPanel({ value, foundation, projectStartYear, periodCount, capexTotal, preOperatingCost = 0, referenceDepreciationByYear, onChange, language = 'fa', blankTemplate = false, preOperatingOnly = false }: Props) {
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
+  const visibleAssetClasses=preOperatingOnly?assetClasses.filter(option=>option.value==='preproduction'):assetClasses
   const issues = validateFixedInvestmentItems(value, foundation)
   const depreciationBuild = buildComfarDepreciationAssetsFromFixedInvestmentItems(value, projectStartYear, periodCount, foundation.planning.periodFrequency, foundation)
   const assetLifecycle = calculateComfarAssetLifecycle(depreciationBuild.assets, depreciationBuild.sales, periodCount)
@@ -98,8 +99,8 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
     <label className="fw-field"><span>{label}</span><input type={type} value={blankTemplate && type === 'number' && valueText === 0 ? '' : valueText} min={min} max={max} step={step} disabled={disabled} onChange={e => onValue(e.target.value)} /></label>
 
   return <section className="fw-card" style={{ marginTop: 18 }}>
-    <h3>{t('دفتر عمومی هزینه‌های سرمایه‌گذاری ثابت','Fixed Investment Register')}</h3>
-    <p className="fw-hint">{t('این دفتر فونداسیون مشترک دارایی‌های ثابت و هزینه‌های قبل از بهره‌برداری است. هر قلم چند نوبت تحصیل، مبنای مستندات دوره، شرایط استهلاک و فروش مستقل دارد. استهلاک و واگذاری به موتور مالی متصل‌اند؛ اما زمان‌بندی CAPEX فقط وقتی از دفتر استخراج می‌شود که دوره‌های تحصیل مستند یا تأیید شده و جمع دفتر با CAPEX تطبیق داشته باشد. در غیر این صورت CAPEX تجمیعی به‌عنوان مبنای موقت باقی می‌ماند.','This register is shared across industries and templates. Each asset class can have multiple acquisition periods, currencies, depreciation conditions and disposals. Its depreciation and disposal schedules feed the integrated finance engine. Fixed-asset acquisitions and pre-production expenditures are reconciled separately to aggregate CAPEX, preventing double-counting; the evidence basis for each acquisition period and depreciation condition is recorded and validated.')}</p>
+    <h3>{preOperatingOnly?t('دفتر مخارج پیش از تولید','Pre-production Expenditure Register'):t('دفتر عمومی هزینه‌های سرمایه‌گذاری ثابت','Fixed Investment Register')}</h3>
+    <p className="fw-hint">{t('این دفتر فونداسیون مشترک دارایی‌های ثابت و هزینه‌های قبل از بهره‌برداری است. هر قلم چند نوبت تحصیل، مبنای مستندات دوره، شرایط استهلاک و فروش مستقل دارد. استهلاک و واگذاری به موتور مالی متصل‌اند؛ اما زمان‌بندی CAPEX فقط وقتی از دفتر استخراج می‌شود که دوره‌های تحصیل مستند یا تأیید شده و جمع دفتر با CAPEX تطبیق داشته باشد. در غیر این صورت CAPEX تجمیعی به‌عنوان مبنای موقت باقی می‌ماند.','This register records either fixed assets or pre-production expenditures as selected by the project model. Acquisition periods, currency conversion and the evidence basis are validated before the schedule feeds the integrated finance engine.')}</p>
     {value.map(item => <div className="fw-card" key={item.id}>
       <div className="fw-grid">
         {field(t('شرح دارایی','Fixed Investment Item'), item.description, v => updateItem(item.id, { description: v }))}
@@ -153,6 +154,7 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       </div>)}
       <button type="button" className="secondary-button" onClick={() => addAcquisition(item.id)}>{t('افزودن نوبت تحصیل','Add Acquisition')}</button>
 
+      {!preOperatingOnly&&<>
       <h4>{t('فروش و واگذاری دارایی','Sale of Asset')}</h4>
       {item.sales.map(sale => <div className="fw-grid" key={sale.id}>
         <label className="fw-field"><span>{t('نوبت تحصیل مرتبط','Related Acquisition')}</span><select value={sale.acquisitionId} onChange={e => updateSale(item.id, sale.id, { acquisitionId: e.target.value })}><option value="">{t('انتخاب نوبت','Select Acquisition')}</option>{item.acquisitions.map(acquisition => <option key={acquisition.id} value={acquisition.id}>{acquisition.period}</option>)}</select></label>
@@ -164,9 +166,10 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
         <button type="button" className="secondary-button" onClick={() => updateItem(item.id, { sales: item.sales.filter(row => row.id !== sale.id) })}>{t('حذف فروش','Remove Sale')}</button>
       </div>)}
       <button type="button" className="secondary-button" disabled={item.acquisitions.length === 0} onClick={() => addSale(item.id)}>{t('افزودن فروش دارایی','Add Asset Sale')}</button>
+      </>}
     </div>)}
-    <button type="button" className="secondary-button" onClick={() => onChange([...value, createBlankFixedInvestmentItem()])}>{t('افزودن قلم سرمایه‌گذاری ثابت','Add Fixed Investment Item')}</button>
-    {hasDepreciableAssets && <div className="fw-card">
+    <button type="button" className="secondary-button" onClick={() => {const item=createBlankFixedInvestmentItem();onChange([...value,preOperatingOnly?{...item,assetClass:'preproduction'}:item])}}>{preOperatingOnly?t('افزودن مخارج پیش از تولید','Add Pre-production Expenditure'):t('افزودن قلم سرمایه‌گذاری ثابت','Add Fixed Investment Item')}</button>
+    {hasDepreciableAssets&&!preOperatingOnly && <div className="fw-card">
       <h4>{t('پیش‌نمایش برنامه استهلاک دارایی‌ها','Asset Depreciation Schedule Preview')}</h4>
       <p className="fw-hint">{t('این پیش‌نمایش از نوبت‌های تحصیل و فروش همین دفتر ساخته می‌شود و برنامه استهلاک/واگذاری آن به موتور مالی یکپارچه ارسال می‌شود. جمع دفتر با CAPEX تجمیعی تطبیق داده می‌شود؛ زمان‌بندی دفتر فقط در صورت تأیید دوره‌های تحصیل و انطباق جمع، جایگزین تخصیص موقت CAPEX می‌شود و هیچ مبلغی دوباره به سرمایه‌گذاری اضافه نمی‌گردد.','This preview is built from acquisition and disposal vintages in this register and is passed to the integrated finance engine for depreciation and asset-sale treatment. Register totals are reconciled to aggregate CAPEX; register timing replaces the provisional CAPEX allocation only when acquisition periods are verified and totals match. Register amounts are never added a second time.')}</p>
       {depreciationWarnings.map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
@@ -178,6 +181,10 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
         <div className="fw-validation"><span>{t('بیشترین اختلاف مطلق','Maximum Absolute Variance')}</span><b>{maximumReferenceVariance.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
       </div>}
       {!assetLifecycle.valid && <p className="fw-hint">{t('برنامه استهلاک دارای هشدار است و نباید به‌عنوان خروجی تأییدشده استفاده شود.','The depreciation schedule has warnings and must not be treated as a validated output.')}</p>}
+    </div>}
+    {preOperatingOnly&&<div className="fw-card">
+      <h4>{t('زمان‌بندی مخارج پیش از تولید','Pre-production Expenditure Schedule')}</h4>
+      <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('مبلغ مخارج پیش از تولید','Pre-production Cost')}</th></tr></thead><tbody>{depreciationBuild.preOperatingSchedule.map((amount,index)=><tr key={index}><td>{projectStartYear+index}</td><td>{amount.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td></tr>)}</tbody></table></div>
     </div>}
     <div className="fw-card">
       <h4>{t('تطبیق دفتر دارایی با CAPEX تجمیعی','Fixed Investment Register to Aggregate CAPEX Reconciliation')}</h4>
