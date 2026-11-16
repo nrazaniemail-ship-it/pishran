@@ -207,8 +207,29 @@ const openingBalanceStatements=engine.buildPeriodicThreeFinancialStatements(inte
   cash:100,netFixedAssets:250,netWorkingCapital:20,deferredPreOperatingAssets:30,paidInCapital:400,retainedEarnings:0
 })
 assert.equal(openingBalanceStatements.length,4,'Existing-enterprise opening balances must be supported')
+const zeroFlowPeriodic = engine.calculateIntegratedPeriodicFinance({
+  periods:quarter,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
+  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
+  annualTaxRates:[25],annualEquityContributions:[0],workingCapitalByPeriod:[0,0,0,0],loans:[]
+})
+const existingEnterpriseStatements = engine.buildPeriodicThreeFinancialStatements(zeroFlowPeriodic,{cash:100,debt:100})
+assert.ok(existingEnterpriseStatements.every(row=>row.balanceSheet.reconciled),
+  'Opening cash and debt balances must roll forward for an existing enterprise')
+assert.ok(existingEnterpriseStatements.every(row=>Math.abs(row.movementChecks.debt)<1e-9),
+  'Opening debt must not be discarded when no new loan schedule exists')
 assert.equal(engine.buildPeriodicThreeFinancialStatements({...integratedPeriodic,valid:false}).length,0,
   'Invalid periodic finance results must not produce statements')
+assert.equal(integratedPeriodic.rows[3].salvageGainLoss,500,
+  'Terminal salvage gain must equal proceeds less the disposed book value')
+assert.ok(Math.abs(integratedPeriodic.rows[3].ebit-
+  (integratedPeriodic.rows[3].revenue-integratedPeriodic.rows[3].variableCost-
+    integratedPeriodic.rows[3].fixedCost-integratedPeriodic.rows[3].depreciation+
+    integratedPeriodic.rows[3].assetSaleOtherIncomeLoss+500))<1e-8,
+  'Terminal salvage gain must enter taxable EBIT')
+assert.ok(Math.abs(integratedPeriodic.rows[3].tax-
+  (integratedPeriodic.rows[3].ebit-integratedPeriodic.rows[3].interestExpense)*0.25)<1e-8,
+  'Terminal salvage gain must be included in period tax')
 assert.equal(integratedPeriodic.rows.length, 4)
 assert.ok(Math.abs(integratedPeriodic.rows.reduce((sum,row)=>sum+row.revenue,0)-4800)<1e-7,
   'Quarterly revenue must reconcile to the source annual total')
