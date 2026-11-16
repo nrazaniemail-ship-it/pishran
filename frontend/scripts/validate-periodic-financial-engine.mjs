@@ -13,6 +13,7 @@ const benchmarkOutput = ts.transpileModule(benchmarkSource, {
 }).outputText
 const benchmark = await import('data:text/javascript;base64,' + Buffer.from(benchmarkOutput).toString('base64'))
 const comfarReference = benchmark.HOT_ROLLING_COMFAR_OUTPUT_AUDIT
+const capexLoanReference = benchmark.HOT_ROLLING_CAPEX_LOAN_SCHEDULE_AUDIT
 
 const year = [{ index: 1, startDate: '2025-01-01', endDate: '2025-12-31', days: 365, partial: false }]
 const quarter = [
@@ -371,6 +372,43 @@ assert.equal(comfarReference.depreciationByOperatingYear.length, 15, 'COMFAR dep
 assert.equal(comfarReference.depreciationByOperatingYear.find(([year])=>year===1414)?.[1], 98840.49, 'COMFAR depreciation must preserve the sharp 1414 reduction')
 assert.equal(comfarReference.changeInWorkingCapitalByOperatingYear.find(([year])=>year===1405)?.[1], 3309144.53, 'COMFAR working-capital build must start in 1405')
 assert.equal(comfarCashFlows.at(-1), comfarReference.projectCashFlowsByYear.at(-1)+comfarReference.terminalSalvage.amount, 'Terminal salvage shown in 1420 must be reconciled to the final operating-period cash-flow timing')
+
+assert.equal(capexLoanReference.loans.length,3,'CAPEX loan schedule must preserve two fixed-investment tranches and a separate working-capital loan')
+assert.equal(capexLoanReference.nominalAnnualRatePercent,26,'CAPEX loan source nominal annual rate')
+assert.ok(Math.abs(capexLoanReference.effectiveAnnualRatePercent/4-capexLoanReference.effectiveQuarterRatePercent)<1e-12,'Effective annual rate must be divided by four for the source quarterly schedule')
+assert.equal(capexLoanReference.termPeriods,20,'CAPEX annuity schedule must contain twenty quarterly payments')
+assert.equal(capexLoanReference.sourceTimingConflict,true,'CAPEX loan drawdown-year conflict must remain disclosed')
+const quarterlyLoanPeriods = Array.from({length:20},(_,index)=>{
+  const year=2025+Math.floor(index/4),quarter=index%4
+  const start=new Date(Date.UTC(year,quarter*3,1))
+  const next=new Date(Date.UTC(year,quarter*3+3,1))
+  const end=new Date(next.getTime()-86400000)
+  return {index:index+1,startDate:start.toISOString().slice(0,10),endDate:end.toISOString().slice(0,10),days:Math.round((next-start)/86400000),partial:false}
+})
+for (const loan of capexLoanReference.loans) {
+  const schedule=engine.calculatePeriodicLoanSchedule({
+    annualRatePercent:capexLoanReference.effectiveAnnualRatePercent,
+    drawdowns:Array(20).fill(0),openingBalance:loan.principal,drawdownTiming:'beginning',
+    repaymentMethod:'annuity',repaymentStartPeriod:1,gracePeriods:0,termPeriods:20,
+    capitalizeInterest:false,rateConversion:capexLoanReference.rateConversion,periodsPerYear:4
+  },quarterlyLoanPeriods,365)
+  assert.equal(schedule.valid,true,'Source quarterly annuity schedule must be valid for '+loan.id)
+  near(schedule.rows[0].debtService,loan.firstInstallment,0.001,'First quarterly annuity installment '+loan.id)
+  near(schedule.rows[0].interestExpense,loan.firstInterest,0.001,'First quarterly interest '+loan.id)
+  near(schedule.rows[0].principal,loan.firstPrincipal,0.001,'First quarterly principal '+loan.id)
+  near(schedule.rows.reduce((sum,row)=>sum+row.principal,0),loan.principal,0.01,'Total principal amortization '+loan.id)
+  near(schedule.rows.reduce((sum,row)=>sum+row.debtService,0),loan.totalRepayment,0.01,'Total quarterly repayments '+loan.id)
+  near(schedule.rows.reduce((sum,row)=>sum+row.interestExpense,0),loan.totalInterest,0.01,'Total quarterly interest '+loan.id)
+  assert.ok(Math.abs(schedule.rows.at(-1).closingBalance)<0.01,'Quarterly loan must fully amortize '+loan.id)
+}
+const timingPeriods=quarterlyLoanPeriods.slice(0,2)
+const timingInput={annualRatePercent:capexLoanReference.effectiveAnnualRatePercent,drawdowns:[100,0],repaymentMethod:'bullet',repaymentStartPeriod:2,gracePeriods:0,termPeriods:1,capitalizeInterest:false,rateConversion:capexLoanReference.rateConversion,periodsPerYear:4}
+const beginningTiming=engine.calculatePeriodicLoanSchedule({...timingInput,drawdownTiming:'beginning'},timingPeriods,365)
+const midTiming=engine.calculatePeriodicLoanSchedule({...timingInput,drawdownTiming:'mid-period'},timingPeriods,365)
+const endTiming=engine.calculatePeriodicLoanSchedule({...timingInput,drawdownTiming:'end-period'},timingPeriods,365)
+near(beginningTiming.rows[0].interestExpense,capexLoanReference.effectiveQuarterRatePercent,1e-9,'Beginning-period drawdown interest')
+near(midTiming.rows[0].interestExpense,capexLoanReference.effectiveQuarterRatePercent/2,1e-9,'Mid-period drawdown interest')
+near(endTiming.rows[0].interestExpense,0,1e-9,'End-period drawdown interest')
 assert.ok(Math.abs(comfarNpv - comfarReference.projectNpvAt25) < 0.05,
   'COMFAR HRCR200 NPV at 25% and valuation date 12/1404 must reconcile within rounding')
 const comfarIrr = engine.calculatePeriodicIrr(comfarCashFlows, comfarAnnualPeriods, 365, 'period-end')
