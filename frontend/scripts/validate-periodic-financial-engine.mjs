@@ -401,7 +401,7 @@ const integratedPeriodic = engine.calculateIntegratedPeriodicFinance({
 assert.equal(integratedPeriodic.valid, true, 'Integrated period model must accept valid quarterly inputs')
 
 const hrcrWorkingCapitalBuffer = engine.calculateIntegratedPeriodicFinance({
-  periods:[quarter[0]],fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  periods:[year[0]],fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
   annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
   annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
   annualTaxRates:[5],annualEquityContributions:[0],
@@ -416,6 +416,27 @@ assert.ok(Math.abs(hrcrBufferStatements[0].balanceSheet.cash-92385.20996)<0.01,
   'The 92,385.21 difference between shareholder funding and OPEX working-capital use must remain as cash buffer')
 assert.ok(hrcrBufferStatements[0].balanceSheet.reconciled,
   'The COMFAR equity funding buffer must reconcile as cash without a balance-sheet plug')
+const quarterlyWorkingCapitalProfile=quarter.reduce((values,period,index)=>{
+  const elapsedDays=quarter.slice(0,index+1).reduce((sum,item)=>sum+item.days,0)
+  values.push(3216759.32004*elapsedDays/365)
+  return values
+},[])
+const hrcrQuarterlyWorkingCapitalBuffer=engine.calculateIntegratedPeriodicFinance({
+  periods:quarter,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
+  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
+  annualTaxRates:[5],annualEquityContributions:[0],
+  annualEquityWorkingCapitalContributions:[3309144.53],
+  workingCapitalByPeriod:quarterlyWorkingCapitalProfile,openingWorkingCapital:0,loans:[],
+})
+assert.equal(hrcrQuarterlyWorkingCapitalBuffer.valid,true)
+assert.ok(Math.abs(hrcrQuarterlyWorkingCapitalBuffer.rows.reduce((sum,row)=>sum+row.equityFreeCashFlow,0)+3309144.53)<0.01,
+  'Annual COMFAR shareholder working-capital contribution must aggregate correctly across quarterly periods')
+const hrcrQuarterlyBufferStatements=engine.buildPeriodicThreeFinancialStatements(hrcrQuarterlyWorkingCapitalBuffer)
+assert.ok(Math.abs(hrcrQuarterlyBufferStatements[3].balanceSheet.cash-92385.20996)<0.01,
+  'Quarterly working-capital phasing must preserve the annual 92,385.21 cash buffer')
+assert.ok(hrcrQuarterlyBufferStatements.every(statement=>statement.balanceSheet.reconciled),
+  'Each quarterly balance sheet must reconcile while phasing the shareholder working-capital contribution')
 assert.ok(Math.abs(hrcrWorkingCapitalBuffer.totalEquityContribution-3309144.53)<0.01)
 
 const periodicStatements = engine.buildPeriodicThreeFinancialStatements(integratedPeriodic)
