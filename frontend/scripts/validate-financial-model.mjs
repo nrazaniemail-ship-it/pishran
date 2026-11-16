@@ -349,7 +349,7 @@ assert.ok(wizardSource.includes("!isRawTemplate&&project.industry==='فولاد 
   && wizardSource.includes('opex:rawProject?[]'),
   'Raw template must hide stage-specific selector and start technical, material, utility, CAPEX and OPEX rows blank')
 assert.ok(['mining','concentrate','pellet','dri','steelmaking','dri-steelmaking-slab','hot-rolling','hot-plate','cold-rolling','rebar-rolling','angle-rolling','beam-rolling']
-  .every(id=>wizardSource.includes("id:'"+id+"'")&&wizardSource.includes(id+':{')),
+  .every(id=>wizardSource.includes("id:'"+id+"'")&&(wizardSource.includes(id+':{')||wizardSource.includes("'"+id+"':{"))),
   'Every requested steel-chain stage must have a matching stage-specific form definition')
 assert.ok(wizardSource.includes("id:'dri-steelmaking-slab'")
   && wizardSource.includes("id:'hot-plate'")
