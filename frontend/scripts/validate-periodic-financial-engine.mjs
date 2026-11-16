@@ -50,6 +50,14 @@ assert.equal(partnerAllocation.totalScheduledEquityContribution,100)
 assert.equal(partnerAllocation.declaredCapitalContributionVariance,0)
 assert.equal(partnerAllocation.positiveCashFlowDistributionPercent,50)
 assert.equal(partnerAllocation.allocationReconciliationVariance,0)
+assert.equal(partnerAllocation.periods.length,3)
+assert.equal(partnerAllocation.periods[0].totalEquityCashFlow,-100)
+assert.equal(partnerAllocation.periods[0].partnerNetCashFlow,-100)
+assert.equal(partnerAllocation.periods[1].totalEquityCashFlow,200)
+assert.equal(partnerAllocation.periods[1].partnerNetCashFlow,100)
+assert.equal(partnerAllocation.periods[1].retainedPositiveCashFlow,100)
+assert.equal(partnerAllocation.periods[1].reconciliationVariance,0)
+assert.equal(partnerAllocation.periods[2].reconciliationVariance,0)
 assert.equal(partnerAllocation.rows.reduce((sum,row)=>sum+row.netCashFlow,0)+partnerAllocation.retainedPositiveCashFlow,200,
   'Partner net cash flows plus retained cash must reconcile to total project equity cash flow')
 const invalidPartnerAllocation=partnerFinance.allocateJointVentureCashFlows({
@@ -713,6 +721,7 @@ assert.ok(feasibilityWizardSource.includes('partnerDistributionPercent={m.partne
   && advancedFinanceSource.includes('allocateJointVentureCashFlows')
   && advancedFinanceSource.includes('onPartnerFinanceResult')
   && advancedFinanceSource.includes('expectedCapitalContribution')
+  && advancedFinanceSource.includes('partnerFinanceResult.periods.map')
   && feasibilityWizardSource.includes('reportPartnerFinance')
   && feasibilityWizardSource.includes('partnerFinanceResult={reportPartnerFinance}')
   && advancedFinanceSource.includes('Partner net CF'),
@@ -721,7 +730,8 @@ assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   && projectReportSource.includes('periodicResult.rows.map')
   && projectReportSource.includes('Joint-Venture Partner Cash-Flow Allocation')
   && projectReportSource.includes('allocationReconciliationVariance')
-  && projectReportSource.includes('expectedCapitalContribution'),
+  && projectReportSource.includes('expectedCapitalContribution')
+  && projectReportSource.includes('partnerFinanceResult.periods.map'),
   'Project report must include the period-level financial schedule and key output metrics')
 assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
   && projectReportSource.includes('hasCompleteFiscalYearCoverage')
