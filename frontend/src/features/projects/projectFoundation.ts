@@ -169,6 +169,8 @@ export function validateProjectFoundation(value: ProjectFoundation): ProjectFoun
     issue('discounting.method', 'warning', 'missing-discounting-method', 'Discounting method has not been selected.')
   if (value.discounting.method === 'manual' && value.discounting.financialRatePercent === null)
     issue('discounting.financialRatePercent', 'warning', 'missing-financial-discount-rate', 'A manual financial discount rate has not been defined.')
+  if (!['unspecified','deductible','non-deductible'].includes(value.taxation.foreignExchangeLossTreatment ?? 'unspecified'))
+    issue('taxation.foreignExchangeLossTreatment', 'error', 'invalid-foreign-exchange-loss-treatment', 'Foreign-exchange loss tax treatment must use a supported option.')
   if (value.taxation.system === 'unspecified')
     issue('taxation.system', 'warning', 'missing-tax-system', 'Tax system has not been selected.')
   if (value.taxation.system !== 'none' && value.taxation.system !== 'unspecified' && value.taxation.lossCarryForward === null)
