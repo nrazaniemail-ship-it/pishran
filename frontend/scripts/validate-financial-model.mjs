@@ -49,6 +49,20 @@ near(engine.calculateWorkingCapitalTurnoverCoefficient(90),4,1e-9,'COMFAR VII.Q 
 assert.equal(engine.calculateWorkingCapitalTurnoverCoefficient(0),null,'Zero days coverage has no finite turnover coefficient')
 near(engine.calculateWorkingCapitalDaysCoverageFromTurnover(12),30,1e-9,'COMFAR VII.Q inverse Coto conversion')
 near(engine.calculateWorkingCapitalDaysCoverageFromTurnover(4),90,1e-9,'COMFAR VII.Q inverse 90-day conversion')
+
+const breakEven=engine.calculateBreakEvenAnalysis({salesRevenue:1000,salesVolume:100,variableCosts:600,fixedCosts:200,financialCosts:50})
+near(breakEven.variableMargin,400,1e-9,'COMFAR break-even variable margin')
+near(breakEven.variableMarginRatioPercent,40,1e-9,'COMFAR break-even variable margin ratio')
+near(breakEven.breakEvenSalesValueIncludingFinance,625,1e-9,'COMFAR break-even sales value including finance')
+near(breakEven.breakEvenSalesValueExcludingFinance,500,1e-9,'COMFAR break-even sales value excluding finance')
+near(breakEven.breakEvenRatioIncludingFinancePercent,62.5,1e-9,'COMFAR break-even ratio including finance')
+near(breakEven.breakEvenRatioExcludingFinancePercent,50,1e-9,'COMFAR break-even ratio excluding finance')
+near(breakEven.breakEvenSalesVolumeIncludingFinance,62.5,1e-9,'COMFAR break-even volume at constant price')
+near(breakEven.breakEvenSalesPriceAtConstantVolume,8.5,1e-9,'COMFAR break-even price at constant volume')
+near(breakEven.fixedCostCoverageIncludingFinance,1.6,1e-9,'COMFAR fixed-cost coverage including finance')
+near(breakEven.fixedCostCoverageExcludingFinance,2,1e-9,'COMFAR fixed-cost coverage excluding finance')
+const noContributionBreakEven=engine.calculateBreakEvenAnalysis({salesRevenue:100,salesVolume:10,variableCosts:120,fixedCosts:20,financialCosts:5})
+assert.equal(noContributionBreakEven.breakEvenSalesValueIncludingFinance,null,'No positive variable margin has no finite break-even sales value')
 assert.equal(engine.calculateWorkingCapitalDaysCoverageFromTurnover(0),null,'Zero turnover coefficient has no finite days coverage')
 
 const suppliesUtilitiesPolicy={
