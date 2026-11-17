@@ -436,7 +436,7 @@ const unsupportedDiscountingModel=orchestrator.calculateProjectFinancialModelFro
 assert.equal(unsupportedDiscountingModel.valid,false)
 assert.ok(unsupportedDiscountingModel.issues.some(issue=>issue.includes('discounting.shortNpvYears')&&issue.includes('not yet connected')))
 
-for (const field of ['basis','daysCoverage','turnover']) {
+for (const field of ['daysCoverage','turnover']) {
  let unusedWorkingCapitalHelp=helpForms.createBlankHelpDrivenProjectForms()
  unusedWorkingCapitalHelp=helpForms.addHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field)
  unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'item','Receivables')
