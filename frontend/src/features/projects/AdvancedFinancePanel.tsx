@@ -9,6 +9,8 @@ import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriod
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
 import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft } from './projectModelFormDrafts'
 import { buildProjectTaxDraftSchedule } from './projectTaxDraftIntegration'
+import { buildProjectLoanDraftIntegration } from './projectLoanDraftIntegration'
+import type { LoanFacilityFormDraft } from './projectModelFormDrafts'
 import { calculateOperatingCycleWorkingCapital, calculateWorkingCapitalTurnoverCoefficient, calculateWorkingCapitalDaysCoverageFromTurnover } from '../steel/financialModel'
 import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
 import {
@@ -67,6 +69,8 @@ type Props = {
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
   productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'>
   taxDraft?: ProjectTaxFormDraft
+  loanDrafts?: LoanFacilityFormDraft[]
+  projectFoundation?: ProjectFoundation
   initialWorkingCapitalEquityContribution?: number
   initialLoanRatePercent?: number
   initialRepaymentMethod?: Loan['repaymentMethod']
@@ -286,11 +290,14 @@ export default function AdvancedFinancePanel(props: Props) {
     ?buildProductOperatingSchedule(props.productFinancialDrafts,projectPeriods,props.fiscalYearStartMonth??1,props.currency)
     :null,[JSON.stringify(props.productFinancialDrafts??null),JSON.stringify(projectPeriods),props.fiscalYearStartMonth,props.currency])
   const projectTaxSchedule=useMemo(()=>props.taxDraft?buildProjectTaxDraftSchedule(props.taxDraft,projectPeriods,props.fiscalYearStartMonth??1):null,[JSON.stringify(props.taxDraft??null),JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
+  const loanDraftIntegration=useMemo(()=>props.loanDrafts?.length&&props.projectFoundation&&props.dayCountBasis!==null&&props.dayCountBasis!==undefined
+    ?buildProjectLoanDraftIntegration(props.loanDrafts,projectPeriods,props.dayCountBasis,props.periodFrequency??'unspecified',props.projectFoundation)
+    :null,[JSON.stringify(props.loanDrafts??[]),JSON.stringify(projectPeriods),props.dayCountBasis,props.periodFrequency,JSON.stringify(props.projectFoundation??null)])
   const periodicFinanceResult=useMemo<PeriodicProjectFinanceResult|null>(()=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
     const fiscalMonth=props.fiscalYearStartMonth
-    const periodLoans=state.loans.map(loan=>{
+    const periodLoans=loanDraftIntegration?.valid?loanDraftIntegration.loans:state.loans.map(loan=>{
       const annualDrawdowns=loan.drawdowns.length===years?loan.drawdowns:Array(years).fill(0)
       const drawdowns=loan.drawdownMode==='period-manual'
         ? (periodDrawdownDatesMatch(loan)?loan.periodDrawdowns!:Array(periods.length).fill(Number.NaN))
@@ -341,7 +348,7 @@ export default function AdvancedFinancePanel(props: Props) {
       periodDepreciationSchedule,periodAssetSaleSchedule,
       workingCapitalByPeriod:periodicWorkingCapitalByPeriod,
       cashInHandByPeriod,shortTermDepositsByPeriod,
-      openingWorkingCapital:props.openingWorkingCapitalBalance??0,openingCash:props.openingCashBalance??0,loans:periodLoans,
+      openingWorkingCapital:props.openingWorkingCapitalBalance??0,openingCash:props.openingCashBalance??0,loans:periodLoans,loanScheduleOverrides:loanDraftIntegration?.valid?loanDraftIntegration.loanScheduleOverrides:undefined,foreignExchangeLossByPeriod:loanDraftIntegration?.valid?loanDraftIntegration.foreignExchangeLossByPeriod:undefined,
       taxRatesByPeriod:projectTaxSchedule?.active?(projectTaxSchedule.valid?projectTaxSchedule.taxRatesByPeriod:Array(periods.length).fill(Number.NaN)):(periodTaxRateDatesMatch()?state.periodTaxRates:undefined),openingTaxLoss:projectTaxSchedule?.active&&projectTaxSchedule.valid?projectTaxSchedule.openingTaxLoss:undefined,openingTaxLossVintages:projectTaxSchedule?.active&&projectTaxSchedule.valid?projectTaxSchedule.openingTaxLossVintages:undefined,taxLossCarryForwardEnabled:projectTaxSchedule?.active&&projectTaxSchedule.valid?projectTaxSchedule.taxLossCarryForwardEnabled:undefined,taxLossCarryForwardYears:projectTaxSchedule?.active&&projectTaxSchedule.valid?projectTaxSchedule.taxLossCarryForwardYears:undefined,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
       equityDiscountRatePercent:props.costOfEquity,
@@ -350,6 +357,8 @@ export default function AdvancedFinancePanel(props: Props) {
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     }
+    if(loanDraftIntegration&&!loanDraftIntegration.valid)
+      return calculateIntegratedPeriodicFinance({...periodicInput,annualTaxRates:Array(years).fill(Number.NaN)})
     if(props.workingCapitalDrafts?.length){
       const binding=bindWorkingCapitalDraftsToPeriodicFinance(
         periodicInput,{workingCapital:props.workingCapitalDrafts},props.openingWorkingCapitalBalance??0
@@ -359,7 +368,7 @@ export default function AdvancedFinancePanel(props: Props) {
       return calculateIntegratedPeriodicFinance(binding.financeInput)
     }
     return calculateIntegratedPeriodicFinance(periodicInput)
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),productOperatingSchedule,projectTaxSchedule,props.openingWorkingCapitalBalance,props.openingCashBalance])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),productOperatingSchedule,projectTaxSchedule,loanDraftIntegration,props.openingWorkingCapitalBalance,props.openingCashBalance])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
@@ -409,6 +418,7 @@ export default function AdvancedFinancePanel(props: Props) {
 
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
+    {loanDraftIntegration&&!loanDraftIntegration.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه تسهیلات از فرم‌های تفصیلی معتبر نیست؛ صورت‌های مالی دوره‌ای متوقف شده‌اند.','Detailed loan facilities are invalid; periodic financial statements are blocked.')}</b>{loanDraftIntegration.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {projectTaxSchedule?.active&&!projectTaxSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه مالیات و انتقال زیان ناقص یا نامعتبر است؛ محاسبه دوره‌ای متوقف شده است.','The tax and loss carry-forward schedule is incomplete or invalid; periodic calculation is blocked.')}</b>{projectTaxSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {productOperatingSchedule&&!productOperatingSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه تولید، موجودی و فروش محصول‌به‌محصول کامل یا معتبر نیست؛ گزارش مالی دوره‌ای متوقف شده است.','Product-by-product production, inventory and sales schedules are incomplete or invalid; periodic financial reporting is blocked.')}</b>{productOperatingSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {workingCapitalDraftSchedule&&!workingCapitalDraftSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه سرمایه در گردش از فرم‌های تفصیلی معتبر نیست؛ محاسبات دوره‌ای متوقف شده است.','The detailed working-capital schedule is invalid; periodic calculations are blocked.')}</b>{workingCapitalDraftSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
