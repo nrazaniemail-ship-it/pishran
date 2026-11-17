@@ -61,7 +61,7 @@ const negativeProduction=module.buildProductOperatingSchedule({
  ...base,sales:[{...base.sales[0],periods:[{...base.sales[0].periods[0],salesQuantity:100,finishedGoodsClosingQuantity:0,openingFinishedGoodsQuantity:10},base.sales[0].periods[1]]}]
 },periods,1,'IRR')
 assert.equal(negativeProduction.valid,false)
-assert.ok(negativeProduction.issues.some(issue=>issue.includes('non-negative production')))
+assert.ok(negativeProduction.issues.some(issue=>issue.includes('sales exceed opening inventory plus non-negative production')))
 const fxCost=module.buildProductOperatingSchedule({
  ...base,productionCosts:[{...base.productionCosts[0],metadata:{...base.productionCosts[0].metadata,currencyCode:'EUR'}}]
 },periods,1,'IRR')
