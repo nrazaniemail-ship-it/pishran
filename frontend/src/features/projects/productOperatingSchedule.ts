@@ -145,8 +145,8 @@ export function buildProductOperatingSchedule(
         issues.push('Product '+sale.productId+' has sales tax/VAT in period '+(index+1)+'; tax payable/receivable posting is not yet connected.')
         continue
       }
-      if(source.subsidyPercent!==null&&(!Number.isFinite(source.subsidyPercent)||source.subsidyPercent<0||source.subsidyPercent>100)||
-        source.subsidyAmount!==null&&(!Number.isFinite(source.subsidyAmount)||source.subsidyAmount<0)||
+      if(source.subsidyPercent!=null&&(!Number.isFinite(source.subsidyPercent)||source.subsidyPercent<0||source.subsidyPercent>100)||
+        source.subsidyAmount!=null&&(!Number.isFinite(source.subsidyAmount)||source.subsidyAmount<0)||
         (source.subsidyPercent??0)>0&&(source.subsidyAmount??0)>0) {
         issues.push('Product '+sale.productId+' subsidy must use one non-negative method (percentage or fixed amount) in period '+(index+1)+'.')
         continue
@@ -168,7 +168,7 @@ export function buildProductOperatingSchedule(
       const costOfSales=salesQuantity*weightedAverageUnitCost
       const closingInventoryValue=closingQuantity*weightedAverageUnitCost
       const baseRevenue=salesQuantity*(source.netUnitPrice as number)
-      const subsidyIncome=source.subsidyPercent!==null
+      const subsidyIncome=source.subsidyPercent!=null
         ?baseRevenue*source.subsidyPercent/100
         :source.subsidyAmount??0
       const netSalesRevenue=baseRevenue+subsidyIncome
