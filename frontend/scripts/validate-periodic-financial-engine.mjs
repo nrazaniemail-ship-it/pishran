@@ -79,15 +79,17 @@ const depositCase=engine.calculateIntegratedPeriodicFinance({
   annualVariableCost:[0,30,30],annualFixedCost:[0,10,10],
   annualDepreciation:[0,0,0],annualFixedInvestment:[100,0,0],annualPreOperatingCost:[0,0,0],
   annualMaintenanceCapex:[0,0,0],annualTaxRates:[0,0,0],annualEquityContributions:[50,0,0],
-  workingCapitalByPeriod:[0,0,0],openingCash:0,loans:[],discountRatePercent:10,
+  workingCapitalByPeriod:[0,100,100],cashInHandByPeriod:[0,50,50],shortTermDepositsByPeriod:[0,50,50],openingCash:0,loans:[],discountRatePercent:10,
 })
 assert.equal(depositCase.valid,true,depositCase.warnings.join('; '))
 assert.deepEqual(depositCase.rows.map(row=>row.shortTermDepositInterest),[0,5,5])
-assert.deepEqual(depositCase.rows.map(row=>Math.round(row.closingCash)),[-50,15,80])
+assert.deepEqual(depositCase.rows.map(row=>Math.round(row.closingCash)),[-50,-35,30])
 const depositStatements=engine.buildPeriodicThreeFinancialStatements(depositCase)
 assert.equal(depositStatements[1].incomeStatement.ebit,60)
 assert.equal(depositStatements[1].incomeStatement.shortTermDepositInterest,5)
 assert.equal(depositStatements[1].incomeStatement.profitBeforeTax,65)
-assert.deepEqual(depositStatements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[-50,15,80])
+assert.deepEqual(depositStatements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[-50,-35,30])
+assert.equal(depositStatements[1].balanceSheet.cashInHand,50)
+assert.equal(depositStatements[1].balanceSheet.shortTermDeposits,50)
 assert.ok(depositStatements.every(row=>Math.abs(row.movementChecks.cashRollForward)<=0.01))
 console.log('PASS: COMFAR short-term deposit interest flows through tax, CFADS, cash and linked statements')
