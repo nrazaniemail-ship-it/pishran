@@ -268,15 +268,20 @@ const taxDeductionCase=engine.calculateIntegratedPeriodicFinance({
   annualRevenue:[100,100,100],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
   annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
   annualMaintenanceCapex:[0,0,0],annualTaxRates:[20,20,20],annualEquityContributions:[0,0,0],
-  workingCapitalByPeriod:[0,0,0],loans:[],taxableDeductionsByPeriod:[10,20,30],
+  workingCapitalByPeriod:[0,0,0],loans:[],taxableDeductionsByPeriod:[10,20,30],taxCreditsByPeriod:[10,0,50],
 })
 assert.equal(taxDeductionCase.valid,true,taxDeductionCase.warnings.join('; '))
-assert.deepEqual(taxDeductionCase.rows.map(row=>row.tax),[18,16,14])
+assert.deepEqual(taxDeductionCase.rows.map(row=>row.taxBeforeCredits),[18,16,14])
+assert.deepEqual(taxDeductionCase.rows.map(row=>row.taxCredit),[10,0,14],
+  'Non-refundable credits are capped at current-period tax liability')
+assert.deepEqual(taxDeductionCase.rows.map(row=>row.tax),[8,16,0])
 assert.deepEqual(taxDeductionCase.rows.map(row=>row.taxableDeduction),[10,20,30])
 const taxDeductionStatements=engine.buildPeriodicThreeFinancialStatements(taxDeductionCase)
 assert.deepEqual(taxDeductionStatements.map(row=>row.incomeStatement.profitBeforeTax),[100,100,100],
   'Tax-only deductions must not distort accounting profit before tax')
 assert.deepEqual(taxDeductionStatements.map(row=>row.incomeStatement.taxableDeductions),[10,20,30])
+assert.deepEqual(taxDeductionStatements.map(row=>row.incomeStatement.taxCredits),[10,0,14])
+assert.deepEqual(taxDeductionStatements.map(row=>row.incomeStatement.taxBeforeCredits),[18,16,14])
 assert.ok(taxDeductionStatements.every(row=>row.balanceSheet.reconciled))
 console.log('PASS: explicit period tax deductions flow through taxable profit without distorting accounting PBT')
 
