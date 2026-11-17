@@ -102,7 +102,7 @@ export function bindHelpDrivenFinancialDrafts(
           if(amount>=0)issues.push('loan-disbursements:'+row.id+': profile repayment must be entered as a negative amount.')
           else loan.profileMovements.push({date,amount:Math.abs(amount)})
         }else issues.push('loan-disbursements:'+row.id+': flow type must be drawdown or profile repayment.')
-        if(disbursementUntil&&validDate(disbursementUntil)&&date>disbursementUntil)
+        if(flowType==='drawdown'&&disbursementUntil&&validDate(disbursementUntil)&&date>disbursementUntil)
           issues.push('loan-disbursements:'+row.id+': drawdown/repayment date exceeds the facility disbursement end date.')
       }
       const datedRates=interestRows.filter(row=>str(row,'loanName')===name)
@@ -150,7 +150,7 @@ export function bindHelpDrivenFinancialDrafts(
         for(const key of ['depreciationMethod','depreciationStart','depreciationRate','depreciationLength'])
           if(row.values[key]!==null&&row.values[key]!==undefined&&row.values[key]!=='')
             issues.push('loan-fees:'+row.id+': fee amortization settings are not yet supported by the periodic adapter.')
-        const feeCurrency=currencyChoice==='local-currency'?str(row,'currency'):loan.currencyCode
+        const feeCurrency=loan.currencyCode
         loan.fees.push({id:row.id,type:type as LoanFacilityFormDraft['fees'][number]['type'],
           ratePercent:rate,currencyCode:feeCurrency,paymentDate,
           treatment:treatment as 'expense'|'capitalize'})
