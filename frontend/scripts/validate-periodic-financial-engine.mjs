@@ -2,15 +2,24 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 
-const load = async relativePath => {
-  const source = await readFile(new URL(relativePath, import.meta.url), 'utf8')
-  const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
-  return import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
+const transpile = source => ts.transpileModule(source, {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
+}).outputText
+const asDataModule = source => import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'))
+const load = async relativePath => asDataModule(transpile(await readFile(new URL(relativePath, import.meta.url), 'utf8')))
+const loadFinancialModel = async () => {
+  const [source, formulaRules] = await Promise.all([
+    readFile(new URL('../src/features/steel/financialModel.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/features/projects/projectModelFormulaRules.ts', import.meta.url), 'utf8')
+  ])
+  const formulaRulesUrl = 'data:text/javascript;base64,' + Buffer.from(transpile(formulaRules)).toString('base64')
+  const output = transpile(source).replace("'../projects/projectModelFormulaRules'", JSON.stringify(formulaRulesUrl))
+  return asDataModule(output)
 }
 const [engine, foundation, financialModel] = await Promise.all([
   load('../src/features/steel/periodicFinancialEngine.ts'),
   load('../src/features/projects/projectFoundation.ts'),
-  load('../src/features/steel/financialModel.ts')
+  loadFinancialModel()
 ])
 const periods=foundation.buildProjectCalendarPeriods('2025-01-01','2027-12-31','annual',1)
 assert.equal(periods.length,3)
