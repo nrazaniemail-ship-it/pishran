@@ -1029,6 +1029,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   if (input.annualEquityContributions.some(value => value < 0) ||
       !validFinite(input.openingWorkingCapital ?? 0) ||
       (input.openingCash != null && !validFinite(input.openingCash)) ||
+      (input.constructionPeriodCount != null && (!validFinite(input.constructionPeriodCount) || !Number.isInteger(input.constructionPeriodCount) || input.constructionPeriodCount < 0 || input.constructionPeriodCount > periods.length)) ||
       !validFinite(input.salvageValue ?? 0) || (input.salvageValue ?? 0) < 0 ||
       (input.discountRatePercent != null && (!validFinite(input.discountRatePercent) || input.discountRatePercent <= -100)) ||
       (input.equityDiscountRatePercent != null && (!validFinite(input.equityDiscountRatePercent) || input.equityDiscountRatePercent <= -100)) ||
