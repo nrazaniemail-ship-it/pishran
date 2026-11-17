@@ -45,8 +45,11 @@ orchestratorOutput=orchestratorOutput.replace("'./productionSalesInventoryIntegr
  .replace("'./shareholderDistributionIntegration'",JSON.stringify(url(await transpile('../src/features/projects/shareholderDistributionIntegration.ts').then(output=>output.replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl))))))
  .replace("'./helpDrivenFinancialDraftBinding'",JSON.stringify(bindingUrl))
  .replace("'./startingBalanceIntegration'",JSON.stringify(startingBalanceUrl))
+ .replace("'./economicAppraisalIntegration'",JSON.stringify(economicAppraisalUrl))
 const orchestrator=await import(url(orchestratorOutput))
 const helpForms=await import(helpFormsUrl)
+const economicAppraisalUrl=url(await transpile('../src/features/projects/economicAppraisalIntegration.ts'))
+const economicAppraisalModule=await import(economicAppraisalUrl)
 const helpBinding=await import(bindingUrl)
 const periodicEngine=await import(engineUrl)
 const exactPeriodOverrideRun=periodicEngine.calculateIntegratedPeriodicFinance({
@@ -173,6 +176,28 @@ const foundation={
  discounting:{method:'manual',financialRatePercent:10,economicRatePercent:10},
  taxation:{system:'corporate',lossCarryForward:true,lossCarryForwardYears:5,rates:[]},
 }
+let economicHelp=helpForms.createBlankHelpDrivenProjectForms()
+economicHelp=helpForms.updateHelpFormRow(economicHelp,'project-identification','project-identification-main','economicAnalysis',true)
+for(const [key,value] of Object.entries({
+ method:'cost-benefit',numeraireType:'local-domestic-prices',numeraireCurrency:'EUR',numeraireUnit:'units',
+ officialExchangeRate:1,shadowExchangeRate:1.2,standardConversionFactor:1/1.2,
+ foreignCurrencyConversionFactor:1.2,discountRate:10,referenceDate:'2025-01-01',
+})) economicHelp=helpForms.updateHelpFormRow(economicHelp,'economic-global','economic-global-main',key,value)
+const economicConfiguration=economicAppraisalModule.bindEconomicAppraisalConfiguration(economicHelp,foundation)
+assert.equal(economicConfiguration.valid,true,economicConfiguration.issues.join('; '))
+assert.equal(economicConfiguration.status,'configuration-ready-not-valued')
+assert.equal(economicConfiguration.configuration.shadowExchangeRate,1.2)
+let invalidEconomicHelp=helpForms.updateHelpFormRow(economicHelp,'economic-global','economic-global-main','standardConversionFactor',1)
+const invalidEconomicConfiguration=economicAppraisalModule.bindEconomicAppraisalConfiguration(invalidEconomicHelp,foundation)
+assert.equal(invalidEconomicConfiguration.valid,false)
+assert.ok(invalidEconomicConfiguration.issues.some(issue=>issue.includes('OER/SER ratio')))
+invalidEconomicHelp=helpForms.addHelpFormRow(invalidEconomicHelp,'economic-effects','employment-effect')
+for(const [key,value] of Object.entries({type:'employment',period:'1',amount:5,headcount:5,shadowWageFactor:0.8}))
+ invalidEconomicHelp=helpForms.updateHelpFormRow(invalidEconomicHelp,'economic-effects','employment-effect',key,value)
+const unvaluedEconomicEffects=economicAppraisalModule.bindEconomicAppraisalConfiguration(invalidEconomicHelp,foundation)
+assert.equal(unvaluedEconomicEffects.valid,false)
+assert.ok(unvaluedEconomicEffects.issues.some(issue=>issue.includes('shadow-price valuation rules')))
+
 const finance={
  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
  annualRevenue:[0,0],annualVariableCost:[0,0],annualFixedCost:[0,0],
