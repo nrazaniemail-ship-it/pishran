@@ -130,7 +130,7 @@ for(const [id,period] of [['sale-a1','1'],['sale-a2','2']]){
 }
 for(const [id,period] of [['wc-a1','1'],['wc-a2','2']]){
  rawHelp=helpForms.addHelpFormRow(rawHelp,'working-capital',id)
- for(const [key,value] of Object.entries({item:'Receivables',category:'accounts-receivable',period,requiredValue:25,startingBalance:10}))
+ for(const [key,value] of Object.entries({item:'Receivables',category:'accounts-receivable',period,requiredValue:25,startingBalance:10,basis:'cost-of-products-sold-operating-plus-marketing'}))
   rawHelp=helpForms.updateHelpFormRow(rawHelp,'working-capital',id,key,value)
 }
 for(const [id,key,value] of [
@@ -514,7 +514,7 @@ addOpeningRow('opening-equity',{category:'equity-capital',item:'Paid-in capital'
 addOpeningRow('opening-retained',{category:'retained-earnings',item:'Retained earnings',currency:'EUR',origin:'local',amount:37})
 for(const [id,period] of [['opening-wc-1','1'],['opening-wc-2','2']]){
  startingBalanceHelp=helpForms.addHelpFormRow(startingBalanceHelp,'working-capital',id)
- for(const [key,value] of Object.entries({item:'Trade receivables',category:'accounts-receivable',period,requiredValue:0,startingBalance:0,basis:'cost-of-products-sold-operating-plus-marketing'}))
+ for(const [key,value] of Object.entries({item:'Trade receivables',category:'accounts-receivable',period,requiredValue:0,startingBalance:0}))
   startingBalanceHelp=helpForms.updateHelpFormRow(startingBalanceHelp,'working-capital',id,key,value)
 }
 assert.deepEqual(helpForms.validateHelpDrivenProjectForms(startingBalanceHelp),[])
