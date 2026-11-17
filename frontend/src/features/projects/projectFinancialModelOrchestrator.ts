@@ -94,10 +94,32 @@ export function calculateProjectFinancialModelFromDrafts(
       finance={...finance,valuationDate:referenceDate}
     }
   }
+  const progressiveTaxRows=input.drafts.helpDriven?.sections?.['tax-brackets']??[]
+  if(progressiveTaxRows.length){
+    const bracketsByPeriod=finance.periods.map(()=>[] as {lowerLimit:number;ratePercent:number}[])
+    for(const row of progressiveTaxRows){
+      const periodKey=row.values.period
+      const lowerLimit=row.values.lowerLimit
+      const ratePercent=row.values.rate
+      const periodIndex=typeof periodKey==='string'?resolveTaxPeriod(periodKey):-1
+      if(periodIndex<0||typeof lowerLimit!=='number'||!Number.isFinite(lowerLimit)||lowerLimit<0||
+        typeof ratePercent!=='number'||!Number.isFinite(ratePercent)||ratePercent<0||ratePercent>100)
+        return fail(['Every progressive tax bracket must have a valid project period, non-negative lower limit and rate from 0% to 100%.'])
+      bracketsByPeriod[periodIndex].push({lowerLimit,ratePercent})
+    }
+    for(let index=0;index<bracketsByPeriod.length;index++){
+      const brackets=bracketsByPeriod[index].sort((a,b)=>a.lowerLimit-b.lowerLimit)
+      if(!brackets.length||brackets[0].lowerLimit!==0||
+        brackets.some((row,bracketIndex)=>bracketIndex>0&&
+          (row.lowerLimit<=brackets[bracketIndex-1].lowerLimit||row.ratePercent<brackets[bracketIndex-1].ratePercent)))
+        return fail(['Progressive tax brackets must be defined for every period, start at zero and use increasing limits with non-decreasing rates.'])
+    }
+    finance={...finance,taxBracketsByPeriod:bracketsByPeriod}
+  }
   const taxDraft=input.drafts.tax??{system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null}
   if(taxDraft.system==='none') {
-    finance={...finance,taxRatesByPeriod:finance.periods.map(()=>0),taxAllowancesByPeriod:finance.periods.map(()=>0),
-      openingTaxLoss:0,openingUnleveredTaxLoss:0,taxLossCarryForwardEnabled:false}
+    finance={...finance,taxRatesByPeriod:finance.periods.map(()=>0),taxBracketsByPeriod:undefined,
+      taxAllowancesByPeriod:finance.periods.map(()=>0),openingTaxLoss:0,openingUnleveredTaxLoss:0,taxLossCarryForwardEnabled:false}
   } else {
     if(taxDraft.rates.length) {
       const rates=Array(finance.periods.length).fill(Number.NaN) as number[]
