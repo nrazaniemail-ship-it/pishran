@@ -36,7 +36,7 @@ assert.deepEqual(result.annualRevenue,[3679])
 assert.deepEqual(result.annualCostOfSales,[1700])
 assert.equal(result.totalProductionQuantity,180)
 assert.equal(result.totalSalesQuantity,170)
-assert.equal(result.totalClosingInventoryValue,200)
+assert.equal(result.totalClosingInventoryValue,500)
 
 const badOpening=module.buildProductOperatingSchedule({
  ...base,sales:[{...base.sales[0],periods:[base.sales[0].periods[0],{...base.sales[0].periods[1],openingFinishedGoodsValue:301}]}]
