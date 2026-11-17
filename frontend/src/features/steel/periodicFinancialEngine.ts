@@ -1163,7 +1163,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   })
   const totalAutomaticEquity = automaticFundingSchedule.reduce((sum,row)=>sum+row.automaticEquity,0)
   const peakAutomaticOverdraft = Math.max(0,...automaticFundingSchedule.map(row=>row.automaticOverdraftBalance))
-  const closingAutomaticOverdraft = automaticFundingSchedule.at(-1)?.automaticOverdraftBalance ?? 0
+  const closingAutomaticOverdraft = automaticFundingSchedule.length ? automaticFundingSchedule[automaticFundingSchedule.length-1].automaticOverdraftBalance : 0
   const projectFlows = rows.map(row=>row.projectFreeCashFlow)
   const equityFlows = rows.map(row=>row.equityFreeCashFlow)
   const investmentFlows = rows.map(row=>row.fixedInvestment + row.preOperatingCost + Math.max(0,row.changeInWorkingCapital))
