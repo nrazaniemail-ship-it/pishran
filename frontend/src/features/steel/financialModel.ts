@@ -1224,7 +1224,7 @@ export function calculateComfarCalendarAssetLifecycle(
     const saleProceeds=sale.priceMode==='book-value'?bookValueAtSale:(sale.selfDefinedPrice??0)*(sale.exchangeRateToLocal??1)
     if (!Number.isFinite(saleProceeds)||saleProceeds<0) { warnings.push(asset.name+': sale proceeds must be non-negative.'); continue }
     const result:ComfarAssetSaleResult={id:sale.id,assetId:sale.assetId,period:periodIndex+1,bookValueAtSale,saleProceeds,
-      returnOfCapital:Math.min(saleProceeds,bookValueAtSale),
+      returnOfCapital:bookValueAtSale,
       extraordinaryIncome:Math.max(0,saleProceeds-bookValueAtSale),
       extraordinaryLoss:Math.max(0,bookValueAtSale-saleProceeds),
       otherIncomeLoss:saleProceeds-bookValueAtSale}
@@ -1329,7 +1329,7 @@ export function calculateComfarAssetLifecycle(
       period: sale.period,
       bookValueAtSale,
       saleProceeds,
-      returnOfCapital: Math.min(saleProceeds, bookValueAtSale),
+      returnOfCapital: bookValueAtSale,
       extraordinaryIncome,
       extraordinaryLoss,
       otherIncomeLoss: extraordinaryIncome - extraordinaryLoss,
