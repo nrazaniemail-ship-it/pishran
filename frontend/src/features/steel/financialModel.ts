@@ -107,6 +107,12 @@ export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPoli
   return { rawMaterials, factorySupplies, utilities, energy, spareParts, workInProgress, finishedGoods, receivables, minimumCash, shortTermDeposits, payables, netWorkingCapital: rawMaterials + factorySupplies + utilities + energy + spareParts + workInProgress + finishedGoods + receivables + minimumCash - payables }
 }
 
+/** COMFAR VII.Q: turnover coefficient (Coto) = day basis / minimum days coverage (Mdc). */
+export function calculateWorkingCapitalTurnoverCoefficient(minimumDaysCoverage: number, dayBasis: number = 360): number | null {
+  if (![minimumDaysCoverage,dayBasis].every(Number.isFinite) || minimumDaysCoverage < 0 || dayBasis <= 0 || minimumDaysCoverage === 0) return null
+  return dayBasis / minimumDaysCoverage
+}
+
 /** COMFAR XI.O: interest on short-term deposits = cash-in-hand × invested share × annual rate × months / 12. */
 export function calculateShortTermDepositInterest(cashInHand: number, investedSharePercent: number, annualRatePercent: number, periodMonths: number): number {
   if (![cashInHand, investedSharePercent, annualRatePercent, periodMonths].every(Number.isFinite) || cashInHand < 0 || investedSharePercent < 0 || investedSharePercent > 100 || annualRatePercent < 0 || periodMonths < 0 || periodMonths > 12) return Number.NaN
