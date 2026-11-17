@@ -58,6 +58,7 @@ assert.ok(fundingCase.warnings.some(message=>message.includes('Funding shortfall
 const statements=engine.buildPeriodicThreeFinancialStatements(fundingCase)
 assert.equal(statements.length,periods.length)
 assert.deepEqual(statements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[-50,10,70])
+assert.ok(statements.every(row=>Math.abs(row.movementChecks.cashRollForward)<=0.01),'Statement cash must reconcile to the engine cash roll-forward')
 const openingCashCase=engine.calculateIntegratedPeriodicFinance({
   periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
   annualRevenue:[0,100,100],annualVariableCost:[0,30,30],annualFixedCost:[0,10,10],
@@ -69,4 +70,5 @@ assert.equal(openingCashCase.peakFundingGap,0)
 assert.deepEqual(openingCashCase.rows.map(row=>Math.round(row.closingCash)),[0,60,120])
 const openingStatements=engine.buildPeriodicThreeFinancialStatements(openingCashCase)
 assert.deepEqual(openingStatements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[0,60,120])
+assert.ok(openingStatements.every(row=>Math.abs(row.movementChecks.cashRollForward)<=0.01),'Opening cash must be carried consistently into linked statements')
 console.log('PASS: period cash roll-forward, opening cash, funding-gap alerts and three-statement cash reconciliation')
