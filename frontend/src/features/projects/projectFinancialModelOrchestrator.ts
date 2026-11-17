@@ -177,7 +177,7 @@ export function calculateProjectFinancialModelFromDrafts(
   // schedules are represented in the periodic engine (rather than being treated as zero).
   const notYetIntegratedSections=new Set([
     'joint-venture',
-    'profit-distribution','depreciation-adjustments','starting-balances',
+    'profit-distribution','starting-balances',
     'economic-items','economic-effects','sensitivity','incremental-analysis',
   ])
   for(const [sectionId,sectionRows] of Object.entries(effectiveDrafts.helpDriven?.sections??{})){
@@ -253,6 +253,32 @@ export function calculateProjectFinancialModelFromDrafts(
         return fail([label+' must be a finite rate greater than -100%.'])
       finance={...finance,[key]:rate}
     }
+  }
+  const depreciationAdjustmentRows=effectiveDrafts.helpDriven?.sections?.['depreciation-adjustments']??[]
+  if(depreciationAdjustmentRows.length){
+    const adjustments=Array(finance.periods.length).fill(0) as number[]
+    for(const row of depreciationAdjustmentRows){
+      const periodKey=typeof row.values.period==='string'?row.values.period.trim():''
+      const periodIndex=periodKey?resolveTaxPeriod(periodKey):-1
+      const amount=row.values.amount
+      const origin=row.values.origin
+      const currencyCode=typeof row.values.currency==='string'&&row.values.currency.trim()
+        ?row.values.currency.trim().toUpperCase():effectiveFoundation.currencies.localCurrencyCode
+      if(periodIndex<0||typeof amount!=='number'||!Number.isFinite(amount))
+        return fail(['Tax depreciation adjustment '+row.id+' requires a valid project period and a finite signed amount.'])
+      if(origin!=='local'&&origin!=='foreign')
+        return fail(['Tax depreciation adjustment '+row.id+' must identify a local or foreign asset origin.'])
+      if((origin==='local'&&currencyCode!==effectiveFoundation.currencies.localCurrencyCode)||
+        (origin==='foreign'&&currencyCode===effectiveFoundation.currencies.localCurrencyCode))
+        return fail(['Tax depreciation adjustment '+row.id+' has a currency that conflicts with its asset origin.'])
+      const exchangeRate=currencyCode===effectiveFoundation.currencies.localCurrencyCode?1:
+        effectiveFoundation.currencies.foreignCurrencies.find(currency=>currency.code===currencyCode)
+          ?.exchangeRates.find(rate=>rate.period===String(finance.periods[periodIndex].index))?.rateToLocal
+      if(!Number.isFinite(exchangeRate)||exchangeRate!<=0)
+        return fail(['Tax depreciation adjustment currency '+currencyCode+' has no exchange rate for period '+periodKey+'.'])
+      adjustments[periodIndex]+=amount*exchangeRate!
+    }
+    finance={...finance,taxDepreciationAdjustmentsByPeriod:adjustments}
   }
   const equityRows=effectiveDrafts.helpDriven?.sections?.['equity-grants']??[]
   if(equityRows.length){
