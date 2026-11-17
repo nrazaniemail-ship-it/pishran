@@ -52,7 +52,7 @@ const result=engine.calculateIntegratedPeriodicFinance({
  annualDepreciation:reference.depreciation,annualFixedInvestment:[0,0,0],
  annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
  annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
- workingCapitalByPeriod:[0,0,0],loans:[],taxLossCarryForwardEnabled:false,
+ workingCapitalByPeriod:[0,0,0],loans:[],taxLossCarryForwardEnabled:false,discountRatePercent:25,
 })
 assert.equal(result.valid,true,result.warnings.join('; '))
 result.rows.forEach((row,index)=>{
@@ -63,4 +63,36 @@ result.rows.forEach((row,index)=>{
  close(row.tax,reference.corporateTax[index],reference.years[index]+' corporate tax')
  close(row.netIncome,reference.netProfit[index],reference.years[index]+' net profit')
 })
+const sensitivity=engine.calculatePeriodicSensitivityMatrix({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:productSchedule.annualRevenue,periodRevenue:productSchedule.periodRevenue,
+  annualVariableCost:productSchedule.annualCostOfSales,periodVariableCost:productSchedule.periodCostOfSales,
+  annualFixedCost:reference.administrativeOverhead.map((value,index)=>value+reference.marketing[index]),
+  annualDepreciation:reference.depreciation,annualFixedInvestment:[0,0,0],
+  annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
+  annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],taxLossCarryForwardEnabled:false,discountRatePercent:25,
+},[0,10],[0,10])
+assert.equal(sensitivity.length,2)
+assert.equal(sensitivity[0].length,2)
+close(sensitivity[0][0].npv??NaN,result.npvProject??NaN,'Periodic sensitivity base case')
+assert.ok((sensitivity[0][1].npv??-Infinity)>(sensitivity[0][0].npv??Infinity),
+  'A positive sales-price shock must improve the base project NPV')
+assert.ok((sensitivity[1][0].npv??-Infinity)>(sensitivity[0][0].npv??Infinity),
+  'A positive sales-volume shock must improve the positive-contribution project NPV')
+const scenarios=engine.calculatePeriodicFinancialScenarios({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:productSchedule.annualRevenue,periodRevenue:productSchedule.periodRevenue,
+  annualVariableCost:productSchedule.annualCostOfSales,periodVariableCost:productSchedule.periodCostOfSales,
+  annualFixedCost:reference.administrativeOverhead.map((value,index)=>value+reference.marketing[index]),
+  annualDepreciation:reference.depreciation,annualFixedInvestment:[0,0,0],
+  annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
+  annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],taxLossCarryForwardEnabled:false,discountRatePercent:25,
+})
+assert.equal(scenarios.base.valid,true)
+close(scenarios.base.npvProject??NaN,result.npvProject??NaN,'Periodic base scenario')
+assert.ok((scenarios.pessimistic.npvProject??Infinity)<(scenarios.base.npvProject??-Infinity))
+assert.ok((scenarios.optimistic.npvProject??-Infinity)>(scenarios.base.npvProject??Infinity))
+
 console.log('COMFAR III DRI reference spot-check passed: product revenue, factory cost, operating overhead, depreciation, taxable profit, 25% corporate tax and net profit for first/reference/last production years.')
