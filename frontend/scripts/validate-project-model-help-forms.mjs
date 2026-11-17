@@ -121,12 +121,12 @@ try {
 
 
  let linkedProducts=h.addHelpFormRow(draft.helpDriven,'products','product-1')
- linkedProducts=h.updateHelpFormRow(linkedProducts,'products','product-1','name','Steel')
+ linkedProducts=h.updateHelpFormRow(linkedProducts,'products','product-1','name','Finished good A')
  linkedProducts=h.updateHelpFormRow(linkedProducts,'products','product-1','unit','tonne')
  let sales=h.addHelpFormRow(linkedProducts,'sales-programme','sale-1')
  sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','productId','Unknown')
  assert.ok(h.validateHelpDrivenProjectForms(sales).includes('sales-programme:0:unknown-product-reference:Unknown'))
- sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','productId','Steel')
+ sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','productId','Finished good A')
  sales=h.updateHelpFormRow(sales,'sales-programme','sale-1','period','1')
  assert.equal(h.validateHelpDrivenProjectForms(sales).length,0)
  let loans2=h.addHelpFormRow(draft.helpDriven,'loan-conditions','loan-1')
@@ -157,7 +157,7 @@ try {
  linkedWc=h.updateHelpFormRow(linkedWc,'working-capital','wc-1','costItemId','missing-cost')
  assert.ok(h.validateHelpDrivenProjectForms(linkedWc).includes('working-capital:0:unknown-cost-item-reference:missing-cost'))
  let economicCycle=h.addHelpFormRow(draft.helpDriven,'economic-items','econ-1')
- economicCycle=h.updateHelpFormRow(economicCycle,'economic-items','econ-1','item','Steel')
+ economicCycle=h.updateHelpFormRow(economicCycle,'economic-items','econ-1','item','Finished good A')
  economicCycle=h.updateHelpFormRow(economicCycle,'economic-items','econ-1','parentEconomicItemId','econ-2')
  economicCycle=h.addHelpFormRow(economicCycle,'economic-items','econ-2')
  economicCycle=h.updateHelpFormRow(economicCycle,'economic-items','econ-2','item','Energy')
