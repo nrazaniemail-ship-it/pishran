@@ -67,22 +67,22 @@ const longCoveragePolicy={...depositPolicy,rawMaterialDays:540,annualRawMaterial
 near(engine.calculateOperatingCycleWorkingCapital(longCoveragePolicy,1).rawMaterials,540,1e-9,'Working-capital days coverage may exceed one year')
 
 const annualDepositModel=engine.calculateIntegratedFinance({
-  years:2,constructionYears:0,capacity:1,fullCapacityRevenue:100,
+  years:2,constructionYears:1,capacity:1,fullCapacityRevenue:100,
   fullCapacityVariableCashCost:30,fullCapacityFixedCashCost:10,annualDepreciation:0,
   fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
-  utilization:[1,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,
+  utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,
   workingCapitalPercent:0,salesEscalationPercent:0,opexEscalationPercent:0,
   discountMode:'manual',manualDiscountRate:10,
   workingCapitalPolicy:depositPolicy,
 })
-near(annualDepositModel.years[0].shortTermDepositInterest,6,1e-9,'Annual integrated model deposit interest')
-near(annualDepositModel.years[0].taxableProfit,66,1e-9,'Deposit interest included in taxable profit')
-near(annualDepositModel.years[0].cfads,-34,1e-9,'Deposit interest included in CFADS')
+near(annualDepositModel.years[1].shortTermDepositInterest,6,1e-9,'Annual integrated model deposit interest')
+near(annualDepositModel.years[1].taxableProfit,66,1e-9,'Deposit interest included in taxable profit')
+near(annualDepositModel.years[1].cfads,-34,1e-9,'Deposit interest included in CFADS')
 const annualDepositStatements=engine.buildThreeFinancialStatements(annualDepositModel.years)
-near(annualDepositStatements[0].incomeStatement.profitBeforeTax,66,1e-9,'Deposit interest included in annual income statement')
-near(annualDepositStatements[0].balanceSheet.cashInHand,50,1e-9,'Cash-in-hand net of short-term deposits')
-near(annualDepositStatements[0].balanceSheet.shortTermDeposits,50,1e-9,'Short-term deposits shown separately on balance sheet')
-near(annualDepositStatements[0].balanceSheet.workingCapitalAssets,100,1e-9,'Cash-in-hand plus deposits included once in current assets')
+near(annualDepositStatements[1].incomeStatement.profitBeforeTax,66,1e-9,'Deposit interest included in annual income statement')
+near(annualDepositStatements[1].balanceSheet.cashInHand,50,1e-9,'Cash-in-hand net of short-term deposits')
+near(annualDepositStatements[1].balanceSheet.shortTermDeposits,50,1e-9,'Short-term deposits shown separately on balance sheet')
+near(annualDepositStatements[1].balanceSheet.workingCapitalAssets,100,1e-9,'Cash-in-hand plus deposits included once in current assets')
 near(engine.calculateWorkingCapitalTurnoverCoefficient(540),2/3,1e-9,'COMFAR Coto for coverage above one year')
 
 
