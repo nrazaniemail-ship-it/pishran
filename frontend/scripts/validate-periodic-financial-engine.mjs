@@ -84,6 +84,8 @@ const depositCase=engine.calculateIntegratedPeriodicFinance({
 assert.equal(depositCase.valid,true,depositCase.warnings.join('; '))
 assert.deepEqual(depositCase.rows.map(row=>row.shortTermDepositInterest),[0,5,5])
 assert.deepEqual(depositCase.rows.map(row=>Math.round(row.closingCash)),[-50,-85,80])
+assert.deepEqual(depositCase.rows.map(row=>Math.round(row.fundingGap)),[50,85,0])
+assert.equal(depositCase.peakFundingGap,85)
 const depositStatements=engine.buildPeriodicThreeFinancialStatements(depositCase)
 assert.equal(depositStatements[1].incomeStatement.ebit,60)
 assert.equal(depositStatements[1].incomeStatement.shortTermDepositInterest,5)
