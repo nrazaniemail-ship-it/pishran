@@ -6,6 +6,7 @@ import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention, ProjectFoundation } from './projectFoundation'
 import type { ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import { calculateProjectFinancialModelFromDrafts } from './projectFinancialModelOrchestrator'
+import type { WorkingCapitalDraftSchedule } from './workingCapitalDraftIntegration'
 import type { EconomicAppraisalConfigurationResult } from './economicAppraisalIntegration'
 import { bindLoanFacilitiesToPeriodicFinance } from './foreignCurrencyLoanFinanceBinding'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
@@ -20,7 +21,7 @@ import {
 } from '../steel/financialModel'
 
 type CapexRow = { id: string; name: string; amount: number }
-type PeriodicFinanceResultWithSensitivityInput=PeriodicProjectFinanceResult & {sensitivityInput?:PeriodicProjectFinanceInput;economicAppraisal?:EconomicAppraisalConfigurationResult|null}
+export type PeriodicFinanceResultWithSensitivityInput=PeriodicProjectFinanceResult & {sensitivityInput?:PeriodicProjectFinanceInput;economicAppraisal?:EconomicAppraisalConfigurationResult|null;workingCapitalSchedule?:WorkingCapitalDraftSchedule}
 type Asset = DepreciationAssetInput
 type Loan = IntegratedLoanInput & {
   periodDrawdowns?: number[]
@@ -75,7 +76,7 @@ type Props = {
   onResult?: (result:IntegratedFinanceResult)=>void
   onSensitivity?: (analysis:OneWaySensitivityAnalysis)=>void
   onScenarioAnalysis?: (matrix:SensitivityCell[][], scenarios:ReturnType<typeof calculateFinancialScenarios>)=>void
-  onPeriodicResult?: (result:PeriodicProjectFinanceResult|null)=>void
+  onPeriodicResult?: (result:PeriodicFinanceResultWithSensitivityInput|null)=>void
   onEconomicAppraisalResult?: (result:EconomicAppraisalConfigurationResult|null)=>void
   onPartnerFinanceResult?: (result:PartnerFinanceResult|null)=>void
   equityPercent: number
@@ -375,7 +376,8 @@ export default function AdvancedFinancePanel(props: Props) {
         foundation:props.foundation,openingForeignBalances,openingExchangeRatesToLocal,
       })
       return Object.assign(orchestration.finalRun.finance,{
-        sensitivityInput:sensitivityLoanBinding.valid?sensitivityLoanBinding.financeInput??undefined:undefined,economicAppraisal:orchestration.economicAppraisal??null
+        sensitivityInput:sensitivityLoanBinding.valid?sensitivityLoanBinding.financeInput??undefined:undefined,economicAppraisal:orchestration.economicAppraisal??null,
+        workingCapitalSchedule:orchestration.workingCapital??undefined
       })
     }
     return Object.assign(calculateIntegratedPeriodicFinance(financeInput),{sensitivityInput:financeInput,economicAppraisal:null})
