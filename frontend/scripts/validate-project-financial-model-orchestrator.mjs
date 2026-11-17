@@ -284,6 +284,14 @@ assert.equal(existingEnterprise.finalRun.statements[0].openingBalances.debt,70)
 assert.equal(existingEnterprise.finalRun.statements[0].openingBalances.netFixedAssets,150)
 assert.equal(existingEnterprise.finalRun.statements[0].openingBalances.netWorkingCapital,85)
 assert.ok(existingEnterprise.finalRun.statements.every(row=>row.balanceSheet.reconciled))
+const mismatchedOpeningWorkingCapital=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,openingBalanceSheet},foundation,productionStartDate:'2025-01-01',
+ openingWorkingCapital:84,
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(mismatchedOpeningWorkingCapital.valid,false)
+assert.ok(mismatchedOpeningWorkingCapital.issues.some(issue=>issue.includes('Explicit opening working capital does not reconcile')))
 const unbalancedOpening=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,openingBalanceSheet:{...openingBalanceSheet,retainedEarnings:66}},foundation,
  productionStartDate:'2025-01-01',
