@@ -1534,3 +1534,9 @@ input,select,textarea{color:var(--text)}
 .ui-modern .setting-row{border-bottom-color:var(--modern-line)}
 .ui-modern .setting-row>span{color:var(--modern-text)}
 .ui-modern .notice{background:var(--modern-selected);color:var(--modern-text)}
+
+/* Modern project browser: visible keyboard focus and reduced-motion-safe drag feedback. */
+.ui-modern .tree-project-wrap:focus-visible{outline:2px solid var(--modern-primary);outline-offset:2px;border-radius:8px}
+.ui-modern .tree-project-wrap[aria-grabbed="true"]{opacity:.62}
+.ui-modern .tree-project-wrap button:focus-visible{outline:2px solid var(--modern-primary);outline-offset:1px}
+@media(forced-colors:active){.ui-modern .tree-project-wrap:focus-visible,.ui-modern button:focus-visible{outline:2px solid Highlight;outline-offset:2px}}
