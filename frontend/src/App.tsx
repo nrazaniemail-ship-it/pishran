@@ -162,7 +162,12 @@ export default function App() {
   }), [isEn])
 
   async function refreshStorage() {
-    setStorageInfo(await localStore.info())
+    try {
+      setStorageInfo(await localStore.info())
+      setLoadError('')
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : (isEn ? 'Unable to inspect local storage' : 'بررسی فضای ذخیره‌سازی ناموفق بود'))
+    }
   }
 
   async function handleCreateProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'location' | 'templateId'>) {
