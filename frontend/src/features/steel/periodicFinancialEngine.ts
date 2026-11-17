@@ -654,6 +654,8 @@ export type PeriodicProjectFinanceInput = {
   annualRevenue: number[]
   /** Optional product-led revenue by exact project period; fiscal-year totals must reconcile to annualRevenue. */
   periodRevenue?: number[]
+  /** Subsidy income included in product revenue but removed as a transfer in economic appraisal. */
+  periodSubsidyIncome?: number[]
   /** Optional product-led cost of sales by exact project period; fiscal-year totals must reconcile to annualVariableCost. */
   periodVariableCost?: number[]
   annualShortTermDepositInterest?: number[]
@@ -716,6 +718,7 @@ export type PeriodicProjectFinanceRow = {
   endDate: string
   days: number
   revenue: number
+  subsidyIncome: number
   shortTermDepositInterest: number
   variableCost: number
   fixedCost: number
@@ -1040,6 +1043,10 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     }
   }
   const [allocatedRevenue, allocatedVariableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution, allocatedEquityWorkingCapitalContribution, shortTermDepositInterest] = allocated
+  if(input.periodSubsidyIncome&&(input.periodSubsidyIncome.length!==periods.length||input.periodSubsidyIncome.some(value=>!validFinite(value)||value<0))){
+    warnings.push('Period subsidy income must contain one finite non-negative amount for every project period.')
+    return empty()
+  }
   const periodOperatingOverrides = [input.periodRevenue, input.periodVariableCost]
   if (periodOperatingOverrides.some(series => series != null && (series.length !== periods.length || series.some(value => !validFinite(value) || value < 0)))) {
     warnings.push('Product-led period revenue and cost-of-sales overrides must contain one finite non-negative amount for every project period.')
@@ -1242,7 +1249,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     if (fundingGap > 0.01) warnings.push('Funding shortfall at the end of project period ' + (index + 1) + ': ' + fundingGap.toFixed(2) + '.')
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
-      revenue:revenue[index],shortTermDepositInterest:shortTermDepositInterest[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
+      revenue:revenue[index],subsidyIncome:input.periodSubsidyIncome?.[index]??0,shortTermDepositInterest:shortTermDepositInterest[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
