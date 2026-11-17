@@ -69,6 +69,11 @@ await store.__store.set('pishran:rolling:sample',{value:1})
 await store.__store.set('process-plant:sample',{value:1})
 await store.__store.set('rolling:sample:v2',{value:1})
 await store.__store.set('projects:workbook-seed:v1',{value:1})
+for (const id of ['retired-a','retired-b','retired-c']) {
+  await store.__store.set('feasibility:project:' + id + ':v1',{sample:true})
+  await store.__store.set('feasibility:advanced-finance:' + id,{sample:true})
+  await store.__store.set('feasibility:advanced-finance:' + id + ':v2',{sample:true})
+}
 const remaining = await repository.purgeRemovedCaseProjects()
 assert.deepEqual(remaining.map(row=>row.id),['kept'])
 assert.equal(remaining[0].templateId,'raw')
@@ -77,6 +82,11 @@ assert.equal(store.__store.has('pishran:rolling:sample'),false)
 assert.equal(store.__store.has('process-plant:sample'),false)
 assert.equal(store.__store.has('rolling:sample:v2'),false)
 assert.equal(store.__store.has('projects:workbook-seed:v1'),false)
+for (const id of ['retired-a','retired-b','retired-c']) {
+  assert.equal(store.__store.has('feasibility:project:' + id + ':v1'),false)
+  assert.equal(store.__store.has('feasibility:advanced-finance:' + id),false)
+  assert.equal(store.__store.has('feasibility:advanced-finance:' + id + ':v2'),false)
+}
 
 const created = await repository.createProject({name:'New raw model',industry:'other',capacity:'',location:''})
 assert.equal(created.templateId,'raw')
