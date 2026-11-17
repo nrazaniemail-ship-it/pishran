@@ -136,4 +136,15 @@ assert.ok(automaticFundingStatements.every(row=>row.balanceSheet.reconciled),
   'Balance sheet must reconcile after automatic equity and overdraft integration')
 assert.ok(automaticFundingStatements.every(row=>Object.values(row.movementChecks).every(value=>Math.abs(value)<=0.01)),
   'All statement movement checks must reconcile after automatic funding')
+const brokenAutomaticFundingSchedule={
+  ...automaticFundingCase,
+  automaticFundingSchedule:automaticFundingCase.automaticFundingSchedule.map((row,index)=>
+    index===2?{...row,automaticOverdraftBalance:5}:row),
+}
+assert.deepEqual(engine.buildPeriodicThreeFinancialStatements(brokenAutomaticFundingSchedule),[],
+  'Three-statement builder must reject discontinuous automatic overdraft schedules')
+const missingAutomaticFundingSchedule={...automaticFundingCase,automaticFundingSchedule:automaticFundingCase.automaticFundingSchedule.slice(0,2)}
+assert.deepEqual(engine.buildPeriodicThreeFinancialStatements(missingAutomaticFundingSchedule),[],
+  'Three-statement builder must reject incomplete automatic funding schedules')
 console.log('PASS: COMFAR XI.N automatic construction equity and overdraft are integrated into cash flow, balance sheet and equity')
+console.log('PASS: malformed, discontinuous or incomplete automatic funding schedules are rejected')
