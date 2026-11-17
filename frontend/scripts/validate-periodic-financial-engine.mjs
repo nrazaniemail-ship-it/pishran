@@ -37,6 +37,27 @@ assert.ok(Math.abs(openingAssetLifecycle.depreciation.periods[0].depreciation-ex
   'Opening asset depreciation must use remaining depreciable book value, remaining useful life and actual calendar days')
 assert.ok(Math.abs(openingAssetLifecycle.depreciation.periods[0].closingBookValue-(700-expectedOpeningAssetDepreciation))<0.01,
   'Opening asset closing book value must reconcile after current-period depreciation')
+const openingAssetDepreciationByPeriod=openingAssetLifecycle.depreciation.periods.map(row=>row.depreciation)
+const openingAssetStatementCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,0],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  annualDepreciation:openingAssetDepreciationByPeriod,periodDepreciationSchedule:openingAssetDepreciationByPeriod,
+  annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
+  annualTaxRates:[0,0,0],annualEquityContributions:[0,0,0],workingCapitalByPeriod:[0,0,0],
+  openingCash:0,loans:[],discountRatePercent:10
+})
+assert.equal(openingAssetStatementCase.valid,true,openingAssetStatementCase.warnings.join('; '))
+const openingAssetStatements=engine.buildPeriodicThreeFinancialStatements(openingAssetStatementCase,{
+  netFixedAssets:700,paidInCapital:700
+})
+assert.equal(openingAssetStatements.length,periods.length,
+  'Opening fixed asset net book value must be accepted as a balance-sheet opening balance')
+assert.ok(openingAssetStatements.every((row,index)=>
+  Math.abs(row.balanceSheet.netFixedAssets-openingAssetLifecycle.depreciation.periods[index].closingBookValue)<0.01),
+  'Opening fixed assets must roll forward by their linked periodic depreciation')
+assert.ok(openingAssetStatements.every(row=>row.balanceSheet.reconciled&&
+  Math.abs(row.movementChecks.netFixedAssets)<=0.01),
+  'Opening asset depreciation, retained earnings and net fixed assets must reconcile across the three statements')
 const loan=engine.calculatePeriodicLoanSchedule({
   annualRatePercent:10,drawdowns:[1000,0,0],repaymentMethod:'annuity',
   repaymentStartPeriod:2,gracePeriods:0,termPeriods:2,capitalizeInterest:false,
