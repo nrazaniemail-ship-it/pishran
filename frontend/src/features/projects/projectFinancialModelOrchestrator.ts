@@ -20,6 +20,7 @@ import {
   type ForeignCurrencyFinanceRunResult,
 } from './foreignCurrencyLoanFinanceBinding'
 import { searchPeriodicFinanceTarget, type PeriodicSensitivityMetric, type PeriodicSensitivityVariable, type PeriodicTargetSearchResult } from '../steel/periodicSensitivity'
+import { calculateIncrementalAnalysis, type IncrementalAnalysisResult } from './incrementalAnalysisIntegration'
 
 export function bindHelpDrivenFoundation(
   foundation:ProjectFoundation,
@@ -146,6 +147,7 @@ export type ProjectFinancialModelOrchestrationResult={
   fixedAssets:FixedAssetFinanceBinding|null
   finalRun:ForeignCurrencyFinanceRunResult|null
   sensitivitySearches?:{rowId:string;alternative:string;result:PeriodicTargetSearchResult}[]
+  incrementalAnalyses?:IncrementalAnalysisResult[]
 }
 
 /**
@@ -180,7 +182,7 @@ export function calculateProjectFinancialModelFromDrafts(
   const notYetIntegratedSections=new Set([
     'joint-venture',
     'profit-distribution','starting-balances',
-    'economic-items','economic-effects','incremental-analysis',
+    'economic-items','economic-effects',
   ])
   for(const [sectionId,sectionRows] of Object.entries(effectiveDrafts.helpDriven?.sections??{})){
     if(notYetIntegratedSections.has(sectionId)&&sectionRows.length){
@@ -208,6 +210,8 @@ export function calculateProjectFinancialModelFromDrafts(
       }
     }
   }
+  const incrementalAnalysis=calculateIncrementalAnalysis(effectiveDrafts.helpDriven,finance)
+  if(incrementalAnalysis.issues.length)crossFormIssues.push(...incrementalAnalysis.issues)
   if(crossFormIssues.length)return fail(crossFormIssues)
   const resolveTaxPeriod=(key:string):number=>{
     const matches:number[]=[]
