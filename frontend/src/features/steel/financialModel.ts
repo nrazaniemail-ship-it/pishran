@@ -400,6 +400,64 @@ export type IntegratedLoanYear = {
   accruedInterestBalance?: number
 }
 
+export type BreakEvenAnalysisResult = {
+  salesRevenue: number
+  salesVolume: number
+  variableCosts: number
+  fixedCostsExcludingFinance: number
+  financialCosts: number
+  variableMargin: number
+  variableMarginRatioPercent: number | null
+  breakEvenSalesValueIncludingFinance: number | null
+  breakEvenSalesValueExcludingFinance: number | null
+  breakEvenRatioIncludingFinancePercent: number | null
+  breakEvenRatioExcludingFinancePercent: number | null
+  breakEvenSalesVolumeIncludingFinance: number | null
+  breakEvenSalesVolumeExcludingFinance: number | null
+  breakEvenSalesPriceAtConstantVolume: number | null
+  breakEvenPriceRatioPercent: number | null
+  fixedCostCoverageIncludingFinance: number | null
+  fixedCostCoverageExcludingFinance: number | null
+}
+
+/** Aggregate project break-even using COMFAR X break-even schedule relationships. */
+export function calculateBreakEvenAnalysis(input: {
+  salesRevenue: number
+  salesVolume: number
+  variableCosts: number
+  fixedCosts: number
+  financialCosts?: number
+}): BreakEvenAnalysisResult {
+  const salesRevenue = Math.max(0, input.salesRevenue)
+  const salesVolume = Math.max(0, input.salesVolume)
+  const variableCosts = Math.max(0, input.variableCosts)
+  const fixedCostsExcludingFinance = Math.max(0, input.fixedCosts)
+  const financialCosts = Math.max(0, input.financialCosts ?? 0)
+  const variableMargin = salesRevenue - variableCosts
+  const variableMarginRatio = salesRevenue > 0 ? variableMargin / salesRevenue : null
+  const validMargin = variableMarginRatio !== null && variableMarginRatio > 0
+  const breakEvenSalesValueIncludingFinance = validMargin ? (fixedCostsExcludingFinance + financialCosts) / variableMarginRatio! : null
+  const breakEvenSalesValueExcludingFinance = validMargin ? fixedCostsExcludingFinance / variableMarginRatio! : null
+  const breakEvenRatioIncludingFinance = breakEvenSalesValueIncludingFinance !== null && salesRevenue > 0 ? breakEvenSalesValueIncludingFinance / salesRevenue * 100 : null
+  const breakEvenRatioExcludingFinance = breakEvenSalesValueExcludingFinance !== null && salesRevenue > 0 ? breakEvenSalesValueExcludingFinance / salesRevenue * 100 : null
+  const averageUnitPrice = salesVolume > 0 ? salesRevenue / salesVolume : null
+  const breakEvenSalesVolumeIncludingFinance = breakEvenSalesValueIncludingFinance !== null && averageUnitPrice !== null && averageUnitPrice > 0 ? breakEvenSalesValueIncludingFinance / averageUnitPrice : null
+  const breakEvenSalesVolumeExcludingFinance = breakEvenSalesValueExcludingFinance !== null && averageUnitPrice !== null && averageUnitPrice > 0 ? breakEvenSalesValueExcludingFinance / averageUnitPrice : null
+  const breakEvenSalesPriceAtConstantVolume = salesVolume > 0 ? (fixedCostsExcludingFinance + financialCosts + variableCosts) / salesVolume : null
+  const breakEvenPriceRatioPercent = breakEvenSalesPriceAtConstantVolume !== null && averageUnitPrice !== null && averageUnitPrice > 0 ? breakEvenSalesPriceAtConstantVolume / averageUnitPrice * 100 : null
+  return {
+    salesRevenue,salesVolume,variableCosts,fixedCostsExcludingFinance,financialCosts,variableMargin,
+    variableMarginRatioPercent:variableMarginRatio===null?null:variableMarginRatio*100,
+    breakEvenSalesValueIncludingFinance,breakEvenSalesValueExcludingFinance,
+    breakEvenRatioIncludingFinancePercent:breakEvenRatioIncludingFinance,
+    breakEvenRatioExcludingFinancePercent:breakEvenRatioExcludingFinance,
+    breakEvenSalesVolumeIncludingFinance,breakEvenSalesVolumeExcludingFinance,
+    breakEvenSalesPriceAtConstantVolume,breakEvenPriceRatioPercent,
+    fixedCostCoverageIncludingFinance:fixedCostsExcludingFinance+financialCosts>0?variableMargin/(fixedCostsExcludingFinance+financialCosts):null,
+    fixedCostCoverageExcludingFinance:fixedCostsExcludingFinance>0?variableMargin/fixedCostsExcludingFinance:null,
+  }
+}
+
 export type IntegratedFinanceYear = {
   year: number
   utilization: number
@@ -410,6 +468,7 @@ export type IntegratedFinanceYear = {
   depreciation: number
   ebit: number
   shortTermDepositInterest: number
+  breakEven: BreakEvenAnalysisResult
   interest: number
   taxableProfit: number
   taxLossCarryForward: number
@@ -624,6 +683,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
 
     annualRows.push({
       year, utilization, production: Math.max(0, input.capacity) * utilization, revenue, shortTermDepositInterest,
+      breakEven: calculateBreakEvenAnalysis({salesRevenue:revenue,salesVolume:Math.max(0,input.capacity)*utilization,variableCosts:variableCashCost,fixedCosts:fixedCashCost+depreciation,financialCosts:interest}),
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
       equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, salvageBookValueDisposed, salvageGainLoss, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
