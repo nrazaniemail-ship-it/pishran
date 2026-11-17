@@ -32,9 +32,10 @@ const openingAssetLifecycle=financialModel.calculateComfarCalendarAssetLifecycle
 assert.equal(openingAssetLifecycle.valid,true,openingAssetLifecycle.warnings.join('; '))
 assert.equal(openingAssetLifecycle.depreciation.periods[0].assets[0].openingBookValue,700,
   'Existing assets must begin at gross cost less accumulated depreciation, not historical gross cost')
-assert.ok(Math.abs(openingAssetLifecycle.depreciation.periods[0].depreciation-(600/7))<0.01,
-  'Opening asset depreciation must use the remaining depreciable book value over remaining useful life')
-assert.ok(Math.abs(openingAssetLifecycle.depreciation.periods[0].closingBookValue-(700-600/7))<0.01,
+const expectedOpeningAssetDepreciation=(600/7)*(periods[0].days/365.2425)
+assert.ok(Math.abs(openingAssetLifecycle.depreciation.periods[0].depreciation-expectedOpeningAssetDepreciation)<0.01,
+  'Opening asset depreciation must use remaining depreciable book value, remaining useful life and actual calendar days')
+assert.ok(Math.abs(openingAssetLifecycle.depreciation.periods[0].closingBookValue-(700-expectedOpeningAssetDepreciation))<0.01,
   'Opening asset closing book value must reconcile after current-period depreciation')
 const loan=engine.calculatePeriodicLoanSchedule({
   annualRatePercent:10,drawdowns:[1000,0,0],repaymentMethod:'annuity',
