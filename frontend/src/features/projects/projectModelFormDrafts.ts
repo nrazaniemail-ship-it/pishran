@@ -36,9 +36,11 @@ export type SalesProductFormDraft={
  openingFinishedGoodsQuantity?:number|null
  openingFinishedGoodsValue?:number|null
  inventoryValuationMethod?:FinishedGoodsValuationMethod|null
+ /** COMFAR-style finished-goods stock coverage; derives closing quantity when a period quantity is left blank. */
+ finishedGoodsDaysCoverage?:number|null
  periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;finishedGoodsClosingQuantity:number|null;grossUnitPrice?:number|null;productionActive?:boolean|null}[]
 }
-export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,openingFinishedGoodsQuantity:null,openingFinishedGoodsValue:null,inventoryValuationMethod:null,periods:[]}}
+export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,openingFinishedGoodsQuantity:null,openingFinishedGoodsValue:null,inventoryValuationMethod:null,finishedGoodsDaysCoverage:null,periods:[]}}
 
 export type WorkingCapitalComponentFormDraft={
  id:string; name:string; category:'inventory'|'work-in-progress'|'finished-goods'|'receivables'|'cash'|'payables'|'other-current-asset'|'other-current-liability'|null
@@ -212,6 +214,11 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
  value.assets.forEach((item,index)=>validateFixedAssetFormDraft(item).forEach(error=>errors.push('asset-'+index+':'+error)))
  value.productionCosts.forEach((item,index)=>validateProductionCostFormDraft(item).forEach(error=>errors.push('production-cost-'+index+':'+error)))
  value.loans.forEach((item,index)=>validateLoanFacilityFormDraft(item).forEach(error=>errors.push('loan-'+index+':'+error)))
+ for(const [index,item] of value.sales.entries()) {
+  if(item.finishedGoodsDaysCoverage!==undefined&&item.finishedGoodsDaysCoverage!==null&&
+    (!Number.isFinite(item.finishedGoodsDaysCoverage)||item.finishedGoodsDaysCoverage<=0))
+   errors.push('sales-'+index+':invalid-finished-goods-days-coverage')
+ }
  for(const [index,item] of value.workingCapital.entries()) {
   if(item.minimumDaysCoverage!==null&&(!Number.isFinite(item.minimumDaysCoverage)||item.minimumDaysCoverage<=0))errors.push('working-capital-'+index+':invalid-days-coverage')
   if(item.turnoverCoefficient!==null&&(!Number.isFinite(item.turnoverCoefficient)||item.turnoverCoefficient<0))errors.push('working-capital-'+index+':invalid-turnover')
