@@ -661,6 +661,10 @@ export type PeriodicProjectFinanceInput = {
   dayCountBasis: 360 | 365
   cashFlowTiming: PeriodCashFlowTiming
   annualRevenue: number[]
+  annualNetSalesRevenue?: number[]
+  annualGrossSalesRevenue?: number[]
+  annualSalesTax?: number[]
+  annualSubsidy?: number[]
   annualVariableCost: number[]
   annualFixedCost: number[]
   annualDepreciation: number[]
@@ -716,6 +720,10 @@ export type PeriodicProjectFinanceRow = {
   endDate: string
   days: number
   revenue: number
+  netSalesRevenue: number
+  grossSalesRevenue: number
+  salesTax: number
+  subsidy: number
   variableCost: number
   fixedCost: number
   depreciation: number
@@ -998,6 +1006,23 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Annual model horizon does not cover every project fiscal period; annual flows cannot be allocated.')
     return empty()
   }
+  const salesAnnualSeries = [
+    input.annualNetSalesRevenue,
+    input.annualGrossSalesRevenue,
+    input.annualSalesTax,
+    input.annualSubsidy,
+  ]
+  if (salesAnnualSeries.some(series => series && (!Array.isArray(series) || !series.length || series.some(value=>!validFinite(value)||value<0)))) {
+    warnings.push('Net/gross sales, sales tax and subsidy schedules must contain finite non-negative annual values.')
+    return empty()
+  }
+  const salesAllocated = salesAnnualSeries.map(series => series
+    ? allocateAnnualFlowsToPeriods(series,periods,fiscalYearStartMonth)
+    : Array(periods.length).fill(0))
+  if (salesAllocated.some(series=>series.length!==periods.length||series.some(value=>!validFinite(value)))) {
+    warnings.push('Annual sales-tax and subsidy schedules do not cover every project period.')
+    return empty()
+  }
   const assetSaleSchedule = input.annualAssetSaleSchedule ?? []
   const validateSaleRow = (row: {saleProceeds:number;returnOfCapital:number;otherIncomeLoss:number;bookValueDisposed:number}) =>
     [row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(validFinite) &&
@@ -1030,6 +1055,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     }
   }
   const [revenue, variableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution, allocatedEquityWorkingCapitalContribution] = allocated
+  const [netSalesRevenue, grossSalesRevenue, salesTax, subsidy] = salesAllocated
   const equityWorkingCapitalContribution = allocatedEquityWorkingCapitalContribution ?? Array(periods.length).fill(Number.NaN)
   const depreciation = input.periodDepreciationSchedule ? [...input.periodDepreciationSchedule] : allocatedDepreciation
   if (input.periodDepreciationSchedule && (input.periodDepreciationSchedule.length!==periods.length ||
@@ -1181,7 +1207,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
-      revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
+      revenue:revenue[index],netSalesRevenue:input.annualNetSalesRevenue?netSalesRevenue[index]:revenue[index],grossSalesRevenue:input.annualGrossSalesRevenue?grossSalesRevenue[index]:revenue[index],salesTax:salesTax[index],subsidy:input.annualSubsidy?subsidy[index]:0,variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
