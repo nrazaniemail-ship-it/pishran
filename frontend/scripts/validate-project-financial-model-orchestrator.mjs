@@ -4,6 +4,7 @@ import ts from 'typescript'
 async function transpile(path){const source=await readFile(new URL(path,import.meta.url),'utf8');return ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText}
 const url=output=>'data:text/javascript;base64,'+Buffer.from(output).toString('base64')
 const engineUrl=url(await transpile('../src/features/steel/periodicFinancialEngine.ts'))
+const sensitivityUrl=url(await transpile('../src/features/steel/periodicSensitivity.ts'))
 const fxUrl=url(await transpile('../src/features/steel/foreignCurrencyTranslation.ts'))
 const helpFormulaUrl=url(await transpile('../src/features/projects/projectModelHelpFormulaRules.ts'))
 const helpFormsUrl=url(await transpile('../src/features/projects/projectModelHelpForms.ts'))
@@ -27,6 +28,7 @@ let orchestratorOutput=await transpile('../src/features/projects/projectFinancia
 orchestratorOutput=orchestratorOutput.replace("'./projectModelFormDrafts'",JSON.stringify(draftsUrl))
  .replace("'./projectModelHelpForms'",JSON.stringify(helpFormsUrl))
  .replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl))
+orchestratorOutput=orchestratorOutput.replace("'../steel/periodicSensitivity'",JSON.stringify(sensitivityUrl))
 orchestratorOutput=orchestratorOutput.replace("'./productionSalesInventoryIntegration'",JSON.stringify(productionUrl))
  .replace("'./workingCapitalDraftIntegration'",JSON.stringify(workingCapitalUrl))
  .replace("'./fixedAssetDraftIntegration'",JSON.stringify(fixedUrl))
@@ -366,6 +368,23 @@ assert.deepEqual(depreciationAdjustmentModel.financeInput.taxDepreciationAdjustm
 assert.equal(depreciationAdjustmentModel.finalRun.finance.rows[0].taxDepreciationAdjustment,50)
 assert.equal(depreciationAdjustmentModel.finalRun.finance.rows[0].tax,237.5)
 assert.equal(depreciationAdjustmentModel.finalRun.finance.rows[1].tax,384)
+
+// Target NPV search is connected to the raw-template sensitivity section.
+let targetSensitivityHelp=helpForms.createBlankHelpDrivenProjectForms()
+targetSensitivityHelp=helpForms.addHelpFormRow(targetSensitivityHelp,'sensitivity','target-npv-a')
+for(const [key,value] of Object.entries({
+ analysisType:'desired-npv',variableGroup:'sales-revenues',targetNpv:depreciationAdjustmentModel.finalRun.finance.npvProject,
+ maxIncrease:10,maxDecrease:10,order:1,chartVariable:'Revenue',
+})) targetSensitivityHelp=helpForms.updateHelpFormRow(targetSensitivityHelp,'sensitivity','target-npv-a',key,value)
+const targetSensitivityModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:targetSensitivityHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(targetSensitivityModel.valid,true,targetSensitivityModel.issues.join('; '))
+assert.equal(targetSensitivityModel.sensitivitySearches.length,1)
+assert.equal(targetSensitivityModel.sensitivitySearches[0].result.achieved,true)
+assert.equal(targetSensitivityModel.sensitivitySearches[0].result.iterations,0)
 
 let unsupportedDiscountingHelp=helpForms.createBlankHelpDrivenProjectForms()
 unsupportedDiscountingHelp=helpForms.updateHelpFormRow(unsupportedDiscountingHelp,'discounting','discounting-main','shortNpvYears',3)
