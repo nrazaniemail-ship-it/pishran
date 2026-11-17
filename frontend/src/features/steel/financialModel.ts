@@ -1,5 +1,6 @@
 import type { ProjectCalendarPeriod } from '../projects/projectFoundation'
 import type { FixedInvestmentItem, ProjectFoundation, ProjectPeriodFrequency } from '../projects/projectFoundation'
+import { calculateAssetDepreciationPeriod } from '../projects/projectModelFormulaRules'
 
 export type CapitalStructureInput = {
   equityWeight: number
@@ -786,9 +787,10 @@ export function calculateComfarAssetDepreciationSchedule(
       && Number.isInteger(months) && months >= 0 && months <= 11
       && (asset.method === 'none' || length > 0) && Number.isInteger(firstMonths) && firstMonths >= 1 && firstMonths <= 12
       && startPeriod !== null
+      && (asset.method !== 'sum-of-years-digits' || (Number.isInteger(asset.lengthYears) && firstMonths <= Math.round(length * 12)))
       && (asset.method === 'none'
         || (asset.method === 'sum-of-years-digits'
-          ? months === 0 && firstMonths === 12
+          ? true
           : Number.isFinite(asset.ratePercent) && (asset.ratePercent ?? 0) > 0 && (asset.ratePercent ?? 0) <= 100))
       && (asset.method !== 'accelerated' || (asset.ratePercent ?? 0) < 100)
     if (!valid) {
@@ -850,14 +852,31 @@ export function calculateComfarAssetDepreciationSchedule(
         bookValue = Math.max(salvage, bookValue - depreciation)
       }
     } else if (asset.method === 'sum-of-years-digits') {
-      const years = asset.lengthYears
-      const divisor = years * (years + 1) / 2
-      for (let age = 1; age <= years; age += 1) {
-        const amount = (years - age + 1) / divisor * (asset.initialBookValue - salvage)
-        const depreciation = Math.min(Math.max(0, bookValue - salvage), amount)
+      // Use the same XI.H intermediate-depreciation equations as the shared
+      // formula rules, including additional useful-life months and a partial
+      // first depreciation year. Each reporting period is evaluated against
+      // the complete asset-life schedule; period boundaries do not reset SYD.
+      const usefulLifeMonths = Math.round(length * 12)
+      let elapsedMonths = 0
+      for (let age = 1; age <= maxAge && elapsedMonths < usefulLifeMonths; age += 1) {
+        const periodMonths = age === 1
+          ? Math.min(m1, usefulLifeMonths)
+          : Math.min(12, usefulLifeMonths - elapsedMonths)
+        const result = calculateAssetDepreciationPeriod({
+          method: 'sum-of-years-digits',
+          acquisitionCost: asset.initialBookValue,
+          salvageValue: salvage,
+          usefulLifeMonths,
+          monthsElapsed: elapsedMonths,
+          periodMonths,
+          openingBookValue: bookValue,
+          firstDepreciationYearMonths: m1,
+        })
+        const depreciation = Math.min(Math.max(0, bookValue - salvage), Math.max(0, result.charge))
         const period = startPeriod! + age - 1
         depreciationByPeriod.set(period, { amount: depreciation, method: asset.method })
         bookValue = Math.max(salvage, bookValue - depreciation)
+        elapsedMonths += periodMonths
       }
     }
 
