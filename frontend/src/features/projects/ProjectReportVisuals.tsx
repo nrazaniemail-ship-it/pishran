@@ -111,7 +111,7 @@ function FormRowsTable({title,rows,language,kind='cost'}:{title:string;rows:Repo
     <td>{row.name}</td><td>{kind==='technical'?(row.valueText|| (row.quantity!==0?fmt(row.quantity,language):'—')):fmt(row.quantity,language)}</td>
     <td>{row.unit||'—'}</td><td>{kind==='technical'||row.unitPrice===0?'—':fmt(row.unitPrice,language)}</td>
     <td>{kind==='technical'||row.unitPrice===0?'—':fmt(row.quantity*row.unitPrice,language)}</td><td>{row.source||'—'}</td>{kind==='material'&&<td>{direction(row)}</td>}
-  </tr>)}</tbody></table>{visibleRows.length===0&&<p className="fw-hint">{t('ردیفی با این عبارت پیدا نشد.','No rows match this search.',language)}</p>}</div><div className="report-table-footnote">{t('نمایش','Showing')} {fmt(visibleRows.length,language,0)} {t('از','of')} {fmt(rows.length,language,0)} {t('ردیف','rows')}</div></div>
+  </tr>)}</tbody></table>{visibleRows.length===0&&<p className="fw-hint">{t('ردیفی با این عبارت پیدا نشد.','No rows match this search.',language)}</p>}</div><div className="report-table-footnote">{t('نمایش','Showing',language)} {fmt(visibleRows.length,language,0)} {t('از','of',language)} {fmt(rows.length,language,0)} {t('ردیف','rows',language)}</div></div>
 }
 function SensitivityChart({ analysis, language, currency }: { analysis: OneWaySensitivityAnalysis | null; language: 'fa'|'en'; currency: string }) {
   if (!analysis) return <p className="fw-hint">{t('در حال آماده‌سازی تحلیل حساسیت یک‌متغیره؛ مدل مالی یکپارچه باید یک بار محاسبه شود.','One-way sensitivity analysis is being prepared; the integrated financial model must complete one calculation.',language)}</p>
