@@ -54,7 +54,12 @@ type Props = {
   preOperatingSchedule?: number[]
   initialWorkingCapital?: number
   openingWorkingCapitalBalance?: number
+  openingCashBalance?: number
+  openingDebtBalance?: number
   openingFixedAssetsNetBookValue?: number
+  openingPaidInCapital?: number
+  openingRetainedEarnings?: number
+  openingGrants?: number
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
   initialWorkingCapitalEquityContribution?: number
   initialLoanRatePercent?: number
@@ -270,7 +275,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
   const workingCapitalDraftSchedule=useMemo(()=>props.workingCapitalDrafts?.length
     ?buildWorkingCapitalScheduleFromDrafts({workingCapital:props.workingCapitalDrafts},projectPeriods,props.openingWorkingCapitalBalance??0)
-    :null,[JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods),props.openingWorkingCapitalBalance])
+    :null,[JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods),props.openingWorkingCapitalBalance,props.openingCashBalance])
   const periodicFinanceResult=useMemo<PeriodicProjectFinanceResult|null>(()=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
@@ -326,7 +331,7 @@ export default function AdvancedFinancePanel(props: Props) {
       periodDepreciationSchedule,periodAssetSaleSchedule,
       workingCapitalByPeriod:periodicWorkingCapitalByPeriod,
       cashInHandByPeriod,shortTermDepositsByPeriod,
-      openingWorkingCapital:props.openingWorkingCapitalBalance??0,loans:periodLoans,
+      openingWorkingCapital:props.openingWorkingCapitalBalance??0,openingCash:props.openingCashBalance??0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
       equityDiscountRatePercent:props.costOfEquity,
@@ -354,7 +359,14 @@ export default function AdvancedFinancePanel(props: Props) {
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
-  const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult,{netFixedAssets:props.openingFixedAssetsNetBookValue??0}):[],[periodicFinanceResult,props.openingFixedAssetsNetBookValue])
+  const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult,{
+    cash:props.openingCashBalance??0,debt:props.openingDebtBalance??0,
+    netFixedAssets:props.openingFixedAssetsNetBookValue??0,
+    netWorkingCapital:props.openingWorkingCapitalBalance??0,
+    paidInCapital:props.openingPaidInCapital??0,
+    retainedEarnings:props.openingRetainedEarnings??0,grants:props.openingGrants??0,
+  }):[],[periodicFinanceResult,props.openingCashBalance,props.openingDebtBalance,props.openingFixedAssetsNetBookValue,
+    props.openingWorkingCapitalBalance,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants])
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
   useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
