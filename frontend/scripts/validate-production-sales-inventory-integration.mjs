@@ -104,6 +104,29 @@ assert.deepEqual(bound.financeInput.annualFixedCost,[11])
 assert.deepEqual(bound.financeInput.annualCostOfGoodsSold,costSchedule.annualCostOfGoodsSold)
 assert.deepEqual(bound.financeInput.finishedGoodsInventoryValueByPeriod,[0,0])
 
+
+const periodAdjustmentDrafts={
+ sales:[{productId:'slab',openingFinishedGoodsQuantity:0,openingFinishedGoodsValue:0,
+  inventoryValuationMethod:'weighted-average',periods:[
+   {period:'1',salesQuantity:10,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:2},
+   {period:'2025-04-01',salesQuantity:1,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:1},
+  ]}],
+ productionCosts:[{id:'one-period-adjustment',metadata:{},classification:'direct',productId:'slab',
+  basis:'period-adjustments',standardQuantity:null,standardUnitPrice:null,standardTotal:null,nominalCapacity:null,
+  fixedPercent:100,variablePercent:0,adjustments:[
+   {period:'1',quantity:null,unitPrice:null,total:1200,fixedPercent:100,variablePercent:0},
+  ]}],
+}
+const periodAdjustmentResult=adapter.buildProductionSalesInventorySchedule(periodAdjustmentDrafts,periods,1,{slab:0})
+assert.equal(periodAdjustmentResult.valid,true,periodAdjustmentResult.issues.join('; '))
+assert.deepEqual(periodAdjustmentResult.periodProductionCost,[1200,0])
+assert.deepEqual(periodAdjustmentResult.periodCostOfGoodsSold,[1000,100])
+assert.deepEqual(periodAdjustmentResult.periodClosingFinishedGoodsValue,[200,100])
+const emptyPeriodAdjustment=adapter.buildProductionSalesInventorySchedule({
+ ...periodAdjustmentDrafts,productionCosts:[{...periodAdjustmentDrafts.productionCosts[0],adjustments:[]}],
+},periods,1,{slab:0})
+assert.equal(emptyPeriodAdjustment.valid,false)
+assert.ok(emptyPeriodAdjustment.issues.some(issue=>issue.includes('At least one explicit period adjustment')))
 const missingOpening=adapter.buildProductionSalesInventorySchedule(inventoryDrafts,periods,1,{})
 assert.equal(missingOpening.valid,false)
 assert.ok(missingOpening.issues.some(x=>x.includes('Explicit opening finished-goods')))
