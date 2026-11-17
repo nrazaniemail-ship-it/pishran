@@ -322,8 +322,7 @@ export function validateStartingFixedAssetBalances(
         asset.grossCost * effectiveScrapPercent / 100 > netBookValue + 0.01)
       issue(path + '.salvagePercent', 'starting-asset-salvage-exceeds-net-book-value', 'Scrap value cannot exceed the opening net book value.')
     if (method === 'accelerated' &&
-        (!Number.isFinite(asset.depreciationRatePercent) || (asset.depreciationRatePercent ?? 0) <= 0 ||
-         (asset.depreciationRatePercent ?? 0) >= 100))
+        (asset.depreciationRatePercent === undefined || asset.depreciationRatePercent === 100))
       issue(path + '.depreciationRatePercent', 'invalid-starting-asset-depreciation-rate', 'Accelerated depreciation requires a rate greater than zero and below 100 percent.')
     if (method !== 'none') {
       if (asset.status === 'active' && asset.remainingLife <= 0)
