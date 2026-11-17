@@ -1167,13 +1167,15 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const salvageBookValueDisposed = index === periods.length - 1 ? Math.max(0,input.salvageBookValue ?? 0) : 0
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
     const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
-      assetSale.otherIncomeLoss + salvageGainLoss + shortTermDepositInterest[index]
+      assetSale.otherIncomeLoss + salvageGainLoss
     const fiscalYearIndex = fiscalYearIndexForPeriod(periods[index], periods, fiscalYearStartMonth)
     const productionStartFiscalYear = input.productionStartFiscalYear ?? 0
     const taxHolidayActive = input.taxHolidayYears != null && fiscalYearIndex >= productionStartFiscalYear &&
       fiscalYearIndex < productionStartFiscalYear + input.taxHolidayYears
-    const taxAdjusted = applyTaxLossCarryForward(ebit - interestExpense,taxLossLots,fiscalYearIndex,input.lossCarryForwardYears,!taxHolidayActive)
-    const unleveredTaxAdjusted = applyTaxLossCarryForward(ebit,unleveredTaxLossLots,fiscalYearIndex,input.lossCarryForwardYears,!taxHolidayActive)
+    const taxableProfitBeforeLossCarryForward = ebit + shortTermDepositInterest[index] - interestExpense
+    const unleveredTaxableProfitBeforeLossCarryForward = ebit + shortTermDepositInterest[index]
+    const taxAdjusted = applyTaxLossCarryForward(taxableProfitBeforeLossCarryForward,taxLossLots,fiscalYearIndex,input.lossCarryForwardYears,!taxHolidayActive)
+    const unleveredTaxAdjusted = applyTaxLossCarryForward(unleveredTaxableProfitBeforeLossCarryForward,unleveredTaxLossLots,fiscalYearIndex,input.lossCarryForwardYears,!taxHolidayActive)
     const periodTax = taxHolidayActive
       ? {taxableProfitAfterLoss:taxAdjusted.taxableProfitAfterLoss,tax:0,closingLossCarryForward:taxAdjusted.closingLossCarryForward}
       : input.taxBrackets
@@ -1212,7 +1214,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const dscrCovenantStatus: 'not-tested' | 'pass' | 'breach' = input.minimumDscr == null || dscr == null
       ? 'not-tested' : dscr + 1e-9 >= input.minimumDscr ? 'pass' : 'breach'
     if (dscrCovenantStatus === 'breach') warnings.push('Minimum DSCR covenant breached in period ' + (index + 1) + ': actual ' + dscr!.toFixed(4) + ', minimum ' + input.minimumDscr!.toFixed(4) + '.')
-    const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
+    const projectFreeCashFlow = ebit + shortTermDepositInterest[index] - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
     const equityFreeCashFlow = -equityContribution[index] + revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index]
@@ -1633,8 +1635,8 @@ export function buildPeriodicThreeFinancialStatements(
     const cashOperatingCosts = row.variableCost + row.fixedCost
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
     const ebitda = row.revenue - cashOperatingCosts
-    const ebit = ebitda - row.depreciation + assetDisposalGainLoss + row.shortTermDepositInterest
-    const profitBeforeTax = ebit - row.interestExpense
+    const ebit = ebitda - row.depreciation + assetDisposalGainLoss
+    const profitBeforeTax = ebit + row.shortTermDepositInterest - row.interestExpense
     const netIncome = profitBeforeTax - row.tax
     const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital
     const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex +
