@@ -79,7 +79,7 @@ export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{re
 export type ProjectTaxFormDraft={
  system:'corporate'|'none'|'custom'|null
  rates:{period:string;ratePercent:number|null}[]
- allowances:{id:string;name:string;periodAmounts:{period:string;amount:number|null}[]}[]
+ allowances:{id:string;name:string;treatment:'deduction'|'credit'|null;periodAmounts:{period:string;amount:number|null}[]}[]
  lossCarryForward:boolean|null;lossCarryForwardYears:number|null;openingLossVintages:{amount:number|null;originFiscalYearIndex:number|null}[]
 }
 export function createBlankProjectTaxFormDraft():ProjectTaxFormDraft{return{
