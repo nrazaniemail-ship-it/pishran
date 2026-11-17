@@ -576,6 +576,11 @@ const conflictingOpening=startingBalanceAdapter.bindStartingBalancesToPeriodicFi
 })
 assert.equal(conflictingOpening.valid,false)
 assert.ok(conflictingOpening.issues.some(issue=>issue.includes('cannot be combined')))
+const conflictingWorkingCapital=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
+ rows:localOnlyStartingBalances,periods,finance:{...finance,openingWorkingCapital:5},currencies:foundation.currencies,
+})
+assert.equal(conflictingWorkingCapital.valid,false)
+assert.ok(conflictingWorkingCapital.issues.some(issue=>issue.includes('does not reconcile to the previously bound working-capital opening balance')))
 const unsupportedExistingAsset=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
  rows:[{id:'unsupported-depreciation',values:{category:'fixed-assets',item:'Machine',currency:'EUR',origin:'local',amount:100,depreciationMethod:'accelerated-declining-balance',remainingLife:5}}],
  periods,finance,currencies:foundation.currencies,
