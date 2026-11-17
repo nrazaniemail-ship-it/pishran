@@ -1104,8 +1104,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     return empty()
   }
   const rows: PeriodicProjectFinanceRow[] = []
-  let taxLoss = openingLoss
-  let unleveredTaxLoss = openingUnleveredLoss
+  const openingFiscalYear = fiscalYearIndexForPeriod(periods[0],periods,fiscalYearStartMonth)
+  const taxLossLots: TaxLossLot[] = openingLoss > 0 ? [{amount:openingLoss,originFiscalYear:openingFiscalYear}] : []
+  const unleveredTaxLossLots: TaxLossLot[] = openingUnleveredLoss > 0 ? [{amount:openingUnleveredLoss,originFiscalYear:openingFiscalYear}] : []
   let priorWorkingCapital = Math.max(0, input.openingWorkingCapital ?? 0)
   for (let index = 0; index < periods.length; index++) {
     const loanRows = Object.values(loanSchedules).map(schedule => schedule[index])
@@ -1132,13 +1133,6 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const productionStartFiscalYear = input.productionStartFiscalYear ?? 0
     const taxHolidayActive = input.taxHolidayYears != null && fiscalYearIndex >= productionStartFiscalYear &&
       fiscalYearIndex < productionStartFiscalYear + input.taxHolidayYears
-    const taxDuringHoliday = (profit: number, openingLoss: number): PeriodTaxResult => ({
-      taxableProfitAfterLoss: profit - openingLoss,
-      tax: 0,
-      // COMFAR's tax holiday postpones tax payable; positive income during the
-      // holiday does not consume losses carried into taxable production years.
-      closingLossCarryForward: profit < 0 ? openingLoss - profit : openingLoss,
-    })
     const taxAdjusted = applyTaxLossCarryForward(ebit - interestExpense,taxLossLots,fiscalYearIndex,input.lossCarryForwardYears,!taxHolidayActive)
     const unleveredTaxAdjusted = applyTaxLossCarryForward(ebit,unleveredTaxLossLots,fiscalYearIndex,input.lossCarryForwardYears,!taxHolidayActive)
     const periodTax = taxHolidayActive
