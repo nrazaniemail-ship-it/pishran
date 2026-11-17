@@ -128,6 +128,7 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
     products:['name','unit'],
     currencies:['code','name','type'],
     'currency-rates':['currencyCode','period','exchangeRate'],
+    inflation:['currencyCode','period'],
     'cost-centres':['name','group'],
     'cost-allocation':['name','type','costCentreId','allocationPercent'],
     'joint-venture':['name','type'],
