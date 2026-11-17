@@ -703,6 +703,14 @@ export type PeriodicProjectFinanceInput = {
     otherIncomeLoss: number
     bookValueDisposed: number
   }[]
+  /** Exact period-level incremental operating/capital adjustments layered over annual base flows. */
+  periodIncrementalAdjustments?: {
+    revenue?: number[]
+    fixedCost?: number[]
+    fixedInvestment?: number[]
+    preOperatingCost?: number[]
+    maintenanceCapex?: number[]
+  }
   periodDepreciationSchedule?: number[]
   periodAssetSaleSchedule?: {
     saleProceeds: number
@@ -1017,7 +1025,25 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSalesByPeriod[target] = {...row}
     }
   }
-  const [revenue, variableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution, allocatedEquityWorkingCapitalContribution] = allocated
+  let [revenue, variableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution, allocatedEquityWorkingCapitalContribution] = allocated
+  const periodAdjustments=input.periodIncrementalAdjustments
+  if(periodAdjustments){
+    for(const [key,values] of Object.entries(periodAdjustments) as [keyof NonNullable<PeriodicProjectFinanceInput['periodIncrementalAdjustments']>,number[]|undefined][]){
+      if(values!==undefined&&(values.length!==periods.length||values.some(value=>!validFinite(value)))){
+        warnings.push('Period incremental '+key+' adjustments must contain one finite amount for every project period.')
+        return empty()
+      }
+    }
+    revenue=revenue.map((value,index)=>value+(periodAdjustments.revenue?.[index]??0))
+    fixedCost=fixedCost.map((value,index)=>value+(periodAdjustments.fixedCost?.[index]??0))
+    fixedInvestment=fixedInvestment.map((value,index)=>value+(periodAdjustments.fixedInvestment?.[index]??0))
+    preOperatingCost=preOperatingCost.map((value,index)=>value+(periodAdjustments.preOperatingCost?.[index]??0))
+    maintenanceCapex=maintenanceCapex.map((value,index)=>value+(periodAdjustments.maintenanceCapex?.[index]??0))
+    if([revenue,fixedCost,fixedInvestment,preOperatingCost,maintenanceCapex].some(series=>series.some(value=>value<0))){
+      warnings.push('Period incremental adjustments cannot make revenue, costs or investment balances negative.')
+      return empty()
+    }
+  }
   const equityWorkingCapitalContribution = allocatedEquityWorkingCapitalContribution ?? Array(periods.length).fill(Number.NaN)
   const depreciation = input.periodDepreciationSchedule ? [...input.periodDepreciationSchedule] : allocatedDepreciation
   if (input.periodDepreciationSchedule && (input.periodDepreciationSchedule.length!==periods.length ||
