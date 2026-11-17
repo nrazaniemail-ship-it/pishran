@@ -59,6 +59,7 @@ export function resolveLoanFeeBasis(type:LoanFeeType):LoanFeeBasis{
 }
 export type LoanFacilityFormDraft={
  id:string; name:string; currencyCode:string|null; marketOrigin:'local'|'foreign'|null
+ annualRatePercent:number|null; openingBalance:number|null; openingExchangeRateToLocal:number|null; gracePeriods:number|null
  loanType:'annuity'|'constant-principal'|'profile'|null
  repaymentInterval:'annual'|'semiannual'|'quarterly'|'monthly'|null
  firstRepaymentDate:string; numberOfRepayments:number|null
@@ -70,7 +71,7 @@ export type LoanFacilityFormDraft={
  fees:{id:string;type:LoanFeeType|null;ratePercent:number|null;currencyCode:string|null}[]
 }
 export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{return{
- id,name:'',currencyCode:null,marketOrigin:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',numberOfRepayments:null,
+ id,name:'',currencyCode:null,marketOrigin:null,annualRatePercent:null,openingBalance:null,openingExchangeRateToLocal:null,gracePeriods:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',numberOfRepayments:null,
  disbursements:[],profileMovements:[],interestRateChanges:[],interestPaymentMonth:null,
  capitalizedInterestPercent:null,capitalizeUntilDate:'',fees:[]
 }}
