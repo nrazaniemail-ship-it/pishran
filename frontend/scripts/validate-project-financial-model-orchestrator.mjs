@@ -628,16 +628,19 @@ for (const field of ['daysCoverage','turnover']) {
  unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'item','Receivables')
  unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'category','accounts-receivable')
  unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'period','1')
- unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'requiredValue',100)
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'requiredValue',0)
  unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'startingBalance',0)
- unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,field,field==='basis'?'cost-of-products-sold-operating-cost':30)
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'mode','value')
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'activityBasis','sales')
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'basis','sales-revenue')
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,field,30)
  const unusedWorkingCapitalModel=orchestrator.calculateProjectFinancialModelFromDrafts({
   finance,drafts:{...drafts,helpDriven:unusedWorkingCapitalHelp},foundation,productionStartDate:'2025-01-01',
   openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
   taxTreatment:'non-deductible',
  })
- assert.equal(unusedWorkingCapitalModel.valid,false,field+' must not be silently ignored')
- assert.ok(unusedWorkingCapitalModel.issues.some(issue=>issue.includes('working-capital-0:days-coverage-requires-value-calculation-mode')),unusedWorkingCapitalModel.issues.join('; '))
+ assert.equal(unusedWorkingCapitalModel.valid,true,unusedWorkingCapitalModel.issues.join('; '))
+ assert.deepEqual(unusedWorkingCapitalModel.workingCapital?.closingWorkingCapital,[0,0])
 }
 
 
