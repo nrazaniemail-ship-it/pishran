@@ -25,6 +25,7 @@ export type ProductOperatingSchedule = {
   rows: ProductOperatingPeriodRow[]
   periodRevenue: number[]
   periodCostOfSales: number[]
+  periodSubsidyIncome: number[]
   annualRevenue: number[]
   annualCostOfSales: number[]
   totalProductionQuantity: number
@@ -47,7 +48,7 @@ export function buildProductOperatingSchedule(
   const issues: string[] = []
   const count = periods.length
   const empty = (): ProductOperatingSchedule => ({
-    valid:false,issues,rows:[],periodRevenue:[],periodCostOfSales:[],
+    valid:false,issues,rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],
     annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,
     totalSalesQuantity:0,totalClosingInventoryValue:0,
   })
@@ -122,6 +123,7 @@ export function buildProductOperatingSchedule(
 
   const periodRevenue=Array(count).fill(0) as number[]
   const periodCostOfSales=Array(count).fill(0) as number[]
+  const periodSubsidyIncome=Array(count).fill(0) as number[]
   const rows:ProductOperatingPeriodRow[]=[]
   let totalProductionQuantity=0,totalSalesQuantity=0,totalClosingInventoryValue=0
   for (const sale of drafts.sales) {
@@ -208,6 +210,7 @@ export function buildProductOperatingSchedule(
       rows.push(row)
       periodRevenue[index]+=netSalesRevenue
       periodCostOfSales[index]+=costOfSales
+      periodSubsidyIncome[index]+=subsidyIncome
       totalProductionQuantity+=row.productionQuantity
       totalSalesQuantity+=salesQuantity
       totalClosingInventoryValue+=closingInventoryValue
@@ -225,6 +228,6 @@ export function buildProductOperatingSchedule(
     else {annualRevenue[year]+=periodRevenue[index];annualCostOfSales[year]+=periodCostOfSales[index]}
   })
   if(issues.length)return empty()
-  return {valid:true,issues:[],rows,periodRevenue,periodCostOfSales,annualRevenue,annualCostOfSales,
+  return {valid:true,issues:[],rows,periodRevenue,periodCostOfSales,periodSubsidyIncome,annualRevenue,annualCostOfSales,
     totalProductionQuantity,totalSalesQuantity,totalClosingInventoryValue}
 }
