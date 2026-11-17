@@ -151,8 +151,8 @@ export function buildProductionSalesInventorySchedule(
       issues.push('Every production-cost item must identify an existing product: '+(cost.id||'(missing id)')+'.')
     if (cost.classification !== 'direct' && cost.classification !== 'indirect')
       issues.push('Cost classification is required for item '+cost.id+'.')
-    if (cost.classification === 'indirect')
-      issues.push('Indirect production cost '+cost.id+' cannot be assigned directly to product '+(cost.productId||'(missing product)')+'. A validated allocation-key schedule and period-level allocation shares are required before this cost can enter product cost.')
+    if (cost.classification === 'indirect' && !cost.allocationKeyId)
+      issues.push('Indirect production cost '+cost.id+' must be expanded by a validated user-defined allocation key before product-level costing.')
     if (!cost.basis) issues.push('Cost calculation basis is required for item '+cost.id+'.')
     if (cost.fixedPercent===null || cost.variablePercent===null ||
         !nonNegative(cost.fixedPercent) || !nonNegative(cost.variablePercent) ||
