@@ -76,3 +76,20 @@ const annualLossResults = [
 assert.deepEqual(annualLossResults.map(row=>row.taxableProfitAfterLoss),[0,0,0,0,120,300])
 assert.deepEqual(annualLossResults.map(row=>row.closingLossCarryForward),[200,280,260,130,0,0])
 console.log('PASS: COMFAR Reference Manual Table 23 FIFO loss carry-forward and three-year expiry')
+
+const salesTaxAndSubsidy = engine.calculateIntegratedFinance({
+  years:2,constructionYears:1,capacity:1,fullCapacityRevenue:1000,
+  fullCapacityVariableCashCost:0,fullCapacityFixedCashCost:0,annualDepreciation:0,
+  depreciationSchedule:[0,0],maintenanceCapexSchedule:[0,0],
+  fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
+  utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,
+  salesTaxPercent:10,subsidyPercent:5,annualSubsidyAbsoluteSchedule:[0,100],
+  costOfEquity:0,workingCapitalPercent:0,salesEscalationPercent:0,opexEscalationPercent:0,
+  discountMode:'manual',manualDiscountRate:0,
+})
+near(salesTaxAndSubsidy.years[1].netSalesRevenue,1000,1e-9,'COMFAR net sales revenue')
+near(salesTaxAndSubsidy.years[1].grossSalesRevenue,1100,1e-9,'COMFAR gross sales revenue')
+near(salesTaxAndSubsidy.years[1].salesTax,100,1e-9,'COMFAR sales tax')
+near(salesTaxAndSubsidy.years[1].subsidy,150,1e-9,'COMFAR percentage and absolute subsidies')
+near(salesTaxAndSubsidy.years[1].revenue,1150,1e-9,'COMFAR sales revenue after subsidy')
+console.log('PASS: COMFAR gross/net sales, sales tax and aggregated price subsidies')
