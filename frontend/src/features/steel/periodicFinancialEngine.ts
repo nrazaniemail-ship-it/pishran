@@ -1440,7 +1440,7 @@ export type PeriodicFinancialStatement = {
     balanceDifference: number; reconciled: boolean
   }
   movementChecks: {
-    cash: number; debt: number; netWorkingCapital: number; netFixedAssets: number
+    cash: number; cashRollForward: number; debt: number; netWorkingCapital: number; netFixedAssets: number
     deferredPreOperatingAssets: number; paidInCapital: number; retainedEarnings: number
   }
 }
@@ -1517,6 +1517,7 @@ export function buildPeriodicThreeFinancialStatements(
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
     const movementChecks = {
       cash: closingCash - cash - netChangeInCash,
+      cashRollForward: closingCash - row.closingCash,
       debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal),
       netWorkingCapital: closingWorkingCapital - netWorkingCapital - row.changeInWorkingCapital,
       netFixedAssets: closingNetFixedAssets - netFixedAssets -
