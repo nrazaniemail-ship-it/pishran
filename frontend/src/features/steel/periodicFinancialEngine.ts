@@ -668,6 +668,8 @@ export type PeriodicProjectFinanceInput = {
   annualTaxRates: number[]
   taxRatesByPeriod?: number[]
   taxableDeductionsByPeriod?: number[]
+  /** Non-refundable period tax credits; excess credits are not carried forward. */
+  taxCreditsByPeriod?: number[]
   annualEquityContributions: number[]
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
@@ -744,6 +746,8 @@ export type PeriodicProjectFinanceRow = {
   debtService: number
   taxRatePercent: number
   taxableDeduction: number
+  taxCredit: number
+  taxBeforeCredits: number
   tax: number
   unleveredTax: number
   taxLossCarryForward: number
@@ -997,6 +1001,10 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Annual flow arrays, tax rates, working-capital balances must be finite (negative net working capital is valid), or loan definitions are invalid.')
     return empty()
   }
+  if(input.taxCreditsByPeriod&&(input.taxCreditsByPeriod.length!==periods.length||input.taxCreditsByPeriod.some(value=>!validFinite(value)||value<0))){
+    warnings.push('Tax credits must contain one finite non-negative amount for every project period.')
+    return empty()
+  }
   if(input.taxableDeductionsByPeriod&&(input.taxableDeductionsByPeriod.length!==periods.length||input.taxableDeductionsByPeriod.some(value=>!validFinite(value)||value<0))){
     warnings.push('Taxable-income deductions must contain one finite non-negative amount for every project period.')
     return empty()
@@ -1201,9 +1209,11 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const unleveredTaxWithExpiry=calculatePeriodTaxWithLossExpiry(
       ebit+shortTermDepositInterest[index]-taxableDeduction,taxRates[index],unleveredTaxLossVintages,currentFiscalYearIndex,
       lossCarryForwardEnabled?lossCarryForwardYears:null,lossCarryForwardEnabled)
-    const periodTax:PeriodTaxResult=periodTaxWithExpiry
-    const unleveredPeriodTax:PeriodTaxResult=unleveredTaxWithExpiry
-    if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
+    const taxCredit=Math.min(input.taxCreditsByPeriod?.[index]??0,periodTaxWithExpiry.tax)
+    const unleveredTaxCredit=Math.min(input.taxCreditsByPeriod?.[index]??0,unleveredTaxWithExpiry.tax)
+    const periodTax:PeriodTaxResult={...periodTaxWithExpiry,tax:periodTaxWithExpiry.tax-taxCredit}
+    const unleveredPeriodTax:PeriodTaxResult={...unleveredTaxWithExpiry,tax:unleveredTaxWithExpiry.tax-unleveredTaxCredit}
+    if (![periodTax.tax,unleveredPeriodTax.tax,taxCredit,unleveredTaxCredit].every(validFinite)) {
       warnings.push('Tax calculation failed in project period ' + (index + 1) + '.')
       return empty()
     }
@@ -1253,7 +1263,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
-      capitalizedInterest,capitalizedFinancingFees,foreignExchangeLoss,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],taxableDeduction,
+      capitalizedInterest,capitalizedFinancingFees,foreignExchangeLoss,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],taxableDeduction,taxCredit,taxBeforeCredits:periodTaxWithExpiry.tax,
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,cashInHand:input.cashInHandByPeriod?.[index]??0,shortTermDeposits:input.shortTermDepositsByPeriod?.[index]??0,
@@ -1622,7 +1632,7 @@ export type PeriodicFinancialStatement = {
     revenue: number; shortTermDepositInterest: number; cashOperatingCosts: number; ebitda: number; depreciation: number
     assetDisposalGainLoss: number; ebit: number; interest: number
     cashInterestExpense: number; financingFeeExpense: number; commitmentFeeExpense: number
-    profitBeforeTax: number; foreignExchangeGainLoss: number; taxableDeductions: number; tax: number; netIncome: number
+    profitBeforeTax: number; foreignExchangeGainLoss: number; taxableDeductions: number; taxCredits: number; taxBeforeCredits: number; tax: number; netIncome: number
   }
   cashFlowStatement: {
     operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number
@@ -1852,7 +1862,7 @@ export function buildPeriodicThreeFinancialStatements(
         assetDisposalGainLoss, ebit, interest: row.interestExpense,
         cashInterestExpense: row.cashInterestExpense, financingFeeExpense: row.financingFeeExpense,
         commitmentFeeExpense: row.commitmentFeeExpense,
-        profitBeforeTax, foreignExchangeGainLoss:-foreignExchangeLoss, taxableDeductions:row.taxableDeduction??0, tax: row.tax, netIncome },
+        profitBeforeTax, foreignExchangeGainLoss:-foreignExchangeLoss, taxableDeductions:row.taxableDeduction??0, taxCredits:row.taxCredit??0, taxBeforeCredits:row.taxBeforeCredits??row.tax, tax: row.tax, netIncome },
       cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow,
         automaticEquityContribution: automaticFunding.automaticEquity,
         automaticOverdraftDrawdown: automaticFunding.automaticOverdraftDrawdown,
