@@ -4,6 +4,8 @@ import ts from 'typescript'
 async function transpile(path){const source=await readFile(new URL(path,import.meta.url),'utf8');return ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText}
 const url=output=>'data:text/javascript;base64,'+Buffer.from(output).toString('base64')
 const engineUrl=url(await transpile('../src/features/steel/periodicFinancialEngine.ts'))
+const startingBalanceOutput=await transpile('../src/features/projects/startingBalanceIntegration.ts')
+const startingBalanceUrl=url(startingBalanceOutput)
 let sensitivityOutput=await transpile('../src/features/steel/periodicSensitivity.ts')
 sensitivityOutput=sensitivityOutput.replace("'./periodicFinancialEngine'",JSON.stringify(engineUrl))
 const sensitivityUrl=url(sensitivityOutput)
@@ -41,6 +43,7 @@ orchestratorOutput=orchestratorOutput.replace("'./productionSalesInventoryIntegr
  .replace("'./foreignCurrencyLoanFinanceBinding'",JSON.stringify(loanUrl))
  .replace("'./shareholderDistributionIntegration'",JSON.stringify(url(await transpile('../src/features/projects/shareholderDistributionIntegration.ts').then(output=>output.replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl))))))
  .replace("'./helpDrivenFinancialDraftBinding'",JSON.stringify(bindingUrl))
+ .replace("'./startingBalanceIntegration'",JSON.stringify(startingBalanceUrl))
 const orchestrator=await import(url(orchestratorOutput))
 const helpForms=await import(helpFormsUrl)
 const helpBinding=await import(bindingUrl)
@@ -491,4 +494,86 @@ for(const [key,value] of Object.entries({alternative:'Upgrade C',view:'project-i
  missingIncrementalDepreciation=helpForms.updateHelpFormRow(missingIncrementalDepreciation,'incremental-analysis','missing-incremental-depreciation',key,value)
 assert.ok(helpForms.validateHelpDrivenProjectForms(missingIncrementalDepreciation).some(issue=>issue.includes('depreciationDelta-required-when-investment-is-entered')))
 
-console.log('Unified project form orchestration, pre-production amortization, input-coverage guards and opening-balance-sheet validation passed.')
+// Detailed raw-template opening balances feed the same opening balances and depreciation schedule as the summary form.
+let startingBalanceHelp=helpForms.createBlankHelpDrivenProjectForms()
+startingBalanceHelp=helpForms.addHelpFormRow(startingBalanceHelp,'currencies','local-eur')
+for(const [key,value] of Object.entries({code:'EUR',name:'Euro',type:'local',accountingCurrency:true}))
+ startingBalanceHelp=helpForms.updateHelpFormRow(startingBalanceHelp,'currencies','local-eur',key,value)
+const addOpeningRow=(id,values)=>{
+ startingBalanceHelp=helpForms.addHelpFormRow(startingBalanceHelp,'starting-balances',id)
+ for(const [key,value] of Object.entries(values))
+  startingBalanceHelp=helpForms.updateHelpFormRow(startingBalanceHelp,'starting-balances',id,key,value)
+}
+addOpeningRow('opening-cash',{category:'cash-in-hand',item:'Opening cash',currency:'EUR',origin:'local',amount:10})
+addOpeningRow('opening-inventory',{category:'materials-supplies',item:'Opening materials',currency:'EUR',origin:'local',amount:20})
+addOpeningRow('opening-payables',{category:'accounts-payable',item:'Trade payables',currency:'EUR',origin:'local',amount:3})
+addOpeningRow('opening-fixed-assets',{category:'fixed-assets',item:'Existing machinery',currency:'EUR',origin:'local',amount:100,depreciationMethod:'linear-to-zero',remainingLife:5})
+addOpeningRow('opening-debt',{category:'long-term-debt',item:'Legacy debt',currency:'EUR',origin:'local',amount:50})
+addOpeningRow('opening-equity',{category:'equity-capital',item:'Paid-in capital',currency:'EUR',origin:'local',amount:40})
+addOpeningRow('opening-retained',{category:'retained-earnings',item:'Retained earnings',currency:'EUR',origin:'local',amount:37})
+assert.deepEqual(helpForms.validateHelpDrivenProjectForms(startingBalanceHelp),[])
+const startingBalanceModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:startingBalanceHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(startingBalanceModel.valid,true,startingBalanceModel.issues.join('; '))
+assert.equal(startingBalanceModel.startingBalances.valid,true)
+assert.equal(startingBalanceModel.startingBalances.openingAssets,127)
+assert.equal(startingBalanceModel.startingBalances.openingLiabilitiesAndEquity,127)
+assert.equal(startingBalanceModel.finalRun.statements[0].openingBalances.cash,10)
+assert.equal(startingBalanceModel.finalRun.statements[0].openingBalances.netWorkingCapital,17)
+assert.equal(startingBalanceModel.finalRun.statements[0].openingBalances.netFixedAssets,100)
+assert.equal(startingBalanceModel.finalRun.statements[0].openingBalances.debt,50)
+assert.equal(startingBalanceModel.finalRun.statements[0].openingBalances.paidInCapital,40)
+assert.equal(startingBalanceModel.finalRun.statements[0].openingBalances.retainedEarnings,37)
+assert.deepEqual(startingBalanceModel.financeInput.annualDepreciation,[20,20])
+assert.equal(startingBalanceModel.finalRun.finance.rows[0].depreciation,20)
+assert.equal(startingBalanceModel.finalRun.statements[0].balanceSheet.reconciled,true)
+
+const startingBalanceAdapter=await import(startingBalanceUrl)
+const fxStartingBalances=[
+ {id:'fx-cash-local',values:{category:'cash-in-hand',item:'Local cash',currency:'EUR',origin:'local',amount:10}},
+ {id:'fx-cash-usd',values:{category:'cash-in-hand',item:'USD cash',currency:'USD',origin:'foreign',amount:10}},
+ {id:'fx-inventory',values:{category:'materials-supplies',item:'Materials',currency:'EUR',origin:'local',amount:20}},
+ {id:'fx-payables',values:{category:'accounts-payable',item:'Payables',currency:'EUR',origin:'local',amount:3}},
+ {id:'fx-fixed',values:{category:'fixed-assets',item:'Plant',currency:'EUR',origin:'local',amount:100,depreciationMethod:'linear-to-zero',remainingLife:5}},
+ {id:'fx-debt',values:{category:'long-term-debt',item:'Debt',currency:'EUR',origin:'local',amount:50}},
+ {id:'fx-equity',values:{category:'equity-capital',item:'Capital',currency:'EUR',origin:'local',amount:40}},
+ {id:'fx-retained',values:{category:'retained-earnings',item:'Retained',currency:'EUR',origin:'local',amount:48}},
+]
+const fxOpeningCurrencies={...foundation.currencies,foreignCurrencies:[{code:'USD',name:'US Dollar',exchangeRates:[{period:'1',rateToLocal:1.1},{period:'2',rateToLocal:1.2}]}]}
+const fxOpeningResult=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
+ rows:fxStartingBalances,periods,finance,currencies:fxOpeningCurrencies,
+ existingOpeningBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+})
+assert.equal(fxOpeningResult.valid,true,fxOpeningResult.issues.join('; '))
+assert.equal(fxOpeningResult.openingBalances.cash,21)
+assert.equal(fxOpeningResult.openingAssets,138)
+assert.equal(fxOpeningResult.openingLiabilitiesAndEquity,138)
+assert.equal(fxOpeningResult.translatedRows.find(row=>row.rowId==='fx-cash-usd').exchangeRate,1.1)
+
+const ambiguousOpening=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
+ rows:[{id:'ambiguous',values:{category:'other-assets',item:'Unclassified asset',currency:'EUR',origin:'local',amount:10}}],
+ periods,finance,currencies:foundation.currencies,
+})
+assert.equal(ambiguousOpening.valid,false)
+assert.ok(ambiguousOpening.issues.some(issue=>issue.includes('category other-assets is ambiguous')))
+const mismatchedOpening=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
+ rows:fxStartingBalances.slice(0,-1),periods,finance,currencies:fxOpeningCurrencies,
+})
+assert.equal(mismatchedOpening.valid,false)
+assert.ok(mismatchedOpening.issues.some(issue=>issue.includes('do not reconcile')))
+const conflictingOpening=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
+ rows:fxStartingBalances,periods,finance,currencies:fxOpeningCurrencies,summaryOpeningBalanceEnabled:true,
+})
+assert.equal(conflictingOpening.valid,false)
+assert.ok(conflictingOpening.issues.some(issue=>issue.includes('cannot be combined')))
+const unsupportedExistingAsset=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
+ rows:[{id:'unsupported-depreciation',values:{category:'fixed-assets',item:'Machine',currency:'EUR',origin:'local',amount:100,depreciationMethod:'accelerated-declining-balance',remainingLife:5}}],
+ periods,finance,currencies:foundation.currencies,
+})
+assert.equal(unsupportedExistingAsset.valid,false)
+assert.ok(unsupportedExistingAsset.issues.some(issue=>issue.includes('only supports linear-to-zero')))
+
+console.log('Unified project form orchestration, shareholder model, and raw-template opening-balance integration passed.')
