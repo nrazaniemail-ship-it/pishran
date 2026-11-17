@@ -110,7 +110,7 @@ try {
  assert.match(financialFormsPanelSource,/products\?:ProductOption\[\]/,'The detailed financial forms panel must accept the project product list')
  assert.match(financialFormsPanelSource,/<select value=\{sale\.productId\}/,'Sales schedules must select a declared project product')
  assert.match(financialFormsPanelSource,/<select value=\{cost\.productId\?\?''\}/,'Direct production costs must reference a declared project product')
- assert.match(advancedFinanceSource,/const utilization = Array\.from\(\{length:years\},_=>i<construction\?0:Math\.max\(0,Math\.min\(100,props\.ramp\[i-construction\]\?\?\(props\.blankStart\?Number\.NaN:100\)\)\)\/100\)/,'Raw utilization must not assume full production when ramp-up is blank')
+ assert.match(advancedFinanceSource,/const utilization = Array\.from\(\{length:years\},\(_,i\)=>i<construction\?0:Math\.max\(0,Math\.min\(100,props\.ramp\[i-construction\]\?\?\(props\.blankStart\?Number\.NaN:100\)\)\)\/100\)/,'Raw utilization must not assume full production when ramp-up is blank')
  assert.match(advancedFinanceSource,/discountMode:blank\?'':/,'Raw discount method must remain unselected until user input')
  assert.match(advancedFinanceSource,/value=\{blankNumber\(state\.manualRate\)\}/,'Blank discount rates must display as blank')
  assert.match(advancedFinanceSource,/!props\.blankStart&&<>[\s\S]*تسهیلات و برنامه بازپرداخت/,'The legacy loan editor must remain hidden for the raw template')
