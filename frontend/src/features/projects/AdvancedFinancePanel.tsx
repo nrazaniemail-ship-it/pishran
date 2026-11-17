@@ -3,7 +3,7 @@ import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { allocateJointVentureCashFlows, type JointVenturePartner, type PartnerFinanceResult } from './partnerFinance'
 import { listFinancialMethods } from './financialMethodDirectory'
-import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
+import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention, OpeningCurrentAccounts } from './projectFoundation'
 import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { calculateOperatingCycleWorkingCapital, calculateWorkingCapitalTurnoverCoefficient, calculateWorkingCapitalDaysCoverageFromTurnover } from '../steel/financialModel'
@@ -60,6 +60,7 @@ type Props = {
   openingPaidInCapital?: number
   openingRetainedEarnings?: number
   openingGrants?: number
+  openingCurrentAccounts?: OpeningCurrentAccounts
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
   initialWorkingCapitalEquityContribution?: number
   initialLoanRatePercent?: number
@@ -371,6 +372,20 @@ export default function AdvancedFinancePanel(props: Props) {
     ?Object.values(periodicFinanceResult.loanSchedules??{}).reduce((sum,schedule)=>sum+(schedule[0]?.openingBalance??0),0)
     :0,[periodicFinanceResult])
   const unmodelledOpeningDebt=Math.max(0,(props.openingDebtBalance??0)-scheduledOpeningDebt)
+  const openingCurrentAccountControl=useMemo(()=>{
+    const a=props.openingCurrentAccounts
+    if(!a)return null
+    const values=Object.values(a)
+    if(values.some(value=>!Number.isFinite(value)||value<0))return {valid:false,assetTotal:NaN,liabilityTotal:NaN,netWorkingCapital:NaN,cashTotal:NaN}
+    const assetTotal=a.rawMaterials+a.factorySupplies+a.workInProgress+a.finishedGoods+a.receivables+
+      a.cash+a.shortTermDeposits+a.cashSurplus+a.otherCurrentAssets
+    const liabilityTotal=a.tradePayables+a.otherCurrentLiabilities
+    const cashTotal=a.cash+a.shortTermDeposits+a.cashSurplus
+    const netWorkingCapital=assetTotal-cashTotal-liabilityTotal
+    const valid=Math.abs(netWorkingCapital-(props.openingWorkingCapitalBalance??0))<=0.01&&
+      Math.abs(cashTotal-(props.openingCashBalance??0))<=0.01
+    return {valid,assetTotal,liabilityTotal,netWorkingCapital,cashTotal}
+  },[props.openingCurrentAccounts,props.openingWorkingCapitalBalance,props.openingCashBalance])
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
   useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
@@ -592,6 +607,16 @@ export default function AdvancedFinancePanel(props: Props) {
     <h4>{t('۸. موتور یکپارچه جریان نقدی ماهانه/فصلی','8. Integrated Monthly / Quarterly Cash-Flow Engine')}</h4>
     {periodicFinanceResult?.valid?<div className="fw-card">
       <p className="fw-hint">{t('جریان‌های عملیاتی سالانه با تعداد روز واقعی به دوره‌های پروژه تخصیص یافته‌اند. برداشت وام می‌تواند روزشمار از مبالغ سالانه توزیع شود یا برای هر دوره مستقلاً ثبت شود. نرخ مالیات قابل تنظیم در هر دوره است و زیان انتقالی، بهره، اصل بدهی و سرمایه در گردش در سطح هر دوره محاسبه می‌شوند. در صورت وجود تاریخ‌های مستند دفتر دارایی، استهلاک و واگذاری دارایی‌به‌دارایی در سطح ماه/فصل اعمال می‌شود. مانده افتتاحیه نقد، سرمایه در گردش، دارایی ثابت، بدهی، آورده، سود انباشته و کمک‌ها از دفتر مانده‌های افتتاحیه به صورت‌های مالی منتقل می‌شود؛ برای پروژه جدید این مانده‌ها صفر هستند.','Annual operating flows are allocated to project periods by actual day counts. Loan drawdowns can be day-weighted from annual amounts or entered directly by period. Tax rates can be set for each period, and loss carry-forward, interest, principal and working capital are calculated period by period. Dated asset-level depreciation and disposals feed the monthly/quarterly model. Opening cash, net working capital, fixed assets, debt, paid-in capital, retained earnings and grants are carried into the statements; these balances default to zero for greenfield projects.')}</p>
+      {props.openingCurrentAccounts&&openingCurrentAccountControl&&<div className="fw-card">
+        <h4>{t('تفکیک مانده‌های افتتاحیه دارایی‌ها و بدهی‌های جاری','Opening Current Assets & Liabilities Breakdown')}</h4>
+        <p className="fw-hint">{t('این تفکیک از دفتر مانده‌های افتتاحیه بنگاه موجود منتقل شده است. ارقام تفصیلی در این قسمت برای کنترل و ردیابی ارائه می‌شوند؛ گردش دوره‌ای سرمایه در گردش از برنامه دوره‌ای اقلام تشکیل می‌شود و از این مانده‌ها دوباره ساخته نمی‌شود.','These details are carried from the existing-enterprise opening register for control and traceability. Periodic working-capital movements continue to come from the period-level component schedule; opening balances are not added a second time.')}</p>
+        <div className="fw-validation"><span>{t('مواد اولیه','Raw materials')} · {t('ملزومات','Supplies')} · WIP · {t('محصول نهایی','Finished goods')} · {t('مطالبات','Receivables')} · {t('سایر دارایی جاری','Other current assets')}</span><b>{money(props.openingCurrentAccounts.rawMaterials+props.openingCurrentAccounts.factorySupplies+props.openingCurrentAccounts.workInProgress+props.openingCurrentAccounts.finishedGoods+props.openingCurrentAccounts.receivables+props.openingCurrentAccounts.otherCurrentAssets)} {props.currency}</b></div>
+        <div className="fw-validation"><span>{t('وجه نقد','Cash')} · {t('سپرده کوتاه‌مدت','Short-term deposits')} · {t('مازاد نقد','Cash surplus')}</span><b>{money(openingCurrentAccountControl.cashTotal)} {props.currency}</b></div>
+        <div className="fw-validation"><span>{t('حساب‌های پرداختنی','Trade payables')} · {t('سایر بدهی‌های جاری','Other current liabilities')}</span><b>{money(openingCurrentAccountControl.liabilityTotal)} {props.currency}</b></div>
+        <div className="fw-validation"><span>{t('بهره تعهدشده افتتاحیه (در بدهی افتتاحیه)','Opening accrued interest (included in opening debt)')}</span><b>{money(props.openingCurrentAccounts.accruedInterest)} {props.currency}</b></div>
+        <div className="fw-validation"><span>{t('سرمایه در گردش خالص محاسبه‌شده از اقلام ناخالص','Net working capital derived from gross accounts')}</span><b>{money(openingCurrentAccountControl.netWorkingCapital)} {props.currency}</b></div>
+        {openingCurrentAccountControl.valid?<p className="fw-hint">{t('تطبیق مانده‌های ناخالص با نقد و سرمایه در گردش خالص افتتاحیه برقرار است.','Gross opening balances reconcile to opening cash and net working capital.')}</p>:<div className="fw-validation" role="alert"><b>{t('عدم تطبیق دفتر مانده افتتاحیه','Opening balance register does not reconcile')}</b><p>{t('جمع اقلام جاری تفصیلی با مانده نقد یا سرمایه در گردش خالص منتقل‌شده برابر نیست. تا اصلاح ورودی‌های دفتر افتتاحیه، صورت‌های مالی دوره‌ای را تأییدشده تلقی نکنید.','Detailed current-account balances do not match the transferred opening cash or net working-capital balances. Do not treat periodic statements as validated until the opening register is corrected.')}</p></div>}
+      </div>}
       {unmodelledOpeningDebt>0.01&&<div className="fw-validation" role="alert">
         <b>{t('هشدار: بخشی از بدهی افتتاحیه برنامه بازپرداخت ندارد.','Warning: part of opening debt has no repayment schedule.')}</b>
         <p>{t('مانده بدهی افتتاحیه بدون برنامه: ','Unscheduled opening debt: ')}{money(unmodelledOpeningDebt)} {props.currency}</p>
