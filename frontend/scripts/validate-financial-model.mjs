@@ -93,3 +93,16 @@ near(salesTaxAndSubsidy.years[1].salesTax,100,1e-9,'COMFAR sales tax')
 near(salesTaxAndSubsidy.years[1].subsidy,150,1e-9,'COMFAR percentage and absolute subsidies')
 near(salesTaxAndSubsidy.years[1].revenue,1150,1e-9,'COMFAR sales revenue after subsidy')
 console.log('PASS: COMFAR gross/net sales, sales tax and aggregated price subsidies')
+
+const workingCapitalBreakdown = engine.calculateOperatingCycleWorkingCapital({
+  dayBasis:360,rawMaterialDays:30,factorySuppliesDays:15,utilitiesDays:10,energyDays:0,sparePartsDays:0,
+  workInProgressDays:0,workInProgressMaterialCompletionPercent:0,workInProgressConversionCompletionPercent:0,
+  finishedGoodsDays:0,receivableDays:0,cashDays:0,payableDays:0,
+  annualRawMaterialCost:360,annualFactorySuppliesCost:360,annualUtilitiesCost:360,
+  annualConversionCost:0,annualFinishedGoodsCost:0,annualRevenue:0,annualCashOperatingCost:0,
+},1)
+near(workingCapitalBreakdown.rawMaterials,30,1e-9,'Raw-material inventory working capital')
+near(workingCapitalBreakdown.factorySupplies,15,1e-9,'Factory-supplies inventory working capital')
+near(workingCapitalBreakdown.utilities,10,1e-9,'Utilities inventory working capital')
+near(workingCapitalBreakdown.netWorkingCapital,55,1e-9,'COMFAR inventory working-capital total')
+console.log('PASS: COMFAR raw materials, factory supplies and utilities working-capital inventory')
