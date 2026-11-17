@@ -605,6 +605,8 @@ export type PeriodicProjectFinanceInput = {
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
   workingCapitalByPeriod: number[]
+  cashInHandByPeriod?: number[]
+  shortTermDepositsByPeriod?: number[]
   openingWorkingCapital?: number
   /** Opening cash balance for the period cash roll-forward. */
   openingCash?: number
@@ -672,6 +674,8 @@ export type PeriodicProjectFinanceRow = {
   preOperatingCost: number
   maintenanceCapex: number
   closingWorkingCapital: number
+  cashInHand: number
+  shortTermDeposits: number
   changeInWorkingCapital: number
   equityContribution: number
   equityWorkingCapitalContribution: number
@@ -901,6 +905,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       (input.annualShortTermDepositInterest?.some(value => value < 0) ?? false) ||
       !Array.isArray(input.workingCapitalByPeriod) || input.workingCapitalByPeriod.length !== periods.length ||
       input.workingCapitalByPeriod.some(value => !validFinite(value)) ||
+      (input.cashInHandByPeriod != null && (input.cashInHandByPeriod.length !== periods.length || input.cashInHandByPeriod.some(value => !validFinite(value) || value < 0))) ||
+      (input.shortTermDepositsByPeriod != null && (input.shortTermDepositsByPeriod.length !== periods.length || input.shortTermDepositsByPeriod.some(value => !validFinite(value) || value < 0))) ||
       input.loans.some(loan => !loan.id || !loan.input)) {
     warnings.push('Annual flow arrays, tax rates, working-capital balances must be finite (negative net working capital is valid), or loan definitions are invalid.')
     return empty()
@@ -1101,7 +1107,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
-      closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
+      closingWorkingCapital,cashInHand:input.cashInHandByPeriod?.[index]??0,shortTermDeposits:input.shortTermDepositsByPeriod?.[index]??0,
+      changeInWorkingCapital,equityContribution:equityContribution[index],
       equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
       salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,dscrCovenantStatus,projectFreeCashFlow,equityFreeCashFlow,
       closingCash,fundingGap
@@ -1438,7 +1445,7 @@ export type PeriodicFinancialStatement = {
     netChangeInCash: number; closingCash: number
   }
   balanceSheet: {
-    cash: number; netWorkingCapital: number; netFixedAssets: number; deferredPreOperatingAssets: number
+    cash: number; cashInHand: number; shortTermDeposits: number; netWorkingCapital: number; netFixedAssets: number; deferredPreOperatingAssets: number
     totalAssets: number; debt: number; totalLiabilities: number; paidInCapital: number
     retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number
     balanceDifference: number; reconciled: boolean
@@ -1538,7 +1545,7 @@ export function buildPeriodicThreeFinancialStatements(
         commitmentFeeExpense: row.commitmentFeeExpense,
         profitBeforeTax, tax: row.tax, netIncome },
       cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash, closingCash },
-      balanceSheet: { cash: closingCash, netWorkingCapital: closingWorkingCapital, netFixedAssets: closingNetFixedAssets,
+      balanceSheet: { cash: closingCash, cashInHand: row.cashInHand, shortTermDeposits: row.shortTermDeposits, netWorkingCapital: closingWorkingCapital, netFixedAssets: closingNetFixedAssets,
         deferredPreOperatingAssets: closingPreOperatingAssets, totalAssets, debt: closingDebt, totalLiabilities,
         paidInCapital: closingPaidInCapital, retainedEarnings: closingRetainedEarnings, totalEquity,
         totalLiabilitiesAndEquity, balanceDifference,
