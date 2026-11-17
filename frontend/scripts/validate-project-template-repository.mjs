@@ -18,6 +18,19 @@ const output = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
 }).outputText.replace("from '../storage/localStore'", `from '${storeUrl}'`)
 const repository = await import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
+const modelSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+for (const retiredModelMarker of [
+  'Steel Slab',
+  'Extra DRI',
+  'HRCR200',
+  'coldRollingProject',
+  'نورد و لوله گالوانیزه فجر کویر کاشان',
+  'گزارش فنی-اقتصادی نورد سرد',
+  '۲۰۰ هزار تن برای تولید ۲۰۰ هزار تن کلاف سرد',
+]) {
+  assert.equal(modelSource.includes(retiredModelMarker), false,
+    `Retired sample-project data must not be embedded in the feasibility model: ${retiredModelMarker}`)
+}
 const store = await import(storeUrl)
 
 const project = (id, name, steelStage, templateId) => ({
