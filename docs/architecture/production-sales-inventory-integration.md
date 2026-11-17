@@ -30,6 +30,12 @@ Production-cost form calculations call the existing help-driven formula function
 
 Each product must select FIFO or weighted-average valuation whenever finished-goods stock is carried. Weighted-average costing rolls the opening carrying value and current-period production cost over available units. FIFO consumes the oldest opening/production layers first. Both methods enforce quantity and value reconciliation in every period and carry closing quantity/value into the next period.
 
+If a period's closing quantity is left blank and product-level finished-goods days coverage is supplied, the adapter derives the COMFAR-style target stock:
+`required stock = sales quantity × days coverage / (30 × months in period)`
+and
+`closing stock = max(opening stock − sales quantity, required stock)`.
+The period's production requirement then follows the stock identity above. A manually entered closing quantity takes precedence over the derived value. Full calendar periods use their calendar-month count; partial periods use their actual day count on a 30-day month convention.
+
 ## Financial statement posting
 
 The orchestrator binds the calculated annual COGS and period closing inventory values into the periodic finance engine:
