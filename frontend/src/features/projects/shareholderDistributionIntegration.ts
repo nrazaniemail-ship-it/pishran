@@ -86,6 +86,7 @@ export function applyShareholderDistributions(
     }
   }
   if(issues.length)return empty(issues)
+  const updatedFinance:PeriodicProjectFinanceResult={...finance,rows:finance.rows.map(row=>({...row}))}
   const periods:ShareholderDistributionPeriod[]=[]
   const updatedStatements=statements.map(statement=>({...statement,
     cashFlowStatement:{...statement.cashFlowStatement},
@@ -97,9 +98,8 @@ export function applyShareholderDistributions(
   let priorRefunds=0
   let retained=statements[0].openingBalances.retainedEarnings
   let paidIn=statements[0].openingBalances.paidInCapital
-  let cash=statements[0].openingBalances.cash
   for(let i=0;i<finance.rows.length;i++){
-    const row=finance.rows[i], statement=updatedStatements[i]
+    const row=updatedFinance.rows[i], statement=updatedStatements[i]
     const openingDistributableProfit=retained
     const netIncome=statement.incomeStatement.netIncome
     const profitAvailable=Math.max(0,openingDistributableProfit+netIncome)
@@ -114,6 +114,8 @@ export function applyShareholderDistributions(
     const preferredRows=partners.filter(item=>item.values.type==='preferred-shareholder')
     let preferredDividend=0
     for(const partner of preferredRows){
+      const partnerPeriod=partner.values.period
+      if(typeof partnerPeriod==='string'&&partnerPeriod.trim()&&periodIndex(partnerPeriod)!==i)continue
       const absolute=finite(partner.values.preferredDividendAbsolute)?partner.values.preferredDividendAbsolute:0
       const percent=finite(partner.values.preferredDividendPercent)?partner.values.preferredDividendPercent:0
       const basis=finite(partner.values.paidIn)?partner.values.paidIn:0
@@ -167,14 +169,13 @@ export function applyShareholderDistributions(
     statement.movementChecks.cash-=totalOutflow
     statement.movementChecks.paidInCapital-=capitalRefund
     statement.movementChecks.retainedEarnings-=totalDividend
-    finance.rows[i]={...row,equityFreeCashFlow:row.equityFreeCashFlow-totalOutflow}
+    updatedFinance.rows[i]={...row,equityFreeCashFlow:row.equityFreeCashFlow-totalOutflow}
     periods.push({period:row.period,openingDistributableProfit,netIncome,profitAvailable,
       retainedProfit:profitAvailable*retainedPercent/100,preferredDividend,ordinaryDividend,totalDividend,
       repatriatedDividend,capitalRefund,closingRetainedEarnings,closingPaidInCapital,closingCash})
     totalDividends+=totalDividend;totalCapitalRefund+=capitalRefund;totalRepatriatedDividend+=repatriatedDividend
-    priorRefunds+=capitalRefund;retained=closingRetainedEarnings;paidIn=closingPaidInCapital;cash=closingCash
-    void cash
+    priorRefunds+=capitalRefund;retained=closingRetainedEarnings;paidIn=closingPaidInCapital
   }
   if(issues.length)return empty(issues)
-  return {valid:true,issues:[],periods,finance,statements:updatedStatements,totalDividends,totalCapitalRefund,totalRepatriatedDividend}
+  return {valid:true,issues:[],periods,finance:updatedFinance,statements:updatedStatements,totalDividends,totalCapitalRefund,totalRepatriatedDividend}
 }
