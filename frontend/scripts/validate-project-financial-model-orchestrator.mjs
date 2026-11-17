@@ -28,6 +28,7 @@ orchestratorOutput=orchestratorOutput.replace("'./productionSalesInventoryIntegr
  .replace("'./fixedAssetDraftIntegration'",JSON.stringify(fixedUrl))
  .replace("'./foreignCurrencyLoanFinanceBinding'",JSON.stringify(loanUrl))
 const orchestrator=await import(url(orchestratorOutput))
+const helpForms=await import(helpFormsUrl)
 
 const periods=[
  {index:1,startDate:'2025-01-01',endDate:'2025-12-31',days:365,partial:false},
@@ -79,6 +80,20 @@ assert.equal(result.finalRun.finance.rows[1].tax,380)
 assert.deepEqual(result.financeInput.workingCapitalByPeriod,[0,0])
 assert.equal(result.finalRun.finance.valid,true)
 assert.equal(result.finalRun.statements.length,2)
+let discountingHelp=helpForms.createBlankHelpDrivenProjectForms()
+discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','investmentRate',12)
+discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','equityRate',14)
+discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','referenceDate','2025-01-01')
+const discountedResult=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:discountingHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(discountedResult.valid,true,discountedResult.issues.join('; '))
+assert.equal(discountedResult.financeInput.discountRatePercent,12)
+assert.equal(discountedResult.financeInput.equityDiscountRatePercent,14)
+assert.equal(discountedResult.financeInput.valuationDate,'2025-01-01')
+assert.notEqual(discountedResult.finalRun.finance.npvProject,result.finalRun.finance.npvProject)
 assert.ok(result.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 const openingBalanceSheet={
  enabled:true,cash:100,inventory:20,workInProgress:10,finishedGoods:30,receivables:40,
