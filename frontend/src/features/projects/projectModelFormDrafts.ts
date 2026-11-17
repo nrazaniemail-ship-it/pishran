@@ -33,7 +33,7 @@ export type SalesProductFormDraft={
  productId:string
  /** Explicit opening finished-goods quantity; blank legacy records require user entry. */
  openingFinishedGoodsQuantity?:number|null
- periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;finishedGoodsClosingQuantity:number|null}[]
+ periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;finishedGoodsClosingQuantity:number|null;grossUnitPrice?:number|null;productionActive?:boolean|null}[]
 }
 export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,openingFinishedGoodsQuantity:null,periods:[]}}
 
