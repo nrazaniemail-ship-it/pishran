@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Plus, Trash2, Save, CheckCircle2, AlertCircle, Printer } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
-import { calculateNpv as npv, calculateIrr as irr, calculateMirr as mirr, buildComfarDepreciationAssetsFromFixedInvestmentItems, reconcileFixedInvestmentRegister, type IntegratedFinanceResult } from '../steel/financialModel'
+import { calculateNpv as npv, calculateIrr as irr, calculateMirr as mirr, buildComfarDepreciationAssetsFromFixedInvestmentItems, reconcileFixedInvestmentRegister, type IntegratedFinanceResult, type ComfarDepreciationAssetInput } from '../steel/financialModel'
 import AdvancedFinancePanel from './AdvancedFinancePanel'
 import type { OneWaySensitivityAnalysis, SensitivityCell } from '../steel/financialModel'
 import type { PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
@@ -15,7 +15,7 @@ import ProjectModelFinancialFormsPanel from './ProjectModelFinancialFormsPanel'
 import ProjectModelHelpCoveragePanel from './ProjectModelHelpCoveragePanel'
 import { createBlankProjectModelFinancialFormDrafts, listUnintegratedFinancialDraftInputs, type ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import FixedInvestmentPanel from './FixedInvestmentPanel'
-import { buildProjectCalendarPeriods, createBlankProjectFoundation, mergeProjectFoundation, type ProjectFoundation, type FixedInvestmentItem } from './projectFoundation'
+import { buildProjectCalendarPeriods, createBlankProjectFoundation, mergeProjectFoundation, type ProjectFoundation, type FixedInvestmentItem, type StartingFixedAssetBalance } from './projectFoundation'
 
 type Row = { id:string; name:string; quantity:number; unit:string; unitPrice:number; source:string; valueText?:string; flowType?:'input'|'output' }
 type Model = {
@@ -28,6 +28,7 @@ type Model = {
   financialForms: ProjectModelFinancialFormDrafts
   fixedInvestmentItems: FixedInvestmentItem[]
   fixedInvestmentSeedVersion: number
+  startingFixedAssets: StartingFixedAssetBalance[]
   project: { name:string; location:string; owner:string; startYear:number; constructionYears:number; operatingYears:number; currency:string; fxRate:number }
   stage: string
   products: Row[]
@@ -164,7 +165,7 @@ function baseModel(project:FeasibilityProject):Model {
  return {
   projectCategory:selectedStage.id==='mining'?'mining':'industrial',analysisMode:'new',partners:[],partnerDistributionPercent:100,
   scope:{studyLevel:'feasibility',jointVenture:false,economicAnalysis:false,costCentreAnalysis:false,costAllocation:false,valueAddedAnalysis:false,foreignExchangeEffect:false,employmentEffects:false},
-  foundation:createBlankProjectFoundation(),financialForms:createBlankProjectModelFinancialFormDrafts(),fixedInvestmentItems:[],fixedInvestmentSeedVersion:0,
+  foundation:createBlankProjectFoundation(),financialForms:createBlankProjectModelFinancialFormDrafts(),fixedInvestmentItems:[],fixedInvestmentSeedVersion:0,startingFixedAssets:[],
   project:{name:project.name,location:project.location,owner:coldRollingProject?'نورد و لوله گالوانیزه فجر کویر کاشان':'',startYear:rawProject?0:1403,constructionYears:rawProject?0:(coldRollingProject?1.5:2),operatingYears:rawProject?0:(coldRollingProject?15:10),currency:rawProject?'':'میلیون ریال',fxRate:rawProject?0:1},
   stage:selectedStage.id,
   products:rawProject?[]:coldRollingProject?[makeRow('کلاف سرد','تن/سال',200000,0,'گزارش فنی-اقتصادی نورد سرد، مهر ۱۴۰۲')]:[makeRow('محصول اصلی','تن/سال',parsedCapacity,0)],
@@ -293,7 +294,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
     ?buildProjectCalendarPeriods(m.foundation.planning.projectStartDate,m.foundation.planning.projectEndDate,m.foundation.planning.periodFrequency,m.foundation.planning.fiscalYearStartMonth)
     :[]
   const FormField=(props:Parameters<typeof Field>[0])=><Field {...props} blankZero={isRawTemplate}/>
- useEffect(()=>{let alive=true;localStore.get<Model>(key).then(v=>{if(alive){if(v){const defaults=baseModel(project);setM({...defaults,...v,partners:Array.isArray(v.partners)?v.partners:defaults.partners,partnerDistributionPercent:Number.isFinite(v.partnerDistributionPercent)?v.partnerDistributionPercent:defaults.partnerDistributionPercent,stage:defaults.stage,foundation:mergeProjectFoundation(v.foundation),financialForms:v.financialForms??defaults.financialForms,fixedInvestmentItems:(Array.isArray(v.fixedInvestmentItems)?v.fixedInvestmentItems:[]).map(item=>({...item,depreciationBasis:item.depreciationBasis??'unresolved',acquisitions:item.acquisitions.map(acquisition=>({...acquisition,allocationBasis:acquisition.allocationBasis??'unallocated'})),depreciation:{...item.depreciation,lengthMonths:item.depreciation?.lengthMonths??0,firstDepreciationMonths:item.depreciation?.firstDepreciationMonths??12}})),fixedInvestmentSeedVersion:0,project:{...defaults.project,...v.project},capacity:{...defaults.capacity,...v.capacity},market:{...defaults.market,...v.market},scope:{...defaults.scope,...v.scope}})}else setM(baseModel(project));setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[key]);
+ useEffect(()=>{let alive=true;localStore.get<Model>(key).then(v=>{if(alive){if(v){const defaults=baseModel(project);setM({...defaults,...v,partners:Array.isArray(v.partners)?v.partners:defaults.partners,partnerDistributionPercent:Number.isFinite(v.partnerDistributionPercent)?v.partnerDistributionPercent:defaults.partnerDistributionPercent,stage:defaults.stage,foundation:mergeProjectFoundation(v.foundation),financialForms:v.financialForms??defaults.financialForms,fixedInvestmentItems:(Array.isArray(v.fixedInvestmentItems)?v.fixedInvestmentItems:[]).map(item=>({...item,depreciationBasis:item.depreciationBasis??'unresolved',acquisitions:item.acquisitions.map(acquisition=>({...acquisition,allocationBasis:acquisition.allocationBasis??'unallocated'})),depreciation:{...item.depreciation,lengthMonths:item.depreciation?.lengthMonths??0,firstDepreciationMonths:item.depreciation?.firstDepreciationMonths??12}})),fixedInvestmentSeedVersion:0,startingFixedAssets:Array.isArray(v.startingFixedAssets)?v.startingFixedAssets:[],project:{...defaults.project,...v.project},capacity:{...defaults.capacity,...v.capacity},market:{...defaults.market,...v.market},scope:{...defaults.scope,...v.scope}})}else setM(baseModel(project));setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[key]);
  useEffect(()=>{if(loaded){localStore.set(key,m).then(()=>setSaved(new Date().toLocaleTimeString(en?'en-US':'fa-IR',{hour:'2-digit',minute:'2-digit'}))) }},[m,loaded,key,en])
  const saveNow=async()=>{await localStore.set(key,m);setSaved(new Date().toLocaleTimeString(en?'en-US':'fa-IR',{hour:'2-digit',minute:'2-digit'}))}
  const stage=stageOptions.find(s=>s.id===m.stage)??stageOptions[5]
