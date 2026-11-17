@@ -135,7 +135,7 @@ for(const [id,period] of [['sale-a1','1'],['sale-a2','2']]){
 }
 for(const [id,period] of [['wc-a1','1'],['wc-a2','2']]){
  rawHelp=helpForms.addHelpFormRow(rawHelp,'working-capital',id)
- for(const [key,value] of Object.entries({item:'Receivables',category:'accounts-receivable',period,requiredValue:25,startingBalance:10,basis:'cost-of-products-sold-operating-plus-marketing'}))
+ for(const [key,value] of Object.entries({item:'Receivables',category:'accounts-receivable',period,requiredValue:null,startingBalance:10,mode:'value',activityBasis:'sales',basis:'sales-revenue',daysCoverage:45,turnover:8}))
   rawHelp=helpForms.updateHelpFormRow(rawHelp,'working-capital',id,key,value)
 }
 for(const [id,key,value] of [
@@ -164,6 +164,10 @@ assert.equal(rawBound.drafts.assets[0].depreciation.usefulLifeMonths,60)
 assert.equal(rawBound.drafts.productionCosts[0].productId,'product-a')
 assert.equal(rawBound.drafts.sales[0].periods.length,2)
 assert.equal(rawBound.drafts.workingCapital[0].periodBalances.length,2)
+assert.equal(rawBound.drafts.workingCapital[0].calculationMode,'value')
+assert.equal(rawBound.drafts.workingCapital[0].activityBasis,'sales')
+assert.equal(rawBound.drafts.workingCapital[0].valuationBasis,'sales-revenue')
+assert.deepEqual(rawBound.drafts.workingCapital[0].periodBalances.map(row=>row.amount),[null,null])
 assert.equal(rawBound.drafts.loans[0].name,'Generic facility')
 assert.equal(rawBound.drafts.loans[0].openingLocalBalance,250)
 assert.equal(rawBound.drafts.loans[0].disbursements[0].amount,1000)
