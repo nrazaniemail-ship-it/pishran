@@ -19,7 +19,7 @@ export function createBlankFixedAssetFormDraft(id=''):FixedAssetFormDraft{return
 
 export type ProductionCostFormDraft={
  id:string; metadata:CommonFinancialItemMetadata; classification:'direct'|'indirect'|null
- productId:string|null; basis:'nominal-capacity'|'per-unit-output'|'period-adjustments'|null
+ productId:string|null; basis:'nominal-capacity'|'per-unit-output'|'period-adjustments'|null; activityBasis?:'sales'|'production'|null
  standardQuantity:number|null; standardUnitPrice:number|null; standardTotal:number|null
  nominalCapacity:number|null; fixedPercent:number|null; variablePercent:number|null
  adjustments:{period:string;quantity:number|null;unitPrice:number|null;total:number|null;fixedPercent:number|null;variablePercent:number|null}[]
