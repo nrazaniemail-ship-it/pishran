@@ -110,7 +110,8 @@ const statements=engine.buildPeriodicThreeFinancialStatements(fundingCase)
 assert.equal(statements.length,periods.length)
 assert.deepEqual(statements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[-50,15,80])
 assert.equal(statements[1].incomeStatement.shortTermDepositInterest,5)
-assert.equal(statements[1].incomeStatement.ebit,65)
+assert.equal(statements[1].incomeStatement.ebit,60)
+assert.equal(statements[1].incomeStatement.profitBeforeTax,65)
 const openingCashCase=engine.calculateIntegratedPeriodicFinance({
   periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
   annualRevenue:[0,100,100],annualShortTermDepositInterest:[0,5,5],
