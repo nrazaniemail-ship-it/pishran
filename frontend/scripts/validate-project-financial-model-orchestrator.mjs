@@ -544,15 +544,12 @@ const fxStartingBalances=[
  {id:'fx-retained',values:{category:'retained-earnings',item:'Retained',currency:'EUR',origin:'local',amount:48}},
 ]
 const fxOpeningCurrencies={...foundation.currencies,foreignCurrencies:[{code:'USD',name:'US Dollar',exchangeRates:[{period:'1',rateToLocal:1.1},{period:'2',rateToLocal:1.2}]}]}
-const fxOpeningResult=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
- rows:fxStartingBalances,periods,finance,currencies:fxOpeningCurrencies,
- existingOpeningBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+const foreignOpeningResult=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
+ rows:[fxStartingBalances.find(row=>row.id==='fx-cash-usd')],periods,finance,currencies:fxOpeningCurrencies,
 })
-assert.equal(fxOpeningResult.valid,true,fxOpeningResult.issues.join('; '))
-assert.equal(fxOpeningResult.openingBalances.cash,21)
-assert.equal(fxOpeningResult.openingAssets,138)
-assert.equal(fxOpeningResult.openingLiabilitiesAndEquity,138)
-assert.equal(fxOpeningResult.translatedRows.find(row=>row.rowId==='fx-cash-usd').exchangeRate,1.1)
+assert.equal(foreignOpeningResult.valid,false)
+assert.ok(foreignOpeningResult.issues.some(issue=>issue.includes('period-by-period monetary revaluation')))
+const localOnlyStartingBalances=fxStartingBalances.filter(row=>row.id!=='fx-cash-usd')
 const explicitDepreciationFinance={...finance,periodDepreciationSchedule:[10,10],annualDepreciation:[10,10]}
 const explicitDepreciationResult=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
  rows:[{id:'explicit-period-asset',values:{category:'fixed-assets',item:'Existing machine',currency:'EUR',origin:'local',amount:100,depreciationMethod:'linear-to-zero',remainingLife:5}}],
@@ -569,12 +566,12 @@ const ambiguousOpening=startingBalanceAdapter.bindStartingBalancesToPeriodicFina
 assert.equal(ambiguousOpening.valid,false)
 assert.ok(ambiguousOpening.issues.some(issue=>issue.includes('category other-assets is ambiguous')))
 const mismatchedOpening=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
- rows:fxStartingBalances.slice(0,-1),periods,finance,currencies:fxOpeningCurrencies,
+ rows:localOnlyStartingBalances.slice(0,-1),periods,finance,currencies:foundation.currencies,
 })
 assert.equal(mismatchedOpening.valid,false)
 assert.ok(mismatchedOpening.issues.some(issue=>issue.includes('do not reconcile')))
 const conflictingOpening=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
- rows:fxStartingBalances,periods,finance,currencies:fxOpeningCurrencies,summaryOpeningBalanceEnabled:true,
+ rows:localOnlyStartingBalances,periods,finance,currencies:foundation.currencies,summaryOpeningBalanceEnabled:true,
 })
 assert.equal(conflictingOpening.valid,false)
 assert.ok(conflictingOpening.issues.some(issue=>issue.includes('cannot be combined')))
