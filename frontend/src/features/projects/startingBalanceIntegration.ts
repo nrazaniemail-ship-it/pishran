@@ -21,10 +21,10 @@ const blankBalances=():Required<PeriodicStatementOpeningBalances>=>({
 /**
  * Converts the raw-template opening-balance subledger into the exact opening
  * balances consumed by the periodic statements. Amounts are translated at the
- * first project-period exchange rate because the form has no separate balance
- * date. Existing fixed assets are accepted only with a straight-line-to-zero
- * remaining-life schedule; unsupported asset methods and account classes fail
- * closed instead of disappearing into an unrelated balance-sheet line.
+ * local-currency carrying value. Foreign opening balances fail closed because
+ * cash/receivable/payable and debt subledgers do not yet carry period-by-period
+ * foreign-currency revaluation through this raw-template section. Existing fixed
+ * assets require a straight-line-to-zero remaining-life schedule.
  */
 export function bindStartingBalancesToPeriodicFinance(input:{
   rows:readonly HelpFormRow[]
@@ -52,7 +52,6 @@ export function bindStartingBalancesToPeriodicFinance(input:{
     issues.push('Starting-balance calendar periods do not match the financial model periods.')
   const localCode=input.currencies.localCurrencyCode.trim().toUpperCase()
   if(!localCode)issues.push('A local accounting currency is required to translate opening balances.')
-  const openingRatePeriod=input.periods[0]
   let openingAssets=0,openingLiabilitiesAndEquity=0
   const annualDepreciation=[...input.finance.annualDepreciation]
   const incrementalAnnualDepreciation=Array(annualDepreciation.length).fill(0) as number[]
@@ -68,12 +67,12 @@ export function bindStartingBalancesToPeriodicFinance(input:{
     if(category!=='retained-earnings'&&amount<0){issues.push('Starting-balance row '+row.id+' cannot have a negative amount for '+category+'.');continue}
     if(origin!=='local'&&origin!=='foreign'){issues.push('Starting-balance row '+row.id+' must identify local or foreign currency origin.');continue}
     if(!currency){issues.push('Starting-balance row '+row.id+' requires a currency code.');continue}
-    if(origin==='local'&&currency!==localCode){issues.push('Starting-balance row '+row.id+' identifies a local origin but does not use the project local currency '+localCode+'.');continue}
-    if(origin==='foreign'&&currency===localCode){issues.push('Starting-balance row '+row.id+' identifies a foreign origin but uses the local currency '+localCode+'.');continue}
-    const foreignCurrency=input.currencies.foreignCurrencies.find(entry=>entry.code.trim().toUpperCase()===currency)
-    if(origin==='foreign'&&!foreignCurrency){issues.push('Starting-balance row '+row.id+' references an unknown foreign currency '+currency+'.');continue}
-    const exchangeRate=origin==='local'?1:foreignCurrency?.exchangeRates.find(rate=>rate.period===String(openingRatePeriod?.index))?.rateToLocal
-    if(!finite(exchangeRate)||exchangeRate<=0){issues.push('Starting-balance row '+row.id+' has no positive opening-period exchange rate for '+currency+'.');continue}
+    if(origin==='foreign'){
+      issues.push('Foreign-currency opening balance '+row.id+' requires a period-by-period monetary revaluation subledger. Enter its local-currency carrying value here; record foreign-currency debt in the linked loan facility.')
+      continue
+    }
+    if(currency!==localCode){issues.push('Starting-balance row '+row.id+' must use the project local currency '+localCode+' for its recorded carrying value.');continue}
+    const exchangeRate=1
     const foreignPercent=v.foreignPercent
     if(foreignPercent!==null&&foreignPercent!==undefined&&foreignPercent!==''&&(!finite(foreignPercent)||foreignPercent!==0)){
       issues.push('Starting-balance row '+row.id+' uses a mixed-currency percentage; split it into separate local and foreign rows.')
