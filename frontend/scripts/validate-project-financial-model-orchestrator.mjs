@@ -349,6 +349,34 @@ assert.deepEqual(holidayResult.financeInput.taxRatesByPeriod,[0,20])
 assert.equal(holidayResult.financeInput.taxLossCarryForwardYears,5)
 assert.equal(holidayResult.finalRun.finance.rows[0].tax,0)
 assert.equal(holidayResult.finalRun.finance.rows[1].tax,380)
+
+// The raw income-tax regime is explicitly mapped only to the supported corporate
+// income-tax engine, and tax postings must use the project's local accounting currency.
+let corporateTaxHelp=helpForms.createBlankHelpDrivenProjectForms()
+corporateTaxHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main','taxSystem','corporate-income-tax')
+corporateTaxHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main','taxCurrency','EUR')
+const corporateTaxModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:corporateTaxHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(corporateTaxModel.valid,true,corporateTaxModel.issues.join('; '))
+let unsupportedTaxSystemHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main','taxSystem','other')
+const unsupportedTaxSystemModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:unsupportedTaxSystemHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(unsupportedTaxSystemModel.valid,false)
+assert.ok(unsupportedTaxSystemModel.issues.some(issue=>issue.includes('tax system is not supported')))
+let foreignTaxCurrencyHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main','taxCurrency','USD')
+const foreignTaxCurrencyModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:foreignTaxCurrencyHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(foreignTaxCurrencyModel.valid,false)
+assert.ok(foreignTaxCurrencyModel.issues.some(issue=>issue.includes('foreign tax currency requires a dedicated tax-liability translation')))
 assert.ok(result.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 const openingBalanceSheet={
  enabled:true,cash:100,inventory:20,workInProgress:10,finishedGoods:30,receivables:40,
