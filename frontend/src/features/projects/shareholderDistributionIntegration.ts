@@ -50,7 +50,7 @@ export function applyShareholderDistributions(
     return empty(['Shareholder distribution requires a valid, reconciled periodic finance run.'])
   const policies=forms?.sections?.['profit-distribution']??[]
   const partners=forms?.sections?.['joint-venture']??[]
-  if(!policies.length&&!partners.some(row=>['paidIn','paidOut','preferredDividendAbsolute','preferredDividendPercent'].some(key=>finite(row.values[key])&&row.values[key]>0)))
+  if(!policies.length&&!partners.some(row=>['paidIn','paidOut','preferredDividendAbsolute','preferredDividendPercent','netWorthDistribution'].some(key=>finite(row.values[key])&&row.values[key]>0)))
     return {valid:true,issues:[],periods:[],finance,statements,totalDividends:0,totalCapitalRefund:0,totalRepatriatedDividend:0}
   const periodIndex=(key:unknown):number=>{
     if(typeof key!=='string'||!key.trim())return -1
@@ -104,6 +104,8 @@ export function applyShareholderDistributions(
         issues.push('Joint-venture row '+row.id+' has an invalid '+key+'.')
     }
   }
+  if(!policies.length&&partners.some(row=>(finite(row.values.preferredDividendAbsolute)&&row.values.preferredDividendAbsolute>0)||(finite(row.values.preferredDividendPercent)&&row.values.preferredDividendPercent>0)))
+    issues.push('Preferred dividend terms require an explicit profit-distribution policy before they can be posted.')
   if(issues.length)return empty(issues)
   const updatedFinance:PeriodicProjectFinanceResult={...finance,rows:finance.rows.map(row=>({...row}))}
   const periods:ShareholderDistributionPeriod[]=[]
