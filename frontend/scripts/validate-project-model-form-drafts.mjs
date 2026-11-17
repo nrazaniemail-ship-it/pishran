@@ -58,6 +58,8 @@ try {
  assert.deepEqual(tax.rates,[])
  const complete=forms.createBlankProjectModelFinancialFormDrafts()
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts(complete),[])
+ const invalidFinishedGoodsCoverage={...complete,sales:[{...forms.createBlankSalesProductFormDraft('p1'),finishedGoodsDaysCoverage:0}]}
+ assert.ok(forms.validateProjectModelFinancialFormDrafts(invalidFinishedGoodsCoverage).includes('sales-0:invalid-finished-goods-days-coverage'))
  const balancedOpening={enabled:true,cash:10,inventory:20,workInProgress:0,finishedGoods:0,receivables:0,otherCurrentAssets:0,tradePayables:5,otherCurrentLiabilities:0,grossFixedAssets:100,accumulatedDepreciation:0,deferredPreOperatingAssets:0,shortTermDebt:10,longTermDebt:20,shareCapital:95,retainedEarnings:0}
  assert.deepEqual(forms.validateOpeningBalanceSheetDraft(balancedOpening),[],'Trade payables must be included in liabilities, not subtracted from total assets')
  assert.ok(forms.validateOpeningBalanceSheetDraft({...balancedOpening,shareCapital:94}).includes('opening-balance-sheet-does-not-balance'),'Opening balance sheet must reject a one-unit imbalance')
@@ -99,6 +101,9 @@ try {
  assert.match(wizardSource,/products=\{m\.products\.map\(row=>\(\{id:row\.id,name:row\.name\}\)\)\}/,'Detailed financial forms must receive the actual project product identifiers')
  assert.match(financialFormsPanelSource,/products\?:ProductOption\[\]/,'The detailed financial forms panel must accept the project product list')
  assert.match(financialFormsPanelSource,/<select value=\{sale\.productId\}/,'Sales schedules must select a declared project product')
+ assert.match(financialFormsPanelSource,/sale\.finishedGoodsDaysCoverage/,'Sales forms must expose COMFAR-style finished-goods days coverage')
+ assert.match(financialFormsPanelSource,/sale\.inventoryValuationMethod/,'Sales forms must expose FIFO or weighted-average valuation selection')
+ assert.match(financialFormsPanelSource,/sale\.openingFinishedGoodsValue/,'Sales forms must capture opening finished-goods carrying value')
  assert.match(financialFormsPanelSource,/<select value=\{cost\.productId\?\?''\}/,'Direct production costs must reference a declared project product')
  assert.match(advancedFinanceSource,/const utilization = Array\.from\(\{length:years\},\(_,i\)=>i<construction\?0:Math\.max\(0,Math\.min\(100,props\.ramp\[i-construction\]\?\?\(props\.blankStart\?Number\.NaN:100\)\)\)\/100\)/,'Raw utilization must not assume full production when ramp-up is blank')
  assert.match(advancedFinanceSource,/discountMode:blank\?'':/,'Raw discount method must remain unselected until user input')
