@@ -510,7 +510,7 @@ export function calculateProjectFinancialModelFromDrafts(
   if(!finalRun.valid)return {
     valid:false,issues:finalRun.issues,financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,
   }
-  const shareholderDistribution=applyShareholderDistributions(finalRun.finance,finalRun.statements,effectiveDrafts.helpDriven)
+  const shareholderDistribution=applyShareholderDistributions(finalRun.finance,finalRun.statements,effectiveDrafts.helpDriven,finance)
   if(!shareholderDistribution.valid)return {
     valid:false,issues:shareholderDistribution.issues,financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,
   }
