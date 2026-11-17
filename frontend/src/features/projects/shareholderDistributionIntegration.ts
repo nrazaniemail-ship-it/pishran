@@ -11,6 +11,8 @@ export type ShareholderDistributionPeriod = {
   ordinaryDividend: number
   totalDividend: number
   repatriatedDividend: number
+  ordinaryAllocations: {shareholderClass:string;amount:number}[]
+  preferredAllocations: {shareholderClass:string;amount:number}[]
   capitalRefund: number
   closingRetainedEarnings: number
   closingPaidInCapital: number
@@ -75,7 +77,21 @@ export function applyShareholderDistributions(
     policyByPeriod.set(p,[...(policyByPeriod.get(p)??[]),row])
   }
   const refunds=new Map<number,number>()
+  const contributions=new Map<number,number>()
+  const partnerContributions=new Map<string,Map<number,number>>()
   for(const row of partners){
+    const partnerKey=String(row.values.name??row.id).trim()||row.id
+    const paidIn=row.values.paidIn
+    if(paidIn!==null&&paidIn!==undefined&&paidIn!==''){
+      if(!nonNegative(paidIn)||periodIndex(row.values.period)<0)issues.push('Joint-venture contribution '+row.id+' requires a valid project period and non-negative paid-in amount.')
+      else {
+        const p=periodIndex(row.values.period)
+        contributions.set(p,(contributions.get(p)??0)+paidIn)
+        const schedule=partnerContributions.get(partnerKey)??new Map<number,number>()
+        schedule.set(p,(schedule.get(p)??0)+paidIn)
+        partnerContributions.set(partnerKey,schedule)
+      }
+    }
     const p=periodIndex(row.values.period)
     const refund=row.values.paidOut
     if(refund!==null&&refund!==undefined&&refund!==''){
@@ -101,8 +117,22 @@ export function applyShareholderDistributions(
   let priorRefunds=0
   let retained=statements[0].openingBalances.retainedEarnings
   let paidIn=statements[0].openingBalances.paidInCapital
+  const partnerCapitalBalances=new Map<string,number>()
   for(let i=0;i<finance.rows.length;i++){
     const row=updatedFinance.rows[i], statement=updatedStatements[i]
+    const newPartnerContribution=contributions.get(i)??0
+    if(newPartnerContribution>0){
+      updatedFinance.rows[i]={...row,equityContribution:row.equityContribution+newPartnerContribution,equityFreeCashFlow:row.equityFreeCashFlow+newPartnerContribution}
+      updatedFinance.totalEquityContribution+=newPartnerContribution
+      statement.cashFlowStatement.financingCashFlow+=newPartnerContribution
+      statement.cashFlowStatement.netChangeInCash+=newPartnerContribution
+      statement.cashFlowStatement.closingCash+=newPartnerContribution
+      statement.balanceSheet.cash+=newPartnerContribution
+      statement.balanceSheet.totalAssets+=newPartnerContribution
+      statement.balanceSheet.paidInCapital+=newPartnerContribution
+      statement.balanceSheet.totalEquity+=newPartnerContribution
+      statement.balanceSheet.totalLiabilitiesAndEquity+=newPartnerContribution
+    }
     const openingDistributableProfit=retained
     const netIncome=statement.incomeStatement.netIncome
     const profitAvailable=Math.max(0,openingDistributableProfit+netIncome)
@@ -116,15 +146,25 @@ export function applyShareholderDistributions(
     const profitPool=profitAvailable*distributedPercent/100
     const preferredRows=partners.filter(item=>item.values.type==='preferred-shareholder')
     let preferredDividend=0
+    const preferredAllocations:{shareholderClass:string;amount:number}[]=[]
     for(const partner of preferredRows){
-      const partnerPeriod=partner.values.period
-      if(typeof partnerPeriod==='string'&&partnerPeriod.trim()&&periodIndex(partnerPeriod)!==i)continue
+      const partnerKey=String(partner.values.name??partner.id).trim()||partner.id
+      const contribution=partnerContributions.get(partnerKey)?.get(i)??0
+      const basis=(partnerCapitalBalances.get(partnerKey)??0)+contribution
       const absolute=finite(partner.values.preferredDividendAbsolute)?partner.values.preferredDividendAbsolute:0
       const percent=finite(partner.values.preferredDividendPercent)?partner.values.preferredDividendPercent:0
-      const basis=finite(partner.values.paidIn)?partner.values.paidIn:0
-      preferredDividend+=absolute+basis*percent/100
+      const requested=absolute+basis*percent/100
+      if(requested>0)preferredAllocations.push({shareholderClass:partnerKey,amount:requested})
+      preferredDividend+=requested
     }
     preferredDividend=Math.min(profitPool,preferredDividend)
+    if(preferredDividend>0){
+      let remainingPreferred=preferredDividend
+      for(let j=0;j<preferredAllocations.length;j++){
+        const amount=j===preferredAllocations.length-1?remainingPreferred:Math.min(remainingPreferred,preferredAllocations[j].amount)
+        preferredAllocations[j]={...preferredAllocations[j],amount};remainingPreferred-=amount
+      }
+    }
     const ordinaryPool=Math.max(0,profitPool-preferredDividend)
     const shareRows=rows.filter(item=>typeof item.values.shareholderClass==='string'&&item.values.shareholderClass.trim())
     const explicitShares=shareRows.map(item=>item.values.remainingProfitShare)
@@ -139,6 +179,14 @@ export function applyShareholderDistributions(
       if(partnerShares.length&&!close(shareTotal,100))issues.push('Joint-venture profit-share percentages must sum to 100%.')
     }
     const ordinaryDividend=ordinaryPool
+    const ordinaryAllocations:{shareholderClass:string;amount:number}[]=[]
+    if(explicitShares.some(value=>value!==null&&value!==undefined&&value!=='')){
+      for(const item of shareRows)ordinaryAllocations.push({shareholderClass:String(item.values.shareholderClass).trim(),amount:ordinaryPool*(item.values.remainingProfitShare as number)/100})
+    } else {
+      const partnerShares=partners.filter(item=>item.values.type!=='preferred-shareholder'&&finite(item.values.profitSharePercent))
+      if(partnerShares.length){for(const item of partnerShares)ordinaryAllocations.push({shareholderClass:String(item.values.name??item.id),amount:ordinaryPool*(item.values.profitSharePercent as number)/100})}
+      else if(ordinaryPool>0)ordinaryAllocations.push({shareholderClass:'unallocated',amount:ordinaryPool})
+    }
     const totalDividend=preferredDividend+ordinaryDividend
     const repatriationValues=rows.map(item=>item.values.repatriatedPercent).filter(value=>value!==null&&value!==undefined&&value!=='')
     if(repatriationValues.some(value=>!finite(value)||!close(value as number,repatriationValues.length?repatriationValues[0] as number:0)))
@@ -175,9 +223,10 @@ export function applyShareholderDistributions(
     updatedFinance.rows[i]={...row,equityFreeCashFlow:row.equityFreeCashFlow-totalOutflow}
     periods.push({period:row.period,openingDistributableProfit,netIncome,profitAvailable,
       retainedProfit:profitAvailable*retainedPercent/100,preferredDividend,ordinaryDividend,totalDividend,
-      repatriatedDividend,capitalRefund,closingRetainedEarnings,closingPaidInCapital,closingCash})
+      repatriatedDividend,ordinaryAllocations,preferredAllocations,capitalRefund,closingRetainedEarnings,closingPaidInCapital,closingCash})
     totalDividends+=totalDividend;totalCapitalRefund+=capitalRefund;totalRepatriatedDividend+=repatriatedDividend
     priorRefunds+=capitalRefund;retained=closingRetainedEarnings;paidIn=closingPaidInCapital
+    for(const [partnerKey,schedule] of partnerContributions){partnerCapitalBalances.set(partnerKey,(partnerCapitalBalances.get(partnerKey)??0)+(schedule.get(i)??0))}
   }
   if(issues.length)return empty(issues)
   return {valid:true,issues:[],periods,finance:updatedFinance,statements:updatedStatements,totalDividends,totalCapitalRefund,totalRepatriatedDividend}
