@@ -116,12 +116,28 @@ export default function App() {
         if (!alive) return
         setSettings(nextSettings)
         applySettings(nextSettings)
-        setProjects(nextProjects)
+        const savedProjectOrder = await localStore.get<string[]>('ui:modern-project-order')
+        const orderedProjects = Array.isArray(savedProjectOrder) && savedProjectOrder.length
+          ? [...nextProjects].sort((left, right) => {
+              const leftIndex = savedProjectOrder.indexOf(left.id)
+              const rightIndex = savedProjectOrder.indexOf(right.id)
+              if (leftIndex < 0 && rightIndex < 0) return 0
+              if (leftIndex < 0) return 1
+              if (rightIndex < 0) return -1
+              return leftIndex - rightIndex
+            })
+          : nextProjects
+        setProjects(orderedProjects)
         setStorageInfo(info)
         setReady(true)
       }).catch(() => setReady(true))
     return () => { alive = false }
   }, [])
+
+  useEffect(() => {
+    if (!ready) return
+    void localStore.set('ui:modern-project-order', projects.map(project => project.id))
+  }, [projects, ready])
 
   useEffect(() => {
     document.documentElement.lang = settings.language
