@@ -87,7 +87,8 @@ assert.equal(coverageResult.valid,true,coverageResult.issues.join('; '))
 const close=(a,b)=>assert.ok(Math.abs(a-b)<0.0001,'Expected '+b+', got '+a)
 coverageResult.rows.filter(row=>row.productId==='P1').forEach((row,index)=>{
  close(row.closingInventoryQuantity,[100*30/90,100*30/90,0][index])
- close(row.productionQuantity,[100+100*30/360,100,0][index])
+ // 30 days of cover = 30/90 of the quarter's sales, not 30/360.
+ close(row.productionQuantity,[100+100*30/90,100,0][index])
 })
 const noLiquidation=module.buildProductOperatingSchedule({
  ...daysCoverageDraft,sales:[{...daysCoverageDraft.sales[0],periods:daysCoverageDraft.sales[0].periods.map((row,index)=>index===2?{...row,salesQuantity:0}:row)}]
