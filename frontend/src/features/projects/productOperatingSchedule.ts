@@ -179,10 +179,10 @@ export function buildProductOperatingSchedule(
         issues.push('Product '+sale.productId+' requires non-negative sales quantity, price and explicit sales-tax rate in period '+(index+1)+'.')
         continue
       }
-      const openingQuantity=index===0
+      const openingQuantity:number|null=index===0
         ?source.openingFinishedGoodsQuantity
         :sale.inventoryPolicy==='comfar-days-coverage'?previousClosingQuantity:source.openingFinishedGoodsQuantity
-      const openingValue=index===0
+      const openingValue:number|null=index===0
         ?source.openingFinishedGoodsValue
         :sale.inventoryPolicy==='comfar-days-coverage'?previousClosingValue:source.openingFinishedGoodsValue
       if(openingQuantity===null||openingValue===null||!Number.isFinite(openingQuantity)||!Number.isFinite(openingValue)||
@@ -254,14 +254,14 @@ export function buildProductOperatingSchedule(
       const productionCost=Math.max(0,productionQuantity)*baseUnitProductionCost+periodAdjustment
       const unitProductionCost=productionQuantity>0?productionCost/productionQuantity:baseUnitProductionCost
       const availableQuantity=openingQuantity+Math.max(0,productionQuantity)
-      const availableValue=openingValue+productionCost
+      const availableValue:number=openingValue+productionCost
       if(availableQuantity<=0&&(salesQuantity>0||closingQuantity>0)) {
         issues.push('Product '+sale.productId+' has positive sales or closing inventory without available stock in period '+(index+1)+'.')
         continue
       }
-      const weightedAverageUnitCost=availableQuantity>0?availableValue/availableQuantity:0
+      const weightedAverageUnitCost:number=availableQuantity>0?availableValue/availableQuantity:0
       const costOfSales=salesQuantity*weightedAverageUnitCost
-      const closingInventoryValue=closingQuantity*weightedAverageUnitCost
+      const closingInventoryValue:number=closingQuantity*weightedAverageUnitCost
       const baseRevenue=salesQuantity*(source.netUnitPrice as number)
       const subsidyIncome=source.subsidyPercent!=null
         ?baseRevenue*source.subsidyPercent/100
