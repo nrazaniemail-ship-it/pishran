@@ -102,3 +102,22 @@ assert.equal(depositStatements[2].balanceSheet.cashInHand,0)
 assert.equal(depositStatements[2].balanceSheet.shortTermDeposits,0)
 assert.ok(depositStatements.every(row=>Math.abs(row.movementChecks.cashRollForward)<=0.01))
 console.log('PASS: COMFAR short-term deposit interest flows through tax, CFADS, cash and linked statements')
+
+const automaticFundingCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,constructionPeriodCount:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,100],annualShortTermDepositInterest:[0,0,0],
+  annualVariableCost:[0,20,20],annualFixedCost:[0,10,10],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[150,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[0,0,0],annualEquityContributions:[50,0,0],
+  workingCapitalByPeriod:[0,0,0],openingCash:0,loans:[],discountRatePercent:10,
+})
+assert.equal(automaticFundingCase.valid,true,automaticFundingCase.warnings.join('; '))
+assert.deepEqual(automaticFundingCase.rows.map(row=>Math.round(row.closingCash)),[-100,-130,-60])
+assert.deepEqual(automaticFundingCase.automaticFundingSchedule.map(row=>Math.round(row.automaticEquity)),[100,0,0])
+assert.deepEqual(automaticFundingCase.automaticFundingSchedule.map(row=>Math.round(row.automaticOverdraftDrawdown)),[0,30,0])
+assert.deepEqual(automaticFundingCase.automaticFundingSchedule.map(row=>Math.round(row.automaticOverdraftRepayment)),[0,0,30])
+assert.deepEqual(automaticFundingCase.automaticFundingSchedule.map(row=>Math.round(row.automaticOverdraftBalance)),[0,30,0])
+assert.equal(automaticFundingCase.totalAutomaticEquity,100)
+assert.equal(automaticFundingCase.peakAutomaticOverdraft,30)
+assert.equal(automaticFundingCase.closingAutomaticOverdraft,0)
+console.log('PASS: COMFAR XI.N construction equity, production overdraft and earliest-surplus repayment')
