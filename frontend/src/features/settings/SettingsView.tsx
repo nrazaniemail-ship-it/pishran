@@ -53,6 +53,11 @@ export default function SettingsView({ settings, storageInfo, onChange, onRestor
         <label className="setting-row"><span>{en ? 'Compact layout' : 'چیدمان فشرده'}</span><input type="checkbox" checked={settings.compactMode} onChange={e => update('compactMode', e.target.checked)}/></label>
       </article>
 
+      <article className="settings-card ui-mode-settings">
+        <div className="settings-card-title"><span className="settings-symbol">▦</span><div><b>{en ? 'User Interface' : 'رابط کاربری'}</b><small>{en ? 'Choose your Pishran workspace' : 'انتخاب محیط کاری پیشران'}</small></div></div>
+        <label className="setting-row"><span>{en ? 'Interface style' : 'سبک رابط کاربری'}</span><select value={settings.uiMode ?? 'simple'} onChange={e => update('uiMode', e.target.value as AppSettings['uiMode'])}><option value="simple">{en ? 'Simple — current interface' : 'ساده — رابط کاربری کنونی'}</option><option value="modern">{en ? 'Modern — enterprise workspace' : 'مدرن — فضای کاری حرفه‌ای'}</option></select></label>
+        <p className="font-directory-note">{en ? 'The selected interface is saved on this device. Both modes use the same projects, data and financial calculation engine.' : 'انتخاب شما روی همین دستگاه ذخیره می‌شود. هر دو رابط از پروژه‌ها، داده‌ها و موتور محاسبات مالی مشترک استفاده می‌کنند.'}</p>
+      </article>
       <BackupSettings language={settings.language} settings={settings} onChange={onChange} onRestored={onRestored}/>
     </div>
     <div className="local-only-note"><b>{en ? 'Privacy:' : 'حریم خصوصی:'}</b> {en ? 'In local mode, project data is not sent to an account or server.' : 'در حالت محلی، اطلاعات پروژه‌ها برای ورود به حساب یا سرور ارسال نمی‌شوند.'}</div>

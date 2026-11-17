@@ -6,7 +6,7 @@ import {
 import { listFinancialMethods, type FinancialMethodDefinition } from './financialMethodDirectory'
 import { buildComfarDepreciationAssetsFromFixedInvestmentItems, calculateComfarAssetLifecycle, reconcileFixedInvestmentRegister } from '../steel/financialModel'
 
-type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; projectStartYear: number; periodCount: number; capexTotal: number; preOperatingCost?: number; referenceDepreciationByYear?: ReadonlyArray<readonly [number, number]>; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean }
+type Props = { value: FixedInvestmentItem[]; foundation: ProjectFoundation; projectStartYear: number; periodCount: number; capexTotal: number; preOperatingCost?: number; referenceDepreciationByYear?: ReadonlyArray<readonly [number, number]>; onChange: (items: FixedInvestmentItem[]) => void; language?: 'fa' | 'en'; blankTemplate?: boolean; preOperatingOnly?: boolean }
 const makeId = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
 const assetClasses: { value: FixedInvestmentItem['assetClass']; fa: string; en: string }[] = [
   { value: 'land', fa: 'زمین', en: 'Land' },
@@ -32,9 +32,10 @@ const methods: { value: FixedInvestmentDepreciationMethod; definition: Financial
     .filter(definition => directoryMethodToAssetMethod[definition.id] !== undefined)
     .map(definition => ({ value: directoryMethodToAssetMethod[definition.id], definition }))
 
-export default function FixedInvestmentPanel({ value, foundation, projectStartYear, periodCount, capexTotal, preOperatingCost = 0, referenceDepreciationByYear, onChange, language = 'fa', blankTemplate = false }: Props) {
+export default function FixedInvestmentPanel({ value, foundation, projectStartYear, periodCount, capexTotal, preOperatingCost = 0, referenceDepreciationByYear, onChange, language = 'fa', blankTemplate = false, preOperatingOnly = false }: Props) {
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
+  const visibleAssetClasses=preOperatingOnly?assetClasses.filter(option=>option.value==='preproduction'):assetClasses
   const issues = validateFixedInvestmentItems(value, foundation)
   const depreciationBuild = buildComfarDepreciationAssetsFromFixedInvestmentItems(value, projectStartYear, periodCount, foundation.planning.periodFrequency, foundation)
   const assetLifecycle = calculateComfarAssetLifecycle(depreciationBuild.assets, depreciationBuild.sales, periodCount)
@@ -56,6 +57,9 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
     'asset-acquisition-period-unallocated':'دوره تحصیل هنوز تخصیص یا تأیید نشده است.',
     'asset-acquisition-period-estimated':'دوره تحصیل برآوردی است و تا تأیید نباید مبنای جریان نقدی قطعی باشد.',
     'missing-fixed-asset-description':'شرح هر قلم دارایی را وارد کنید.',
+    'missing-fixed-asset-class':'طبقه دارایی را انتخاب کنید.',
+    'missing-fixed-asset-origin':'منشأ محلی یا خارجی دارایی را مشخص کنید.',
+    'missing-depreciation-method':'روش استهلاک یا عدم استهلاک را صریحاً انتخاب کنید.',
     'unknown-fixed-asset-currency':'ارز دارایی باید در ساختار ارزهای پروژه تعریف شده باشد.',
     'local-asset-currency-mismatch':'دارایی با منشأ محلی باید به ارز محلی ثبت شود.',
     'foreign-asset-currency-mismatch':'دارایی با منشأ خارجی باید به یکی از ارزهای خارجی تعریف‌شده ثبت شود.',
@@ -92,27 +96,27 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
   const updateDepreciation = (id: string, patch: Partial<FixedInvestmentItem['depreciation']>) => onChange(value.map(item => item.id === id ? { ...item, depreciation: { ...item.depreciation, ...patch } } : item))
   const updateAcquisition = (id: string, acquisitionId: string, patch: Partial<FixedInvestmentAcquisition>) => onChange(value.map(item => item.id === id ? { ...item, acquisitions: item.acquisitions.map(row => row.id === acquisitionId ? { ...row, ...patch } : row) } : item))
   const updateSale = (id: string, saleId: string, patch: Partial<FixedInvestmentSale>) => onChange(value.map(item => item.id === id ? { ...item, sales: item.sales.map(row => row.id === saleId ? { ...row, ...patch } : row) } : item))
-  const addAcquisition = (id: string) => onChange(value.map(item => item.id === id ? { ...item, acquisitions: [...item.acquisitions, { id: makeId('acq'), period: '', quantity: blankTemplate ? 0 : 1, unitPrice: 0, currencyCode: item.currencyCode, exchangeRateToLocal: null, allocationBasis: 'unallocated' }] } : item))
+  const addAcquisition = (id: string) => onChange(value.map(item => item.id === id ? { ...item, acquisitions: [...item.acquisitions, { id: makeId('acq'), period: '', quantity: blankTemplate ? Number.NaN : 1, unitPrice: blankTemplate ? Number.NaN : 0, currencyCode: item.currencyCode, exchangeRateToLocal: null, allocationBasis: 'unallocated' }] } : item))
   const addSale = (id: string) => onChange(value.map(item => item.id === id ? { ...item, sales: [...item.sales, { id: makeId('sale'), acquisitionId: item.acquisitions[0]?.id ?? '', period: '', market: 'local', priceMode: 'book-value', currencyCode: item.currencyCode, selfDefinedPrice: null }] } : item))
   const field = (label: string, valueText: string | number, onValue: (value: string) => void, type = 'text', min?: number, max?: number, disabled = false, step?: number) =>
-    <label className="fw-field"><span>{label}</span><input type={type} value={blankTemplate && type === 'number' && valueText === 0 ? '' : valueText} min={min} max={max} step={step} disabled={disabled} onChange={e => onValue(e.target.value)} /></label>
+    <label className="fw-field"><span>{label}</span><input type={type} value={type === 'number' && typeof valueText === 'number' && !Number.isFinite(valueText) ? '' : valueText} min={min} max={max} step={step} disabled={disabled} onChange={e => onValue(e.target.value)} /></label>
 
   return <section className="fw-card" style={{ marginTop: 18 }}>
-    <h3>{t('دفتر عمومی هزینه‌های سرمایه‌گذاری ثابت','Fixed Investment Register')}</h3>
-    <p className="fw-hint">{t('این دفتر فونداسیون مشترک دارایی‌های ثابت و هزینه‌های قبل از بهره‌برداری است. هر قلم چند نوبت تحصیل، مبنای مستندات دوره، شرایط استهلاک و فروش مستقل دارد. استهلاک و واگذاری به موتور مالی متصل‌اند؛ اما زمان‌بندی CAPEX فقط وقتی از دفتر استخراج می‌شود که دوره‌های تحصیل مستند یا تأیید شده و جمع دفتر با CAPEX تطبیق داشته باشد. در غیر این صورت CAPEX تجمیعی به‌عنوان مبنای موقت باقی می‌ماند.','This register is shared across industries and templates. Each asset class can have multiple acquisition periods, currencies, depreciation conditions and disposals. Its depreciation and disposal schedules feed the integrated finance engine. Fixed-asset acquisitions and pre-production expenditures are reconciled separately to aggregate CAPEX, preventing double-counting; the evidence basis for each acquisition period and depreciation condition is recorded and validated.')}</p>
+    <h3>{preOperatingOnly?t('دفتر مخارج پیش از تولید','Pre-production Expenditure Register'):t('دفتر عمومی هزینه‌های سرمایه‌گذاری ثابت','Fixed Investment Register')}</h3>
+    <p className="fw-hint">{t('این دفتر فونداسیون مشترک دارایی‌های ثابت و هزینه‌های قبل از بهره‌برداری است. هر قلم چند نوبت تحصیل، مبنای مستندات دوره، شرایط استهلاک و فروش مستقل دارد. استهلاک و واگذاری به موتور مالی متصل‌اند؛ اما زمان‌بندی CAPEX فقط وقتی از دفتر استخراج می‌شود که دوره‌های تحصیل مستند یا تأیید شده و جمع دفتر با CAPEX تطبیق داشته باشد. در غیر این صورت CAPEX تجمیعی به‌عنوان مبنای موقت باقی می‌ماند.','This register records either fixed assets or pre-production expenditures as selected by the project model. Acquisition periods, currency conversion and the evidence basis are validated before the schedule feeds the integrated finance engine.')}</p>
     {value.map(item => <div className="fw-card" key={item.id}>
       <div className="fw-grid">
-        {field(t('شرح دارایی','Fixed Investment Item'), item.description, v => updateItem(item.id, { description: v }))}
-        <label className="fw-field"><span>{t('طبقه دارایی','Asset Class')}</span><select value={item.assetClass} onChange={e => updateItem(item.id, { assetClass: e.target.value as FixedInvestmentItem['assetClass'], depreciation: e.target.value === 'land' ? { ...item.depreciation, method: 'none' } : item.depreciation })}>{assetClasses.map(option => <option key={option.value} value={option.value}>{en ? option.en : option.fa}</option>)}</select></label>
-        <label className="fw-field"><span>{t('منشأ دارایی','Asset Origin')}</span><select value={item.origin} onChange={e => { const origin = e.target.value as FixedInvestmentItem['origin']; const currencyCode = origin === 'local' ? foundation.currencies.localCurrencyCode : (foundation.currencies.foreignCurrencies[0]?.code ?? ''); updateItem(item.id, { origin, currencyCode, acquisitions: item.acquisitions.map(row => ({ ...row, currencyCode })), sales: item.sales.map(row => ({ ...row, currencyCode })) }) }}><option value="local">{t('محلی','Local')}</option><option value="foreign">{t('خارجی','Foreign')}</option></select></label>
-        <label className="fw-field"><span>{t('ارز دارایی','Asset Currency')}</span><select value={item.currencyCode} onChange={e => updateItem(item.id, { currencyCode: e.target.value, acquisitions: item.acquisitions.map(row => ({ ...row, currencyCode: e.target.value })), sales: item.sales.map(row => ({ ...row, currencyCode: e.target.value })) })}><option value="">{t('انتخاب ارز','Select currency')}</option>{currencies.filter(currency => item.origin === 'local' ? currency.code === foundation.currencies.localCurrencyCode : currency.code !== foundation.currencies.localCurrencyCode).map(currency => <option key={currency.code} value={currency.code}>{currency.code} — {currency.name}</option>)}</select></label>
+        {field(t(preOperatingOnly?'شرح مخارج پیش از تولید':'شرح دارایی',preOperatingOnly?'Pre-production Expenditure':'Fixed Investment Item'), item.description, v => updateItem(item.id, { description: v }))}
+        <label className="fw-field"><span>{t('طبقه دارایی','Asset Class')}</span><select value={item.assetClass} onChange={e => updateItem(item.id, { assetClass: e.target.value as FixedInvestmentItem['assetClass'], depreciation: e.target.value === 'land' ? { ...item.depreciation, method: 'none' } : item.depreciation })}><option value="">{t('انتخاب طبقه دارایی','Select asset class')}</option>{visibleAssetClasses.map(option => <option key={option.value} value={option.value}>{en ? option.en : option.fa}</option>)}</select></label>
+        <label className="fw-field"><span>{t('منشأ دارایی','Asset Origin')}</span><select value={item.origin} onChange={e => { const origin = e.target.value as FixedInvestmentItem['origin']; const currencyCode = origin === 'local' ? foundation.currencies.localCurrencyCode : origin === 'foreign' ? (foundation.currencies.foreignCurrencies[0]?.code ?? '') : '';  updateItem(item.id, { origin, currencyCode, acquisitions: item.acquisitions.map(row => ({ ...row, currencyCode })), sales: item.sales.map(row => ({ ...row, currencyCode })) }) }}><option value="">{t('انتخاب منشأ','Select origin')}</option><option value="local">{t('محلی','Local')}</option><option value="foreign">{t('خارجی','Foreign')}</option></select></label>
+        <label className="fw-field"><span>{t('ارز دارایی','Asset Currency')}</span><select value={item.currencyCode} onChange={e => updateItem(item.id, { currencyCode: e.target.value, acquisitions: item.acquisitions.map(row => ({ ...row, currencyCode: e.target.value })), sales: item.sales.map(row => ({ ...row, currencyCode: e.target.value })) })}><option value="">{t('انتخاب ارز','Select currency')}</option>{currencies.filter(currency => item.origin === 'local' ? currency.code === foundation.currencies.localCurrencyCode : item.origin === 'foreign' ? currency.code !== foundation.currencies.localCurrencyCode : false).map(currency => <option key={currency.code} value={currency.code}>{currency.code} — {currency.name}</option>)}</select></label>
         {foundation.costCentres.active && <label className="fw-field"><span>{t('مرکز هزینه','Cost Centre')}</span><select value={item.costCentreId} onChange={e => updateItem(item.id, { costCentreId: e.target.value })}><option value="">{t('انتخاب مرکز هزینه','Select Cost Centre')}</option>{foundation.costCentres.items.map(centre => <option key={centre.id} value={centre.id}>{centre.code} — {centre.name}</option>)}</select></label>}
         <button type="button" className="secondary-button" onClick={() => onChange(value.filter(row => row.id !== item.id))}>{t('حذف قلم دارایی','Remove Fixed Investment Item')}</button>
       </div>
 
-      <h4>{t('شرایط استهلاک','Depreciation Conditions')}</h4>
+      <h4>{preOperatingOnly?t('شرایط استهلاک‌پذیری مخارج','Amortization Conditions'):t('شرایط استهلاک','Depreciation Conditions')}</h4>
       <div className="fw-grid">
-        <label className="fw-field"><span>{t('روش استهلاک از دایرکتوری','Depreciation Method Directory')}</span><select value={item.depreciation.method} onChange={e => updateDepreciation(item.id, { method: e.target.value as FixedInvestmentItem['depreciation']['method'] })}>{methods.map(option => <option key={option.definition.id} value={option.value}>{en ? option.definition.nameEn : option.definition.nameFa}</option>)}</select></label>
+        <label className="fw-field"><span>{t('روش استهلاک از دایرکتوری','Depreciation Method Directory')}</span><select value={item.depreciation.method} onChange={e => updateDepreciation(item.id, { method: e.target.value as FixedInvestmentItem['depreciation']['method'] })}><option value="">{t('انتخاب روش استهلاک','Select depreciation method')}</option>{methods.map(option => <option key={option.definition.id} value={option.value}>{en ? option.definition.nameEn : option.definition.nameFa}</option>)}</select></label>
         {(() => {
           const definition = methods.find(option => option.value === item.depreciation.method)?.definition
           if (!definition) return null
@@ -135,24 +139,25 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
         {field(t('شروع استهلاک','Starting at'), item.depreciation.startingAt, v => updateDepreciation(item.id, { startingAt: v }), 'text')}
         {field(t('نرخ استهلاک (% در سال)','Rate (% per annum)'), item.depreciation.ratePercent ?? '', v => updateDepreciation(item.id, { ratePercent: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none' || item.depreciation.method === 'sum-of-digits')}
         {field(t('مدت استهلاک ـ سال','Length — Years'), item.depreciation.lengthYears ?? '', v => updateDepreciation(item.id, { lengthYears: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none', 0.001)}
-        {field(t('مدت استهلاک ـ ماه','Length — Months'), item.depreciation.lengthMonths, v => updateDepreciation(item.id, { lengthMonths: Number(v) }), 'number', 0, 11, item.depreciation.method === 'none')}
-        {field(t('ماه‌های مشمول استهلاک در سال اول','Months in first depreciation year'), item.depreciation.firstDepreciationMonths, v => updateDepreciation(item.id, { firstDepreciationMonths: Number(v) }), 'number', 1, 12, item.depreciation.method === 'none')}
-        {field(t('ارزش اسقاط (% از بهای اولیه)','Scrap (% of original value)'), item.depreciation.scrapPercent, v => updateDepreciation(item.id, { scrapPercent: Number(v) }), 'number', 0, 100, item.depreciation.method === 'none')}
+        {field(t('مدت استهلاک ـ ماه','Length — Months'), item.depreciation.lengthMonths, v => updateDepreciation(item.id, { lengthMonths: v===''?Number.NaN:Number(v) }), 'number', 0, 11, item.depreciation.method === 'none')}
+        {field(t('ماه‌های مشمول استهلاک در سال اول','Months in first depreciation year'), item.depreciation.firstDepreciationMonths, v => updateDepreciation(item.id, { firstDepreciationMonths: v===''?Number.NaN:Number(v) }), 'number', 1, 12, item.depreciation.method === 'none')}
+        {field(t('ارزش اسقاط (% از بهای اولیه)','Scrap (% of original value)'), item.depreciation.scrapPercent, v => updateDepreciation(item.id, { scrapPercent: v===''?Number.NaN:Number(v) }), 'number', 0, 100, item.depreciation.method === 'none')}
         {item.depreciation.method === 'sum-of-digits' && (item.depreciation.lengthMonths > 0 || item.depreciation.firstDepreciationMonths !== 12) && <p className="fw-hint">{t('برای حفظ دقت، محاسبه مجموع سنوات در دوره ناقص فعلاً مسدود است.','Sum of years digits with a partial period is held to avoid unverified depreciation results.')}</p>}
       </div>
 
-      <h4>{t('هزینه تحصیل دارایی به تفکیک دوره','Costs of Assets by Period')}</h4>
+      <h4>{preOperatingOnly?t('مخارج پیش از تولید به تفکیک دوره','Pre-production Expenditures by Period'):t('هزینه تحصیل دارایی به تفکیک دوره','Costs of Assets by Period')}</h4>
       {item.acquisitions.map(acquisition => <div className="fw-grid" key={acquisition.id}>
         {field(t('دوره تحصیل','Acquisition Period'), acquisition.period, v => updateAcquisition(item.id, acquisition.id, { period: v }))}
         <label className="fw-field"><span>{t('مبنای دوره تحصیل','Acquisition Period Basis')}</span><select value={acquisition.allocationBasis ?? 'unallocated'} onChange={e=>updateAcquisition(item.id,acquisition.id,{allocationBasis:e.target.value as FixedInvestmentAcquisition['allocationBasis']})}><option value="source-period">{t('مستند به فایل منبع','Source-period evidence')}</option><option value="user-confirmed">{t('تأییدشده توسط کاربر','User-confirmed')}</option><option value="proportional-estimate">{t('برآورد تناسبی','Proportional estimate')}</option><option value="unallocated">{t('تخصیص‌نیافته','Unallocated')}</option></select></label>
-        {field(t('مقدار','Quantity'), acquisition.quantity, v => updateAcquisition(item.id, acquisition.id, { quantity: Number(v) }), 'number', 0)}
-        {field(t('قیمت واحد','Price'), acquisition.unitPrice, v => updateAcquisition(item.id, acquisition.id, { unitPrice: Number(v) }), 'number', 0)}
+        {field(t('مقدار','Quantity'), acquisition.quantity, v => updateAcquisition(item.id, acquisition.id, { quantity: v===''?Number.NaN:Number(v) }), 'number', 0)}
+        {field(t('قیمت واحد','Price'), acquisition.unitPrice, v => updateAcquisition(item.id, acquisition.id, { unitPrice: v===''?Number.NaN:Number(v) }), 'number', 0)}
         {field(t('نرخ تبدیل به ارز محلی','Exchange Rate to Local Currency'), acquisition.exchangeRateToLocal ?? '', v => updateAcquisition(item.id, acquisition.id, { exchangeRateToLocal: v === '' ? null : Number(v) }), 'number', 0, undefined, item.origin === 'local')}
         <div className="fw-field"><span>{t('جمع ردیف','Total')}</span><b>{(acquisition.quantity * acquisition.unitPrice).toLocaleString(en ? 'en-US' : 'fa-IR', { maximumFractionDigits: 2 })} {acquisition.currencyCode}</b></div>
         <button type="button" className="secondary-button" onClick={() => updateItem(item.id, { acquisitions: item.acquisitions.filter(row => row.id !== acquisition.id) })}>{t('حذف نوبت تحصیل','Remove Acquisition')}</button>
       </div>)}
       <button type="button" className="secondary-button" onClick={() => addAcquisition(item.id)}>{t('افزودن نوبت تحصیل','Add Acquisition')}</button>
 
+      {!preOperatingOnly&&<>
       <h4>{t('فروش و واگذاری دارایی','Sale of Asset')}</h4>
       {item.sales.map(sale => <div className="fw-grid" key={sale.id}>
         <label className="fw-field"><span>{t('نوبت تحصیل مرتبط','Related Acquisition')}</span><select value={sale.acquisitionId} onChange={e => updateSale(item.id, sale.id, { acquisitionId: e.target.value })}><option value="">{t('انتخاب نوبت','Select Acquisition')}</option>{item.acquisitions.map(acquisition => <option key={acquisition.id} value={acquisition.id}>{acquisition.period}</option>)}</select></label>
@@ -164,9 +169,10 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
         <button type="button" className="secondary-button" onClick={() => updateItem(item.id, { sales: item.sales.filter(row => row.id !== sale.id) })}>{t('حذف فروش','Remove Sale')}</button>
       </div>)}
       <button type="button" className="secondary-button" disabled={item.acquisitions.length === 0} onClick={() => addSale(item.id)}>{t('افزودن فروش دارایی','Add Asset Sale')}</button>
+      </>}
     </div>)}
-    <button type="button" className="secondary-button" onClick={() => onChange([...value, createBlankFixedInvestmentItem()])}>{t('افزودن قلم سرمایه‌گذاری ثابت','Add Fixed Investment Item')}</button>
-    {hasDepreciableAssets && <div className="fw-card">
+    <button type="button" className="secondary-button" onClick={() => {const item=createBlankFixedInvestmentItem();const blankItem=blankTemplate?{...item,assetClass:'' as FixedInvestmentItem['assetClass'],origin:'' as FixedInvestmentItem['origin'],depreciation:{...item.depreciation,method:'' as FixedInvestmentItem['depreciation']['method'],lengthMonths:Number.NaN,firstDepreciationMonths:Number.NaN,scrapPercent:Number.NaN}}:item;onChange([...value,preOperatingOnly?{...blankItem,assetClass:'preproduction'}:blankItem])}}>{preOperatingOnly?t('افزودن مخارج پیش از تولید','Add Pre-production Expenditure'):t('افزودن قلم سرمایه‌گذاری ثابت','Add Fixed Investment Item')}</button>
+    {hasDepreciableAssets&&!preOperatingOnly && <div className="fw-card">
       <h4>{t('پیش‌نمایش برنامه استهلاک دارایی‌ها','Asset Depreciation Schedule Preview')}</h4>
       <p className="fw-hint">{t('این پیش‌نمایش از نوبت‌های تحصیل و فروش همین دفتر ساخته می‌شود و برنامه استهلاک/واگذاری آن به موتور مالی یکپارچه ارسال می‌شود. جمع دفتر با CAPEX تجمیعی تطبیق داده می‌شود؛ زمان‌بندی دفتر فقط در صورت تأیید دوره‌های تحصیل و انطباق جمع، جایگزین تخصیص موقت CAPEX می‌شود و هیچ مبلغی دوباره به سرمایه‌گذاری اضافه نمی‌گردد.','This preview is built from acquisition and disposal vintages in this register and is passed to the integrated finance engine for depreciation and asset-sale treatment. Register totals are reconciled to aggregate CAPEX; register timing replaces the provisional CAPEX allocation only when acquisition periods are verified and totals match. Register amounts are never added a second time.')}</p>
       {depreciationWarnings.map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
@@ -179,8 +185,12 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       </div>}
       {!assetLifecycle.valid && <p className="fw-hint">{t('برنامه استهلاک دارای هشدار است و نباید به‌عنوان خروجی تأییدشده استفاده شود.','The depreciation schedule has warnings and must not be treated as a validated output.')}</p>}
     </div>}
+    {preOperatingOnly&&<div className="fw-card">
+      <h4>{t('زمان‌بندی مخارج پیش از تولید','Pre-production Expenditure Schedule')}</h4>
+      <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('مبلغ مخارج پیش از تولید','Pre-production Cost')}</th></tr></thead><tbody>{depreciationBuild.preOperatingSchedule.map((amount,index)=><tr key={index}><td>{projectStartYear+index}</td><td>{amount.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</td></tr>)}</tbody></table></div>
+    </div>}
     <div className="fw-card">
-      <h4>{t('تطبیق دفتر دارایی با CAPEX تجمیعی','Fixed Investment Register to Aggregate CAPEX Reconciliation')}</h4>
+      <h4>{preOperatingOnly?t('تطبیق مخارج پیش از تولید','Pre-production Expenditure Reconciliation'):t('تطبیق دفتر دارایی با CAPEX تجمیعی','Fixed Investment Register to Aggregate CAPEX Reconciliation')}</h4>
       <p className="fw-hint">{t('این کنترل، جمع نوبت‌های تحصیل را پس از تبدیل به ارز محلی با CAPEX منهای هزینه‌های قبل از بهره‌برداری مقایسه می‌کند. ارقام دفتر دوباره به CAPEX اضافه نمی‌شوند؛ تا زمان رفع اختلاف، برنامه سرمایه‌گذاری تجمیعی منبع جریان نقدی باقی می‌ماند.','This control compares acquisition vintages converted to local currency with aggregate CAPEX less pre-operating expenses. Register amounts are not added again to CAPEX; until the difference is resolved, aggregate CAPEX remains the cash-flow source.')}</p>
       <div className="fw-validation"><span>{t('جمع نوبت‌های تحصیل به ارز محلی','Register Acquisitions in Local Currency')}</span><b>{depreciationBuild.assets.length || value.some(item=>item.acquisitions.length>0) ? capexReconciliation.registerTotal.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2}) : '—'}</b></div>
       <div className="fw-validation"><span>{t('CAPEX هدف پس از کسر هزینه‌های قبل از بهره‌برداری','CAPEX Target Excluding Pre-operating Expenses')}</span><b>{capexReconciliation.capexFixedAssetTarget.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})}</b></div>
@@ -193,7 +203,7 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
       <div className="fw-validation"><span>{t('تأیید زمان‌بندی هزینه‌های قبل از بهره‌برداری','Pre-production Timing')}</span><b>{depreciationBuild.preOperatingScheduleVerified?t('تأییدشده','Verified'):t('موقت / نیازمند تأیید','Provisional / Requires confirmation')}</b></div>
       {capexReconciliation.warnings.map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
     </div>
-    <h4>{t('کنترل کامل بودن دفتر دارایی','Fixed Investment Register Validation')}</h4>
+    <h4>{preOperatingOnly?t('کنترل کامل بودن مخارج پیش از تولید','Pre-production Expenditure Validation'):t('کنترل کامل بودن دفتر دارایی','Fixed Investment Register Validation')}</h4>
     <div className="fw-validation"><span>{t('خطاهای ثبت','Input errors')}</span><b>{issues.length}</b></div>
     {issues.map((issue, index) => <div className="fw-hint" key={issue.path + issue.code + index}><b>{issue.path}</b> — {en ? issue.message : (issueMessages[issue.code] ?? issue.message)}</div>)}
   </section>

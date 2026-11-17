@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import type { OneWaySensitivityAnalysis, SensitivityCell } from '../steel/financialModel'
 import type { PartnerFinanceResult } from './partnerFinance'
 import { aggregatePeriodicFinanceByFiscalYear, hasCompleteFiscalYearCoverage, type PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
@@ -7,7 +8,7 @@ import { HOT_ROLLING_COMFAR_OUTPUT_AUDIT } from '../steel/hotRollingExcelBenchma
 type ReportFormRow = { id:string; name:string; quantity:number; unit:string; unitPrice:number; source:string; valueText?:string; flowType?:'input'|'output' }
 type Props = {
   language: 'fa' | 'en'
-  isHotRollingCoil: boolean
+  isHotRollingCoil?: boolean
   project: { name: string; location: string; owner: string; startYear: number; constructionYears: number; operatingYears: number; currency: string; fxRate: number }
   capacity: number
   sellingPrice: number
@@ -79,18 +80,39 @@ const fmt = (value: number | null | undefined, language: 'fa'|'en', digits = 2) 
   value == null || !Number.isFinite(value) ? '—' : value.toLocaleString(language === 'en' ? 'en-US' : 'fa-IR', { maximumFractionDigits: digits, minimumFractionDigits: digits })
 
 function FormRowsTable({title,rows,language,kind='cost'}:{title:string;rows:ReportFormRow[];language:'fa'|'en';kind?:'technical'|'material'|'cost'}){
+  const [query,setQuery]=useState('')
+  const [sort,setSort]=useState<'source'|'name'|'quantity'|'total'>('source')
+  const [directionSort,setDirectionSort]=useState<'asc'|'desc'>('asc')
   if(!rows.length)return null
   const direction=(row:ReportFormRow)=>row.flowType==='output'||(row.flowType==null&&/(تولیدی|قابل فروش|باطله|ضایعات|نرمه و برگشتی|سرباره|پرت|برگشتی|گندله سالم|آهن اسفنجی سرد)/.test(row.name))
     ?t('خروجی / محصول','Output / Product',language):t('ورودی / مصرف','Input / Consumption',language)
-  return <div className="fw-card"><h4>{title}</h4><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
+  const visibleRows=[...rows].filter(row=>[row.name,row.unit,row.source,row.valueText??''].join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+    .sort((a,b)=>{const left=sort==='name'?a.name:sort==='quantity'?a.quantity:sort==='total'?a.quantity*a.unitPrice:a.source;const right=sort==='name'?b.name:sort==='quantity'?b.quantity:sort==='total'?b.quantity*b.unitPrice:b.source;const result=typeof left==='number'&&typeof right==='number'?left-right:String(left).localeCompare(String(right),language==='en'?'en':'fa');return directionSort==='asc'?result:-result})
+  const exportCsv=()=>{
+    const headers=[t('قلم / پارامتر','Item / Parameter',language),t('مقدار / مشخصه','Quantity / Value',language),t('واحد','Unit',language),t('قیمت واحد','Unit price',language),t('جمع','Total',language),t('منبع','Source',language),...(kind==='material'?[t('جهت جریان','Flow direction',language)]:[])]
+    const records=visibleRows.map(row=>[row.name,kind==='technical'?(row.valueText||(row.quantity!==0?String(row.quantity):'')):String(row.quantity),row.unit,kind==='technical'||row.unitPrice===0?'':String(row.unitPrice),kind==='technical'||row.unitPrice===0?'':String(row.quantity*row.unitPrice),row.source,...(kind==='material'?[direction(row)]:[])])
+    const quote=(value:unknown)=>'"'+String(value??'').replace(/"/g,'""')+'"'
+    const csv='\uFEFF'+[headers,...records].map(record=>record.map(quote).join(',')).join('\r\n')
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'})
+    const url=URL.createObjectURL(blob)
+    const anchor=document.createElement('a');anchor.href=url;anchor.download=(title.trim().replace(/[^\p{L}\p{N}-]+/gu,'-')||'report')+'.csv';document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url)
+  }
+  return <div className="fw-card report-data-card"><div className="report-table-toolbar"><h4>{title}</h4><div className="report-table-actions">
+    <input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={t('جستجو در ردیف‌ها...','Filter rows...',language)} aria-label={t('جستجو در جدول','Search table',language)}/>
+    <select value={sort} onChange={event=>setSort(event.target.value as typeof sort)} aria-label={t('مرتب‌سازی جدول','Sort table',language)}>
+      <option value="source">{t('ترتیب منبع','Source order',language)}</option><option value="name">{t('نام قلم','Item name',language)}</option><option value="quantity">{t('مقدار','Quantity',language)}</option><option value="total">{t('جمع','Total',language)}</option>
+    </select>
+    <button type="button" className="secondary-button" onClick={()=>setDirectionSort(value=>value==='asc'?'desc':'asc')} aria-label={t('تغییر جهت مرتب‌سازی','Reverse sort direction',language)}>{directionSort==='asc'?'↑':'↓'}</button>
+    <button type="button" className="secondary-button report-export-button" onClick={exportCsv}>{t('خروجی Excel (CSV)','Export Excel (CSV)',language)}</button>
+    <button type="button" className="secondary-button report-print-button" onClick={()=>window.print()}>{t('چاپ / PDF','Print / PDF',language)}</button>
+  </div></div><div className="report-table-scroll" style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
     <th>{t('قلم / پارامتر','Item / Parameter',language)}</th><th>{t('مقدار / مشخصه','Quantity / Value',language)}</th><th>{t('واحد','Unit',language)}</th><th>{t('قیمت واحد','Unit price',language)}</th><th>{t('جمع','Total',language)}</th><th>{t('منبع','Source',language)}</th>{kind==='material'&&<th>{t('جهت جریان','Flow direction',language)}</th>}
-  </tr></thead><tbody>{rows.map(row=><tr key={row.id}>
+  </tr></thead><tbody>{visibleRows.map(row=><tr key={row.id}>
     <td>{row.name}</td><td>{kind==='technical'?(row.valueText|| (row.quantity!==0?fmt(row.quantity,language):'—')):fmt(row.quantity,language)}</td>
     <td>{row.unit||'—'}</td><td>{kind==='technical'||row.unitPrice===0?'—':fmt(row.unitPrice,language)}</td>
     <td>{kind==='technical'||row.unitPrice===0?'—':fmt(row.quantity*row.unitPrice,language)}</td><td>{row.source||'—'}</td>{kind==='material'&&<td>{direction(row)}</td>}
-  </tr>)}</tbody></table></div></div>
+  </tr>)}</tbody></table>{visibleRows.length===0&&<p className="fw-hint">{t('ردیفی با این عبارت پیدا نشد.','No rows match this search.',language)}</p>}</div><div className="report-table-footnote">{t('نمایش','Showing',language)} {fmt(visibleRows.length,language,0)} {t('از','of',language)} {fmt(rows.length,language,0)} {t('ردیف','rows',language)}</div></div>
 }
-
 function SensitivityChart({ analysis, language, currency }: { analysis: OneWaySensitivityAnalysis | null; language: 'fa'|'en'; currency: string }) {
   if (!analysis) return <p className="fw-hint">{t('در حال آماده‌سازی تحلیل حساسیت یک‌متغیره؛ مدل مالی یکپارچه باید یک بار محاسبه شود.','One-way sensitivity analysis is being prepared; the integrated financial model must complete one calculation.',language)}</p>
   const usable = analysis.factors.filter(f => f.available && f.lowNpv != null && f.highNpv != null)
@@ -153,8 +175,9 @@ function ReferenceSensitivityChart({ language }: { language:'fa'|'en' }) {
   </div>
 }
 
-function BreakEvenChart({ capacity, chartMaxQuantity, price, variable, fixed, breakEven, currency, language }: { capacity:number; chartMaxQuantity?:number; price:number; variable:number; fixed:number; breakEven:number; currency:string; language:'fa'|'en' }) {
+function BreakEvenChart({ capacity, chartMaxQuantity, price, variable, fixed, breakEven, currency, language, quantityUnit }: { capacity:number; chartMaxQuantity?:number; price:number; variable:number; fixed:number; breakEven:number; currency:string; language:'fa'|'en'; quantityUnit?:string }) {
   const chartMax = chartMaxQuantity ?? capacity
+  const unitLabel=quantityUnit??(language==='en'?'units/year':'واحد/سال')
   const valid = capacity > 0 && chartMax > 0 && price >= 0 && variable >= 0 && fixed >= 0
   if (!valid) return <p className="fw-hint">{t('برای ترسیم نمودار، ظرفیت، قیمت فروش و هزینه‌ها را تکمیل کنید.','Enter capacity, selling price and costs to draw the chart.',language)}</p>
   const maxRevenue = chartMax * price
@@ -179,19 +202,23 @@ function BreakEvenChart({ capacity, chartMaxQuantity, price, variable, fixed, br
       <path d={totalPath} fill="none" stroke="#c75b54" strokeWidth="3"/>
       <path d={revenuePath} fill="none" stroke="#2f9676" strokeWidth="3"/>
       {markerVisible&&<g><line x1={x(breakEven)} x2={x(breakEven)} y1="48" y2="258" stroke="#c28b36" strokeDasharray="4 4" strokeWidth="2"/><circle cx={x(breakEven)} cy={y(breakEven*price)} r="5" fill="#c28b36"/><text x={Math.min(680,x(breakEven)+8)} y={Math.max(45,y(breakEven*price)-10)} fontSize="11" fill="currentColor">{t('نقطه سربه‌سر','Break-even',language)}</text></g>}
-      <text x="374" y="294" textAnchor="middle" fontSize="12" fill="currentColor">{t('حجم تولید (تن در سال)','Production volume (tonnes/year)',language)}</text>
+      <text x="374" y="294" textAnchor="middle" fontSize="12" fill="currentColor">{t('حجم تولید','Production volume',language)} ({unitLabel})</text>
     </svg>
     <div className="fw-grid" style={{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:8}}>
       {[[t('درآمد فروش','Sales revenue',language),'#2f9676'],[t('هزینه کل','Total cost',language),'#c75b54'],[t('هزینه ثابت','Fixed cost',language),'#9b8c70'],[t('هزینه متغیر','Variable cost',language),'#8a9eaa']].map(([label,color])=><div key={label} className="fw-hint"><span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:color,marginInlineEnd:6}}/>{label}</div>)}
     </div>
-    <div className="fw-validation"><span>{t('مقدار نقطه سربه‌سر','Break-even volume',language)}</span><b>{fmt(breakEven,language)} {t('تن','tonnes',language)} · {fmt(capacity>0?breakEven/capacity*100:NaN,language)}٪ {t('ظرفیت','capacity',language)}</b></div>
+    <div className="fw-validation"><span>{t('مقدار نقطه سربه‌سر','Break-even volume',language)}</span><b>{fmt(breakEven,language)} {unitLabel} · {fmt(capacity>0?breakEven/capacity*100:NaN,language)}٪ {t('ظرفیت','capacity',language)}</b></div>
     {breakEven>capacity&&<p className="fw-hint">{t('نقطه سربه‌سر بالاتر از ظرفیت عملی پروژه است؛ در ظرفیت فعلی، پروژه به حاشیه مشارکت کافی نمی‌رسد.','Break-even exceeds project capacity; the current project does not reach sufficient contribution margin.',language)}</p>}
   </div>
 }
 
 export default function ProjectReportVisuals(props: Props) {
-  const { language, isHotRollingCoil, project } = props
+  const { language, project } = props
+  const isHotRollingCoil = props.isHotRollingCoil === true
   const fmtValue=(value:number|null|undefined,digits=2)=>fmt(value,language,digits)
+  const firstProductUnit=props.products?.find(product=>product.unit.trim())?.unit.trim()??''
+  const productUnit=firstProductUnit.replace(/\s*\/\s*(سال|year)$/i,'').trim()||t('واحد محصول','product unit',language)
+  const annualProductUnit=firstProductUnit||productUnit+(language==='en'?'/year':'/سال')
   const comfarReference = HOT_ROLLING_200KT_AUDIT.alternativeMetricsInWorkbook
   const expectedComfarTaxRates = HOT_ROLLING_COMFAR_OUTPUT_AUDIT.taxScheduleByOperatingYear.map(row=>row.ratePercent)
   const annualComparisonRows = aggregatePeriodicFinanceByFiscalYear(
@@ -231,7 +258,7 @@ export default function ProjectReportVisuals(props: Props) {
   const comfarCurrentNpv = props.periodicResult?.npvProject ?? null
   const comfarCurrentIrr = props.periodicResult?.irrProject ?? null
   const currentRows: [string,string,string][] = [
-    [t('ظرفیت عملی قابل فروش','Saleable capacity',language),fmtValue(props.capacity,0),t('تن در سال','tonnes/year',language)],
+    [t('ظرفیت عملی قابل فروش','Saleable capacity',language),fmtValue(props.capacity,0),annualProductUnit],
     [t('سرمایه‌گذاری ثبت‌شده','Recorded investment',language),fmtValue(props.capex),props.project.currency],
     [t('سرمایه در گردش','Working capital',language),fmtValue(props.workingCapital),props.project.currency],
     [t('آورده / تسهیلات','Equity / debt',language),`${fmtValue(props.equityPercent,1)}% / ${fmtValue(props.debtPercent,1)}%`,t('درصد','percent',language)],
@@ -267,7 +294,7 @@ export default function ProjectReportVisuals(props: Props) {
       {isHotRollingCoil&&<div className="fw-card">
        <h4>{t("تطبیق با خروجی مرجع COMFAR","COMFAR Output Reconciliation",language)}</h4>
        <p className="fw-hint">{t("مبنای مرجع: ظرفیت ۲۰۰ هزار تن در سال، دو سال ساخت، ۱۵ سال بهره‌برداری، مالیات ۲۵٪، نرخ تنزیل ۲۵٪ و تاریخ ارزش‌گذاری ۱۲/۱۴۰۴. برای مقایسه عددی NPV و IRR، تاریخ و قرارداد تنزیل نیز باید با همین مبنا تنظیم شوند.","Reference basis: 200,000 tonnes/year, two construction years, 15 operating years, 25% tax, 25% discount rate and valuation date 12/1404. Numerical NPV and IRR comparison also requires the same valuation date and discount convention.",language)}</p>
-       <div className="fw-validation"><span>{t("وضعیت تطبیق مفروضات","Assumption match status",language)}</span><b>{comfarBasisMatches?t("مبنای اصلی منطبق؛ اختلاف خروجی قابل بررسی است","Core basis aligned; output variance can be reviewed",language):t("تطبیق کامل مفروضات هنوز برقرار نیست","Full benchmark assumptions are not yet aligned",language)}</b></div>
+       <p className="fw-hint">{t("وضعیت ترازنامه: کنترل داخلی برابری دارایی‌ها با بدهی‌ها و حقوق صاحبان سهام در موتور مالی انجام می‌شود؛ اما تطبیق خارجی دوره‌به‌دوره ترازنامه HRCR200 هنوز تأییدنشده است، زیرا خروجی بومی ترازنامه همان پروژه در منابع مرجع موجود نیست. گزارش SARZAMIN و گزارش احیای رامهرمز به این پروژه تعلق ندارند و در این تطبیق استفاده نمی‌شوند.","Balance-sheet status: the financial engine performs an internal assets = liabilities + equity control; however, external period-by-period HRCR200 balance-sheet parity remains unverified because the native balance-sheet output for that same project is not available in the reference set. The SARZAMIN and Ramhormoz DRI reports belong to different projects and are excluded.",language)}</p>\n       <div className="fw-validation"><span>{t("وضعیت تطبیق مفروضات","Assumption match status",language)}</span><b>{comfarBasisMatches?t("مبنای اصلی منطبق؛ اختلاف خروجی قابل بررسی است","Core basis aligned; output variance can be reviewed",language):t("تطبیق کامل مفروضات هنوز برقرار نیست","Full benchmark assumptions are not yet aligned",language)}</b></div>
        <div style={{overflowX:"auto"}}><table className="fw-table"><thead><tr><th>{t("شاخص","Metric",language)}</th><th>{t("مرجع COMFAR","COMFAR reference",language)}</th><th>{t("خروجی دوره‌ای پیشران","Pishran periodic output",language)}</th><th>{t("اختلاف","Variance",language)}</th></tr></thead><tbody>
          <tr><td>NPV @ 25%</td><td>{fmtValue(comfarReference.generalSummaryNpvAt25)} {t("میلیون ریال","million IRR",language)}</td><td>{comfarCurrentNpv==null?"—":fmtValue(comfarCurrentNpv)+" "+project.currency}</td><td>{comfarBasisMatches&&comfarCurrentNpv!=null?fmtValue(comfarCurrentNpv-comfarReference.generalSummaryNpvAt25):"—"}</td></tr>
          <tr><td>IRR</td><td>{fmtValue(comfarReference.generalSummaryIrrPercent)}%</td><td>{comfarCurrentIrr==null?"—":fmtValue(comfarCurrentIrr)+"%"}</td><td>{comfarBasisMatches&&comfarCurrentIrr!=null?fmtValue(comfarCurrentIrr-comfarReference.generalSummaryIrrPercent)+" pp":"—"}</td></tr>
@@ -373,9 +400,9 @@ export default function ProjectReportVisuals(props: Props) {
         </div>}
        </div>}
      </div>}
-     {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ محور نمایش تا ۸۳ هزار تن است، اما درصد ظرفیت بر مبنای ظرفیت واقعی ۲۰۰ هزار تن محاسبه می‌شود.','Reconstructed from the OPEX “Break-even Analysis” sheet. The visible axis ends at 83,000 tonnes, while the capacity percentage uses the actual 200,000-tonne project capacity.',language)}</p><BreakEvenChart capacity={200000} chartMaxQuantity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language}/></>}
+     {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ محور نمایش تا ۸۳ هزار تن است، اما درصد ظرفیت بر مبنای ظرفیت واقعی ۲۰۰ هزار تن محاسبه می‌شود.','Reconstructed from the OPEX “Break-even Analysis” sheet. The visible axis ends at 83,000 tonnes, while the capacity percentage uses the actual 200,000-tonne project capacity.',language)}</p><BreakEvenChart capacity={200000} chartMaxQuantity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language} quantityUnit="تن در سال"/></>}
       <h4>{t('نقطه سربه‌سر بر اساس مفروضات جاری پروژه','Break-even Based on Current Project Assumptions',language)}</h4>
-      <BreakEvenChart capacity={props.capacity} price={props.sellingPrice} variable={props.variableCostPerUnit} fixed={props.fixedAnnualCost} breakEven={props.breakEvenQuantity} currency={project.currency} language={language}/>
+      <BreakEvenChart capacity={props.capacity} price={props.sellingPrice} variable={props.variableCostPerUnit} fixed={props.fixedAnnualCost} breakEven={props.breakEvenQuantity} currency={project.currency} language={language} quantityUnit={annualProductUnit}/>
     </div>
     <div className="fw-card">
       <h4>{t('مشخصات جاری پروژه','Current Project Specifications',language)}</h4>
@@ -389,13 +416,13 @@ export default function ProjectReportVisuals(props: Props) {
       <h4>{t('جزئیات فرم‌های فنی و هزینه‌ای پروژه','Project Technical & Cost Form Details',language)}</h4>
       {props.marketSummary&&<div className="fw-card"><h4>{t('خلاصه اطلاعات بازار','Market Information Summary',language)} </h4><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('شاخص','Indicator',language)}</th><th>{t('مقدار','Value',language)}</th><th>{t('واحد','Unit',language)}</th></tr></thead><tbody>
         {[
-          [t('تقاضای سالانه بازار','Annual Market Demand',language),fmtValue(props.marketSummary.demand,0),t('تن/سال','tonnes/year',language)],
-          [t('تولید داخلی','Domestic Production',language),fmtValue(props.marketSummary.domesticProduction,0),t('تن/سال','tonnes/year',language)],
-          [t('واردات','Imports',language),fmtValue(props.marketSummary.imports,0),t('تن/سال','tonnes/year',language)],
-          [t('صادرات','Exports',language),fmtValue(props.marketSummary.exports,0),t('تن/سال','tonnes/year',language)],
+          [t('تقاضای سالانه بازار','Annual Market Demand',language),fmtValue(props.marketSummary.demand,0),annualProductUnit],
+          [t('تولید داخلی','Domestic Production',language),fmtValue(props.marketSummary.domesticProduction,0),annualProductUnit],
+          [t('واردات','Imports',language),fmtValue(props.marketSummary.imports,0),annualProductUnit],
+          [t('صادرات','Exports',language),fmtValue(props.marketSummary.exports,0),annualProductUnit],
           [t('سهم هدف پروژه از بازار','Target Project Market Share',language),fmtValue(props.marketSummary.targetShare,2)+'%',t('درصد','percent',language)],
-          [t('قیمت فروش داخلی','Domestic Selling Price',language),fmtValue(props.marketSummary.domesticPrice),project.currency+'/تن'],
-          [t('قیمت فروش صادراتی','Export Selling Price',language),fmtValue(props.marketSummary.exportPrice),project.currency+'/تن'],
+          [t('قیمت فروش داخلی','Domestic Selling Price',language),fmtValue(props.marketSummary.domesticPrice),project.currency+'/'+productUnit],
+          [t('قیمت فروش صادراتی','Export Selling Price',language),fmtValue(props.marketSummary.exportPrice),project.currency+'/'+productUnit],
           [t('سهم فروش داخلی','Domestic Sales Share',language),fmtValue(props.marketSummary.domesticShare,2)+'%',t('درصد','percent',language)],
           [t('رشد سالانه تقاضا','Annual Demand Growth',language),fmtValue(props.marketSummary.growth,2)+'%',t('درصد','percent',language)],
         ].map(([label,value,unit])=><tr key={String(label)}><td>{label}</td><td>{value}</td><td>{unit}</td></tr>)}

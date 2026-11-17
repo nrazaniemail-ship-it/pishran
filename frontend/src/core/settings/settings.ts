@@ -4,6 +4,7 @@ export type ThemeMode = 'light' | 'dark' | 'system'
 export type AccentTheme = 'navy' | 'emerald' | 'graphite' | 'gold'
 export type BackgroundTheme = 'bluegray' | 'mist' | 'sage' | 'sand' | 'sky' | 'lavender'
 export type AppLanguage = 'fa' | 'en'
+export type UiMode = 'simple' | 'modern'
 export type FontTheme = 'vazirmatn' | 'tahoma' | 'arial' | 'system' | 'noto' | 'sahel' | 'shabnam' | 'samim' | 'nazanin' | 'titr' | 'inter' | 'roboto' | 'opensans' | 'lato' | 'montserrat' | 'poppins' | 'serif' | 'mono'
 
 export interface AppSettings {
@@ -12,6 +13,7 @@ export interface AppSettings {
   backgroundTheme: BackgroundTheme
   fontTheme: FontTheme
   language: AppLanguage
+  uiMode: UiMode
   compactMode: boolean
   confirmBeforeDelete: boolean
   autoBackup: boolean
@@ -23,6 +25,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   backgroundTheme: 'bluegray',
   fontTheme: 'vazirmatn',
   language: 'fa',
+  uiMode: 'simple',
   compactMode: false,
   confirmBeforeDelete: true,
   autoBackup: false

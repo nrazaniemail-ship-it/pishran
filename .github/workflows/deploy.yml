@@ -1,8 +1,8 @@
-name: Deploy Pishran PWA to GitHub Pages
+name: Deploy Pishran PWA and PR preview to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/foreign-currency-loan-finance-orchestration-v2]
   workflow_dispatch:
 
 permissions:
@@ -32,11 +32,24 @@ jobs:
       - name: Validate Excel financial benchmark
         working-directory: frontend
         run: npm run test:financial
-      - name: Build
+      - name: Build production PWA
         working-directory: frontend
         env:
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
         run: npm run build
+      - name: Build isolated PR preview
+        if: github.ref != 'refs/heads/main'
+        working-directory: frontend
+        env:
+          VITE_PREVIEW_BUILD: 'true'
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: npm run build -- --outDir dist-preview
+      - name: Assemble preview under /preview/
+        if: github.ref != 'refs/heads/main'
+        working-directory: frontend
+        run: |
+          mkdir -p dist/preview
+          cp -R dist-preview/. dist/preview/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

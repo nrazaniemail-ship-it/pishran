@@ -3,9 +3,13 @@ import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { allocateJointVentureCashFlows, type JointVenturePartner, type PartnerFinanceResult } from './partnerFinance'
 import { listFinancialMethods } from './financialMethodDirectory'
-import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
+import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention, ProjectFoundation } from './projectFoundation'
+import type { ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
+import { calculateProjectFinancialModelFromDrafts } from './projectFinancialModelOrchestrator'
+import { bindLoanFacilitiesToPeriodicFinance } from './foreignCurrencyLoanFinanceBinding'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
-import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
+import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
+import { calculatePeriodicSensitivity, type PeriodicSensitivityVariable } from '../steel/periodicSensitivity'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
   calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
@@ -15,6 +19,7 @@ import {
 } from '../steel/financialModel'
 
 type CapexRow = { id: string; name: string; amount: number }
+type PeriodicFinanceResultWithSensitivityInput=PeriodicProjectFinanceResult & {sensitivityInput?:PeriodicProjectFinanceInput}
 type Asset = DepreciationAssetInput
 type Loan = IntegratedLoanInput & {
   periodDrawdowns?: number[]
@@ -85,6 +90,13 @@ type Props = {
   cashFlowTiming?: 'unspecified'|'period-end'|'mid-period'
   valuationDate?: string
   discountConvention?: ProjectDiscountConvention
+  financialForms?: ProjectModelFinancialFormDrafts
+  products?: {id:string}[]
+  foundation?: ProjectFoundation
+  productionStartDate?: string
+  greenfield?: boolean
+  /** Start the generic raw model with no assumed loan, asset, tax or working-capital values. */
+  blankStart?: boolean
 }
 type SavedState = {
   loans: Loan[]
@@ -95,7 +107,7 @@ type SavedState = {
   workingCapitalBases: { rawMaterials: number; energy:number; spareParts:number; conversion: number; finishedGoods: number; cash: number; payables: number }
   wipCompletion: { material: number; conversion: number }
   taxRates: number[]
-  discountMode: 'wacc' | 'manual'
+  discountMode: '' | 'wacc' | 'manual'
   manualRate: number
   maintenancePercent: number
   salesEscalationPercent: number
@@ -106,6 +118,8 @@ type SavedState = {
   minimumDscr?: number
 }
 const money = (v: number) => Number.isFinite(v) ? v.toLocaleString(typeof document!=='undefined'&&document.documentElement.lang==='en'?'en-US':'fa-IR',{maximumFractionDigits:1}) : '—'
+const blankNumber=(value:number|null|undefined)=>value!=null&&Number.isFinite(value)?value:''
+const parseNumberInput=(value:string)=>value.trim()===''?Number.NaN:Number(value)
 const directoryRepaymentMethod: Record<string, Loan['repaymentMethod']> = {
   'financing.equal-principal': 'equal-principal',
   'financing.annuity': 'annuity',
@@ -121,10 +135,11 @@ export default function AdvancedFinancePanel(props: Props) {
  const labelEn:Record<string,string>={"عنوان تسهیلات":"Loan Name","نرخ سالانه":"Annual Interest Rate","دوره تنفس اصل (سال)":"Principal Grace Period (Years)","مدت بازپرداخت (سال)":"Repayment Term (Years)","شروع بازپرداخت اصل (سال مدل)":"Principal Repayment Start (Model Year)","روش اقساط":"Repayment Method","سرمایه‌ای شدن بهره تا شروع بازپرداخت":"Capitalise interest until repayment starts","برداشت سالانه (واحد پول پایه)":"Annual Drawdown (Base Currency)","برنامه بازپرداخت همین تسهیلات":"Repayment Schedule for This Loan","حذف تسهیلات":"Remove Loan","افزودن وام":"Add Loan","آورده نقدی سهامدار به تفکیک سال":"Annual Shareholder Equity Contributions","روز موجودی مواد اولیه":"Raw Material Inventory Days","روز موجودی/پوشش هزینه انرژی":"Energy Inventory / Coverage Days","روز موجودی قطعات یدکی":"Spare Parts Inventory Days","مبنای سالانه هزینه انرژی":"Annual Energy Cost Basis","مبنای سالانه قطعات یدکی":"Annual Spare Parts Cost Basis","روز کالای در جریان ساخت":"Work-in-Progress Days","روز محصول نهایی":"Finished Goods Days","روز وصول مطالبات":"Receivable Days","روز حداقل نقد عملیاتی":"Minimum Operating Cash Days","روز پرداخت بدهی تجاری":"Trade Payables Days","مبنای سالانه مواد اولیه":"Annual Raw Material Cost Basis","مبنای سالانه هزینه تبدیل":"Annual Conversion Cost Basis","بهای سالانه محصول ساخته‌شده":"Annual Cost of Finished Goods","هزینه نقدی سالانه برای حداقل نقد":"Annual Cash Cost for Minimum Cash","مبنای سالانه بدهی تجاری":"Annual Trade Payables Cost Basis","تکمیل مواد در جریان ساخت (%)":"WIP Material Completion (%)","تکمیل تبدیل در جریان ساخت (%)":"WIP Conversion Completion (%)","دارایی":"Asset","بهای تمام‌شده":"Asset Cost","ارزش اسقاط":"Residual Value","عمر مفید (سال)":"Useful Life (Years)","شروع استهلاک (سال مدل)":"Depreciation Start (Model Year)","روش":"Method","خط مستقیم":"Straight Line","مانده نزولی":"Declining Balance","نرخ نزولی (%)":"Declining-Balance Rate (%)","نرخ تنزیل":"Discount Rate","نرخ تنزیل دستی (%)":"Manual Discount Rate (%)","CAPEX نگهداری سالانه (% هزینه نقدی)":"Annual Maintenance CAPEX (% of Cash Cost)","سال":"Year","بهره":"Interest","اصل":"Principal","مانده بدهی":"Debt Balance","فروش":"Revenue","زیان انتقالی پایان سال":"Closing Tax Loss Carryforward","سود خالص":"Net Income","جریان نقد پایان سال":"Closing Cash","جمع دارایی‌ها":"Total Assets","بدهی + حقوق مالکانه":"Liabilities + Equity","اختلاف تراز":"Balance Difference","تسهیلات اصلی":"Primary Loan","تسهیلات جدید":"New Loan","دارایی جدید":"New Asset","زمین":"Land","اصل مساوی":"Equal Principal","اقساط مساوی":"Equal Instalments","یکجا در سررسید":"Bullet at Maturity","ساخت":"Construction","بهره‌برداری":"Operation","افزودن دارایی":"Add Asset","حذف دارایی":"Remove Asset","دارایی‌ها و استهلاک":"Assets & Depreciation","برنامه تسهیلات و بدهی":"Loans & Debt Schedule","سرمایه در گردش عملیاتی":"Operating Working Capital","مفروضات مالیاتی سالانه":"Annual Tax Assumptions","تحلیل حساسیت":"Sensitivity Analysis","سناریوهای مالی":"Financial Scenarios","صورت‌های مالی سه‌گانه":"Three Financial Statements","برنامه سالانه جریان نقدی":"Annual Cash Flow Schedule","جریان نقدی در دسترس برای خدمت بدهی":"Cash Flow Available for Debt Service","نسبت پوشش خدمت بدهی":"Debt Service Coverage Ratio","روش استهلاک":"Depreciation Method","موجودی مواد اولیه":"Raw Material Inventory","کالای در جریان ساخت":"Work in Progress","محصول نهایی":"Finished Goods","مطالبات":"Receivables","نقد عملیاتی":"Operating Cash","بدهی تجاری":"Trade Payables","جمع بدهی‌ها و حقوق مالکانه":"Total Liabilities & Equity","درآمد":"Revenue","سود عملیاتی":"Operating Profit","مالیات":"Tax","مانده نقد":"Cash Balance","موجودی نقد":"Cash Balance","بهره نقدی":"Cash Interest","بهره سرمایه‌ای":"Capitalised Interest","اصل بدهی":"Principal","مانده پایان":"Closing Balance","مانده اول":"Opening Balance","برداشت":"Drawdown","سرمایه‌گذاری مجدد":"Reinvestment","سال مدل":"Model Year","هزینه سرمایه‌گذاری ثابت":"Fixed Investment Cost","هزینه نقدی عملیاتی":"Cash Operating Cost","درصد":"Percent","روز":"Days","آورده سال ساخت":"Construction-Year Equity","آورده سرمایه در گردش سال بهره‌برداری":"Operating-Year Shareholder Working-Capital Contribution","آورده سهامدار را جدا از برداشت وام وارد کنید. کسری منابع، در خروجی هشدار داده می‌شود.":"Enter shareholder equity separately from loan drawdowns. Any funding gap is flagged in the results.","مبنای روز ۳۶۰ روز است. روزهای نگهداری/وصول/پرداخت را از چرخه واقعی پروژه وارد کنید؛ مقدار صفر یعنی برای آن قلم سرمایه در گردش منظور نمی‌شود.":"The day-count basis is 360 days. Enter inventory, collection and payment days from the actual operating cycle. A zero value means no working capital is assigned to that item.","اوج نیاز سرمایه در گردش":"Peak Working Capital Requirement","کسری منابع":"Funding Gap","مبنای هزینه‌های سرمایه در گردش عمداً از OPEX کل به‌صورت خودکار تفکیک نمی‌شود؛ ارقام واقعی مواد، تبدیل، محصول، نقد و خرید اعتباری را وارد کنید تا تقسیم‌بندی فرضی در مدل ایجاد نشود.":"Working-capital cost bases are intentionally not auto-allocated from total OPEX. Enter actual raw-material, conversion, finished-goods, cash and credit-purchase bases to avoid arbitrary assumptions.","اوج نیاز سرمایه در گردش: ":"Peak Working Capital Requirement: ","همگام‌سازی دارایی‌ها از CAPEX":"Sync Assets from CAPEX","جمع استهلاک سالانه (به ترتیب سال مدل)":"Total Annual Depreciation (by Model Year)","دستی":"Manual","نرخ مالیات سال":"Tax Rate — Year","NPV پروژه":"Project NPV","IRR پروژه":"Project IRR","NPV سهامدار":"Equity NPV","IRR سهامدار":"Equity IRR","اوج سرمایه در گردش":"Peak Working Capital","کل برداشت وام":"Total Loan Drawdown","کل آورده":"Total Equity Contribution","جدول سالانه خدمت بدهی":"Annual Debt Service Schedule","CFADS":"CFADS","ردیف‌ها تغییر حجم/ظرفیت و ستون‌ها تغییر قیمت فروش را نشان می‌دهند. مقادیر NPV پروژه با همان برنامه وام، مالیات و سرمایه در گردش دوباره محاسبه می‌شوند.":"Rows represent volume/capacity changes and columns represent selling-price changes. Project NPV is recalculated using the same loan, tax and working-capital schedules.","حجم \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ قیمت":"Volume \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ Price","بدبینانه":"Downside","مبنا":"Base Case","خوش‌بینانه":"Upside","ترازهای منطبق: ":"Balanced Statements: ","از":"of","دوره":"Period","صورت‌ها از یک مجموعه جریان نقدی و برنامه دارایی/بدهی ساخته می‌شوند؛ هیچ رقم ترازکنندهٔ مصنوعی به حقوق مالکانه اضافه نمی‌شود. اگر اختلاف تراز صفر نباشد، خروجی به‌عنوان عدم تطبیق علامت می‌خورد و باید طبقه‌بندی CAPEX، آورده، بدهی یا سرمایه در گردش بررسی شود. این نسخه هنوز اقلام حسابداری تفصیلی مانند مالیات بر ارزش افزوده، سود تقسیمی، مطالبات/بدهی مالیاتی، تجدید ارزیابی و ثبت‌های چندارزی را پوشش نمی‌دهد.":"The statements are built from one cash-flow set and the asset/debt schedules; no artificial balancing plug is added to equity. Any balance difference is flagged for review of CAPEX, equity, debt or working-capital classification. This version does not yet cover detailed accounting items such as VAT, dividends, tax receivables/payables, revaluation or multi-currency postings.","دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.":"Sync assets from CAPEX. Land is not depreciated by default. Depreciation method (straight-line or declining-balance), useful life, residual value and start year are set independently for each asset. Tax-loss carry-forward is applied by the calculation engine.","جدول دوره‌ای سرمایه در گردش":"Periodic Working Capital Schedule","سرمایه در گردش خالص":"Net Working Capital","چرخه تبدیل وجه نقد":"Cash Conversion Cycle","سال اول":"Year 1","سال آخر":"Final Year","سناریوهای خوش‌بینانه و بدبینانه":"Upside & Downside Scenarios","سناریوی پایه":"Base Case","سناریوی بدبینانه":"Downside Case","سناریوی خوش‌بینانه":"Upside Case","سه صورت مالی":"Three Financial Statements","ترازنامه":"Balance Sheet","صورت سود و زیان":"Income Statement","صورت جریان وجوه نقد":"Cash Flow Statement","ترازهای منطبق":"Balanced Periods","مالیات و انتقال زیان":"Tax & Loss Carryforward","زیان انتقالی":"Tax Loss Carryforward","جمع دارایی‌های ثابت":"Total Fixed Assets","سرمایه‌گذاری در دارایی":"Asset Investment","سرمایه در گردش اوج":"Peak Working Capital","سال اوج نیاز":"Peak Requirement Year","برداشت سالانه":"Annual Drawdown","آورده نقدی سهامدار":"Shareholder Cash Contribution","واحد پول پایه":"Base Currency","هزینه‌های سرمایه‌ای":"Capital Expenditure","هزینه‌های عملیاتی":"Operating Expenditure","هزینه خدمت بدهی":"Debt Service Cost","عمر مفید":"Useful Life","سرمایه در گردش":"Working Capital","مواد اولیه":"Raw Materials","هزینه تبدیل":"Conversion Cost","محصول ساخته‌شده":"Finished Goods","حداقل نقد عملیاتی":"Minimum Operating Cash","نرخ مالیات":"Tax Rate","مواد":"Materials","محصول":"Finished Goods","پرداختنی":"Payables","نیاز":"Requirement","تکمیل اولیه":"Initially Complete","نیازمند تکمیل":"Completion Required","نامعتبر":"Invalid","کسری نقدینگی":"Funding Shortfall","جمع‌بندی سه صورت مالی":"Three-Statement Reconciliation"}
   const tr=(v:string, english?:string)=>en?(english??labelEn[v]??v):v
   const loanMethodEn:Record<string,string>={'equal-principal':'Equal Principal','annuity':'Equal Instalments','bullet':'Bullet at Maturity'}
-  const years = Math.max(1, Math.min(60, Math.ceil(props.constructionYears) + Math.ceil(props.operatingYears)))
+  const planningReady=Number.isFinite(props.constructionYears)&&props.constructionYears>0&&Number.isFinite(props.operatingYears)&&props.operatingYears>0
+  const years = props.blankStart&&!planningReady?0:Math.max(1, Math.min(60, Math.ceil(props.constructionYears) + Math.ceil(props.operatingYears)))
   const periodsPerYear: 1|2|4|12 = props.periodFrequency==='monthly'?12:props.periodFrequency==='quarterly'?4:props.periodFrequency==='semiannual'?2:1
-  const construction = Math.max(1, Math.ceil(props.constructionYears))
-  const opYears = Math.max(1, years - construction)
+  const construction = props.blankStart&&!planningReady?0:Math.max(1, Math.ceil(props.constructionYears))
+  const opYears = props.blankStart&&!planningReady?0:Math.max(1, years - construction)
   const storageKey = 'feasibility:advanced-finance:' + props.projectId + (props.referenceVersion ? ':' + props.referenceVersion : '')
   const fallbackFixedInvestmentSchedule = Array.from({length:years},(_,i)=>i<construction?props.fixedInvestment/construction:0)
   const fallbackPreOperatingSchedule = Array.from({length:years},(_,i)=>i<construction?props.preOperatingCost/construction:0)
@@ -132,16 +147,27 @@ export default function AdvancedFinancePanel(props: Props) {
   const activePreOperatingSchedule = props.preOperatingSchedule?.length===years ? props.preOperatingSchedule : fallbackPreOperatingSchedule
   const initialCapexSchedule = activeFixedInvestmentSchedule.map((amount,i)=>amount+activePreOperatingSchedule[i])
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
-  const [state,setState] = useState<SavedState>(() => ({
-    loans:[{id:'loan-1',label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),drawdownMode:'annual-day-weighted',annualRate:props.initialLoanRatePercent??props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:props.initialRepaymentMethod??'equal-principal',capitalizeInterest:true}],
-    assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??0):0),fundingStructureVersion:2,
-    workingCapitalDays:props.workingCapitalDefaults?.days??{raw:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
-    workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
-    wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),
-    discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0
-  }))
+  const [state,setState] = useState<SavedState>(() => {
+    const blank=props.blankStart===true
+    const unset=Number.NaN
+    return {
+     loans:blank?[]:[{id:'loan-1',label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),drawdownMode:'annual-day-weighted',annualRate:props.initialLoanRatePercent??props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:props.initialRepaymentMethod??'equal-principal',capitalizeInterest:true}],
+     assets:blank?[]:(props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20}))),
+     equityContributions:Array(years).fill(blank?unset:0).map((v,i)=>blank?v:initialCapexSchedule[i]*Math.max(0,Math.min(100,props.equityPercent))/100),
+     equityWorkingCapitalContributions:Array(years).fill(blank?unset:0),
+     fundingStructureVersion:2,
+     workingCapitalDays:blank?{raw:unset,energy:unset,spareParts:unset,wip:unset,finished:unset,receivable:unset,cash:unset,payable:unset}:(props.workingCapitalDefaults?.days??{raw:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0}),
+     workingCapitalBases:blank?{rawMaterials:unset,energy:unset,spareParts:unset,conversion:unset,finishedGoods:unset,cash:unset,payables:unset}:(props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0}),
+     wipCompletion:blank?{material:unset,conversion:unset}:(props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0}),
+     taxRates:Array(years).fill(blank?unset:props.taxRate),
+     discountMode:blank?'':(props.initialDiscountMode??'wacc'),
+     manualRate:blank?unset:(props.initialManualRate??props.costOfEquity),
+     maintenancePercent:blank?unset:0,salesEscalationPercent:blank?unset:0,opexEscalationPercent:blank?unset:0
+    }
+  })
   const [loaded,setLoaded]=useState(false)
   useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const matchesLegacyDefault=Math.abs(legacyContribution-legacyWorkingCapitalEquity)<0.01;restored.equityWorkingCapitalContributions=Array(years).fill(0);if(matchesLegacyDefault){restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-legacyWorkingCapitalEquity):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??legacyWorkingCapitalEquity):0)}}if((saved.fundingStructureVersion??0)<2){const legacyDrawdowns=initialCapexSchedule.map((value,index)=>value*initialDebtShare+(index===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0));restored.loans=restored.loans.map(loan=>{const untouchedLegacyDefault=loan.label==='تسهیلات اصلی و سرمایه در گردش'&&loan.drawdowns.length===years&&loan.drawdowns.every((value,index)=>Math.abs(value-legacyDrawdowns[index])<0.01)&&Math.abs(loan.annualRate-props.costOfDebt)<0.0001&&loan.repaymentMethod==='equal-principal';return untouchedLegacyDefault?{...loan,label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(value=>value*initialDebtShare),annualRate:props.initialLoanRatePercent??props.costOfDebt,repaymentMethod:props.initialRepaymentMethod??'equal-principal'}:loan});if(props.initialWorkingCapitalEquityContribution&&restored.equityWorkingCapitalContributions.every(value=>value===0)){restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?props.initialWorkingCapitalEquityContribution!:0)}restored.fundingStructureVersion=2}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
+  useEffect(()=>{setState(current=>{const resize=(values:number[],fill:number)=>Array.from({length:years},(_,index)=>values[index]??fill);return {...current,equityContributions:resize(current.equityContributions,props.blankStart?Number.NaN:0),equityWorkingCapitalContributions:resize(current.equityWorkingCapitalContributions,props.blankStart?Number.NaN:0),taxRates:resize(current.taxRates,props.blankStart?Number.NaN:props.taxRate),loans:current.loans.map(loan=>({...loan,drawdowns:resize(loan.drawdowns,props.blankStart?Number.NaN:0)}))}})},[years,props.blankStart,props.taxRate])
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
   const capexSchedule = activeFixedInvestmentSchedule
@@ -179,8 +205,8 @@ export default function AdvancedFinancePanel(props: Props) {
   }
   const periodicRateMethod=listFinancialMethods('financing').find(method=>method.id==='financing.effective-annual-frequency-rate')
   const syncAssets=()=>setState(s=>({...s,assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20}))}))
-  const addLoan=()=>setState(s=>({...s,loans:[...s.loans,{id:'loan-'+Date.now(),label:'تسهیلات جدید',drawdowns:Array(years).fill(0),drawdownMode:'annual-day-weighted',annualRate:20,graceYears:0,termYears:Math.max(1,opYears),repaymentStartYear:construction+1,repaymentMethod:'equal-principal',capitalizeInterest:true}]}))
-  const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی جدید',cost:0,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line',decliningRate:20}]}))
+  const addLoan=()=>setState(s=>({...s,loans:[...s.loans,{id:'loan-'+Date.now(),label:'',drawdowns:Array(years).fill(props.blankStart?Number.NaN:0),drawdownMode:'annual-day-weighted',annualRate:props.blankStart?Number.NaN:20,graceYears:props.blankStart?Number.NaN:0,termYears:props.blankStart?Number.NaN:Math.max(1,opYears),repaymentStartYear:props.blankStart?Number.NaN:construction+1,repaymentMethod:props.blankStart?undefined as unknown as Loan['repaymentMethod']:'equal-principal',capitalizeInterest:props.blankStart?undefined as unknown as boolean:true}]}))
+  const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'',cost:props.blankStart?Number.NaN:0,residualValue:props.blankStart?Number.NaN:0,usefulLife:props.blankStart?Number.NaN:10,startYear:props.blankStart?Number.NaN:construction+1,method:'straight-line',decliningRate:props.blankStart?Number.NaN:20}]}))
 
   const depreciation = useMemo(()=>calculateAssetDepreciationSchedule(state.assets.filter(a=>a.cost>0&&!a.name.includes('زمین')),years),[state.assets,years])
   const comfarCalendarLifecycle = useMemo(()=>props.comfarDepreciationAssets?.length && projectPeriods.length && props.fiscalYearStartMonth!=null
@@ -231,7 +257,7 @@ export default function AdvancedFinancePanel(props: Props) {
           }
         })
       : undefined
-  const utilization = Array.from({length:years},(_,i)=>i<construction?0:Math.max(0,Math.min(100,props.ramp[i-construction]??100))/100)
+  const utilization = Array.from({length:years},(_,i)=>i<construction?0:Math.max(0,Math.min(100,props.ramp[i-construction]??(props.blankStart?Number.NaN:100)))/100)
   const fixedInvestmentSchedule = capexSchedule
   const workingCapitalPolicy = useMemo(()=>({
     dayBasis:(props.dayCountBasis??360) as 360|365,rawMaterialDays:state.workingCapitalDays.raw,energyDays:state.workingCapitalDays.energy,sparePartsDays:state.workingCapitalDays.spareParts,workInProgressDays:state.workingCapitalDays.wip,
@@ -244,9 +270,9 @@ export default function AdvancedFinancePanel(props: Props) {
     annualFinishedGoodsCost:state.workingCapitalBases.finishedGoods,
     annualRevenue:props.fullCapacityRevenue,annualCashOperatingCost:state.workingCapitalBases.cash
   }),[state.workingCapitalDays,state.workingCapitalBases,state.wipCompletion,props.fullCapacityRevenue,props.dayCountBasis])
-  const equityContributions = state.equityContributions.length===years ? state.equityContributions : Array(years).fill(0)
-  const equityWorkingCapitalContributions = Array.isArray(state.equityWorkingCapitalContributions)&&state.equityWorkingCapitalContributions.length===years ? state.equityWorkingCapitalContributions : Array(years).fill(0)
-  const taxRates = state.taxRates?.length===years ? state.taxRates : Array(years).fill(props.taxRate)
+  const equityContributions = state.equityContributions.length===years ? state.equityContributions : Array(years).fill(props.blankStart?Number.NaN:0)
+  const equityWorkingCapitalContributions = Array.isArray(state.equityWorkingCapitalContributions)&&state.equityWorkingCapitalContributions.length===years ? state.equityWorkingCapitalContributions : Array(years).fill(props.blankStart?Number.NaN:0)
+  const taxRates = state.taxRates?.length===years ? state.taxRates : Array(years).fill(props.blankStart?Number.NaN:props.taxRate)
   const maintenanceCapexSchedule = utilization.map(u=>(props.fullCapacityFixedCashCost+props.fullCapacityVariableCashCost)*u*state.maintenancePercent/100)
   const input: IntegratedFinanceInput = {
     years,constructionYears:construction,capacity:props.capacity,fullCapacityRevenue:props.fullCapacityRevenue,
@@ -257,15 +283,15 @@ export default function AdvancedFinancePanel(props: Props) {
     loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
     taxRate:props.taxRate,taxRateSchedule:taxRates,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
     workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:state.salesEscalationPercent,opexEscalationPercent:state.opexEscalationPercent,
-    discountMode:state.discountMode,manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.mirrFinanceRate??props.costOfEquity,equityMirrReinvestmentRate:props.mirrReinvestmentRate??props.costOfEquity
+    discountMode:state.discountMode==='wacc'?'wacc':'manual',manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.mirrFinanceRate??props.costOfEquity,equityMirrReinvestmentRate:props.mirrReinvestmentRate??props.costOfEquity
   }
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
-  const periodicFinanceResult=useMemo<PeriodicProjectFinanceResult|null>(()=>{
+  const periodicFinanceResult=useMemo<PeriodicFinanceResultWithSensitivityInput|null>(()=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
     const fiscalMonth=props.fiscalYearStartMonth
     const periodLoans=state.loans.map(loan=>{
-      const annualDrawdowns=loan.drawdowns.length===years?loan.drawdowns:Array(years).fill(0)
+      const annualDrawdowns=loan.drawdowns.length===years?loan.drawdowns:Array(years).fill(props.blankStart?Number.NaN:0)
       const drawdowns=loan.drawdownMode==='period-manual'
         ? (periodDrawdownDatesMatch(loan)?loan.periodDrawdowns!:Array(periods.length).fill(Number.NaN))
         : allocateAnnualFlowsToPeriods(annualDrawdowns,periods,fiscalMonth)
@@ -297,7 +323,7 @@ export default function AdvancedFinancePanel(props: Props) {
       const opexFactor=Math.pow(1+state.opexEscalationPercent/100,operatingYear)
       return calculateOperatingCycleWorkingCapital(workingCapitalPolicy,annualRow.utilization,salesFactor,opexFactor).netWorkingCapital
     })
-    return calculateIntegratedPeriodicFinance({
+    const financeInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
       annualRevenue:result.years.map(row=>row.revenue),annualVariableCost:result.years.map(row=>row.variableCashCost),
@@ -315,8 +341,42 @@ export default function AdvancedFinancePanel(props: Props) {
       discountConvention:props.discountConvention??'actual-days',
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
-    })
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
+    }
+    if(props.financialForms&&props.foundation&&(props.greenfield||props.financialForms.openingBalanceSheet?.enabled)) {
+      const hasForeignLoans=props.financialForms.loans.some(loan=>loan.marketOrigin==='foreign')
+      const fxTreatment=props.foundation.taxation.foreignExchangeLossTreatment??'unspecified'
+      if(hasForeignLoans&&fxTreatment==='unspecified')return {
+        valid:false,rows:[],loanSchedules:{},npvProject:null,irrProject:null,mirrProject:null,
+        npvEquity:null,irrEquity:null,mirrEquity:null,totalDebtDrawdown:0,totalEquityContribution:0,
+        totalCapitalizedInterest:0,peakWorkingCapital:0,warnings:['Select the tax treatment of foreign-exchange losses in Project Foundation.'],
+      }
+      const orchestration=calculateProjectFinancialModelFromDrafts({
+        finance:financeInput,drafts:props.financialForms,foundation:props.foundation,
+        productionStartDate:props.productionStartDate??'',projectProductIds:props.products?.map(product=>product.id),
+        openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+        taxTreatment:fxTreatment==='deductible'?'deductible':'non-deductible',
+      })
+      if(!orchestration.valid||!orchestration.finalRun)return {
+        valid:false,rows:[],loanSchedules:{},npvProject:null,irrProject:null,mirrProject:null,
+        npvEquity:null,irrEquity:null,mirrEquity:null,totalDebtDrawdown:0,totalEquityContribution:0,
+        totalCapitalizedInterest:0,peakWorkingCapital:0,warnings:orchestration.issues,
+      }
+      const openingForeignBalances=Object.fromEntries(props.financialForms.loans
+        .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
+        .map(loan=>[loan.id,loan.openingForeignBalance as number]))
+      const openingExchangeRatesToLocal=Object.fromEntries(props.financialForms.loans
+        .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
+        .map(loan=>[loan.id,loan.openingExchangeRateToLocal as number]))
+      const sensitivityLoanBinding=bindLoanFacilitiesToPeriodicFinance({
+        finance:orchestration.financeInput??financeInput,loans:props.financialForms.loans,
+        foundation:props.foundation,openingForeignBalances,openingExchangeRatesToLocal,
+      })
+      return Object.assign(orchestration.finalRun.finance,{
+        sensitivityInput:sensitivityLoanBinding.valid?sensitivityLoanBinding.financeInput??undefined:undefined
+      })
+    }
+    return Object.assign(calculateIntegratedPeriodicFinance(financeInput),{sensitivityInput:financeInput})
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.financialForms??null),JSON.stringify(props.foundation??null),props.productionStartDate,props.greenfield])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
@@ -327,6 +387,15 @@ export default function AdvancedFinancePanel(props: Props) {
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
   const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult):[],[periodicFinanceResult])
+  const periodicSensitivityResult=useMemo(()=>{
+    const sensitivityInput=periodicFinanceResult?.sensitivityInput
+    if(!periodicFinanceResult?.valid||!sensitivityInput)return null
+    const variables:PeriodicSensitivityVariable[]=['revenue','variable-cost','fixed-cost','investment','working-capital','tax-rate','discount-rate']
+    // Do not present a rate shock when the loan form supplies an already-built
+    // schedule; the schedule must be rebuilt from its source terms first.
+    if(!Object.keys(sensitivityInput.precomputedLoanSchedules??{}).length)variables.push('loan-interest-rate')
+    return calculatePeriodicSensitivity(sensitivityInput,variables,10,'npvProject')
+  },[periodicFinanceResult])
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
   useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
@@ -351,48 +420,49 @@ export default function AdvancedFinancePanel(props: Props) {
 
     <p className="fw-lead">{t('برنامه وام، CFADS، سرمایه در گردش دوره‌ای، مالیات با انتقال زیان، استهلاک دارایی‌به‌دارایی، سناریوها و سه صورت مالی در یک مدل مشترک محاسبه می‌شوند. ارقام این بخش از مفروضات همین پروژه استفاده می‌کنند.','Loan schedules, CFADS, periodic working capital, tax-loss carry-forward, asset-level depreciation, scenarios and three financial statements are calculated in one shared model using this project’s assumptions.')}</p>
 
+    {!props.blankStart&&<>
     <h4>{t('۱. برنامه برداشت و بازپرداخت وام','1. Loan Drawdown & Repayment Schedule')}</h4>
     {state.loans.map(loan=><div className="fw-card" key={loan.id}>
       <div className="fw-grid">
         <label className="fw-field"><span>{tr('عنوان تسهیلات')}</span><input value={tr(loan.label)} onChange={e=>updateLoan(loan.id,{label:e.target.value})}/></label>
-        <label className="fw-field"><span>{tr('نرخ سالانه')}</span><input type="number" value={loan.annualRate} onChange={e=>updateLoan(loan.id,{annualRate:Number(e.target.value)})}/></label>
-        <label className="fw-field"><span>{tr('دوره تنفس اصل (سال)')}</span><input type="number" min="0" value={loan.graceYears} onChange={e=>updateLoan(loan.id,{graceYears:Number(e.target.value)})}/></label>
-        <label className="fw-field"><span>{tr('مدت بازپرداخت (سال)')}</span><input type="number" min="1" value={loan.termYears} onChange={e=>updateLoan(loan.id,{termYears:Number(e.target.value)})}/></label>
-        <label className="fw-field"><span>{tr('شروع بازپرداخت اصل (سال مدل)')}</span><input type="number" min="1" value={loan.repaymentStartYear} onChange={e=>updateLoan(loan.id,{repaymentStartYear:Number(e.target.value)})}/></label>
-        <label className="fw-field"><span>{tr('روش اقساط')}</span><select value={loan.repaymentMethod} onChange={e=>updateLoan(loan.id,{repaymentMethod:e.target.value as Loan['repaymentMethod']})}>{loanMethods.map(m=><option key={m.value} value={m.value}>{en?m.definition.nameEn:m.definition.nameFa}</option>)}</select></label>
+        <label className="fw-field"><span>{tr('نرخ سالانه')}</span><input type="number" value={blankNumber(loan.annualRate)} onChange={e=>updateLoan(loan.id,{annualRate:parseNumberInput(e.target.value)})}/></label>
+        <label className="fw-field"><span>{tr('دوره تنفس اصل (سال)')}</span><input type="number" min="0" value={blankNumber(loan.graceYears)} onChange={e=>updateLoan(loan.id,{graceYears:parseNumberInput(e.target.value)})}/></label>
+        <label className="fw-field"><span>{tr('مدت بازپرداخت (سال)')}</span><input type="number" min="1" value={blankNumber(loan.termYears)} onChange={e=>updateLoan(loan.id,{termYears:parseNumberInput(e.target.value)})}/></label>
+        <label className="fw-field"><span>{tr('شروع بازپرداخت اصل (سال مدل)')}</span><input type="number" min="1" value={blankNumber(loan.repaymentStartYear)} onChange={e=>updateLoan(loan.id,{repaymentStartYear:parseNumberInput(e.target.value)})}/></label>
+        <label className="fw-field"><span>{tr('روش اقساط')}</span><select value={loan.repaymentMethod??''} onChange={e=>updateLoan(loan.id,{repaymentMethod:e.target.value?e.target.value as Loan['repaymentMethod']:undefined as unknown as Loan['repaymentMethod']})}><option value="">{t('انتخاب روش اقساط','Select repayment method')}</option>{loanMethods.map(m=><option key={m.value} value={m.value}>{en?m.definition.nameEn:m.definition.nameFa}</option>)}</select></label>
       </div>
       {loanMethods.find(method => method.value === loan.repaymentMethod)?.definition && <p className="fw-hint">{t('روش انتخاب‌شده از دایرکتوری روش‌های مالی خوانده می‌شود. فرمول:','Selected method from the financial method directory. Formula:')} {loanMethods.find(method => method.value === loan.repaymentMethod)!.definition.formula} · {t('اعتبار:','Validity:')} {loanMethods.find(method => method.value === loan.repaymentMethod)!.definition.validity} · {t('منبع:','Source:')} {loanMethods.find(method => method.value === loan.repaymentMethod)!.definition.source} · {t('وضعیت تطبیق:','Benchmark status:')} {loanMethods.find(method => method.value === loan.repaymentMethod)!.definition.benchmarkStatus === 'partial' ? t('تطبیق جزئی','Partially benchmarked') : loanMethods.find(method => method.value === loan.repaymentMethod)!.definition.benchmarkStatus === 'verified' ? t('تطبیق‌شده','Benchmarked') : t('تطبیق عددی نشده','Not numerically benchmarked')}</p>}
       <label className="fw-field"><span><input type="checkbox" checked={loan.capitalizeInterest} onChange={e=>updateLoan(loan.id,{capitalizeInterest:e.target.checked})}/> {tr('سرمایه‌ای شدن بهره تا شروع بازپرداخت')}</span></label>
       <b>{t('برداشت سالانه (واحد پول پایه)','Annual Drawdown (Base Currency)')}</b>
-      <div className="fw-grid">{Array.from({length:years},(_,i)=><label className="fw-field" key={i}><span>{tr('سال')} {i+1} {i<construction?'· '+t('ساخت','Construction'):'· '+t('بهره‌برداری','Operation')}</span><input type="number" min="0" value={loan.drawdowns[i]??0} onChange={e=>updateDraw(loan.id,i,Number(e.target.value))}/></label>)}</div>
+      <div className="fw-grid">{Array.from({length:years},(_,i)=><label className="fw-field" key={i}><span>{tr('سال')} {i+1} {i<construction?'· '+t('ساخت','Construction'):'· '+t('بهره‌برداری','Operation')}</span><input type="number" min="0" value={blankNumber(loan.drawdowns[i])} onChange={e=>updateDraw(loan.id,i,parseNumberInput(e.target.value))}/></label>)}</div>
       {props.projectPeriods?.length&&props.fiscalYearStartMonth!=null&&props.dayCountBasis!=null&&props.cashFlowTiming!=='unspecified'&&<div className="fw-card">
         <h4>{t('زمان‌بندی دوره‌ای تسهیلات','Periodic Loan Schedule Settings')}</h4>
         <div className="fw-grid">
           <label className="fw-field"><span>{t('مبنای برداشت در دوره‌ها','Period Drawdown Allocation')}</span><select value={loan.drawdownMode??'annual-day-weighted'} onChange={e=>{const mode=e.target.value as Loan['drawdownMode'];updateLoan(loan.id,mode==='period-manual'?{drawdownMode:mode,periodDrawdowns:allocateAnnualFlowsToPeriods(loan.drawdowns,props.projectPeriods??[],props.fiscalYearStartMonth??1),periodDrawdownDates:(props.projectPeriods??[]).map(period=>period.startDate+'|'+period.endDate)}:{drawdownMode:mode,periodDrawdowns:undefined,periodDrawdownDates:undefined})}}><option value="annual-day-weighted">{t('توزیع روزشمار برداشت سالانه','Allocate annual drawdowns by actual days')}</option><option value="period-manual">{t('ورود مستقیم برداشت هر دوره','Enter each period drawdown')}</option></select></label>
           <label className="fw-field"><span>{t('روش تبدیل نرخ سالانه','Annual-to-Period Rate Convention')}</span><select value={loan.periodRateConversion??'effective-annual-by-actual-days'} onChange={e=>updateLoan(loan.id,{periodRateConversion:e.target.value as Loan['periodRateConversion']})}><option value="effective-annual-by-actual-days">{t('نرخ مؤثر سالانه بر مبنای روزهای واقعی','Effective annual rate by actual days')}</option><option value="effective-annual-divided-by-frequency">{t('نرخ مؤثر سالانه تقسیم بر تعداد دوره‌ها','Effective annual rate divided by frequency')}</option></select></label>
-          <label className="fw-field"><span>{t('شروع بازپرداخت اصل (شماره دوره)','Principal Repayment Start (Period)')}</span><input type="number" min="1" max={props.projectPeriods.length} value={loan.periodRepaymentStart??defaultPeriodRepaymentStart(loan)} onChange={e=>updateLoan(loan.id,{periodRepaymentStart:Number(e.target.value)})}/></label>
-          <label className="fw-field"><span>{t('دوره تنفس اصل (تعداد دوره)','Principal Grace (Periods)')}</span><input type="number" min="0" value={loan.periodGracePeriods??loan.graceYears*periodsPerYear} onChange={e=>updateLoan(loan.id,{periodGracePeriods:Number(e.target.value)})}/></label>
-          <label className="fw-field"><span>{t('مدت بازپرداخت (تعداد دوره)','Repayment Term (Periods)')}</span><input type="number" min="1" value={loan.periodTerm??loan.termYears*periodsPerYear} onChange={e=>updateLoan(loan.id,{periodTerm:Number(e.target.value)})}/></label>
+          <label className="fw-field"><span>{t('شروع بازپرداخت اصل (شماره دوره)','Principal Repayment Start (Period)')}</span><input type="number" min="1" max={props.projectPeriods.length} value={blankNumber(loan.periodRepaymentStart)} onChange={e=>updateLoan(loan.id,{periodRepaymentStart:parseNumberInput(e.target.value)})}/></label>
+          <label className="fw-field"><span>{t('دوره تنفس اصل (تعداد دوره)','Principal Grace (Periods)')}</span><input type="number" min="0" value={blankNumber(loan.periodGracePeriods)} onChange={e=>updateLoan(loan.id,{periodGracePeriods:parseNumberInput(e.target.value)})}/></label>
+          <label className="fw-field"><span>{t('مدت بازپرداخت (تعداد دوره)','Repayment Term (Periods)')}</span><input type="number" min="1" value={blankNumber(loan.periodTerm)} onChange={e=>updateLoan(loan.id,{periodTerm:parseNumberInput(e.target.value)})}/></label>
           <label className="fw-field"><span>{t('روش بازپرداخت دوره‌ای','Periodic Repayment Method')}</span><select value={loan.periodRepaymentMethod??loan.repaymentMethod} onChange={e=>updateLoan(loan.id,{periodRepaymentMethod:e.target.value as Loan['periodRepaymentMethod']})}><option value="equal-principal">{t('اصل مساوی','Equal Principal')}</option><option value="annuity">{t('اقساط مساوی','Annuity')}</option><option value="bullet">{t('یکجا در سررسید','Bullet at Maturity')}</option><option value="custom">{t('برنامه سفارشی / بالونی','Custom / Balloon Schedule')}</option></select></label>
-          <label className="fw-field"><span>{t('سقف تعهد تسهیلات','Committed Facility Limit')}</span><input type="number" min="0" value={loan.facilityLimit??''} onChange={e=>updateLoan(loan.id,{facilityLimit:e.target.value===''?undefined:Number(e.target.value)})}/></label>
-          <label className="fw-field"><span>{t('کارمزد سالانه مانده استفاده‌نشده (%)','Annual Undrawn Commitment Fee (%)')}</span><input type="number" min="0" step="0.01" value={loan.commitmentFeeAnnualRatePercent??0} onChange={e=>updateLoan(loan.id,{commitmentFeeAnnualRatePercent:Number(e.target.value)})}/></label>
+          <label className="fw-field"><span>{t('سقف تعهد تسهیلات','Committed Facility Limit')}</span><input type="number" min="0" value={loan.facilityLimit??''} onChange={e=>updateLoan(loan.id,{facilityLimit:e.target.value===''?undefined:parseNumberInput(e.target.value)})}/></label>
+          <label className="fw-field"><span>{t('کارمزد سالانه مانده استفاده‌نشده (%)','Annual Undrawn Commitment Fee (%)')}</span><input type="number" min="0" step="0.01" value={blankNumber(loan.commitmentFeeAnnualRatePercent)} onChange={e=>updateLoan(loan.id,{commitmentFeeAnnualRatePercent:parseNumberInput(e.target.value)})}/></label>
         </div>
         {(loan.periodRepaymentMethod??loan.repaymentMethod)==='custom'&&<div className="fw-card"><b>{t('برنامه اصل سفارشی به تفکیک دوره','Custom Principal Repayment by Period')}</b>
-          {projectPeriods.map(period=>{const current=(loan.customPrincipalRepayments??[]).find(item=>item.period===period.index)?.amount??0;return <label className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} – {period.endDate}</span><input type="number" min="0" value={current} onChange={e=>updateLoan(loan.id,{customPrincipalRepayments:[...(loan.customPrincipalRepayments??[]).filter(item=>item.period!==period.index),...(Number(e.target.value)>0?[{period:period.index,amount:Number(e.target.value)}]:[])]})}/></label>})}
+          {projectPeriods.map(period=>{const current=(loan.customPrincipalRepayments??[]).find(item=>item.period===period.index)?.amount;return <label className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} – {period.endDate}</span><input type="number" min="0" value={blankNumber(current)} onChange={e=>updateLoan(loan.id,{customPrincipalRepayments:[...(loan.customPrincipalRepayments??[]).filter(item=>item.period!==period.index),...(parseNumberInput(e.target.value)>0?[{period:period.index,amount:parseNumberInput(e.target.value)}]:[])]})}/></label>})}
           <label className="fw-field"><span><input type="checkbox" checked={loan.balloonAtMaturity??false} onChange={e=>updateLoan(loan.id,{balloonAtMaturity:e.target.checked})}/> {t('تسویه مانده باقی‌مانده به‌صورت قسط بالونی در سررسید','Settle remaining principal as a balloon at maturity')}</span></label>
         </div>}
         {loan.periodRateConversion==='effective-annual-divided-by-frequency'&&periodicRateMethod&&<p className="fw-hint">{t('فرمول روش:','Method formula:')} {periodicRateMethod.formula} · {t('منبع:','Source:')} {periodicRateMethod.source} · {t('محدودیت:','Limitation:')} {periodicRateMethod.limitations}</p>}
         <div className="fw-grid">
           <label className="fw-field"><span>{t('مبنای روزشمار بهره و هزینه تأمین مالی','Interest & Financing Fee Day-Count')}</span><select value={loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':'')} onChange={e=>updateLoan(loan.id,{periodInterestConvention:e.target.value?(e.target.value as Loan['periodInterestConvention']):undefined})}>
             <option value="">{t('استفاده از روش تبدیل نرخ انتخاب‌شده','Use selected rate-conversion method')}</option>
-            <option value="comfar-months-plus-360">{t('ماه‌های کامل + روزهای با مبنای ۳۶۰ (کامفار)','Completed months + residual days / 360 (COMFAR)')}</option>
+            <option value="comfar-months-plus-360">{t('ماه‌های کامل + روزهای با مبنای ۳۶۰','Completed months + residual days / 360')}</option>
             <option value="actual-360">Actual / 360</option><option value="actual-365">Actual / 365</option>
           </select></label>
         </div>
         <h5>{t('تغییرات نرخ بهره در طول تسهیلات','Effective-Dated Interest Rate Resets')}</h5>
         {(loan.rateChanges??[]).map((change,index)=><div className="fw-grid" key={'rate-'+index}>
           <label className="fw-field"><span>{t('تاریخ اثر نرخ','Rate Effective Date')}</span><input type="date" min={props.projectPeriods?.[0]?.startDate} max={props.projectPeriods?.at(-1)?.endDate} value={change.effectiveDate} onChange={e=>updateLoan(loan.id,{rateChanges:(loan.rateChanges??[]).map((item,i)=>i===index?{...item,effectiveDate:e.target.value}:item)})}/></label>
-          <label className="fw-field"><span>{t('نرخ سالانه جدید (%)','New Annual Rate (%)')}</span><input type="number" min="0" step="0.01" value={change.annualRatePercent} onChange={e=>updateLoan(loan.id,{rateChanges:(loan.rateChanges??[]).map((item,i)=>i===index?{...item,annualRatePercent:Number(e.target.value)}:item)})}/></label>
+          <label className="fw-field"><span>{t('نرخ سالانه جدید (%)','New Annual Rate (%)')}</span><input type="number" min="0" step="0.01" value={change.annualRatePercent} onChange={e=>updateLoan(loan.id,{rateChanges:(loan.rateChanges??[]).map((item,i)=>i===index?{...item,annualRatePercent:parseNumberInput(e.target.value)}:item)})}/></label>
           <button className="secondary-button" onClick={()=>updateLoan(loan.id,{rateChanges:(loan.rateChanges??[]).filter((_,i)=>i!==index)})}>{t('حذف تغییر نرخ','Remove Rate Reset')}</button>
         </div>)}
         <button className="secondary-button" onClick={()=>updateLoan(loan.id,{rateChanges:[...(loan.rateChanges??[]),{effectiveDate:props.projectPeriods?.[0]?.startDate??'',annualRatePercent:loan.annualRate}]})}>{t('افزودن تغییر نرخ','Add Rate Reset')}</button>
@@ -400,7 +470,7 @@ export default function AdvancedFinancePanel(props: Props) {
         {(loan.financingFees??[]).map((fee,index)=><div className="fw-grid" key={'fee-'+index}>
           <label className="fw-field"><span>{t('شرح هزینه','Fee Description')}</span><input value={fee.label??''} onChange={e=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).map((item,i)=>i===index?{...item,label:e.target.value}:item)})}/></label>
           <label className="fw-field"><span>{t('تاریخ پرداخت','Payment Date')}</span><input type="date" min={props.projectPeriods?.[0]?.startDate} max={props.projectPeriods?.at(-1)?.endDate} value={fee.date} onChange={e=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).map((item,i)=>i===index?{...item,date:e.target.value}:item)})}/></label>
-          <label className="fw-field"><span>{t('مبلغ','Amount')}</span><input type="number" min="0" step="0.01" value={fee.amount} onChange={e=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).map((item,i)=>i===index?{...item,amount:Number(e.target.value)}:item)})}/></label>
+          <label className="fw-field"><span>{t('مبلغ','Amount')}</span><input type="number" min="0" step="0.01" value={fee.amount} onChange={e=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).map((item,i)=>i===index?{...item,amount:parseNumberInput(e.target.value)}:item)})}/></label>
           <label className="fw-field"><span>{t('نحوه شناسایی','Accounting Treatment')}</span><select value={fee.treatment} onChange={e=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).map((item,i)=>i===index?{...item,treatment:e.target.value as 'expense'|'capitalize'}:item)})}><option value="expense">{t('هزینه نقدی دوره','Period Expense')}</option><option value="capitalize">{t('سرمایه‌ای و افزوده به بدهی','Capitalize into Debt')}</option></select></label>
           <button className="secondary-button" onClick={()=>updateLoan(loan.id,{financingFees:(loan.financingFees??[]).filter((_,i)=>i!==index)})}>{t('حذف هزینه','Remove Fee')}</button>
         </div>)}
@@ -408,43 +478,46 @@ export default function AdvancedFinancePanel(props: Props) {
         <p className="fw-hint">{t('تغییر نرخ از تاریخ مؤثر اعمال می‌شود. کارمزد هزینه‌ای در جریان نقد و خدمت بدهی دوره ثبت می‌شود؛ هزینه سرمایه‌ای به مانده بدهی و دارایی‌های قبل از بهره‌برداری افزوده می‌شود.','Rate resets apply from their effective dates. Expense fees are recorded in period financing costs and debt service; capitalized fees increase debt and deferred pre-operating assets.')}</p>
         <p className="fw-hint">{t('تغییرات برداشت دوره‌ای در موتور ماهانه/فصلی اعمال می‌شوند؛ جدول سالانه برای کنترل و گزارش سالانه مستقل باقی می‌ماند.','Period drawdown edits affect the monthly/quarterly engine; the annual schedule remains separately available for annual reporting.')}</p>
         {loan.drawdownMode==='period-manual'&&!periodDrawdownDatesMatch(loan)&&<div className="fw-hint">{t('تقویم پروژه تغییر کرده است؛ برنامه برداشت قبلی به تاریخ‌های جدید متصل نیست. برای بازسازی از برنامه سالانه استفاده کنید.','The project calendar changed; the prior drawdown schedule is not mapped to the new dates. Rebuild it from the annual schedule.')} <button className="secondary-button" onClick={()=>updateLoan(loan.id,{periodDrawdowns:allocateAnnualFlowsToPeriods(loan.drawdowns,props.projectPeriods??[],props.fiscalYearStartMonth??1),periodDrawdownDates:(props.projectPeriods??[]).map(period=>period.startDate)})}>{t('بازسازی برنامه دوره‌ای','Rebuild period schedule')}</button></div>}
-        {loan.drawdownMode==='period-manual'?<div className="fw-grid">{props.projectPeriods.map((period,index)=><div className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} تا {period.endDate}</span><input type="number" min="0" value={periodDrawdownDatesMatch(loan)?loan.periodDrawdowns?.[index]??0:0} onChange={e=>updatePeriodDraw(loan.id,index,Number(e.target.value))}/><span>{t('تاریخ دقیق برداشت','Exact drawdown date')}</span><input type="date" min={period.startDate} max={period.endDate} value={periodDrawdownDatesMatch(loan)?loan.exactDrawdownDates?.[index]??period.startDate:period.startDate} onChange={e=>updatePeriodDrawDate(loan.id,index,e.target.value)}/></div>)}</div>:<p className="fw-hint">{t('برداشت‌های سالانه برای موتور دوره‌ای بر اساس تعداد روز واقعی هر دوره توزیع می‌شوند. برای برداشت‌های یک‌باره یا مرحله‌ای دقیق، ورود مستقیم برداشت هر دوره را انتخاب کنید.','Annual drawdowns are distributed by actual period days in the periodic engine. Select direct period entry for exact one-off or staged drawdowns.')}</p>}
+        {loan.drawdownMode==='period-manual'?<div className="fw-grid">{props.projectPeriods.map((period,index)=><div className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} تا {period.endDate}</span><input type="number" min="0" value={blankNumber(periodDrawdownDatesMatch(loan)?loan.periodDrawdowns?.[index]??Number.NaN:Number.NaN)} onChange={e=>updatePeriodDraw(loan.id,index,parseNumberInput(e.target.value))}/><span>{t('تاریخ دقیق برداشت','Exact drawdown date')}</span><input type="date" min={period.startDate} max={period.endDate} value={periodDrawdownDatesMatch(loan)?loan.exactDrawdownDates?.[index]??period.startDate:period.startDate} onChange={e=>updatePeriodDrawDate(loan.id,index,e.target.value)}/></div>)}</div>:<p className="fw-hint">{t('برداشت‌های سالانه برای موتور دوره‌ای بر اساس تعداد روز واقعی هر دوره توزیع می‌شوند. برای برداشت‌های یک‌باره یا مرحله‌ای دقیق، ورود مستقیم برداشت هر دوره را انتخاب کنید.','Annual drawdowns are distributed by actual period days in the periodic engine. Select direct period entry for exact one-off or staged drawdowns.')}</p>}
       </div>}
       <div className="fw-card"><b>{tr('برنامه بازپرداخت دوره‌ای همین تسهیلات')}</b>{(periodicFinanceResult?.valid ? periodicFinanceResult.loanSchedules[loan.id]??[] : result.loanSchedules[loan.id]??[]).map((r,i)=><div className="fw-validation" key={i}><span>{periodicFinanceResult?.valid ? `${tr('دوره')} ${i+1} · ${periodicFinanceResult.rows[i]?.startDate} تا ${periodicFinanceResult.rows[i]?.endDate}` : `${tr('سال')} ${i+1}`} · {tr('برداشت')} {money(r.drawdown)} · {tr('مانده اول')} {money(r.openingBalance)}</span><b>{tr('بهره نقدی')} {money(r.interestExpense)} · {tr('بهره سرمایه‌ای')} {money(r.capitalizedInterest)} · {t('کارمزد تعهد','Commitment Fee')} {money('commitmentFeeExpense' in r ? r.commitmentFeeExpense : 0)} · {t('سایر کارمزدهای نقدی','Other Cash Fees')} {money('financingFeeExpense' in r ? Math.max(0,r.financingFeeExpense-('commitmentFeeExpense' in r ? r.commitmentFeeExpense : 0)) : 0)} · {t('کارمزد سرمایه‌ای','Capitalized Fees')} {money('capitalizedFinancingFees' in r ? r.capitalizedFinancingFees : 0)} · {tr('اصل')} {money(r.principal)} · {tr('مانده پایان')} {money(r.closingBalance)}</b></div>)}</div><button className="secondary-button" onClick={()=>setState(s=>({...s,loans:s.loans.filter(l=>l.id!==loan.id)}))}><Trash2 size={14}/> {tr('حذف تسهیلات')}</button>
     </div>)}
     <button className="secondary-button" onClick={addLoan}><Plus size={14}/> {tr('افزودن وام')}</button>
     <div className="fw-card">
       <h4>{t('کنترل تعهدات قراردادی تسهیلات','Loan Covenant Controls')}</h4>
-      <label className="fw-field"><span>{t('حداقل نسبت پوشش خدمت بدهی (DSCR)','Minimum Debt Service Coverage Ratio (DSCR)')}</span><input type="number" min="0.01" step="0.01" placeholder={t('بدون محدودیت','No covenant')} value={state.minimumDscr??''} onChange={e=>setState(s=>({...s,minimumDscr:e.target.value===''?undefined:Number(e.target.value)}))}/></label>
+      <label className="fw-field"><span>{t('حداقل نسبت پوشش خدمت بدهی (DSCR)','Minimum Debt Service Coverage Ratio (DSCR)')}</span><input type="number" min="0.01" step="0.01" placeholder={t('بدون محدودیت','No covenant')} value={state.minimumDscr??''} onChange={e=>setState(s=>({...s,minimumDscr:e.target.value===''?undefined:parseNumberInput(e.target.value)}))}/></label>
       <p className="fw-hint">{t('نقض حداقل DSCR در هر دوره به‌صورت هشدار قراردادی گزارش می‌شود و به‌طور خودکار جریان نقد یا اقساط را تغییر نمی‌دهد.','A minimum DSCR breach is reported as a covenant warning for the affected period; cash flows and repayments are not automatically altered.')}</p>
     </div>
+    </>}
     <div className="fw-card">
       <h4>{t('آورده نقدی سهامدار به تفکیک سال','Annual Shareholder Equity Contributions')}</h4>
-      <div className="fw-grid">{Array.from({length:construction},(_,i)=><label className="fw-field" key={i}><span>{tr('آورده سال ساخت')} {i+1}</span><input type="number" min="0" value={equityContributions[i]??0} onChange={e=>setEquity(i,Number(e.target.value))}/></label>)}</div>
+      <div className="fw-grid">{Array.from({length:construction},(_,i)=><label className="fw-field" key={i}><span>{tr('آورده سال ساخت')} {i+1}</span><input type="number" min="0" value={blankNumber(equityContributions[i])} onChange={e=>setEquity(i,parseNumberInput(e.target.value))}/></label>)}</div>
       <p className="fw-hint">{tr('آورده سهامدار برای CAPEX را جدا از برداشت وام وارد کنید. سرمایه در گردش در بخش مستقل زیر ثبت می‌شود.')}</p>
       <h4>{t('آورده سهامدار برای سرمایه در گردش','Shareholder Equity for Working Capital')}</h4>
-      <div className="fw-grid">{Array.from({length:opYears},(_,i)=>{const yearIndex=construction+i;return <label className="fw-field" key={yearIndex}><span>{tr('آورده سرمایه در گردش سال بهره‌برداری')} {i+1}</span><input type="number" min="0" value={equityWorkingCapitalContributions[yearIndex]??0} onChange={e=>setWorkingCapitalEquity(yearIndex,Number(e.target.value))}/></label>})}</div>
+      <div className="fw-grid">{Array.from({length:opYears},(_,i)=>{const yearIndex=construction+i;return <label className="fw-field" key={yearIndex}><span>{tr('آورده سرمایه در گردش سال بهره‌برداری')} {i+1}</span><input type="number" min="0" value={blankNumber(equityWorkingCapitalContributions[yearIndex])} onChange={e=>setWorkingCapitalEquity(yearIndex,parseNumberInput(e.target.value))}/></label>})}</div>
       <p className="fw-hint">{tr('این مبلغ، آورده نقدی سهامدار برای تأمین سرمایه در گردش است و فقط یک‌بار ثبت می‌شود. اگر از افزایش خالص سرمایه در گردش بیشتر باشد، مازاد در مانده نقد ترازنامه دیده می‌شود؛ اگر کمتر باشد، کسری نقدینگی باقی می‌ماند. سهم تأمین‌شده از محل وام در این قسمت وارد نمی‌شود.','This is the shareholder cash contribution to working capital; enter it only once. Any amount above the net working-capital increase remains as cash on the balance sheet; any shortfall remains visible as a cash deficit. Do not enter debt-funded amounts here.')}</p>
     </div>
 
+    {!(props.blankStart&&(props.financialForms?.workingCapital.length??0)>0)&&<>
     <h4>{t('۲. سرمایه در گردش دوره‌ای','2. Periodic Working Capital')}</h4>
     <p className="fw-hint">{tr('مبنای روز ۳۶۰ روز است. روزهای نگهداری/وصول/پرداخت را از چرخه واقعی پروژه وارد کنید؛ مقدار صفر یعنی برای آن قلم سرمایه در گردش منظور نمی‌شود.')}</p>
     <div className="fw-grid">
-      {([['raw','روز موجودی مواد اولیه'],['energy','روز موجودی/پوشش هزینه انرژی'],['spareParts','روز موجودی قطعات یدکی'],['wip','روز کالای در جریان ساخت'],['finished','روز محصول نهایی'],['receivable','روز وصول مطالبات'],['cash','روز حداقل نقد عملیاتی'],['payable','روز پرداخت بدهی تجاری']] as [keyof SavedState['workingCapitalDays'],string][]).map(([key,label])=><label className="fw-field" key={key}><span>{tr(label)}</span><input type="number" min="0" value={state.workingCapitalDays[key]} onChange={e=>updateDay(key,Number(e.target.value))}/></label>)}
+      {([['raw','روز موجودی مواد اولیه'],['energy','روز موجودی/پوشش هزینه انرژی'],['spareParts','روز موجودی قطعات یدکی'],['wip','روز کالای در جریان ساخت'],['finished','روز محصول نهایی'],['receivable','روز وصول مطالبات'],['cash','روز حداقل نقد عملیاتی'],['payable','روز پرداخت بدهی تجاری']] as [keyof SavedState['workingCapitalDays'],string][]).map(([key,label])=><label className="fw-field" key={key}><span>{tr(label)}</span><input type="number" min="0" value={blankNumber(state.workingCapitalDays[key])} onChange={e=>updateDay(key,parseNumberInput(e.target.value))}/></label>)}
     </div>
     <div className="fw-grid">
-      {([['rawMaterials','مبنای سالانه مواد اولیه'],['energy','مبنای سالانه هزینه انرژی'],['spareParts','مبنای سالانه قطعات یدکی'],['conversion','مبنای سالانه هزینه تبدیل'],['finishedGoods','بهای سالانه محصول ساخته‌شده'],['cash','هزینه نقدی سالانه برای حداقل نقد'],['payables','مبنای سالانه بدهی تجاری']] as [keyof SavedState['workingCapitalBases'],string][]).map(([key,label])=><label className="fw-field" key={key}><span>{tr(label)} ({props.currency})</span><input type="number" min="0" value={state.workingCapitalBases[key]} onChange={e=>setState(s=>({...s,workingCapitalBases:{...s.workingCapitalBases,[key]:Math.max(0,Number(e.target.value))}}))}/></label>)}
-      <label className="fw-field"><span>{tr('تکمیل مواد در جریان ساخت (%)')}</span><input type="number" min="0" max="100" value={state.wipCompletion.material} onChange={e=>setState(s=>({...s,wipCompletion:{...s.wipCompletion,material:Math.max(0,Math.min(100,Number(e.target.value)))}}))}/></label>
-      <label className="fw-field"><span>{tr('تکمیل تبدیل در جریان ساخت (%)')}</span><input type="number" min="0" max="100" value={state.wipCompletion.conversion} onChange={e=>setState(s=>({...s,wipCompletion:{...s.wipCompletion,conversion:Math.max(0,Math.min(100,Number(e.target.value)))}}))}/></label>
+      {([['rawMaterials','مبنای سالانه مواد اولیه'],['energy','مبنای سالانه هزینه انرژی'],['spareParts','مبنای سالانه قطعات یدکی'],['conversion','مبنای سالانه هزینه تبدیل'],['finishedGoods','بهای سالانه محصول ساخته‌شده'],['cash','هزینه نقدی سالانه برای حداقل نقد'],['payables','مبنای سالانه بدهی تجاری']] as [keyof SavedState['workingCapitalBases'],string][]).map(([key,label])=><label className="fw-field" key={key}><span>{tr(label)} ({props.currency})</span><input type="number" min="0" value={blankNumber(state.workingCapitalBases[key])} onChange={e=>setState(s=>({...s,workingCapitalBases:{...s.workingCapitalBases,[key]:Math.max(0,parseNumberInput(e.target.value))}}))}/></label>)}
+      <label className="fw-field"><span>{tr('تکمیل مواد در جریان ساخت (%)')}</span><input type="number" min="0" max="100" value={blankNumber(state.wipCompletion.material)} onChange={e=>setState(s=>({...s,wipCompletion:{...s.wipCompletion,material:Math.max(0,Math.min(100,parseNumberInput(e.target.value)))}}))}/></label>
+      <label className="fw-field"><span>{tr('تکمیل تبدیل در جریان ساخت (%)')}</span><input type="number" min="0" max="100" value={blankNumber(state.wipCompletion.conversion)} onChange={e=>setState(s=>({...s,wipCompletion:{...s.wipCompletion,conversion:Math.max(0,Math.min(100,parseNumberInput(e.target.value)))}}))}/></label>
     </div>
     <p className="fw-hint">{tr('مبنای هزینه‌های سرمایه در گردش عمداً از OPEX کل به‌صورت خودکار تفکیک نمی‌شود؛ ارقام واقعی مواد، تبدیل، محصول، نقد و خرید اعتباری را وارد کنید تا تقسیم‌بندی فرضی در مدل ایجاد نشود.')}</p>
     <div className="fw-result">{tr('اوج نیاز سرمایه در گردش')}: <b>{money(result.peakWorkingCapital)} {props.currency}</b> · {tr('کسری منابع')}: <b>{money(result.fundingGap)} {props.currency}</b></div>
     <div className="fw-card"><b>{t('جدول دوره‌ای سرمایه در گردش','Periodic Working Capital Schedule')}</b>{result.years.map(r=><div className="fw-validation" key={r.year}><span>{tr('سال')} {r.year} · {tr('مواد')} {money(r.workingCapitalBreakdown.rawMaterials)} · {tr('انرژی')} {money(r.workingCapitalBreakdown.energy??0)} · {tr('قطعات یدکی')} {money(r.workingCapitalBreakdown.spareParts??0)} · WIP {money(r.workingCapitalBreakdown.workInProgress)} · {tr('محصول')} {money(r.workingCapitalBreakdown.finishedGoods)} · {tr('مطالبات')} {money(r.workingCapitalBreakdown.receivables)} · {tr('پرداختنی')} {money(r.workingCapitalBreakdown.payables)}</span><b>نیاز طی سال {money(r.workingCapital)} · مانده پایان {money(r.closingWorkingCapital)} · تغییر خالص {money(r.changeInWorkingCapital)}</b></div>)}</div>
 
+    </>}
     <h4>{t('۳. استهلاک دارایی‌به‌دارایی و مالیات','3. Asset-Level Depreciation & Tax')}</h4>
     <p className="fw-hint">{tr('دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.')}</p>
-    <div className="fw-grid">{taxRates.map((v,i)=><label className="fw-field" key={i}><span>{tr('نرخ مالیات سال')} {i+1} (%)</span><input type="number" min="0" max="100" value={v} onChange={e=>setState(s=>({...s,taxRates:taxRates.map((rate,j)=>j===i?Number(e.target.value):rate)}))}/></label>)}</div>
-    {projectPeriods.length>0&&<div className="fw-card"><h4>{t('نرخ مالیات به تفکیک دوره','Tax Rate by Project Period')}</h4><p className="fw-hint">{t('در صورت عدم ورود نرخ دوره‌ای، نرخ سال مالی متناظر اعمال می‌شود. با ویرایش هر خانه، برنامه مالیاتی مستقل دوره‌ای فعال می‌شود.','If no period-specific rate is entered, the corresponding fiscal-year rate is applied. Editing any cell activates the independent period tax schedule.')}</p><div className="fw-grid">{projectPeriods.map((period,index)=>{const fiscalIndex=props.fiscalYearStartMonth==null?0:fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth);const defaultRate=taxRates[fiscalIndex]??props.taxRate;return <label className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} (%)</span><input type="number" min="0" max="100" value={periodTaxRateDatesMatch()?state.periodTaxRates![index]:defaultRate} onChange={e=>updatePeriodTaxRate(index,Number(e.target.value))}/></label>})}</div></div>}
+    <div className="fw-grid">{taxRates.map((v,i)=><label className="fw-field" key={i}><span>{tr('نرخ مالیات سال')} {i+1} (%)</span><input type="number" min="0" max="100" value={blankNumber(v)} onChange={e=>setState(s=>({...s,taxRates:taxRates.map((rate,j)=>j===i?parseNumberInput(e.target.value):rate)}))}/></label>)}</div>
+    {projectPeriods.length>0&&<div className="fw-card"><h4>{t('نرخ مالیات به تفکیک دوره','Tax Rate by Project Period')}</h4><p className="fw-hint">{t('در صورت عدم ورود نرخ دوره‌ای، نرخ سال مالی متناظر اعمال می‌شود. با ویرایش هر خانه، برنامه مالیاتی مستقل دوره‌ای فعال می‌شود.','If no period-specific rate is entered, the corresponding fiscal-year rate is applied. Editing any cell activates the independent period tax schedule.')}</p><div className="fw-grid">{projectPeriods.map((period,index)=>{const fiscalIndex=props.fiscalYearStartMonth==null?0:fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth);const defaultRate=taxRates[fiscalIndex]??props.taxRate;return <label className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} (%)</span><input type="number" min="0" max="100" value={blankNumber(periodTaxRateDatesMatch()?state.periodTaxRates![index]:defaultRate)} onChange={e=>updatePeriodTaxRate(index,parseNumberInput(e.target.value))}/></label>})}</div></div>}
     {listFinancialMethods('taxation').map(method=><div className="fw-validation" key={method.id}>
       <b>{tr(method.nameFa,method.nameEn)} · {method.calculationStatus==='implemented'?tr('محاسبه پیاده‌سازی‌شده','Calculation implemented'):method.calculationStatus}</b>
       <p className="fw-hint">{tr('فرمول:','Formula:')} {method.formula}</p>
@@ -454,7 +527,7 @@ export default function AdvancedFinancePanel(props: Props) {
       {method.limitations&&<p className="fw-hint">{tr('محدودیت‌ها:','Limitations:')} {method.limitations}</p>}
     </div>)}
     <p className="fw-hint">{tr('نرخ سالانه در صورت نبود نرخ اختصاصی برای هر دوره، به دوره‌های همان سال مالی اعمال می‌شود. نرخ‌های واردشده در بخش «نرخ مالیات به تفکیک دوره» بر نرخ سالانه اولویت دارند.','Annual rates apply to periods in the corresponding fiscal year unless explicit period-specific rates are entered. Values in the period tax schedule override the annual rate.')}</p>
-    {!props.useFixedInvestmentRegister&&<>
+    {!props.blankStart&&!props.useFixedInvestmentRegister&&<>
           <button className="secondary-button" onClick={syncAssets}><RefreshCw size={14}/> {tr('همگام‌سازی دارایی‌ها از CAPEX')}</button>
           {comfarLifecycle&&<div className="fw-validation">
             <span>{tr('وضعیت دفتر دارایی و فروش','Fixed Asset Register & Disposal Status')}</span>
@@ -467,12 +540,12 @@ export default function AdvancedFinancePanel(props: Props) {
           </div>}
           {state.assets.map(asset=><div className="fw-grid" key={asset.id}>
             <label className="fw-field"><span>{tr('دارایی')}</span><input value={tr(asset.name)} onChange={e=>updateAsset(asset.id,{name:e.target.value})}/></label>
-            <label className="fw-field"><span>{tr('بهای تمام‌شده')}</span><input type="number" value={asset.cost} onChange={e=>updateAsset(asset.id,{cost:Number(e.target.value)})}/></label>
-            <label className="fw-field"><span>{tr('ارزش اسقاط')}</span><input type="number" value={asset.residualValue} onChange={e=>updateAsset(asset.id,{residualValue:Number(e.target.value)})}/></label>
-            <label className="fw-field"><span>{tr('عمر مفید (سال)')}</span><input type="number" min="1" value={asset.usefulLife} onChange={e=>updateAsset(asset.id,{usefulLife:Number(e.target.value)})}/></label>
-            <label className="fw-field"><span>{tr('شروع استهلاک (سال مدل)')}</span><input type="number" min="1" value={asset.startYear} onChange={e=>updateAsset(asset.id,{startYear:Number(e.target.value)})}/></label>
+            <label className="fw-field"><span>{tr('بهای تمام‌شده')}</span><input type="number" value={blankNumber(asset.cost)} onChange={e=>updateAsset(asset.id,{cost:parseNumberInput(e.target.value)})}/></label>
+            <label className="fw-field"><span>{tr('ارزش اسقاط')}</span><input type="number" value={blankNumber(asset.residualValue)} onChange={e=>updateAsset(asset.id,{residualValue:parseNumberInput(e.target.value)})}/></label>
+            <label className="fw-field"><span>{tr('عمر مفید (سال)')}</span><input type="number" min="1" value={blankNumber(asset.usefulLife)} onChange={e=>updateAsset(asset.id,{usefulLife:parseNumberInput(e.target.value)})}/></label>
+            <label className="fw-field"><span>{tr('شروع استهلاک (سال مدل)')}</span><input type="number" min="1" value={blankNumber(asset.startYear)} onChange={e=>updateAsset(asset.id,{startYear:parseNumberInput(e.target.value)})}/></label>
             <label className="fw-field"><span>{tr('روش')}</span><select value={asset.method} onChange={e=>updateAsset(asset.id,{method:e.target.value as Asset['method']})}><option value="straight-line">{tr('خط مستقیم')}</option><option value="declining-balance">{tr('مانده نزولی')}</option></select></label>
-            {asset.method==='declining-balance'&&<label className="fw-field"><span>{tr('نرخ نزولی (%)')}</span><input type="number" value={asset.decliningRate??20} onChange={e=>updateAsset(asset.id,{decliningRate:Number(e.target.value)})}/></label>}
+            {asset.method==='declining-balance'&&<label className="fw-field"><span>{tr('نرخ نزولی (%)')}</span><input type="number" value={blankNumber(asset.decliningRate)} onChange={e=>updateAsset(asset.id,{decliningRate:parseNumberInput(e.target.value)})}/></label>}
             <button className="secondary-button" onClick={()=>setState(s=>({...s,assets:s.assets.filter(a=>a.id!==asset.id)}))}><Trash2 size={14}/> {tr('حذف دارایی')}</button>
           </div>)}
           <button className="secondary-button" onClick={addAsset}><Plus size={14}/> {tr('افزودن دارایی')}</button>
@@ -489,11 +562,11 @@ export default function AdvancedFinancePanel(props: Props) {
       {comfarLifecycle.sales.map(sale=><p className="fw-hint" key={sale.id}>{tr('فروش دوره','Sale period')} {sale.period}: {tr('ارزش دفتری','Book value')} {money(sale.bookValueAtSale)} / {tr('عواید فروش','Sale proceeds')} {money(sale.saleProceeds)} / {tr('سود یا زیان','Gain / loss')} {money(sale.otherIncomeLoss)}</p>)}
     </div>}
     <div className="fw-grid">
-      <label className="fw-field"><span>{tr('نرخ تنزیل')}</span><select value={state.discountMode} onChange={e=>setState(s=>({...s,discountMode:e.target.value as SavedState['discountMode']}))}><option value="wacc">WACC</option><option value="manual">{tr('دستی')}</option></select></label>
-      {state.discountMode==='manual'&&<label className="fw-field"><span>{tr('نرخ تنزیل دستی (%)')}</span><input type="number" value={state.manualRate} onChange={e=>setState(s=>({...s,manualRate:Number(e.target.value)}))}/></label>}
-      <label className="fw-field"><span>{tr('CAPEX نگهداری سالانه (% هزینه نقدی)')}</span><input type="number" min="0" value={state.maintenancePercent} onChange={e=>setState(s=>({...s,maintenancePercent:Number(e.target.value)}))}/></label>
-      <label className="fw-field"><span>{t('رشد سالانه قیمت فروش (%)','Annual Selling Price Escalation (%)')}</span><input type="number" min="-99" value={state.salesEscalationPercent} onChange={e=>setState(s=>({...s,salesEscalationPercent:Number(e.target.value)}))}/></label>
-      <label className="fw-field"><span>{t('رشد سالانه هزینه‌های عملیاتی (%)','Annual OPEX Escalation (%)')}</span><input type="number" min="-99" value={state.opexEscalationPercent} onChange={e=>setState(s=>({...s,opexEscalationPercent:Number(e.target.value)}))}/></label>
+      <label className="fw-field"><span>{tr('نرخ تنزیل')}</span><select value={state.discountMode} onChange={e=>setState(s=>({...s,discountMode:e.target.value as SavedState['discountMode']}))}><option value="">{t('انتخاب روش نرخ تنزیل','Select discount-rate method')}</option><option value="wacc">WACC</option><option value="manual">{tr('دستی')}</option></select></label>
+      {state.discountMode==='manual'&&<label className="fw-field"><span>{tr('نرخ تنزیل دستی (%)')}</span><input type="number" value={blankNumber(state.manualRate)} onChange={e=>setState(s=>({...s,manualRate:parseNumberInput(e.target.value)}))}/></label>}
+      <label className="fw-field"><span>{tr('CAPEX نگهداری سالانه (% هزینه نقدی)')}</span><input type="number" min="0" value={blankNumber(state.maintenancePercent)} onChange={e=>setState(s=>({...s,maintenancePercent:parseNumberInput(e.target.value)}))}/></label>
+      <label className="fw-field"><span>{t('رشد سالانه قیمت فروش (%)','Annual Selling Price Escalation (%)')}</span><input type="number" min="-99" value={blankNumber(state.salesEscalationPercent)} onChange={e=>setState(s=>({...s,salesEscalationPercent:parseNumberInput(e.target.value)}))}/></label>
+      <label className="fw-field"><span>{t('رشد سالانه هزینه‌های عملیاتی (%)','Annual OPEX Escalation (%)')}</span><input type="number" min="-99" value={blankNumber(state.opexEscalationPercent)} onChange={e=>setState(s=>({...s,opexEscalationPercent:parseNumberInput(e.target.value)}))}/></label>
     </div>
 
     <h4>{t('۴. شاخص‌های مالی، CFADS و DSCR','4. Financial Metrics, CFADS & DSCR')}</h4>
@@ -514,14 +587,28 @@ export default function AdvancedFinancePanel(props: Props) {
     {result.warnings.length>0&&<ul className="fw-checklist">{result.warnings.map((w,i)=><li key={i}>{tr(w)}</li>)}</ul>}
 
     <h4>{t('۵. تحلیل حساسیت چندمتغیره','5. Multivariable Sensitivity Analysis')}</h4>
-    <p className="fw-hint">{tr('ردیف‌ها تغییر حجم/ظرفیت و ستون‌ها تغییر قیمت فروش را نشان می‌دهند. مقادیر NPV پروژه با همان برنامه وام، مالیات و سرمایه در گردش دوباره محاسبه می‌شوند.')}</p>
-    <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('حجم \\ قیمت')}</th>{[-20,-10,0,10,20].map(v=><th key={v}>{v}%</th>)}</tr></thead><tbody>{sensitivity.map((row,i)=><tr key={i}><th>{[-20,-10,0,10,20][i]}%</th>{row.map((cell,j)=><td key={j}>{cell.npv==null?'—':money(cell.npv)}</td>)}</tr>)}</tbody></table></div>
+    {periodicSensitivityResult?.valid
+      ?<p className="fw-hint">{tr('حساسیت دوره‌ای بر مبنای جریان‌های پس از اتصال فرم‌های پروژه محاسبه شده است؛ جدول سالانهٔ قدیمی در این حالت نمایش داده نمی‌شود.')}</p>
+      :<p className="fw-hint">{tr('تحلیل دوره‌ای در دسترس نیست؛ جدول حجم/قیمت زیر صرفاً محاسبهٔ سالانهٔ پایه است و جایگزین خروجی دوره‌ای فرم‌های تخصصی نیست.')}</p>}
+    {periodicSensitivityResult?.valid&&<div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('متغیر')}</th><th>{tr('کاهش ۱۰٪')}</th><th>{tr('مبنا')}</th><th>{tr('افزایش ۱۰٪')}</th></tr></thead><tbody>{(['revenue','variable-cost','fixed-cost','investment','working-capital','tax-rate','discount-rate','loan-interest-rate'] as PeriodicSensitivityVariable[]).filter(variable=>periodicSensitivityResult.points.some(point=>point.variable===variable)).map(variable=>{
+      const points=periodicSensitivityResult.points.filter(point=>point.variable===variable)
+      const down=points.find(point=>point.variationPercent===-10)
+      const up=points.find(point=>point.variationPercent===10)
+      const labels:Record<PeriodicSensitivityVariable,string>={revenue:tr('درآمد'), 'variable-cost':tr('هزینه متغیر'),'fixed-cost':tr('هزینه ثابت'),investment:tr('سرمایه‌گذاری'),'working-capital':tr('سرمایه در گردش'),'tax-rate':tr('نرخ مالیات'),'discount-rate':tr('نرخ تنزیل'),'loan-interest-rate':tr('نرخ بهره تسهیلات')}
+      return <tr key={variable}><th>{labels[variable]}</th><td>{down?.metric==null?'—':money(down.metric)}</td><td>{money(periodicSensitivityResult.baseline.npvProject??NaN)}</td><td>{up?.metric==null?'—':money(up.metric)}</td></tr>
+    })}</tbody></table></div>}
+    {periodicSensitivityResult&&!periodicSensitivityResult.valid&&<p className="fw-hint">{tr(periodicSensitivityResult.issues.join('; '))}</p>}
+    {!periodicSensitivityResult?.valid&&<div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('حجم \\ قیمت')}</th>{[-20,-10,0,10,20].map(v=><th key={v}>{v}%</th>)}</tr></thead><tbody>{sensitivity.map((row,i)=><tr key={i}><th>{[-20,-10,0,10,20][i]}%</th>{row.map((cell,j)=><td key={j}>{cell.npv==null?'—':money(cell.npv)}</td>)}</tr>)}</tbody></table></div>}
     <h4>{t('۶. سناریوهای خوش‌بینانه و بدبینانه','6. Optimistic & Pessimistic Scenarios')}</h4>
-    <div className="fw-grid">
+    {periodicSensitivityResult?.valid?<div className="fw-grid">
+      <div className="fw-result">{tr('بدبینانه')} · NPV {money(periodicSensitivityResult.pessimistic.npvProject??NaN)} · IRR {periodicSensitivityResult.pessimistic.irrProject==null?'—':money(periodicSensitivityResult.pessimistic.irrProject*100)+'٪'}</div>
+      <div className="fw-result">{tr('مبنا')} · NPV {money(periodicSensitivityResult.baseline.npvProject??NaN)} · IRR {periodicSensitivityResult.baseline.irrProject==null?'—':money(periodicSensitivityResult.baseline.irrProject*100)+'٪'}</div>
+      <div className="fw-result">{tr('خوش‌بینانه')} · NPV {money(periodicSensitivityResult.optimistic.npvProject??NaN)} · IRR {periodicSensitivityResult.optimistic.irrProject==null?'—':money(periodicSensitivityResult.optimistic.irrProject*100)+'٪'}</div>
+    </div>:<div className="fw-grid">
       <div className="fw-result">{tr('بدبینانه')} · NPV {money(scenarios.pessimistic.npvProject??NaN)} · IRR {scenarios.pessimistic.irrProject==null?'—':money(scenarios.pessimistic.irrProject*100)+'٪'}</div>
       <div className="fw-result">{tr('مبنا')} · NPV {money(scenarios.base.npvProject??NaN)} · IRR {scenarios.base.irrProject==null?'—':money(scenarios.base.irrProject*100)+'٪'}</div>
       <div className="fw-result">{tr('خوش‌بینانه')} · NPV {money(scenarios.optimistic.npvProject??NaN)} · IRR {scenarios.optimistic.irrProject==null?'—':money(scenarios.optimistic.irrProject*100)+'٪'}</div>
-    </div>
+    </div>}
 
     <h4>{t('۷. تطبیق سه صورت مالی و کنترل ترازنامه','7. Three-Statement Reconciliation & Balance Sheet Check')}</h4>
     <div className="fw-result">{tr('ترازهای منطبق: ')}<b>{totalBalanceChecks} {tr('از')} {statements.length}</b> {tr('دوره')} · {tr('کنترل گردش مانده‌ها: ')}<b>{totalMovementChecks} {tr('از')} {statements.length}</b></div>

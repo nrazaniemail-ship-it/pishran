@@ -259,10 +259,14 @@ export function translatePeriodicForeignCurrencyLoan(
 
 export type ForeignExchangeStatementPostingInput = {
   statements: PeriodicFinancialStatement[]
-  debtTranslation: PeriodicForeignCurrencyDebtResult
+  debtTranslation?: PeriodicForeignCurrencyDebtResult
+  /** Multiple facilities may use different currencies; FX losses are aggregated in local currency by period. */
+  debtTranslations?: PeriodicForeignCurrencyDebtResult[]
   taxRatesPercent: number[]
   openingTaxLossCarryForward?: number
   taxTreatment: 'deductible' | 'non-deductible'
+  /** True when precomputed loan schedules already include FX remeasurement in debt balances. */
+  debtAlreadyRemeasured?:boolean
 }
 
 export type ForeignExchangeStatementPostingResult = {
@@ -287,11 +291,15 @@ export function postForeignExchangeIntoThreeStatements(
   input: ForeignExchangeStatementPostingInput,
 ): ForeignExchangeStatementPostingResult {
   const issues: string[] = []
-  const { statements, debtTranslation, taxRatesPercent } = input
+  const { statements, taxRatesPercent } = input
+  const translations = input.debtTranslations ?? (input.debtTranslation ? [input.debtTranslation] : [])
+  const fxLossesByPeriod = Array.isArray(statements) ? statements.map((statement,index) =>
+    translations.reduce((sum,translation) => sum + (translation.rows[index]?.foreignExchangeLossLocal ?? Number.NaN),0)) : []
   if (!Array.isArray(statements) || !statements.length)
     issues.push('At least one linked financial statement is required.')
-  if (!debtTranslation?.valid || debtTranslation.rows.length !== statements.length)
-    issues.push('A valid foreign-currency debt translation row is required for every statement period.')
+  if (!translations.length || translations.some(translation=>!translation?.valid || translation.rows.length!==statements.length ||
+      translation.rows.some((row,index)=>row.period!==index+1 || !finite(row.foreignExchangeLossLocal))))
+    issues.push('At least one valid foreign-currency debt translation with one row per statement period is required.')
   if (taxRatesPercent.length !== statements.length ||
       taxRatesPercent.some(rate => !finite(rate) || rate < 0 || rate > 100))
     issues.push('A valid tax rate from 0 to 100 percent is required for every statement period.')
@@ -310,9 +318,9 @@ export function postForeignExchangeIntoThreeStatements(
 
   for (let index = 0; index < statements.length; index++) {
     const statement = statements[index]
-    const fxLoss = debtTranslation.rows[index].foreignExchangeLossLocal
+    const fxLoss = fxLossesByPeriod[index]
     const taxRate = taxRatesPercent[index]
-    if (!finite(fxLoss) || statement.period !== debtTranslation.rows[index].period) {
+    if (!finite(fxLoss) || statement.period !== index+1) {
       issues.push('FX translation and financial statement periods do not reconcile at period ' + (index + 1) + '.')
       break
     }
@@ -334,32 +342,39 @@ export function postForeignExchangeIntoThreeStatements(
     const openingBalances = {
       ...statement.openingBalances,
       cash: statement.openingBalances.cash + cumulativeCashTaxAdjustment - periodCashAdjustment,
-      debt: statement.openingBalances.debt + cumulativeFx - fxLoss,
+      debt: statement.openingBalances.debt + (input.debtAlreadyRemeasured?0:cumulativeFx - fxLoss),
       retainedEarnings: statement.openingBalances.retainedEarnings +
         cumulativeRetainedEarningsAdjustment - netIncomeDelta,
     }
     const cash = statement.balanceSheet.cash + cumulativeCashTaxAdjustment
-    const debt = statement.balanceSheet.debt + cumulativeFx
+    const debt = statement.balanceSheet.debt + (input.debtAlreadyRemeasured?0:cumulativeFx)
     const retainedEarnings = statement.balanceSheet.retainedEarnings + cumulativeRetainedEarningsAdjustment
     const totalAssets = statement.balanceSheet.totalAssets + cumulativeCashTaxAdjustment
-    const totalLiabilities = statement.balanceSheet.totalLiabilities + cumulativeFx
+    const totalLiabilities = statement.balanceSheet.totalLiabilities + (input.debtAlreadyRemeasured?0:cumulativeFx)
     const totalEquity = statement.balanceSheet.totalEquity + cumulativeRetainedEarningsAdjustment
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
-    const reconciled = statement.balanceSheet.reconciled && Math.abs(balanceDifference) <= 0.01
-
     const cashFlowStatement = {
       ...statement.cashFlowStatement,
       operatingCashFlow: statement.cashFlowStatement.operatingCashFlow + netIncomeDelta + fxLoss,
       netChangeInCash: statement.cashFlowStatement.netChangeInCash + periodCashAdjustment,
       closingCash: statement.cashFlowStatement.closingCash + cumulativeCashTaxAdjustment,
     }
-    const movementChecks = {
-      ...statement.movementChecks,
-      cash: statement.movementChecks.cash + periodCashAdjustment,
-      debt: statement.movementChecks.debt + fxLoss,
-      retainedEarnings: statement.movementChecks.retainedEarnings + netIncomeDelta,
-    }
+    // Opening balances, closing balances and the corresponding cash/debt/equity
+    // movements are all restated together above. Their roll-forward residuals
+    // therefore remain the base statement residuals; adding the FX deltas again
+    // here would double-count the very adjustments already posted to both sides.
+    const movementChecks = { ...statement.movementChecks }
+    // For a base statement whose foreign debt is still carried at its
+    // transaction-date amount, the engine's authoritative control is its
+    // balance-sheet reconciliation flag. Its movementChecks are source
+    // movements (not residuals) until debt remeasurement has already been
+    // incorporated by the upstream schedule. In that pre-remeasured path,
+    // every movement check must be a finite zero residual.
+    const reconciled = Math.abs(balanceDifference) <= 0.01 &&
+      (input.debtAlreadyRemeasured
+        ? Object.values(movementChecks).every(value => finite(value) && Math.abs(value) <= 0.01)
+        : statement.balanceSheet.reconciled === true)
     posted.push({
       ...statement,
       openingBalances,
@@ -386,7 +401,7 @@ export function postForeignExchangeIntoThreeStatements(
       movementChecks,
     })
     if (!reconciled) {
-      issues.push('Foreign-exchange posting did not preserve the balance sheet in period ' + (index + 1) + '.')
+      issues.push('Foreign-exchange posting did not preserve the balance sheet in period ' + (index + 1) + '. Difference=' + balanceDifference + '; movement checks=' + JSON.stringify(movementChecks) + '; FX=' + fxLoss + '; tax delta=' + taxDelta + '.')
       break
     }
   }
@@ -425,4 +440,14 @@ export function resolveLoanFacilityCurrency(
       issues: [matches.length ? 'The selected foreign currency code is ambiguous.' : 'The selected foreign currency is not defined in the project foundation.'],
     }
   return { valid: true, currency: matches[0], issues: [] }
+}
+
+
+/** Post several foreign-currency loan remeasurements into the same linked statements. */
+export function postMultipleForeignCurrencyDebtsIntoThreeFinancialStatements(
+  input: Omit<ForeignExchangeStatementPostingInput,'debtTranslation'|'debtTranslations'> & {
+    debtTranslations: PeriodicForeignCurrencyDebtResult[]
+  },
+): ForeignExchangeStatementPostingResult {
+  return postForeignExchangeIntoThreeStatements(input)
 }

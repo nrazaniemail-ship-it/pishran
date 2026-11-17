@@ -1,7 +1,10 @@
 export type ProjectPeriodFrequency = 'unspecified' | 'annual' | 'semiannual' | 'quarterly' | 'monthly'
 export type ProjectDiscountConvention = 'actual-days' | 'period-count'
 export type ProjectCurrency = { id: string; code: string; name: string; exchangeRates: { period: string; rateToLocal: number }[] }
-export type ProjectCostCentre = { id: string; code: string; name: string; parentId?: string }
+export type ProjectCostCentre = {
+  id: string; code: string; name: string; parentId?: string
+  group?: string; level?: string; productIds?: string[]
+}
 export type ProjectInflationIndex = { id: string; name: string; currencyCode: string; rates: { period: string; ratePercent: number }[] }
 export type ProjectTaxRate = { id: string; period: string; ratePercent: number }
 
@@ -36,6 +39,8 @@ export type ProjectFoundation = {
     lossCarryForward: boolean | null
     lossCarryForwardYears: number | null
     rates: ProjectTaxRate[]
+    /** Tax treatment of realized foreign-exchange losses; required only when FX debt is modeled. */
+    foreignExchangeLossTreatment?: 'unspecified' | 'deductible' | 'non-deductible'
   }
 }
 
@@ -65,7 +70,7 @@ export function createBlankProjectFoundation(): ProjectFoundation {
     costCentres: { active: false, items: [] },
     inflation: { active: false, indices: [] },
     discounting: { method: 'unspecified', financialRatePercent: null, economicRatePercent: null },
-    taxation: { system: 'unspecified', lossCarryForward: null, lossCarryForwardYears: null, rates: [] },
+    taxation: { system: 'unspecified', lossCarryForward: null, lossCarryForwardYears: null, rates: [], foreignExchangeLossTreatment: 'unspecified' },
   }
 }
 
@@ -167,6 +172,8 @@ export function validateProjectFoundation(value: ProjectFoundation): ProjectFoun
     issue('discounting.method', 'warning', 'missing-discounting-method', 'Discounting method has not been selected.')
   if (value.discounting.method === 'manual' && value.discounting.financialRatePercent === null)
     issue('discounting.financialRatePercent', 'warning', 'missing-financial-discount-rate', 'A manual financial discount rate has not been defined.')
+  if (!['unspecified','deductible','non-deductible'].includes(value.taxation.foreignExchangeLossTreatment ?? 'unspecified'))
+    issue('taxation.foreignExchangeLossTreatment', 'error', 'invalid-foreign-exchange-loss-treatment', 'Foreign-exchange loss tax treatment must use a supported option.')
   if (value.taxation.system === 'unspecified')
     issue('taxation.system', 'warning', 'missing-tax-system', 'Tax system has not been selected.')
   if (value.taxation.system !== 'none' && value.taxation.system !== 'unspecified' && value.taxation.lossCarryForward === null)
@@ -401,6 +408,9 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
   items.forEach((item, index) => {
     const path = `fixedInvestmentItems[${index}]`
     if (!item.description.trim()) issue(path + '.description', 'missing-fixed-asset-description', 'Enter a description for each fixed investment item.')
+    if (!item.assetClass) issue(path + '.assetClass', 'missing-fixed-asset-class', 'Select a fixed investment asset class.')
+    if (!item.origin) issue(path + '.origin', 'missing-fixed-asset-origin', 'Select whether the fixed investment item is local or foreign.')
+    if (!item.depreciation.method) issue(path + '.depreciation.method', 'missing-depreciation-method', 'Select a depreciation method or explicitly select no depreciation.')
     if (!item.depreciationBasis || item.depreciationBasis === 'unresolved') warn(path + '.depreciationBasis', 'depreciation-basis-unresolved', 'Depreciation conditions are not supported by a source or confirmed by the user.')
     else if (item.depreciationBasis === 'source-conflict') warn(path + '.depreciationBasis', 'depreciation-basis-conflict', 'Source documents contain conflicting depreciation conditions; confirm the applicable rate or scrap value.')
     if (!item.currencyCode.trim() || !validCurrencyCodes.has(item.currencyCode.trim().toUpperCase()))
@@ -426,7 +436,7 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
       if (item.origin === 'foreign' && (!Number.isFinite(acquisition.exchangeRateToLocal) || (acquisition.exchangeRateToLocal ?? 0) <= 0))
         issue(acquisitionPath + '.exchangeRateToLocal', 'missing-asset-exchange-rate', 'Foreign-origin asset acquisitions require a positive exchange rate to local currency.')
     })
-    if (item.depreciation.method !== 'none') {
+    if (item.depreciation.method && item.depreciation.method !== 'none') {
       if (!item.depreciation.startingAt.trim()) issue(path + '.depreciation.startingAt', 'missing-depreciation-start', 'Define Starting at for depreciable assets.')
       if (!Number.isFinite(item.depreciation.lengthYears) || (item.depreciation.lengthYears ?? 0) < 0 || !Number.isInteger(item.depreciation.lengthMonths) || item.depreciation.lengthMonths < 0 || item.depreciation.lengthMonths > 11 || ((item.depreciation.lengthYears ?? 0) + item.depreciation.lengthMonths / 12) <= 0)
         issue(path + '.depreciation.length', 'invalid-depreciation-length', 'Depreciation Length must be greater than zero and months must be from 0 to 11.')

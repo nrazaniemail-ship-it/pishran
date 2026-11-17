@@ -4,7 +4,7 @@ name: Frontend build and financial validation
 
 on:
   push:
-    branches: [feature/integrated-dri-steelmaking-comfar, feat/valuation-date-discounting-rebased, feat/periodic-loan-rate-resets-and-fees]
+    branches: [feature/integrated-dri-steelmaking-comfar, feat/valuation-date-discounting-rebased, feat/periodic-loan-rate-resets-and-fees, feat/foreign-currency-loan-finance-orchestration-v2]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-validation.yml'

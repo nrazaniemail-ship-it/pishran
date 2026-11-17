@@ -34,6 +34,45 @@ export function prorateAnnualFlowByDays(
   return annualAmount * periodDays / dayCountBasis
 }
 
+type TaxLossVintage={fiscalYear:number;amount:number}
+function calculatePeriodTaxWithVintages(
+  taxableProfit:number,
+  taxRatePercent:number,
+  openingVintages:TaxLossVintage[],
+  fiscalYear:number,
+  enabled:boolean,
+  carryForwardYears:number|null,
+  progressiveBrackets?:readonly {lowerLimit:number;ratePercent:number}[],
+):{tax:number;closingLossCarryForward:number;vintages:TaxLossVintage[]}|null {
+  if(![taxableProfit,taxRatePercent,fiscalYear].every(validFinite)||taxRatePercent<0||taxRatePercent>100||
+    (carryForwardYears!==null&&(!Number.isInteger(carryForwardYears)||carryForwardYears<1)))return null
+  const brackets=progressiveBrackets?[...progressiveBrackets].sort((a,b)=>a.lowerLimit-b.lowerLimit):null
+  if(brackets&&(!brackets.length||brackets[0].lowerLimit!==0||
+    brackets.some((row,index)=>!validFinite(row.lowerLimit)||row.lowerLimit<0||
+      !validFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100||
+      (index>0&&(row.lowerLimit<=brackets[index-1].lowerLimit||row.ratePercent<brackets[index-1].ratePercent)))))return null
+  let vintages=enabled?openingVintages.filter(vintage=>fiscalYear-vintage.fiscalYear<= (carryForwardYears??Infinity))
+    .map(vintage=>({...vintage})): []
+  let remainingProfit=taxableProfit
+  if(enabled&&remainingProfit>0) {
+    vintages.sort((a,b)=>a.fiscalYear-b.fiscalYear)
+    for(const vintage of vintages) {
+      const used=Math.min(vintage.amount,remainingProfit)
+      vintage.amount-=used
+      remainingProfit-=used
+      if(remainingProfit<=1e-9)break
+    }
+    vintages=vintages.filter(vintage=>vintage.amount>1e-9)
+  }
+  if(enabled&&remainingProfit<0)vintages.push({fiscalYear,amount:-remainingProfit})
+  const taxableAfterLoss=Math.max(0,remainingProfit)
+  const tax=brackets?brackets.reduce((sum,row,index)=>{
+    const upper=brackets[index+1]?.lowerLimit??Infinity
+    return sum+Math.max(0,Math.min(taxableAfterLoss,upper)-row.lowerLimit)*row.ratePercent/100
+  },0):taxableAfterLoss*taxRatePercent/100
+  return {tax,closingLossCarryForward:vintages.reduce((sum,vintage)=>sum+vintage.amount,0),vintages}
+}
+
 /** Apply tax-loss carry-forward to one financial period without allowing negative tax. */
 export function calculatePeriodTax(
   taxableProfitBeforeLoss: number,
@@ -221,6 +260,10 @@ export type PeriodicLoanInput = {
   gracePeriods: number
   termPeriods: number
   capitalizeInterest: boolean
+  /** Optional partial capitalization rate; overrides the legacy boolean when supplied. */
+  capitalizedInterestPercent?: number
+  /** Inclusive final date eligible for interest capitalization. */
+  capitalizeUntilDate?: string
   rateConversion?: 'effective-annual-by-actual-days' | 'effective-annual-divided-by-frequency'
   periodsPerYear?: 1 | 2 | 4 | 12
   /** Existing principal balance at the start of the first modeled period; not a new cash drawdown. */
@@ -251,6 +294,8 @@ export type PeriodicLoanRow = {
   commitmentFeeExpense: number
   capitalizedFinancingFees: number
   principal: number
+  /** Non-cash local-currency liability remeasurement; may be negative for an FX gain. */
+  foreignExchangeLoss?: number
   closingBalance: number
   debtService: number
 }
@@ -312,6 +357,14 @@ export function calculatePeriodicLoanSchedule(
     issues.push('Unsupported periodic repayment method.')
   if (typeof input.capitalizeInterest !== 'boolean')
     issues.push('Capitalized-interest option must be explicitly true or false.')
+  if (input.capitalizedInterestPercent != null &&
+      (!validFinite(input.capitalizedInterestPercent) || input.capitalizedInterestPercent < 0 || input.capitalizedInterestPercent > 100))
+    issues.push('Capitalized-interest percentage must be between 0 and 100.')
+  if (input.capitalizeUntilDate != null && !parseIsoDateUtc(input.capitalizeUntilDate))
+    issues.push('Interest capitalization end date must be a valid ISO calendar date.')
+  if (input.capitalizeUntilDate != null && periods.length &&
+      (input.capitalizeUntilDate < periods[0].startDate || input.capitalizeUntilDate > periods[periods.length-1].endDate))
+    issues.push('Interest capitalization end date must fall inside the project calendar.')
   const rateConversion = input.rateConversion ?? 'effective-annual-by-actual-days'
   if (!['effective-annual-by-actual-days', 'effective-annual-divided-by-frequency'].includes(rateConversion))
     issues.push('Unsupported period interest-rate conversion convention.')
@@ -522,8 +575,20 @@ export function calculatePeriodicLoanSchedule(
     }
     financingFeeExpense += commitmentFeeExpense
     const beforePrincipal = index < firstPrincipalIndex
-    const capitalizedInterest = beforePrincipal && input.capitalizeInterest ? interestAccrued : 0
-    const interestExpense = capitalizedInterest > 0 ? 0 : interestAccrued
+    const requestedCapitalizationPercent = input.capitalizedInterestPercent ?? (input.capitalizeInterest ? 100 : 0)
+    let capitalizationPeriodFraction = 0
+    if (beforePrincipal && requestedCapitalizationPercent > 0) {
+      const capitalizationEnd = input.capitalizeUntilDate ?? periods[index].endDate
+      if (periods[index].startDate <= capitalizationEnd) {
+        const endDate = parseIsoDateUtc(capitalizationEnd)!
+        const startDate = parseIsoDateUtc(periods[index].startDate)!
+        const eligibleDays = Math.max(0, Math.min(periods[index].days,
+          Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1))
+        capitalizationPeriodFraction = eligibleDays / periods[index].days
+      }
+    }
+    const capitalizedInterest = interestAccrued * requestedCapitalizationPercent / 100 * capitalizationPeriodFraction
+    const interestExpense = interestAccrued - capitalizedInterest
     const availableBalance = openingBalance + drawdown + capitalizedInterest + capitalizedFinancingFees
     // Period-end capitalized interest becomes outstanding facility utilization
     // at close; it must not silently push total debt above the commitment.
@@ -600,6 +665,12 @@ export type PeriodicProjectFinanceInput = {
   annualMaintenanceCapex: number[]
   annualTaxRates: number[]
   taxRatesByPeriod?: number[]
+  /** Progressive marginal tax brackets for each project period; overrides the flat rate when supplied. */
+  taxBracketsByPeriod?: {lowerLimit:number;ratePercent:number}[][]
+  /** Explicit deductible tax allowances by project period, applied before loss carry-forward. */
+  taxAllowancesByPeriod?: number[]
+  /** Signed tax-only depreciation adjustments; positive values increase deductible depreciation. */
+  taxDepreciationAdjustmentsByPeriod?: number[]
   annualEquityContributions: number[]
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
@@ -607,7 +678,11 @@ export type PeriodicProjectFinanceInput = {
   openingWorkingCapital?: number
   openingTaxLoss?: number
   openingUnleveredTaxLoss?: number
+  taxLossCarryForwardEnabled?: boolean
+  taxLossCarryForwardYears?: number | null
   loans: PeriodicProjectLoan[]
+  /** Validated local-currency schedules prepared by adapters (e.g. foreign-currency translation). */
+  precomputedLoanSchedules?: Record<string, PeriodicLoanRow[]>
   /** Minimum covenant DSCR as a multiple (e.g. 1.20); breaches are warnings, not automatic cash-flow changes. */
   minimumDscr?: number
   discountRatePercent?: number | null
@@ -617,6 +692,9 @@ export type PeriodicProjectFinanceInput = {
   discountPeriodsPerYear?: 1 | 2 | 4 | 12
   mirrFinanceRatePercent?: number | null
   mirrReinvestmentRatePercent?: number | null
+  /** Optional equity-specific MIRR rates; fall back to project MIRR rates when omitted. */
+  equityMirrFinanceRatePercent?: number | null
+  equityMirrReinvestmentRatePercent?: number | null
   salvageValue?: number
   salvageBookValue?: number
   annualAssetSaleSchedule?: {
@@ -661,6 +739,8 @@ export type PeriodicProjectFinanceRow = {
   debtDrawdown: number
   debtService: number
   taxRatePercent: number
+  taxAllowances: number
+  taxDepreciationAdjustment: number
   tax: number
   unleveredTax: number
   taxLossCarryForward: number
@@ -910,7 +990,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     [row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(validFinite) &&
     row.saleProceeds >= 0 && row.returnOfCapital >= 0 && row.bookValueDisposed >= 0 &&
     row.returnOfCapital <= row.saleProceeds + 0.01 && row.returnOfCapital <= row.bookValueDisposed + 0.01 &&
-    Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss) <= 0.01
+    Math.abs(row.returnOfCapital-Math.min(row.saleProceeds,row.bookValueDisposed)) <= 0.01 &&
+    Math.abs(row.otherIncomeLoss-(row.saleProceeds-row.bookValueDisposed)) <= 0.01
   if (assetSaleSchedule.some(row=>!validateSaleRow(row)) ||
       (input.periodAssetSaleSchedule && (input.periodAssetSaleSchedule.length!==periods.length ||
         input.periodAssetSaleSchedule.some(row=>!validateSaleRow(row))))) {
@@ -984,14 +1065,62 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Annual tax-rate schedule does not cover every project fiscal period.')
     return empty()
   }
+  if(input.taxBracketsByPeriod&&(input.taxBracketsByPeriod.length!==periods.length||
+    input.taxBracketsByPeriod.some(brackets=>!Array.isArray(brackets)||!brackets.length||
+      brackets[0]?.lowerLimit!==0||[...brackets].sort((a,b)=>a.lowerLimit-b.lowerLimit).some((row,index,sorted)=>
+        !validFinite(row.lowerLimit)||row.lowerLimit<0||!validFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100||
+        (index>0&&(row.lowerLimit<=sorted[index-1].lowerLimit||row.ratePercent<sorted[index-1].ratePercent)))))) {
+    warnings.push('Progressive tax brackets must cover every project period and start at zero with increasing limits and non-decreasing rates.')
+    return empty()
+  }
+  if(input.taxAllowancesByPeriod&&(input.taxAllowancesByPeriod.length!==periods.length||
+    input.taxAllowancesByPeriod.some(amount=>!validFinite(amount)||amount<0))) {
+    warnings.push('Tax allowances must contain one finite non-negative amount for every project period.')
+    return empty()
+  }
+  if(input.taxDepreciationAdjustmentsByPeriod&&(input.taxDepreciationAdjustmentsByPeriod.length!==periods.length||
+    input.taxDepreciationAdjustmentsByPeriod.some(amount=>!validFinite(amount)))) {
+    warnings.push('Tax depreciation adjustments must contain one finite signed amount for every project period.')
+    return empty()
+  }
   const loanSchedules: Record<string, PeriodicLoanRow[]> = {}
+  const suppliedSchedules = input.precomputedLoanSchedules ?? {}
+  const loanIds = new Set(input.loans.map(loan => loan.id))
+  if (Object.keys(suppliedSchedules).some(id => !loanIds.has(id))) {
+    warnings.push('Precomputed loan schedules must reference an existing loan identifier.')
+    return empty()
+  }
   for (const loan of input.loans) {
-    const schedule = calculatePeriodicLoanSchedule(loan.input, periods, dayCountBasis)
-    if (!schedule.valid) {
-      warnings.push(...schedule.issues.map(issue => loan.id + ': ' + issue))
-      return empty()
+    const supplied = suppliedSchedules[loan.id]
+    if (supplied) {
+      const scheduleIssues: string[] = []
+      if (!Array.isArray(supplied) || supplied.length !== periods.length) {
+        scheduleIssues.push('Precomputed schedule must contain one row per project period.')
+      } else supplied.forEach((row,index) => {
+        const values = [row?.drawdown,row?.openingBalance,row?.periodRatePercent,row?.interestExpense,
+          row?.capitalizedInterest,row?.financingFeeExpense,row?.commitmentFeeExpense,
+          row?.capitalizedFinancingFees,row?.principal,row?.closingBalance,row?.debtService]
+        if (row?.period !== index+1 || values.some(value=>!validFinite(value)) ||
+            values.some(value=>value<0) ||
+            Math.abs(row.closingBalance-(row.openingBalance+row.drawdown+row.capitalizedInterest+
+              row.capitalizedFinancingFees-row.principal+(row.foreignExchangeLoss??0)))>0.01 ||
+            Math.abs(row.debtService-(row.interestExpense+row.financingFeeExpense+row.principal))>0.01) {
+          scheduleIssues.push('Precomputed schedule row does not reconcile in period '+(index+1)+'.')
+        }
+      })
+      if (scheduleIssues.length) {
+        warnings.push(...scheduleIssues.map(issue=>loan.id+': '+issue))
+        return empty()
+      }
+      loanSchedules[loan.id] = supplied.map(row=>({...row}))
+    } else {
+      const schedule = calculatePeriodicLoanSchedule(loan.input, periods, dayCountBasis)
+      if (!schedule.valid) {
+        warnings.push(...schedule.issues.map(issue => loan.id + ': ' + issue))
+        return empty()
+      }
+      loanSchedules[loan.id] = schedule.rows
     }
-    loanSchedules[loan.id] = schedule.rows
   }
   if (input.annualEquityContributions.some(value => value < 0) ||
       !validFinite(input.openingWorkingCapital ?? 0) || (input.openingWorkingCapital ?? 0) < 0 ||
@@ -1000,19 +1129,26 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       (input.equityDiscountRatePercent != null && (!validFinite(input.equityDiscountRatePercent) || input.equityDiscountRatePercent <= -100)) ||
       (input.mirrFinanceRatePercent != null && (!validFinite(input.mirrFinanceRatePercent) || input.mirrFinanceRatePercent <= -100)) ||
       (input.mirrReinvestmentRatePercent != null && (!validFinite(input.mirrReinvestmentRatePercent) || input.mirrReinvestmentRatePercent <= -100)) ||
+      (input.equityMirrFinanceRatePercent != null && (!validFinite(input.equityMirrFinanceRatePercent) || input.equityMirrFinanceRatePercent <= -100)) ||
+      (input.equityMirrReinvestmentRatePercent != null && (!validFinite(input.equityMirrReinvestmentRatePercent) || input.equityMirrReinvestmentRatePercent <= -100)) ||
       new Set(input.loans.map(loan => loan.id)).size !== input.loans.length) {
     warnings.push('Equity, opening working capital, salvage, discount rates or loan identifiers are invalid.')
     return empty()
   }
   const openingLoss = input.openingTaxLoss ?? 0
   const openingUnleveredLoss = input.openingUnleveredTaxLoss ?? 0
-  if (!validFinite(openingLoss) || openingLoss < 0 || !validFinite(openingUnleveredLoss) || openingUnleveredLoss < 0) {
-    warnings.push('Opening tax-loss balances must be finite and non-negative.')
+  const carryForwardEnabled=input.taxLossCarryForwardEnabled??true
+  const carryForwardYears=input.taxLossCarryForwardYears??null
+  if (!validFinite(openingLoss) || openingLoss < 0 || !validFinite(openingUnleveredLoss) || openingUnleveredLoss < 0||
+    (carryForwardYears!==null&&(!Number.isInteger(carryForwardYears)||carryForwardYears<1))) {
+    warnings.push('Opening tax-loss balances or carry-forward duration are invalid.')
     return empty()
   }
   const rows: PeriodicProjectFinanceRow[] = []
   let taxLoss = openingLoss
   let unleveredTaxLoss = openingUnleveredLoss
+  let taxLossVintages:TaxLossVintage[]=openingLoss>0?[{fiscalYear:-1,amount:openingLoss}]:[]
+  let unleveredTaxLossVintages:TaxLossVintage[]=openingUnleveredLoss>0?[{fiscalYear:-1,amount:openingUnleveredLoss}]:[]
   let priorWorkingCapital = Math.max(0, input.openingWorkingCapital ?? 0)
   for (let index = 0; index < periods.length; index++) {
     const loanRows = Object.values(loanSchedules).map(schedule => schedule[index])
@@ -1035,14 +1171,23 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
     const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
-    const periodTax = calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
-    const unleveredPeriodTax = calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
-    if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
-      warnings.push('Tax calculation failed in project period ' + (index + 1) + '.')
+    const taxAllowances=input.taxAllowancesByPeriod?.[index]??0
+    const taxDepreciationAdjustment=input.taxDepreciationAdjustmentsByPeriod?.[index]??0
+    const taxableIncomeAdjustment=taxAllowances+taxDepreciationAdjustment
+    const fiscalYear=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
+    const progressiveBrackets=input.taxBracketsByPeriod?.[index]
+    const periodTax=calculatePeriodTaxWithVintages(ebit-interestExpense-taxableIncomeAdjustment,taxRates[index],
+      taxLossVintages,fiscalYear,carryForwardEnabled,carryForwardYears,progressiveBrackets)
+    const unleveredPeriodTax=calculatePeriodTaxWithVintages(ebit-taxableIncomeAdjustment,taxRates[index],
+      unleveredTaxLossVintages,fiscalYear,carryForwardEnabled,carryForwardYears,progressiveBrackets)
+    if(!periodTax||!unleveredPeriodTax) {
+      warnings.push('Tax calculation failed in project period '+(index+1)+'.')
       return empty()
     }
-    taxLoss = periodTax.closingLossCarryForward
-    unleveredTaxLoss = unleveredPeriodTax.closingLossCarryForward
+    taxLossVintages=periodTax.vintages
+    unleveredTaxLossVintages=unleveredPeriodTax.vintages
+    taxLoss=periodTax.closingLossCarryForward
+    unleveredTaxLoss=unleveredPeriodTax.closingLossCarryForward
     const closingWorkingCapital = input.workingCapitalByPeriod[index]
     const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
     const equityWorkingCapitalContributionAmount = input.annualEquityWorkingCapitalContributions
@@ -1078,7 +1223,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
       capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
-      tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
+      taxAllowances,taxDepreciationAdjustment,tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
       equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
@@ -1094,8 +1239,10 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const npvEquity = equityDiscountRate == null ? null : calculatePeriodicNpv(equityFlows,periods,equityDiscountRate,dayCountBasis,cashFlowTiming,input.valuationDate,input.discountConvention??'actual-days',input.discountPeriodsPerYear??1)
   const mirrProject = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
     : calculatePeriodicMirr(projectFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
-  const mirrEquity = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
-    : calculatePeriodicMirr(equityFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
+  const equityMirrFinanceRate = input.equityMirrFinanceRatePercent ?? input.mirrFinanceRatePercent
+  const equityMirrReinvestmentRate = input.equityMirrReinvestmentRatePercent ?? input.mirrReinvestmentRatePercent
+  const mirrEquity = equityMirrFinanceRate == null || equityMirrReinvestmentRate == null ? null
+    : calculatePeriodicMirr(equityFlows,periods,equityMirrFinanceRate,equityMirrReinvestmentRate,dayCountBasis,cashFlowTiming)
   const signChanges = (flows: number[]) => { const nonZero=flows.filter(value=>value!==0); let changes=0; for(let index=1;index<nonZero.length;index++) if(Math.sign(nonZero[index])!==Math.sign(nonZero[index-1])) changes++; return changes }
   if (signChanges(projectFlows) > 1 || signChanges(equityFlows) > 1)
     warnings.push('Non-conventional cash-flow signs may produce multiple IRR roots; the reported IRR is one numerical root only.')
@@ -1198,47 +1345,64 @@ function nextPeriodStartAfter(date: Date, periods: ProjectCalendarPeriod[]): Dat
   if (index < 0 || index + 1 >= periods.length) return null
   return parseIsoDateUtc(periods[index + 1].startDate)
 }
-function depreciationForAnniversarySegments(
-  method: 'accelerated' | 'sum-of-years-digits',
-  openingBookValue: number,
-  salvageValue: number,
-  depreciableBase: number,
-  lifeStart: Date,
-  lifeEndExclusive: Date,
-  segmentStart: Date,
-  segmentEnd: Date,
-  lifeMonths: number,
-  ratePercent: number | null,
-  annualOpeningBookValues: number[],
-): number {
-  let cursor = new Date(segmentStart.getTime())
-  let bookValue = openingBookValue
-  let total = 0
-  const lifeYears = Math.max(1, Math.ceil(lifeMonths / 12))
-  const sumYears = lifeYears * (lifeYears + 1) / 2
-  while (cursor.getTime() <= segmentEnd.getTime() && bookValue > salvageValue + 1e-9) {
-    const monthsFromStart = Math.max(0, (cursor.getUTCFullYear() - lifeStart.getUTCFullYear()) * 12 + cursor.getUTCMonth() - lifeStart.getUTCMonth())
-    const ageYear = Math.min(lifeYears - 1, Math.floor(monthsFromStart / 12))
-    const yearStart = addUtcMonthsClamped(lifeStart, ageYear * 12)
-    const nextYear = addUtcMonthsClamped(lifeStart, (ageYear + 1) * 12)
-    const yearEndExclusive = nextYear.getTime() > lifeEndExclusive.getTime() ? lifeEndExclusive : nextYear
-    const yearDays = Math.max(1, Math.round((yearEndExclusive.getTime() - yearStart.getTime()) / 86400000))
-    const segmentEndExclusive = new Date(segmentEnd.getTime() + 86400000)
-    const endExclusive = segmentEndExclusive.getTime() < yearEndExclusive.getTime() ? segmentEndExclusive : yearEndExclusive
-    const segmentDays = Math.max(0, Math.round((endExclusive.getTime() - cursor.getTime()) / 86400000))
-    if (segmentDays <= 0) break
-    const remainingMonths = Math.max(1, lifeMonths - ageYear * 12)
-    if (annualOpeningBookValues[ageYear] == null) annualOpeningBookValues[ageYear] = bookValue
-    const annualOpeningBookValue = annualOpeningBookValues[ageYear]
-    const annualDepreciation = method === 'sum-of-years-digits'
-      ? depreciableBase * (lifeYears - ageYear) / sumYears
-      : Math.max(annualOpeningBookValue * ((ratePercent ?? 0) / 100), (annualOpeningBookValue - salvageValue) / (remainingMonths / 12))
-    const amount = Math.min(bookValue - salvageValue, annualDepreciation * segmentDays / yearDays)
-    total += amount
-    bookValue -= amount
-    cursor = new Date(endExclusive.getTime())
+type HelpDepreciationSegment={startDate:Date;endDate:Date;months:number;amount:number}
+
+/**
+ * Applies the reference annual depreciation formula using the explicitly entered
+ * number of months in the first depreciation year. Depreciation is posted at the
+ * end of each depreciation-year segment, not spread evenly over every month.
+ */
+function buildHelpDepreciationSegments(
+  asset:PeriodicDepreciationAssetInput,
+  startDate:Date|null,
+  lifeMonths:number,
+  salvageValue:number,
+):HelpDepreciationSegment[] {
+  if(asset.method==='none'||!startDate||lifeMonths<=0)return []
+  if(asset.method==='sum-of-years-digits'&&(lifeMonths%12!==0||asset.firstDepreciationMonths!==12))return []
+  const base=Math.max(0,asset.initialBookValue-salvageValue)
+  const segments:HelpDepreciationSegment[]=[]
+  let elapsedMonths=0
+  let bookValue=asset.initialBookValue
+  let segmentIndex=0
+  while(elapsedMonths<lifeMonths&&bookValue>salvageValue+1e-9) {
+    const months=Math.min(segmentIndex===0?asset.firstDepreciationMonths:12,lifeMonths-elapsedMonths)
+    const segmentStart=addUtcMonthsClamped(startDate,elapsedMonths)
+    const segmentEndExclusive=addUtcMonthsClamped(startDate,elapsedMonths+months)
+    const segmentEnd=new Date(segmentEndExclusive.getTime()-86400000)
+    let amount=0
+    if(asset.method==='linear-to-zero'||asset.method==='linear-to-scrap') {
+      amount=base*months/lifeMonths
+    } else if(asset.method==='accelerated') {
+      if(segmentIndex===0) {
+        amount=asset.initialBookValue*(asset.ratePercent??0)/100*months/12
+      } else {
+        const remainingYears=(lifeMonths-elapsedMonths)/12
+        const straightLineAnnual=remainingYears>0?(bookValue-salvageValue)/remainingYears:bookValue-salvageValue
+        const acceleratedAnnual=bookValue*(asset.ratePercent??0)/100
+        amount=(acceleratedAnnual>straightLineAnnual?acceleratedAnnual:straightLineAnnual)*months/12
+      }
+    } else if(asset.method==='sum-of-years-digits') {
+      const years=lifeMonths/12
+      const divisor=years*(years+1)/2
+      amount=base*(years-segmentIndex)/divisor
+    }
+    amount=Math.min(Math.max(0,bookValue-salvageValue),Math.max(0,amount))
+    segments.push({startDate:segmentStart,endDate:segmentEnd,months,amount})
+    bookValue=Math.max(salvageValue,bookValue-amount)
+    elapsedMonths+=months
+    segmentIndex++
   }
-  return total
+  if(segments.length&&bookValue>salvageValue+1e-7) {
+    const last=segments[segments.length-1]
+    last.amount+=bookValue-salvageValue
+  }
+  return segments
+}
+
+function monthsElapsedToBalanceDate(start:Date,end:Date):number {
+  const months=(end.getUTCFullYear()-start.getUTCFullYear())*12+end.getUTCMonth()-start.getUTCMonth()+1
+  return Math.max(0,Math.min(12,months))
 }
 
 /**
@@ -1269,9 +1433,21 @@ export function calculatePeriodicComfarAssetLifecycle(
     warnings.push('Periodic depreciation asset and sale identifiers must be unique.')
     return empty()
   }
+  if(assets.some(asset=>!asset.id.trim())||sales.some(sale=>!sale.id.trim())) {
+    warnings.push('Periodic depreciation asset and sale identifiers cannot be blank.')
+    return empty()
+  }
   const assetIds=new Set(assets.map(asset=>asset.id))
   if (sales.some(sale=>!assetIds.has(sale.assetId))) {
     warnings.push('Every periodic asset sale must reference an existing asset vintage.')
+    return empty()
+  }
+  if(new Set(sales.map(sale=>sale.assetId)).size!==sales.length) {
+    warnings.push('An asset vintage can be disposed only once; multiple disposal rows for one asset are not permitted.')
+    return empty()
+  }
+  if(periods.some((period,index)=>!Number.isInteger(period.index)||period.index!==periods[0].index+index)) {
+    warnings.push('Project period indexes must be consecutive and ordered.')
     return empty()
   }
   const periodRows=periods.map(period=>({
@@ -1310,12 +1486,11 @@ export function calculatePeriodicComfarAssetLifecycle(
     } else {
       depreciationStartDate=nextPeriodStartAfter(acquisitionDate,periods)
     }
-    const lifeEndExclusive=depreciationStartDate&&lifeMonths>0?addUtcMonthsClamped(depreciationStartDate,lifeMonths):null
     const salvageValue=asset.method==='linear-to-zero'?0:asset.initialBookValue*asset.scrapPercent/100
-    const depreciableBase=Math.max(0,asset.initialBookValue-salvageValue)
     const sale=sales.find(row=>row.assetId===asset.id)
     const saleDate=sale?parseIsoDateUtc(sale.saleDate):null
     if(sale&&(!saleDate||saleDate.getTime()<acquisitionDate.getTime()||
+      !['book-value','self-defined'].includes(sale.priceMode)||
       (sale.priceMode==='self-defined'&&(sale.selfDefinedPrice==null||!validFinite(sale.selfDefinedPrice)||sale.selfDefinedPrice<0||
        !validFinite(sale.exchangeRateToLocal)||sale.exchangeRateToLocal<=0)))) {
       warnings.push(asset.name+': periodic disposal date or proceeds are invalid.')
@@ -1326,8 +1501,12 @@ export function calculatePeriodicComfarAssetLifecycle(
       warnings.push(asset.name+': disposal date is outside the project calendar.')
       continue
     }
+    if(sale&&saleDate&&periods[saleIndex].endDate!==sale.saleDate){
+      warnings.push(asset.name+': disposal must be recorded on a project balance date (period end).')
+      continue
+    }
+    const depreciationSegments=buildHelpDepreciationSegments(asset,depreciationStartDate,lifeMonths,salvageValue)
     let bookValue=0
-    const annualOpeningBookValues:number[]=[]
     for(let index=0;index<periods.length;index++){
       const period=periods[index]
       const periodStart=parseIsoDateUtc(period.startDate)!
@@ -1341,21 +1520,24 @@ export function calculatePeriodicComfarAssetLifecycle(
       const openingBookValue=bookValue
       const saleInThisPeriod=!!sale&&saleIndex===index
       let depreciation=0
-      if(asset.method!=='none'&&depreciationStartDate&&lifeEndExclusive&&bookValue>salvageValue&&
-        index>=acquisitionIndex&&(!saleDate||periodStart.getTime()<=saleDate.getTime())){
-        const activeStart=new Date(Math.max(periodStart.getTime(),depreciationStartDate.getTime()))
-        const lifeEndInclusive=new Date(lifeEndExclusive.getTime()-86400000)
-        const effectiveEnd=new Date(Math.min(periodEnd.getTime(),lifeEndInclusive.getTime(),saleDate&&saleInThisPeriod?saleDate.getTime():periodEnd.getTime()))
-        if(activeStart.getTime()<=effectiveEnd.getTime()){
-          if(asset.method==='linear-to-zero'||asset.method==='linear-to-scrap'){
-            const totalLifeDays=Math.max(1,Math.round((lifeEndExclusive.getTime()-depreciationStartDate.getTime())/86400000))
-            depreciation=Math.min(bookValue-salvageValue,depreciableBase*inclusiveDays(activeStart,effectiveEnd)/totalLifeDays)
-          } else {
-            depreciation=depreciationForAnniversarySegments(asset.method,bookValue,salvageValue,depreciableBase,
-              depreciationStartDate,lifeEndExclusive,activeStart,effectiveEnd,lifeMonths,asset.ratePercent,annualOpeningBookValues)
-            depreciation=Math.min(bookValue-salvageValue,depreciation)
+      if(asset.method!=='none'&&bookValue>salvageValue&&index>=acquisitionIndex){
+        // A project period can contain more than one depreciation-year boundary
+        // (for example, a partial first year followed by a full year inside an
+        // annual reporting period). Accumulate every segment due in this period.
+        for(const segment of depreciationSegments){
+          const dueAtPeriodEnd=segment.endDate.getTime()>=periodStart.getTime()&&segment.endDate.getTime()<=periodEnd.getTime()
+          const disposedInsideSegment=!!(saleInThisPeriod&&saleDate&&
+            saleDate.getTime()>=segment.startDate.getTime()&&saleDate.getTime()<=segment.endDate.getTime())
+          if(!dueAtPeriodEnd&&!disposedInsideSegment)continue
+          if(saleDate&&segment.startDate.getTime()>saleDate.getTime())continue
+          let segmentCharge=segment.amount
+          if(disposedInsideSegment&&saleDate&&saleDate.getTime()<segment.endDate.getTime()){
+            const elapsedMonths=monthsElapsedToBalanceDate(segment.startDate,saleDate)
+            segmentCharge=segment.amount*elapsedMonths/segment.months
           }
-          bookValue=Math.max(salvageValue,bookValue-depreciation)
+          depreciation+=Math.min(Math.max(0,bookValue-salvageValue),Math.max(0,segmentCharge))
+          bookValue=Math.max(salvageValue,bookValue-Math.max(0,segmentCharge))
+          if(bookValue<=salvageValue+1e-9)break
         }
       }
       let saleProceeds=0,bookValueDisposed=0,gainLoss=0
@@ -1464,13 +1646,14 @@ export function buildPeriodicThreeFinancialStatements(
       capitalizedInterest: sum.capitalizedInterest + schedule[index].capitalizedInterest,
       capitalizedFinancingFees: sum.capitalizedFinancingFees + schedule[index].capitalizedFinancingFees,
       principal: sum.principal + schedule[index].principal,
+      foreignExchangeLoss: sum.foreignExchangeLoss + (schedule[index].foreignExchangeLoss??0),
       closingBalance: sum.closingBalance + schedule[index].closingBalance,
-    }), { drawdown: 0, capitalizedInterest: 0, capitalizedFinancingFees: 0, principal: 0, closingBalance: 0 })
+    }), { drawdown: 0, capitalizedInterest: 0, capitalizedFinancingFees: 0, principal: 0, foreignExchangeLoss:0, closingBalance: 0 })
     if (Math.abs(scheduledPeriod.drawdown - row.debtDrawdown) > tolerance ||
         Math.abs(scheduledPeriod.capitalizedInterest - row.capitalizedInterest) > tolerance ||
         Math.abs(scheduledPeriod.capitalizedFinancingFees - row.capitalizedFinancingFees) > tolerance ||
         Math.abs(scheduledPeriod.principal - row.principal) > tolerance) return []
-    const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal
+    const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal + scheduledPeriod.foreignExchangeLoss
     if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance)) > tolerance) return []
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
     const cashOperatingCosts = row.variableCost + row.fixedCost
@@ -1498,7 +1681,7 @@ export function buildPeriodicThreeFinancialStatements(
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
     const movementChecks = {
       cash: closingCash - cash - netChangeInCash,
-      debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal),
+      debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal + scheduledPeriod.foreignExchangeLoss),
       netWorkingCapital: closingWorkingCapital - netWorkingCapital - row.changeInWorkingCapital,
       netFixedAssets: closingNetFixedAssets - netFixedAssets -
         (row.fixedInvestment + row.maintenanceCapex - row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed),

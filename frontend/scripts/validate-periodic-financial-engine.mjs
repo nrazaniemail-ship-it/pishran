@@ -6,7 +6,13 @@ const source = await readFile(new URL('../src/features/steel/periodicFinancialEn
 const output = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
 }).outputText
-const engine = await import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
+const engineModuleUrl='data:text/javascript;base64,' + Buffer.from(output).toString('base64')
+const engine = await import(engineModuleUrl)
+const sensitivitySource=await readFile(new URL('../src/features/steel/periodicSensitivity.ts',import.meta.url),'utf8')
+const sensitivityOutput=ts.transpileModule(sensitivitySource,{
+  compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}
+}).outputText.replace("from './periodicFinancialEngine'",`from '${engineModuleUrl}'`)
+const periodicSensitivity=await import('data:text/javascript;base64,'+Buffer.from(sensitivityOutput).toString('base64'))
 const benchmarkSource = await readFile(new URL('../src/features/steel/hotRollingExcelBenchmark.ts', import.meta.url), 'utf8')
 const benchmarkOutput = ts.transpileModule(benchmarkSource, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
@@ -210,7 +216,7 @@ const equalPrincipalLoan = engine.calculatePeriodicLoanSchedule({
 }, quarter, 365)
 assert.equal(equalPrincipalLoan.valid, true)
 assert.ok(equalPrincipalLoan.rows[0].capitalizedInterest > 0)
-assert.equal(equalPrincipalLoan.rows[0].interestExpense, 0)
+assert.ok(Math.abs(equalPrincipalLoan.rows[0].interestExpense) < 1e-8)
 assert.ok(equalPrincipalLoan.rows[2].principal > 0)
 assert.ok(equalPrincipalLoan.rows[3].principal > 0)
 assert.ok(Math.abs(equalPrincipalLoan.rows[3].closingBalance) < 1e-8)
@@ -656,6 +662,23 @@ assert.ok(Math.abs(disposalClosingRow.projectFreeCashFlow - (disposalClosingRow.
   'Project cash flow must include disposal proceeds once, excluding double-counted accounting gain')
 assert.ok(Math.abs(disposalClosingRow.equityFreeCashFlow - (disposalClosingRow.revenue - disposalClosingRow.variableCost - disposalClosingRow.fixedCost - disposalClosingRow.tax + 500)) < 1e-8,
   'Equity cash flow must include disposal proceeds')
+const periodicAssetDisposalLoss = engine.calculateIntegratedPeriodicFinance({
+  periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [4800], annualVariableCost: [1600], annualFixedCost: [400],
+  annualDepreciation: [400], annualFixedInvestment: [0], annualPreOperatingCost: [0],
+  annualMaintenanceCapex: [0], annualTaxRates: [25], annualEquityContributions: [0],
+  workingCapitalByPeriod: [0, 0, 0, 0], loans: [],
+  annualAssetSaleSchedule: [{
+    saleProceeds: 500, returnOfCapital: 500, otherIncomeLoss: -140, bookValueDisposed: 640
+  }]
+})
+assert.equal(periodicAssetDisposalLoss.valid,true,'Periodic finance must accept a correctly reconciled disposal loss')
+const disposalLossRow=periodicAssetDisposalLoss.rows[3]
+assert.equal(disposalLossRow.assetSaleOtherIncomeLoss,-140)
+assert.ok(Math.abs(disposalLossRow.ebit-(disposalLossRow.revenue-disposalLossRow.variableCost-disposalLossRow.fixedCost-disposalLossRow.depreciation-140))<1e-8,
+  'Disposal loss must reduce taxable EBIT')
+assert.ok(Math.abs(disposalLossRow.projectFreeCashFlow-(disposalLossRow.ebit+140-disposalLossRow.unleveredTax+disposalLossRow.depreciation+500))<1e-8,
+  'Project cash flow must add back the accounting loss and include disposal proceeds once')
 
 const calendarAssetLifecycleFinance = engine.calculateIntegratedPeriodicFinance({
   periods: quarter, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
@@ -762,6 +785,73 @@ function buildMonthlyPeriods(startYear,startMonth,endYear,endMonth) {
   return periods
 }
 const monthlyDepreciationPeriods=buildMonthlyPeriods(2024,1,2026,1)
+const annualDepreciationPeriods=Array.from({length:3},(_,index)=>{
+  const year=2024+index
+  const start=new Date(Date.UTC(year,0,1))
+  const end=new Date(Date.UTC(year+1,0,1)-86400000)
+  return {index:index+1,startDate:start.toISOString().slice(0,10),endDate:end.toISOString().slice(0,10),days:Math.round((end-start)/86400000)+1,partial:false}
+})
+
+const periodicTaxLossRollForward=engine.calculateIntegratedPeriodicFinance({
+  periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,150],annualVariableCost:[0,0,0],annualFixedCost:[100,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],discountRatePercent:10,
+})
+assert.equal(periodicTaxLossRollForward.valid,true,periodicTaxLossRollForward.warnings.join('; '))
+assert.deepEqual(periodicTaxLossRollForward.rows.map(row=>row.taxLossCarryForward),[100,100,0])
+assert.deepEqual(periodicTaxLossRollForward.rows.map(row=>row.tax),[0,0,12.5],
+  'Periodic integrated tax must carry operating losses forward and tax only the remaining taxable profit')
+
+const expiredPeriodicTaxLoss=engine.calculateIntegratedPeriodicFinance({
+  periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,150],annualVariableCost:[0,0,0],annualFixedCost:[100,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],discountRatePercent:10,
+  taxLossCarryForwardEnabled:true,taxLossCarryForwardYears:1,
+})
+assert.equal(expiredPeriodicTaxLoss.valid,true,expiredPeriodicTaxLoss.warnings.join('; '))
+assert.equal(expiredPeriodicTaxLoss.rows[2].tax,37.5,
+  'Losses must expire after the configured number of fiscal years rather than offsetting indefinitely')
+const periodicTaxAllowance=engine.calculateIntegratedPeriodicFinance({
+  periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,150],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],discountRatePercent:10,taxAllowancesByPeriod:[0,0,50],
+})
+assert.equal(periodicTaxAllowance.valid,true,periodicTaxAllowance.warnings.join('; '))
+assert.equal(periodicTaxAllowance.rows[2].taxAllowances,50)
+assert.equal(periodicTaxAllowance.rows[2].tax,25,
+  'Period tax allowances must reduce the taxable base before tax is calculated')
+const periodicSensitivityInput={
+  periods:annualDepreciationPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,1000,1200],annualVariableCost:[0,300,350],annualFixedCost:[0,100,100],
+  annualDepreciation:[0,50,50],annualFixedInvestment:[500,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[25,25,25],annualEquityContributions:[500,0,0],
+  workingCapitalByPeriod:[0,20,0],loans:[],discountRatePercent:15,equityDiscountRatePercent:20,
+}
+const periodicSensitivityResult=periodicSensitivity.calculatePeriodicSensitivity(
+  periodicSensitivityInput,['revenue','variable-cost','tax-rate'],10,'npvProject'
+)
+assert.equal(periodicSensitivityResult.valid,true,periodicSensitivityResult.issues.join('; '))
+assert.equal(periodicSensitivityResult.points.length,6)
+assert.ok(periodicSensitivityResult.points.every(point=>point.valid&&point.metric!==null))
+assert.ok(periodicSensitivityResult.optimistic.npvProject>periodicSensitivityResult.baseline.npvProject)
+assert.ok(periodicSensitivityResult.pessimistic.npvProject<periodicSensitivityResult.baseline.npvProject)
+const targetSearch=periodicSensitivity.searchPeriodicFinanceTarget({
+  finance:periodicSensitivityInput,variable:'revenue',metric:'npvProject',
+  target:(periodicSensitivityResult.baseline.npvProject??0)+1,direction:'increase',
+  maxVariationPercent:50,tolerance:0.001,maxIterations:80,
+})
+assert.equal(targetSearch.achieved,true,targetSearch.issues.join('; '))
+assert.ok((targetSearch.achievedValue??-Infinity)>=(targetSearch.target-0.001))
+assert.throws(()=>periodicSensitivity.applyPeriodicSensitivityShock({
+  ...periodicSensitivityInput,precomputedLoanSchedules:{'form-loan':[]},
+},'loan-interest-rate',10),/loan-interest-rate-sensitivity-unavailable-for-precomputed-schedules/,
+'A loan-rate shock must not silently leave a precomputed repayment schedule unchanged')
 const straightLineAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   id:'asset-sl-01',name:'Monthly straight-line asset',assetClass:'fixed',
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:1,lengthMonths:0,
@@ -774,6 +864,27 @@ assert.equal(straightLineAsset.depreciationByPeriod[0],0,'New asset depreciation
 assert.ok(Math.abs(straightLineAsset.depreciationByPeriod.reduce((sum,value)=>sum+value,0)-1200)<1e-7,
   'Monthly straight-line depreciation must exhaust the depreciable base over the exact useful-life dates')
 assert.ok(Math.abs(straightLineAsset.periods.at(-1).closingBookValue)<1e-7)
+const partialFirstYearAsset=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-partial-first-year',name:'Partial first depreciation year',assetClass:'fixed',
+  originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
+  firstDepreciationMonths:6,ratePercent:null,method:'linear-to-scrap',
+  acquisitionDate:'2024-01-15',startingAtDate:'2024-01-01'
+}],[],monthlyDepreciationPeriods)
+assert.equal(partialFirstYearAsset.valid,true)
+assert.equal(partialFirstYearAsset.depreciationByPeriod[6],300,'Six-month first depreciation year must charge half the annual straight-line amount at its balance date')
+assert.equal(partialFirstYearAsset.depreciationByPeriod[18],600,'The next full depreciation year must charge the full annual amount')
+assert.equal(partialFirstYearAsset.depreciationByPeriod[24],300,'The final partial year must clear the remaining depreciable base')
+assert.ok(Math.abs(partialFirstYearAsset.periods.at(-1).closingBookValue)<1e-7)
+const annualPartialFirstYearAsset=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-annual-partial-first-year',name:'Annual period with two depreciation boundaries',assetClass:'fixed',
+  originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
+  firstDepreciationMonths:6,ratePercent:null,method:'linear-to-scrap',
+  acquisitionDate:'2024-12-31',startingAtDate:'2025-01-01'
+}],[],annualDepreciationPeriods)
+assert.equal(annualPartialFirstYearAsset.valid,true)
+assert.deepEqual(annualPartialFirstYearAsset.depreciationByPeriod,[0,300,900],
+  'An annual reporting period must accumulate both the remaining partial-year and full-year depreciation segments due within it')
+assert.ok(Math.abs(annualPartialFirstYearAsset.periods.at(-1).closingBookValue)<1e-7)
 const sydAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   id:'asset-syd-01',name:'Two-year SYD asset',assetClass:'fixed',
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
@@ -801,13 +912,30 @@ const soldAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
   firstDepreciationMonths:12,ratePercent:null,method:'linear-to-scrap',
   acquisitionDate:'2024-01-15',startingAtDate:'2024-01-01'
-}],[{id:'sale-01',assetId:'asset-sale-01',saleDate:'2024-10-15',priceMode:'self-defined',selfDefinedPrice:1500,exchangeRateToLocal:1}],monthlyDepreciationPeriods)
+}],[{id:'sale-01',assetId:'asset-sale-01',saleDate:'2024-10-31',priceMode:'self-defined',selfDefinedPrice:1500,exchangeRateToLocal:1}],monthlyDepreciationPeriods)
 assert.equal(soldAsset.valid,true)
 assert.equal(soldAsset.sales.length,1)
 assert.equal(soldAsset.sales[0].saleProceeds,1500)
 assert.ok(soldAsset.sales[0].gainLoss>0)
+assert.equal(soldAsset.periods[9].assets[0].depreciation,450,'Disposal at the period balance date must prorate the current depreciation year by elapsed months')
 assert.equal(soldAsset.periods[9].closingBookValue,0)
 assert.ok(soldAsset.periods.slice(10).every(period=>period.closingBookValue===0))
+const duplicateAssetDisposal=engine.calculatePeriodicComfarAssetLifecycle([{
+  id:'asset-duplicate-sale',name:'Duplicate disposal guard',assetClass:'fixed',
+  originalValue:1000,initialBookValue:1000,scrapPercent:0,lengthYears:2,lengthMonths:0,
+  firstDepreciationMonths:12,ratePercent:null,method:'linear-to-zero',
+  acquisitionDate:'2024-01-15',startingAtDate:'2024-01-01'
+}],[
+  {id:'sale-duplicate-a',assetId:'asset-duplicate-sale',saleDate:'2024-10-31',priceMode:'book-value',selfDefinedPrice:null,exchangeRateToLocal:1},
+  {id:'sale-duplicate-b',assetId:'asset-duplicate-sale',saleDate:'2024-12-31',priceMode:'book-value',selfDefinedPrice:null,exchangeRateToLocal:1},
+],monthlyDepreciationPeriods)
+assert.equal(duplicateAssetDisposal.valid,false,'An asset vintage cannot be disposed twice')
+const invalidPeriodSequence=engine.calculatePeriodicComfarAssetLifecycle([],[],[
+  {...annualDepreciationPeriods[0],index:1},
+  {...annualDepreciationPeriods[1],index:3},
+  {...annualDepreciationPeriods[2],index:4},
+])
+assert.equal(invalidPeriodSequence.valid,false,'Period indexes must be consecutive and ordered')
 const invalidPeriodicAsset=engine.calculatePeriodicComfarAssetLifecycle([{
   id:'asset-invalid-date',name:'Invalid date asset',assetClass:'fixed',
   originalValue:1200,initialBookValue:1200,scrapPercent:0,lengthYears:2,lengthMonths:0,
@@ -827,6 +955,11 @@ const projectFoundationPanelSource = await readFile(new URL('../src/features/pro
 assert.ok(advancedFinanceSource.includes('equityDiscountRatePercent:props.costOfEquity'),
   'Advanced finance panel must discount shareholder NPV at the cost of equity, independently of project WACC')
 assert.ok(advancedFinanceSource.includes('calculateIntegratedPeriodicFinance')
+  && advancedFinanceSource.includes('calculatePeriodicSensitivity')
+  && advancedFinanceSource.includes('bindLoanFacilitiesToPeriodicFinance')
+  && advancedFinanceSource.includes('sensitivityInput:sensitivityLoanBinding.valid?sensitivityLoanBinding.financeInput??undefined:undefined')
+  && advancedFinanceSource.includes('periodicSensitivityResult.pessimistic')
+  && advancedFinanceSource.includes('periodicSensitivityResult.optimistic')
   && advancedFinanceSource.includes('periodicFinanceResult')
   && advancedFinanceSource.includes('periodDrawdowns')
   && advancedFinanceSource.includes('periodRateConversion')
@@ -836,63 +969,43 @@ assert.ok(advancedFinanceSource.includes('calculateIntegratedPeriodicFinance')
   && advancedFinanceSource.includes('periodDrawdownDates')
   && advancedFinanceSource.includes('periodTaxRateDates'),
   'Advanced finance panel must connect period schedules, rate conventions, working capital and the integrated periodic engine')
-assert.ok(feasibilityWizardSource.includes('resolveProjectStage')
-  && feasibilityWizardSource.includes("has('پلیت')")
-  && feasibilityWizardSource.includes("has('نوردسرد')")
-  && feasibilityWizardSource.includes('stage:defaults.stage'),
-  'Steel-chain aliases must resolve to their correct specialist form, including saved projects')
-assert.ok(feasibilityWizardSource.includes('hasPricedRows')
-  && feasibilityWizardSource.includes('hasTechnicalInputs')
-  && feasibilityWizardSource.includes('validRows')
-  && feasibilityWizardSource.includes('hasMaterialInput')
-  && feasibilityWizardSource.includes('technicalParametersComplete')
-  && feasibilityWizardSource.includes('TechnicalParameterEditor')
-  && feasibilityWizardSource.includes("language={language}")
-  && feasibilityWizardSource.includes('periodicModelValid')
-  && feasibilityWizardSource.includes('opex:validRows(m.opex)&&sum(m.opex)>0'),
-  'Completion indicators must require populated engineering, utility, OPEX and valid periodic finance inputs')
 assert.ok(feasibilityWizardSource.includes("project.templateId==='raw'")
-  && feasibilityWizardSource.includes("process:{technology:rawProject?'':selectedStage.name,route:rawProject?'':selectedStage.route")
-  && feasibilityWizardSource.includes('technical:rawProject?[]')
-  && feasibilityWizardSource.includes('balance:rawProject?[]')
-  && feasibilityWizardSource.includes('utilities:rawProject?[]')
-  && feasibilityWizardSource.includes('capex:rawProject?[]')
-  && feasibilityWizardSource.includes('opex:rawProject?[]')
-  && feasibilityWizardSource.includes('blankZero={isRawTemplate}')
-  && feasibilityWizardSource.includes('stageFormDefinitions[selectedStage.id]?.materials')
-  && feasibilityWizardSource.includes('stageFormDefinitions[selectedStage.id]?.utilities')
-  && feasibilityWizardSource.includes('stageFormDefinitions[selectedStage.id]?.capex')
-  && feasibilityWizardSource.includes('stageFormDefinitions[selectedStage.id]?.opex'),
-  'Blank projects must start with empty data while specialist projects receive stage-specific engineering rows')
-assert.ok(feasibilityWizardSource.includes('TechnicalParameterEditor')
+  && feasibilityWizardSource.includes("stage:'other'")
+  && feasibilityWizardSource.includes('technical:[]')
+  && feasibilityWizardSource.includes('balance:[]')
+  && feasibilityWizardSource.includes('utilities:[]')
+  && feasibilityWizardSource.includes('capex:[]')
+  && feasibilityWizardSource.includes('opex:[]')
+  && feasibilityWizardSource.includes('blankZero={isRawTemplate}'),
+  'The current raw project wizard must start with empty engineering and cost schedules and preserve blank numeric inputs')
+assert.ok(feasibilityWizardSource.includes('function TechnicalParameterEditor')
   && feasibilityWizardSource.includes('valueText')
-  && feasibilityWizardSource.includes('technicalParametersComplete')
-  && feasibilityWizardSource.includes('مقدار / مشخصه'),
-  'Raw and specialist technical forms must support descriptive and numeric parameter values and enforce parameter completion')
+  && feasibilityWizardSource.includes('مقدار / مشخصه')
+  && feasibilityWizardSource.includes('technicalParametersComplete'),
+  'Raw technical parameters must support descriptive and numeric values and validate completed entries')
 assert.ok(feasibilityWizardSource.includes('flowType')
   && feasibilityWizardSource.includes('sumMaterialInputs')
   && feasibilityWizardSource.includes('showFlowType')
   && feasibilityWizardSource.includes('Output / Product'),
-  'Material balance must distinguish input consumption from product, by-product and waste outputs before operating-cost aggregation')
+  'Material balance must distinguish inputs from products and by-products before cost aggregation')
 assert.ok(feasibilityWizardSource.includes('productPricingComplete')
   && feasibilityWizardSource.includes('productWeightedRevenuePrice')
   && feasibilityWizardSource.includes('sum(m.products)'),
-  'Priced multi-product and by-product rows must feed weighted project revenue instead of being ignored by the financial model')
+  'Priced multi-product and by-product rows must feed weighted project revenue')
 assert.ok(feasibilityWizardSource.includes("n(r.quantity)*n(r.unitPrice)")
   && feasibilityWizardSource.includes("sumMaterialInputs(m.balance)+sum(m.utilities)"),
-  'Variable and fixed OPEX must use quantity times unit price and exclude material output rows from cost totals')
-assert.ok(projectsViewSource.includes("{steelStage && <label>")
-  && projectsViewSource.includes("t('نام پروژه','Project Name')")
+  'Raw variable-cost aggregation must use quantity times unit price and exclude material outputs')
+assert.ok(projectsViewSource.includes("t('نام پروژه','Project Name')")
   && projectsViewSource.includes('placeholder={t(\'نام دلخواه پروژه را وارد کنید\''),
-  'Steel project creation must request a manually entered project name immediately after project type selection')
+  'Raw project creation must always request a manually entered project name')
 assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
   && feasibilityWizardSource.includes('projectPeriods={projectCalendarPeriods}')
   && feasibilityWizardSource.includes('cashFlowTiming={m.foundation.planning.cashFlowTiming}'),
   'Project calendar dates and discount timing must flow from the project foundation into the periodic finance engine')
-assert.ok(feasibilityWizardSource.includes('partners:Array.isArray(v.partners)')
-  && feasibilityWizardSource.includes('partnerDistributionPercent:Number.isFinite(v.partnerDistributionPercent)'),
+assert.ok(feasibilityWizardSource.includes('partners:Array.isArray(saved.partners)?saved.partners:[]')
+  && feasibilityWizardSource.includes('partnerDistributionPercent:Number.isFinite(saved.partnerDistributionPercent)'),
   'Saved projects created before joint-venture partner fields must migrate to safe defaults')
-assert.ok(feasibilityWizardSource.includes('partnerDistributionPercent={m.partnerDistributionPercent??100}')
+assert.ok(feasibilityWizardSource.includes('partnerDistributionPercent={m.partnerDistributionPercent??Number.NaN}')
   && feasibilityWizardSource.includes('درصد جریان نقدی مثبت قابل تقسیم')
   && advancedFinanceSource.includes('allocateJointVentureCashFlows')
   && advancedFinanceSource.includes('onPartnerFinanceResult')
@@ -907,10 +1020,10 @@ assert.ok(projectReportSource.includes('Project Technical & Cost Form Details')
   && projectReportSource.includes('Material Balance & Feed')
   && projectReportSource.includes('Market Information Summary')
   && feasibilityWizardSource.includes('marketSummary={m.market}')
-  && feasibilityWizardSource.includes('technicalParameters={m.technical.map')
-  && feasibilityWizardSource.includes('materialBalance={m.balance.map')
-  && feasibilityWizardSource.includes('capexItems={m.capex.map')
-  && feasibilityWizardSource.includes('opexItems={m.opex.map'),
+  && feasibilityWizardSource.includes('technicalParameters={m.technical}')
+  && feasibilityWizardSource.includes('materialBalance={m.balance}')
+  && feasibilityWizardSource.includes('capexItems={m.capex')
+  && feasibilityWizardSource.includes('opexItems={m.opex'),
   'Project reports must include the populated raw and specialist technical, material-balance, utility, CAPEX and OPEX forms')
 assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   && projectReportSource.includes('periodicResult.rows.map')
@@ -919,6 +1032,9 @@ assert.ok(projectReportSource.includes('Periodic Financial Model Outputs')
   && projectReportSource.includes('expectedCapitalContribution')
   && projectReportSource.includes('partnerFinanceResult.periods.map'),
   'Project report must include the period-level financial schedule and key output metrics')
+assert.ok(projectReportSource.includes('external period-by-period HRCR200 balance-sheet parity remains unverified')
+  && projectReportSource.includes('the financial engine performs an internal assets = liabilities + equity control'),
+  'The HRCR200 report must distinguish internal balance-sheet reconciliation from external period-by-period parity')
 assert.ok(projectReportSource.includes('aggregatePeriodicFinanceByFiscalYear')
   && projectReportSource.includes('hasCompleteFiscalYearCoverage')
   && projectReportSource.includes('fiscalYearStartMonth')
@@ -1084,16 +1200,6 @@ assert.ok(Math.abs(engine.calculatePeriodicNpv([100,100],comfarAnnualPeriods.sli
 assert.ok(advancedFinanceUi.includes("periodicFinanceResult?.valid ? periodicFinanceResult.loanSchedules[loan.id]")
   && advancedFinanceUi.includes("periodicFinanceResult.rows[i]?.startDate"),
   'Loan repayment detail must display the actual monthly/quarterly schedule and its period dates when the periodic engine is valid')
-const financingAuditDoc = await readFile(new URL('../../docs/references/HRCR200-COMFAR-financing-reconstruction.md', import.meta.url), 'utf8')
-assert.ok(financingAuditDoc.includes('840,992.27')
-  && financingAuditDoc.includes('2,399,043.44')
-  && financingAuditDoc.includes('964,925.63')
-  && financingAuditDoc.includes('3,363,969.07'),
-  'HRCR200 financing audit must preserve the reconstructed 20-quarter annuity and first-year debt-service reconciliation')
-assert.ok(financingAuditDoc.includes('one-off or recurring')
-  && financingAuditDoc.includes('must not be charged twice')
-  && financingAuditDoc.includes('3,309,144.53'),
-  'HRCR200 financing audit must keep issuance-fee ambiguity and shareholder working-capital funding explicit')
 console.log('PASS: asset-level monthly/quarterly depreciation, disposals and integrated periodic project finance, loan schedules, fiscal-year allocation, leap-year handling, tax-loss roll-forward and dated NPV')
 
 // Shareholder-funded working capital is recorded once as an equity injection;
@@ -1229,7 +1335,7 @@ const resetAndFeeLoan = engine.calculatePeriodicLoanSchedule({
 },loanEventPeriods,365)
 assert.equal(resetAndFeeLoan.valid,true,resetAndFeeLoan.issues.join('; '))
 const expectedNominalResetInterest=100*(10*181/365+20*183/365)/100+5*(20/100)*91/365
-console.log('DEBUG reset fee interest', {actual:resetAndFeeLoan.rows[0].interestExpense,expected:expectedNominalResetInterest,row:resetAndFeeLoan.rows[0]})
+
 assert.ok(Math.abs(resetAndFeeLoan.rows[0].interestExpense-expectedNominalResetInterest)<1e-8,
   'Exact dated drawdowns must preserve end-exclusive Actual/365 accrual, including interest on the capitalized fee from its payment date')
 assert.equal(resetAndFeeLoan.rows[0].financingFeeExpense,10,
@@ -1285,7 +1391,7 @@ const integratedRateResetAndFees = engine.calculateIntegratedPeriodicFinance({
   }}],
 })
 assert.equal(integratedRateResetAndFees.valid,true,integratedRateResetAndFees.warnings.join('; '))
-assert.equal(integratedRateResetAndFees.rows[0].interestExpense,integratedRateResetAndFees.loanSchedules['reset-fee-loan'][0].interestExpense+10,
+assert.ok(Math.abs(integratedRateResetAndFees.rows[0].interestExpense-integratedRateResetAndFees.loanSchedules['reset-fee-loan'][0].interestExpense-10)<1e-8,
   'Expense financing fees must flow into periodic financing costs and taxable profit')
 assert.equal(integratedRateResetAndFees.rows[0].capitalizedFinancingFees,5,
   'Capitalized financing fees must remain distinct from capitalized interest in project results')

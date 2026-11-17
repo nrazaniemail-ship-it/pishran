@@ -324,56 +324,57 @@ const [projectsViewSource,projectRepositorySource,rollingWorkspaceSource,wizardS
 ])
 assert.ok(projectsViewSource.includes('قالب پروژه جدید را انتخاب کنید')
   && projectsViewSource.includes('قالب خام')
-  && projectsViewSource.includes('قالب پروژه نورد ورق گرم'),
-  'New project must ask the user to choose one of the two named templates')
-assert.ok(projectRepositorySource.includes("ProjectTemplateId = 'raw' | 'hot-rolling-200kt'")
-  && projectRepositorySource.includes('templateId?: ProjectTemplateId'),
-  'Project template identity must be persisted with each project')
-assert.ok(rollingWorkspaceSource.includes("project.templateId==='hot-rolling-200kt'")
+  && !projectsViewSource.includes('قالب پروژه نورد ورق گرم')
+  && !projectsViewSource.includes('hot-rolling-200kt'),
+  'New project creation must expose only the blank template')
+assert.ok(projectRepositorySource.includes("ProjectTemplateId = 'raw'")
+  && projectRepositorySource.includes('templateId?: ProjectTemplateId')
+  && projectRepositorySource.includes('removeSampleProjects')
+  && projectRepositorySource.includes('projects:workbook-seed:v1')
+  && projectRepositorySource.includes('projects:dri-direct-reduction-seed:v1'),
+  'Only the raw template remains and saved demonstration projects are removed')
+assert.ok(rollingWorkspaceSource.includes("(project.templateId as string)==='hot-rolling-200kt'")
   && rollingWorkspaceSource.includes("!project.templateId&&project.steelStage?.includes('نورد گرم')"),
-  'Only explicit hot-rolling template or legacy hot-rolling projects may load benchmark defaults')
+  'Legacy project detection remains isolated from new raw-template projects')
 assert.ok(wizardSource.includes("project.templateId==='raw'"),
   'Raw template must initialize an empty feasibility model')
-assert.ok(projectsViewSource.indexOf('value={projectType}') < projectsViewSource.indexOf('{steelStage && <label>')
-  && projectsViewSource.includes("t('نام پروژه','Project Name')")
-  && !projectsViewSource.includes("مرحله زنجیره فولاد"),
-  'Raw project creation must ask for project type then a manually entered project name, without a steel-chain-stage field')
+assert.ok(appSource.includes("onOpenProject={project => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard') }}")
+  && !appSource.includes("stage.includes('نورد گرم')"),
+  'Every saved project must open in the single raw feasibility model')
+assert.ok(projectsViewSource.indexOf("t('نوع پروژه','Project Type')") < projectsViewSource.indexOf("t('نام پروژه','Project Name')")
+  && projectsViewSource.includes("value={projectType} onChange={e => setProjectType(e.target.value)}")
+  && projectsViewSource.includes("value={name} onChange={e => setName(e.target.value)}")
+  && !projectsViewSource.includes('steelStage')
+  && !projectsViewSource.includes('نورد ورق گرم'),
+  'Raw project creation must ask for a generic project type and manually entered name without specialized steel stages')
 assert.ok(projectsViewSource.includes("value={projectType} onChange={e => setProjectType(e.target.value)}")
   && projectsViewSource.includes("projectType: projectType.trim()")
   && projectsViewSource.includes("value={name} onChange={e => setName(e.target.value)}")
   && projectRepositorySource.includes("projectType?: string"),
   'Non-steel raw templates must persist project type separately from the manually entered project name')
 assert.ok(!wizardSource.includes("مرحله اصلی زنجیره فولاد")
-  && wizardSource.includes('technical:rawProject?[]')
-  && wizardSource.includes('balance:rawProject?[]')
-  && wizardSource.includes('utilities:rawProject?[]')
-  && wizardSource.includes('capex:rawProject?[]')
-  && wizardSource.includes('opex:rawProject?[]'),
-  'Raw template must hide stage-specific selector and start technical, material, utility, CAPEX and OPEX rows blank')
-assert.ok(['mining','concentrate','pellet','dri','steelmaking','dri-steelmaking-slab','hot-rolling','hot-plate','cold-rolling','rebar-rolling','angle-rolling','beam-rolling']
-  .every(id=>wizardSource.includes("id:'"+id+"'")&&(wizardSource.includes(id+':{')||wizardSource.includes("'"+id+"':{"))),
-  'Every requested steel-chain stage must have a matching stage-specific form definition')
-assert.ok(wizardSource.includes("id:'dri-steelmaking-slab'")
-  && wizardSource.includes("id:'hot-plate'")
-  && wizardSource.includes("const stageFormDefinitions")
-  && wizardSource.includes("dri:{")
-  && wizardSource.includes("'dri-steelmaking-slab':{")
-  && wizardSource.includes("'hot-plate':{")
-  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.materials")
-  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.utilities")
-  && wizardSource.includes("stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex")
-  && wizardSource.includes("stageRows(stageFormDefinitions[selectedStage.id]?.opex"),
-  'Mining, concentration, pelletizing, DRI, steelmaking, integrated slab, hot plate, hot coil and rolling forms must use stage-specific input rows')
-assert.ok(wizardSource.includes("stageOptions.find(s=>s.id==='other')")
-  && !wizardSource.includes("stageOptions[10]"),
-  'Blank-template stage selection must use stable stage IDs, not a fragile array index')
-assert.ok(wizardSource.includes("خرید زمین (۱۳ هکتار؛ ۱۳۰٬۰۰۰ مترمربع)")
-  && wizardSource.includes("حقوق و دستمزد ۲۵۰ نفر")
-  && wizardSource.includes("کلاف گرم (ماده اولیه اصلی)"),
-  'Existing cold-rolling source-based CAPEX, payroll and material-balance fields must be preserved')
-assert.ok(wizardSource.includes("unit={project.industry==='انرژی و نیروگاه'?'مگاوات':project.industry==='فولاد و صنایع معدنی'?'تن/سال':'واحد/سال'}")
-  && projectsViewSource.includes('inputMode="numeric" pattern="[0-9]*"'),
-  'Capacity must use MW for energy projects and tonnes/year for steel/mining with numeric-only entry')
+  && wizardSource.includes("function baseModel(project:FeasibilityProject):Model")
+  && wizardSource.includes("analysisMode:'unspecified'")
+  && wizardSource.includes("stage:'other'")
+  && wizardSource.includes("products:[]")
+  && wizardSource.includes("technical:[]")
+  && wizardSource.includes("balance:[]")
+  && wizardSource.includes("utilities:[]")
+  && wizardSource.includes("capex:[]")
+  && wizardSource.includes("opex:[]")
+  && wizardSource.includes("startYear:null as unknown as number")
+  && wizardSource.includes("nameplate:null as unknown as number")
+  && wizardSource.includes("market:{demand:null as unknown as number")
+  && wizardSource.includes("finance:{equity:null as unknown as number")
+  && !/HRCR200|hotRolling|HOT_ROLLING|کلاف گرم|کلاف سرد|نورد گرم|نورد سرد/.test(wizardSource)
+  && !wizardSource.includes("ExpansionRehabilitationPanel"),
+  'Raw template must be a generic blank model with no sample-project or steel-stage references')
+assert.ok(wizardSource.includes("unit={project.industry==='انرژی و نیروگاه'?'مگاوات':'واحد/سال'}")
+  && projectsViewSource.includes("const INDUSTRY_OPTIONS")
+  && !projectsViewSource.includes('inputMode="numeric" pattern="[0-9]*"')
+  && projectsViewSource.includes("capacity: '',")
+  && projectsViewSource.includes("location: '',"),
+  'Raw project creation stays industry-neutral and defers capacity and location inputs to the blank model form')
 assert.ok(wizardSource.includes("value=\"industrial\"")
   && wizardSource.includes("value=\"maritime\"")
   && wizardSource.includes("value=\"agricultural\"")
@@ -398,13 +399,13 @@ assert.ok(wizardSource.includes("Opportunity Study")
 assert.ok(wizardSource.includes("costCentreAnalysis:e.target.checked||m.scope.costAllocation")
   && wizardSource.includes("costAllocation:e.target.checked,costCentreAnalysis:e.target.checked?true:m.scope.costCentreAnalysis"),
   'Cost Allocation must activate Cost Centre Analysis as in the COMFAR Tutorial workflow')
-assert.ok(appSource.includes("if(project.templateId==='raw') setPage('project-wizard')"),
-  'Raw template must not be routed into the seeded hot-rolling workspace')
+assert.ok(appSource.includes("onOpenProject={project => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard') }}"),
+  'All projects must route to the single raw model form')
 assert.ok(rollingWorkspaceSource.includes('ممیزی جریان نقدی خام و اصلاح‌شده مرجع مالی')
   && rollingWorkspaceSource.includes('HOT_ROLLING_reference_CASHFLOW_AUDIT'),
   'Active rolling workspace must expose the reference cash-flow audit')
-assert.ok(wizardSource.includes('useFixedInvestmentRegister={true}'), 'The shared fixed investment register must remain the authoritative depreciation source for every feasibility project, including when it is empty')
-assert.equal(model.discountMode, 'wacc', 'Hot-rolling template must use the sponsor-confirmed WACC by default')
+assert.ok(wizardSource.includes('useFixedInvestmentRegister={true}') && wizardSource.includes('comfarDepreciationAssets={fixedInvestmentLifecycleInputs.assets}') && wizardSource.includes('preOperatingOnly={m.financialForms.assets.length>0}') && wizardSource.includes('fixedInvestmentForFinance=m.financialForms.assets.length?0:capex-preOperatingCost'), 'Raw projects must use detailed assets and a separate pre-production-only schedule without double-counting')
+assert.ok(wizardSource.includes("method:'unspecified'") && wizardSource.includes("manualRate:null as unknown as number"), 'The raw template must leave discount-rate method and manual rate unset')
 
 const output = expected.capacity
 const currency = model.currency
@@ -1451,9 +1452,10 @@ const mismatchedIncremental = engine.calculateIncrementalEnterpriseAnalysis(
 assert.equal(mismatchedIncremental.periods.length, 0, 'Incremental analysis must reject non-aligned planning horizons')
 const expansionPanelSource = await readFile(new URL('../src/features/projects/ExpansionRehabilitationPanel.tsx', import.meta.url), 'utf8')
 const expansionWizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
-assert.ok(expansionWizardSource.includes("analysisMode: 'new'|'expansion'|'rehabilitation'|'combined'")
-  && expansionWizardSource.includes("m.analysisMode!=='new'&&<ExpansionRehabilitationPanel"),
-  'Project wizard must activate the existing-enterprise module only for expansion/rehabilitation classifications')
+assert.ok(expansionWizardSource.includes("analysisMode: 'unspecified'|'new'|'expansion'|'rehabilitation'|'combined'")
+  && expansionWizardSource.includes("projectClassificationReady=m.analysisMode==='new'||(['expansion','rehabilitation','combined'].includes(m.analysisMode)&&m.financialForms.openingBalanceSheet?.enabled===true)")
+  && !expansionWizardSource.includes('ExpansionRehabilitationPanel'),
+  'The raw wizard must use the integrated opening-balance-sheet form for existing-enterprise projects, not a disconnected pre-seeded panel')
 assert.ok(expansionPanelSource.includes('Starting Balances')
   && expansionPanelSource.includes('Incremental Analysis')
   && expansionPanelSource.includes('Work in progress')
@@ -1647,7 +1649,7 @@ assert.equal(blankFoundation.planning.dayCountBasis, null, 'Blank template must 
 assert.equal(blankFoundation.discounting.method, 'unspecified', 'Blank template must not assume a discounting method')
 assert.equal(blankFoundation.taxation.system, 'unspecified', 'Blank template must not assume a tax system')
 assert.equal(blankFoundation.taxation.lossCarryForward, null, 'Blank template must not assume loss carry-forward treatment')
-assert.ok((await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')).includes("method:rawProject?'unspecified'") , 'Raw template must not assume a discounting method in the finance form')
+assert.ok((await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')).includes("method:'unspecified'") , 'Raw template must not assume a discounting method in the finance form')
 assert.equal(blankFoundation.currencies.foreignCurrencies.length, 0, 'Blank template must not invent foreign currencies or exchange rates')
 assert.equal(blankFoundation.discounting.financialRatePercent, null, 'Blank template must not assume a financial discount rate')
 assert.equal(blankFoundation.taxation.rates.length, 0, 'Blank template must not assume tax rates')
@@ -1862,10 +1864,10 @@ assert.ok(foundation.validateFixedInvestmentItems([invalidForeignAsset], validFo
 const foundationWizard = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 const foundationPanel = await readFile(new URL('../src/features/projects/ProjectFoundationPanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('ProjectFoundationPanel')
-  && foundationWizard.includes('mergeProjectFoundation(v.foundation)')
-  && foundationWizard.includes('createBlankProjectFoundation()')
-  && foundationWizard.includes('foundation:isHotRolling?mergeHotRollingCoilProjectFoundation(v.foundation):mergeProjectFoundation(v.foundation)'),
-  'Project foundation must be integrated into the saved project model with legacy-safe migration')
+  && foundationWizard.includes('foundation:mergeProjectFoundation(saved.foundation)')
+  && foundationWizard.includes('foundation:createBlankProjectFoundation()')
+  && !/isHotRollingCoil=\{true\}|hotRollingCoilProject|mergeHotRollingCoilProjectFoundation/.test(foundationWizard),
+  'The raw project foundation must be blank and independent of sample-specific migrations')
 assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
   && foundationPanel.includes('Cost Centres')
   && foundationPanel.includes('Inflation & Price Indices')
@@ -1876,11 +1878,11 @@ assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
   'Common project foundation form must cover the base schedules without inventing unknown assumptions')
 const fixedInvestmentPanel = await readFile(new URL('../src/features/projects/FixedInvestmentPanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('FixedInvestmentPanel')
-  && foundationWizard.includes('fixedInvestmentItems:hotRollingCoilProject?createHotRollingCoilFixedInvestmentItems():[]')
-  && foundationWizard.includes('Array.isArray(v.fixedInvestmentItems)?v.fixedInvestmentItems:[]')
-  && foundationWizard.includes('fixedInvestmentItems:(isHotRolling?migratedFixedInvestmentItems:savedFixedInvestmentItems).map(item=>({...item,depreciationBasis:')
-  && foundationWizard.includes('fixedInvestmentItems:[]'),
-  'The reusable fixed investment register must be initialized for new projects and restored with legacy-safe migration')
+  && foundationWizard.includes('fixedInvestmentItems:[]')
+  && foundationWizard.includes('fixedInvestmentItems:savedAssets.map(item=>({...item,depreciationBasis:')
+  && !/hotRollingCoilProject|isHotRolling|createHotRollingCoilFixedInvestmentItems/.test(foundationWizard),
+  'The generic fixed investment register must start empty and restore only saved user-entered asset data')
+assert.ok(fixedInvestmentPanel.includes('preOperatingOnly') && fixedInvestmentPanel.includes('visibleAssetClasses') && fixedInvestmentPanel.includes("assetClass:'preproduction'") && fixedInvestmentPanel.includes('depreciationBuild.preOperatingSchedule.map'), 'The fixed investment register must switch to a pre-production-only schedule when detailed fixed assets are used')
 assert.ok(fixedInvestmentPanel.includes("listFinancialMethods('depreciation')")
   && fixedInvestmentPanel.includes('directoryMethodToAssetMethod')
   && fixedInvestmentPanel.includes('Depreciation Method Directory')
@@ -1896,7 +1898,7 @@ assert.ok(fixedInvestmentPanel.includes('Costs of Assets by Period')
   && fixedInvestmentPanel.includes("'depreciation.accelerated': 'accelerated'")
   && fixedInvestmentPanel.includes("'depreciation.sum-of-years-digits': 'sum-of-digits'")
   && fixedInvestmentPanel.includes('Sum of years digits')
-  && fixedInvestmentPanel.includes('aggregate CAPEX') && fixedInvestmentPanel.includes('preventing double-counting') && fixedInvestmentPanel.includes('first depreciation year') && fixedInvestmentPanel.includes('Asset Depreciation Schedule Preview') && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems') && fixedInvestmentPanel.includes('asset-sale-not-at-balance-date') && fixedInvestmentPanel.includes('missing-asset-sale-exchange-rate') && fixedInvestmentPanel.includes('Annual Depreciation vs Reference Output') && fixedInvestmentPanel.includes('referenceDepreciationByYear') && fixedInvestmentPanel.includes('Acquisition Period Basis') && fixedInvestmentPanel.includes('Depreciation Condition Evidence') && fixedInvestmentPanel.includes('depreciation-basis-conflict') && fixedInvestmentPanel.includes('calculateComfarAssetLifecycle') && fixedInvestmentPanel.includes('Asset Sale Proceeds'),
+  && fixedInvestmentPanel.includes('aggregate CAPEX') && fixedInvestmentPanel.includes('first depreciation year') && fixedInvestmentPanel.includes('preOperatingOnly') && fixedInvestmentPanel.includes('visibleAssetClasses') && fixedInvestmentPanel.includes('depreciationBuild.preOperatingSchedule.map') && fixedInvestmentPanel.includes('Asset Depreciation Schedule Preview') && fixedInvestmentPanel.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems') && fixedInvestmentPanel.includes('asset-sale-not-at-balance-date') && fixedInvestmentPanel.includes('missing-asset-sale-exchange-rate') && fixedInvestmentPanel.includes('Annual Depreciation vs Reference Output') && fixedInvestmentPanel.includes('referenceDepreciationByYear') && fixedInvestmentPanel.includes('Acquisition Period Basis') && fixedInvestmentPanel.includes('Depreciation Condition Evidence') && fixedInvestmentPanel.includes('depreciation-basis-conflict') && fixedInvestmentPanel.includes('calculateComfarAssetLifecycle') && fixedInvestmentPanel.includes('Asset Sale Proceeds'),
   'Fixed investment foundation must capture acquisition periods, COMFAR depreciation conditions and asset disposals without double-counting CAPEX')
 const advancedFinanceSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
 assert.ok(foundationWizard.includes('buildComfarDepreciationAssetsFromFixedInvestmentItems')

@@ -70,6 +70,12 @@ export function applyPeriodicSensitivityShock(
       next.discountRatePercent=Math.max(-99.999,input.discountRatePercent+variationPercent)
       break
     case 'loan-interest-rate':
+      // A precomputed schedule is already the authoritative repayment path.
+      // Mutating the source rate without rebuilding that schedule would produce
+      // a false sensitivity result, so fail closed until its originating form
+      // can be recalculated as part of the scenario.
+      if(Object.keys(input.precomputedLoanSchedules??{}).length)
+        throw new Error('loan-interest-rate-sensitivity-unavailable-for-precomputed-schedules')
       next.loans=input.loans.map(loan=>({
         ...loan,input:{
           ...loan.input,
