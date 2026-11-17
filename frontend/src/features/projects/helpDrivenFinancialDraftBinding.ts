@@ -422,7 +422,11 @@ export function bindHelpDrivenFinancialDrafts(
         if(!period)issues.push('working-capital:'+row.id+': period must resolve to exactly one project period.')
         if(period&&seen.has(period))issues.push('working-capital:'+key+': duplicate balance for period '+period+'.')
         if(period)seen.add(period)
-        required(amount,'working-capital:'+row.id+': required value',issues)
+        const driverCanDerive = str(first,'mode')==='value' && str(first,'activityBasis')==='sales' &&
+          str(first,'basis')==='sales-revenue' && category==='accounts-receivable' &&
+          (num(first,'daysCoverage')!==null || num(first,'turnover')!==null)
+        if(amount===null&&!driverCanDerive)
+          required(amount,'working-capital:'+row.id+': required value',issues)
         return {period:period??str(row,'period'),amount}
       })
       const opening=num(first,'startingBalance')
