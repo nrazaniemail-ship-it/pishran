@@ -1514,6 +1514,8 @@ export type PeriodicFinancialStatement = {
  * Builds period-level linked statements. Working capital is represented as net working
  * capital (current assets less operating payables); no unsupported gross split is inferred.
  * Capitalized interest is a non-cash addition to both deferred pre-operating assets and debt.
+ * COMFAR XI.N automatic construction equity and production overdraft are posted
+ * to financing cash flow, paid-in capital and debt instead of remaining a detached schedule.
  */
 export function buildPeriodicThreeFinancialStatements(
   result: PeriodicProjectFinanceResult,
