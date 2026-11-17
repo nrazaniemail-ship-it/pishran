@@ -453,7 +453,7 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
  for(const sectionId of currencySections){
   for(const [index,row] of (value.sections?.[sectionId]??[]).entries()){
    const raw=row.values.currency
-   if(typeof raw==='string'&&raw.trim()&&!currencyCodes.has(raw.trim().toUpperCase()))
+   if(typeof raw==='string'&&raw.trim()&&!currencyCodes.includes(raw.trim().toUpperCase()))
     errors.push(sectionId+':'+index+':unknown-currency-reference:'+raw)
   }
  }
