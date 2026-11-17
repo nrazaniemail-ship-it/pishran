@@ -6,6 +6,7 @@ import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention, ProjectFoundation } from './projectFoundation'
 import type { ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import { calculateProjectFinancialModelFromDrafts } from './projectFinancialModelOrchestrator'
+import type { EconomicAppraisalConfigurationResult } from './economicAppraisalIntegration'
 import { bindLoanFacilitiesToPeriodicFinance } from './foreignCurrencyLoanFinanceBinding'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
 import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
@@ -19,7 +20,7 @@ import {
 } from '../steel/financialModel'
 
 type CapexRow = { id: string; name: string; amount: number }
-type PeriodicFinanceResultWithSensitivityInput=PeriodicProjectFinanceResult & {sensitivityInput?:PeriodicProjectFinanceInput}
+type PeriodicFinanceResultWithSensitivityInput=PeriodicProjectFinanceResult & {sensitivityInput?:PeriodicProjectFinanceInput;economicAppraisal?:EconomicAppraisalConfigurationResult|null}
 type Asset = DepreciationAssetInput
 type Loan = IntegratedLoanInput & {
   periodDrawdowns?: number[]
@@ -75,6 +76,7 @@ type Props = {
   onSensitivity?: (analysis:OneWaySensitivityAnalysis)=>void
   onScenarioAnalysis?: (matrix:SensitivityCell[][], scenarios:ReturnType<typeof calculateFinancialScenarios>)=>void
   onPeriodicResult?: (result:PeriodicProjectFinanceResult|null)=>void
+  onEconomicAppraisalResult?: (result:EconomicAppraisalConfigurationResult|null)=>void
   onPartnerFinanceResult?: (result:PartnerFinanceResult|null)=>void
   equityPercent: number
   costOfEquity: number
@@ -360,6 +362,7 @@ export default function AdvancedFinancePanel(props: Props) {
         valid:false,rows:[],loanSchedules:{},npvProject:null,irrProject:null,mirrProject:null,
         npvEquity:null,irrEquity:null,mirrEquity:null,totalDebtDrawdown:0,totalEquityContribution:0,
         totalCapitalizedInterest:0,peakWorkingCapital:0,warnings:orchestration.issues,
+        economicAppraisal:orchestration.economicAppraisal??null,
       }
       const openingForeignBalances=Object.fromEntries(props.financialForms.loans
         .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
@@ -372,15 +375,16 @@ export default function AdvancedFinancePanel(props: Props) {
         foundation:props.foundation,openingForeignBalances,openingExchangeRatesToLocal,
       })
       return Object.assign(orchestration.finalRun.finance,{
-        sensitivityInput:sensitivityLoanBinding.valid?sensitivityLoanBinding.financeInput??undefined:undefined
+        sensitivityInput:sensitivityLoanBinding.valid?sensitivityLoanBinding.financeInput??undefined:undefined,economicAppraisal:orchestration.economicAppraisal??null
       })
     }
-    return Object.assign(calculateIntegratedPeriodicFinance(financeInput),{sensitivityInput:financeInput})
+    return Object.assign(calculateIntegratedPeriodicFinance(financeInput),{sensitivityInput:financeInput,economicAppraisal:null})
   },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.financialForms??null),JSON.stringify(props.foundation??null),props.productionStartDate,props.greenfield])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
   useEffect(()=>{props.onPeriodicResult?.(periodicFinanceResult)},[periodicFinanceResult,props.onPeriodicResult])
+  useEffect(()=>{props.onEconomicAppraisalResult?.(periodicFinanceResult?.economicAppraisal??null)},[periodicFinanceResult,props.onEconomicAppraisalResult])
   useEffect(()=>{props.onPartnerFinanceResult?.(partnerFinanceResult)},[partnerFinanceResult,props.onPartnerFinanceResult])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
