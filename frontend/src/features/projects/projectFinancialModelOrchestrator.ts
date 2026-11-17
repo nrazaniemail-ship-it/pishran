@@ -201,7 +201,7 @@ export function calculateProjectFinancialModelFromDrafts(
     'discounting':['shortNpvYears'],
     'income-tax':[],
     'production-costs':['initialStockQuantity','initialStockValue'],
-    'sales-programme':['grossUnitPrice','productionActive','futureSalesQuantity','terminalInventorySale'],
+    'sales-programme':['futureSalesQuantity','terminalInventorySale'],
     'working-capital':['mode','activityBasis','daysCoverage','turnover','requiredQuantity','initialStockQuantity','initialStockValue','recoveryPeriod','depositPercent','depositRate','periodMonths'],
     'sensitivity':['quantityChange','priceChange','valueChange','chartVariable'],
   }
