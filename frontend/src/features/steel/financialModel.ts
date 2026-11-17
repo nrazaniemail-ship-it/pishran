@@ -29,11 +29,17 @@ export type WorkingCapitalPolicy = {
   cashDays: number
   payableDays: number
   annualRawMaterialCost: number
+  factorySuppliesDays?: number
+  annualFactorySuppliesCost?: number
+  utilitiesDays?: number
+  annualUtilitiesCost?: number
   energyDays?: number
   annualEnergyCost?: number
   sparePartsDays?: number
   annualSparePartsCost?: number
   annualFixedRawMaterialCost?: number
+  annualFixedFactorySuppliesCost?: number
+  annualFixedUtilitiesCost?: number
   annualPayablesCost?: number
   annualFixedPayablesCost?: number
   annualConversionCost: number
@@ -49,6 +55,8 @@ export type WorkingCapitalPolicy = {
 
 export type WorkingCapitalBreakdown = {
   rawMaterials: number
+  factorySupplies?: number
+  utilities?: number
   energy?: number
   spareParts?: number
   workInProgress: number
@@ -61,14 +69,20 @@ export type WorkingCapitalBreakdown = {
 }
 
 export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPolicy, utilization: number, salesFactor = 1, opexFactor = 1): WorkingCapitalBreakdown {
-  const values = [policy.dayBasis, policy.rawMaterialDays, policy.energyDays ?? 0, policy.sparePartsDays ?? 0, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualEnergyCost ?? 0, policy.annualSparePartsCost ?? 0, policy.annualFixedRawMaterialCost ?? 0, policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, policy.shortTermDepositSharePercent ?? 0, policy.shortTermDepositRatePercent ?? 0, utilization, salesFactor, opexFactor]
-  if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1).some(value => value < 0) || policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100 || (policy.shortTermDepositSharePercent ?? 0) > 100) return { rawMaterials: 0, energy: 0, spareParts: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, shortTermDeposits: 0, payables: 0, netWorkingCapital: 0 }
+  const values = [policy.dayBasis, policy.rawMaterialDays, policy.factorySuppliesDays ?? 0, policy.utilitiesDays ?? 0, policy.energyDays ?? 0, policy.sparePartsDays ?? 0, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualFactorySuppliesCost ?? 0, policy.annualUtilitiesCost ?? 0, policy.annualEnergyCost ?? 0, policy.annualSparePartsCost ?? 0, policy.annualFixedRawMaterialCost ?? 0, policy.annualFixedFactorySuppliesCost ?? 0, policy.annualFixedUtilitiesCost ?? 0, policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, policy.shortTermDepositSharePercent ?? 0, policy.shortTermDepositRatePercent ?? 0, utilization, salesFactor, opexFactor]
+  if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1).some(value => value < 0) || policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100 || (policy.shortTermDepositSharePercent ?? 0) > 100) return { rawMaterials: 0, factorySupplies: 0, utilities: 0, energy: 0, spareParts: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, shortTermDeposits: 0, payables: 0, netWorkingCapital: 0 }
   const day = (base: number, days: number, factor: number) => base * factor * Math.min(days, policy.dayBasis) / policy.dayBasis
   const activeFactor = utilization > 0 ? 1 : 0
   const fixedRawMaterials = Math.min(policy.annualRawMaterialCost, policy.annualFixedRawMaterialCost ?? 0)
   const variableRawMaterials = policy.annualRawMaterialCost - fixedRawMaterials
   const rawMaterials = day(variableRawMaterials, policy.rawMaterialDays, utilization * opexFactor)
     + day(fixedRawMaterials, policy.rawMaterialDays, activeFactor * opexFactor)
+  const fixedFactorySupplies = Math.min(policy.annualFactorySuppliesCost ?? 0, policy.annualFixedFactorySuppliesCost ?? 0)
+  const factorySupplies = day((policy.annualFactorySuppliesCost ?? 0) - fixedFactorySupplies, policy.factorySuppliesDays ?? 0, utilization * opexFactor)
+    + day(fixedFactorySupplies, policy.factorySuppliesDays ?? 0, activeFactor * opexFactor)
+  const fixedUtilities = Math.min(policy.annualUtilitiesCost ?? 0, policy.annualFixedUtilitiesCost ?? 0)
+  const utilities = day((policy.annualUtilitiesCost ?? 0) - fixedUtilities, policy.utilitiesDays ?? 0, utilization * opexFactor)
+    + day(fixedUtilities, policy.utilitiesDays ?? 0, activeFactor * opexFactor)
   const energy = day(policy.annualEnergyCost ?? 0, policy.energyDays ?? 0, utilization * opexFactor)
   const spareParts = day(policy.annualSparePartsCost ?? 0, policy.sparePartsDays ?? 0, utilization * opexFactor)
   const materialCompletion = policy.workInProgressMaterialCompletionPercent / 100
@@ -90,7 +104,7 @@ export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPoli
   const variablePayables = Math.max(0, (policy.annualPayablesCost ?? policy.annualRawMaterialCost) - fixedPayables)
   const payables = day(variablePayables, policy.payableDays, utilization * opexFactor)
     + day(fixedPayables, policy.payableDays, activeFactor * opexFactor)
-  return { rawMaterials, energy, spareParts, workInProgress, finishedGoods, receivables, minimumCash, shortTermDeposits, payables, netWorkingCapital: rawMaterials + energy + spareParts + workInProgress + finishedGoods + receivables + minimumCash - payables }
+  return { rawMaterials, factorySupplies, utilities, energy, spareParts, workInProgress, finishedGoods, receivables, minimumCash, shortTermDeposits, payables, netWorkingCapital: rawMaterials + factorySupplies + utilities + energy + spareParts + workInProgress + finishedGoods + receivables + minimumCash - payables }
 }
 
 /** COMFAR XI.O: interest on short-term deposits = cash-in-hand × invested share × annual rate × months / 12. */
@@ -1517,7 +1531,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     cumulativePreOperatingAssets += row.preOperatingCost + row.capitalizedInterest
     accumulatedDepreciation += row.depreciation
     cumulativeBookValueDisposed += (row.assetBookValueDisposed ?? 0) + (row.salvageBookValueDisposed ?? 0)
-    const currentAssets = row.workingCapitalBreakdown.rawMaterials + (row.workingCapitalBreakdown.energy ?? 0) +
+    const currentAssets = row.workingCapitalBreakdown.rawMaterials + (row.workingCapitalBreakdown.factorySupplies ?? 0) + (row.workingCapitalBreakdown.utilities ?? 0) + (row.workingCapitalBreakdown.energy ?? 0) +
       (row.workingCapitalBreakdown.spareParts ?? 0) + row.workingCapitalBreakdown.workInProgress +
       row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables +
       row.workingCapitalBreakdown.minimumCash
@@ -1596,6 +1610,8 @@ export function calculateSensitivityMatrix(input: IntegratedFinanceInput, priceC
       workingCapitalPolicy: input.workingCapitalPolicy ? {
         ...input.workingCapitalPolicy,
         annualRawMaterialCost: input.workingCapitalPolicy.annualRawMaterialCost * (1 + volumeChangePercent / 100),
+        annualFactorySuppliesCost: (input.workingCapitalPolicy.annualFactorySuppliesCost ?? 0) * (1 + volumeChangePercent / 100),
+        annualUtilitiesCost: (input.workingCapitalPolicy.annualUtilitiesCost ?? 0) * (1 + volumeChangePercent / 100),
         annualEnergyCost: (input.workingCapitalPolicy.annualEnergyCost ?? 0) * (1 + volumeChangePercent / 100),
         annualSparePartsCost: (input.workingCapitalPolicy.annualSparePartsCost ?? 0) * (1 + volumeChangePercent / 100),
         annualPayablesCost: (input.workingCapitalPolicy.annualPayablesCost ?? input.workingCapitalPolicy.annualRawMaterialCost) * (1 + volumeChangePercent / 100),
@@ -1624,6 +1640,8 @@ export function calculateFinancialScenarios(input: IntegratedFinanceInput) {
       workingCapitalPolicy: input.workingCapitalPolicy ? {
         ...input.workingCapitalPolicy,
         annualRawMaterialCost: input.workingCapitalPolicy.annualRawMaterialCost * variableCost * volume,
+        annualFactorySuppliesCost: (input.workingCapitalPolicy.annualFactorySuppliesCost ?? 0) * variableCost * volume,
+        annualUtilitiesCost: (input.workingCapitalPolicy.annualUtilitiesCost ?? 0) * variableCost * volume,
         annualEnergyCost: (input.workingCapitalPolicy.annualEnergyCost ?? 0) * variableCost * volume,
         annualSparePartsCost: (input.workingCapitalPolicy.annualSparePartsCost ?? 0) * variableCost * volume,
         annualPayablesCost: (input.workingCapitalPolicy.annualPayablesCost ?? input.workingCapitalPolicy.annualRawMaterialCost) * variableCost * volume,
