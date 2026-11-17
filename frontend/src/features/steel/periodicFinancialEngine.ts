@@ -56,6 +56,44 @@ export function calculatePeriodTax(
   return { taxableProfitAfterLoss, tax, closingLossCarryForward }
 }
 
+/** A progressive corporate-income-tax bracket as documented in COMFAR III. */
+export type PeriodTaxBracket = {
+  lowerLimit: number
+  upperLimit: number | null
+  ratePercent: number
+}
+
+/**
+ * Calculate tax after loss carry-forward using marginal tax brackets.
+ * Brackets must start at zero, be contiguous and increasing, and end with
+ * exactly one unlimited final bracket. This mirrors COMFAR's graduated scale.
+ */
+export function calculateGraduatedPeriodTax(
+  taxableProfitBeforeLoss: number,
+  openingLossCarryForward: number,
+  brackets: PeriodTaxBracket[],
+): PeriodTaxResult {
+  const base = calculatePeriodTax(taxableProfitBeforeLoss, 0, openingLossCarryForward)
+  const valid = Array.isArray(brackets) && brackets.length > 0 &&
+    brackets.every((bracket, index) =>
+      validFinite(bracket.lowerLimit) && bracket.lowerLimit >= 0 &&
+      (bracket.upperLimit === null || (validFinite(bracket.upperLimit) && bracket.upperLimit > bracket.lowerLimit)) &&
+      validFinite(bracket.ratePercent) && bracket.ratePercent >= 0 && bracket.ratePercent <= 100 &&
+      (index === 0 ? bracket.lowerLimit === 0 : bracket.lowerLimit === brackets[index - 1].upperLimit) &&
+      (index === brackets.length - 1 ? bracket.upperLimit === null : bracket.upperLimit !== null)
+    )
+  if (!valid || !validFinite(base.taxableProfitAfterLoss)) {
+    return { taxableProfitAfterLoss: Number.NaN, tax: Number.NaN, closingLossCarryForward: Number.NaN }
+  }
+  const taxable = Math.max(0, base.taxableProfitAfterLoss)
+  const tax = brackets.reduce((sum, bracket) => {
+    if (taxable <= bracket.lowerLimit) return sum
+    const upper = bracket.upperLimit === null ? taxable : Math.min(taxable, bracket.upperLimit)
+    return sum + Math.max(0, upper - bracket.lowerLimit) * bracket.ratePercent / 100
+  }, 0)
+  return { ...base, tax }
+}
+
 /**
  * Discount period cash flows using an effective annual rate and actual elapsed days.
  * The first period begins at t=0; mid-period timing discounts at the period midpoint.
@@ -600,6 +638,8 @@ export type PeriodicProjectFinanceInput = {
   annualMaintenanceCapex: number[]
   annualTaxRates: number[]
   taxRatesByPeriod?: number[]
+  /** Optional graduated tax scale; when present it overrides flat period rates. */
+  taxBrackets?: PeriodTaxBracket[]
   annualEquityContributions: number[]
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
@@ -900,6 +940,13 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Period-specific tax-rate schedule must contain one rate from 0% to 100% for every project period.')
     return empty()
   }
+  if (input.taxBrackets) {
+    const probe = calculateGraduatedPeriodTax(1, 0, input.taxBrackets)
+    if (!validFinite(probe.tax)) {
+      warnings.push('Graduated tax brackets must be contiguous, start at zero, use rates from 0% to 100%, and end with one unlimited bracket.')
+      return empty()
+    }
+  }
   const allocated = annualSeries.map(series => allocateAnnualFlowsToPeriods(series, periods, fiscalYearStartMonth))
   if (allocated.some(series => series.length !== periods.length || series.some(value => !validFinite(value)))) {
     warnings.push('Annual model horizon does not cover every project fiscal period; annual flows cannot be allocated.')
@@ -1035,8 +1082,12 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
     const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
-    const periodTax = calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
-    const unleveredPeriodTax = calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
+    const periodTax = input.taxBrackets
+      ? calculateGraduatedPeriodTax(ebit - interestExpense, taxLoss, input.taxBrackets)
+      : calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
+    const unleveredPeriodTax = input.taxBrackets
+      ? calculateGraduatedPeriodTax(ebit, unleveredTaxLoss, input.taxBrackets)
+      : calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
     if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
       warnings.push('Tax calculation failed in project period ' + (index + 1) + '.')
       return empty()
