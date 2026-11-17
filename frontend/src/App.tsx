@@ -154,13 +154,21 @@ export default function App() {
     void saveSettings(settings)
   }, [settings, ready])
 
-  const chart = useMemo(() => ({
-    tooltip: { trigger: 'axis' },
-    grid: { left: 12, right: 12, top: 24, bottom: 20, containLabel: true },
-    xAxis: { type: 'category', data: isEn ? ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'] : ['سال ۱', 'سال ۲', 'سال ۳', 'سال ۴', 'سال ۵'], axisLine: { lineStyle: { color: '#cbd5e1' } } },
-    yAxis: { type: 'value', axisLabel: { formatter: '{value}%' }, splitLine: { lineStyle: { color: '#edf0f4' } } },
-    series: [{ name: isEn ? 'Illustrative return' : 'بازده نمونه', type: 'line', smooth: true, data: [8, 12, 16, 19, 23], areaStyle: { opacity: .08 }, lineStyle: { width: 3 }, symbolSize: 8 }]
-  }), [isEn])
+  const chart = useMemo(() => {
+    const dark = settings.themeMode === 'dark' || (settings.themeMode === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches)
+    const axis = dark ? '#64748b' : '#cbd5e1'
+    const gridLine = dark ? '#334155' : '#edf0f4'
+    const label = dark ? '#cbd5e1' : '#64748b'
+    return {
+      backgroundColor: 'transparent',
+      textStyle: { color: label, fontFamily: 'inherit' },
+      tooltip: { trigger: 'axis', backgroundColor: dark ? '#1e293b' : '#ffffff', borderColor: dark ? '#475569' : '#e2e8f0', textStyle: { color: dark ? '#f1f5f9' : '#0f172a' } },
+      grid: { left: 12, right: 12, top: 24, bottom: 20, containLabel: true },
+      xAxis: { type: 'category', data: isEn ? ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'] : ['سال ۱', 'سال ۲', 'سال ۳', 'سال ۴', 'سال ۵'], axisLabel: { color: label }, axisLine: { lineStyle: { color: axis } }, axisTick: { lineStyle: { color: axis } } },
+      yAxis: { type: 'value', axisLabel: { formatter: '{value}%', color: label }, axisLine: { lineStyle: { color: axis } }, splitLine: { lineStyle: { color: gridLine } } },
+      series: [{ name: isEn ? 'Illustrative return' : 'بازده نمونه', type: 'line', smooth: true, data: [8, 12, 16, 19, 23], areaStyle: { opacity: .08 }, lineStyle: { width: 3 }, itemStyle: { color: dark ? '#38bdf8' : '#0ea5e9' }, symbolSize: 8, emphasis: { focus: 'series', scale: 1.4 } }]
+    }
+  }, [isEn, settings.themeMode])
 
   const normalizedCommandQuery = commandQuery.trim().toLocaleLowerCase()
   const commandItems = [
