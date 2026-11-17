@@ -23,6 +23,9 @@ f('name','نام محصول','Product name'),f('unit','واحد','Unit'),f('actu
 s('currencies','ارزها و نرخ تبدیل','Currencies and exchange rates','project',true,'VII.I; XI.A',[
 f('code','کد ارز','Currency code'),f('name','نام ارز','Currency name'),f('type','نوع ارز','Currency type','select',['local','foreign']),f('accountingCurrency','ارز حسابداری','Accounting currency','boolean'),f('accountingUnit','واحد گزارش','Accounting unit','select',['absolute','thousands','millions']),f('effectiveDate','تاریخ اثر نرخ','Exchange-rate date','date'),f('exchangeRate','نرخ تبدیل به ارز محلی','Rate to local currency','number'),f('referenceCurrency','ارز مرجع اطلاعاتی','Reference currency','boolean')
 ]),
+s('currency-rates','نرخ‌های تبدیل ارز به تفکیک دوره','Period-specific currency exchange rates','project',true,'VII.I; XI.A',[
+f('currencyCode','کد ارز','Currency code'),f('period','دوره مالی','Financial period'),f('effectiveDate','تاریخ اثر نرخ','Rate effective date','date'),f('exchangeRate','نرخ تبدیل به ارز محلی','Rate to local currency','number')
+]),
 s('inflation','تورم و شاخص قیمت ارزها','Inflation and currency price indices','project',true,'VII.K; XI.A, XI.C',[
 f('currencyCode','ارز','Currency'),f('period','دوره','Period'),f('effectiveDate','تاریخ اثر','Effective date','date'),f('inflationPercent','نرخ تورم','Inflation rate','percent'),f('priceIndex','شاخص قیمت','Price index','number')
 ]),
@@ -124,6 +127,7 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
     'planning-horizon':['periodStart','periodEnd','frequency'],
     products:['name','unit'],
     currencies:['code','name','type'],
+    'currency-rates':['currencyCode','period','exchangeRate'],
     'cost-centres':['name','group'],
     'cost-allocation':['name','type','costCentreId','allocationPercent'],
     'joint-venture':['name','type'],
@@ -453,6 +457,19 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
    if(typeof raw==='string'&&raw.trim()&&!currencyCodes.includes(raw.trim().toUpperCase()))
     errors.push(sectionId+':'+index+':unknown-currency-reference:'+raw)
   }
+ }
+ const currencyRateRows=value.sections?.['currency-rates']??[]
+ const currencyRateKeys=currencyRateRows.map(row=>[row.values.currencyCode,row.values.period].join('|'))
+ if(new Set(currencyRateKeys).size!==currencyRateKeys.length)errors.push('currency-rates:duplicate-currency-period')
+ for(const [index,row] of currencyRateRows.entries()){
+  const code=typeof row.values.currencyCode==='string'?row.values.currencyCode.trim().toUpperCase():''
+  const period=typeof row.values.period==='string'?row.values.period.trim():''
+  const rate=row.values.exchangeRate
+  if(code&&!currencyCodes.includes(code))errors.push('currency-rates:'+index+':unknown-currency:'+code)
+  if(typeof rate!=='number'||!Number.isFinite(rate)||rate<=0)errors.push('currency-rates:'+index+':invalid-exchange-rate')
+  if(code&&currencyRows.some(currency=>String(currency.values.code??'').trim().toUpperCase()===code&&currency.values.type==='local')&&
+    typeof rate==='number'&&Math.abs(rate-1)>1e-10)errors.push('currency-rates:'+index+':local-currency-rate-must-equal-one')
+  if(!period)errors.push('currency-rates:'+index+':period-required')
  }
  const taxBrackets=value.sections?.['tax-brackets']??[]
  const taxByPeriod=new Map<string,typeof taxBrackets>()
