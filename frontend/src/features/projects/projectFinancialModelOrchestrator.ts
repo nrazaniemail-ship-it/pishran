@@ -154,7 +154,7 @@ export function calculateProjectFinancialModelFromDrafts(
   input:ProjectFinancialModelOrchestrationInput,
 ):ProjectFinancialModelOrchestrationResult {
   let finance=input.finance
-  const foundationBinding=bindHelpDrivenFoundation(input.foundation,input.drafts.helpDriven,input.finance.periods)
+  const foundationBinding=bindHelpDrivenFoundation(input.foundation,effectiveDrafts.helpDriven,input.finance.periods)
   if(foundationBinding.issues.length)return {valid:false,issues:foundationBinding.issues,financeInput:null,productionSales:null,workingCapital:null,fixedAssets:null,finalRun:null}
   const effectiveFoundation=foundationBinding.foundation
   let productionSales:ProductionSalesInventorySchedule|null=null
