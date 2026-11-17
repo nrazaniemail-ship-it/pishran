@@ -5,7 +5,7 @@ import type { FeasibilityProject } from '../../core/projects/projectRepository'
 import { calculateNpv as npv, calculateIrr as irr, calculateMirr as mirr, buildComfarDepreciationAssetsFromFixedInvestmentItems, reconcileFixedInvestmentRegister, type IntegratedFinanceResult, type ComfarDepreciationAssetInput, type ComfarAssetSaleInput } from '../steel/financialModel'
 import AdvancedFinancePanel from './AdvancedFinancePanel'
 import type { OneWaySensitivityAnalysis, SensitivityCell } from '../steel/financialModel'
-import type { PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
+import type { PeriodicProjectFinanceResult, PeriodicFinancialScenarioSet, PeriodicSensitivityCell } from '../steel/periodicFinancialEngine'
 import type { PartnerFinanceResult } from './partnerFinance'
 import ExpansionRehabilitationPanel from './ExpansionRehabilitationPanel'
 import ProjectFoundationPanel from './ProjectFoundationPanel'
@@ -281,8 +281,8 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  Object.assign(routeEn,routeEnExtra);
 
  const key='feasibility:project:'+project.id+':v1'
- const handleScenarioAnalysis=useCallback((matrix:SensitivityCell[][],scenarios:ReturnType<typeof import('../steel/financialModel').calculateFinancialScenarios>)=>{setReportScenarioMatrix(matrix);setReportScenarios(scenarios)},[])
- const [m,setM]=useState<Model>(()=>baseModel(project)),[step,setStep]=useState<Step>('profile'),[loaded,setLoaded]=useState(false),[saved,setSaved]=useState(''),[integratedFinanceResult,setIntegratedFinanceResult]=useState<IntegratedFinanceResult|null>(null),[reportSensitivity,setReportSensitivity]=useState<OneWaySensitivityAnalysis|null>(null),[reportScenarioMatrix,setReportScenarioMatrix]=useState<SensitivityCell[][]>([]),[reportScenarios,setReportScenarios]=useState<ReturnType<typeof import('../steel/financialModel').calculateFinancialScenarios>|null>(null),[reportPeriodicFinance,setReportPeriodicFinance]=useState<PeriodicProjectFinanceResult|null>(null),[reportPartnerFinance,setReportPartnerFinance]=useState<PartnerFinanceResult|null>(null),[startingBalances,setStartingBalances]=useState<StartingFinancialBalanceSummary>(blankStartingBalanceSummary)
+ const handleScenarioAnalysis=useCallback((matrix:PeriodicSensitivityCell[][],scenarios:PeriodicFinancialScenarioSet|null)=>{setReportScenarioMatrix(matrix);setReportScenarios(scenarios)},[])
+ const [m,setM]=useState<Model>(()=>baseModel(project)),[step,setStep]=useState<Step>('profile'),[loaded,setLoaded]=useState(false),[saved,setSaved]=useState(''),[integratedFinanceResult,setIntegratedFinanceResult]=useState<IntegratedFinanceResult|null>(null),[reportSensitivity,setReportSensitivity]=useState<OneWaySensitivityAnalysis|null>(null),[reportScenarioMatrix,setReportScenarioMatrix]=useState<SensitivityCell[][]>([]),[reportScenarios,setReportScenarios]=useState<PeriodicFinancialScenarioSet|null>(null),[reportPeriodicFinance,setReportPeriodicFinance]=useState<PeriodicProjectFinanceResult|null>(null),[reportPartnerFinance,setReportPartnerFinance]=useState<PartnerFinanceResult|null>(null),[startingBalances,setStartingBalances]=useState<StartingFinancialBalanceSummary>(blankStartingBalanceSummary)
  const handleStartingAssetsChange=useCallback((assets:StartingFixedAssetBalance[])=>setM(current=>JSON.stringify(current.startingFixedAssets)===JSON.stringify(assets)?current:{...current,startingFixedAssets:assets}),[])
  const handleStartingBalancesChange=useCallback((balances:StartingFinancialBalanceSummary)=>setStartingBalances(current=>JSON.stringify(current)===JSON.stringify(balances)?current:balances),[])
   const isRawTemplate=project.templateId==='raw'||project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
