@@ -129,7 +129,6 @@ Reference Manual فصل VI ساختار درختی پروژه را بر اساس
 | Tomato Canning | Industrial، Opportunity Study، Financial Analysis، یک محصول، Sales Programme، Working Capital، وام، Net Income Statement، Cash Flow for Financial Planning، Discounted Cash Flow، NPV/NPVR/IRR/MIRR، Break-even، Balance Sheet، Ratios |
 | Growmania Garments | Opportunity Study، Cost Allocation، Joint-venture Project، Value-added Analysis، پروژه چندمحصولی، تحلیل هزینه و تخصیص |
 | Sahara Textile Mills | Feasibility Study، Joint-venture Project، Cost Centre Analysis، Cost Allocation، Economic Analysis، Foreign Exchange Effect، Employment Effects، چند محصول و برنامه تفصیلی |
-| HRCR200 / نورد گرم کلاف | آزمون تطبیق صنعتی واقعی بر مبنای CAPEX/OPEX/Marketing و خروجی مالی مرجع |
 | توسعه/بازسازی کارخانه موجود | آزمون مستقل با Starting Balances، دارایی ثابت و بدهی موجود، Without/With Project و Incremental Analysis |
 
 ## 9. Technical Manual: الزامات محصول و استقرار
