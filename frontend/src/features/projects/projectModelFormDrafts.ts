@@ -62,7 +62,7 @@ export function resolveLoanFeeBasis(type:LoanFeeType):LoanFeeBasis{
  return 'total-loan-at-first-disbursement'
 }
 export type LoanFacilityFormDraft={
- id:string; name:string; currencyCode:string|null; facilityLimit?:number|null; openingForeignBalance?:number|null; openingExchangeRateToLocal?:number|null; marketOrigin:'local'|'foreign'|null
+ id:string; name:string; currencyCode:string|null; facilityLimit?:number|null; openingLocalBalance?:number|null; openingForeignBalance?:number|null; openingExchangeRateToLocal?:number|null; marketOrigin:'local'|'foreign'|null
  loanType:'annuity'|'constant-principal'|'profile'|null
  repaymentInterval:'annual'|'semiannual'|'quarterly'|'monthly'|null
  firstRepaymentDate:string; graceMonths:number|null; numberOfRepayments:number|null
@@ -74,7 +74,7 @@ export type LoanFacilityFormDraft={
  fees:{id:string;type:LoanFeeType|null;ratePercent:number|null;currencyCode:string|null;paymentDate?:string;treatment?:'expense'|'capitalize'|null}[]
 }
 export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{return{
- id,name:'',currencyCode:null,facilityLimit:null,openingForeignBalance:null,openingExchangeRateToLocal:null,marketOrigin:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',graceMonths:null,numberOfRepayments:null,
+ id,name:'',currencyCode:null,facilityLimit:null,openingLocalBalance:null,openingForeignBalance:null,openingExchangeRateToLocal:null,marketOrigin:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',graceMonths:null,numberOfRepayments:null,
  disbursements:[],profileMovements:[],interestRateChanges:[],interestPaymentMonth:null,
  capitalizedInterestPercent:null,capitalizeUntilDate:'',fees:[]
 }}
@@ -164,7 +164,10 @@ export function validateFixedAssetFormDraft(value:FixedAssetFormDraft):string[]{
 export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):string[]{
  const errors:string[]=[]
  if(value.facilityLimit!==undefined&&value.facilityLimit!==null&&(!Number.isFinite(value.facilityLimit)||value.facilityLimit<=0))errors.push('invalid-facility-limit')
+ if(value.openingLocalBalance!=null&&(!Number.isFinite(value.openingLocalBalance)||value.openingLocalBalance<0))errors.push('invalid-opening-local-balance')
  if(value.openingForeignBalance!=null&&(!Number.isFinite(value.openingForeignBalance)||value.openingForeignBalance<0))errors.push('invalid-opening-foreign-balance')
+ if(value.marketOrigin==='foreign'&&(value.openingLocalBalance??0)>0)errors.push('foreign-facility-cannot-use-opening-local-balance')
+ if(value.marketOrigin==='local'&&(value.openingForeignBalance??0)>0)errors.push('local-facility-cannot-use-opening-foreign-balance')
  if(value.openingForeignBalance!=null&&value.openingForeignBalance>0&&(!Number.isFinite(value.openingExchangeRateToLocal)||!value.openingExchangeRateToLocal||value.openingExchangeRateToLocal<=0))errors.push('opening-foreign-debt-requires-opening-exchange-rate')
  if(value.loanType==='profile'&&value.numberOfRepayments!==null)errors.push('profile-loan-uses-dated-movements')
  if(value.graceMonths===null||!Number.isInteger(value.graceMonths)||value.graceMonths<0)errors.push('loan-grace-period-months-required-or-invalid')
