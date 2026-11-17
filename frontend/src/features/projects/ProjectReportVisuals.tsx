@@ -104,6 +104,7 @@ function FormRowsTable({title,rows,language,kind='cost'}:{title:string;rows:Repo
     </select>
     <button type="button" className="secondary-button" onClick={()=>setDirectionSort(value=>value==='asc'?'desc':'asc')} aria-label={t('تغییر جهت مرتب‌سازی','Reverse sort direction',language)}>{directionSort==='asc'?'↑':'↓'}</button>
     <button type="button" className="secondary-button report-export-button" onClick={exportCsv}>{t('خروجی Excel (CSV)','Export Excel (CSV)',language)}</button>
+    <button type="button" className="secondary-button report-print-button" onClick={()=>window.print()}>{t('چاپ / PDF','Print / PDF',language)}</button>
   </div></div><div className="report-table-scroll" style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
     <th>{t('قلم / پارامتر','Item / Parameter',language)}</th><th>{t('مقدار / مشخصه','Quantity / Value',language)}</th><th>{t('واحد','Unit',language)}</th><th>{t('قیمت واحد','Unit price',language)}</th><th>{t('جمع','Total',language)}</th><th>{t('منبع','Source',language)}</th>{kind==='material'&&<th>{t('جهت جریان','Flow direction',language)}</th>}
   </tr></thead><tbody>{visibleRows.map(row=><tr key={row.id}>
