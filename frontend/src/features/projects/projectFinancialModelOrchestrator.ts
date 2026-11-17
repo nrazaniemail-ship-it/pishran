@@ -156,7 +156,7 @@ export function calculateProjectFinancialModelFromDrafts(
 ):ProjectFinancialModelOrchestrationResult {
   const draftBinding=bindHelpDrivenFinancialDrafts(input.drafts.helpDriven,input.finance.periods,{
     assets:input.drafts.assets,productionCosts:input.drafts.productionCosts,
-    sales:input.drafts.sales,workingCapital:input.drafts.workingCapital,
+    sales:input.drafts.sales,workingCapital:input.drafts.workingCapital,loans:input.drafts.loans,
   })
   if(draftBinding.issues.length)return {valid:false,issues:draftBinding.issues,financeInput:null,productionSales:null,workingCapital:null,fixedAssets:null,finalRun:null}
   const effectiveDrafts={...input.drafts,...draftBinding.drafts}
