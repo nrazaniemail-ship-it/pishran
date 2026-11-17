@@ -71,6 +71,9 @@ try {
  const duplicateSales={...complete,sales:[{productId:'p1',periods:[{period:'2027-01-01',salesQuantity:null,netUnitPrice:null,salesTaxPercent:null,subsidyPercent:null,subsidyAmount:null,finishedGoodsClosingQuantity:null},{period:'2027-01-01',salesQuantity:null,netUnitPrice:null,salesTaxPercent:null,subsidyPercent:null,subsidyAmount:null,finishedGoodsClosingQuantity:null}]}]}
  assert.ok(forms.validateProjectModelCrossReferences(duplicateSales).includes('sales-0:duplicate-period-key'))
  assert.deepEqual(forms.validateProjectModelCrossReferences(complete),[])
+ const staleSalesProduct={...complete,sales:[{productId:'deleted-product',periods:[]}]}
+ assert.ok(forms.validateProjectModelCrossReferences(staleSalesProduct,['current-product']).includes('sales-0:unknown-product-reference'))
+ assert.ok(forms.validateProjectModelFinancialFormDrafts(staleSalesProduct,['current-product']).includes('sales-0:unknown-product-reference'))
 
  const wizardSource=await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx',import.meta.url),'utf8')
  const projectViewSource=await readFile(new URL('../src/features/projects/ProjectsView.tsx',import.meta.url),'utf8')
@@ -87,6 +90,8 @@ try {
  assert.match(advancedFinanceSource,/assets:blank\?\[\]:/,'Raw finance schedules must start without seeded depreciation assets')
  assert.match(advancedFinanceSource,/taxRates:Array\(years\)\.fill\(blank\?unset:props\.taxRate\)/,'Raw finance tax assumptions must remain unset')
  assert.match(advancedFinanceSource,/annualRate:props\.blankStart\?Number\.NaN:20/,'New raw loan rates must remain blank rather than defaulting to 20 percent')
+ assert.match(advancedFinanceSource,/projectProductIds:props\.products\?\.map\(product=>product\.id\)/,'Financial orchestration must validate sales and cost references against the project product register')
+ assert.match(financialFormsPanelSource,/validateProjectModelFinancialFormDrafts\(value,products\.map\(product=>product\.id\)\)/,'The financial forms panel must validate product references against current project products')
  assert.match(wizardSource,/rampReady=m\.capacity\.ramp\.length===Math\.ceil\(m\.project\.operatingYears\)/,'Raw capacity must require an explicit ramp-up value for every operating year')
  assert.match(wizardSource,/projectClassificationReady=m\.analysisMode==='new'/,'Raw model calculations must require an explicit new-project or existing-project classification')
  assert.match(wizardSource,/salesReady=m\.financialForms\.sales\.length>0/,'Raw financial calculations must require period-based sales schedules')
