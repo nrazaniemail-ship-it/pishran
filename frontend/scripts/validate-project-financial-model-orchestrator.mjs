@@ -556,7 +556,7 @@ let targetSensitivityHelp=helpForms.createBlankHelpDrivenProjectForms()
 targetSensitivityHelp=helpForms.addHelpFormRow(targetSensitivityHelp,'sensitivity','target-npv-a')
 for(const [key,value] of Object.entries({
  analysisType:'desired-npv',variableGroup:'sales-revenues',variableId:'total-revenue',targetNpv:result.finalRun.finance.npvProject,
- maxIncrease:10,maxDecrease:10,order:1,
+ maxIncrease:10,maxDecrease:10,order:1,chartVariable:'Revenue sensitivity chart',
 })) targetSensitivityHelp=helpForms.updateHelpFormRow(targetSensitivityHelp,'sensitivity','target-npv-a',key,value)
 const targetSensitivityModel=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,helpDriven:targetSensitivityHelp},foundation,productionStartDate:'2025-01-01',
@@ -567,6 +567,7 @@ assert.equal(targetSensitivityModel.valid,true,targetSensitivityModel.issues.joi
 assert.equal(targetSensitivityModel.sensitivitySearches.length,1)
 assert.equal(targetSensitivityModel.sensitivitySearches[0].result.achieved,true)
 assert.equal(targetSensitivityModel.sensitivitySearches[0].result.iterations,0)
+assert.equal(targetSensitivityModel.sensitivitySearches[0].alternative,'Revenue sensitivity chart')
 let unsupportedSensitivityHelp=helpForms.createBlankHelpDrivenProjectForms()
 unsupportedSensitivityHelp=helpForms.addHelpFormRow(unsupportedSensitivityHelp,'sensitivity','global-sensitivity-a')
 for(const [key,value] of Object.entries({
