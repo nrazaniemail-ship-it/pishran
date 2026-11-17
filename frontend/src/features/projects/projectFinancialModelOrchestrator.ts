@@ -77,9 +77,9 @@ export function bindHelpDrivenFoundation(
     }
     const indices=[...groups.entries()].map(([code,group])=>{
       const sorted=[...group].sort((a,b)=>{
-        const ai=resolvePeriod(String(a.values.period??'').trim())??''
-        const bi=resolvePeriod(String(b.values.period??'').trim())??''
-        return ai.localeCompare(bi)
+        const ai=resolvePeriod(String(a.values.period??'').trim())
+        const bi=resolvePeriod(String(b.values.period??'').trim())
+        return (ai===null?Number.POSITIVE_INFINITY:Number(ai))-(bi===null?Number.POSITIVE_INFINITY:Number(bi))
       })
       let previousIndex:number|null=null
       const rates=sorted.map(row=>{
