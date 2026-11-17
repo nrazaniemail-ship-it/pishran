@@ -88,7 +88,7 @@ for(const [id,key,value] of [
 }
 for(const [id,key,value] of [
  ['cost-a','item','Generic direct cost'],['cost-a','classification','direct'],['cost-a','productId','product-a'],
- ['cost-a','basis','nominal-capacity'],['cost-a','standardQuantity',1],['cost-a','standardUnitPrice',2],
+ ['cost-a','basis','nominal-capacity'],['cost-a','activityBasis','production'],['cost-a','standardQuantity',1],['cost-a','standardUnitPrice',2],
  ['cost-a','nominalCapacity',100],['cost-a','fixedPercent',20],['cost-a','variablePercent',80],
 ]){
  if(!rawHelp.sections['production-costs'].some(row=>row.id===id))rawHelp=helpForms.addHelpFormRow(rawHelp,'production-costs',id)
