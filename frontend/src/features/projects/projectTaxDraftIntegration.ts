@@ -12,6 +12,7 @@ export type ProjectTaxDraftSchedule = {
   taxLossCarryForwardYears:number|null
   openingTaxLoss:number
   openingTaxLossVintages:TaxLossVintage[]
+  taxableDeductionsByPeriod:number[]
 }
 
 /** Resolve explicit tax-form rates and opening loss vintages onto the exact project calendar. */
@@ -26,13 +27,11 @@ export function buildProjectTaxDraftSchedule(
   const fiscalYearCount=periods.length
     ?Math.max(...periods.map(period=>fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)))+1:0
   const empty:ProjectTaxDraftSchedule={active,valid:false,issues,annualTaxRates:[],taxRatesByPeriod:[],
-    taxLossCarryForwardEnabled:false,taxLossCarryForwardYears:null,openingTaxLoss:0,openingTaxLossVintages:[]}
+    taxLossCarryForwardEnabled:false,taxLossCarryForwardYears:null,openingTaxLoss:0,openingTaxLossVintages:[],taxableDeductionsByPeriod:[]}
   if(!active)return {...empty,valid:true,annualTaxRates:[],taxRatesByPeriod:[]}
   if(!periods.length||!Number.isInteger(fiscalYearStartMonth)||fiscalYearStartMonth<1||fiscalYearStartMonth>12)
     issues.push('A valid project calendar and fiscal-year start month are required for detailed taxation.')
   if(draft.system===null)issues.push('Select the project tax system before entering tax rates.')
-  if(draft.allowances.some(item=>item.name.trim()||item.periodAmounts.length))
-    issues.push('Tax allowances and deductions are not yet posted to taxable profit; remove or complete their integration before using this tax schedule.')
   let taxRatesByPeriod:number[]=[]
   if(draft.system==='none'){
     if(draft.rates.length)issues.push('A tax-free project cannot also contain taxable-rate rows.')
@@ -68,6 +67,33 @@ export function buildProjectTaxDraftSchedule(
   } else if(draft.lossCarryForward&&(!Number.isInteger(draft.lossCarryForwardYears)||!draft.lossCarryForwardYears||draft.lossCarryForwardYears<1)) {
     issues.push('A positive carry-forward duration in years is required when tax-loss carry-forward is enabled.')
   }
+  const taxableDeductionsByPeriod=Array(periods.length).fill(0) as number[]
+  for(const allowance of draft.allowances){
+    if(!allowance.name.trim())issues.push('Every tax allowance requires a description.')
+    if(allowance.treatment!=='deduction'){
+      issues.push('Tax allowance '+allowance.name+' must be classified as a taxable-income deduction; tax credits require a separate tax-credit posting.')
+      continue
+    }
+    const amounts=new Map<number,number>()
+    for(const item of allowance.periodAmounts){
+      const matches:number[]=[]
+      periods.forEach((period,index)=>{
+        if(item.period===String(index+1)||item.period===String(period.index)||
+          item.period===period.startDate||item.period===period.endDate||
+          (item.period.length===7&&item.period===period.startDate.slice(0,7)&&item.period===period.endDate.slice(0,7)))
+          matches.push(index)
+      })
+      if(matches.length!==1){issues.push('Tax allowance '+allowance.name+' has an unknown or ambiguous period: '+item.period);continue}
+      const index=matches[0]
+      if(amounts.has(index)){issues.push('Tax allowance '+allowance.name+' has a duplicate amount for period '+(index+1)+'.');continue}
+      if(item.amount===null||!Number.isFinite(item.amount)||item.amount<0){issues.push('Tax allowance '+allowance.name+' requires a non-negative explicit amount for period '+(index+1)+'.');continue}
+      amounts.set(index,item.amount)
+    }
+    for(let index=0;index<periods.length;index++){
+      if(!amounts.has(index)){issues.push('Tax allowance '+allowance.name+' is missing an explicit amount for period '+(index+1)+'.');continue}
+      taxableDeductionsByPeriod[index]+=amounts.get(index) as number
+    }
+  }
   const openingTaxLossVintages:TaxLossVintage[]=[]
   for(const [index,item] of draft.openingLossVintages.entries()){
     if(item.amount===null||!Number.isFinite(item.amount)||item.amount<=0||
@@ -93,5 +119,5 @@ export function buildProjectTaxDraftSchedule(
   return {active:true,valid:true,issues:[],annualTaxRates,taxRatesByPeriod,
     taxLossCarryForwardEnabled:draft.system==='none'?false:draft.lossCarryForward===true,
     taxLossCarryForwardYears:draft.lossCarryForward===true?draft.lossCarryForwardYears:null,
-    openingTaxLoss:openingTaxLossVintages.reduce((sum,item)=>sum+item.amount,0),openingTaxLossVintages}
+    openingTaxLoss:openingTaxLossVintages.reduce((sum,item)=>sum+item.amount,0),openingTaxLossVintages,taxableDeductionsByPeriod}
 }
