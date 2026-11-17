@@ -589,6 +589,13 @@ const conflictingWorkingCapital=startingBalanceAdapter.bindStartingBalancesToPer
 })
 assert.equal(conflictingWorkingCapital.valid,false)
 assert.ok(conflictingWorkingCapital.issues.some(issue=>issue.includes('does not reconcile to the previously bound working-capital opening balance')))
+const unsupportedDeferredAsset=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
+ rows:[{id:'deferred-asset',values:{category:'deferred-pre-operating-assets',item:'Unamortized startup cost',currency:'EUR',origin:'local',amount:10}}],
+ periods,finance,currencies:foundation.currencies,
+})
+assert.equal(unsupportedDeferredAsset.valid,false)
+assert.ok(unsupportedDeferredAsset.issues.some(issue=>issue.includes('amortization schedule')))
+
 const unsupportedExistingAsset=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
  rows:[{id:'unsupported-depreciation',values:{category:'fixed-assets',item:'Machine',currency:'EUR',origin:'local',amount:100,depreciationMethod:'accelerated-declining-balance',remainingLife:5}}],
  periods,finance,currencies:foundation.currencies,
