@@ -15,6 +15,7 @@ export type ShareholderDistributionPeriod = {
   preferredAllocations: {shareholderClass:string;amount:number}[]
   capitalRefund: number
   terminalNetWorthDistribution: number
+  terminalDividend: number
   closingRetainedEarnings: number
   closingPaidInCapital: number
   closingCash: number
@@ -249,7 +250,7 @@ export function applyShareholderDistributions(
     updatedFinance.rows[i]={...row,equityFreeCashFlow:row.equityFreeCashFlow-totalOutflow}
     periods.push({period:row.period,openingDistributableProfit,netIncome,profitAvailable,
       retainedProfit:profitAvailable*retainedPercent/100,preferredDividend,ordinaryDividend,totalDividend:totalDividendWithTerminal,
-      repatriatedDividend,ordinaryAllocations,preferredAllocations,capitalRefund,terminalNetWorthDistribution,closingRetainedEarnings,closingPaidInCapital,closingCash})
+      repatriatedDividend,ordinaryAllocations,preferredAllocations,capitalRefund,terminalNetWorthDistribution,terminalDividend,closingRetainedEarnings,closingPaidInCapital,closingCash})
     totalDividends+=totalDividendWithTerminal;totalCapitalRefund+=capitalRefund;totalRepatriatedDividend+=repatriatedDividend
     priorRefunds+=capitalRefund;retained=closingRetainedEarnings;paidIn=closingPaidInCapital
     for(const [partnerKey,schedule] of partnerContributions){partnerCapitalBalances.set(partnerKey,(partnerCapitalBalances.get(partnerKey)??0)+(schedule.get(i)??0))}
