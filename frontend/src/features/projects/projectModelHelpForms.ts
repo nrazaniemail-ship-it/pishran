@@ -160,7 +160,8 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
     const v=row.values?.[field.key]
     if(v===undefined){errors.push(section.id+':'+i+':missing-field:'+field.key);continue}
     if((field.type==='number'||field.type==='percent')&&v!==null&&v!==''&&(typeof v!=='number'||!Number.isFinite(v)))errors.push(section.id+':'+i+':invalid-number:'+field.key)
-    if(field.type==='percent'&&typeof v==='number'&&(v<0||v>100))errors.push(section.id+':'+i+':percent-out-of-range:'+field.key)
+    const minimumPercent=section.id==='inflation'&&field.key==='inflationPercent'?-100:0
+    if(field.type==='percent'&&typeof v==='number'&&(v<minimumPercent||v>100))errors.push(section.id+':'+i+':percent-out-of-range:'+field.key)
     if(field.type==='select'&&v!==null&&v!==''&&field.options&&!field.options.includes(String(v)))errors.push(section.id+':'+i+':invalid-option:'+field.key)
     if(field.type==='date'&&typeof v==='string'&&v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))errors.push(section.id+':'+i+':invalid-date:'+field.key)
     if(field.type==='date'&&typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)){
@@ -471,6 +472,17 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
   if(code&&currencyRows.some(currency=>String(currency.values.code??'').trim().toUpperCase()===code&&currency.values.type==='local')&&
     typeof rate==='number'&&Math.abs(rate-1)>1e-10)errors.push('currency-rates:'+index+':local-currency-rate-must-equal-one')
   if(!period)errors.push('currency-rates:'+index+':period-required')
+ }
+ const inflationRows=value.sections?.['inflation']??[]
+ const inflationKeys=inflationRows.map(row=>[row.values.currencyCode,row.values.period].join('|'))
+ if(new Set(inflationKeys).size!==inflationKeys.length)errors.push('inflation:duplicate-currency-period')
+ for(const [index,row] of inflationRows.entries()){
+  const code=typeof row.values.currencyCode==='string'?row.values.currencyCode.trim().toUpperCase():''
+  if(code&&!currencyCodes.includes(code))errors.push('inflation:'+index+':unknown-currency:'+code)
+  if(typeof row.values.priceIndex==='number'&&(!Number.isFinite(row.values.priceIndex)||row.values.priceIndex<=0))
+   errors.push('inflation:'+index+':invalid-price-index')
+  if(typeof row.values.inflationPercent==='number'&&(!Number.isFinite(row.values.inflationPercent)||row.values.inflationPercent<=-100||row.values.inflationPercent>100))
+   errors.push('inflation:'+index+':invalid-inflation-rate')
  }
  const taxBrackets=value.sections?.['tax-brackets']??[]
  const taxByPeriod=new Map<string,typeof taxBrackets>()
