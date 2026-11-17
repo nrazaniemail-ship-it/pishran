@@ -82,6 +82,9 @@ export default function App() {
   const [commandQuery, setCommandQuery] = useState('')
   const [focusMode, setFocusMode] = useState(false)
   const [inspectorOpen, setInspectorOpen] = useState(true)
+  const [treeQuery, setTreeQuery] = useState('')
+  const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null)
+  const [contextProjectId, setContextProjectId] = useState<string | null>(null)
   const isEn = settings.language === 'en'
   const toggleLanguage = () => setSettings(current => ({ ...current, language: current.language === 'fa' ? 'en' : 'fa' }))
   const modern = settings.uiMode === 'modern'
@@ -176,8 +179,13 @@ export default function App() {
       <nav className="modern-side-nav">{navigation.map(item => <button key={item.id} className={page === item.id || (item.id === 'steel-group' && page === 'hot-rolling') ? 'active' : ''} onClick={() => setPage(item.id)}><item.icon size={17}/><span>{item.label}</span></button>)}</nav>
       <div className="modern-side-label">{isEn ? 'PROJECT BROWSER' : 'مرورگر پروژه‌ها'}</div>
       <div className="modern-project-tree"><div className="tree-root"><FolderKanban size={15}/><b>{isEn ? 'My projects' : 'پروژه‌های من'}</b><span>{projects.length}</span></div>
-        {projects.slice(0, 12).map(project => <button key={project.id} className={activeProject?.id === project.id ? 'selected' : ''} onClick={() => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard') }}><span className="tree-status"/><span>{project.name}</span></button>)}
+        <input className="tree-search-input" value={treeQuery} onChange={event => setTreeQuery(event.target.value)} placeholder={isEn ? 'Filter projects...' : 'جستجوی پروژه‌ها...'} aria-label={isEn ? 'Filter projects' : 'جستجوی پروژه‌ها'}/>
+        {projects.filter(project => project.name.toLocaleLowerCase().includes(treeQuery.trim().toLocaleLowerCase())).slice(0, 30).map(project => <div key={project.id} className="tree-project-wrap" draggable onDragStart={() => setDraggedProjectId(project.id)} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (!draggedProjectId || draggedProjectId === project.id) return; setProjects(current => { const next=[...current]; const from=next.findIndex(item=>item.id===draggedProjectId); const to=next.findIndex(item=>item.id===project.id); if(from<0||to<0)return current; const [moved]=next.splice(from,1); next.splice(to,0,moved); return next }); setDraggedProjectId(null) }} onDragEnd={() => setDraggedProjectId(null)}>
+          <button className={activeProject?.id === project.id ? 'selected' : ''} onContextMenu={event => { event.preventDefault(); setContextProjectId(contextProjectId === project.id ? null : project.id) }} onClick={() => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard'); setContextProjectId(null) }}><span className="tree-status"/><span>{project.name}</span><span className="tree-grip">⠿</span></button>
+          {contextProjectId === project.id && <div className="tree-context-menu"><button onClick={() => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard'); setContextProjectId(null) }}>{isEn ? 'Open project' : 'بازکردن پروژه'}</button><button onClick={() => { setPage('projects'); setContextProjectId(null) }}>{isEn ? 'Project list' : 'فهرست پروژه‌ها'}</button></div>}
+        </div>)}
         {projects.length === 0 && <small className="tree-empty">{isEn ? 'No projects yet' : 'هنوز پروژه‌ای ثبت نشده است'}</small>}
+        {projects.length > 0 && !projects.some(project => project.name.toLocaleLowerCase().includes(treeQuery.trim().toLocaleLowerCase())) && <small className="tree-empty">{isEn ? 'No matching projects' : 'پروژه‌ای یافت نشد'}</small>}
       </div>
       <div className="modern-sidebar-bottom"><button onClick={() => setFocusMode(value => !value)}><Layers3 size={16}/>{focusMode ? (isEn ? 'Exit focus mode' : 'خروج از حالت تمرکز') : (isEn ? 'Focus mode' : 'حالت تمرکز')}</button><button onClick={() => setInspectorOpen(value => !value)}><ShieldCheck size={16}/>{isEn ? 'Context panel' : 'پنل جزئیات'}</button></div>
     </aside>}
