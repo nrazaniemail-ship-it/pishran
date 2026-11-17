@@ -426,4 +426,38 @@ for (const field of ['basis','daysCoverage','turnover']) {
  assert.ok(unusedWorkingCapitalModel.issues.some(issue=>issue.includes('working-capital.'+field)&&issue.includes('not yet connected')))
 }
 
+
+let incrementalHelp=helpForms.createBlankHelpDrivenProjectForms()
+for(const [id,values] of [
+ ['incremental-period-1',{alternative:'Upgrade A',view:'existing-with-project',period:'1',investmentDelta:100,financingDelta:50,assetOpportunityValue:20}],
+ ['incremental-period-2',{alternative:'Upgrade A',view:'existing-with-project',period:'2',revenueDelta:80,costDelta:20}],
+]){
+ incrementalHelp=helpForms.addHelpFormRow(incrementalHelp,'incremental-analysis',id)
+ for(const [key,value] of Object.entries(values))
+  incrementalHelp=helpForms.updateHelpFormRow(incrementalHelp,'incremental-analysis',id,key,value)
+}
+const incrementalModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:incrementalHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(incrementalModel.valid,true,incrementalModel.issues.join('; '))
+assert.equal(incrementalModel.incrementalAnalyses.length,1)
+assert.equal(incrementalModel.incrementalAnalyses[0].alternative,'Upgrade A')
+assert.equal(incrementalModel.incrementalAnalyses[0].view,'existing-with-project')
+assert.deepEqual(incrementalModel.incrementalAnalyses[0].cashFlows,[-120,60])
+assert.deepEqual(incrementalModel.incrementalAnalyses[0].financingDeltaByPeriod,[50,0])
+assert.equal(incrementalModel.incrementalAnalyses[0].basis,'pre-tax-unlevered')
+let invalidIncrementalHelp=helpForms.createBlankHelpDrivenProjectForms()
+invalidIncrementalHelp=helpForms.addHelpFormRow(invalidIncrementalHelp,'incremental-analysis','invalid-incremental-period')
+for(const [key,value] of Object.entries({alternative:'Upgrade B',view:'project-in-isolation',period:'not-a-period',investmentDelta:10}))
+ invalidIncrementalHelp=helpForms.updateHelpFormRow(invalidIncrementalHelp,'incremental-analysis','invalid-incremental-period',key,value)
+const invalidIncrementalModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:invalidIncrementalHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(invalidIncrementalModel.valid,false)
+assert.ok(invalidIncrementalModel.issues.some(issue=>issue.includes('exactly one project period')))
+
 console.log('Unified project form orchestration, pre-production amortization, input-coverage guards and opening-balance-sheet validation passed.')
