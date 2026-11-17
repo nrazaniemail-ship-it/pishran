@@ -103,6 +103,7 @@ type SavedState = {
   periodTaxRates?: number[]
   periodTaxRateDates?: string[]
   taxBrackets?: PeriodTaxBracket[]
+  taxHolidayYears?: number
   fundingStructureVersion?: number
   minimumDscr?: number
 }
@@ -138,7 +139,7 @@ export default function AdvancedFinancePanel(props: Props) {
     assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??0):0),fundingStructureVersion:2,
     workingCapitalDays:props.workingCapitalDefaults?.days??{raw:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
     workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
-    wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),
+    wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),taxHolidayYears:0,
     discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0
   }))
   const [loaded,setLoaded]=useState(false)
@@ -314,6 +315,7 @@ export default function AdvancedFinancePanel(props: Props) {
       workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
       taxBrackets:state.taxBrackets?.length?state.taxBrackets:undefined,
+      taxHolidayYears:state.taxHolidayYears??0,productionStartFiscalYear:construction,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
       equityDiscountRatePercent:props.costOfEquity,
       valuationDate:props.valuationDate||undefined,
@@ -321,7 +323,7 @@ export default function AdvancedFinancePanel(props: Props) {
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     })
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(state.taxBrackets??[]),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(state.taxBrackets??[]),state.taxHolidayYears??0,JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
@@ -450,6 +452,10 @@ export default function AdvancedFinancePanel(props: Props) {
     <p className="fw-hint">{tr('دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.')}</p>
     <div className="fw-grid">{taxRates.map((v,i)=><label className="fw-field" key={i}><span>{tr('نرخ مالیات سال')} {i+1} (%)</span><input type="number" min="0" max="100" value={v} onChange={e=>setState(s=>({...s,taxRates:taxRates.map((rate,j)=>j===i?Number(e.target.value):rate)}))}/></label>)}</div>
     {projectPeriods.length>0&&<div className="fw-card"><h4>{t('نرخ مالیات به تفکیک دوره','Tax Rate by Project Period')}</h4><p className="fw-hint">{t('در صورت عدم ورود نرخ دوره‌ای، نرخ سال مالی متناظر اعمال می‌شود. با ویرایش هر خانه، برنامه مالیاتی مستقل دوره‌ای فعال می‌شود.','If no period-specific rate is entered, the corresponding fiscal-year rate is applied. Editing any cell activates the independent period tax schedule.')}</p><div className="fw-grid">{projectPeriods.map((period,index)=>{const fiscalIndex=props.fiscalYearStartMonth==null?0:fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth);const defaultRate=taxRates[fiscalIndex]??props.taxRate;return <label className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} (%)</span><input type="number" min="0" max="100" value={periodTaxRateDatesMatch()?state.periodTaxRates![index]:defaultRate} onChange={e=>updatePeriodTaxRate(index,Number(e.target.value))}/></label>})}</div></div>}
+    <div className="fw-card">
+      <label className="fw-field"><span>{t('مدت معافیت مالیاتی از شروع تولید (سال)','Tax holiday from start of production (years)')}</span><input type="number" min="0" step="1" value={state.taxHolidayYears??0} onChange={e=>setState(s=>({...s,taxHolidayYears:Math.max(0,Math.floor(Number(e.target.value)||0))}))}/></label>
+      <p className="fw-hint">{t('معافیت فقط برای سال‌های تولید پس از پایان دوره ساخت اعمال می‌شود. پس از پایان مدت معافیت، محاسبه مالیات عادی از سر گرفته می‌شود.','The holiday applies only to production fiscal years after construction. Normal tax calculation resumes when the holiday expires.')}</p>
+    </div>
     <div className="fw-card">
       <h4>{t('نرخ‌های پلکانی مالیات بر درآمد','Progressive Corporate Income Tax Brackets')}</h4>
       <p className="fw-hint">{t('مطابق جدول ۲۲ مرجع کامفار، هر نرخ فقط بر بخش درآمد واقع در همان بازه اعمال می‌شود. بازه‌ها باید پیوسته و از صفر شروع شوند؛ سقف خالی فقط برای آخرین پله است.','Following COMFAR Reference Manual Table 22, each marginal rate applies only to income within its bracket. Brackets must be contiguous and start at zero; a blank upper limit is reserved for the final bracket.')}</p>
