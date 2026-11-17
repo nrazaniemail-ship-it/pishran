@@ -35,7 +35,7 @@ const drafts={
  productionCosts:[{id:'power',metadata:{},classification:'direct',productId:'slab',basis:'nominal-capacity',
   standardQuantity:2,standardUnitPrice:5,standardTotal:10,nominalCapacity:20,fixedPercent:20,variablePercent:80,adjustments:[]}]
 }
-const inventoryDrafts={...drafts,productionCosts:[]}
+const inventoryDrafts={...drafts,productionCosts:[],sales:[{...drafts.sales[0],openingFinishedGoodsValue:200,inventoryValuationMethod:'weighted-average'}]}
 const result=adapter.buildProductionSalesInventorySchedule(inventoryDrafts,periods,1,{slab:2})
 assert.equal(result.valid,true,result.issues.join('; '))
 assert.deepEqual(result.periodSalesQuantity,[10,12])
@@ -59,7 +59,7 @@ assert.ok(inactiveProduction.issues.some(issue=>issue.includes('Production is ma
 
 const unvaluedInventory=adapter.buildProductionSalesInventorySchedule(drafts,periods,1,{slab:2})
 assert.equal(unvaluedInventory.valid,false)
-assert.ok(unvaluedInventory.issues.some(issue=>issue.includes('Finished-goods inventory valuation is not yet connected')))
+assert.ok(unvaluedInventory.issues.some(issue=>issue.includes('Explicit opening finished-goods carrying value is required')))
 
 const indirectCostDrafts={
  ...inventoryDrafts,
@@ -71,12 +71,15 @@ assert.ok(unallocatedIndirectCost.issues.some(issue=>issue.includes('expanded by
 
 const zeroInventoryCostDrafts={
  ...drafts,
- sales:[{...drafts.sales[0],openingFinishedGoodsQuantity:0,periods:drafts.sales[0].periods.map(row=>({...row,finishedGoodsClosingQuantity:0}))}],
+ sales:[{...drafts.sales[0],openingFinishedGoodsQuantity:0,openingFinishedGoodsValue:0,inventoryValuationMethod:null,periods:drafts.sales[0].periods.map(row=>({...row,finishedGoodsClosingQuantity:0}))}],
 }
 const costSchedule=adapter.buildProductionSalesInventorySchedule(zeroInventoryCostDrafts,periods,1,{slab:0})
 assert.equal(costSchedule.valid,true,costSchedule.issues.join('; '))
-assert.ok(costSchedule.annualFixedCost[0]>=0)
-assert.ok(costSchedule.annualVariableCost[0]>=0)
+assert.equal(costSchedule.annualFixedCost[0],0)
+assert.equal(costSchedule.annualVariableCost[0],0)
+assert.ok(costSchedule.annualCostOfGoodsSold[0]>0)
+assert.ok(costSchedule.periodCostOfGoodsSold.every(value=>value>0))
+assert.deepEqual(costSchedule.periodClosingFinishedGoodsValue,[0,0])
 
 const bound=adapter.bindProductionSalesToPeriodicFinance({
  periods,fiscalYearStartMonth:1,dayCountBasis:360,cashFlowTiming:'period-end',
@@ -86,6 +89,8 @@ const bound=adapter.bindProductionSalesToPeriodicFinance({
 },zeroInventoryCostDrafts,{slab:0})
 assert.equal(bound.valid,true,bound.issues.join('; '))
 assert.deepEqual(bound.financeInput.annualRevenue,[2370])
+assert.deepEqual(bound.financeInput.annualCostOfGoodsSold,costSchedule.annualCostOfGoodsSold)
+assert.deepEqual(bound.financeInput.finishedGoodsInventoryValueByPeriod,[0,0])
 
 const missingOpening=adapter.buildProductionSalesInventorySchedule(inventoryDrafts,periods,1,{})
 assert.equal(missingOpening.valid,false)
