@@ -336,6 +336,9 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
         :asset.depreciationMethod==='sum-of-digits'?'sum-of-years-digits':'linear-to-scrap'
       const length=Math.max(0,asset.remainingLife)
       const scrapPercent=asset.salvagePercent??(asset.grossCost>0?(asset.residualValue??0)/asset.grossCost*100:0)
+      const effectiveStartingAtDate=[
+        m.foundation.planning.projectStartDate,asset.commissioningDate,asset.depreciationStartDate
+      ].filter((date):date is string=>!!date).sort().at(-1)
       return {
         id:'opening-'+asset.id,name:asset.name,originalValue:asset.grossCost,
         initialBookValue:Math.max(0,asset.grossCost-asset.accumulatedDepreciation),
@@ -344,7 +347,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
           ?(length>0?100/length:0):asset.depreciationRatePercent,
         method,acquisitionPeriod:0,startingAtPeriod:1,
         acquisitionDate:asset.commissioningDate||m.foundation.planning.projectStartDate||undefined,
-        startingAtDate:asset.depreciationStartDate||m.foundation.planning.projectStartDate||undefined,
+        startingAtDate:effectiveStartingAtDate,
         firstDepreciationMonths:asset.firstDepreciationMonths??12,
       }
     })
