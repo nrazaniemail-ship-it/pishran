@@ -174,6 +174,8 @@ export function buildProductionSalesInventorySchedule(
     if (cost.classification === 'indirect' && !cost.allocationKeyId)
       issues.push('Indirect production cost '+cost.id+' must be expanded by a validated user-defined allocation key before product-level costing.')
     if (!cost.basis) issues.push('Cost calculation basis is required for item '+cost.id+'.')
+    if (cost.basis==='period-adjustments'&&(!Array.isArray(cost.adjustments)||cost.adjustments.length===0))
+      issues.push('At least one explicit period adjustment is required for production-cost item '+cost.id+'.')
     if (cost.fixedPercent===null || cost.variablePercent===null ||
         !nonNegative(cost.fixedPercent) || !nonNegative(cost.variablePercent) ||
         Math.abs(cost.fixedPercent+cost.variablePercent-100)>1e-8)
@@ -261,6 +263,9 @@ export function buildProductionSalesInventorySchedule(
       const months=periodMonths(periods[i])
       const adjustment=adjustments.get(i)
       let fixed=0,variable=0
+      // A period-adjustment cost is incurred only in periods with an explicit row;
+      // omitted periods are zero, while an entirely empty schedule is rejected above.
+      if(cost.basis==='period-adjustments'&&!adjustment)continue
       try {
         if (cost.basis==='nominal-capacity') {
           if (![cost.standardQuantity,cost.standardUnitPrice,cost.nominalCapacity].every(nonNegative) ||
