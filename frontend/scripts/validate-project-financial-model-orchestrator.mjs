@@ -771,3 +771,5 @@ for (const [type,expected] of [
 }
 
 console.log('Unified project form orchestration, shareholder model, and raw-template opening-balance integration passed.')
+
+// Gross unit price and production activity are now validated by the operating schedule adapter.
