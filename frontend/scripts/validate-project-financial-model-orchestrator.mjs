@@ -354,6 +354,22 @@ assert.ok(Math.abs(costDrivenWorkingCapitalModel.finalRun.statements[0].balanceS
 assert.ok(Math.abs(costDrivenWorkingCapitalModel.finalRun.statements[1].balanceSheet.netWorkingCapital-(220+600*30/360))<0.000001)
 assert.ok(costDrivenWorkingCapitalModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 
+const projectEndRecoveryModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,workingCapital:[{
+  id:'inventory-recovery',name:'Raw materials',category:'inventory',openingBalance:0,
+  minimumDaysCoverage:null,turnoverCoefficient:null,calculationMode:'value',activityBasis:null,
+  valuationBasis:'user-defined',recoveryPercent:100,
+  periodBalances:[{period:'1',amount:100},{period:'2',amount:50}],
+ }]},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(projectEndRecoveryModel.valid,true,projectEndRecoveryModel.issues.join('; '))
+assert.deepEqual(projectEndRecoveryModel.financeInput.workingCapitalByPeriod,[100,0])
+assert.deepEqual(projectEndRecoveryModel.finalRun.finance.rows.map(row=>row.changeInWorkingCapital),[100,-100])
+assert.deepEqual(projectEndRecoveryModel.finalRun.statements.map(row=>row.balanceSheet.netWorkingCapital),[100,0])
+assert.ok(projectEndRecoveryModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
+
 const fifoInventoryCostDrafts={
  ...inventoryCostDrafts,
  sales:inventoryCostDrafts.sales.map(product=>({...product,inventoryValuationMethod:'fifo'})),
