@@ -1674,6 +1674,7 @@ function scalePeriodicOperatingInput(
     ...input,
     annualRevenue:input.annualRevenue.map(value=>value*priceFactor*volumeFactor),
     periodRevenue:scale(input.periodRevenue,priceFactor*volumeFactor),
+    periodSubsidyIncome:scale(input.periodSubsidyIncome,priceFactor*volumeFactor),
     annualVariableCost:input.annualVariableCost.map(value=>value*variableCostFactor*volumeFactor),
     periodVariableCost:scale(input.periodVariableCost,variableCostFactor*volumeFactor),
     annualFixedCost:input.annualFixedCost.map(value=>value*fixedCostFactor),
