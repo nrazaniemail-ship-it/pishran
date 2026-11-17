@@ -54,6 +54,7 @@ type Props = {
   preOperatingSchedule?: number[]
   initialWorkingCapital?: number
   openingWorkingCapitalBalance?: number
+  openingFixedAssetsNetBookValue?: number
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
   initialWorkingCapitalEquityContribution?: number
   initialLoanRatePercent?: number
@@ -353,7 +354,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
-  const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult):[],[periodicFinanceResult])
+  const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult,{netFixedAssets:props.openingFixedAssetsNetBookValue??0}):[],[periodicFinanceResult,props.openingFixedAssetsNetBookValue])
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
   useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
