@@ -167,7 +167,7 @@ export function listUnintegratedFinancialDraftInputs(value:ProjectModelFinancial
  const collections:[string,unknown[]][]=[['financialForms.assets',value.assets],['financialForms.loans',value.loans]]
  // Working-capital component balances are bound to the periodic finance engine; do not block reports for these integrated rows.
  for(const [label,rows] of collections)for(const [index,row] of (rows??[]).entries())if(hasEnteredValue(row))issues.push(label+'.'+index)
- if(value.tax&&(value.tax.system!==null||value.tax.lossCarryForward!==null||value.tax.lossCarryForwardYears!==null||value.tax.rates.length||value.tax.allowances.length))issues.push('financialForms.tax')
+ if(value.tax&&(value.tax.system!==null||value.tax.lossCarryForward!==null||value.tax.lossCarryForwardYears!==null||value.tax.openingLossVintages.length||value.tax.rates.length||value.tax.allowances.length))issues.push('financialForms.tax')
  return issues
 }
 
