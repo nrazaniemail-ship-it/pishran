@@ -444,6 +444,15 @@ export function calculateProjectFinancialModelFromDrafts(
     ?openingDraft.inventory!+openingDraft.workInProgress!+openingDraft.finishedGoods!+openingDraft.receivables!+
       openingDraft.otherCurrentAssets!-openingDraft.tradePayables!-openingDraft.otherCurrentLiabilities!
     :undefined
+  const rawStartingBalanceRows=effectiveDrafts.helpDriven?.sections?.['starting-balances']??[]
+  const rawOpeningNwcFromRows=rawStartingBalanceRows.length&&rawStartingBalanceRows.every(row=>
+    typeof row.values.amount==='number'&&Number.isFinite(row.values.amount)
+  )?rawStartingBalanceRows.reduce((sum,row)=>{
+    const category=row.values.category
+    if(['materials-supplies','work-in-progress','finished-products','accounts-receivable','other-current-assets'].includes(String(category)))return sum+Number(row.values.amount)
+    if(['accounts-payable','other-current-liabilities'].includes(String(category)))return sum-Number(row.values.amount)
+    return sum
+  },0):undefined
   // A separately supplied opening NWC must agree with the detailed opening balance sheet.
   // Otherwise the model would start its working-capital schedule from one balance while
   // the linked statements start from another, creating a hidden opening-period mismatch.
@@ -460,9 +469,9 @@ export function calculateProjectFinancialModelFromDrafts(
   }
   if(effectiveDrafts.workingCapital.length) {
     const componentOpeningBalances=effectiveDrafts.workingCapital.map(component=>component.openingBalance)
-    if(input.openingWorkingCapital==null&&componentOpeningBalances.some(value=>!Number.isFinite(value)||value!<0))
+    if(input.openingWorkingCapital==null&&detailedOpeningNwc===undefined&&rawOpeningNwcFromRows===undefined&&componentOpeningBalances.some(value=>!Number.isFinite(value)||value!<0))
       return fail(['Every working-capital component requires an explicit non-negative opening balance.'])
-    const openingWorkingCapital=input.openingWorkingCapital??detailedOpeningNwc??effectiveDrafts.workingCapital.reduce((sum,component)=>{
+    const openingWorkingCapital=input.openingWorkingCapital??detailedOpeningNwc??rawOpeningNwcFromRows??effectiveDrafts.workingCapital.reduce((sum,component)=>{
       const liability=component.category==='payables'||component.category==='other-current-liability'
       return sum+(liability?-1:1)*(component.openingBalance??0)
     },0)
@@ -490,6 +499,9 @@ export function calculateProjectFinancialModelFromDrafts(
       existingOpeningBalances:input.openingBalances,summaryOpeningBalanceEnabled:!!openingDraft?.enabled,
     })
     if(!startingBalances.valid)return fail(startingBalances.issues)
+    if(input.openingWorkingCapital!==undefined&&input.openingWorkingCapital!==null&&
+      Math.abs(input.openingWorkingCapital-startingBalances.openingBalances.netWorkingCapital!)>0.01)
+      return fail(['Explicit opening working capital does not reconcile to the raw-template starting-balance subledger.'])
     finance=startingBalances.financeInput
     openingBalances=startingBalances.openingBalances
   }
