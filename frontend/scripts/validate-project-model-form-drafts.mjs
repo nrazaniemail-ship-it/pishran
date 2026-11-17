@@ -113,7 +113,7 @@ try {
  assert.match(advancedFinanceSource,/const utilization = Array\.from\(\{length:years\},\(_,i\)=>i<construction\?0:Math\.max\(0,Math\.min\(100,props\.ramp\[i-construction\]\?\?\(props\.blankStart\?Number\.NaN:100\)\)\)\/100\)/,'Raw utilization must not assume full production when ramp-up is blank')
  assert.match(advancedFinanceSource,/discountMode:blank\?'':/,'Raw discount method must remain unselected until user input')
  assert.match(advancedFinanceSource,/value=\{blankNumber\(state\.manualRate\)\}/,'Blank discount rates must display as blank')
- assert.match(advancedFinanceSource,/!props\.blankStart&&<>[\s\S]*تسهیلات و برنامه بازپرداخت/,'The legacy loan editor must remain hidden for the raw template')
+ assert.match(advancedFinanceSource,/\{!props\.blankStart&&<>[\s\S]*برنامه برداشت و بازپرداخت وام/,'The legacy loan editor must remain hidden for the raw template')
  assert.match(wizardSource,/nameplate:null as unknown as number/,'Raw capacity must remain unset')
  assert.match(wizardSource,/products:\[\]/,'Raw product rows must start empty')
  assert.match(wizardSource,/fixedInvestmentItems:\[\]/,'Raw project fixed assets must not be seeded')
