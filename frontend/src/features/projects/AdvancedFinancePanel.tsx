@@ -298,15 +298,18 @@ export default function AdvancedFinancePanel(props: Props) {
         interestConvention:loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':undefined)
       } as PeriodicLoanInput}
     })
-    const estimatedWorkingCapitalByPeriod=periods.map(period=>{
+    const workingCapitalBreakdownByPeriod=periods.map(period=>{
       const fiscalIndex=fiscalYearIndexForPeriod(period,periods,fiscalMonth)
       const annualRow=result.years[fiscalIndex]
-      if(!annualRow) return 0
+      if(!annualRow) return calculateOperatingCycleWorkingCapital(workingCapitalPolicy,0,1,1)
       const operatingYear=Math.max(0,fiscalIndex-construction)
       const salesFactor=Math.pow(1+state.salesEscalationPercent/100,operatingYear)
       const opexFactor=Math.pow(1+state.opexEscalationPercent/100,operatingYear)
-      return calculateOperatingCycleWorkingCapital(workingCapitalPolicy,annualRow.utilization,salesFactor,opexFactor).netWorkingCapital
+      return calculateOperatingCycleWorkingCapital(workingCapitalPolicy,annualRow.utilization,salesFactor,opexFactor)
     })
+    const estimatedWorkingCapitalByPeriod=workingCapitalBreakdownByPeriod.map(row=>row.netWorkingCapital)
+    const cashInHandByPeriod=workingCapitalBreakdownByPeriod.map(row=>Math.max(0,row.minimumCash-(row.shortTermDeposits??0)))
+    const shortTermDepositsByPeriod=workingCapitalBreakdownByPeriod.map(row=>row.shortTermDeposits??0)
     const periodicInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
@@ -321,6 +324,7 @@ export default function AdvancedFinancePanel(props: Props) {
       workingCapitalByPeriod:workingCapitalDraftSchedule?.valid
         ?workingCapitalDraftSchedule.closingWorkingCapital
         :estimatedWorkingCapitalByPeriod,
+      cashInHandByPeriod,shortTermDepositsByPeriod,
       openingWorkingCapital:props.openingWorkingCapitalBalance??0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
