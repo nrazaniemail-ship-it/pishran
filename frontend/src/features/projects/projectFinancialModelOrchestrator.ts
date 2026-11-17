@@ -202,7 +202,7 @@ export function calculateProjectFinancialModelFromDrafts(
     'income-tax':[],
     'production-costs':['initialStockQuantity','initialStockValue'],
     'sales-programme':['futureSalesQuantity','terminalInventorySale'],
-    'working-capital':['mode','activityBasis','daysCoverage','turnover','requiredQuantity','initialStockQuantity','initialStockValue','recoveryPeriod','depositPercent','depositRate','periodMonths'],
+    'working-capital':['requiredQuantity','initialStockQuantity','initialStockValue','recoveryPeriod','depositPercent','depositRate','periodMonths'],
     'sensitivity':['quantityChange','priceChange','valueChange','chartVariable'],
   }
   for(const [sectionId,fieldKeys] of Object.entries(notYetMappedFields)){
