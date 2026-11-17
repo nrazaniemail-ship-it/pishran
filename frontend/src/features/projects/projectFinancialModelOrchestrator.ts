@@ -225,38 +225,7 @@ export function calculateProjectFinancialModelFromDrafts(
       if(taxDraft.lossCarryForward!==false)
         finance={...finance,taxLossCarryForwardEnabled:true,taxLossCarryForwardYears:taxDraft.lossCarryForwardYears??carryYears}
     }
-    const holidayYears=incomeTaxRow.values.taxHolidayYears
-    const suppliedHolidayEnd=incomeTaxRow.values.taxHolidayEndDate
-    let holidayEnd=typeof suppliedHolidayEnd==='string'&&suppliedHolidayEnd.trim()?suppliedHolidayEnd.trim():''
-    if(holidayYears!==null&&holidayYears!==undefined&&holidayYears!==''){
-      if(typeof holidayYears!=='number'||!Number.isInteger(holidayYears)||holidayYears<1)
-        return fail(['Tax holiday duration must be a positive whole number of years.'])
-      const start=Date.parse(finance.periods[0].startDate+'T00:00:00.000Z')
-      if(!Number.isFinite(start))return fail(['Tax holiday requires a valid project start date.'])
-      const date=new Date(start),targetYear=date.getUTCFullYear()+holidayYears
-      const targetDay=Math.min(date.getUTCDate(),new Date(Date.UTC(targetYear,date.getUTCMonth()+1,0)).getUTCDate())
-      const anniversary=Date.UTC(targetYear,date.getUTCMonth(),targetDay)
-      const derivedEnd=new Date(anniversary-86400000).toISOString().slice(0,10)
-      if(holidayEnd&&holidayEnd!==derivedEnd)return fail(['Tax holiday end date and duration do not reconcile.'])
-      holidayEnd=derivedEnd
-    }
-    if(holidayEnd){
-      const parsed=Date.parse(holidayEnd+'T00:00:00.000Z')
-      if(!Number.isFinite(parsed)||new Date(parsed).toISOString().slice(0,10)!==holidayEnd||
-        holidayEnd<finance.periods[0].startDate||holidayEnd>finance.periods[finance.periods.length-1].endDate)
-        return fail(['Tax holiday end date must be a valid date inside the project calendar.'])
-      const boundary=finance.periods.findIndex(period=>period.endDate===holidayEnd)
-      if(boundary<0)return fail(['Tax holiday end date must align with a project-period boundary.'])
-      const rates=finance.taxRatesByPeriod??finance.periods.map(period=>{
-        const yearIndex=fiscalYearIndexForPeriod(period,finance.periods,finance.fiscalYearStartMonth)
-        return finance.annualTaxRates[yearIndex]??Number.NaN
-      })
-      if(rates.some(rate=>!Number.isFinite(rate)))return fail(['Tax holiday cannot be applied because the base tax schedule is incomplete.'])
-      for(let index=0;index<=boundary;index++)rates[index]=0
-      finance={...finance,taxRatesByPeriod:rates,
-        ...(finance.taxBracketsByPeriod?{taxBracketsByPeriod:finance.taxBracketsByPeriod.map((brackets,index)=>
-          index<=boundary?brackets.map(bracket=>({...bracket,ratePercent:0})):brackets)}:{})}
-    }
+
   }
   if(taxDraft.system==='none') {
     finance={...finance,taxRatesByPeriod:finance.periods.map(()=>0),taxBracketsByPeriod:undefined,
@@ -305,6 +274,40 @@ export function calculateProjectFinancialModelFromDrafts(
       if(taxDraft.lossCarryForwardYears!==null&&(!Number.isInteger(taxDraft.lossCarryForwardYears)||taxDraft.lossCarryForwardYears<1))
         return fail(['Tax-loss carry-forward duration must be a positive whole number of years.'])
       finance={...finance,taxLossCarryForwardEnabled:true,taxLossCarryForwardYears:taxDraft.lossCarryForwardYears}
+    }
+  }
+  if(incomeTaxRow){
+    const holidayYears=incomeTaxRow.values.taxHolidayYears
+    const suppliedHolidayEnd=incomeTaxRow.values.taxHolidayEndDate
+    let holidayEnd=typeof suppliedHolidayEnd==='string'&&suppliedHolidayEnd.trim()?suppliedHolidayEnd.trim():''
+    if(holidayYears!==null&&holidayYears!==undefined&&holidayYears!==''){
+      if(typeof holidayYears!=='number'||!Number.isInteger(holidayYears)||holidayYears<1)
+        return fail(['Tax holiday duration must be a positive whole number of years.'])
+      const start=Date.parse(finance.periods[0].startDate+'T00:00:00.000Z')
+      if(!Number.isFinite(start))return fail(['Tax holiday requires a valid project start date.'])
+      const date=new Date(start),targetYear=date.getUTCFullYear()+holidayYears
+      const targetDay=Math.min(date.getUTCDate(),new Date(Date.UTC(targetYear,date.getUTCMonth()+1,0)).getUTCDate())
+      const anniversary=Date.UTC(targetYear,date.getUTCMonth(),targetDay)
+      const derivedEnd=new Date(anniversary-86400000).toISOString().slice(0,10)
+      if(holidayEnd&&holidayEnd!==derivedEnd)return fail(['Tax holiday end date and duration do not reconcile.'])
+      holidayEnd=derivedEnd
+    }
+    if(holidayEnd){
+      const parsed=Date.parse(holidayEnd+'T00:00:00.000Z')
+      if(!Number.isFinite(parsed)||new Date(parsed).toISOString().slice(0,10)!==holidayEnd||
+        holidayEnd<finance.periods[0].startDate||holidayEnd>finance.periods[finance.periods.length-1].endDate)
+        return fail(['Tax holiday end date must be a valid date inside the project calendar.'])
+      const boundary=finance.periods.findIndex(period=>period.endDate===holidayEnd)
+      if(boundary<0)return fail(['Tax holiday end date must align with a project-period boundary.'])
+      const rates=finance.taxRatesByPeriod??finance.periods.map(period=>{
+        const yearIndex=fiscalYearIndexForPeriod(period,finance.periods,finance.fiscalYearStartMonth)
+        return finance.annualTaxRates[yearIndex]??Number.NaN
+      })
+      if(rates.some(rate=>!Number.isFinite(rate)))return fail(['Tax holiday cannot be applied because the base tax schedule is incomplete.'])
+      for(let index=0;index<=boundary;index++)rates[index]=0
+      finance={...finance,taxRatesByPeriod:rates,
+        ...(finance.taxBracketsByPeriod?{taxBracketsByPeriod:finance.taxBracketsByPeriod.map((brackets,index)=>
+          index<=boundary?brackets.map(bracket=>({...bracket,ratePercent:0})):brackets)}:{})}
     }
   }
   const detailedOpeningNwc=openingDraft?.enabled
