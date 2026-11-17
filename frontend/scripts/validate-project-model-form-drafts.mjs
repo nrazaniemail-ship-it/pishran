@@ -77,7 +77,7 @@ try {
  const costDraft=forms.createBlankProductionCostFormDraft('cost-1')
  const loanDraft=forms.createBlankLoanFacilityFormDraft('loan-1')
  const taxDraft={...forms.createBlankProjectTaxFormDraft(),system:'corporate'}
- const withAllUnintegrated={...auditDraft,assets:[blankAsset],productionCosts:[costDraft],sales:[salesDraft],loans:[loanDraft],tax:taxDraft}
+ const withAllUnintegrated={...auditDraft,assets:[{...blankAsset,metadata:{...blankAsset.metadata,description:'Plant'}}],productionCosts:[{...costDraft,metadata:{...costDraft.metadata,description:'Raw material'}}],sales:[salesDraft],loans:[{...loanDraft,name:'Term loan'}],tax:taxDraft}
  const blocked=forms.listUnintegratedFinancialDraftInputs(withAllUnintegrated)
  for(const path of ['financialForms.assets.0','financialForms.productionCosts.0','financialForms.sales.0','financialForms.loans.0','financialForms.tax'])
   assert.ok(blocked.includes(path),'Every populated but unintegrated finance form must block report generation: '+path)
