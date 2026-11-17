@@ -58,6 +58,46 @@ assert.ok(openingAssetStatements.every((row,index)=>
 assert.ok(openingAssetStatements.every(row=>row.balanceSheet.reconciled&&
   Math.abs(row.movementChecks.netFixedAssets)<=0.01),
   'Opening asset depreciation, retained earnings and net fixed assets must reconcile across the three statements')
+const openingAssetDisposal=financialModel.calculateComfarCalendarAssetLifecycle([{
+  id:'opening-sale-test',name:'Opening asset for sale',originalValue:1000,initialBookValue:700,
+  scrapPercent:10,lengthYears:7,lengthMonths:0,ratePercent:100/7,
+  method:'linear-to-scrap',acquisitionPeriod:0,startingAtPeriod:1,
+  acquisitionDate:'2020-01-01',startingAtDate:'2025-01-01',firstDepreciationMonths:12
+}],[{
+  id:'opening-sale-test-disposal',assetId:'opening-sale-test',period:1,
+  saleDate:'2026-06-30',priceMode:'self-defined',selfDefinedPrice:500,exchangeRateToLocal:1
+}],periods,1)
+assert.equal(openingAssetDisposal.valid,true,openingAssetDisposal.warnings.join('; '))
+const openingAssetSaleByPeriod=periods.map((period,index)=>{
+  const sales=openingAssetDisposal.sales.filter(sale=>sale.period===index+1)
+  return {
+    saleProceeds:sales.reduce((sum,sale)=>sum+sale.saleProceeds,0),
+    returnOfCapital:sales.reduce((sum,sale)=>sum+sale.returnOfCapital,0),
+    otherIncomeLoss:sales.reduce((sum,sale)=>sum+sale.otherIncomeLoss,0),
+    bookValueDisposed:sales.reduce((sum,sale)=>sum+sale.bookValueAtSale,0),
+  }
+})
+const disposalDepreciation=openingAssetDisposal.depreciation.periods.map(row=>row.depreciation)
+const openingAssetDisposalCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,0],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  annualDepreciation:disposalDepreciation,periodDepreciationSchedule:disposalDepreciation,
+  annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
+  annualTaxRates:[0,0,0],annualEquityContributions:[0,0,0],workingCapitalByPeriod:[0,0,0],
+  periodAssetSaleSchedule:openingAssetSaleByPeriod,openingCash:0,loans:[],discountRatePercent:10
+})
+assert.equal(openingAssetDisposalCase.valid,true,openingAssetDisposalCase.warnings.join('; '))
+const openingAssetDisposalStatements=engine.buildPeriodicThreeFinancialStatements(openingAssetDisposalCase,{
+  netFixedAssets:700,paidInCapital:700
+})
+assert.equal(openingAssetDisposalStatements.length,periods.length)
+assert.equal(openingAssetDisposalStatements[1].balanceSheet.netFixedAssets,0,
+  'Dated disposal must remove the opening asset carrying amount from net fixed assets')
+assert.ok(Math.abs(openingAssetDisposalStatements[1].cashFlowStatement.investingCashFlow-500)<0.01,
+  'Opening asset sale proceeds must flow into investing cash flow')
+assert.ok(openingAssetDisposalStatements.every(row=>row.balanceSheet.reconciled&&
+  Math.abs(row.movementChecks.netFixedAssets)<=0.01),
+  'Opening asset disposal proceeds, disposal loss and fixed-asset derecognition must reconcile')
 const loan=engine.calculatePeriodicLoanSchedule({
   annualRatePercent:10,drawdowns:[1000,0,0],repaymentMethod:'annuity',
   repaymentStartPeriod:2,gracePeriods:0,termPeriods:2,capitalizeInterest:false,
