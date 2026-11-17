@@ -125,4 +125,35 @@ const unsupportedProductionDriver = adapter.buildWorkingCapitalScheduleFromDraft
 assert.equal(unsupportedProductionDriver.valid, false)
 assert.ok(unsupportedProductionDriver.issues.some(issue => issue.includes('days-coverage-currently-supports-sales-revenue-receivables-only')))
 
+
+const crossFiscalYearBinding = adapter.bindWorkingCapitalDraftsToPeriodicFinance({
+  periods: [
+    { index: 1, startDate: '2025-01-01', endDate: '2025-12-31', days: 365, partial: false },
+    { index: 2, startDate: '2026-01-01', endDate: '2026-12-31', days: 365, partial: false },
+  ],
+  fiscalYearStartMonth: 1, dayCountBasis: 360, cashFlowTiming: 'period-end',
+  annualRevenue: [720, 900], annualVariableCost: [0, 0], annualFixedCost: [0, 0],
+  annualDepreciation: [0, 0], annualFixedInvestment: [0, 0], annualPreOperatingCost: [0, 0],
+  annualMaintenanceCapex: [0, 0], annualTaxRates: [0, 0], annualEquityContributions: [0, 0],
+  workingCapitalByPeriod: [], loans: [],
+}, { workingCapital: [{
+  id: 'receivables', name: 'Trade receivables', category: 'receivables',
+  minimumDaysCoverage: 45, turnoverCoefficient: 8, calculationMode: 'value',
+  activityBasis: 'sales', valuationBasis: 'sales-revenue',
+  periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
+}] }, 0)
+assert.equal(crossFiscalYearBinding.valid, true, crossFiscalYearBinding.issues.join('; '))
+assert.deepEqual(crossFiscalYearBinding.financeInput.workingCapitalByPeriod, [90, 112.5])
+
+const missingSalesBase = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'receivables', name: 'Trade receivables', category: 'receivables',
+    minimumDaysCoverage: 45, turnoverCoefficient: 8, calculationMode: 'value',
+    activityBasis: 'sales', valuationBasis: 'sales-revenue',
+    periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
+  }],
+}, periods, 0)
+assert.equal(missingSalesBase.valid, false)
+assert.ok(missingSalesBase.issues.some(issue => issue.includes('valid-period-sales-revenue-base-required')))
+
 console.log('Working-capital draft integration validation passed.')
