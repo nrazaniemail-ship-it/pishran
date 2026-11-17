@@ -183,18 +183,45 @@ for(const [key,value] of Object.entries({
  officialExchangeRate:1,shadowExchangeRate:1.2,standardConversionFactor:1/1.2,
  foreignCurrencyConversionFactor:1.2,discountRate:10,referenceDate:'2025-01-01',
 })) economicHelp=helpForms.updateHelpFormRow(economicHelp,'economic-global','economic-global-main',key,value)
-const economicConfiguration=economicAppraisalModule.bindEconomicAppraisalConfiguration(economicHelp,foundation)
+economicHelp=helpForms.addHelpFormRow(economicHelp,'economic-items','economic-input-year-1')
+for(const [key,value] of Object.entries({
+ item:'Economic investment input',financialItemId:'fixture-investment',assignedToEconomicBrowser:true,
+ direction:'input',period:'1',periodNumeraireValue:100,currency:'EUR',
+})) economicHelp=helpForms.updateHelpFormRow(economicHelp,'economic-items','economic-input-year-1',key,value)
+economicHelp=helpForms.addHelpFormRow(economicHelp,'economic-items','economic-output-year-2')
+for(const [key,value] of Object.entries({
+ item:'Economic operating benefit',financialItemId:'fixture-sales',assignedToEconomicBrowser:true,
+ direction:'output',period:'2',periodNumeraireValue:200,currency:'EUR',
+})) economicHelp=helpForms.updateHelpFormRow(economicHelp,'economic-items','economic-output-year-2',key,value)
+const economicFinance={
+ periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+ annualRevenue:[0,0],annualVariableCost:[0,0],annualFixedCost:[0,0],
+ annualDepreciation:[0,0],annualFixedInvestment:[0,0],annualPreOperatingCost:[0,0],
+ annualMaintenanceCapex:[0,0],annualTaxRates:[25,25],annualEquityContributions:[0,0],
+ annualEquityWorkingCapitalContributions:[0,0],workingCapitalByPeriod:[0,0],
+ openingWorkingCapital:0,loans:[],discountRatePercent:10,
+}
+const economicConfiguration=economicAppraisalModule.bindEconomicAppraisalConfiguration(economicHelp,foundation,economicFinance)
 assert.equal(economicConfiguration.valid,true,economicConfiguration.issues.join('; '))
-assert.equal(economicConfiguration.status,'configuration-ready-not-valued')
+assert.equal(economicConfiguration.status,'calculated')
 assert.equal(economicConfiguration.configuration.shadowExchangeRate,1.2)
+assert.equal(economicConfiguration.cashFlow.netCashFlows[0],-100)
+assert.equal(economicConfiguration.cashFlow.netCashFlows[1],200)
+assert.ok(economicConfiguration.cashFlow.enpv>0)
+assert.ok(economicConfiguration.cashFlow.benefitCostRatio>1)
+assert.equal(economicConfiguration.cashFlow.irrStatus,'calculated')
 let invalidEconomicHelp=helpForms.updateHelpFormRow(economicHelp,'economic-global','economic-global-main','standardConversionFactor',1)
-const invalidEconomicConfiguration=economicAppraisalModule.bindEconomicAppraisalConfiguration(invalidEconomicHelp,foundation)
+const invalidEconomicConfiguration=economicAppraisalModule.bindEconomicAppraisalConfiguration(invalidEconomicHelp,foundation,economicFinance)
 assert.equal(invalidEconomicConfiguration.valid,false)
 assert.ok(invalidEconomicConfiguration.issues.some(issue=>issue.includes('OER/SER ratio')))
-invalidEconomicHelp=helpForms.addHelpFormRow(invalidEconomicHelp,'economic-effects','employment-effect')
+let unsupportedEconomicHelp=helpForms.updateHelpFormRow(economicHelp,'economic-items','economic-input-year-1','borderPrice',50)
+const unsupportedEconomic=economicAppraisalModule.bindEconomicAppraisalConfiguration(unsupportedEconomicHelp,foundation,economicFinance)
+assert.equal(unsupportedEconomic.valid,false)
+assert.ok(unsupportedEconomic.issues.some(issue=>issue.includes('borderPrice')))
+let invalidEconomicEffects=helpForms.addHelpFormRow(economicHelp,'economic-effects','employment-effect')
 for(const [key,value] of Object.entries({type:'employment',period:'1',amount:5,headcount:5,shadowWageFactor:0.8}))
- invalidEconomicHelp=helpForms.updateHelpFormRow(invalidEconomicHelp,'economic-effects','employment-effect',key,value)
-const unvaluedEconomicEffects=economicAppraisalModule.bindEconomicAppraisalConfiguration(invalidEconomicHelp,foundation)
+ invalidEconomicEffects=helpForms.updateHelpFormRow(invalidEconomicEffects,'economic-effects','employment-effect',key,value)
+const unvaluedEconomicEffects=economicAppraisalModule.bindEconomicAppraisalConfiguration(invalidEconomicEffects,foundation,economicFinance)
 assert.equal(unvaluedEconomicEffects.valid,false)
 assert.ok(unvaluedEconomicEffects.issues.some(issue=>issue.includes('shadow-price valuation rules')))
 
