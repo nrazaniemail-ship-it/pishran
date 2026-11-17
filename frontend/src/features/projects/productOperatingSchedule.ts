@@ -78,7 +78,8 @@ export function buildProductOperatingSchedule(
       continue
     }
     const currency=cost.metadata.currencyCode?.trim().toUpperCase()
-    if (currency&&currency!==baseCurrency.trim().toUpperCase()) {
+    if(!currency){issues.push('Production-cost item '+cost.id+' requires an explicit currency code; project currency is not assumed.');continue}
+    if (currency!==baseCurrency.trim().toUpperCase()) {
       issues.push('Production-cost item '+cost.id+' uses '+currency+'; convert it through the foreign-currency schedule before product costing.')
       continue
     }
@@ -147,7 +148,7 @@ export function buildProductOperatingSchedule(
     for(let index=0;index<count;index++) {
       const source=mapped.get(index)
       if(!source) { issues.push('Product '+sale.productId+' is missing period '+(index+1)+'.'); continue }
-      const required=[source.salesQuantity,source.netUnitPrice,source.finishedGoodsClosingQuantity,
+      const required=[source.salesQuantity,source.netUnitPrice,source.salesTaxPercent,source.finishedGoodsClosingQuantity,
         source.openingFinishedGoodsQuantity,source.openingFinishedGoodsValue]
       if(required.some(value=>value===null||!Number.isFinite(value))||
         required.some(value=>(value as number)<0)) {
