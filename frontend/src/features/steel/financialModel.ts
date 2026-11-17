@@ -1973,6 +1973,10 @@ export function calculateOneWaySensitivity(
     return {
       ...policy,
       annualRawMaterialCost: policy.annualRawMaterialCost * factor,
+      annualFactorySuppliesCost: (policy.annualFactorySuppliesCost ?? 0) * factor,
+      annualUtilitiesCost: (policy.annualUtilitiesCost ?? 0) * factor,
+      annualFixedFactorySuppliesCost: policy.annualFixedFactorySuppliesCost === undefined ? undefined : policy.annualFixedFactorySuppliesCost * factor,
+      annualFixedUtilitiesCost: policy.annualFixedUtilitiesCost === undefined ? undefined : policy.annualFixedUtilitiesCost * factor,
       annualEnergyCost: (policy.annualEnergyCost ?? 0) * factor,
       annualSparePartsCost: (policy.annualSparePartsCost ?? 0) * factor,
       annualFixedRawMaterialCost: policy.annualFixedRawMaterialCost === undefined ? undefined : policy.annualFixedRawMaterialCost * factor,
