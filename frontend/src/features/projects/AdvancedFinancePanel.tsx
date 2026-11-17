@@ -3,7 +3,7 @@ import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { allocateJointVentureCashFlows, type JointVenturePartner, type PartnerFinanceResult } from './partnerFinance'
 import { listFinancialMethods } from './financialMethodDirectory'
-import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention, OpeningCurrentAccounts } from './projectFoundation'
+import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention, OpeningCurrentAccounts, ProjectFoundation } from './projectFoundation'
 import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
@@ -14,8 +14,8 @@ import type { LoanFacilityFormDraft } from './projectModelFormDrafts'
 import { calculateOperatingCycleWorkingCapital, calculateWorkingCapitalTurnoverCoefficient, calculateWorkingCapitalDaysCoverageFromTurnover } from '../steel/financialModel'
 import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, calculatePeriodicSensitivityMatrix, calculatePeriodicFinancialScenarios, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput, type PeriodicFinancialScenarioSet, type PeriodicSensitivityCell } from '../steel/periodicFinancialEngine'
 import {
-  calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
-  calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
+  calculateIntegratedFinance, calculateAssetDepreciationSchedule,
+  calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
   calculateComfarCalendarAssetLifecycle,
   type IntegratedFinanceInput, type IntegratedFinanceResult, type IntegratedLoanInput, type DepreciationAssetInput,
   type ComfarDepreciationAssetInput, type ComfarAssetSaleInput, type OneWaySensitivityAnalysis,
@@ -88,7 +88,7 @@ type Props = {
   mirrReinvestmentRate?: number
   onResult?: (result:IntegratedFinanceResult)=>void
   onSensitivity?: (analysis:OneWaySensitivityAnalysis)=>void
-  onScenarioAnalysis?: (matrix:SensitivityCell[][], scenarios:ReturnType<typeof calculateFinancialScenarios>)=>void
+  onScenarioAnalysis?: (matrix:PeriodicSensitivityCell[][], scenarios:PeriodicFinancialScenarioSet|null)=>void
   onPeriodicResult?: (result:PeriodicProjectFinanceResult|null)=>void
   onPartnerFinanceResult?: (result:PartnerFinanceResult|null)=>void
   equityPercent: number
