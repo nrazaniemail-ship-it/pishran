@@ -21,6 +21,7 @@ import {
 } from './foreignCurrencyLoanFinanceBinding'
 import { searchPeriodicFinanceTarget, type PeriodicSensitivityMetric, type PeriodicSensitivityVariable, type PeriodicTargetSearchResult } from '../steel/periodicSensitivity'
 import { calculateIncrementalAnalysis, type IncrementalAnalysisResult } from './incrementalAnalysisIntegration'
+import { applyShareholderDistributions, type ShareholderDistributionResult } from './shareholderDistributionIntegration'
 
 export function bindHelpDrivenFoundation(
   foundation:ProjectFoundation,
@@ -148,6 +149,7 @@ export type ProjectFinancialModelOrchestrationResult={
   finalRun:ForeignCurrencyFinanceRunResult|null
   sensitivitySearches?:{rowId:string;alternative:string;result:PeriodicTargetSearchResult}[]
   incrementalAnalyses?:IncrementalAnalysisResult[]
+  shareholderDistribution?:ShareholderDistributionResult
 }
 
 /**
@@ -181,7 +183,7 @@ export function calculateProjectFinancialModelFromDrafts(
   // schedules are represented in the periodic engine (rather than being treated as zero).
   const notYetIntegratedSections=new Set([
     'joint-venture',
-    'profit-distribution','starting-balances',
+    'starting-balances',
     'economic-items','economic-effects',
   ])
   for(const [sectionId,sectionRows] of Object.entries(effectiveDrafts.helpDriven?.sections??{})){
@@ -499,7 +501,7 @@ export function calculateProjectFinancialModelFromDrafts(
   const openingExchangeRatesToLocal={...input.openingExchangeRatesToLocal,...Object.fromEntries(effectiveDrafts.loans
     .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
     .map(loan=>[loan.id,loan.openingExchangeRateToLocal as number]))}
-  const finalRun=calculatePeriodicFinanceWithForeignCurrencyLoans({
+  let finalRun=calculatePeriodicFinanceWithForeignCurrencyLoans({
     finance,loans:effectiveDrafts.loans,foundation:effectiveFoundation,
     openingBalances,taxTreatment:input.taxTreatment,
     openingTaxLossCarryForward:input.openingTaxLossCarryForward,
@@ -508,6 +510,11 @@ export function calculateProjectFinancialModelFromDrafts(
   if(!finalRun.valid)return {
     valid:false,issues:finalRun.issues,financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,
   }
+  const shareholderDistribution=applyShareholderDistributions(finalRun.finance,finalRun.statements,effectiveDrafts.helpDriven)
+  if(!shareholderDistribution.valid)return {
+    valid:false,issues:shareholderDistribution.issues,financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,
+  }
+  finalRun={...finalRun,finance:shareholderDistribution.finance,statements:shareholderDistribution.statements}
   const incrementalAnalysis=calculateIncrementalAnalysis(effectiveDrafts.helpDriven,finance)
   if(incrementalAnalysis.issues.length)return fail(incrementalAnalysis.issues)
   const sensitivitySearches:{rowId:string;alternative:string;result:PeriodicTargetSearchResult}[]=[]
@@ -543,5 +550,5 @@ export function calculateProjectFinancialModelFromDrafts(
       sensitivitySearches.push({rowId:row.id,alternative:typeof v.chartVariable==='string'&&v.chartVariable.trim()?v.chartVariable.trim():row.id,result})
     }
   }
-  return {valid:true,issues:[],financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,sensitivitySearches,...(incrementalAnalysis.results.length?{incrementalAnalyses:incrementalAnalysis.results}:{})}
+  return {valid:true,issues:[],financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,sensitivitySearches,shareholderDistribution,...(incrementalAnalysis.results.length?{incrementalAnalyses:incrementalAnalysis.results}:{})}
 }
