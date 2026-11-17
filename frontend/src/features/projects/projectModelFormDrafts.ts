@@ -74,7 +74,7 @@ export type LoanFacilityFormDraft={
  fees:{id:string;type:LoanFeeType|null;ratePercent:number|null;currencyCode:string|null;paymentDate?:string;treatment?:'expense'|'capitalize'|null}[]
 }
 export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{return{
- id,name:'',currencyCode:null,facilityLimit:null,openingForeignBalance:null,openingExchangeRateToLocal:null,marketOrigin:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',numberOfRepayments:null,
+ id,name:'',currencyCode:null,facilityLimit:null,openingForeignBalance:null,openingExchangeRateToLocal:null,marketOrigin:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',graceMonths:null,numberOfRepayments:null,
  disbursements:[],profileMovements:[],interestRateChanges:[],interestPaymentMonth:null,
  capitalizedInterestPercent:null,capitalizeUntilDate:'',fees:[]
 }}
@@ -168,6 +168,10 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
  if(value.openingForeignBalance!=null&&(!Number.isFinite(value.openingForeignBalance)||value.openingForeignBalance<0))errors.push('invalid-opening-foreign-balance')
  if(value.openingForeignBalance!=null&&value.openingForeignBalance>0&&(!Number.isFinite(value.openingExchangeRateToLocal)||!value.openingExchangeRateToLocal||value.openingExchangeRateToLocal<=0))errors.push('opening-foreign-debt-requires-opening-exchange-rate')
  if(value.loanType==='profile'&&value.numberOfRepayments!==null)errors.push('profile-loan-uses-dated-movements')
+ if(value.graceMonths===null||!Number.isInteger(value.graceMonths)||value.graceMonths<0)errors.push('loan-grace-period-months-required-or-invalid')
+ if(value.loanType==='profile'&&(value.graceMonths??0)>0)errors.push('profile-loan-grace-is-encoded-in-dated-principal-movements')
+ if(value.capitalizedInterestPercent===null)errors.push('loan-capitalized-interest-share-required')
+ if(value.capitalizedInterestPercent!==null&&value.capitalizedInterestPercent>0&&!value.capitalizeUntilDate)errors.push('loan-capitalization-end-date-required')
  if(value.loanType!=='profile'&&value.loanType!==null&&value.numberOfRepayments!==null&&(!Number.isInteger(value.numberOfRepayments)||value.numberOfRepayments<=0))errors.push('invalid-number-of-repayments')
  if(value.capitalizedInterestPercent!==null&&(!Number.isFinite(value.capitalizedInterestPercent)||value.capitalizedInterestPercent<0||value.capitalizedInterestPercent>100))errors.push('invalid-capitalized-interest-percent')
  if(value.interestPaymentMonth!==null&&(!Number.isInteger(value.interestPaymentMonth)||value.interestPaymentMonth<1||value.interestPaymentMonth>12))errors.push('invalid-interest-payment-month')
