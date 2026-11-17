@@ -5,7 +5,7 @@ import { allocateJointVentureCashFlows, type JointVenturePartner, type PartnerFi
 import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
-import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
+import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicLoanInput, type PeriodTaxBracket } from '../steel/periodicFinancialEngine'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
   calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
@@ -102,6 +102,7 @@ type SavedState = {
   opexEscalationPercent: number
   periodTaxRates?: number[]
   periodTaxRateDates?: string[]
+  taxBrackets?: PeriodTaxBracket[]
   fundingStructureVersion?: number
   minimumDscr?: number
 }
@@ -161,6 +162,9 @@ export default function AdvancedFinancePanel(props: Props) {
   })}))
   const periodTaxRateDatesMatch=()=>{const periods=props.projectPeriods??[];return state.periodTaxRates?.length===periods.length&&state.periodTaxRateDates?.length===periods.length&&state.periodTaxRateDates.every((date,index)=>date===periods[index].startDate+'|'+periods[index].endDate)}
   const periodDrawdownDatesMatch=(loan:Loan)=>{const periods=props.projectPeriods??[];return loan.periodDrawdowns?.length===periods.length&&loan.periodDrawdownDates?.length===periods.length&&loan.periodDrawdownDates.every((date,index)=>date===periods[index].startDate+'|'+periods[index].endDate)}
+  const updateTaxBracket=(index:number,patch:Partial<PeriodTaxBracket>)=>setState(s=>({...s,taxBrackets:(s.taxBrackets??[]).map((row,i)=>i===index?{...row,...patch}:row)}))
+  const addTaxBracket=()=>setState(s=>({...s,taxBrackets:[...(s.taxBrackets??[]),{lowerLimit:(s.taxBrackets??[]).length?((s.taxBrackets??[]).at(-1)?.upperLimit??0):0,upperLimit:null,ratePercent:0}]}))
+  const removeTaxBracket=(index:number)=>setState(s=>({...s,taxBrackets:(s.taxBrackets??[]).filter((_,i)=>i!==index)}))
   const updatePeriodTaxRate=(index:number,value:number)=>setState(s=>{
     const periods=props.projectPeriods??[]
     const matches=s.periodTaxRates?.length===periods.length&&s.periodTaxRateDates?.length===periods.length&&s.periodTaxRateDates.every((date,i)=>date===periods[i].startDate+'|'+periods[i].endDate)
@@ -309,6 +313,7 @@ export default function AdvancedFinancePanel(props: Props) {
       periodDepreciationSchedule,periodAssetSaleSchedule,
       workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
+      taxBrackets:state.taxBrackets?.length?state.taxBrackets:undefined,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
       equityDiscountRatePercent:props.costOfEquity,
       valuationDate:props.valuationDate||undefined,
@@ -316,7 +321,7 @@ export default function AdvancedFinancePanel(props: Props) {
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     })
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(state.taxBrackets??[]),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
@@ -445,6 +450,18 @@ export default function AdvancedFinancePanel(props: Props) {
     <p className="fw-hint">{tr('دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.')}</p>
     <div className="fw-grid">{taxRates.map((v,i)=><label className="fw-field" key={i}><span>{tr('نرخ مالیات سال')} {i+1} (%)</span><input type="number" min="0" max="100" value={v} onChange={e=>setState(s=>({...s,taxRates:taxRates.map((rate,j)=>j===i?Number(e.target.value):rate)}))}/></label>)}</div>
     {projectPeriods.length>0&&<div className="fw-card"><h4>{t('نرخ مالیات به تفکیک دوره','Tax Rate by Project Period')}</h4><p className="fw-hint">{t('در صورت عدم ورود نرخ دوره‌ای، نرخ سال مالی متناظر اعمال می‌شود. با ویرایش هر خانه، برنامه مالیاتی مستقل دوره‌ای فعال می‌شود.','If no period-specific rate is entered, the corresponding fiscal-year rate is applied. Editing any cell activates the independent period tax schedule.')}</p><div className="fw-grid">{projectPeriods.map((period,index)=>{const fiscalIndex=props.fiscalYearStartMonth==null?0:fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth);const defaultRate=taxRates[fiscalIndex]??props.taxRate;return <label className="fw-field" key={period.index}><span>{t('دوره','Period')} {period.index} · {period.startDate} (%)</span><input type="number" min="0" max="100" value={periodTaxRateDatesMatch()?state.periodTaxRates![index]:defaultRate} onChange={e=>updatePeriodTaxRate(index,Number(e.target.value))}/></label>})}</div></div>}
+    <div className="fw-card">
+      <h4>{t('نرخ‌های پلکانی مالیات بر درآمد','Progressive Corporate Income Tax Brackets')}</h4>
+      <p className="fw-hint">{t('مطابق جدول ۲۲ مرجع کامفار، هر نرخ فقط بر بخش درآمد واقع در همان بازه اعمال می‌شود. بازه‌ها باید پیوسته و از صفر شروع شوند؛ سقف خالی فقط برای آخرین پله است.','Following COMFAR Reference Manual Table 22, each marginal rate applies only to income within its bracket. Brackets must be contiguous and start at zero; a blank upper limit is reserved for the final bracket.')}</p>
+      {(state.taxBrackets??[]).map((bracket,index)=><div className="fw-grid" key={index}>
+        <label className="fw-field"><span>{t('حد پایین','Lower limit')}</span><input type="number" min="0" value={bracket.lowerLimit} onChange={e=>updateTaxBracket(index,{lowerLimit:Math.max(0,Number(e.target.value))})}/></label>
+        <label className="fw-field"><span>{t('حد بالا (خالی = بدون سقف)','Upper limit (blank = unlimited)')}</span><input type="number" min="0" value={bracket.upperLimit??''} onChange={e=>updateTaxBracket(index,{upperLimit:e.target.value===''?null:Math.max(0,Number(e.target.value))})}/></label>
+        <label className="fw-field"><span>{t('نرخ این پله (%)','Marginal rate (%)')}</span><input type="number" min="0" max="100" value={bracket.ratePercent} onChange={e=>updateTaxBracket(index,{ratePercent:Math.max(0,Math.min(100,Number(e.target.value)))})}/></label>
+        <button type="button" className="secondary-button" onClick={()=>removeTaxBracket(index)}><Trash2 size={14}/>{t('حذف پله','Remove bracket')}</button>
+      </div>)}
+      <button type="button" className="secondary-button" disabled={(state.taxBrackets??[]).length>0&&(state.taxBrackets??[]).at(-1)?.upperLimit===null} onClick={addTaxBracket}><Plus size={14}/>{t('افزودن پله مالیاتی','Add tax bracket')}</button>
+      {(state.taxBrackets??[]).length>0&&<p className="fw-hint">{t('با فعال بودن جدول پلکانی، نرخ‌های ثابت سالانه و دوره‌ای برای محاسبه مالیات نادیده گرفته می‌شوند.','When progressive brackets are active, flat annual and period tax rates are ignored.')}</p>}
+    </div>
     {listFinancialMethods('taxation').map(method=><div className="fw-validation" key={method.id}>
       <b>{tr(method.nameFa,method.nameEn)} · {method.calculationStatus==='implemented'?tr('محاسبه پیاده‌سازی‌شده','Calculation implemented'):method.calculationStatus}</b>
       <p className="fw-hint">{tr('فرمول:','Formula:')} {method.formula}</p>
