@@ -28,3 +28,23 @@ const invalid=engine.calculatePeriodicLoanSchedule({
 },periods,365)
 assert.equal(invalid.valid,false,'Loan schedule with mismatched period drawdowns must be rejected')
 console.log('PASS: generic periodic loan schedule validates drawdowns, amortization and maturity balance')
+
+const comfarTaxBrackets = [
+  { lowerLimit: 0, upperLimit: 1200, ratePercent: 15 },
+  { lowerLimit: 1200, upperLimit: 2000, ratePercent: 25 },
+  { lowerLimit: 2000, upperLimit: 5000, ratePercent: 40 },
+  { lowerLimit: 5000, upperLimit: 10000, ratePercent: 60 },
+  { lowerLimit: 10000, upperLimit: null, ratePercent: 75 },
+]
+const graduatedTax = engine.calculateGraduatedPeriodTax(7500, 0, comfarTaxBrackets)
+assert.equal(graduatedTax.taxableProfitAfterLoss, 7500)
+assert.equal(graduatedTax.tax, 3080, 'COMFAR Reference Manual Table 22 must calculate tax of 3,080 on taxable income of 7,500')
+const lossOffsetTax = engine.calculateGraduatedPeriodTax(7500, 1000, comfarTaxBrackets)
+assert.equal(lossOffsetTax.taxableProfitAfterLoss, 6500)
+assert.equal(lossOffsetTax.tax, 2480, 'Loss carry-forward must reduce taxable income before applying progressive brackets')
+const invalidBrackets = engine.calculateGraduatedPeriodTax(7500, 0, [
+  { lowerLimit: 0, upperLimit: 1000, ratePercent: 15 },
+  { lowerLimit: 1200, upperLimit: null, ratePercent: 25 },
+])
+assert.equal(Number.isNaN(invalidBrackets.tax), true, 'Gaps in graduated tax brackets must be rejected')
+console.log('PASS: COMFAR graduated corporate-tax brackets reproduce Reference Manual Table 22 and validate bracket continuity')
