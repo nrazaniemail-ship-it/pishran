@@ -176,7 +176,7 @@ export function calculateProjectFinancialModelFromDrafts(
   // These sections require dedicated adapters and are deliberately rejected until their
   // schedules are represented in the periodic engine (rather than being treated as zero).
   const notYetIntegratedSections=new Set([
-    'cost-allocation','joint-venture','equity-grants',
+    'joint-venture','equity-grants',
     'profit-distribution','depreciation-adjustments','starting-balances',
     'economic-items','economic-effects','sensitivity','incremental-analysis',
   ])
@@ -191,7 +191,7 @@ export function calculateProjectFinancialModelFromDrafts(
     'discounting':['shortNpvYears','referencePoint'],
     'economic-global':['method','numeraireType','numeraireCurrency','numeraireUnit','officialExchangeRate','shadowExchangeRate','standardConversionFactor','foreignCurrencyConversionFactor','referenceDate'],
     'income-tax':['taxSystem','taxCurrency','adjustmentPeriod','adjustmentAmount'],
-    'production-costs':['initialStockQuantity','initialStockValue','allocationKeyId'],
+    'production-costs':['initialStockQuantity','initialStockValue'],
     'sales-programme':['grossUnitPrice','productionActive','futureSalesQuantity','terminalInventorySale'],
     'working-capital':['mode','activityBasis','requiredQuantity','initialStockQuantity','initialStockValue','recoveryPeriod','depositPercent','depositRate','periodMonths'],
   }
