@@ -118,6 +118,9 @@ export function bindHelpDrivenFinancialDrafts(
         costCentreId:str(row,'costCentreId')||null}
       cost.classification=classification==='direct'||classification==='indirect'?classification:null
       cost.productId=productId||null
+      const activityBasis=str(row,'activityBasis')
+      if(activityBasis!=='sales'&&activityBasis!=='production')issues.push('production-costs:'+row.id+': activity basis must be explicitly set to sales or production.')
+      cost.activityBasis=activityBasis==='sales'||activityBasis==='production'?activityBasis:null
       cost.basis=['nominal-capacity','per-unit-output','period-adjustments'].includes(basis)?basis as typeof cost.basis:null
       cost.standardQuantity=num(row,'standardQuantity')
       cost.standardUnitPrice=num(row,'standardUnitPrice')
