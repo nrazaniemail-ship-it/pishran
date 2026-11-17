@@ -14,9 +14,9 @@ const periods = [
 ]
 const result = adapter.buildWorkingCapitalScheduleFromDrafts({
   workingCapital: [
-    { id: 'raw', name: 'Raw materials', category: 'inventory', minimumDaysCoverage: 30, turnoverCoefficient: 12, valuationBasis: 'cost-of-production',
+    { id: 'raw', name: 'Raw materials', category: 'inventory', minimumDaysCoverage: null, turnoverCoefficient: null, valuationBasis: 'cost-of-production',
       periodBalances: [{ period: '1', amount: 100 }, { period: '2025-04-01', amount: 130 }] },
-    { id: 'pay', name: 'Trade payables', category: 'payables', minimumDaysCoverage: 20, turnoverCoefficient: 18, valuationBasis: 'cost-of-production',
+    { id: 'pay', name: 'Trade payables', category: 'payables', minimumDaysCoverage: null, turnoverCoefficient: null, valuationBasis: 'cost-of-production',
       periodBalances: [{ period: '2025-01-01', amount: 20 }, { period: '2', amount: 30 }] },
   ],
 }, periods, 50)
