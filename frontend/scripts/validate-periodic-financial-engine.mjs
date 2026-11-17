@@ -92,3 +92,35 @@ assert.deepEqual(
   [1000,1100,100,150,1150],
 )
 console.log('PASS: periodic COMFAR sales schedule reconciles gross sales, sales tax, net sales and subsidies')
+
+const fundingCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,100,100],annualShortTermDepositInterest:[0,5,5],
+  annualVariableCost:[0,30,30],annualFixedCost:[0,10,10],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[100,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[0,0,0],annualEquityContributions:[50,0,0],
+  workingCapitalByPeriod:[0,0,0],openingCash:0,loans:[],discountRatePercent:10,
+})
+assert.equal(fundingCase.valid,true,fundingCase.warnings.join('; '))
+assert.deepEqual(fundingCase.rows.map(row=>Math.round(row.closingCash)),[-50,15,80])
+assert.deepEqual(fundingCase.rows.map(row=>Math.round(row.fundingGap)),[50,0,0])
+assert.equal(fundingCase.peakFundingGap,50)
+assert.ok(fundingCase.warnings.some(message=>message.includes('Funding shortfall')))
+const statements=engine.buildPeriodicThreeFinancialStatements(fundingCase)
+assert.equal(statements.length,periods.length)
+assert.deepEqual(statements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[-50,15,80])
+assert.equal(statements[1].incomeStatement.shortTermDepositInterest,5)
+assert.equal(statements[1].incomeStatement.ebit,65)
+const openingCashCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,100,100],annualShortTermDepositInterest:[0,5,5],
+  annualVariableCost:[0,30,30],annualFixedCost:[0,10,10],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[100,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[0,0,0],annualEquityContributions:[50,0,0],
+  workingCapitalByPeriod:[0,0,0],openingCash:50,loans:[],discountRatePercent:10,
+})
+assert.equal(openingCashCase.peakFundingGap,0)
+assert.deepEqual(openingCashCase.rows.map(row=>Math.round(row.closingCash)),[0,65,130])
+const openingStatements=engine.buildPeriodicThreeFinancialStatements(openingCashCase)
+assert.deepEqual(openingStatements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[0,65,130])
+console.log('PASS: period cash roll-forward, opening cash, shortfall alerts and deposit-interest statement reconciliation')
