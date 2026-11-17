@@ -108,7 +108,7 @@ for(const [id,key,value] of [
  ['loan-a','loanName','Generic facility'],['loan-a','kind','long-term'],['loan-a','currency','EUR'],
  ['loan-a','origin','local'],['loan-a','repaymentType','annuity'],['loan-a','interval','yearly'],
  ['loan-a','firstRepaymentDate','2025-12-31'],['loan-a','numberOfRepayments',2],
- ['loan-a','graceMonths',0],['loan-a','facilityLimit',1000],
+ ['loan-a','graceMonths',0],['loan-a','facilityLimit',1000],['loan-a','openingDebt',250],
 ]){
  if(!rawHelp.sections['loan-conditions'].some(row=>row.id===id))rawHelp=helpForms.addHelpFormRow(rawHelp,'loan-conditions',id)
  rawHelp=helpForms.updateHelpFormRow(rawHelp,'loan-conditions',id,key,value)
@@ -131,6 +131,7 @@ assert.equal(rawBound.drafts.productionCosts[0].productId,'product-a')
 assert.equal(rawBound.drafts.sales[0].periods.length,2)
 assert.equal(rawBound.drafts.workingCapital[0].periodBalances.length,2)
 assert.equal(rawBound.drafts.loans[0].name,'Generic facility')
+assert.equal(rawBound.drafts.loans[0].openingLocalBalance,250)
 assert.equal(rawBound.drafts.loans[0].disbursements[0].amount,1000)
 assert.equal(rawBound.drafts.loans[0].interestRateChanges[0].annualRatePercent,8)
 assert.equal(rawBound.drafts.loans[0].fees[0].paymentDate,'2025-01-01')
