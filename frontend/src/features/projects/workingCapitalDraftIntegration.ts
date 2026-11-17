@@ -17,6 +17,8 @@ export type WorkingCapitalDraftSchedule = {
   closingWorkingCapital: number[]
   changeInWorkingCapital: number[]
   openingWorkingCapital: number
+  /** Signed net working-capital balance released or settled in the terminal project period. */
+  terminalRecoveryAmount: number
 }
 
 /**
@@ -134,16 +136,21 @@ export function buildWorkingCapitalScheduleFromDrafts(
     closingWorkingCapital: [],
     changeInWorkingCapital: [],
     openingWorkingCapital,
+    terminalRecoveryAmount: 0,
   }
-  const changeInWorkingCapital = totals.map((closing, index) =>
-    closing - (index === 0 ? openingWorkingCapital : totals[index - 1]))
+  const closingWorkingCapital = [...totals]
+  const terminalRecoveryAmount = count ? closingWorkingCapital[count - 1] : 0
+  if (count) closingWorkingCapital[count - 1] = 0
+  const changeInWorkingCapital = closingWorkingCapital.map((closing, index) =>
+    closing - (index === 0 ? openingWorkingCapital : closingWorkingCapital[index - 1]))
   return {
     valid: true,
     issues: [],
     componentRows: rows,
-    closingWorkingCapital: totals,
+    closingWorkingCapital,
     changeInWorkingCapital,
     openingWorkingCapital,
+    terminalRecoveryAmount,
   }
 }
 
