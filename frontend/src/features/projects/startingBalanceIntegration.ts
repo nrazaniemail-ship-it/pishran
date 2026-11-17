@@ -1,4 +1,4 @@
-import { fiscalYearIndexForPeriod, type PeriodicProjectFinanceInput, type PeriodicStatementOpeningBalances } from '../steel/periodicFinancialEngine'
+import { type PeriodicProjectFinanceInput, type PeriodicStatementOpeningBalances } from '../steel/periodicFinancialEngine'
 import type { ProjectFoundation, ProjectCalendarPeriod } from './projectFoundation'
 import type { HelpFormRow } from './projectModelHelpForms'
 
@@ -118,7 +118,7 @@ export function bindStartingBalancesToPeriodicFinance(input:{
         openingBalances.netWorkingCapital!+=amountLocal;openingAssets+=amountLocal;break
       case 'accounts-payable':
       case 'other-current-liabilities':
-        openingBalances.netWorkingCapital!-=amountLocal;openingLiabilitiesAndEquity+=amountLocal;break
+        openingBalances.netWorkingCapital!-=amountLocal;openingAssets-=amountLocal;break
       case 'short-term-debt':
       case 'long-term-debt':
         openingBalances.debt!+=amountLocal;openingLiabilitiesAndEquity+=amountLocal;break
