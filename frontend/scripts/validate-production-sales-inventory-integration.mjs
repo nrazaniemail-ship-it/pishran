@@ -61,6 +61,14 @@ const unvaluedInventory=adapter.buildProductionSalesInventorySchedule(drafts,per
 assert.equal(unvaluedInventory.valid,false)
 assert.ok(unvaluedInventory.issues.some(issue=>issue.includes('Finished-goods inventory valuation is not yet connected')))
 
+const indirectCostDrafts={
+ ...inventoryDrafts,
+ productionCosts:[{...drafts.productionCosts[0],classification:'indirect',allocationKeyId:'overhead-key'}],
+}
+const unallocatedIndirectCost=adapter.buildProductionSalesInventorySchedule(indirectCostDrafts,periods,1,{slab:2})
+assert.equal(unallocatedIndirectCost.valid,false)
+assert.ok(unallocatedIndirectCost.issues.some(issue=>issue.includes('validated allocation-key schedule and period-level allocation shares are required')))
+
 const zeroInventoryCostDrafts={
  ...drafts,
  sales:[{...drafts.sales[0],openingFinishedGoodsQuantity:0,periods:drafts.sales[0].periods.map(row=>({...row,finishedGoodsClosingQuantity:0}))}],
