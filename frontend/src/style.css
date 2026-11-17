@@ -1606,3 +1606,10 @@ input,select,textarea{color:var(--text)}
 @media(prefers-reduced-motion:reduce){
   .ui-modern *, .ui-modern *::before, .ui-modern *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+
+/* Dashboard capability artwork supplied for the Pishran home screen */
+.dashboard-capabilities-art{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;padding:0;background:transparent!important;box-shadow:none!important;overflow:visible}
+.dashboard-capabilities-image{display:block;width:min(100%,590px);height:auto;max-height:560px;object-fit:contain;border-radius:18px;filter:drop-shadow(0 12px 22px rgba(27,48,65,.10))}
+@media(max-width:900px){.dashboard-capabilities-image{width:min(100%,520px);max-height:none}}
+@media(max-width:650px){.dashboard-capabilities-art{margin-top:12px}.dashboard-capabilities-image{width:100%;border-radius:12px}}
