@@ -1494,16 +1494,18 @@ export type PeriodicFinancialStatement = {
   }
   cashFlowStatement: {
     operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number
+    automaticEquityContribution: number; automaticOverdraftDrawdown: number; automaticOverdraftRepayment: number
     netChangeInCash: number; closingCash: number
   }
   balanceSheet: {
     cash: number; cashInHand: number; shortTermDeposits: number; netWorkingCapital: number; netFixedAssets: number; deferredPreOperatingAssets: number
+    automaticOverdraft: number
     totalAssets: number; debt: number; totalLiabilities: number; paidInCapital: number
     retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number
     balanceDifference: number; reconciled: boolean
   }
   movementChecks: {
-    cash: number; cashRollForward: number; debt: number; netWorkingCapital: number; netFixedAssets: number
+    cash: number; cashRollForward: number; debt: number; automaticOverdraft: number; netWorkingCapital: number; netFixedAssets: number
     deferredPreOperatingAssets: number; paidInCapital: number; retainedEarnings: number
   }
 }
@@ -1538,9 +1540,25 @@ export function buildPeriodicThreeFinancialStatements(
   let cash = balances.cash, debt = balances.debt, netFixedAssets = balances.netFixedAssets
   let netWorkingCapital = balances.netWorkingCapital, deferredPreOperatingAssets = balances.deferredPreOperatingAssets
   let paidInCapital = balances.paidInCapital, retainedEarnings = balances.retainedEarnings
+  let automaticFundingCashBalance = 0
+  let automaticOverdraftBalance = 0
   const statements: PeriodicFinancialStatement[] = []
   for (let index = 0; index < result.rows.length; index++) {
     const row = result.rows[index]
+    const automaticFunding = result.automaticFundingSchedule?.[index] ?? {
+      period: row.period, automaticEquity: 0, automaticOverdraftDrawdown: 0,
+      automaticOverdraftRepayment: 0, automaticOverdraftBalance: 0,
+    }
+    if (automaticFunding.period !== row.period ||
+        ![automaticFunding.automaticEquity, automaticFunding.automaticOverdraftDrawdown,
+          automaticFunding.automaticOverdraftRepayment, automaticFunding.automaticOverdraftBalance].every(validFinite) ||
+        [automaticFunding.automaticEquity, automaticFunding.automaticOverdraftDrawdown,
+          automaticFunding.automaticOverdraftRepayment, automaticFunding.automaticOverdraftBalance].some(value => value < 0)) return []
+    automaticFundingCashBalance += automaticFunding.automaticEquity +
+      automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
+    automaticOverdraftBalance += automaticFunding.automaticOverdraftDrawdown -
+      automaticFunding.automaticOverdraftRepayment
+    if (Math.abs(automaticOverdraftBalance - automaticFunding.automaticOverdraftBalance) > tolerance) return []
     const scheduledPeriod = loanSchedules.reduce((sum, schedule) => ({
       drawdown: sum.drawdown + schedule[index].drawdown,
       capitalizedInterest: sum.capitalizedInterest + schedule[index].capitalizedInterest,
@@ -1552,7 +1570,8 @@ export function buildPeriodicThreeFinancialStatements(
         Math.abs(scheduledPeriod.capitalizedInterest - row.capitalizedInterest) > tolerance ||
         Math.abs(scheduledPeriod.capitalizedFinancingFees - row.capitalizedFinancingFees) > tolerance ||
         Math.abs(scheduledPeriod.principal - row.principal) > tolerance) return []
-    const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal
+    const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees -
+      row.principal + automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
     if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance)) > tolerance) return []
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
     const cashOperatingCosts = row.variableCost + row.fixedCost
@@ -1564,14 +1583,18 @@ export function buildPeriodicThreeFinancialStatements(
     const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital
     const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex +
       row.assetSaleProceeds + row.salvageValue
-    const financingCashFlow = row.debtDrawdown + row.equityContribution + row.equityWorkingCapitalContribution - row.principal
+    const automaticFinancingCashFlow = automaticFunding.automaticEquity +
+      automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
+    const financingCashFlow = row.debtDrawdown + row.equityContribution +
+      row.equityWorkingCapitalContribution - row.principal + automaticFinancingCashFlow
     const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
     const closingCash = cash + netChangeInCash
     const closingWorkingCapital = row.closingWorkingCapital
     const closingNetFixedAssets = netFixedAssets + row.fixedInvestment + row.maintenanceCapex -
       row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed
     const closingPreOperatingAssets = deferredPreOperatingAssets + row.preOperatingCost + row.capitalizedInterest + row.capitalizedFinancingFees
-    const closingPaidInCapital = paidInCapital + row.equityContribution + row.equityWorkingCapitalContribution
+    const closingPaidInCapital = paidInCapital + row.equityContribution +
+      row.equityWorkingCapitalContribution + automaticFunding.automaticEquity
     const closingRetainedEarnings = retainedEarnings + netIncome
     const totalAssets = closingCash + closingWorkingCapital + closingNetFixedAssets + closingPreOperatingAssets
     const totalLiabilities = closingDebt
@@ -1580,13 +1603,17 @@ export function buildPeriodicThreeFinancialStatements(
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
     const movementChecks = {
       cash: closingCash - cash - netChangeInCash,
-      cashRollForward: closingCash - row.closingCash,
-      debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal),
+      cashRollForward: closingCash - (row.closingCash + automaticFundingCashBalance),
+      debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest +
+        row.capitalizedFinancingFees - row.principal + automaticFunding.automaticOverdraftDrawdown -
+        automaticFunding.automaticOverdraftRepayment),
+      automaticOverdraft: automaticOverdraftBalance - automaticFunding.automaticOverdraftBalance,
       netWorkingCapital: closingWorkingCapital - netWorkingCapital - row.changeInWorkingCapital,
       netFixedAssets: closingNetFixedAssets - netFixedAssets -
         (row.fixedInvestment + row.maintenanceCapex - row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed),
       deferredPreOperatingAssets: closingPreOperatingAssets - deferredPreOperatingAssets - row.preOperatingCost - row.capitalizedInterest - row.capitalizedFinancingFees,
-      paidInCapital: closingPaidInCapital - paidInCapital - row.equityContribution - row.equityWorkingCapitalContribution,
+      paidInCapital: closingPaidInCapital - paidInCapital - row.equityContribution -
+        row.equityWorkingCapitalContribution - automaticFunding.automaticEquity,
       retainedEarnings: closingRetainedEarnings - retainedEarnings - netIncome,
     }
     statements.push({
@@ -1596,9 +1623,14 @@ export function buildPeriodicThreeFinancialStatements(
         cashInterestExpense: row.cashInterestExpense, financingFeeExpense: row.financingFeeExpense,
         commitmentFeeExpense: row.commitmentFeeExpense,
         profitBeforeTax, tax: row.tax, netIncome },
-      cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow, netChangeInCash, closingCash },
+      cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow,
+        automaticEquityContribution: automaticFunding.automaticEquity,
+        automaticOverdraftDrawdown: automaticFunding.automaticOverdraftDrawdown,
+        automaticOverdraftRepayment: automaticFunding.automaticOverdraftRepayment,
+        netChangeInCash, closingCash },
       balanceSheet: { cash: closingCash, cashInHand: row.cashInHand, shortTermDeposits: row.shortTermDeposits, netWorkingCapital: closingWorkingCapital, netFixedAssets: closingNetFixedAssets,
-        deferredPreOperatingAssets: closingPreOperatingAssets, totalAssets, debt: closingDebt, totalLiabilities,
+        deferredPreOperatingAssets: closingPreOperatingAssets, automaticOverdraft: automaticFunding.automaticOverdraftBalance,
+        totalAssets, debt: closingDebt, totalLiabilities,
         paidInCapital: closingPaidInCapital, retainedEarnings: closingRetainedEarnings, totalEquity,
         totalLiabilitiesAndEquity, balanceDifference,
         reconciled: Math.abs(balanceDifference) <= tolerance && Object.values(movementChecks).every(value => Math.abs(value) <= tolerance) },
