@@ -605,6 +605,17 @@ export function calculateProjectFinancialModelFromDrafts(
       retainedEarnings:openingDraft.retainedEarnings!,
     }
   }
+
+  // The periodic engine and linked statements must start from the same opening NWC.
+  // Detailed/raw opening balances take precedence; otherwise use the explicit NWC
+  // input, then the bound working-capital schedule, then the summary opening balance.
+  const statementOpeningWorkingCapital=openingDraft?.enabled||startingBalances
+    ?(openingBalances.netWorkingCapital??0)
+    :input.openingWorkingCapital??(effectiveDrafts.workingCapital.length
+      ?(finance.openingWorkingCapital??openingBalances.netWorkingCapital??0)
+      :(openingBalances.netWorkingCapital??finance.openingWorkingCapital??0))
+  finance={...finance,openingWorkingCapital:statementOpeningWorkingCapital}
+  openingBalances={...openingBalances,netWorkingCapital:statementOpeningWorkingCapital}
   const openingForeignBalances={...input.openingForeignBalances,...Object.fromEntries(effectiveDrafts.loans
     .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
     .map(loan=>[loan.id,loan.openingForeignBalance as number]))}
