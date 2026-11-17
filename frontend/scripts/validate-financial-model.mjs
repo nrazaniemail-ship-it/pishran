@@ -168,6 +168,11 @@ assert.equal(openingAssetDisposal.sales.length,1)
 assert.equal(openingAssetDisposal.sales[0].period,2)
 assert.equal(openingAssetDisposal.sales[0].saleProceeds,500)
 assert.ok(openingAssetDisposal.sales[0].bookValueAtSale<700&&openingAssetDisposal.sales[0].bookValueAtSale>100)
+assert.equal(openingAssetDisposal.sales[0].returnOfCapital,openingAssetDisposal.sales[0].bookValueAtSale,
+  'Asset sale return of capital must equal the carrying value derecognized')
+assert.ok(Math.abs(openingAssetDisposal.sales[0].otherIncomeLoss-
+  (openingAssetDisposal.sales[0].saleProceeds-openingAssetDisposal.sales[0].bookValueAtSale))<0.01,
+  'Asset sale gain or loss must reconcile proceeds to the carrying value returned')
 assert.ok(openingAssetDisposal.depreciation.periods[2].assets[0].closingBookValue===0,
   'An opening asset must be removed from net fixed assets after its dated disposal')
 console.log('PASS: generic financial calculations, project calendar and opening-asset validation')
