@@ -313,6 +313,31 @@ assert.equal(discountedResult.financeInput.mirrReinvestmentRatePercent,9)
 assert.equal(discountedResult.financeInput.equityMirrFinanceRatePercent,11)
 assert.equal(discountedResult.financeInput.equityMirrReinvestmentRatePercent,12)
 assert.notEqual(discountedResult.finalRun.finance.npvProject,result.finalRun.finance.npvProject)
+let beginningReferenceHelp=helpForms.createBlankHelpDrivenProjectForms()
+beginningReferenceHelp=helpForms.updateHelpFormRow(beginningReferenceHelp,'discounting','discounting-main','referencePoint','beginning-of-first-period')
+const beginningReferenceModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:beginningReferenceHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(beginningReferenceModel.valid,true,beginningReferenceModel.issues.join('; '))
+assert.equal(beginningReferenceModel.financeInput.valuationDate,finance.periods[0].startDate)
+let endingReferenceHelp=helpForms.updateHelpFormRow(beginningReferenceHelp,'discounting','discounting-main','referencePoint','end-of-first-period')
+const endingReferenceModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:endingReferenceHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(endingReferenceModel.valid,true,endingReferenceModel.issues.join('; '))
+assert.equal(endingReferenceModel.financeInput.valuationDate,finance.periods[0].endDate)
+let conflictingReferenceHelp=helpForms.updateHelpFormRow(beginningReferenceHelp,'discounting','discounting-main','referenceDate','2025-01-01')
+const conflictingReferenceModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:conflictingReferenceHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(conflictingReferenceModel.valid,false)
+assert.ok(conflictingReferenceModel.issues.some(issue=>issue.includes('Specify either a discount reference date or a temporal reference point')))
 let progressiveTaxHelp=helpForms.createBlankHelpDrivenProjectForms()
 for(const period of ['1','2']){
  for(const [lowerLimit,rate] of [[0,10],[500,20]]){
