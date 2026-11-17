@@ -169,7 +169,7 @@ function baseModel(project:FeasibilityProject):Model {
   foundation:createBlankProjectFoundation(),financialForms:createBlankProjectModelFinancialFormDrafts(),fixedInvestmentItems:[],fixedInvestmentSeedVersion:0,startingFixedAssets:[],
   project:{name:project.name,location:project.location,owner:'',startYear:blankTemplate?0:1403,constructionYears:blankTemplate?0:2,operatingYears:blankTemplate?0:10,currency:blankTemplate?'':'میلیون ریال',fxRate:blankTemplate?0:1},
   stage:selectedStage.id,
-  products:[makeRow('محصول اصلی','تن/سال',blankTemplate?0:parsedCapacity,0)],
+  products:blankCustomProject?[]:[makeRow('محصول اصلی','تن/سال',blankTemplate?0:parsedCapacity,0)],
   capacity:{nameplate:blankTemplate?0:parsedCapacity,operatingDays:blankTemplate?0:330,hoursPerDay:blankTemplate?0:24,availability:blankTemplate?0:100,yield:blankTemplate?0:100,ramp:blankTemplate?[]:[70,80,90,100]},
   process:{technology:blankCustomProject||blankTemplate?'':selectedStage.name,route:blankCustomProject||blankTemplate?'':selectedStage.route,equipment:'',bottleneck:0,notes:''},
   technical:blankCustomProject?[]:selectedStage.fields.map(field=>makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',0,0,'برآورد مهندسی')),
