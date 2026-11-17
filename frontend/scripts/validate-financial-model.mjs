@@ -161,7 +161,7 @@ const openingAssetDisposal=engine.calculateComfarCalendarAssetLifecycle([{
   acquisitionDate:'2020-01-01',startingAtDate:'2025-01-01',firstDepreciationMonths:12
 }],[{
   id:'opening-sale-test-disposal',assetId:'opening-sale-test',period:1,
-  saleDate:'2026-06-30',priceMode:'self-defined',selfDefinedPrice:500,exchangeRateToLocal:1
+  saleDate:'2026-11-15',priceMode:'self-defined',selfDefinedPrice:500,exchangeRateToLocal:1
 }],periods,1)
 assert.equal(openingAssetDisposal.valid,true,openingAssetDisposal.warnings.join('; '))
 assert.equal(openingAssetDisposal.sales.length,1)
