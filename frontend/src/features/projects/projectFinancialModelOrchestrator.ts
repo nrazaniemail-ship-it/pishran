@@ -199,7 +199,7 @@ export function calculateProjectFinancialModelFromDrafts(
   // engine posting exists; supported sibling fields in the same section remain usable.
   const notYetMappedFields:Record<string,readonly string[]> = {
     'discounting':['shortNpvYears','referencePoint'],
-    'income-tax':['taxSystem','taxCurrency','adjustmentPeriod','adjustmentAmount'],
+    'income-tax':['adjustmentPeriod','adjustmentAmount'],
     'production-costs':['initialStockQuantity','initialStockValue'],
     'sales-programme':['grossUnitPrice','productionActive','futureSalesQuantity','terminalInventorySale'],
     'working-capital':['mode','activityBasis','daysCoverage','turnover','requiredQuantity','initialStockQuantity','initialStockValue','recoveryPeriod','depositPercent','depositRate','periodMonths'],
@@ -350,6 +350,21 @@ export function calculateProjectFinancialModelFromDrafts(
   const taxDraft=effectiveDrafts.tax??{system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null}
   const incomeTaxRow=effectiveDrafts.helpDriven?.sections?.['income-tax']?.[0]
   if(incomeTaxRow){
+    const taxSystem=incomeTaxRow.values.taxSystem
+    if(taxSystem!==null&&taxSystem!==undefined&&taxSystem!==''){
+      if(taxSystem!=='corporate-income-tax')
+        return fail(['The selected tax system is not supported by the periodic corporate income-tax engine. Choose corporate-income-tax or leave the tax system unspecified; no alternative tax regime is approximated.'])
+    }
+    const taxCurrency=incomeTaxRow.values.taxCurrency
+    if(taxCurrency!==null&&taxCurrency!==undefined&&taxCurrency!==''){
+      if(typeof taxCurrency!=='string'||!taxCurrency.trim())
+        return fail(['Tax currency must be a valid currency code.'])
+      const normalizedTaxCurrency=taxCurrency.trim().toUpperCase()
+      if(![effectiveFoundation.currencies.localCurrencyCode,...effectiveFoundation.currencies.foreignCurrencies.map(currency=>currency.code)].some(code=>code.toUpperCase()===normalizedTaxCurrency))
+        return fail(['Tax currency '+normalizedTaxCurrency+' is not defined in the project currency directory.'])
+      if(normalizedTaxCurrency!==effectiveFoundation.currencies.localCurrencyCode.toUpperCase())
+        return fail(['The tax engine currently calculates and posts income tax in the project local accounting currency. A foreign tax currency requires a dedicated tax-liability translation and settlement schedule; the model run is blocked rather than silently mixing currencies.'])
+    }
     const carryYears=incomeTaxRow.values.lossCarryForwardYears
     if(typeof carryYears==='number'){
       if(!Number.isInteger(carryYears)||carryYears<1)return fail(['Income-tax loss carry-forward duration must be a positive whole number of years.'])
