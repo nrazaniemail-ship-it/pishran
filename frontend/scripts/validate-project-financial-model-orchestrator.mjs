@@ -144,6 +144,10 @@ let discountingHelp=helpForms.createBlankHelpDrivenProjectForms()
 discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','investmentRate',12)
 discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','equityRate',14)
 discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','referenceDate','2025-01-01')
+discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','investmentBorrowingRate',8)
+discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','investmentReinvestmentRate',9)
+discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','equityBorrowingRate',11)
+discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','equityReinvestmentRate',12)
 const discountedResult=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,helpDriven:discountingHelp},foundation,productionStartDate:'2025-01-01',
  openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
@@ -153,6 +157,10 @@ assert.equal(discountedResult.valid,true,discountedResult.issues.join('; '))
 assert.equal(discountedResult.financeInput.discountRatePercent,12)
 assert.equal(discountedResult.financeInput.equityDiscountRatePercent,14)
 assert.equal(discountedResult.financeInput.valuationDate,'2025-01-01')
+assert.equal(discountedResult.financeInput.mirrFinanceRatePercent,8)
+assert.equal(discountedResult.financeInput.mirrReinvestmentRatePercent,9)
+assert.equal(discountedResult.financeInput.equityMirrFinanceRatePercent,11)
+assert.equal(discountedResult.financeInput.equityMirrReinvestmentRatePercent,12)
 assert.notEqual(discountedResult.finalRun.finance.npvProject,result.finalRun.finance.npvProject)
 let progressiveTaxHelp=helpForms.createBlankHelpDrivenProjectForms()
 for(const period of ['1','2']){
