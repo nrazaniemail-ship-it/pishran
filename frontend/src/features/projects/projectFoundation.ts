@@ -3,7 +3,7 @@ export type ProjectDiscountConvention = 'actual-days' | 'period-count'
 export type ProjectCurrency = { id: string; code: string; name: string; exchangeRates: { period: string; rateToLocal: number }[] }
 export type ProjectCostCentre = {
   id: string; code: string; name: string; parentId?: string
-  group?: string; level?: number; productIds?: string[]
+  group?: string; level?: string; productIds?: string[]
 }
 export type ProjectInflationIndex = { id: string; name: string; currencyCode: string; rates: { period: string; ratePercent: number }[] }
 export type ProjectTaxRate = { id: string; period: string; ratePercent: number }
