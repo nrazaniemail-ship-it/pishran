@@ -158,6 +158,16 @@ export function buildProductionSalesInventorySchedule(
       issues.push('Fixed and variable shares must be explicitly supplied and total 100% for item '+cost.id+'.')
     costRowsByPeriod.set(cost,resolveRows(cost.adjustments,periods,'Cost adjustment '+cost.id,issues))
   }
+  if(drafts.productionCosts.length){
+    for(const product of drafts.sales){
+      const opening=openingFinishedGoodsByProduct[product.productId]??product.openingFinishedGoodsQuantity??0
+      const salesMap=salesByProduct.get(product.productId)
+      const hasClosingStock=Array.from(salesMap?.values()??[]).some(row=>(row.finishedGoodsClosingQuantity??0)>1e-8)
+      if(opening>1e-8||hasClosingStock){
+        issues.push('Finished-goods inventory valuation is not yet connected to the cost-of-sales engine for '+product.productId+'. When production costs are entered, opening and closing finished-goods quantities must both be zero until opening inventory value and period-end inventory costing are supported.')
+      }
+    }
+  }
   if (issues.length) return empty()
 
   const openingByProduct={...openingFinishedGoodsByProduct}
