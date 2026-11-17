@@ -427,6 +427,60 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
   }
   if(typeof v.order==='number'&&(!Number.isInteger(v.order)||v.order<1))errors.push('sensitivity:invalid-variable-order')
  }
+ const currencyRows=value.sections?.['currencies']??[]
+ if(currencyRows.length){
+  const localCurrencies=currencyRows.filter(row=>row.values.type==='local')
+  const accountingCurrencies=currencyRows.filter(row=>row.values.accountingCurrency===true)
+  if(localCurrencies.length!==1)errors.push('currencies:exactly-one-local-currency-required')
+  if(accountingCurrencies.length!==1)errors.push('currencies:exactly-one-accounting-currency-required')
+  if(accountingCurrencies.length===1&&accountingCurrencies[0].values.type!=='local')
+   errors.push('currencies:accounting-currency-must-be-local')
+  for(const row of currencyRows){
+   const code=typeof row.values.code==='string'?row.values.code.trim().toUpperCase():''
+   const rate=row.values.exchangeRate
+   if(rate!==null&&rate!==''&&(typeof rate!=='number'||!Number.isFinite(rate)||rate<=0))
+    errors.push('currencies:invalid-exchange-rate:'+code)
+   if(row.values.type==='foreign'&&rate!==null&&rate!==''&&(!row.values.effectiveDate||row.values.effectiveDate===''))
+    errors.push('currencies:exchange-rate-date-required:'+code)
+   if(row.values.type==='local'&&typeof rate==='number'&&Math.abs(rate-1)>1e-10)
+    errors.push('currencies:local-currency-rate-must-equal-one:'+code)
+   if(row.values.accountingCurrency===true&&row.values.type!=='local')
+    errors.push('currencies:accounting-currency-must-be-local:'+code)
+  }
+ }
+ const currencyCodes=new Set(currencyRows.map(row=>typeof row.values.code==='string'?row.values.code.trim().toUpperCase():'').filter(Boolean))
+ const currencySections=['fixed-investment','preproduction-expenditure','production-costs','equity-grants','loan-conditions','loan-fees']
+ for(const sectionId of currencySections){
+  for(const [index,row] of (value.sections?.[sectionId]??[]).entries()){
+   const raw=row.values.currency
+   if(typeof raw==='string'&&raw.trim()&&!currencyCodes.has(raw.trim().toUpperCase()))
+    errors.push(sectionId+':'+index+':unknown-currency-reference:'+raw)
+  }
+ }
+ const taxBrackets=value.sections?.['tax-brackets']??[]
+ const taxByPeriod=new Map<string,typeof taxBrackets>()
+ for(const row of taxBrackets){
+  const period=typeof row.values.period==='string'?row.values.period.trim():''
+  if(period)taxByPeriod.set(period,[...(taxByPeriod.get(period)??[]),row])
+ }
+ for(const [period,rows] of taxByPeriod){
+  const sorted=[...rows].sort((a,b)=>Number(a.values.lowerLimit)-Number(b.values.lowerLimit))
+  const lowerLimits=sorted.map(row=>row.values.lowerLimit)
+  if(lowerLimits.some(value=>typeof value!=='number'||!Number.isFinite(value)||value<0))
+   errors.push('tax-brackets:invalid-lower-limit:'+period)
+  if(new Set(lowerLimits).size!==lowerLimits.length)
+   errors.push('tax-brackets:duplicate-lower-limit:'+period)
+  let previousRate=-Infinity
+  for(const row of sorted){
+   const rate=row.values.rate
+   if(typeof rate!=='number'||!Number.isFinite(rate)||rate<0||rate>100){
+    errors.push('tax-brackets:invalid-rate:'+period)
+    continue
+   }
+   if(rate<previousRate)errors.push('tax-brackets:progressive-rates-must-not-decrease:'+period)
+   previousRate=rate
+  }
+ }
  for(const row of value.sections?.['economic-effects']??[]){
   const v=row.values
   if(typeof v.headcount==='number'&&(!Number.isFinite(v.headcount)||v.headcount<0))errors.push('economic-effects:invalid-headcount')
@@ -494,60 +548,6 @@ export function validateHelpDrivenProjectPeriods(value:HelpDrivenProjectForms,pe
     if(typeof start==='string'&&start&&typeof end==='string'&&end&&start>end)
      errors.push(sectionId+':'+rowIndex+':date-range-reversed:'+startKey+':'+endKey)
    }
-  }
- }
- const currencyRows=value.sections?.['currencies']??[]
- if(currencyRows.length){
-  const localCurrencies=currencyRows.filter(row=>row.values.type==='local')
-  const accountingCurrencies=currencyRows.filter(row=>row.values.accountingCurrency===true)
-  if(localCurrencies.length!==1)errors.push('currencies:exactly-one-local-currency-required')
-  if(accountingCurrencies.length!==1)errors.push('currencies:exactly-one-accounting-currency-required')
-  if(accountingCurrencies.length===1&&accountingCurrencies[0].values.type!=='local')
-   errors.push('currencies:accounting-currency-must-be-local')
-  for(const row of currencyRows){
-   const code=typeof row.values.code==='string'?row.values.code.trim().toUpperCase():''
-   const rate=row.values.exchangeRate
-   if(rate!==null&&rate!==''&&(typeof rate!=='number'||!Number.isFinite(rate)||rate<=0))
-    errors.push('currencies:invalid-exchange-rate:'+code)
-   if(row.values.type==='foreign'&&rate!==null&&rate!==''&&(!row.values.effectiveDate||row.values.effectiveDate===''))
-    errors.push('currencies:exchange-rate-date-required:'+code)
-   if(row.values.type==='local'&&typeof rate==='number'&&Math.abs(rate-1)>1e-10)
-    errors.push('currencies:local-currency-rate-must-equal-one:'+code)
-   if(row.values.accountingCurrency===true&&row.values.type!=='local')
-    errors.push('currencies:accounting-currency-must-be-local:'+code)
-  }
- }
- const currencyCodes=new Set(currencyRows.map(row=>typeof row.values.code==='string'?row.values.code.trim().toUpperCase():'').filter(Boolean))
- const currencySections=['fixed-investment','preproduction-expenditure','production-costs','equity-grants','loan-conditions','loan-fees']
- for(const sectionId of currencySections){
-  for(const [index,row] of (value.sections?.[sectionId]??[]).entries()){
-   const raw=row.values.currency
-   if(typeof raw==='string'&&raw.trim()&&!currencyCodes.has(raw.trim().toUpperCase()))
-    errors.push(sectionId+':'+index+':unknown-currency-reference:'+raw)
-  }
- }
- const taxBrackets=value.sections?.['tax-brackets']??[]
- const taxByPeriod=new Map<string,typeof taxBrackets>()
- for(const row of taxBrackets){
-  const period=typeof row.values.period==='string'?row.values.period.trim():''
-  if(period)taxByPeriod.set(period,[...(taxByPeriod.get(period)??[]),row])
- }
- for(const [period,rows] of taxByPeriod){
-  const sorted=[...rows].sort((a,b)=>Number(a.values.lowerLimit)-Number(b.values.lowerLimit))
-  const lowerLimits=sorted.map(row=>row.values.lowerLimit)
-  if(lowerLimits.some(value=>typeof value!=='number'||!Number.isFinite(value)||value<0))
-   errors.push('tax-brackets:invalid-lower-limit:'+period)
-  if(new Set(lowerLimits).size!==lowerLimits.length)
-   errors.push('tax-brackets:duplicate-lower-limit:'+period)
-  let previousRate=-Infinity
-  for(const row of sorted){
-   const rate=row.values.rate
-   if(typeof rate!=='number'||!Number.isFinite(rate)||rate<0||rate>100){
-    errors.push('tax-brackets:invalid-rate:'+period)
-    continue
-   }
-   if(rate<previousRate)errors.push('tax-brackets:progressive-rates-must-not-decrease:'+period)
-   previousRate=rate
   }
  }
  return errors
