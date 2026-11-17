@@ -23,6 +23,25 @@ const [engine, foundation, financialModel] = await Promise.all([
 ])
 const periods=foundation.buildProjectCalendarPeriods('2025-01-01','2027-12-31','annual',1)
 assert.equal(periods.length,3)
+const detailedOpeningAccounts={
+  rawMaterials:120,factorySupplies:15,workInProgress:40,finishedGoods:65,
+  receivables:80,cash:30,shortTermDeposits:20,cashSurplus:10,
+  otherCurrentAssets:5,tradePayables:55,otherCurrentLiabilities:10,accruedInterest:7
+}
+const detailedOpeningSummary=foundation.calculateStartingFinancialBalanceSummary({
+  currentAssets:385,cashLocal:20,cashForeign:10,shortTermDepositsLocal:20,
+  cashSurplusLocal:6,cashSurplusForeign:4,payablesLocal:45,payablesForeign:10,
+  otherLiabilitiesLocal:10,openingDebt:200,accruedInterest:7,paidInCapital:300,
+  retainedEarnings:40,accumulatedLosses:5,grants:10,currentAccounts:detailedOpeningAccounts
+})
+assert.equal(detailedOpeningSummary.cash,60,
+  'Opening cash summary must include cash-in-hand, short-term deposits and cash surplus')
+assert.equal(detailedOpeningSummary.netWorkingCapital,265,
+  'Opening net working capital must exclude cash/deposits and operating current liabilities')
+assert.equal(detailedOpeningSummary.debt,207,
+  'Opening accrued interest must remain included in the total opening debt liability')
+assert.deepEqual(detailedOpeningSummary.currentAccounts,detailedOpeningAccounts,
+  'Opening current-account categories must be preserved without collapsing them into net working capital')
 const openingAssetLifecycle=financialModel.calculateComfarCalendarAssetLifecycle([{
   id:'opening-asset-test',name:'Opening asset',originalValue:1000,initialBookValue:700,
   scrapPercent:10,lengthYears:7,lengthMonths:0,ratePercent:100/7,
