@@ -44,6 +44,22 @@ orchestratorOutput=orchestratorOutput.replace("'./productionSalesInventoryIntegr
 const orchestrator=await import(url(orchestratorOutput))
 const helpForms=await import(helpFormsUrl)
 const helpBinding=await import(bindingUrl)
+const periodicEngine=await import(engineUrl)
+const exactPeriodOverrideRun=periodicEngine.calculateIntegratedPeriodicFinance({
+ periods:[
+  {index:1,startDate:'2025-01-01',endDate:'2025-01-31',days:31,partial:false},
+  {index:2,startDate:'2025-02-01',endDate:'2025-02-28',days:28,partial:false},
+ ],
+ fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+ annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
+ annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
+ annualTaxRates:[25],annualEquityContributions:[0],workingCapitalByPeriod:[0,0],
+ loans:[],discountRatePercent:10,
+ periodIncrementalAdjustments:{revenue:[100,0]},
+})
+assert.equal(exactPeriodOverrideRun.valid,true,exactPeriodOverrideRun.warnings.join('; '))
+assert.deepEqual(exactPeriodOverrideRun.rows.map(row=>row.revenue),[100,0])
+assert.deepEqual(exactPeriodOverrideRun.rows.map(row=>row.unleveredTax),[25,0])
 
 const periods=[
  {index:1,startDate:'2025-01-01',endDate:'2025-12-31',days:365,partial:false},
