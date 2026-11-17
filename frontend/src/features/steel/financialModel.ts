@@ -113,6 +113,12 @@ export function calculateWorkingCapitalTurnoverCoefficient(minimumDaysCoverage: 
   return 360 / minimumDaysCoverage
 }
 
+/** COMFAR VII.Q inverse: minimum days coverage (Mdc) = 360 / Coto. */
+export function calculateWorkingCapitalDaysCoverageFromTurnover(turnoverCoefficient: number): number | null {
+  if (!Number.isFinite(turnoverCoefficient) || turnoverCoefficient <= 0) return null
+  return 360 / turnoverCoefficient
+}
+
 /** COMFAR XI.O: interest on short-term deposits = cash-in-hand × invested share × annual rate × months / 12. */
 export function calculateShortTermDepositInterest(cashInHand: number, investedSharePercent: number, annualRatePercent: number, periodMonths: number): number {
   if (![cashInHand, investedSharePercent, annualRatePercent, periodMonths].every(Number.isFinite) || cashInHand < 0 || investedSharePercent < 0 || investedSharePercent > 100 || annualRatePercent < 0 || periodMonths < 0 || periodMonths > 12) return Number.NaN
