@@ -119,16 +119,42 @@ const driverBinding = adapter.bindWorkingCapitalDraftsToPeriodicFinance({
 assert.equal(driverBinding.valid, true, driverBinding.issues.join('; '))
 assert.deepEqual(driverBinding.financeInput.workingCapitalByPeriod, [90, 90])
 
-const unsupportedProductionDriver = adapter.buildWorkingCapitalScheduleFromDrafts({
+const productionCostDriver = adapter.buildWorkingCapitalScheduleFromDrafts({
   workingCapital: [{
     id: 'inventory', name: 'Raw materials', category: 'inventory',
     minimumDaysCoverage: 30, turnoverCoefficient: 12, calculationMode: 'value',
     activityBasis: 'production', valuationBasis: 'cost-of-production',
     periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
   }],
-}, periods, 0, [720, 900])
-assert.equal(unsupportedProductionDriver.valid, false)
-assert.ok(unsupportedProductionDriver.issues.some(issue => issue.includes('days-coverage-currently-supports-sales-revenue-receivables-only')))
+}, periods, 0, undefined, { costOfProductionByPeriod: [900, 1200] })
+assert.equal(productionCostDriver.valid, true, productionCostDriver.issues.join('; '))
+assert.ok(Math.abs(productionCostDriver.closingWorkingCapital[0] - 300) < 0.000001)
+assert.ok(Math.abs(productionCostDriver.closingWorkingCapital[1] - (1200 * 30 / 91)) < 0.000001)
+
+const costOfSalesPayables = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [
+    { id: 'stock', name: 'Other stock', category: 'inventory', minimumDaysCoverage: null, turnoverCoefficient: null,
+      calculationMode: 'value', valuationBasis: 'user-defined', periodBalances: [{ period: '1', amount: 500 }, { period: '2', amount: 600 }] },
+    { id: 'payables', name: 'Trade payables', category: 'payables',
+      minimumDaysCoverage: 20, turnoverCoefficient: 18, calculationMode: 'value',
+      activityBasis: 'sales', valuationBasis: 'cost-of-sales',
+      periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }] },
+  ],
+}, periods, 0, undefined, { costOfSalesByPeriod: [450, 910] })
+assert.equal(costOfSalesPayables.valid, true, costOfSalesPayables.issues.join('; '))
+assert.deepEqual(costOfSalesPayables.closingWorkingCapital, [400, 400])
+assert.deepEqual(costOfSalesPayables.componentRows.filter(row => row.category === 'payables').map(row => row.signedAmount), [-100, -200])
+
+const missingProductionCostBase = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'inventory', name: 'Raw materials', category: 'inventory',
+    minimumDaysCoverage: 30, turnoverCoefficient: 12, calculationMode: 'value',
+    activityBasis: 'production', valuationBasis: 'cost-of-production',
+    periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
+  }],
+}, periods, 0)
+assert.equal(missingProductionCostBase.valid, false)
+assert.ok(missingProductionCostBase.issues.some(issue => issue.includes('valid-period-cost-base-required')))
 
 
 const crossFiscalYearBinding = adapter.bindWorkingCapitalDraftsToPeriodicFinance({
@@ -149,6 +175,21 @@ const crossFiscalYearBinding = adapter.bindWorkingCapitalDraftsToPeriodicFinance
 }] }, 0)
 assert.equal(crossFiscalYearBinding.valid, true, crossFiscalYearBinding.issues.join('; '))
 assert.deepEqual(crossFiscalYearBinding.financeInput.workingCapitalByPeriod, [90, 112.5])
+const productionCostBinding = adapter.bindWorkingCapitalDraftsToPeriodicFinance({
+  periods, fiscalYearStartMonth: 1, dayCountBasis: 360, cashFlowTiming: 'period-end',
+  annualRevenue: [0], annualVariableCost: [0], annualFixedCost: [0], annualDepreciation: [0],
+  annualFixedInvestment: [0], annualPreOperatingCost: [0], annualMaintenanceCapex: [0],
+  annualTaxRates: [0], annualEquityContributions: [0], workingCapitalByPeriod: [], loans: [],
+}, { workingCapital: [{
+  id: 'wip', name: 'Work in progress', category: 'work-in-progress',
+  minimumDaysCoverage: 30, turnoverCoefficient: 12, calculationMode: 'value',
+  activityBasis: 'production', valuationBasis: 'cost-of-production',
+  periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
+}] }, 0, { costOfProductionByPeriod: [900, 1200] })
+assert.equal(productionCostBinding.valid, true, productionCostBinding.issues.join('; '))
+assert.ok(Math.abs(productionCostBinding.financeInput.workingCapitalByPeriod[0] - 300) < 0.000001)
+assert.ok(Math.abs(productionCostBinding.financeInput.workingCapitalByPeriod[1] - (1200 * 30 / 91)) < 0.000001)
+
 
 const missingSalesBase = adapter.buildWorkingCapitalScheduleFromDrafts({
   workingCapital: [{
