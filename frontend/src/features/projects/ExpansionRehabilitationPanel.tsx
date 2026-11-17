@@ -103,6 +103,8 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   'missing-starting-asset-remaining-life':'برای دارایی فعالِ مستهلک‌شونده عمر مفید باقیمانده مثبت لازم است.',
   'invalid-starting-asset-opportunity-value':'ارزش فرصت باید عددی نامنفی باشد.',
   'invalid-starting-asset-residual-value':'ارزش اسقاط باید بین صفر و بهای ناخالص باشد.',
+  'invalid-starting-asset-salvage-percent':'درصد ارزش اسقاط باید بین صفر تا صد درصد باشد.',
+  'starting-asset-salvage-exceeds-net-book-value':'ارزش اسقاط از ارزش دفتری خالص افتتاحیه بیشتر است؛ بهای ناخالص، استهلاک انباشته یا درصد اسقاط را اصلاح کنید.',
   'invalid-starting-asset-foreign-share':'سهم جزء ارزی باید بین صفر تا صد درصد باشد.',
   'unknown-starting-asset-cost-centre':'مرکز هزینه انتخاب‌شده در فونداسیون تعریف نشده است.',
   'invalid-starting-asset-date':'تاریخ‌ها باید به صورت YYYY-MM-DD وارد شوند.',
