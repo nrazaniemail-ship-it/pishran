@@ -4,7 +4,9 @@ import ts from 'typescript'
 async function transpile(path){const source=await readFile(new URL(path,import.meta.url),'utf8');return ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText}
 const url=output=>'data:text/javascript;base64,'+Buffer.from(output).toString('base64')
 const engineUrl=url(await transpile('../src/features/steel/periodicFinancialEngine.ts'))
-const sensitivityUrl=url(await transpile('../src/features/steel/periodicSensitivity.ts'))
+let sensitivityOutput=await transpile('../src/features/steel/periodicSensitivity.ts')
+sensitivityOutput=sensitivityOutput.replace("'./periodicFinancialEngine'",JSON.stringify(engineUrl))
+const sensitivityUrl=url(sensitivityOutput)
 const fxUrl=url(await transpile('../src/features/steel/foreignCurrencyTranslation.ts'))
 const helpFormulaUrl=url(await transpile('../src/features/projects/projectModelHelpFormulaRules.ts'))
 const helpFormsUrl=url(await transpile('../src/features/projects/projectModelHelpForms.ts'))
