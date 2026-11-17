@@ -83,6 +83,7 @@ export default function App() {
   const [focusMode, setFocusMode] = useState(false)
   const [inspectorOpen, setInspectorOpen] = useState(true)
   const [treeQuery, setTreeQuery] = useState('')
+  const [treeStatusFilter, setTreeStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all')
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null)
   const [contextProjectId, setContextProjectId] = useState<string | null>(null)
   const isEn = settings.language === 'en'
@@ -112,7 +113,7 @@ export default function App() {
     let alive = true
     Promise.all([localStore.remove('sample:plate-250k:v1'), localStore.remove('rolling:sample:v2')])
       .then(() => Promise.all([loadSettings(), removeSampleProjects(), localStore.info()]))
-      .then(([nextSettings, nextProjects, info]) => {
+      .then(async ([nextSettings, nextProjects, info]) => {
         if (!alive) return
         setSettings(nextSettings)
         applySettings(nextSettings)
@@ -196,12 +197,18 @@ export default function App() {
       <div className="modern-side-label">{isEn ? 'PROJECT BROWSER' : 'مرورگر پروژه‌ها'}</div>
       <div className="modern-project-tree"><div className="tree-root"><FolderKanban size={15}/><b>{isEn ? 'My projects' : 'پروژه‌های من'}</b><span>{projects.length}</span></div>
         <input className="tree-search-input" value={treeQuery} onChange={event => setTreeQuery(event.target.value)} placeholder={isEn ? 'Filter projects...' : 'جستجوی پروژه‌ها...'} aria-label={isEn ? 'Filter projects' : 'جستجوی پروژه‌ها'}/>
-        {projects.filter(project => project.name.toLocaleLowerCase().includes(treeQuery.trim().toLocaleLowerCase())).slice(0, 30).map(project => <div key={project.id} className="tree-project-wrap" draggable tabIndex={0} role="listitem" aria-label={isEn ? `Project ${project.name}. Use Alt plus arrow keys to reorder.` : `پروژه ${project.name}. برای جابه‌جایی از کلیدهای Alt و جهت‌نما استفاده کنید.`} onKeyDown={event => { if (!event.altKey || !['ArrowUp','ArrowDown'].includes(event.key)) return; event.preventDefault(); setProjects(current => { const next=[...current]; const index=next.findIndex(item=>item.id===project.id); const target=index+(event.key==='ArrowUp'?-1:1); if(index<0||target<0||target>=next.length)return current; [next[index],next[target]]=[next[target],next[index]]; return next }) }} onDragStart={() => setDraggedProjectId(project.id)} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (!draggedProjectId || draggedProjectId === project.id) return; setProjects(current => { const next=[...current]; const from=next.findIndex(item=>item.id===draggedProjectId); const to=next.findIndex(item=>item.id===project.id); if(from<0||to<0)return current; const [moved]=next.splice(from,1); next.splice(to,0,moved); return next }); setDraggedProjectId(null) }} onDragEnd={() => setDraggedProjectId(null)}>
+        <select className="tree-status-filter" value={treeStatusFilter} onChange={event => setTreeStatusFilter(event.target.value as typeof treeStatusFilter)} aria-label={isEn ? 'Filter project status' : 'فیلتر وضعیت پروژه'}>
+          <option value="all">{isEn ? 'All statuses' : 'همه وضعیت‌ها'}</option>
+          <option value="draft">{isEn ? 'Draft' : 'پیش‌نویس'}</option>
+          <option value="active">{isEn ? 'Active' : 'فعال'}</option>
+          <option value="archived">{isEn ? 'Archived' : 'بایگانی‌شده'}</option>
+        </select>
+        {projects.filter(project => project.name.toLocaleLowerCase().includes(treeQuery.trim().toLocaleLowerCase()) && (treeStatusFilter === 'all' || project.status === treeStatusFilter)).slice(0, 30).map(project => <div key={project.id} className="tree-project-wrap" draggable tabIndex={0} role="listitem" aria-label={isEn ? `Project ${project.name}. Use Alt plus arrow keys to reorder.` : `پروژه ${project.name}. برای جابه‌جایی از کلیدهای Alt و جهت‌نما استفاده کنید.`} onKeyDown={event => { if (!event.altKey || !['ArrowUp','ArrowDown'].includes(event.key)) return; event.preventDefault(); setProjects(current => { const next=[...current]; const index=next.findIndex(item=>item.id===project.id); const target=index+(event.key==='ArrowUp'?-1:1); if(index<0||target<0||target>=next.length)return current; [next[index],next[target]]=[next[target],next[index]]; return next }) }} onDragStart={() => setDraggedProjectId(project.id)} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (!draggedProjectId || draggedProjectId === project.id) return; setProjects(current => { const next=[...current]; const from=next.findIndex(item=>item.id===draggedProjectId); const to=next.findIndex(item=>item.id===project.id); if(from<0||to<0)return current; const [moved]=next.splice(from,1); next.splice(to,0,moved); return next }); setDraggedProjectId(null) }} onDragEnd={() => setDraggedProjectId(null)}>
           <button className={activeProject?.id === project.id ? 'selected' : ''} onContextMenu={event => { event.preventDefault(); setContextProjectId(contextProjectId === project.id ? null : project.id) }} onClick={() => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard'); setContextProjectId(null) }}><span className="tree-status"/><span>{project.name}</span><span className="tree-grip">⠿</span></button>
           {contextProjectId === project.id && <div className="tree-context-menu"><button onClick={() => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard'); setContextProjectId(null) }}>{isEn ? 'Open project' : 'بازکردن پروژه'}</button><button onClick={() => { setPage('projects'); setContextProjectId(null) }}>{isEn ? 'Project list' : 'فهرست پروژه‌ها'}</button></div>}
         </div>)}
         {projects.length === 0 && <small className="tree-empty">{isEn ? 'No projects yet' : 'هنوز پروژه‌ای ثبت نشده است'}</small>}
-        {projects.length > 0 && !projects.some(project => project.name.toLocaleLowerCase().includes(treeQuery.trim().toLocaleLowerCase())) && <small className="tree-empty">{isEn ? 'No matching projects' : 'پروژه‌ای یافت نشد'}</small>}
+        {projects.length > 0 && !projects.some(project => project.name.toLocaleLowerCase().includes(treeQuery.trim().toLocaleLowerCase()) && (treeStatusFilter === 'all' || project.status === treeStatusFilter)) && <small className="tree-empty">{isEn ? 'No matching projects' : 'پروژه‌ای یافت نشد'}</small>}
       </div>
       <div className="modern-sidebar-bottom"><button onClick={() => setFocusMode(value => !value)}><Layers3 size={16}/>{focusMode ? (isEn ? 'Exit focus mode' : 'خروج از حالت تمرکز') : (isEn ? 'Focus mode' : 'حالت تمرکز')}</button><button onClick={() => setInspectorOpen(value => !value)}><ShieldCheck size={16}/>{isEn ? 'Context panel' : 'پنل جزئیات'}</button></div>
     </aside>}
