@@ -12,7 +12,7 @@ import { buildProjectTaxDraftSchedule } from './projectTaxDraftIntegration'
 import { buildProjectLoanDraftIntegration } from './projectLoanDraftIntegration'
 import type { LoanFacilityFormDraft } from './projectModelFormDrafts'
 import { calculateOperatingCycleWorkingCapital, calculateWorkingCapitalTurnoverCoefficient, calculateWorkingCapitalDaysCoverageFromTurnover } from '../steel/financialModel'
-import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
+import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, calculatePeriodicSensitivityMatrix, calculatePeriodicFinancialScenarios, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput, type PeriodicFinancialScenarioSet, type PeriodicSensitivityCell } from '../steel/periodicFinancialEngine'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
   calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
@@ -293,7 +293,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const loanDraftIntegration=useMemo(()=>props.loanDrafts?.length&&props.projectFoundation&&props.dayCountBasis!==null&&props.dayCountBasis!==undefined
     ?buildProjectLoanDraftIntegration(props.loanDrafts,projectPeriods,props.dayCountBasis,props.periodFrequency??'unspecified',props.projectFoundation)
     :null,[JSON.stringify(props.loanDrafts??[]),JSON.stringify(projectPeriods),props.dayCountBasis,props.periodFrequency,JSON.stringify(props.projectFoundation??null)])
-  const periodicFinanceResult=useMemo<PeriodicProjectFinanceResult|null>(()=>{
+  const periodicFinanceBundle=useMemo<{result:PeriodicProjectFinanceResult;input:PeriodicProjectFinanceInput}|null>(()=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
     const fiscalMonth=props.fiscalYearStartMonth
@@ -358,17 +358,21 @@ export default function AdvancedFinancePanel(props: Props) {
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     }
     if(loanDraftIntegration&&!loanDraftIntegration.valid)
-      return calculateIntegratedPeriodicFinance({...periodicInput,annualTaxRates:Array(years).fill(Number.NaN)})
+      const invalidInput={...periodicInput,annualTaxRates:Array(years).fill(Number.NaN)}
+      return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
     if(props.workingCapitalDrafts?.length){
       const binding=bindWorkingCapitalDraftsToPeriodicFinance(
         periodicInput,{workingCapital:props.workingCapitalDrafts},props.openingWorkingCapitalBalance??0
       )
       if(!binding.valid||!binding.financeInput)
-        return calculateIntegratedPeriodicFinance({...periodicInput,workingCapitalByPeriod:Array(periods.length).fill(Number.NaN)})
-      return calculateIntegratedPeriodicFinance(binding.financeInput)
+        const invalidInput={...periodicInput,workingCapitalByPeriod:Array(periods.length).fill(Number.NaN)}
+        return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
+      return {result:calculateIntegratedPeriodicFinance(binding.financeInput),input:binding.financeInput}
     }
-    return calculateIntegratedPeriodicFinance(periodicInput)
+    return {result:calculateIntegratedPeriodicFinance(periodicInput),input:periodicInput}
   },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),productOperatingSchedule,projectTaxSchedule,loanDraftIntegration,props.openingWorkingCapitalBalance,props.openingCashBalance])
+  const periodicFinanceResult=periodicFinanceBundle?.result??null
+  const periodicFinanceInput=periodicFinanceBundle?.input??null
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
@@ -404,8 +408,8 @@ export default function AdvancedFinancePanel(props: Props) {
       Math.abs(cashTotal-(props.openingCashBalance??0))<=0.01
     return {valid,assetTotal,liabilityTotal,netWorkingCapital,cashTotal}
   },[props.openingCurrentAccounts,props.openingWorkingCapitalBalance,props.openingCashBalance])
-  const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
-  const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
+  const sensitivity=useMemo(()=>periodicFinanceInput?calculatePeriodicSensitivityMatrix(periodicFinanceInput,[-20,-10,0,10,20],[-20,-10,0,10,20]):[],[periodicFinanceInput])
+  const scenarios=useMemo(()=>periodicFinanceInput&&periodicFinanceResult?.valid?calculatePeriodicFinancialScenarios(periodicFinanceInput):null,[periodicFinanceInput,periodicFinanceResult?.valid])
   useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
   const updateAsset=(id:string,patch:Partial<Asset>)=>setState(s=>({...s,assets:s.assets.map(a=>a.id===id?{...a,...patch}:a)}))
   const updateDay=(key:keyof SavedState['workingCapitalDays'],value:number)=>setState(s=>({...s,workingCapitalDays:{...s.workingCapitalDays,[key]:Math.max(0,value)}}))
