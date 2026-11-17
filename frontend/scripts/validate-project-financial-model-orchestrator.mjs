@@ -395,8 +395,8 @@ assert.equal(depreciationAdjustmentModel.finalRun.finance.rows[1].tax,384)
 let targetSensitivityHelp=helpForms.createBlankHelpDrivenProjectForms()
 targetSensitivityHelp=helpForms.addHelpFormRow(targetSensitivityHelp,'sensitivity','target-npv-a')
 for(const [key,value] of Object.entries({
- analysisType:'desired-npv',variableGroup:'sales-revenues',targetNpv:result.finalRun.finance.npvProject,
- maxIncrease:10,maxDecrease:10,order:1,chartVariable:'Revenue',
+ analysisType:'desired-npv',variableGroup:'sales-revenues',variableId:'total-revenue',targetNpv:result.finalRun.finance.npvProject,
+ maxIncrease:10,maxDecrease:10,order:1,
 })) targetSensitivityHelp=helpForms.updateHelpFormRow(targetSensitivityHelp,'sensitivity','target-npv-a',key,value)
 const targetSensitivityModel=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,helpDriven:targetSensitivityHelp},foundation,productionStartDate:'2025-01-01',
@@ -410,7 +410,7 @@ assert.equal(targetSensitivityModel.sensitivitySearches[0].result.iterations,0)
 let unsupportedSensitivityHelp=helpForms.createBlankHelpDrivenProjectForms()
 unsupportedSensitivityHelp=helpForms.addHelpFormRow(unsupportedSensitivityHelp,'sensitivity','global-sensitivity-a')
 for(const [key,value] of Object.entries({
- analysisType:'global-input-variation',variableGroup:'sales-revenues',
+ analysisType:'global-input-variation',variableGroup:'sales-revenues',variableId:'total-revenue',
  maxIncrease:10,maxDecrease:10,order:1,
 })) unsupportedSensitivityHelp=helpForms.updateHelpFormRow(unsupportedSensitivityHelp,'sensitivity','global-sensitivity-a',key,value)
 const unsupportedSensitivityModel=orchestrator.calculateProjectFinancialModelFromDrafts({
