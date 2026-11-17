@@ -309,7 +309,7 @@ export default function AdvancedFinancePanel(props: Props) {
     return calculateIntegratedPeriodicFinance({
       periods,fiscalYearStartMonth:fiscalMonth,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
-      annualRevenue:result.years.map(row=>row.revenue),annualVariableCost:result.years.map(row=>row.variableCashCost),
+      annualRevenue:result.years.map(row=>row.revenue),annualNetSalesRevenue:result.years.map(row=>row.netSalesRevenue),annualGrossSalesRevenue:result.years.map(row=>row.grossSalesRevenue),annualSalesTax:result.years.map(row=>row.salesTax),annualSubsidy:result.years.map(row=>row.subsidy),annualVariableCost:result.years.map(row=>row.variableCashCost),
       annualFixedCost:result.years.map(row=>row.fixedCashCost),annualDepreciation:depreciationValues,
       annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
       annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:taxRates,annualEquityContributions:equityContributions,
