@@ -309,12 +309,15 @@ unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure',
 unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a','currency','EUR')
 unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a','origin','local')
 unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a','period','1')
-const blockedUnboundModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+for(const [key,value] of Object.entries({quantity:1,unitPrice:100,total:100,amortizationMethod:'linear-to-zero',amortizationLength:2,amortizationStartMode:'production-start',firstAmortizationYearMonths:12,scrapPercent:0}))
+ unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a',key,value)
+const preproductionModel=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,helpDriven:unboundHelp},foundation,productionStartDate:'2025-01-01',
  openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
  taxTreatment:'non-deductible',
 })
-assert.equal(blockedUnboundModel.valid,false)
-assert.ok(blockedUnboundModel.issues.some(issue=>issue.includes('preproduction-expenditure')&&issue.includes('not yet connected')))
+assert.equal(preproductionModel.valid,true,preproductionModel.issues.join('; '))
+assert.deepEqual(preproductionModel.financeInput.annualPreOperatingCost,[100,0])
+assert.ok(preproductionModel.fixedAssets.assets.some(asset=>asset.assetClass==='preproduction'))
 
-console.log('Unified project form orchestration, input-coverage guard and opening-balance-sheet validation passed.')
+console.log('Unified project form orchestration, pre-production amortization and opening-balance-sheet validation passed.')
