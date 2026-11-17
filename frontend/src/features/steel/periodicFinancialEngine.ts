@@ -687,6 +687,8 @@ export type PeriodicProjectFinanceInput = {
   annualEquityWorkingCapitalContributions?: number[]
   workingCapitalByPeriod: number[]
   openingWorkingCapital?: number
+  /** Opening cash balance used to test period-by-period financing sufficiency. */
+  openingCash?: number
   openingTaxLoss?: number
   openingUnleveredTaxLoss?: number
   loans: PeriodicProjectLoan[]
@@ -766,6 +768,9 @@ export type PeriodicProjectFinanceRow = {
   dscrCovenantStatus: 'not-tested' | 'pass' | 'breach'
   projectFreeCashFlow: number
   equityFreeCashFlow: number
+  /** Closing cash after operating, investing and financing flows; negative values indicate a funding gap. */
+  closingCash: number
+  fundingGap: number
 }
 export type PeriodicProjectFinanceResult = {
   valid: boolean
@@ -781,6 +786,8 @@ export type PeriodicProjectFinanceResult = {
   totalEquityContribution: number
   totalCapitalizedInterest: number
   peakWorkingCapital: number
+  peakFundingGap: number
+  openingCash: number
   warnings: string[]
 }
 
@@ -955,7 +962,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const empty = (): PeriodicProjectFinanceResult => ({
     valid: false, rows: [], loanSchedules: {}, npvProject: null, irrProject: null, mirrProject: null,
     npvEquity: null, irrEquity: null, mirrEquity: null, totalDebtDrawdown: 0,
-    totalEquityContribution: 0, totalCapitalizedInterest: 0, peakWorkingCapital: 0, warnings
+    totalEquityContribution: 0, totalCapitalizedInterest: 0, peakWorkingCapital: 0, peakFundingGap: 0, openingCash: input.openingCash ?? 0, warnings
   })
   if (input.minimumDscr != null && (!validFinite(input.minimumDscr) || input.minimumDscr <= 0)) warnings.push('Minimum DSCR covenant must be a positive finite multiple.')
   if (!periods.length || (input.salvageValue != null && (!validFinite(input.salvageValue) || input.salvageValue < 0)) ||
@@ -963,6 +970,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       (dayCountBasis !== 360 && dayCountBasis !== 365) ||
       !Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12 ||
       (input.minimumDscr != null && (!validFinite(input.minimumDscr) || input.minimumDscr <= 0)) ||
+      (input.openingCash != null && !validFinite(input.openingCash)) ||
       !['period-end','mid-period'].includes(cashFlowTiming)) {
     warnings.push('Project periods, fiscal-year start month, day-count basis or cash-flow timing are invalid.')
     return empty()
@@ -1133,6 +1141,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     return empty()
   }
   const rows: PeriodicProjectFinanceRow[] = []
+  let cashBalance = input.openingCash ?? 0
+  let peakFundingGap = 0
   const openingFiscalYear = fiscalYearIndexForPeriod(periods[0],periods,fiscalYearStartMonth)
   const taxLossLots: TaxLossLot[] = openingLoss > 0 ? [{amount:openingLoss,originFiscalYear:openingFiscalYear}] : []
   const unleveredTaxLossLots: TaxLossLot[] = openingUnleveredLoss > 0 ? [{amount:openingUnleveredLoss,originFiscalYear:openingFiscalYear}] : []
@@ -1208,6 +1218,14 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const equityFreeCashFlow = -equityContribution[index] + revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index]
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
+    const periodCashChange = revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - periodTax.tax
+      - interestExpense - principal - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
+      - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage + debtDrawdown
+      + equityContribution[index] + equityWorkingCapitalContributionAmount
+    const closingCash = cashBalance + periodCashChange
+    const fundingGap = Math.max(0, -closingCash)
+    peakFundingGap = Math.max(peakFundingGap, fundingGap)
+    if (fundingGap > 0.01) warnings.push('Funding shortfall at the end of project period ' + (index + 1) + ': ' + fundingGap.toFixed(2) + '.')
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
       revenue:revenue[index],shortTermDepositInterest:shortTermDepositInterest[index],netSalesRevenue:input.annualNetSalesRevenue?netSalesRevenue[index]:revenue[index],grossSalesRevenue:input.annualGrossSalesRevenue?grossSalesRevenue[index]:revenue[index],salesTax:salesTax[index],subsidy:input.annualSubsidy?subsidy[index]:0,variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
@@ -1219,8 +1237,10 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
       equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
-      salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,dscrCovenantStatus,projectFreeCashFlow,equityFreeCashFlow
+      salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,dscrCovenantStatus,projectFreeCashFlow,equityFreeCashFlow,
+      closingCash,fundingGap
     })
+    cashBalance = closingCash
     priorWorkingCapital = closingWorkingCapital
   }
   const projectFlows = rows.map(row=>row.projectFreeCashFlow)
@@ -1243,7 +1263,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     valid:true,rows,loanSchedules,npvProject,irrProject:calculatePeriodicIrr(projectFlows,periods,dayCountBasis,cashFlowTiming),
     mirrProject,npvEquity,irrEquity:calculatePeriodicIrr(equityFlows,periods,dayCountBasis,cashFlowTiming),mirrEquity,
     totalDebtDrawdown,totalEquityContribution,totalCapitalizedInterest,
-    peakWorkingCapital:Math.max(0,...input.workingCapitalByPeriod),warnings
+    peakWorkingCapital:Math.max(0,...input.workingCapitalByPeriod),peakFundingGap,openingCash:input.openingCash??0,warnings
   }
 }
 
@@ -1542,7 +1562,7 @@ export type PeriodicFinancialStatement = {
   endDate: string
   openingBalances: Required<PeriodicStatementOpeningBalances>
   incomeStatement: {
-    revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number
+    revenue: number; shortTermDepositInterest: number; cashOperatingCosts: number; ebitda: number; depreciation: number
     assetDisposalGainLoss: number; ebit: number; interest: number
     cashInterestExpense: number; financingFeeExpense: number; commitmentFeeExpense: number
     profitBeforeTax: number; tax: number; netIncome: number
@@ -1575,7 +1595,7 @@ export function buildPeriodicThreeFinancialStatements(
 ): PeriodicFinancialStatement[] {
   if (!result.valid || !Number.isFinite(tolerance) || tolerance < 0) return []
   const balances: Required<PeriodicStatementOpeningBalances> = {
-    cash: opening.cash ?? 0, debt: opening.debt ?? 0, netFixedAssets: opening.netFixedAssets ?? 0,
+    cash: opening.cash ?? result.openingCash ?? 0, debt: opening.debt ?? 0, netFixedAssets: opening.netFixedAssets ?? 0,
     netWorkingCapital: opening.netWorkingCapital ?? 0, deferredPreOperatingAssets: opening.deferredPreOperatingAssets ?? 0,
     paidInCapital: opening.paidInCapital ?? 0, retainedEarnings: opening.retainedEarnings ?? 0,
   }
@@ -1613,7 +1633,7 @@ export function buildPeriodicThreeFinancialStatements(
     const cashOperatingCosts = row.variableCost + row.fixedCost
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
     const ebitda = row.revenue - cashOperatingCosts
-    const ebit = ebitda - row.depreciation + assetDisposalGainLoss
+    const ebit = ebitda - row.depreciation + assetDisposalGainLoss + row.shortTermDepositInterest
     const profitBeforeTax = ebit - row.interestExpense
     const netIncome = profitBeforeTax - row.tax
     const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital
@@ -1645,7 +1665,7 @@ export function buildPeriodicThreeFinancialStatements(
     }
     statements.push({
       period: row.period, startDate: row.startDate, endDate: row.endDate, openingBalances,
-      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation,
+      incomeStatement: { revenue: row.revenue, shortTermDepositInterest: row.shortTermDepositInterest, cashOperatingCosts, ebitda, depreciation: row.depreciation,
         assetDisposalGainLoss, ebit, interest: row.interestExpense,
         cashInterestExpense: row.cashInterestExpense, financingFeeExpense: row.financingFeeExpense,
         commitmentFeeExpense: row.commitmentFeeExpense,
