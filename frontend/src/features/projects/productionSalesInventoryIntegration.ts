@@ -383,6 +383,116 @@ export function calculateFinishedGoodsWeightedAverage(input: FinishedGoodsCostFl
 }
 
 
+
+export type FinishedGoodsFifoPeriodInput = {
+  period: string
+  productionQuantity: number
+  productionCost: number
+  salesQuantity: number
+  closingQuantity: number
+}
+export type FinishedGoodsFifoPeriodResult = {
+  period: string
+  openingQuantity: number
+  openingValue: number
+  productionQuantity: number
+  productionCost: number
+  salesQuantity: number
+  closingQuantity: number
+  availableQuantity: number
+  availableValue: number
+  costOfGoodsSold: number
+  closingInventoryValue: number
+  reconciliationDifference: number
+}
+export type FinishedGoodsFifoScheduleResult = {
+  valid: boolean
+  issues: string[]
+  periods: FinishedGoodsFifoPeriodResult[]
+  closingQuantity: number
+  closingValue: number
+}
+
+/**
+ * Value finished goods using FIFO layers. Opening stock is represented by one
+ * carrying-value layer; each period's production creates a new layer at its
+ * actual entered production cost. Sales consume the oldest layers first.
+ */
+export function calculateFinishedGoodsFifoSchedule(input: {
+  openingQuantity: number
+  openingValue: number
+  periods: FinishedGoodsFifoPeriodInput[]
+}): FinishedGoodsFifoScheduleResult {
+  const issues: string[] = []
+  const fail = (): FinishedGoodsFifoScheduleResult => ({
+    valid:false,issues,periods:[],closingQuantity:0,closingValue:0,
+  })
+  if (!nonNegative(input.openingQuantity) || !nonNegative(input.openingValue))
+    issues.push('Opening finished-goods quantity and value must be finite, explicit and non-negative.')
+  if (!Array.isArray(input.periods) || input.periods.length === 0)
+    issues.push('At least one finished-goods FIFO period is required.')
+  const keys = input.periods.map(row => typeof row.period === 'string' ? row.period.trim() : '')
+  if (keys.some(key => !key) || new Set(keys).size !== keys.length)
+    issues.push('Finished-goods FIFO period keys must be non-empty and unique.')
+  if (issues.length) return fail()
+
+  type Layer = { quantity:number; unitCost:number }
+  const layers:Layer[] = input.openingQuantity > 1e-12
+    ? [{quantity:input.openingQuantity,unitCost:input.openingValue/input.openingQuantity}]
+    : []
+  const results:FinishedGoodsFifoPeriodResult[]=[]
+  let openingQuantity=input.openingQuantity
+  let openingValue=input.openingValue
+  for (const row of input.periods) {
+    const values=[row.productionQuantity,row.productionCost,row.salesQuantity,row.closingQuantity]
+    if (values.some(value=>!nonNegative(value))) {
+      issues.push('Period '+row.period+': FIFO quantities and production cost must be finite and non-negative.')
+      break
+    }
+    if (row.productionQuantity<=1e-12 && row.productionCost>0.01) {
+      issues.push('Period '+row.period+': production value exists without production quantity.')
+      break
+    }
+    const availableQuantity=openingQuantity+row.productionQuantity
+    const availableValue=openingValue+row.productionCost
+    const quantityDifference=availableQuantity-row.salesQuantity-row.closingQuantity
+    if (Math.abs(quantityDifference)>1e-8) {
+      issues.push('Period '+row.period+': finished-goods quantities do not reconcile under FIFO.')
+      break
+    }
+    if (row.productionQuantity>1e-12)
+      layers.push({quantity:row.productionQuantity,unitCost:row.productionCost/row.productionQuantity})
+    let remainingSales=row.salesQuantity
+    let costOfGoodsSold=0
+    for (const layer of layers) {
+      if (remainingSales<=1e-12) break
+      const consumed=Math.min(layer.quantity,remainingSales)
+      costOfGoodsSold+=consumed*layer.unitCost
+      layer.quantity-=consumed
+      remainingSales-=consumed
+    }
+    if (remainingSales>1e-8) {
+      issues.push('Period '+row.period+': FIFO layers do not cover reported sales quantity.')
+      break
+    }
+    for (let i=layers.length-1;i>=0;i--) if(layers[i].quantity<=1e-12) layers.splice(i,1)
+    const closingInventoryValue=layers.reduce((sum,layer)=>sum+layer.quantity*layer.unitCost,0)
+    const reconciliationDifference=availableValue-costOfGoodsSold-closingInventoryValue
+    if (Math.abs(reconciliationDifference)>Math.max(0.01,Math.abs(availableValue)*1e-10)) {
+      issues.push('Period '+row.period+': FIFO value does not reconcile to cost of goods sold plus closing inventory.')
+      break
+    }
+    results.push({period:row.period,openingQuantity,openingValue,
+      productionQuantity:row.productionQuantity,productionCost:row.productionCost,
+      salesQuantity:row.salesQuantity,closingQuantity:row.closingQuantity,
+      availableQuantity,availableValue,costOfGoodsSold,closingInventoryValue,reconciliationDifference})
+    openingQuantity=row.closingQuantity
+    openingValue=closingInventoryValue
+  }
+  return {valid:issues.length===0,issues,periods:results,
+    closingQuantity:openingQuantity,closingValue:openingValue}
+}
+
 export type FinishedGoodsWeightedAveragePeriodInput = {
   period: string
   productionQuantity: number
