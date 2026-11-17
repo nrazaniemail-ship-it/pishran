@@ -368,7 +368,10 @@ export default function AdvancedFinancePanel(props: Props) {
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
     {workingCapitalDraftSchedule&&!workingCapitalDraftSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه سرمایه در گردش از فرم‌های تفصیلی معتبر نیست؛ محاسبات دوره‌ای متوقف شده است.','The detailed working-capital schedule is invalid; periodic calculations are blocked.')}</b>{workingCapitalDraftSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
-    {workingCapitalDraftSchedule?.valid&&<p className="fw-hint">{t('مانده‌های سرمایه در گردش از فرم‌های تفصیلی به موتور دوره‌ای متصل شده‌اند؛ افزایش/کاهش مانده خالص در جریان نقدی ثبت می‌شود.','Detailed working-capital closing balances are connected to the periodic engine; net balance movements are posted to cash flow.')}</p>}
+    {workingCapitalDraftSchedule?.valid&&<>
+      <p className="fw-hint">{t('مانده‌های سرمایه در گردش از فرم‌های تفصیلی به موتور دوره‌ای متصل شده‌اند؛ افزایش/کاهش مانده خالص در جریان نقدی ثبت می‌شود.','Detailed working-capital closing balances are connected to the periodic engine; net balance movements are posted to cash flow.')}</p>
+      {Math.abs(workingCapitalDraftSchedule.terminalRecoveryAmount)>0.01&&<p className="fw-hint">{t('در پایان آخرین دوره، مانده خالص سرمایه در گردش به‌طور کامل آزاد یا تسویه می‌شود؛ اثر نقدی خالص این تسویه:','At the end of the final period, net working capital is fully released or settled; net cash effect of this settlement:')} <b>{money(workingCapitalDraftSchedule.terminalRecoveryAmount)} {props.currency}</b></p>}
+    </>}
     {props.fixedInvestmentSchedule?.length===years && props.preOperatingSchedule?.length===years
       ? <p className="fw-hint">{t('زمان‌بندی CAPEX دارایی‌های ثابت و هزینه‌های قبل از بهره‌برداری از نوبت‌های تحصیل مستند یا تأییدشده استخراج شده است.','Fixed-asset CAPEX and pre-production timing both use source-supported or user-confirmed acquisition vintages.')}</p>
       : props.fixedInvestmentSchedule?.length===years
