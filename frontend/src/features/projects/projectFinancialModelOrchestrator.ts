@@ -26,7 +26,7 @@ export function bindHelpDrivenFoundation(
 ):{foundation:ProjectFoundation;issues:string[]} {
   if(!forms)return {foundation,issues:[]}
   const issues:string[]=[]
-  let result=f​​oundation
+  let result=foundation
   const rows=(id:string)=>forms.sections?.[id]??[]
   const currencies=rows('currencies')
   if(currencies.length){
