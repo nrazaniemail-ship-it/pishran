@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { calculateIncrementalEnterpriseAnalysis, calculateExistingLoanSchedule, type ExistingLoanRepaymentType, type EnterpriseScenarioPeriodInput } from '../steel/financialModel'
-import { validateStartingFixedAssetBalances, type StartingFixedAssetBalance, type ProjectFoundation } from './projectFoundation'
+import { calculateStartingFinancialBalanceSummary, validateStartingFixedAssetBalances, type StartingFixedAssetBalance, type StartingFinancialBalanceSummary, type ProjectFoundation } from './projectFoundation'
 
 type Asset = StartingFixedAssetBalance
 type ProductBalance = {id:string;productName:string;localValue:number;foreignValue:number}
@@ -83,7 +83,7 @@ const comfarTermsEn:Record<string,string>={
 const moneyKeys:[keyof Opening,string][]=[
  ['rawMaterialsLocal','موجودی مواد اولیه ـ ارز محلی'],['rawMaterialsForeign','موجودی مواد اولیه ـ جزء ارز خارجی'],['suppliesLocal','مواد و ملزومات ـ ارز محلی'],['suppliesForeign','مواد و ملزومات ـ جزء ارز خارجی'],['wipLocal','کالای در جریان ساخت ـ ارز محلی'],['wipForeign','کالای در جریان ساخت ـ جزء ارز خارجی'],['receivablesLocal','حساب‌های دریافتنی ـ ارز محلی'],['receivablesForeign','حساب‌های دریافتنی ـ جزء ارز خارجی'],['cashLocal','وجه نقد ـ ارز محلی'],['cashForeign','وجه نقد ـ جزء ارز خارجی'],['shortTermDepositsLocal','سپرده کوتاه‌مدت محلی'],['cashSurplusLocal','مازاد نقدی محلی'],['cashSurplusForeign','مازاد نقدی ارزی'],['payablesLocal','حساب‌های پرداختنی ـ ارز محلی'],['payablesForeign','حساب‌های پرداختنی ـ جزء ارز خارجی'],['otherAssetsLocal','سایر دارایی‌های جاری محلی'],['otherLiabilitiesLocal','سایر بدهی‌های جاری محلی'],['retainedEarnings','اندوخته و سود انباشته'],['accumulatedLosses','زیان انباشته'],['grants','یارانه‌ها و کمک‌های بلاعوض']
 ]
-type Props={projectId:string;currency:string;constructionYears:number;operatingYears:number;foundation:ProjectFoundation;language?:'fa'|'en';onStartingAssetsChange?:(assets:StartingFixedAssetBalance[])=>void;onStartingBalancesChange?:(balances:{cash:number;netWorkingCapital:number;debt:number;paidInCapital:number;retainedEarnings:number;grants:number})=>void}
+type Props={projectId:string;currency:string;constructionYears:number;operatingYears:number;foundation:ProjectFoundation;language?:'fa'|'en';onStartingAssetsChange?:(assets:StartingFixedAssetBalance[])=>void;onStartingBalancesChange?:(balances:StartingFinancialBalanceSummary)=>void}
 export default function ExpansionRehabilitationPanel({projectId,currency,constructionYears,operatingYears,foundation,language='fa',onStartingAssetsChange,onStartingBalancesChange}:Props){
  const en=language==='en', t=(fa:string,english:string)=>en?english:fa
  const horizon=Math.max(2,Math.min(30,Math.ceil(constructionYears)+Math.ceil(operatingYears)))
@@ -137,15 +137,21 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  const equity=state.equityCapital.reduce((sum,item)=>sum+item.paidIn-item.paidOut,0)+state.opening.retainedEarnings-state.opening.accumulatedLosses+state.opening.grants
  const totalAssets=currentAssets+fixedNet
  const balanceDifference=totalAssets-liabilities-equity
- const openingCashBalance=state.opening.cashLocal+state.opening.cashForeign+state.opening.shortTermDepositsLocal+state.opening.cashSurplusLocal+state.opening.cashSurplusForeign
- const openingNetWorkingCapitalBalance=currentAssets-openingCashBalance-state.opening.payablesLocal-state.opening.payablesForeign-state.opening.otherLiabilitiesLocal
  const openingPaidInCapital=state.equityCapital.reduce((sum,item)=>sum+item.paidIn-item.paidOut,0)
- const openingRetainedEarnings=state.opening.retainedEarnings-state.opening.accumulatedLosses
- useEffect(()=>{if(loaded)onStartingBalancesChange?.({
-  cash:openingCashBalance,netWorkingCapital:openingNetWorkingCapitalBalance,
-  debt:debt+accruedLoanInterest,paidInCapital:openingPaidInCapital,
-  retainedEarnings:openingRetainedEarnings,grants:state.opening.grants,
- })},[loaded,onStartingBalancesChange,openingCashBalance,openingNetWorkingCapitalBalance,debt,accruedLoanInterest,openingPaidInCapital,openingRetainedEarnings,state.opening.grants])
+ const openingBalanceSummary=useMemo(()=>calculateStartingFinancialBalanceSummary({
+  currentAssets,cashLocal:state.opening.cashLocal,cashForeign:state.opening.cashForeign,
+  shortTermDepositsLocal:state.opening.shortTermDepositsLocal,
+  cashSurplusLocal:state.opening.cashSurplusLocal,cashSurplusForeign:state.opening.cashSurplusForeign,
+  payablesLocal:state.opening.payablesLocal,payablesForeign:state.opening.payablesForeign,
+  otherLiabilitiesLocal:state.opening.otherLiabilitiesLocal,openingDebt:debt,
+  accruedInterest:accruedLoanInterest,paidInCapital:openingPaidInCapital,
+  retainedEarnings:state.opening.retainedEarnings,accumulatedLosses:state.opening.accumulatedLosses,
+  grants:state.opening.grants,
+ }),[currentAssets,state.opening.cashLocal,state.opening.cashForeign,state.opening.shortTermDepositsLocal,
+  state.opening.cashSurplusLocal,state.opening.cashSurplusForeign,state.opening.payablesLocal,
+  state.opening.payablesForeign,state.opening.otherLiabilitiesLocal,debt,accruedLoanInterest,
+  openingPaidInCapital,state.opening.retainedEarnings,state.opening.accumulatedLosses,state.opening.grants])
+ useEffect(()=>{if(loaded)onStartingBalancesChange?.(openingBalanceSummary)},[loaded,onStartingBalancesChange,openingBalanceSummary])
  const result=useMemo(()=>calculateIncrementalEnterpriseAnalysis(state.without,state.with,state.discountRate/100),[state.without,state.with,state.discountRate])
  const inputFields=(scenario:'without'|'with',rows:EnterpriseScenarioPeriodInput[])=> <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('درآمد','Revenue')}</th><th>{t('هزینه نقدی','Cash OPEX')}</th><th>{t('مالیات','Tax')}</th><th>{t('CAPEX','CAPEX')}</th><th>{t('هزینه فرصت دارایی موجود','Existing Asset Opportunity Cost')}</th><th>{t('تغییر سرمایه در گردش','Δ Working Capital')}</th><th>{t('فروش دارایی','Asset Sale')}</th><th>{t('ارزش نهایی','Terminal Value')}</th></tr></thead><tbody>{rows.map((r,i)=><tr key={i}><th>{i+1}</th>{(['revenue','cashOperatingCosts','tax','capex','opportunityCost','changeInWorkingCapital','assetSaleProceeds','terminalValue'] as (keyof EnterpriseScenarioPeriodInput)[]).map(field=><td key={field}><input aria-label={String(field)+' '+(i+1)} style={{width:105,minWidth:85}} type="number" value={r[field]??0} onChange={e=>updatePeriod(scenario,i,field,Number(e.target.value))}/></td>)}</tr>)}</tbody></table></div>
  return <section className="fw-card" style={{marginTop:18}}>
