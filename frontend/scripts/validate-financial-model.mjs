@@ -129,4 +129,14 @@ assert.deepEqual(periods.map(p=>[p.startDate,p.endDate,p.days,p.partial]),[
 const validAsset={id:'asset-1',name:'Test asset',grossCost:1000,accumulatedDepreciation:0,remainingLife:5,opportunityValue:1000,commissioningDate:'2024-02-29',depreciationStartDate:'2024-03-01',depreciationMethod:'linear-scrap',depreciationLengthYears:5,depreciationLengthMonths:0,firstDepreciationMonths:12,status:'active'}
 assert.equal(foundation.validateStartingFixedAssetBalances([validAsset],blank).length,0)
 assert.ok(foundation.validateStartingFixedAssetBalances([{...validAsset,commissioningDate:'2023-02-29'}],blank).some(x=>x.code==='invalid-starting-asset-date'))
+assert.ok(foundation.validateStartingFixedAssetBalances([{...validAsset,accumulatedDepreciation:950,salvagePercent:10}],blank)
+  .some(x=>x.code==='starting-asset-salvage-exceeds-net-book-value'),
+  'Opening asset salvage value must not exceed its net book value')
+assert.ok(foundation.validateStartingFixedAssetBalances([{...validAsset,salvagePercent:101}],blank)
+  .some(x=>x.code==='invalid-starting-asset-salvage-percent'),
+  'Opening asset scrap percentage must be within 0–100 percent')
+const acceleratedWithoutRate={...validAsset,depreciationMethod:'accelerated',depreciationRatePercent:undefined}
+assert.ok(foundation.validateStartingFixedAssetBalances([acceleratedWithoutRate],blank)
+  .some(x=>x.code==='invalid-starting-asset-depreciation-rate'),
+  'Accelerated depreciation must have an explicit rate below 100 percent')
 console.log('PASS: generic financial calculations, project calendar and opening-asset validation')
