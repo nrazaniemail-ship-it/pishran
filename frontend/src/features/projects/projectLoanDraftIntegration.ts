@@ -78,7 +78,7 @@ export function buildProjectLoanDraftIntegration(
       issues.push(prefix+'every rate reset date must fall inside the project calendar.')
     const drawdowns=Array(periods.length).fill(0) as number[]
     const datedDrawdowns:{date:string;amount:number}[]=[]
-    const repayments:{period:number;amount:number}[]=[]
+    const repaymentMovements:{period:number;amount:number}[]=[]
     if(loan.loanType==='profile'){
       if(loan.disbursements.length)issues.push(prefix+'use dated profile movements or the standard drawdown register, not both.')
       for(const movement of loan.profileMovements){
@@ -88,9 +88,9 @@ export function buildProjectLoanDraftIntegration(
           continue
         }
         if(movement.amount>0){drawdowns[index]+=movement.amount;datedDrawdowns.push({date:movement.date,amount:movement.amount})}
-        else repayments.push({period:index+1,amount:-movement.amount})
+        else repaymentMovements.push({period:index+1,amount:-movement.amount})
       }
-      if(!repayments.length)issues.push(prefix+'a profile loan requires at least one dated principal repayment.')
+      if(!repaymentMovements.length)issues.push(prefix+'a profile loan requires at least one dated principal repayment.')
     }else{
       if(loan.profileMovements.length)issues.push(prefix+'remove profile movements from an annuity or constant-principal facility.')
       for(const drawdown of loan.disbursements){
@@ -103,6 +103,7 @@ export function buildProjectLoanDraftIntegration(
         datedDrawdowns.push({date:drawdown.date,amount:drawdown.amount})
       }
     }
+    const repayments=Array.from(repaymentMovements.reduce((map,item)=>map.set(item.period,(map.get(item.period)??0)+item.amount),new Map<number,number>()).entries()).map(([period,amount])=>({period,amount}))
     let repaymentStartPeriod=0,gracePeriods=0,termPeriods=0
     let repaymentMethod:PeriodicLoanInput['repaymentMethod']='annuity'
     if(loan.loanType==='profile'){
