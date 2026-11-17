@@ -127,6 +127,26 @@ const emptyPeriodAdjustment=adapter.buildProductionSalesInventorySchedule({
 },periods,1,{slab:0})
 assert.equal(emptyPeriodAdjustment.valid,false)
 assert.ok(emptyPeriodAdjustment.issues.some(issue=>issue.includes('At least one explicit period adjustment')))
+
+const coverageCarryDrafts={
+ sales:[{productId:'slab',openingFinishedGoodsQuantity:50,openingFinishedGoodsValue:500,
+  inventoryValuationMethod:'weighted-average',finishedGoodsDaysCoverage:5,periods:[
+   {period:periods[0].startDate,salesQuantity:10,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:null,productionActive:false},
+   {period:periods[1].startDate,salesQuantity:5,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:null,productionActive:false},
+  ]}],
+ productionCosts:[],
+}
+const coverageCarryResult=adapter.buildProductionSalesInventorySchedule(coverageCarryDrafts,periods,1,{slab:500})
+assert.equal(coverageCarryResult.valid,true,coverageCarryResult.issues.join('; '))
+assert.deepEqual(coverageCarryResult.periodProductionQuantity,[0,0])
+assert.deepEqual(coverageCarryResult.rows.map(row=>row.closingFinishedGoodsQuantity),[40,35])
+assert.deepEqual(coverageCarryResult.periodCostOfGoodsSold,[100,50])
+assert.deepEqual(coverageCarryResult.periodClosingFinishedGoodsValue,[400,350])
+const invalidCoverageResult=adapter.buildProductionSalesInventorySchedule({
+ ...coverageCarryDrafts,sales:coverageCarryDrafts.sales.map(product=>({...product,finishedGoodsDaysCoverage:0})),
+},periods,1,{slab:500})
+assert.equal(invalidCoverageResult.valid,false)
+assert.ok(invalidCoverageResult.issues.some(issue=>issue.includes('Finished-goods days coverage must be finite and positive')))
 const missingOpening=adapter.buildProductionSalesInventorySchedule(inventoryDrafts,periods,1,{})
 assert.equal(missingOpening.valid,false)
 assert.ok(missingOpening.issues.some(x=>x.includes('Explicit opening finished-goods')))
