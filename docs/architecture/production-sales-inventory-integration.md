@@ -25,7 +25,7 @@ For each product and period:
 
 Production-cost form calculations call the existing help-driven formula functions for nominal-capacity and per-unit-output methods. Period-adjustment costs require explicit totals and a 100% fixed/variable split.
 
-Indirect cost items remain visible in separate fixed/variable buckets. They are not allocated to products unless an allocation basis is explicitly supplied; this adapter does not choose an arbitrary allocation key.
+Indirect cost items remain visible in separate fixed/variable buckets. The form-binding layer expands an indirect item into product-level rows only after a user-defined allocation key has been supplied and its shares reconcile to exactly 100% for the matching cost-centre group. The production/sales adapter rejects an indirect row without its allocation-key reference, so an unallocated shared cost cannot be silently attributed to one product. Formula-based allocation drivers remain blocked until their driver schedules are implemented.
 
 ## Independent external benchmark
 
