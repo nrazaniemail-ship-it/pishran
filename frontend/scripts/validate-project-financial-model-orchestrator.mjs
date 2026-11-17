@@ -402,6 +402,16 @@ const negativeTaxAdjustmentModel=orchestrator.calculateProjectFinancialModelFrom
 assert.equal(negativeTaxAdjustmentModel.valid,true,negativeTaxAdjustmentModel.issues.join('; '))
 assert.deepEqual(negativeTaxAdjustmentModel.financeInput.taxAdjustmentsByPeriod,[0,-10])
 assert.equal(negativeTaxAdjustmentModel.finalRun.finance.rows[1].tax,result.finalRun.finance.rows[1].tax-10)
+let taxFloorHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main','adjustmentPeriod','1')
+taxFloorHelp=helpForms.updateHelpFormRow(taxFloorHelp,'income-tax','income-tax-main','adjustmentAmount',-1000000)
+const taxFloorModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:taxFloorHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(taxFloorModel.valid,true,taxFloorModel.issues.join('; '))
+assert.equal(taxFloorModel.finalRun.finance.rows[0].tax,0)
+assert.equal(taxFloorModel.finalRun.finance.rows[0].unleveredTax,0)
 let incompleteTaxAdjustmentHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main','adjustmentAmount',25)
 const incompleteTaxAdjustmentModel=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,helpDriven:incompleteTaxAdjustmentHelp},foundation,productionStartDate:'2025-01-01',
