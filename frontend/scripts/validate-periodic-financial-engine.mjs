@@ -72,3 +72,22 @@ const openingStatements=engine.buildPeriodicThreeFinancialStatements(openingCash
 assert.deepEqual(openingStatements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[0,60,120])
 assert.ok(openingStatements.every(row=>Math.abs(row.movementChecks.cashRollForward)<=0.01),'Opening cash must be carried consistently into linked statements')
 console.log('PASS: period cash roll-forward, opening cash, funding-gap alerts and three-statement cash reconciliation')
+
+const depositCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,100,100],annualShortTermDepositInterest:[0,5,5],
+  annualVariableCost:[0,30,30],annualFixedCost:[0,10,10],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[100,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[0,0,0],annualEquityContributions:[50,0,0],
+  workingCapitalByPeriod:[0,0,0],openingCash:0,loans:[],discountRatePercent:10,
+})
+assert.equal(depositCase.valid,true,depositCase.warnings.join('; '))
+assert.deepEqual(depositCase.rows.map(row=>row.shortTermDepositInterest),[0,5,5])
+assert.deepEqual(depositCase.rows.map(row=>Math.round(row.closingCash)),[-50,15,80])
+const depositStatements=engine.buildPeriodicThreeFinancialStatements(depositCase)
+assert.equal(depositStatements[1].incomeStatement.ebit,60)
+assert.equal(depositStatements[1].incomeStatement.shortTermDepositInterest,5)
+assert.equal(depositStatements[1].incomeStatement.profitBeforeTax,65)
+assert.deepEqual(depositStatements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[-50,15,80])
+assert.ok(depositStatements.every(row=>Math.abs(row.movementChecks.cashRollForward)<=0.01))
+console.log('PASS: COMFAR short-term deposit interest flows through tax, CFADS, cash and linked statements')
