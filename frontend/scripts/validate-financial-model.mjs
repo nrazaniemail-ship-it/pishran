@@ -154,7 +154,7 @@ assert.ok(foundation.validateStartingFixedAssetBalances([{
   ...validAsset,status:'replace',disposalDate:'2028-01-01'
 }],disposalFoundation).some(x=>x.code==='starting-asset-disposal-after-project'),
   'Replacement disposal date must fall inside the project calendar')
-const openingAssetDisposal=financialModel.calculateComfarCalendarAssetLifecycle([{
+const openingAssetDisposal=engine.calculateComfarCalendarAssetLifecycle([{
   id:'opening-sale-test',name:'Opening asset for sale',originalValue:1000,initialBookValue:700,
   scrapPercent:10,lengthYears:7,lengthMonths:0,ratePercent:100/7,
   method:'linear-to-scrap',acquisitionPeriod:0,startingAtPeriod:1,
