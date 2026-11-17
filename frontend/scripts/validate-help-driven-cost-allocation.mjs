@@ -60,6 +60,12 @@ assert.deepEqual(bound.drafts.productionCosts.map(row=>row.productId),['product-
 assert.deepEqual(bound.drafts.productionCosts.map(row=>row.standardQuantity),[0.6,0.4])
 assert.deepEqual(bound.drafts.productionCosts.map(row=>row.allocationKeyId),['share-a','share-a'])
 
+const mismatchedCostCentre=forms.updateHelpFormRow(help,'production-costs','cost-a','costCentreId','centre-b')
+const mismatchedCostCentreBound=binder.bindHelpDrivenFinancialDrafts(mismatchedCostCentre,periods,{
+ assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],
+})
+assert.ok(mismatchedCostCentreBound.issues.some(issue=>issue.includes('allocation key must belong to the same cost centre')))
+
 let invalid=forms.updateHelpFormRow(help,'cost-allocation','share-b','allocationPercent',30)
 const invalidBound=binder.bindHelpDrivenFinancialDrafts(invalid,periods,{
  assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],
