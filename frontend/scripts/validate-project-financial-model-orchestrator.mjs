@@ -371,6 +371,38 @@ assert.deepEqual(combinedInventoryModel.financeInput.workingCapitalByPeriod,[600
 assert.deepEqual(combinedInventoryModel.finalRun.statements.map(row=>row.balanceSheet.netWorkingCapital),[600,320])
 assert.ok(combinedInventoryModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 
+const openingInventoryDrafts={
+ ...inventoryCostDrafts,
+ workingCapital:[],
+ openingBalanceSheet:{enabled:true,cash:0,inventory:0,workInProgress:0,finishedGoods:400,
+  receivables:0,otherCurrentAssets:0,tradePayables:0,otherCurrentLiabilities:0,
+  grossFixedAssets:0,accumulatedDepreciation:0,deferredPreOperatingAssets:0,
+  shortTermDebt:0,longTermDebt:0,shareCapital:400,retainedEarnings:0},
+ sales:[{productId:'finished-product',openingFinishedGoodsQuantity:5,openingFinishedGoodsValue:400,
+  inventoryValuationMethod:'weighted-average',periods:[
+   {period:'1',salesQuantity:10,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:3},
+   {period:'2',salesQuantity:5,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:2},
+  ]}],
+ productionCosts:[{...inventoryCostDrafts.productionCosts[0],adjustments:[
+  {period:'1',quantity:null,unitPrice:null,total:800,fixedPercent:20,variablePercent:80},
+  {period:'2',quantity:null,unitPrice:null,total:480,fixedPercent:20,variablePercent:80},
+ ]}],
+}
+const openingInventoryModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance:{...finance,openingWorkingCapital:0},drafts:openingInventoryDrafts,foundation,productionStartDate:'2025-01-01',
+ openingWorkingCapital:400,
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(openingInventoryModel.valid,true,openingInventoryModel.issues.join('; '))
+assert.equal(openingInventoryModel.financeInput.openingWorkingCapital,400)
+assert.equal(openingInventoryModel.finalRun.statements[0].openingBalances.netWorkingCapital,400)
+assert.ok(Math.abs(openingInventoryModel.productionSales.rows[0].costOfGoodsSold-923.0769230769231)<0.000001)
+assert.ok(Math.abs(openingInventoryModel.productionSales.rows[0].closingFinishedGoodsValue-276.9230769230769)<0.000001)
+assert.ok(Math.abs(openingInventoryModel.productionSales.rows[1].costOfGoodsSold-540.6593406593406)<0.000001)
+assert.ok(Math.abs(openingInventoryModel.productionSales.rows[1].closingFinishedGoodsValue-216.26373626373626)<0.000001)
+assert.ok(openingInventoryModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
+
 const mismatchedWorkingCapitalOpening=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,workingCapital:drafts.workingCapital.map(component=>({...component,openingBalance:25}))},
  foundation,productionStartDate:'2025-01-01',
