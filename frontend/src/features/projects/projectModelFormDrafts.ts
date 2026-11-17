@@ -31,7 +31,7 @@ export function createBlankProductionCostFormDraft(id=''):ProductionCostFormDraf
 
 export type SalesProductFormDraft={
  productId:string
- periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;finishedGoodsClosingQuantity:number|null}[]
+ periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;openingFinishedGoodsQuantity:number|null;openingFinishedGoodsValue:number|null;finishedGoodsClosingQuantity:number|null}[]
 }
 export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,periods:[]}}
 
