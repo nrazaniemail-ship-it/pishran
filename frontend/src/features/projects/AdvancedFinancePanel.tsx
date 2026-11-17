@@ -250,7 +250,7 @@ export default function AdvancedFinancePanel(props: Props) {
     annualFinishedGoodsCost:state.workingCapitalBases.finishedGoods,
     annualRevenue:props.fullCapacityRevenue,annualCashOperatingCost:state.workingCapitalBases.cash,
     shortTermDepositSharePercent:state.shortTermDepositSharePercent??0,shortTermDepositRatePercent:state.shortTermDepositRatePercent??0
-  }),[state.workingCapitalDays,state.workingCapitalBases,state.wipCompletion,props.fullCapacityRevenue,props.dayCountBasis])
+  }),[state.workingCapitalDays,state.workingCapitalBases,state.wipCompletion,state.shortTermDepositSharePercent,state.shortTermDepositRatePercent,props.fullCapacityRevenue,props.dayCountBasis])
   const equityContributions = state.equityContributions.length===years ? state.equityContributions : Array(years).fill(0)
   const equityWorkingCapitalContributions = Array.isArray(state.equityWorkingCapitalContributions)&&state.equityWorkingCapitalContributions.length===years ? state.equityWorkingCapitalContributions : Array(years).fill(0)
   const taxRates = state.taxRates?.length===years ? state.taxRates : Array(years).fill(props.taxRate)
