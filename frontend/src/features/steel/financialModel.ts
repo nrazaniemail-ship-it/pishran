@@ -317,6 +317,31 @@ export type IntegratedLoanInput = {
   capitalizeInterest: boolean
 }
 
+export type ComfarTaxBracket = {
+  lowerLimit: number
+  upperLimit: number | null
+  ratePercent: number
+}
+
+/** Marginal progressive tax calculator following COMFAR III Reference Manual Table 22. */
+export function calculateComfarGraduatedTax(taxableIncome: number, brackets: ComfarTaxBracket[]): number {
+  const valid = Number.isFinite(taxableIncome) && Array.isArray(brackets) && brackets.length > 0 &&
+    brackets.every((bracket, index) =>
+      Number.isFinite(bracket.lowerLimit) && bracket.lowerLimit >= 0 &&
+      (bracket.upperLimit === null || (Number.isFinite(bracket.upperLimit) && bracket.upperLimit > bracket.lowerLimit)) &&
+      Number.isFinite(bracket.ratePercent) && bracket.ratePercent >= 0 && bracket.ratePercent <= 100 &&
+      (index === 0 ? bracket.lowerLimit === 0 : bracket.lowerLimit === brackets[index - 1].upperLimit) &&
+      (index === brackets.length - 1 ? bracket.upperLimit === null : bracket.upperLimit !== null)
+    )
+  if (!valid) return Number.NaN
+  const income = Math.max(0, taxableIncome)
+  return brackets.reduce((tax, bracket) => {
+    if (income <= bracket.lowerLimit) return tax
+    const upper = bracket.upperLimit === null ? income : Math.min(income, bracket.upperLimit)
+    return tax + Math.max(0, upper - bracket.lowerLimit) * bracket.ratePercent / 100
+  }, 0)
+}
+
 export type IntegratedFinanceInput = {
   years: number
   constructionYears: number
@@ -336,6 +361,8 @@ export type IntegratedFinanceInput = {
   loans: IntegratedLoanInput[]
   taxRate: number
   taxRateSchedule?: number[]
+  taxBrackets?: ComfarTaxBracket[]
+  taxHolidayYears?: number
   waccTaxRate?: number
   costOfEquity: number
   workingCapitalPercent: number
@@ -551,14 +578,31 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const ebit = revenue - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss + salvageGainLoss
 
     const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
-    const taxableProfit = ebit - interest - taxLoss
-    const tax = Math.max(0, taxableProfit) * effectiveTaxRate / 100
-    taxLoss = taxableProfit < 0 ? -taxableProfit : Math.max(0, taxLoss - (ebit - interest))
+    const taxableProfitBeforeLoss = ebit - interest
+    const taxableProfit = taxableProfitBeforeLoss - taxLoss
+    const taxHolidayActive = (input.taxHolidayYears ?? 0) > 0 && year > constructionYears && year <= constructionYears + (input.taxHolidayYears ?? 0)
+    let tax = 0
+    if (taxHolidayActive) {
+      if (taxableProfitBeforeLoss < 0) taxLoss += -taxableProfitBeforeLoss
+    } else {
+      tax = input.taxBrackets
+        ? calculateComfarGraduatedTax(Math.max(0, taxableProfit), input.taxBrackets)
+        : Math.max(0, taxableProfit) * effectiveTaxRate / 100
+      taxLoss = taxableProfitBeforeLoss < 0 ? taxLoss - taxableProfitBeforeLoss : Math.max(0, taxLoss - taxableProfitBeforeLoss)
+    }
     const taxLossCarryForward = taxLoss
 
-    const unleveredTaxableProfit = ebit - unleveredTaxLoss
-    const unleveredTax = Math.max(0, unleveredTaxableProfit) * effectiveTaxRate / 100
-    unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : Math.max(0, unleveredTaxLoss - ebit)
+    const unleveredTaxableProfitBeforeLoss = ebit
+    const unleveredTaxableProfit = unleveredTaxableProfitBeforeLoss - unleveredTaxLoss
+    let unleveredTax = 0
+    if (taxHolidayActive) {
+      if (unleveredTaxableProfitBeforeLoss < 0) unleveredTaxLoss += -unleveredTaxableProfitBeforeLoss
+    } else {
+      unleveredTax = input.taxBrackets
+        ? calculateComfarGraduatedTax(Math.max(0, unleveredTaxableProfit), input.taxBrackets)
+        : Math.max(0, unleveredTaxableProfit) * effectiveTaxRate / 100
+      unleveredTaxLoss = unleveredTaxableProfitBeforeLoss < 0 ? unleveredTaxLoss - unleveredTaxableProfitBeforeLoss : Math.max(0, unleveredTaxLoss - unleveredTaxableProfitBeforeLoss)
+    }
 
     const terminalValue = salvageProceeds + assetSaleProceeds
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
@@ -619,6 +663,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     fixedCostCaps.forEach(([label, fixed, total]) => { if (Number.isFinite(fixed) && Number.isFinite(total) && fixed > total) warnings.push(`${label} از کل مبنای هزینه بیشتر است؛ در محاسبه به سقف کل هزینه محدود می‌شود.`) })
   }
   if (input.taxRateSchedule?.some(rate => !Number.isFinite(rate) || rate < 0 || rate > 100)) warnings.push('نرخ مالیات عملکرد سالانه باید در تمام دوره‌ها بین صفر تا ۱۰۰ درصد باشد.')
+  if (input.taxBrackets && !Number.isFinite(calculateComfarGraduatedTax(1, input.taxBrackets))) warnings.push('پله‌های مالیاتی باید پیوسته، از صفر آغاز و با یک پله بدون سقف خاتمه یابند.')
+  if (input.taxHolidayYears !== undefined && (!Number.isInteger(input.taxHolidayYears) || input.taxHolidayYears < 0)) warnings.push('مدت معافیت مالیاتی باید عدد صحیح و نامنفی باشد.')
   if (input.waccTaxRate !== undefined && (!Number.isFinite(input.waccTaxRate) || input.waccTaxRate < 0 || input.waccTaxRate > 100)) warnings.push('نرخ مالیات سپر مالیاتی WACC باید بین صفر تا ۱۰۰ درصد باشد.')
   if (input.discountMode === 'wacc' && discountRate === null) warnings.push('برای محاسبه نرخ تنزیل، ساختار سرمایه و نرخ بازده مورد انتظار سهامدار را تکمیل کنید.')
   if (input.loans.some(loan => loan.repaymentStartYear + loan.graceYears + loan.termYears - 1 > years)) warnings.push('بخشی از بازپرداخت وام‌ها خارج از افق زمانی مدل قرار می‌گیرد.')
