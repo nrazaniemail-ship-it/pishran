@@ -252,7 +252,7 @@ export function bindHelpDrivenFinancialDrafts(
         method:methods.includes(method as typeof methods[number])?method as typeof methods[number]:null,
         startMode:startMode==='production-start'||startMode==='specified-date'?startMode:null,
         startDate:str(row,'amortizationStartDate'),firstDepreciationYearMonths:firstMonths,
-        ratePercent:num(row,'ratePercent'),usefulLifeMonths:lifeYears!==null?Math.round(lifeYears*12):null,
+        ratePercent:num(row,'amortizationRatePercent'),usefulLifeMonths:lifeYears!==null?Math.round(lifeYears*12):null,
         salvagePercent:method==='linear-to-zero'?0:salvage,
       }
       return asset
