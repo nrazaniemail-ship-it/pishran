@@ -339,6 +339,26 @@ assert.equal(equityModel.valid,true,equityModel.issues.join('; '))
 assert.deepEqual(equityModel.financeInput.annualEquityContributions,[250,0])
 assert.equal(equityModel.finalRun.finance.rows[0].equityContribution,250)
 
+let depreciationAdjustmentHelp=helpForms.createBlankHelpDrivenProjectForms()
+depreciationAdjustmentHelp=helpForms.addHelpFormRow(depreciationAdjustmentHelp,'currencies','local-eur')
+for(const [key,value] of Object.entries({code:'EUR',name:'Euro',type:'local',accountingCurrency:true}))
+ depreciationAdjustmentHelp=helpForms.updateHelpFormRow(depreciationAdjustmentHelp,'currencies','local-eur',key,value)
+for(const [id,period,amount] of [['tax-dep-a','1',50],['tax-dep-b','2',-20]]){
+ depreciationAdjustmentHelp=helpForms.addHelpFormRow(depreciationAdjustmentHelp,'depreciation-adjustments',id)
+ for(const [key,value] of Object.entries({period,origin:'local',amount,currency:'EUR'}))
+  depreciationAdjustmentHelp=helpForms.updateHelpFormRow(depreciationAdjustmentHelp,'depreciation-adjustments',id,key,value)
+}
+const depreciationAdjustmentModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:depreciationAdjustmentHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(depreciationAdjustmentModel.valid,true,depreciationAdjustmentModel.issues.join('; '))
+assert.deepEqual(depreciationAdjustmentModel.financeInput.taxDepreciationAdjustmentsByPeriod,[50,-20])
+assert.equal(depreciationAdjustmentModel.finalRun.finance.rows[0].taxDepreciationAdjustment,50)
+assert.equal(depreciationAdjustmentModel.finalRun.finance.rows[0].tax,237.5)
+assert.equal(depreciationAdjustmentModel.finalRun.finance.rows[1].tax,384)
+
 let unsupportedDiscountingHelp=helpForms.createBlankHelpDrivenProjectForms()
 unsupportedDiscountingHelp=helpForms.updateHelpFormRow(unsupportedDiscountingHelp,'discounting','discounting-main','shortNpvYears',3)
 const unsupportedDiscountingModel=orchestrator.calculateProjectFinancialModelFromDrafts({
