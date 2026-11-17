@@ -176,7 +176,7 @@ export function calculateProjectFinancialModelFromDrafts(
   // These sections require dedicated adapters and are deliberately rejected until their
   // schedules are represented in the periodic engine (rather than being treated as zero).
   const notYetIntegratedSections=new Set([
-    'cost-allocation','joint-venture','preproduction-expenditure','equity-grants',
+    'cost-allocation','joint-venture','equity-grants',
     'profit-distribution','depreciation-adjustments','starting-balances',
     'economic-items','economic-effects','sensitivity','incremental-analysis',
   ])
