@@ -112,7 +112,7 @@ export function validateOpeningBalanceSheetDraft(value:OpeningBalanceSheetDraft)
  const currentLiabilities=value.tradePayables!+value.otherCurrentLiabilities!
  const netFixedAssets=value.grossFixedAssets!-value.accumulatedDepreciation!
  if(netFixedAssets<0)errors.push('opening-accumulated-depreciation-exceeds-gross-assets')
- const totalAssets=value.cash!+currentAssets-currentLiabilities+netFixedAssets+value.deferredPreOperatingAssets!
+ const totalAssets=value.cash!+currentAssets+netFixedAssets+value.deferredPreOperatingAssets!
  const totalLiabilitiesAndEquity=value.shortTermDebt!+value.longTermDebt!+value.shareCapital!+value.retainedEarnings!
  if(Math.abs(totalAssets-totalLiabilitiesAndEquity)>0.01)errors.push('opening-balance-sheet-does-not-balance')
  return errors
