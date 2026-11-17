@@ -99,6 +99,12 @@ export function buildPeriodicLoanFacilityBinding(input:{
   const currencyResolution=resolveLoanFacilityCurrency(loan,foundation)
   if(!currencyResolution.valid)issues.push(...currencyResolution.issues)
   const periodsPerYear=loan.repaymentInterval==='annual'?1:loan.repaymentInterval==='semiannual'?2:loan.repaymentInterval==='quarterly'?4:loan.repaymentInterval==='monthly'?12:0
+  const monthsPerRepayment=periodsPerYear>0?12/periodsPerYear:0
+  const graceMonths=loan.graceMonths
+  const gracePeriods=graceMonths!==null&&monthsPerRepayment>0&&graceMonths%monthsPerRepayment===0?graceMonths/monthsPerRepayment:0
+  if(graceMonths===null||!Number.isInteger(graceMonths)||graceMonths<0)issues.push('An explicit non-negative grace period in months is required.')
+  else if(monthsPerRepayment>0&&graceMonths%monthsPerRepayment!==0)issues.push('Grace period must be an exact multiple of the repayment interval.')
+  if(loan.loanType==='profile'&&graceMonths!==0)issues.push('For profile loans, enter grace directly in the dated principal movements and set grace months to zero.')
   if(!periodFrequencyMatches(periods,periodsPerYear))issues.push('Loan repayment interval must match the project period frequency; mixed-frequency amortization is not inferred.')
   const firstRepaymentIndex=periodForDate(loan.firstRepaymentDate,periods)
   if(firstRepaymentIndex<0)issues.push('First repayment date must fall inside the project calendar.')
@@ -138,14 +144,14 @@ export function buildPeriodicLoanFacilityBinding(input:{
   const baseRate=rateRows[0].annualRatePercent as number
   const rateChanges=rateRows.slice(1).map(row=>({effectiveDate:row.effectiveDate,annualRatePercent:row.annualRatePercent as number}))
   const repaymentMethod=loan.loanType==='annuity'?'annuity':loan.loanType==='constant-principal'?'equal-principal':'custom'
-  const capitalizationPercent=loan.capitalizedInterestPercent??0
+  const capitalizationPercent=loan.capitalizedInterestPercent as number
   let loanInput:PeriodicLoanInput={
     annualRatePercent:baseRate,
     drawdowns,
     datedDrawdowns,
     repaymentMethod,
     repaymentStartPeriod:firstRepaymentIndex+1,
-    gracePeriods:0,
+    gracePeriods,
     termPeriods,
     capitalizeInterest:capitalizationPercent===100,
     capitalizedInterestPercent:capitalizationPercent,
