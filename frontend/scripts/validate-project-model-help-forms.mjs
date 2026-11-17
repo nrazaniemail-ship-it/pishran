@@ -168,7 +168,7 @@ try {
  allocations=h.addHelpFormRow(allocations,'cost-allocation','allocation-b')
  allocations=h.updateHelpFormRow(allocations,'cost-allocation','allocation-b','name','Factory allocation')
  allocations=h.updateHelpFormRow(allocations,'cost-allocation','allocation-b','allocationPercent',50)
- assert.ok(h.validateHelpDrivenProjectForms(allocations).includes('cost-allocation:percentages-must-equal-100:Factory allocation'))
+ assert.ok(h.validateHelpDrivenProjectForms(allocations).includes('cost-allocation:Factory allocation:allocation-must-equal-100'))
  const calendar=[{index:1,startDate:'2025-01-01',endDate:'2025-12-31'},{index:2,startDate:'2026-01-01',endDate:'2026-12-31'}]
  let calendarDraft=h.addHelpFormRow(draft.helpDriven,'sales-programme','calendar-sale')
  calendarDraft=h.updateHelpFormRow(calendarDraft,'sales-programme','calendar-sale','period','3')
