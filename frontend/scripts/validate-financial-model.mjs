@@ -44,6 +44,9 @@ near(depositWorkingCapital.shortTermDeposits??0,50,1e-9,'Short-term deposits are
 near(depositWorkingCapital.netWorkingCapital,100,1e-9,'Short-term deposits must not be double-counted in net working capital')
 near(engine.calculateShortTermDepositInterest(100,50,12,12),6,1e-9,'COMFAR XI.O annual deposit interest')
 near(engine.calculateShortTermDepositInterest(100,50,12,6),3,1e-9,'COMFAR XI.O partial-period deposit interest')
+near(engine.calculateWorkingCapitalTurnoverCoefficient(30,360),12,1e-9,'COMFAR VII.Q turnover coefficient')
+near(engine.calculateWorkingCapitalTurnoverCoefficient(90,360),4,1e-9,'COMFAR VII.Q 90-day turnover coefficient')
+assert.equal(engine.calculateWorkingCapitalTurnoverCoefficient(0,360),null,'Zero days coverage has no finite turnover coefficient')
 
 const suppliesUtilitiesPolicy={
   dayBasis:360,rawMaterialDays:0,factorySuppliesDays:30,utilitiesDays:15,
