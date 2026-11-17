@@ -29,6 +29,8 @@ try {
  assert.deepEqual(forms.deriveFixedVariableSplit(null,70),{fixedPercent:30,variablePercent:70})
  assert.deepEqual(forms.deriveFixedVariableSplit(35,70),{fixedPercent:35,variablePercent:70})
  assert.ok(forms.validateProductionCostFormDraft({...direct,classification:'direct',productId:null}).includes('direct-cost-missing-product'))
+ assert.ok(forms.validateProductionCostFormDraft({...direct,classification:'indirect',productId:null}).includes('indirect-cost-missing-product-allocation'))
+ assert.deepEqual(forms.validateProductionCostFormDraft({...direct,classification:'indirect',productId:'p1'}),[])
 
  assert.equal(forms.deriveWorkingCapitalTurnover(30,360),12)
  assert.equal(forms.deriveWorkingCapitalTurnover(30,90),3)
