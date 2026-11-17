@@ -300,6 +300,42 @@ assert.deepEqual(result.financeInput.workingCapitalByPeriod,[0,0])
 assert.equal(result.finalRun.finance.valid,true)
 assert.equal(result.finalRun.statements.length,2)
 
+ 
+// End-to-end production costing: unsold production is capitalized as finished goods,
+// while only the inventory valuation's cost of goods sold reaches the income statement.
+const inventoryCostDrafts={
+ ...drafts,
+ sales:[{productId:'finished-product',openingFinishedGoodsQuantity:0,openingFinishedGoodsValue:0,
+  inventoryValuationMethod:'weighted-average',periods:[
+   {period:'1',salesQuantity:10,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:5},
+   {period:'2',salesQuantity:8,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:2},
+  ]}],
+ productionCosts:[{id:'direct-production-cost',metadata:{},classification:'direct',productId:'finished-product',
+  basis:'period-adjustments',standardQuantity:null,standardUnitPrice:null,standardTotal:null,nominalCapacity:null,
+  fixedPercent:20,variablePercent:80,adjustments:[
+   {period:'1',quantity:null,unitPrice:null,total:1500,fixedPercent:20,variablePercent:80},
+   {period:'2',quantity:null,unitPrice:null,total:600,fixedPercent:20,variablePercent:80},
+  ]}],
+}
+const inventoryCostModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:inventoryCostDrafts,foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(inventoryCostModel.valid,true,inventoryCostModel.issues.join('; '))
+assert.deepEqual(inventoryCostModel.productionSales.rows.map(row=>row.productionQuantity),[15,5])
+assert.deepEqual(inventoryCostModel.productionSales.rows.map(row=>row.totalProductionCost),[1500,600])
+assert.deepEqual(inventoryCostModel.productionSales.rows.map(row=>row.costOfGoodsSold),[1000,880])
+assert.deepEqual(inventoryCostModel.productionSales.rows.map(row=>row.closingFinishedGoodsValue),[500,220])
+assert.deepEqual(inventoryCostModel.financeInput.annualCostOfGoodsSold,[1000,880])
+assert.deepEqual(inventoryCostModel.financeInput.finishedGoodsInventoryValueByPeriod,[500,220])
+assert.deepEqual(inventoryCostModel.finalRun.finance.rows.map(row=>row.costOfGoodsSold),[1000,880])
+assert.deepEqual(inventoryCostModel.finalRun.finance.rows.map(row=>row.changeInWorkingCapital),[500,-280])
+assert.deepEqual(inventoryCostModel.finalRun.statements.map(row=>row.incomeStatement.costOfGoodsSold),[1000,880])
+assert.deepEqual(inventoryCostModel.finalRun.statements.map(row=>row.balanceSheet.netWorkingCapital),[500,220])
+assert.ok(inventoryCostModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
+assert.deepEqual(inventoryCostModel.finalRun.finance.rows.map(row=>row.ebit),[0,-80])
+
 const mismatchedWorkingCapitalOpening=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,workingCapital:drafts.workingCapital.map(component=>({...component,openingBalance:25}))},
  foundation,productionStartDate:'2025-01-01',
