@@ -403,6 +403,57 @@ assert.ok(Math.abs(openingInventoryModel.productionSales.rows[1].costOfGoodsSold
 assert.ok(Math.abs(openingInventoryModel.productionSales.rows[1].closingFinishedGoodsValue-216.26373626373626)<0.000001)
 assert.ok(openingInventoryModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 
+let indirectCostHelp=helpForms.createBlankHelpDrivenProjectForms()
+indirectCostHelp=helpForms.addHelpFormRow(indirectCostHelp,'currencies','local-eur')
+for(const [key,value] of Object.entries({code:'EUR',name:'Euro',type:'local',accountingCurrency:true,exchangeRate:1}))
+ indirectCostHelp=helpForms.updateHelpFormRow(indirectCostHelp,'currencies','local-eur',key,value)
+for(const [id,name] of [['product-a','Product A'],['product-b','Product B']]){
+ indirectCostHelp=helpForms.addHelpFormRow(indirectCostHelp,'products',id)
+ indirectCostHelp=helpForms.updateHelpFormRow(indirectCostHelp,'products',id,'name',name)
+ indirectCostHelp=helpForms.updateHelpFormRow(indirectCostHelp,'products',id,'unit','unit')
+}
+indirectCostHelp=helpForms.addHelpFormRow(indirectCostHelp,'cost-centres','centre-a')
+for(const [key,value] of Object.entries({name:'Factory overhead',group:'production',level:'unit',productIds:'product-a,product-b'}))
+ indirectCostHelp=helpForms.updateHelpFormRow(indirectCostHelp,'cost-centres','centre-a',key,value)
+indirectCostHelp=helpForms.addHelpFormRow(indirectCostHelp,'production-costs','shared-overhead')
+for(const [key,value] of Object.entries({item:'Shared factory overhead',classification:'indirect',productId:'',
+ allocationKeyId:'share-a',costCentreId:'centre-a',currency:'EUR',origin:'local',basis:'per-unit-output',
+ activityBasis:'production',standardQuantity:1,standardUnitPrice:100,standardTotal:2000,
+ fixedPercent:50,variablePercent:50}))
+ indirectCostHelp=helpForms.updateHelpFormRow(indirectCostHelp,'production-costs','shared-overhead',key,value)
+for(const [id,productId,allocationPercent] of [['share-a','product-a',60],['share-b','product-b',40]]){
+ indirectCostHelp=helpForms.addHelpFormRow(indirectCostHelp,'cost-allocation',id)
+ for(const [key,value] of Object.entries({name:'factory-overhead-key',type:'user-defined',productId,allocationPercent,costCentreId:'centre-a'}))
+  indirectCostHelp=helpForms.updateHelpFormRow(indirectCostHelp,'cost-allocation',id,key,value)
+}
+const indirectCostDrafts={
+ sales:[
+  {productId:'product-a',openingFinishedGoodsQuantity:0,openingFinishedGoodsValue:0,inventoryValuationMethod:'weighted-average',
+   periods:[
+    {period:'1',salesQuantity:6,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:4},
+    {period:'2',salesQuantity:6,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:8},
+   ]},
+  {productId:'product-b',openingFinishedGoodsQuantity:0,openingFinishedGoodsValue:0,inventoryValuationMethod:'weighted-average',
+   periods:[
+    {period:'1',salesQuantity:4,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:6},
+    {period:'2',salesQuantity:4,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:12},
+   ]},
+ ],
+ productionCosts:[],workingCapital:[],assets:[],loans:[],helpDriven:indirectCostHelp,
+}
+const indirectCostModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:indirectCostDrafts,foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(indirectCostModel.valid,true,indirectCostModel.issues.join('; '))
+assert.deepEqual(indirectCostModel.productionSales.rows.map(row=>row.totalProductionCost),[1200,1200,800,800])
+assert.deepEqual(indirectCostModel.productionSales.rows.map(row=>row.indirectFixedCost),[600,600,400,400])
+assert.deepEqual(indirectCostModel.productionSales.rows.map(row=>row.indirectVariableCost),[600,600,400,400])
+assert.deepEqual(indirectCostModel.financeInput.annualCostOfGoodsSold,[1040,1040])
+assert.deepEqual(indirectCostModel.financeInput.finishedGoodsInventoryValueByPeriod,[960,1920])
+assert.ok(indirectCostModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
+
 const mismatchedWorkingCapitalOpening=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,workingCapital:drafts.workingCapital.map(component=>({...component,openingBalance:25}))},
  foundation,productionStartDate:'2025-01-01',
