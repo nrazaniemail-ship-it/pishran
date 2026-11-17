@@ -307,9 +307,11 @@ export default function AdvancedFinancePanel(props: Props) {
       const opexFactor=Math.pow(1+state.opexEscalationPercent/100,operatingYear)
       return calculateOperatingCycleWorkingCapital(workingCapitalPolicy,annualRow.utilization,salesFactor,opexFactor)
     })
-    const estimatedWorkingCapitalByPeriod=workingCapitalBreakdownByPeriod.map(row=>row.netWorkingCapital)
-    const cashInHandByPeriod=workingCapitalBreakdownByPeriod.map(row=>Math.max(0,row.minimumCash-(row.shortTermDeposits??0)))
-    const shortTermDepositsByPeriod=workingCapitalBreakdownByPeriod.map(row=>row.shortTermDeposits??0)
+    const estimatedWorkingCapitalByPeriod=workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:row.netWorkingCapital)
+    const cashInHandByPeriod=workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:Math.max(0,row.minimumCash-(row.shortTermDeposits??0)))
+    const shortTermDepositsByPeriod=workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:row.shortTermDeposits??0)
+    const periodicWorkingCapitalByPeriod=workingCapitalDraftSchedule?.valid?[...workingCapitalDraftSchedule.closingWorkingCapital]:[...estimatedWorkingCapitalByPeriod]
+    if(periodicWorkingCapitalByPeriod.length) periodicWorkingCapitalByPeriod[periodicWorkingCapitalByPeriod.length-1]=0
     const periodicInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
@@ -321,9 +323,7 @@ export default function AdvancedFinancePanel(props: Props) {
       annualShortTermDepositInterest:result.years.map(row=>row.shortTermDepositInterest),
       annualAssetSaleSchedule:assetSaleSchedule,
       periodDepreciationSchedule,periodAssetSaleSchedule,
-      workingCapitalByPeriod:workingCapitalDraftSchedule?.valid
-        ?workingCapitalDraftSchedule.closingWorkingCapital
-        :estimatedWorkingCapitalByPeriod,
+      workingCapitalByPeriod:periodicWorkingCapitalByPeriod,
       cashInHandByPeriod,shortTermDepositsByPeriod,
       openingWorkingCapital:props.openingWorkingCapitalBalance??0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
