@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeftRight, Boxes, CheckCircle2, ChevronLeft, CircleDot, Factory, GitBranch, Layers3, Package, Pickaxe, ShieldCheck, Truck } from 'lucide-react'
+import { ArrowLeftRight, Boxes, ChevronLeft, CircleDot, Factory, GitBranch, Layers3, Package, Pickaxe, ShieldCheck, Truck } from 'lucide-react'
 
 type Stage={id:string;number:string;title:string;subtitle:string;inputs:string;outputs:string;status:'active'|'planned';icon:typeof Factory}
 const stages:Stage[]=[
@@ -20,7 +20,7 @@ export default function SteelGroupWorkspace({language='fa'}:{language?:'fa'|'en'
  const en=language==='en'
  const stageEn:Record<string,[string,string,string,string]>={mining:['Iron Ore Mining','Mine development and feed preparation','Ore, water, energy, explosives and spare parts','Sized iron ore, tailings and low-grade ore'],concentrate:['Processing & Concentration','Crushing, grinding and beneficiation','Iron ore, water, electricity and chemicals','Concentrate, wet/dry tailings and recycled water'],pellet:['Pelletizing','Pellet preparation and induration','Concentrate, bentonite, water and fuel','Fired pellets, fines and dust'],dri:['Direct Reduction','Sponge iron and compacted products','Pellets, natural gas or coal, and energy','DRI, HDRI/HBI and off-gas'],steelmaking:['Steelmaking & Casting','Melting, secondary refining and continuous casting','DRI/HBI, scrap, pig iron, ferroalloys and energy','Slab, billet, bloom, slag and dust'],'hot-rolling':['Hot Rolling','Flat products and sections: plate, coil, rebar, beam and angle','Slabs for plate/flat products; billets and blooms for sections','Plate, hot-rolled coil, rebar, beams, angles and scrap'],'cold-rolling':['Cold Rolling','Coil reduction and coating','Hot-rolled coil, acid, oil, zinc and paint','Cold-rolled, galvanized and pre-painted coils']}
  const t=(fa:string,enText:string)=>en?enText:fa
- const [selected,setSelected]=useState('hot-rolling')
+ const [selected,setSelected]=useState('mining')
  const active=stages.find(s=>s.id===selected)??stages[5]
  const Icon=active.icon
  return <section className="steel-group-page">

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Factory, Plus, Trash2, FolderOpen, FileText } from 'lucide-react'
+import { Factory, Plus, Trash2, FolderOpen } from 'lucide-react'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
 
 interface Props {
@@ -32,13 +32,6 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   const [projectType, setProjectType] = useState('')
   const [industry, setIndustry] = useState('')
 
-  function chooseTemplate() {
-    setShowTemplateChooser(false)
-    setShowForm(true)
-    setIndustry('')
-    setName('')
-    setProjectType('')
-  }
 
   function changeIndustry(value: string) {
     setIndustry(value)
@@ -57,14 +50,13 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
       projectType: projectType.trim(),
       capacity: '',
       location: '',
-      templateId
+      templateId: 'raw'
     })
     setName(''); setProjectType(''); setShowForm(false); setShowTemplateChooser(false)
   }
 
   return <section className="projects-page">
-    <div className="page-heading"><div><h1>{t('پروژه‌های امکان‌سنجی','Feasibility Projects')}</h1><p>{t('پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.','Manage your projects and investment studies on this device.')}</p></div><div className="projects-head-actions"><button className="primary" onClick={() => { setShowForm(false); setShowTemplateChooser(v => !v) }}><Plus size={17}/> {t('پروژه جدید','New Project')}</button></div></div>
-    {showTemplateChooser && <section className="project-form template-chooser" aria-label={t('انتخاب قالب پروژه','Choose a project template')}><h3>{t('قالب پروژه جدید را انتخاب کنید','Choose a template for your new project')}</h3><p>{t('یک پروژه جدید با ساختار خالی و بدون مفروضات از پیش تعیین‌شده ایجاد کنید.','Create a new project with a blank structure and no preset assumptions.')}</p><div className="project-grid"><article className="project-card"><div className="module-icon"><FileText size={21}/></div><h3>{t('قالب خام','Blank Template')}</h3><p>{t('ساختار عمومی و خالی؛ تمام اطلاعات و مفروضات توسط تحلیلگر وارد می‌شود.','A neutral blank structure; all inputs and assumptions are supplied by the analyst.')}</p><button type="button" className="primary" onClick={chooseTemplate}>{t('انتخاب قالب خام','Use Blank Template')}</button></article></div><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowTemplateChooser(false)}>{t('انصراف','Cancel')}</button></div></section>}
+    <div className="page-heading"><div><h1>{t('پروژه‌های امکان‌سنجی','Feasibility Projects')}</h1><p>{t('پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.','Manage your projects and investment studies on this device.')}</p></div><div className="projects-head-actions"><button className="primary" onClick={() => setShowForm(v => !v)}><Plus size={17}/> {t('پروژه جدید','New Project')}</button></div></div>
     {showForm && <form className="project-form" onSubmit={submit}>
       <h3>{t('تعریف پروژه جدید','Create New Project')} · {t('قالب خام','Blank Template')}</h3>
       <div className="form-grid">
@@ -79,7 +71,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
       </div>
       <div className="form-actions"><button type="submit" className="primary">{t('ذخیره پروژه','Save Project')}</button><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>{t('انصراف','Cancel')}</button></div>
     </form>}
-    {projects.length === 0 ? <div className="empty-state"><div className="empty-icon"><FolderOpen size={30}/></div><h3>{t('هنوز پروژه‌ای ثبت نشده است','No projects yet')}</h3><p>{t('اولین پروژه امکان‌سنجی خود را ایجاد کنید. اطلاعات فقط روی همین دستگاه ذخیره می‌شود.','Create your first feasibility project. Data is stored on this device only.')}</p><button className="primary" onClick={() => setShowTemplateChooser(true)}><Plus size={17}/> {t('ایجاد اولین پروژه','Create First Project')}</button></div> :
+    {projects.length === 0 ? <div className="empty-state"><div className="empty-icon"><FolderOpen size={30}/></div><h3>{t('هنوز پروژه‌ای ثبت نشده است','No projects yet')}</h3><p>{t('اولین پروژه امکان‌سنجی خود را ایجاد کنید. اطلاعات فقط روی همین دستگاه ذخیره می‌شود.','Create your first feasibility project. Data is stored on this device only.')}</p><button className="primary" onClick={() => setShowForm(true)}><Plus size={17}/> {t('ایجاد اولین پروژه','Create First Project')}</button></div> :
       <div className="project-grid">{projects.map(project => <article className="project-card" key={project.id} onClick={() => onOpenProject(project)} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') onOpenProject(project) }}><div className="project-card-top"><div className="module-icon"><Factory size={21}/></div><button className="icon-button" title={t('حذف پروژه','Delete project')} onClick={event => { event.stopPropagation(); if (!confirmBeforeDelete || window.confirm(t('این پروژه حذف شود؟','Delete this project?'))) void onDelete(project.id) }}><Trash2 size={17}/></button></div><h3>{project.name}</h3><p>{project.industry}{project.projectType ? ` · ${project.projectType}` : ''}</p><small className="draft-pill">{t('قالب خام','Blank Template')}</small><div className="project-meta"><span>{project.capacity || t('ظرفیت ثبت نشده','Capacity not set')}</span><span>{project.location || t('موقعیت ثبت نشده','Location not set')}</span></div><div className="project-footer"><button type="button" className="draft-pill draft-action" onClick={event => { event.stopPropagation(); onOpenProject(project) }} aria-label={`${t('ادامه تکمیل پیش‌نویس','Continue draft')} ${project.name}`}>{t('ادامه تکمیل پیش‌نویس','Continue draft')} <span aria-hidden="true">←</span></button><small>{t('ایجاد شده در','Created')} {new Date(project.createdAt).toLocaleDateString(en ? 'en-US' : 'fa-IR')}</small></div></article>)}</div>}
   </section>
 }

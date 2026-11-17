@@ -80,3 +80,12 @@ export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
   if (orphanedRecords.length) await Promise.all(orphanedRecords.map(record => localStore.remove(record.key)))
   return remaining
 }
+/** Purge retired HRCR200 and integrated DRI/steelmaking project data. */
+export async function purgeRemovedCaseProjects(): Promise<FeasibilityProject[]> {
+ const projects=await listProjects()
+ const isRemoved=(p:FeasibilityProject)=>{const n=p.name.trim(),stage=p.steelStage??'';const hrcr=p.templateId==='hot-rolling-200kt'||/HRCR200/i.test(n+' '+stage)||['نورد گرم ورق-تولید کلاف','نورد گرم ورق - تولید کلاف','پروژه نورد گرم ورق-تولید کلاف'].includes(n)||(stage==='نورد گرم / ورق'&&p.capacity.includes('HRCR200'));const integrated=/احیاء.*فولادسازی|فولادسازی.*احیاء/.test(n)||stage.includes('مجتمع احیاء');return hrcr||integrated}
+ const removed=projects.filter(isRemoved),remaining=projects.filter(p=>!isRemoved(p));if(removed.length)await localStore.set(PROJECTS_KEY,remaining)
+ const [rolling,process]=await Promise.all([localStore.list('pishran:rolling:'),localStore.list('process-plant:')])
+ await Promise.all([...rolling.map(x=>localStore.remove(x.key)),...process.map(x=>localStore.remove(x.key)),localStore.remove('rolling:sample:v2'),localStore.remove('projects:workbook-seed:v1')])
+ return remaining
+}
