@@ -65,4 +65,18 @@ const invalidCalendar = adapter.buildWorkingCapitalScheduleFromDrafts({ workingC
 assert.equal(invalidCalendar.valid, false)
 assert.ok(invalidCalendar.issues.some(issue => issue.includes('dates and day count')))
 
+
+const negativeNetWorkingCapital = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [
+    { id:'cash-assets', name:'Current assets', category:'cash', minimumDaysCoverage:null, turnoverCoefficient:null, valuationBasis:'user-defined',
+      periodBalances:[{period:'1',amount:20},{period:'2',amount:25}] },
+    { id:'trade-payables', name:'Trade payables', category:'payables', minimumDaysCoverage:null, turnoverCoefficient:null, valuationBasis:'user-defined',
+      periodBalances:[{period:'1',amount:50},{period:'2',amount:60}] },
+  ],
+}, periods, -10)
+assert.equal(negativeNetWorkingCapital.valid,true,negativeNetWorkingCapital.issues.join('; '))
+assert.deepEqual(negativeNetWorkingCapital.closingWorkingCapital,[-30,-35])
+assert.deepEqual(negativeNetWorkingCapital.changeInWorkingCapital,[-20,-5])
+assert.equal(negativeNetWorkingCapital.openingWorkingCapital,-10)
+
 console.log('Working-capital draft integration validation passed.')
