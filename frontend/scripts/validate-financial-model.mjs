@@ -65,6 +65,21 @@ near(suppliesUtilities.utilities??0,30,1e-9,'COMFAR utilities inventory')
 near(suppliesUtilities.netWorkingCapital,60,1e-9,'Factory supplies and utilities included in net working capital')
 const longCoveragePolicy={...depositPolicy,rawMaterialDays:540,annualRawMaterialCost:360,cashDays:0,annualCashOperatingCost:0}
 near(engine.calculateOperatingCycleWorkingCapital(longCoveragePolicy,1).rawMaterials,540,1e-9,'Working-capital days coverage may exceed one year')
+
+const annualDepositModel=engine.calculateIntegratedFinance({
+  years:2,constructionYears:0,capacity:1,fullCapacityRevenue:100,
+  fullCapacityVariableCashCost:30,fullCapacityFixedCashCost:10,annualDepreciation:0,
+  fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
+  utilization:[1,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,
+  workingCapitalPercent:0,salesEscalationPercent:0,opexEscalationPercent:0,
+  discountMode:'manual',manualDiscountRate:10,
+  workingCapitalPolicy:depositPolicy,
+})
+near(annualDepositModel.years[0].shortTermDepositInterest,6,1e-9,'Annual integrated model deposit interest')
+near(annualDepositModel.years[0].taxableProfit,66,1e-9,'Deposit interest included in taxable profit')
+near(annualDepositModel.years[0].cfads,-34,1e-9,'Deposit interest included in CFADS')
+const annualDepositStatements=engine.buildThreeFinancialStatements(annualDepositModel.years)
+near(annualDepositStatements[0].incomeStatement.profitBeforeTax,66,1e-9,'Deposit interest included in annual income statement')
 near(engine.calculateWorkingCapitalTurnoverCoefficient(540),2/3,1e-9,'COMFAR Coto for coverage above one year')
 
 
