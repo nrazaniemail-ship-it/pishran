@@ -102,7 +102,7 @@ s('sensitivity','تحلیل حساسیت و دستیابی به IRR/NPV هدف',
 f('analysisType','نوع تحلیل','Analysis type','select',['global-input-variation','desired-irr','desired-npv','parametric-chart']),f('variableGroup','گروه متغیر','Variable group','select',['fixed-investment','production-costs','sales-programme','economic-indirect-effects','financial-costs','fixed-costs','operating-costs','personnel-costs','sales-revenues','variable-costs']),f('variableId','شناسه متغیر','Variable ID'),f('quantityChange','درصد تغییر مقدار','Quantity change','percent'),f('priceChange','درصد تغییر قیمت','Price change','percent'),f('valueChange','درصد تغییر ارزش','Value change','percent'),f('targetIrr','IRR هدف','Desired IRR','percent'),f('targetNpv','NPV هدف','Desired NPV','number'),f('maxIncrease','حداکثر افزایش','Maximum increase','percent'),f('maxDecrease','حداکثر کاهش','Maximum decrease','percent'),f('order','ترتیب متغیر','Variable order','number'),f('chartVariable','متغیر نمودار','Chart variable')
 ]),
 s('incremental-analysis','تحلیل افزایشی و مقایسه وضعیت‌های طرح','Incremental analysis and project alternatives','analysis',true,'XIV; VII.T',[
-f('alternative','نام گزینه','Alternative'),f('view','دیدگاه تحلیل','Analysis view','select',['existing-without-project','existing-with-project','project-in-isolation']),f('period','دوره','Period'),f('investmentDelta','تغییر سرمایه‌گذاری','Incremental investment','number'),f('financingDelta','تغییر تأمین مالی','Incremental financing','number'),f('revenueDelta','تغییر درآمد','Incremental revenue','number'),f('costDelta','تغییر هزینه','Incremental cost','number'),f('assetOpportunityValue','ارزش فرصت دارایی موجود','Opportunity value of existing assets','number')
+f('alternative','نام گزینه','Alternative'),f('view','دیدگاه تحلیل','Analysis view','select',['existing-without-project','existing-with-project','project-in-isolation']),f('period','دوره','Period'),f('investmentDelta','تغییر سرمایه‌گذاری','Incremental investment','number'),f('financingDelta','تغییر تأمین مالی','Incremental financing','number'),f('revenueDelta','تغییر درآمد','Incremental revenue','number'),f('costDelta','تغییر هزینه','Incremental operating cost','number'),f('assetOpportunityValue','ارزش فرصت دارایی موجود','Opportunity value of existing assets','number'),f('depreciationDelta','تغییر استهلاک','Incremental depreciation','number'),f('workingCapitalDelta','تغییر مانده سرمایه در گردش','Change in closing working-capital balance','number'),f('maintenanceCapexDelta','تغییر مخارج تعمیرات سرمایه‌ای','Incremental maintenance capex','number'),f('preOperatingCostDelta','تغییر مخارج پیش از بهره‌برداری','Incremental pre-operating cost','number')
 ])
 ] as const
 export type HelpFormSectionId=string
@@ -430,10 +430,10 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
   errors.push('incremental-analysis:alternative-view-and-period-required')
  if(new Set(incrementalKeys).size!==incrementalKeys.length)errors.push('incremental-analysis:duplicate-alternative-view-period')
  for(const [index,row] of incremental.entries()){
-  const amountKeys=['investmentDelta','financingDelta','revenueDelta','costDelta','assetOpportunityValue'] as const
+  const amountKeys=['investmentDelta','financingDelta','revenueDelta','costDelta','assetOpportunityValue','depreciationDelta','workingCapitalDelta','maintenanceCapexDelta','preOperatingCostDelta'] as const
   const populated=amountKeys.filter(key=>typeof row.values[key]==='number')
   if(!populated.length)errors.push('incremental-analysis:'+index+':at-least-one-financial-delta-required')
-  for(const key of ['investmentDelta','assetOpportunityValue'] as const){
+  for(const key of ['investmentDelta','assetOpportunityValue','depreciationDelta','maintenanceCapexDelta','preOperatingCostDelta'] as const){
    const amount=row.values[key]
    if(typeof amount==='number'&&amount<0)errors.push('incremental-analysis:'+index+':'+key+'-must-be-nonnegative')
   }
