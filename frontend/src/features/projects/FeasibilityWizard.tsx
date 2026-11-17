@@ -403,7 +403,13 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
     (key==='scope'&&(value as Model['scope']).jointVenture!==m.scope.jointVenture))setReportPartnerFinance(null)
   setM(old=>({...old,[key]:value}))
  }
- const unintegratedFinancialDraftInputs=listUnintegratedFinancialDraftInputs(m.financialForms)
+ const fixedAssetTimingIssues=capex-preOperatingCost>0.01&&!confirmedFixedInvestmentSchedule
+  ?[...fixedInvestmentLifecycleInputs.warnings,...fixedInvestmentRegisterReconciliation.warnings,'زمان‌بندی CAPEX دارایی‌های ثابت برای تمام اقلام به تفکیک دوره مستند یا تأیید نشده است؛ خروجی مالی تا تکمیل دفتر سرمایه‌گذاری قابل تأیید نیست.']
+  :[]
+ const preOperatingTimingIssues=preOperatingCost>0.01&&!confirmedPreOperatingSchedule
+  ?[...fixedInvestmentLifecycleInputs.warnings,...fixedInvestmentRegisterReconciliation.warnings,'زمان‌بندی هزینه‌های قبل از بهره‌برداری برای تمام اقلام به تفکیک دوره مستند یا تأیید نشده است؛ خروجی مالی تا تکمیل دفتر مربوط قابل تأیید نیست.']
+  :[]
+ const unintegratedFinancialDraftInputs=[...listUnintegratedFinancialDraftInputs(m.financialForms),...new Set([...fixedAssetTimingIssues,...preOperatingTimingIssues])]
  const reportFinancialInputIssues=[...unintegratedFinancialDraftInputs,...((m.financialForms.workingCapital??[]).length>0&&reportPeriodicFinance?.valid!==true?['financialForms.workingCapital:periodic-working-capital-schedule-not-valid']:[])]
  const activeFinanceResult=integratedFinanceResult
  const displayProjectFlows=activeFinanceResult?activeFinanceResult.years.map(r=>r.projectFreeCashFlow):model.flows
