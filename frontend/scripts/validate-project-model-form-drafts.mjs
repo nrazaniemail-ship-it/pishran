@@ -13,6 +13,7 @@ try {
  const formsOutput=ts.transpileModule(formsSource,{compilerOptions}).outputText
  const draftsOutput=ts.transpileModule(draftsSource,{compilerOptions}).outputText.replaceAll("'./projectModelHelpForms'","'./projectModelHelpForms.mjs'").replaceAll('"./projectModelHelpForms"','"./projectModelHelpForms.mjs"')
  await writeFile(join(temp,'projectModelHelpForms.mjs'),formsOutput)
+ const h=await import(pathToFileURL(join(temp,'projectModelHelpForms.mjs')).href)
  await writeFile(join(temp,'projectModelFormDrafts.mjs'),draftsOutput)
  const forms=await import(pathToFileURL(join(temp,'projectModelFormDrafts.mjs')).href)
 
