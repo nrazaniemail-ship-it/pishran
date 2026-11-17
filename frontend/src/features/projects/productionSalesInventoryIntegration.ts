@@ -20,6 +20,8 @@ export type ProductPeriodOperatingRow = {
   indirectVariableCost: number
   indirectFixedCost: number
   totalProductionCost: number
+  costOfGoodsSold: number
+  closingFinishedGoodsValue: number
 }
 
 export type ProductionSalesInventorySchedule = {
@@ -29,10 +31,14 @@ export type ProductionSalesInventorySchedule = {
   annualRevenue: number[]
   annualVariableCost: number[]
   annualFixedCost: number[]
+  annualCostOfGoodsSold: number[]
   periodRevenue: number[]
   periodProductionCost: number[]
   periodSalesQuantity: number[]
   periodProductionQuantity: number[]
+  periodCostOfGoodsSold: number[]
+  periodClosingFinishedGoodsValue: number[]
+  openingFinishedGoodsValueByProduct: Record<string, number>
   closingFinishedGoodsQuantityByProduct: Record<string, number[]>
 }
 
@@ -112,11 +118,13 @@ export function buildProductionSalesInventorySchedule(
   periods: ProjectCalendarPeriod[],
   fiscalYearStartMonth: number,
   openingFinishedGoodsByProduct: Record<string, number>,
+  openingFinishedGoodsValueByProduct: Record<string, number> = {},
 ): ProductionSalesInventorySchedule {
   const issues = validCalendar(periods)
   const empty = (): ProductionSalesInventorySchedule => ({
-    valid:false,issues,rows:[],annualRevenue:[],annualVariableCost:[],annualFixedCost:[],
+    valid:false,issues,rows:[],annualRevenue:[],annualVariableCost:[],annualFixedCost:[],annualCostOfGoodsSold:[],
     periodRevenue:[],periodProductionCost:[],periodSalesQuantity:[],periodProductionQuantity:[],
+    periodCostOfGoodsSold:[],periodClosingFinishedGoodsValue:[],openingFinishedGoodsValueByProduct:{},
     closingFinishedGoodsQuantityByProduct:{},
   })
   if (!Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12)
@@ -130,12 +138,16 @@ export function buildProductionSalesInventorySchedule(
   const annualRevenue=Array(yearCount).fill(0) as number[]
   const annualVariableCost=Array(yearCount).fill(0) as number[]
   const annualFixedCost=Array(yearCount).fill(0) as number[]
+  const annualCostOfGoodsSold=Array(yearCount).fill(0) as number[]
   const periodRevenue=Array(periods.length).fill(0) as number[]
   const periodProductionCost=Array(periods.length).fill(0) as number[]
   const periodSalesQuantity=Array(periods.length).fill(0) as number[]
   const periodProductionQuantity=Array(periods.length).fill(0) as number[]
+  const periodCostOfGoodsSold=Array(periods.length).fill(0) as number[]
+  const periodClosingFinishedGoodsValue=Array(periods.length).fill(0) as number[]
   const rows:ProductPeriodOperatingRow[]=[]
   const closingFinishedGoodsQuantityByProduct:Record<string,number[]>={}
+  const openingFinishedGoodsValueByProductResolved:Record<string,number>={}
   const salesByProduct=new Map<string,Map<number,SalesProductFormDraft['periods'][number]>>()
   for (const product of drafts.sales) {
     const map=resolveRows(product.periods,periods,'Sales for product '+product.productId,issues)
@@ -144,6 +156,14 @@ export function buildProductionSalesInventorySchedule(
     const openingQuantity=openingFinishedGoodsByProduct[product.productId]??product.openingFinishedGoodsQuantity
     if (!nonNegative(openingQuantity))
       issues.push('Explicit opening finished-goods quantity is required for product '+product.productId+'.')
+    const openingValue=openingFinishedGoodsValueByProduct[product.productId]??product.openingFinishedGoodsValue
+    if(openingValue!==undefined&&openingValue!==null&&!nonNegative(openingValue))
+      issues.push('Opening finished-goods carrying value must be finite and non-negative for product '+product.productId+'.')
+    if(nonNegative(openingQuantity)&&openingQuantity>1e-8&&!nonNegative(openingValue))
+      issues.push('Explicit opening finished-goods carrying value is required when opening quantity is positive for product '+product.productId+'.')
+    if(nonNegative(openingQuantity)&&openingQuantity<=1e-8&&openingValue!=null&&nonNegative(openingValue)&&openingValue>0.01)
+      issues.push('Opening finished-goods value cannot exist without opening quantity for product '+product.productId+'.')
+    openingFinishedGoodsValueByProductResolved[product.productId]=nonNegative(openingValue)?openingValue:0
   }
   const costRowsByPeriod=new Map<ProductionCostFormDraft,Map<number,ProductionCostFormDraft['adjustments'][number]>>()
   for (const cost of drafts.productionCosts) {
@@ -160,15 +180,12 @@ export function buildProductionSalesInventorySchedule(
       issues.push('Fixed and variable shares must be explicitly supplied and total 100% for item '+cost.id+'.')
     costRowsByPeriod.set(cost,resolveRows(cost.adjustments,periods,'Cost adjustment '+cost.id,issues))
   }
-  if(drafts.productionCosts.length){
-    for(const product of drafts.sales){
-      const opening=openingFinishedGoodsByProduct[product.productId]??product.openingFinishedGoodsQuantity??0
-      const salesMap=salesByProduct.get(product.productId)
-      const hasClosingStock=Array.from(salesMap?.values()??[]).some(row=>(row.finishedGoodsClosingQuantity??0)>1e-8)
-      if(opening>1e-8||hasClosingStock){
-        issues.push('Finished-goods inventory valuation is not yet connected to the cost-of-sales engine for '+product.productId+'. When production costs are entered, opening and closing finished-goods quantities must both be zero until opening inventory value and period-end inventory costing are supported.')
-      }
-    }
+  for(const product of drafts.sales){
+    const opening=openingFinishedGoodsByProduct[product.productId]??product.openingFinishedGoodsQuantity??0
+    const salesMap=salesByProduct.get(product.productId)
+    const hasClosingStock=Array.from(salesMap?.values()??[]).some(row=>(row.finishedGoodsClosingQuantity??0)>1e-8)
+    if((opening>1e-8||hasClosingStock)&&product.inventoryValuationMethod!=='fifo'&&product.inventoryValuationMethod!=='weighted-average')
+      issues.push('An explicit FIFO or weighted-average finished-goods valuation method is required for product '+product.productId+'.')
   }
   if (issues.length) return empty()
 
@@ -227,7 +244,7 @@ export function buildProductionSalesInventorySchedule(
         productionQuantity:Math.max(0,production),openingFinishedGoodsQuantity:opening,
         closingFinishedGoodsQuantity:closing,baseSalesRevenue:baseRevenue,salesTax,subsidy,
         recognizedRevenue,directVariableCost:0,directFixedCost:0,indirectVariableCost:0,
-        indirectFixedCost:0,totalProductionCost:0,
+        indirectFixedCost:0,totalProductionCost:0,costOfGoodsSold:0,closingFinishedGoodsValue:0,
       })
       opening=closing
     }
@@ -289,9 +306,6 @@ export function buildProductionSalesInventorySchedule(
         operating.indirectFixedCost+=fixed
         operating.indirectVariableCost+=variable
       }
-      const year=fiscalIndexes[i]
-      annualFixedCost[year]+=fixed
-      annualVariableCost[year]+=variable
       periodProductionCost[i]+=fixed+variable
     }
   }
@@ -299,9 +313,38 @@ export function buildProductionSalesInventorySchedule(
     row.totalProductionCost=row.directFixedCost+row.directVariableCost+row.indirectFixedCost+row.indirectVariableCost
   }
   if (issues.length) return empty()
+  for(const product of drafts.sales){
+    const openingQuantity=openingFinishedGoodsByProduct[product.productId]??product.openingFinishedGoodsQuantity??0
+    const openingValue=openingFinishedGoodsValueByProductResolved[product.productId]??0
+    const productRows=rows.filter(row=>row.productId===product.productId).sort((a,b)=>a.period-b.period)
+    const valuationPeriods=productRows.map(row=>({
+      period:String(row.period),productionQuantity:row.productionQuantity,productionCost:row.totalProductionCost,
+      salesQuantity:row.salesQuantity,closingQuantity:row.closingFinishedGoodsQuantity,
+    }))
+    const method=product.inventoryValuationMethod??'weighted-average'
+    const valuation=method==='fifo'
+      ?calculateFinishedGoodsFifoSchedule({openingQuantity,openingValue,periods:valuationPeriods})
+      :calculateFinishedGoodsWeightedAverageSchedule({openingQuantity,openingValue,periods:valuationPeriods})
+    if(!valuation.valid){
+      issues.push(...valuation.issues.map(issue=>'Finished-goods valuation for '+product.productId+': '+issue))
+      continue
+    }
+    valuation.periods.forEach((period,index)=>{
+      const row=productRows[index]
+      row.costOfGoodsSold=period.costOfGoodsSold
+      row.closingFinishedGoodsValue=period.closingInventoryValue
+      const year=fiscalIndexes[row.period-1]
+      annualCostOfGoodsSold[year]+=period.costOfGoodsSold
+      periodCostOfGoodsSold[row.period-1]+=period.costOfGoodsSold
+      periodClosingFinishedGoodsValue[row.period-1]+=period.closingInventoryValue
+    })
+  }
+  if (issues.length) return empty()
   return {
-    valid:true,issues:[],rows,annualRevenue,annualVariableCost,annualFixedCost,
+    valid:true,issues:[],rows,annualRevenue,annualVariableCost,annualFixedCost,annualCostOfGoodsSold,
     periodRevenue,periodProductionCost,periodSalesQuantity,periodProductionQuantity,
+    periodCostOfGoodsSold,periodClosingFinishedGoodsValue,
+    openingFinishedGoodsValueByProduct:openingFinishedGoodsValueByProductResolved,
     closingFinishedGoodsQuantityByProduct:closingByProduct,
   }
 }
@@ -311,8 +354,9 @@ export function bindProductionSalesToPeriodicFinance(
   input:PeriodicProjectFinanceInput,
   drafts:Pick<ProjectModelFinancialFormDrafts,'sales'|'productionCosts'>,
   openingFinishedGoodsByProduct:Record<string,number>,
+  openingFinishedGoodsValueByProduct:Record<string,number> = {},
 ):ProductionSalesFinanceBinding {
-  const schedule=buildProductionSalesInventorySchedule(drafts,input.periods,input.fiscalYearStartMonth,openingFinishedGoodsByProduct)
+  const schedule=buildProductionSalesInventorySchedule(drafts,input.periods,input.fiscalYearStartMonth,openingFinishedGoodsByProduct,openingFinishedGoodsValueByProduct)
   if (!schedule.valid) return {valid:false,issues:schedule.issues,financeInput:null,schedule}
   return {
     valid:true,issues:[],
@@ -321,6 +365,8 @@ export function bindProductionSalesToPeriodicFinance(
       annualRevenue:schedule.annualRevenue,
       annualVariableCost:schedule.annualVariableCost,
       annualFixedCost:schedule.annualFixedCost,
+      annualCostOfGoodsSold:schedule.annualCostOfGoodsSold,
+      finishedGoodsInventoryValueByPeriod:schedule.periodClosingFinishedGoodsValue,
     },
     schedule,
   }
