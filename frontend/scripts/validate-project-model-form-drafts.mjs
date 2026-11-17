@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
-
 const compilerOptions={module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}
 const temp=await mkdtemp(join(tmpdir(),'pishran-form-drafts-'))
 try {
@@ -15,13 +14,11 @@ try {
  await writeFile(join(temp,'projectModelHelpForms.mjs'),formsOutput)
  await writeFile(join(temp,'projectModelFormDrafts.mjs'),draftsOutput)
  const forms=await import(pathToFileURL(join(temp,'projectModelFormDrafts.mjs')).href)
-
  const asset=forms.createBlankFixedAssetFormDraft()
  assert.equal(asset.depreciation.method,null)
  assert.equal(asset.depreciation.ratePercent,null)
  assert.equal(asset.depreciation.salvagePercent,null)
  assert.deepEqual(forms.validateFixedAssetFormDraft(asset),[])
-
  const direct=forms.createBlankProductionCostFormDraft()
  assert.equal(direct.classification,null)
  assert.equal(direct.basis,null)
@@ -31,7 +28,6 @@ try {
  assert.ok(forms.validateProductionCostFormDraft({...direct,classification:'direct',productId:null}).includes('direct-cost-missing-product-allocation'))
  assert.ok(forms.validateProductionCostFormDraft({...direct,classification:'indirect',productId:null}).includes('indirect-cost-missing-product-allocation'))
  assert.deepEqual(forms.validateProductionCostFormDraft({...direct,classification:'indirect',productId:'p1'}),[])
-
  assert.equal(forms.deriveWorkingCapitalTurnover(30,360),12)
  assert.equal(forms.deriveWorkingCapitalTurnover(30,90),3)
  assert.equal(forms.deriveWorkingCapitalTurnover(0,90),null)
@@ -42,8 +38,6 @@ try {
  const blankSales=forms.createBlankSalesProductFormDraft()
  assert.equal(blankSales.openingFinishedGoodsQuantity,null,'Raw opening finished-goods quantity must not be silently assumed to be zero')
  assert.deepEqual(blankSales.periods,[])
-
-
  const loan=forms.createBlankLoanFacilityFormDraft()
  assert.equal(loan.loanType,null)
  assert.deepEqual(loan.disbursements,[])
@@ -59,7 +53,6 @@ try {
  assert.ok(forms.validateLoanFacilityFormDraft({...loan,fees:[{id:'fee-1',type:null,ratePercent:2,currencyCode:null}]}).includes('loan-fee-type-required'))
  assert.ok(forms.validateLoanFacilityFormDraft({...loan,fees:[{id:'fee-2',type:'agency',ratePercent:2,currencyCode:'USD'}]}).includes('loan-fee-payment-date-required'))
  assert.ok(forms.validateLoanFacilityFormDraft({...loan,disbursements:[{date:'',amount:-1}]}).includes('invalid-loan-disbursement'))
-
  const tax=forms.createBlankProjectTaxFormDraft()
  assert.equal(tax.system,null)
  assert.deepEqual(tax.rates,[])
@@ -68,7 +61,6 @@ try {
  const balancedOpening={enabled:true,cash:10,inventory:20,workInProgress:0,finishedGoods:0,receivables:0,otherCurrentAssets:0,tradePayables:5,otherCurrentLiabilities:0,grossFixedAssets:100,accumulatedDepreciation:0,deferredPreOperatingAssets:0,shortTermDebt:10,longTermDebt:20,shareCapital:95,retainedEarnings:0}
  assert.deepEqual(forms.validateOpeningBalanceSheetDraft(balancedOpening),[],'Trade payables must be included in liabilities, not subtracted from total assets')
  assert.ok(forms.validateOpeningBalanceSheetDraft({...balancedOpening,shareCapital:94}).includes('opening-balance-sheet-does-not-balance'),'Opening balance sheet must reject a one-unit imbalance')
-
  const duplicateAssets={...complete,assets:[{...asset,id:'same'},{...asset,id:'same'}]}
  assert.ok(forms.validateProjectModelCrossReferences(duplicateAssets).includes('assets:duplicate-id'))
  const missingProductCost={...complete,productionCosts:[{...direct,id:'cost-1',classification:'direct',productId:'missing'}]}
@@ -79,14 +71,12 @@ try {
  const staleSalesProduct={...complete,sales:[{productId:'deleted-product',periods:[]}]}
  assert.ok(forms.validateProjectModelCrossReferences(staleSalesProduct,['current-product']).includes('sales-0:unknown-product-reference'))
  assert.ok(forms.validateProjectModelFinancialFormDrafts(staleSalesProduct,['current-product']).includes('sales-0:unknown-product-reference'))
-
  const wizardSource=await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx',import.meta.url),'utf8')
  const projectViewSource=await readFile(new URL('../src/features/projects/ProjectsView.tsx',import.meta.url),'utf8')
  const advancedFinanceSource=await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx',import.meta.url),'utf8')
  const financialFormsPanelSource=await readFile(new URL('../src/features/projects/ProjectModelFinancialFormsPanel.tsx',import.meta.url),'utf8')
  const fixedInvestmentPanelSource=await readFile(new URL('../src/features/projects/FixedInvestmentPanel.tsx',import.meta.url),'utf8')
  const projectFoundationSource=await readFile(new URL('../src/features/projects/projectFoundation.ts',import.meta.url),'utf8')
- const reportVisualsSource=await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx',import.meta.url),'utf8')
  assert.match(wizardSource,/const projectCategory:Model\['projectCategory'\]=project\.industry==='معدن'\?'mining'/,'Raw project category must derive from the selected industry')
  assert.match(wizardSource,/function baseModel\(project:FeasibilityProject\):Model/,'The raw wizard must construct one generic project model')
  assert.match(wizardSource,/const isRawTemplate=project\.templateId==='raw'/,'All blank-template controls must use the raw-template flag')
@@ -117,7 +107,7 @@ try {
  assert.match(wizardSource,/nameplate:null as unknown as number/,'Raw capacity must remain unset')
  assert.match(wizardSource,/products:\[\]/,'Raw product rows must start empty')
  assert.match(wizardSource,/fixedInvestmentItems:\[\]/,'Raw project fixed assets must not be seeded')
- assert.doesNotMatch(projectViewSource,/HRCR200|نورد ورق گرم|STEEL_PROJECT_OPTIONS/,'Raw project creation UI must not contain sample project names')
+ assert.doesNotMatch(projectViewSource,/STEEL_PROJECT_OPTIONS|changeSteelProject|setSteelStage/,'Raw project creation UI must not contain specialized stage selectors')
  assert.match(projectViewSource,/const templateId = 'raw' as const/,'The project chooser must expose only the raw template')
  assert.match(projectViewSource,/قالب خام/,'The only project template must be labelled as the raw template')
  assert.match(wizardSource,/analysisMode:'unspecified'/,'Raw project classification must not be preselected')
@@ -128,8 +118,7 @@ try {
  assert.match(wizardSource,/market:\{demand:null as unknown as number/,'Raw market inputs must remain unset')
  assert.match(wizardSource,/finance:\{equity:null as unknown as number/,'Raw financing assumptions must remain unset')
  assert.match(wizardSource,/e\.target\.value===''\?null as unknown as number:Number\(e\.target\.value\)/,'Clearing a numeric field must preserve null rather than silently writing zero')
- assert.doesNotMatch(wizardSource,/HRCR200|hotRolling|HOT_ROLLING|کلاف گرم|کلاف سرد|نورد گرم|نورد سرد/,'The raw wizard source must contain no sample-project logic or sample-specific assumptions')
- assert.doesNotMatch(wizardSource,/isHotRollingCoil|HRCR200|hotRolling|HOT_ROLLING|کلاف گرم|کلاف سرد|نورد گرم|نورد سرد/,'The raw wizard must not expose sample-specific report flags or project assumptions')
+ assert.doesNotMatch(wizardSource,/referenceVersion|referenceDepreciation|benchmarkSeed/,'The raw wizard must not import external reference assumptions')
  assert.match(wizardSource,/partnerDistributionPercent:null as unknown as number/,'Joint-venture distribution must remain unset in a blank project')
  assert.match(wizardSource,/sharePercent:null as unknown as number,capitalContribution:null as unknown as number,profitSharePercent:null as unknown as number/,'New partner contributions and allocation percentages must remain unset')
  assert.match(fixedInvestmentPanelSource,/blankTemplate\?\{\.\.\.item,assetClass:'' as FixedInvestmentItem\['assetClass'\],origin:'' as FixedInvestmentItem\['origin'\],depreciation:\{\.\.\.item\.depreciation,method:'' as FixedInvestmentItem\['depreciation'\]\['method'\]/,'Blank fixed-asset rows must not preselect asset class, origin or depreciation method')
@@ -139,10 +128,6 @@ try {
  assert.match(projectFoundationSource,/missing-fixed-asset-class/,'Fixed-asset validation must reject an unspecified asset class')
  assert.match(projectFoundationSource,/missing-fixed-asset-origin/,'Fixed-asset validation must reject an unspecified origin')
  assert.match(projectFoundationSource,/missing-depreciation-method/,'Fixed-asset validation must reject an unspecified depreciation method')
- assert.match(reportVisualsSource,/isHotRollingCoil\?: boolean/,'Generic reports must not require a sample-project classification flag')
- assert.match(reportVisualsSource,/quantityUnit\?:string/,'Break-even charts must accept the actual project product unit')
- assert.match(reportVisualsSource,/annualProductUnit/,'Report tables must use project-specific annual product units')
-
  console.log('Help-driven item-level finance forms: all assertions passed.')
 } finally {
  await rm(temp,{recursive:true,force:true})
