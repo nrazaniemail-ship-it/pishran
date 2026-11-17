@@ -63,7 +63,8 @@ try {
  assert.ok(forms.listUnintegratedFinancialDraftInputs({...auditDraft,helpDriven:unintegrated}).includes('production-costs.cost-1.item'))
  const descriptiveOnly=h.updateHelpFormRow(auditDraft.helpDriven,'project-identification','project-identification-main','title','Test project')
  assert.deepEqual(forms.listUnintegratedFinancialDraftInputs({...auditDraft,helpDriven:descriptiveOnly}),[])
- const withAsset={...auditDraft,assets:[forms.createBlankFixedAssetFormDraft('asset-1')]}
+ const blankAsset=forms.createBlankFixedAssetFormDraft('asset-1')
+ const withAsset={...auditDraft,assets:[{...blankAsset,metadata:{...blankAsset.metadata,description:'Plant equipment'}}]}
  assert.ok(forms.listUnintegratedFinancialDraftInputs(withAsset).includes('financialForms.assets.0'))
 
  console.log('Help-driven item-level finance forms: all assertions passed.')
