@@ -146,6 +146,10 @@ export function bindStartingBalancesToPeriodicFinance(input:{
     }
     translatedRows.push({rowId:row.id,category,amountLocal,exchangeRate})
   }
+  const previouslyBoundOpeningWorkingCapital=input.finance.openingWorkingCapital
+  if(finite(previouslyBoundOpeningWorkingCapital)&&Math.abs(previouslyBoundOpeningWorkingCapital)>0.01&&
+    Math.abs(previouslyBoundOpeningWorkingCapital-openingBalances.netWorkingCapital!)>0.01)
+    issues.push('Detailed starting-balance net working capital does not reconcile to the previously bound working-capital opening balance.')
   if(openingBalances.netWorkingCapital!<0)
     issues.push('Opening net working capital is negative; the current periodic engine requires a non-negative opening working-capital balance.')
   const balanceDifference=openingAssets-openingLiabilitiesAndEquity
