@@ -297,6 +297,21 @@ assert.equal(foreignCurrencyStatements[0].cashFlowStatement.operatingCashFlow,82
 assert.equal(foreignCurrencyStatements[0].balanceSheet.debt,120)
 assert.ok(foreignCurrencyStatements.every(row=>row.balanceSheet.reconciled),
   'FX remeasurement must reconcile income statement, cash flow and debt on the balance sheet')
+const brokenForeignCurrencyCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[100,100,100],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[20,20,20],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:foreignCurrencyStatementCase.valid?[{id:'fx-facility',input:{
+    annualRatePercent:0,drawdowns:[0,0,0],repaymentMethod:'bullet',repaymentStartPeriod:1,
+    gracePeriods:0,termPeriods:1,capitalizeInterest:false,openingBalance:110,
+  }}]:[],
+  loanScheduleOverrides:foreignCurrencyStatementCase.valid?{'fx-facility':foreignCurrencyStatementCase.loanSchedules['fx-facility']}:undefined,
+  foreignExchangeLossByPeriod:[9,0,0],
+})
+assert.equal(brokenForeignCurrencyCase.valid,false,
+  'FX postings must reconcile to translated opening, movement and closing debt balances')
+
 console.log('PASS: foreign-currency debt remeasurement flows through all three periodic financial statements')
 
 const automaticFundingCase=engine.calculateIntegratedPeriodicFinance({
