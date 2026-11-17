@@ -304,6 +304,9 @@ assert.ok(invalidHelpModel.issues.includes('cost-centre:unknown-parent:missing')
 
 // A populated raw-template section must never be silently ignored by the financial engine.
 let unboundHelp=helpForms.createBlankHelpDrivenProjectForms()
+unboundHelp=helpForms.addHelpFormRow(unboundHelp,'currencies','local-eur')
+for(const [key,value] of Object.entries({code:'EUR',name:'Euro',type:'local',accountingCurrency:true}))
+ unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'currencies','local-eur',key,value)
 unboundHelp=helpForms.addHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a')
 unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a','description','Pre-production study')
 unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a','currency','EUR')
