@@ -27,6 +27,10 @@ const repository=await import('data:text/javascript;base64,'+Buffer.from(output)
 
 const created=await repository.createProject({name:'Generic test project',industry:'Industrial',projectType:'Manufacturing',capacity:'',location:''})
 assert.equal(created.templateId,'raw')
+assert.equal(created.capacityUnit,undefined)
+const capacityProject=await repository.createProject({name:'Power project',industry:'Energy',projectType:'Solar',capacity:'25',capacityUnit:'MW',location:''})
+assert.equal(capacityProject.capacity,'25')
+assert.equal(capacityProject.capacityUnit,'MW')
 assert.equal(created.steelStage,undefined)
 assert.deepEqual((await repository.listProjects()).map(project=>project.id),[created.id])
 
