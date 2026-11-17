@@ -236,7 +236,7 @@ export function buildProductionSalesInventorySchedule(
           const adjustmentTotal=adjustment?.total??((adjustment?.quantity??0)*(adjustment?.unitPrice??0))
           const calc=calculateHelpPerUnitOutputCost({
             inputQuantityPerUnit:cost.standardQuantity as number,unitPrice:cost.standardUnitPrice as number,
-            outputVolume:operating.productionQuantity,
+            outputVolume:cost.activityBasis==='sales'?operating.salesQuantity:operating.productionQuantity,
             standardFixedCost:(cost.standardTotal as number)*cost.fixedPercent/100,
             adjustmentTotal,adjustmentVariablePercent:adjustment?.variablePercent??0,periodMonths:months,
           })
