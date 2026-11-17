@@ -30,6 +30,12 @@ export type WorkingCapitalPolicy = {
   annualRawMaterialCost: number
   energyDays?: number
   annualEnergyCost?: number
+  factorySuppliesDays?: number
+  annualFactorySuppliesCost?: number
+  annualFixedFactorySuppliesCost?: number
+  utilitiesDays?: number
+  annualUtilitiesCost?: number
+  annualFixedUtilitiesCost?: number
   sparePartsDays?: number
   annualSparePartsCost?: number
   annualFixedRawMaterialCost?: number
@@ -46,6 +52,8 @@ export type WorkingCapitalPolicy = {
 
 export type WorkingCapitalBreakdown = {
   rawMaterials: number
+  factorySupplies?: number
+  utilities?: number
   energy?: number
   spareParts?: number
   workInProgress: number
@@ -57,14 +65,18 @@ export type WorkingCapitalBreakdown = {
 }
 
 export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPolicy, utilization: number, salesFactor = 1, opexFactor = 1): WorkingCapitalBreakdown {
-  const values = [policy.dayBasis, policy.rawMaterialDays, policy.energyDays ?? 0, policy.sparePartsDays ?? 0, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualEnergyCost ?? 0, policy.annualSparePartsCost ?? 0, policy.annualFixedRawMaterialCost ?? 0, policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, utilization, salesFactor, opexFactor]
-  if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1).some(value => value < 0) || policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100) return { rawMaterials: 0, energy: 0, spareParts: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 }
+  const values = [policy.dayBasis, policy.rawMaterialDays, policy.factorySuppliesDays ?? 0, policy.utilitiesDays ?? 0, policy.energyDays ?? 0, policy.sparePartsDays ?? 0, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualFactorySuppliesCost ?? 0, policy.annualUtilitiesCost ?? 0, policy.annualEnergyCost ?? 0, policy.annualSparePartsCost ?? 0, policy.annualFixedRawMaterialCost ?? 0, policy.annualFixedFactorySuppliesCost ?? 0, policy.annualFixedUtilitiesCost ?? 0, policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, utilization, salesFactor, opexFactor]
+  if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1).some(value => value < 0) || policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100) return { rawMaterials: 0, factorySupplies: 0, utilities: 0, energy: 0, spareParts: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 }
   const day = (base: number, days: number, factor: number) => base * factor * Math.min(days, policy.dayBasis) / policy.dayBasis
   const activeFactor = utilization > 0 ? 1 : 0
   const fixedRawMaterials = Math.min(policy.annualRawMaterialCost, policy.annualFixedRawMaterialCost ?? 0)
   const variableRawMaterials = policy.annualRawMaterialCost - fixedRawMaterials
   const rawMaterials = day(variableRawMaterials, policy.rawMaterialDays, utilization * opexFactor)
     + day(fixedRawMaterials, policy.rawMaterialDays, activeFactor * opexFactor)
+  const fixedFactorySupplies = Math.min(policy.annualFactorySuppliesCost ?? 0, policy.annualFixedFactorySuppliesCost ?? 0)
+  const factorySupplies = day((policy.annualFactorySuppliesCost ?? 0)-fixedFactorySupplies,policy.factorySuppliesDays ?? 0,utilization*opexFactor)+day(fixedFactorySupplies,policy.factorySuppliesDays ?? 0,activeFactor*opexFactor)
+  const fixedUtilities = Math.min(policy.annualUtilitiesCost ?? 0, policy.annualFixedUtilitiesCost ?? 0)
+  const utilities = day((policy.annualUtilitiesCost ?? 0)-fixedUtilities,policy.utilitiesDays ?? 0,utilization*opexFactor)+day(fixedUtilities,policy.utilitiesDays ?? 0,activeFactor*opexFactor)
   const energy = day(policy.annualEnergyCost ?? 0, policy.energyDays ?? 0, utilization * opexFactor)
   const spareParts = day(policy.annualSparePartsCost ?? 0, policy.sparePartsDays ?? 0, utilization * opexFactor)
   const materialCompletion = policy.workInProgressMaterialCompletionPercent / 100
@@ -85,7 +97,7 @@ export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPoli
   const variablePayables = Math.max(0, (policy.annualPayablesCost ?? policy.annualRawMaterialCost) - fixedPayables)
   const payables = day(variablePayables, policy.payableDays, utilization * opexFactor)
     + day(fixedPayables, policy.payableDays, activeFactor * opexFactor)
-  return { rawMaterials, energy, spareParts, workInProgress, finishedGoods, receivables, minimumCash, payables, netWorkingCapital: rawMaterials + energy + spareParts + workInProgress + finishedGoods + receivables + minimumCash - payables }
+  return { rawMaterials, factorySupplies, utilities, energy, spareParts, workInProgress, finishedGoods, receivables, minimumCash, payables, netWorkingCapital: rawMaterials + factorySupplies + utilities + energy + spareParts + workInProgress + finishedGoods + receivables + minimumCash - payables }
 }
 
 export function calculateCashConversionCycleDays(policy: Pick<WorkingCapitalPolicy, 'dayBasis' | 'rawMaterialDays' | 'workInProgressDays' | 'finishedGoodsDays' | 'receivableDays' | 'payableDays'>) {
@@ -684,7 +696,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   if (input.loans.some(loan => loan.termYears <= 0 && loan.drawdowns.some(value => value > 0))) warnings.push('برای یک یا چند وام، دوره بازپرداخت ثبت نشده است.')
   if (input.workingCapitalPolicy) {
     const policy = input.workingCapitalPolicy
-    const dayEntries: [string, number][] = [['موجودی مواد اولیه', policy.rawMaterialDays], ['کالای در جریان ساخت', policy.workInProgressDays], ['محصول نهایی', policy.finishedGoodsDays], ['وصول مطالبات', policy.receivableDays], ['حداقل نقد عملیاتی', policy.cashDays], ['پرداخت بدهی تجاری', policy.payableDays]]
+    const dayEntries: [string, number][] = [['موجودی مواد اولیه', policy.rawMaterialDays], ['ملزومات کارخانه', policy.factorySuppliesDays ?? 0], ['اقلام خدماتی', policy.utilitiesDays ?? 0], ['کالای در جریان ساخت', policy.workInProgressDays], ['محصول نهایی', policy.finishedGoodsDays], ['وصول مطالبات', policy.receivableDays], ['حداقل نقد عملیاتی', policy.cashDays], ['پرداخت بدهی تجاری', policy.payableDays]]
     dayEntries.forEach(([label, days]) => {
       if (!Number.isFinite(days) || days < 0) warnings.push(`روزهای ${label} باید عددی معتبر و غیرمنفی باشد.`)
       else if (days > policy.dayBasis) warnings.push(`دوره ${label} از مبنای روزهای سال بیشتر است؛ در محاسبه به مبنای سال محدود می‌شود.`)
@@ -692,9 +704,9 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const completionEntries: [string, number][] = [['درصد تکمیل مواد در جریان ساخت', policy.workInProgressMaterialCompletionPercent], ['درصد تکمیل تبدیل در جریان ساخت', policy.workInProgressConversionCompletionPercent]]
     completionEntries.forEach(([label, value]) => { if (!Number.isFinite(value) || value < 0 || value > 100) warnings.push(`${label} باید بین صفر تا ۱۰۰ درصد باشد.`) })
     const payableBase = policy.annualPayablesCost ?? policy.annualRawMaterialCost
-    const costEntries: [string, number][] = [['هزینه مواد اولیه', policy.annualRawMaterialCost], ['هزینه ثابت مواد اولیه', policy.annualFixedRawMaterialCost ?? 0], ['مبنای بدهی تجاری', payableBase], ['هزینه ثابت مشمول بدهی تجاری', policy.annualFixedPayablesCost ?? 0], ['هزینه تبدیل', policy.annualConversionCost], ['هزینه ثابت تبدیل', policy.annualFixedConversionCost ?? 0], ['بهای محصول نهایی', policy.annualFinishedGoodsCost], ['هزینه ثابت محصول نهایی', policy.annualFixedFinishedGoodsCost ?? 0], ['درآمد فروش', policy.annualRevenue], ['هزینه نقدی عملیاتی', policy.annualCashOperatingCost], ['هزینه ثابت نقدی عملیاتی', policy.annualFixedCashOperatingCost ?? 0]]
+    const costEntries: [string, number][] = [['هزینه مواد اولیه', policy.annualRawMaterialCost], ['ملزومات کارخانه', policy.annualFactorySuppliesCost ?? 0], ['هزینه ثابت ملزومات کارخانه', policy.annualFixedFactorySuppliesCost ?? 0], ['اقلام خدماتی', policy.annualUtilitiesCost ?? 0], ['هزینه ثابت اقلام خدماتی', policy.annualFixedUtilitiesCost ?? 0], ['هزینه ثابت مواد اولیه', policy.annualFixedRawMaterialCost ?? 0], ['مبنای بدهی تجاری', payableBase], ['هزینه ثابت مشمول بدهی تجاری', policy.annualFixedPayablesCost ?? 0], ['هزینه تبدیل', policy.annualConversionCost], ['هزینه ثابت تبدیل', policy.annualFixedConversionCost ?? 0], ['بهای محصول نهایی', policy.annualFinishedGoodsCost], ['هزینه ثابت محصول نهایی', policy.annualFixedFinishedGoodsCost ?? 0], ['درآمد فروش', policy.annualRevenue], ['هزینه نقدی عملیاتی', policy.annualCashOperatingCost], ['هزینه ثابت نقدی عملیاتی', policy.annualFixedCashOperatingCost ?? 0]]
     costEntries.forEach(([label, value]) => { if (!Number.isFinite(value) || value < 0) warnings.push(`${label} باید عددی معتبر و غیرمنفی باشد.`) })
-    const fixedCostCaps: [string, number, number][] = [['هزینه ثابت مواد اولیه', policy.annualFixedRawMaterialCost ?? 0, policy.annualRawMaterialCost], ['هزینه ثابت مشمول بدهی تجاری', policy.annualFixedPayablesCost ?? 0, payableBase], ['هزینه ثابت تبدیل', policy.annualFixedConversionCost ?? 0, policy.annualConversionCost], ['هزینه ثابت محصول نهایی', policy.annualFixedFinishedGoodsCost ?? 0, policy.annualFinishedGoodsCost], ['هزینه ثابت نقدی عملیاتی', policy.annualFixedCashOperatingCost ?? 0, policy.annualCashOperatingCost]]
+    const fixedCostCaps: [string, number, number][] = [['هزینه ثابت مواد اولیه', policy.annualFixedRawMaterialCost ?? 0, policy.annualRawMaterialCost], ['هزینه ثابت ملزومات کارخانه', policy.annualFixedFactorySuppliesCost ?? 0, policy.annualFactorySuppliesCost ?? 0], ['هزینه ثابت اقلام خدماتی', policy.annualFixedUtilitiesCost ?? 0, policy.annualUtilitiesCost ?? 0], ['هزینه ثابت مشمول بدهی تجاری', policy.annualFixedPayablesCost ?? 0, payableBase], ['هزینه ثابت تبدیل', policy.annualFixedConversionCost ?? 0, policy.annualConversionCost], ['هزینه ثابت محصول نهایی', policy.annualFixedFinishedGoodsCost ?? 0, policy.annualFinishedGoodsCost], ['هزینه ثابت نقدی عملیاتی', policy.annualFixedCashOperatingCost ?? 0, policy.annualCashOperatingCost]]
     fixedCostCaps.forEach(([label, fixed, total]) => { if (Number.isFinite(fixed) && Number.isFinite(total) && fixed > total) warnings.push(`${label} از کل مبنای هزینه بیشتر است؛ در محاسبه به سقف کل هزینه محدود می‌شود.`) })
   }
   if (input.taxRateSchedule?.some(rate => !Number.isFinite(rate) || rate < 0 || rate > 100)) warnings.push('نرخ مالیات عملکرد سالانه باید در تمام دوره‌ها بین صفر تا ۱۰۰ درصد باشد.')
