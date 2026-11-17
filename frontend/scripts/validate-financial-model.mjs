@@ -154,6 +154,16 @@ assert.ok(foundation.validateStartingFixedAssetBalances([{
   ...validAsset,status:'replace',disposalDate:'2028-01-01'
 }],disposalFoundation).some(x=>x.code==='starting-asset-disposal-after-project'),
   'Replacement disposal date must fall inside the project calendar')
+const openingBalanceSummary=foundation.calculateStartingFinancialBalanceSummary({
+  currentAssets:1000,cashLocal:100,cashForeign:20,shortTermDepositsLocal:30,
+  cashSurplusLocal:10,cashSurplusForeign:5,payablesLocal:100,payablesForeign:20,
+  otherLiabilitiesLocal:15,openingDebt:200,accruedInterest:5,paidInCapital:400,
+  retainedEarnings:80,accumulatedLosses:30,grants:25
+})
+assert.deepEqual(openingBalanceSummary,{
+  cash:165,netWorkingCapital:700,debt:205,paidInCapital:400,
+  retainedEarnings:50,grants:25
+},'Detailed opening balances must map into statement balances without a balancing plug')
 const openingAssetDisposal=engine.calculateComfarCalendarAssetLifecycle([{
   id:'opening-sale-test',name:'Opening asset for sale',originalValue:1000,initialBookValue:700,
   scrapPercent:10,lengthYears:7,lengthMonths:0,ratePercent:100/7,
