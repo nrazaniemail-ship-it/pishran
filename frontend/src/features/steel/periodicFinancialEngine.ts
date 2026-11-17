@@ -1642,6 +1642,73 @@ export type PeriodicFinancialStatement = {
  * COMFAR XI.N automatic construction equity and production overdraft are posted
  * to financing cash flow, paid-in capital and debt instead of remaining a detached schedule.
  */
+
+export type PeriodicSensitivityCell = {
+  priceChangePercent:number
+  volumeChangePercent:number
+  npv:number|null
+  irr:number|null
+}
+export type PeriodicFinancialScenarioSet = {
+  pessimistic:PeriodicProjectFinanceResult
+  base:PeriodicProjectFinanceResult
+  optimistic:PeriodicProjectFinanceResult
+}
+function scalePeriodicOperatingInput(
+  input:PeriodicProjectFinanceInput,
+  priceFactor:number,
+  volumeFactor:number,
+  variableCostFactor:number,
+  fixedCostFactor:number,
+  capexFactor:number,
+):PeriodicProjectFinanceInput {
+  const scale=(values:number[]|undefined,factor:number)=>values?.map(value=>value*factor)
+  return {
+    ...input,
+    annualRevenue:input.annualRevenue.map(value=>value*priceFactor*volumeFactor),
+    periodRevenue:scale(input.periodRevenue,priceFactor*volumeFactor),
+    annualVariableCost:input.annualVariableCost.map(value=>value*variableCostFactor*volumeFactor),
+    periodVariableCost:scale(input.periodVariableCost,variableCostFactor*volumeFactor),
+    annualFixedCost:input.annualFixedCost.map(value=>value*fixedCostFactor),
+    annualFixedInvestment:input.annualFixedInvestment.map(value=>value*capexFactor),
+    annualPreOperatingCost:input.annualPreOperatingCost.map(value=>value*capexFactor),
+    annualMaintenanceCapex:input.annualMaintenanceCapex.map(value=>value*capexFactor),
+    workingCapitalByPeriod:scale(input.workingCapitalByPeriod,volumeFactor)??[],
+    cashInHandByPeriod:scale(input.cashInHandByPeriod,volumeFactor),
+    shortTermDepositsByPeriod:scale(input.shortTermDepositsByPeriod,volumeFactor),
+    annualEquityWorkingCapitalContributions:scale(input.annualEquityWorkingCapitalContributions,volumeFactor),
+  }
+}
+
+/**
+ * Two-way sensitivity using the same validated periodic model as the base case.
+ * Price changes affect revenue; volume changes proportionally affect sales,
+ * cost of sales and operating working capital. Financing and tax assumptions
+ * remain fixed unless explicitly changed in the scenario inputs.
+ */
+export function calculatePeriodicSensitivityMatrix(
+  input:PeriodicProjectFinanceInput,
+  priceChanges=[-20,-10,0,10,20],
+  volumeChanges=[-20,-10,0,10,20],
+):PeriodicSensitivityCell[][] {
+  return volumeChanges.map(volumeChangePercent=>priceChanges.map(priceChangePercent=>{
+    const scenario=scalePeriodicOperatingInput(input,1+priceChangePercent/100,
+      1+volumeChangePercent/100,1,1,1)
+    const result=calculateIntegratedPeriodicFinance(scenario)
+    return {priceChangePercent,volumeChangePercent,
+      npv:result.valid?result.npvProject:null,irr:result.valid?result.irrProject:null}
+  }))
+}
+
+/** Pessimistic/base/optimistic cases on the complete periodic model, including debt, tax and FX schedules. */
+export function calculatePeriodicFinancialScenarios(input:PeriodicProjectFinanceInput):PeriodicFinancialScenarioSet {
+  return {
+    pessimistic:calculateIntegratedPeriodicFinance(scalePeriodicOperatingInput(input,.9,.85,1.15,1.1,1.1)),
+    base:calculateIntegratedPeriodicFinance(scalePeriodicOperatingInput(input,1,1,1,1,1)),
+    optimistic:calculateIntegratedPeriodicFinance(scalePeriodicOperatingInput(input,1.1,1.1,.95,.98,.95)),
+  }
+}
+
 export function buildPeriodicThreeFinancialStatements(
   result: PeriodicProjectFinanceResult,
   opening: PeriodicStatementOpeningBalances = {},
