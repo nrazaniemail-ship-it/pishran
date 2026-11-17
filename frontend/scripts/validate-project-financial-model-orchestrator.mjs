@@ -302,4 +302,19 @@ const invalidHelpModel=orchestrator.calculateProjectFinancialModelFromDrafts({
 assert.equal(invalidHelpModel.valid,false)
 assert.ok(invalidHelpModel.issues.includes('cost-centre:unknown-parent:missing'))
 
-console.log('Unified project form orchestration and opening-balance-sheet validation passed.')
+// A populated raw-template section must never be silently ignored by the financial engine.
+let unboundHelp=helpForms.createBlankHelpDrivenProjectForms()
+unboundHelp=helpForms.addHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a')
+unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a','description','Pre-production study')
+unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a','currency','EUR')
+unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a','origin','local')
+unboundHelp=helpForms.updateHelpFormRow(unboundHelp,'preproduction-expenditure','preproduction-a','period','1')
+const blockedUnboundModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:unboundHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(blockedUnboundModel.valid,false)
+assert.ok(blockedUnboundModel.issues.some(issue=>issue.includes('preproduction-expenditure')&&issue.includes('not yet connected')))
+
+console.log('Unified project form orchestration, input-coverage guard and opening-balance-sheet validation passed.')
