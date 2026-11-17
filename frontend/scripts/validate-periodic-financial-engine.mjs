@@ -7,12 +7,26 @@ const load = async relativePath => {
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
   return import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
 }
-const [engine, foundation] = await Promise.all([
+const [engine, foundation, financialModel] = await Promise.all([
   load('../src/features/steel/periodicFinancialEngine.ts'),
-  load('../src/features/projects/projectFoundation.ts')
+  load('../src/features/projects/projectFoundation.ts'),
+  load('../src/features/steel/financialModel.ts')
 ])
 const periods=foundation.buildProjectCalendarPeriods('2025-01-01','2027-12-31','annual',1)
 assert.equal(periods.length,3)
+const openingAssetLifecycle=financialModel.calculateComfarCalendarAssetLifecycle([{
+  id:'opening-asset-test',name:'Opening asset',originalValue:1000,initialBookValue:700,
+  scrapPercent:10,lengthYears:7,lengthMonths:0,ratePercent:100/7,
+  method:'linear-to-scrap',acquisitionPeriod:0,startingAtPeriod:1,
+  acquisitionDate:'2020-01-01',startingAtDate:'2025-01-01',firstDepreciationMonths:12
+}],[],periods,1)
+assert.equal(openingAssetLifecycle.valid,true,openingAssetLifecycle.warnings.join('; '))
+assert.equal(openingAssetLifecycle.depreciation.periods[0].assets[0].openingBookValue,700,
+  'Existing assets must begin at gross cost less accumulated depreciation, not historical gross cost')
+assert.ok(Math.abs(openingAssetLifecycle.depreciation.periods[0].depreciation-(600/7))<0.01,
+  'Opening asset depreciation must use the remaining depreciable book value over remaining useful life')
+assert.ok(Math.abs(openingAssetLifecycle.depreciation.periods[0].closingBookValue-(700-600/7))<0.01,
+  'Opening asset closing book value must reconcile after current-period depreciation')
 const loan=engine.calculatePeriodicLoanSchedule({
   annualRatePercent:10,drawdowns:[1000,0,0],repaymentMethod:'annuity',
   repaymentStartPeriod:2,gracePeriods:0,termPeriods:2,capitalizeInterest:false,
