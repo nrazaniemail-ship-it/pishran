@@ -669,6 +669,8 @@ export type PeriodicProjectFinanceInput = {
   taxBracketsByPeriod?: {lowerLimit:number;ratePercent:number}[][]
   /** Explicit deductible tax allowances by project period, applied before loss carry-forward. */
   taxAllowancesByPeriod?: number[]
+  /** Signed tax-only depreciation adjustments; positive values increase deductible depreciation. */
+  taxDepreciationAdjustmentsByPeriod?: number[]
   annualEquityContributions: number[]
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
@@ -738,6 +740,7 @@ export type PeriodicProjectFinanceRow = {
   debtService: number
   taxRatePercent: number
   taxAllowances: number
+  taxDepreciationAdjustment: number
   tax: number
   unleveredTax: number
   taxLossCarryForward: number
@@ -1075,6 +1078,11 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Tax allowances must contain one finite non-negative amount for every project period.')
     return empty()
   }
+  if(input.taxDepreciationAdjustmentsByPeriod&&(input.taxDepreciationAdjustmentsByPeriod.length!==periods.length||
+    input.taxDepreciationAdjustmentsByPeriod.some(amount=>!validFinite(amount)))) {
+    warnings.push('Tax depreciation adjustments must contain one finite signed amount for every project period.')
+    return empty()
+  }
   const loanSchedules: Record<string, PeriodicLoanRow[]> = {}
   const suppliedSchedules = input.precomputedLoanSchedules ?? {}
   const loanIds = new Set(input.loans.map(loan => loan.id))
@@ -1164,11 +1172,13 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
     const taxAllowances=input.taxAllowancesByPeriod?.[index]??0
+    const taxDepreciationAdjustment=input.taxDepreciationAdjustmentsByPeriod?.[index]??0
+    const taxableIncomeAdjustment=taxAllowances+taxDepreciationAdjustment
     const fiscalYear=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
     const progressiveBrackets=input.taxBracketsByPeriod?.[index]
-    const periodTax=calculatePeriodTaxWithVintages(ebit-interestExpense-taxAllowances,taxRates[index],
+    const periodTax=calculatePeriodTaxWithVintages(ebit-interestExpense-taxableIncomeAdjustment,taxRates[index],
       taxLossVintages,fiscalYear,carryForwardEnabled,carryForwardYears,progressiveBrackets)
-    const unleveredPeriodTax=calculatePeriodTaxWithVintages(ebit-taxAllowances,taxRates[index],
+    const unleveredPeriodTax=calculatePeriodTaxWithVintages(ebit-taxableIncomeAdjustment,taxRates[index],
       unleveredTaxLossVintages,fiscalYear,carryForwardEnabled,carryForwardYears,progressiveBrackets)
     if(!periodTax||!unleveredPeriodTax) {
       warnings.push('Tax calculation failed in project period '+(index+1)+'.')
@@ -1213,7 +1223,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
       capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
-      taxAllowances,tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
+      taxAllowances,taxDepreciationAdjustment,tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
       equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
