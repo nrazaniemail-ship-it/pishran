@@ -73,6 +73,13 @@ assert.deepEqual(foundationBinding.foundation.inflation.indices[0].rates,[
  {period:'1',ratePercent:0},{period:'2',ratePercent:5},
 ])
 assert.equal(foundationBinding.foundation.discounting.economicRatePercent,8)
+const currencyBoundRun=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:currencyHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(currencyBoundRun.valid,true,currencyBoundRun.issues.join('; '))
+assert.equal(currencyBoundRun.finalRun.finance.valid,true)
 const foundation={
  schemaVersion:1,
  planning:{periodFrequency:'annual',projectStartDate:'2025-01-01',projectEndDate:'2026-12-31',fiscalYearStartMonth:1,balanceDateMonth:12,balanceDateDay:31,dayCountBasis:365,valuationDate:'2025-01-01',discountConvention:'actual-days',cashFlowTiming:'period-end'},
