@@ -183,7 +183,7 @@ export default function App() {
     }
   }
 
-  async function handleCreateProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'location' | 'templateId'>) {
+  async function handleCreateProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'capacityUnit' | 'location' | 'templateId'>) {
     const created = await createProject(input)
     setProjects(current => [created, ...current])
     await refreshStorage()
