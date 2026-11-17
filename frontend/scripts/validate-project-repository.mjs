@@ -10,6 +10,7 @@ assert.match(projectsView,/type="number" min="0" step="any"/,'Capacity input mus
 assert.match(projectsView,/capacityUnitFor/,'Project creation must assign capacity units by sector')
 assert.match(projectsView,/if \(industry === 'انرژی و نیروگاه'\) return 'مگاوات'/,'Power projects must use megawatts')
 assert.match(projectsView,/return 'تن در سال'/,'Steel and mining projects must use tonnes per year')
+assert.match(projectsView,/if \(industry === 'معدن' \|\| industry === 'صنعتی'\) return 'تن در سال'/,'Other project types in the mining and steel sectors must retain tonnes-per-year capacity')
 for (const type of ['معدن سنگ آهن','کنستانتره','گندله سازی','احیاء','ذوب و ریخته گری','احیاء و فولادسازی- تولید اسلب','نورد ورق گرم- تولید پلیت','نورد ورق گرم- تولید کلاف','نورد سرد ورق','نورد میلگرد','نورد نبشی','نورد تیرآهن','سایر'])
   assert.ok(projectsView.includes(type), 'Missing supported project type: '+type)
 const wizard=await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx',import.meta.url),'utf8')
