@@ -34,6 +34,31 @@ const periods=[
  {index:1,startDate:'2025-01-01',endDate:'2025-12-31',days:365,partial:false},
  {index:2,startDate:'2026-01-01',endDate:'2026-12-31',days:365,partial:false},
 ]
+let currencyHelp=helpForms.createBlankHelpDrivenProjectForms()
+currencyHelp=helpForms.addHelpFormRow(currencyHelp,'currencies','local-eur')
+for(const [key,value] of Object.entries({code:'EUR',name:'Euro',type:'local',accountingCurrency:true,exchangeRate:1}))
+ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'currencies','local-eur',key,value)
+currencyHelp=helpForms.addHelpFormRow(currencyHelp,'currencies','foreign-usd')
+for(const [key,value] of Object.entries({code:'USD',name:'US Dollar',type:'foreign'}))
+ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'currencies','foreign-usd',key,value)
+for(const [id,period,rate] of [['usd-1','1',1.08],['usd-2','2',1.1]]){
+ currencyHelp=helpForms.addHelpFormRow(currencyHelp,'currency-rates',id)
+ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'currency-rates',id,'currencyCode','USD')
+ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'currency-rates',id,'period',period)
+ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'currency-rates',id,'exchangeRate',rate)
+}
+currencyHelp=helpForms.addHelpFormRow(currencyHelp,'cost-centres','factory-centre')
+currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','name','Factory')
+currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','group','production')
+assert.deepEqual(helpForms.validateHelpDrivenProjectForms(currencyHelp),[])
+const foundationBinding=orchestrator.bindHelpDrivenFoundation(foundation,currencyHelp,periods)
+assert.deepEqual(foundationBinding.issues,[])
+assert.equal(foundationBinding.foundation.currencies.localCurrencyCode,'EUR')
+assert.deepEqual(foundationBinding.foundation.currencies.foreignCurrencies[0].exchangeRates,[
+ {period:'1',rateToLocal:1.08},{period:'2',rateToLocal:1.1},
+])
+assert.equal(foundationBinding.foundation.costCentres.active,true)
+assert.equal(foundationBinding.foundation.costCentres.items[0].name,'Factory')
 const foundation={
  schemaVersion:1,
  planning:{periodFrequency:'annual',projectStartDate:'2025-01-01',projectEndDate:'2026-12-31',fiscalYearStartMonth:1,balanceDateMonth:12,balanceDateDay:31,dayCountBasis:365,valuationDate:'2025-01-01',discountConvention:'actual-days',cashFlowTiming:'period-end'},
