@@ -37,6 +37,7 @@ export const STEEL_SLAB_EXTRA_DRI_SALES_BENCHMARK = Object.freeze({
       name: "Extra DRI",
       unitPrice: 275,
       inventoryValuationMethod: 'weighted-average',
+      finishedGoodsDaysCoverage: 5,
       openingFinishedGoods: [0, 5111.11, 5750, 6388.89, 6388.89, 6388.89],
       production: [373111.11, 414638.89, 460638.89, 460000, 460000, 460000],
       sales: [368000, 414000, 460000, 460000, 460000, 460000],
