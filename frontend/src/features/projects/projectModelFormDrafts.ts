@@ -175,7 +175,7 @@ export function listUnintegratedFinancialDraftInputs(value:ProjectModelFinancial
 /** Convert internal integration-blocker paths into readable bilingual report messages. */
 export function describeUnintegratedFinancialDraftInput(path:string,language:'fa'|'en'='fa'):string {
  const en=language==='en'
- const collection=/^financialForms\\.(assets|productionCosts|sales|loans)\\.(\\d+)$/.exec(path)
+ const collection=/^financialForms\.(assets|productionCosts|sales|loans)\.(\d+)$/.exec(path)
  if(collection){
   const labels:Record<string,[string,string]> = {
    assets:['دارایی ثابت','Fixed asset'],
@@ -187,7 +187,7 @@ export function describeUnintegratedFinancialDraftInput(path:string,language:'fa
   return (en?label[1]:label[0])+' '+(Number(collection[2])+1)+' — '+(en?'not yet connected and validated in the calculation engine':'هنوز به موتور محاسبات متصل و اعتبارسنجی نشده است')
  }
  if(path==='financialForms.tax')return en?'Tax assumptions are not yet integrated and validated':'مفروضات مالیاتی هنوز به موتور محاسبات متصل و اعتبارسنجی نشده‌اند'
- const help=/^([a-z0-9-]+)\\.([^.]+)\\.([^.]+)$/.exec(path)
+ const help=/^([a-z0-9-]+)\.([^.]+)\.([^.]+)$/.exec(path)
  if(help){
   const sections:Record<string,[string,string]> = {
    'production-costs':['هزینه‌های تولید','Production costs'],
