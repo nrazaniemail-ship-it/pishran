@@ -194,9 +194,9 @@ Technical Manual مرجع الگوریتم مالی نیست؛ اما برای �
 
 ### گام بعدی فونداسیون
 1. اتصال دفتر Fixed Investment به ردیف‌های CAPEX و برنامه مخارج هر دوره، با کنترل تطبیق جمع و جلوگیری از دوباره‌شماری.
-2. تطبیق عددی برنامه Depreciation و Asset Sale با خروجی واقعی COMFAR، تکمیل Sum of years digits برای دوره ناقص و چرخه فروش/جایگزینی.
+2. تطبیق عددی برنامه Depreciation و Asset Sale با خروجی واقعی COMFAR، تکمیل Sum of years digits برای دوره ناقص و بررسی اختلاف‌های سالانه.
 3. تکمیل ساختار Production Costs، Sales Programme و Working Capital به‌صورت چندمحصولی و دوره‌ای.
-4. تکمیل اتصال دارایی‌های افتتاحیه به محاسبه استهلاک دوره‌ای و ترازنامه، با کنترل تاریخ مبنا و مانده خالص دفتری.
+4. تکمیل مانده افتتاحیه سایر حساب‌ها (موجودی‌ها، دریافتنی/پرداختنی، نقد و سپرده، بدهی و بهره معوق، حقوق مالکانه، کمک‌ها و هزینه‌های معوق) در ترازنامه و scheduleهای دوره‌ای؛ بدون ساخت رقم ترازکننده و با کنترل گردش هر حساب.
 5. پس از تثبیت و آزمون فونداسیون خام، ورود داده‌های HRCR200 و تطبیق schedule به schedule با فایل‌های Excel و خروجی مرجع.
 
 
@@ -211,7 +211,7 @@ Technical Manual مرجع الگوریتم مالی نیست؛ اما برای �
 - ساختار دارایی‌های موجود در مانده افتتاحیه از نوع محلی پنل توسعه/بازسازی خارج و به نوع مشترک `StartingFixedAssetBalance` در فونداسیون پروژه منتقل شد.
 - اعتبارسنجی شامل یکتایی شناسه، شرح دارایی، کنترل Gross Cost در برابر Accumulated Depreciation، Remaining Useful Life، Opportunity Value، Residual Value، Foreign Currency Component، Cost Centre و توالی تاریخ Commissioning / Depreciation Start است.
 - روش `Not depreciated` نیز برای دارایی‌های غیرمستهلک‌شونده در فرم مانده افتتاحیه قابل انتخاب است.
-- این گام فقط schema و validation را یکسان می‌کند؛ محاسبه استهلاک دارایی افتتاحیه با Gross Cost، Accumulated Depreciation و Remaining Useful Life هنوز باید با قواعد XI.H و نمونه خروجی واقعی تطبیق داده و سپس به Incremental Cash Flow متصل شود.
+- schema و validation دارایی افتتاحیه یکسان شده‌اند؛ Gross Cost، Accumulated Depreciation، Net Book Value و Remaining Useful Life به برنامه استهلاک دوره‌ای و ترازنامه متصل‌اند و فروش/جایگزینی تاریخ‌دار نیز در همان lifecycle ثبت می‌شود. تطبیق عددی این محاسبات با قواعد XI.H و خروجی واقعی COMFAR III همچنان باز است.
 
 
 ### اصلاح XI.H برای Linear to scrap و تطبیق سالانه HRCR200
