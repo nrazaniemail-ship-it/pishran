@@ -147,6 +147,29 @@ export type ProjectModelFinancialFormDrafts = {
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
  return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft()}
 }
+
+const hasEnteredValue=(value:unknown):boolean=>{
+ if(value===null||value===undefined||value==='')return false
+ if(typeof value==='boolean')return value
+ if(typeof value==='number')return Number.isFinite(value)
+ if(Array.isArray(value))return value.some(hasEnteredValue)
+ if(typeof value==='object')return Object.entries(value as Record<string,unknown>).some(([key,child])=>key!=='id'&&hasEnteredValue(child))
+ return typeof value==='string'&&value.trim().length>0
+}
+/** Identify entered form values that are stored but are not yet bound to the financial engine. */
+export function listUnintegratedFinancialDraftInputs(value:ProjectModelFinancialFormDrafts):string[]{
+ const issues:string[]=[]
+ const descriptiveProjectFields=new Set(['title','description','dateTime','status','projectType','analysisLevel'])
+ for(const section of HELP_FORM_SECTIONS)for(const row of value.helpDriven?.sections?.[section.id]??[])for(const field of section.fields){
+  if(section.id==='project-identification'&&descriptiveProjectFields.has(field.key))continue
+  if(hasEnteredValue(row.values?.[field.key]))issues.push(section.id+'.'+row.id+'.'+field.key)
+ }
+ const collections:[string,unknown[]][]=[['financialForms.assets',value.assets],['financialForms.productionCosts',value.productionCosts],['financialForms.sales',value.sales],['financialForms.workingCapital',value.workingCapital],['financialForms.loans',value.loans]]
+ for(const [label,rows] of collections)for(const [index,row] of (rows??[]).entries())if(hasEnteredValue(row))issues.push(label+'.'+index)
+ if(value.tax&&(value.tax.system!==null||value.tax.lossCarryForward!==null||value.tax.lossCarryForwardYears!==null||value.tax.rates.length||value.tax.allowances.length))issues.push('financialForms.tax')
+ return issues
+}
+
 export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinancialFormDrafts):string[] {
  const errors:string[]=[]
  errors.push(...validateHelpDrivenProjectForms(value.helpDriven ?? createBlankHelpDrivenProjectForms()))

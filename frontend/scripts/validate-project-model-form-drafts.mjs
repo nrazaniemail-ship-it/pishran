@@ -53,6 +53,18 @@ try {
  assert.deepEqual(tax.rates,[])
  const complete=forms.createBlankProjectModelFinancialFormDrafts()
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts(complete),[])
+
+ const auditDraft=forms.createBlankProjectModelFinancialFormDrafts()
+ assert.deepEqual(forms.listUnintegratedFinancialDraftInputs(auditDraft),[])
+ let unintegrated=auditDraft.helpDriven
+ unintegrated=h.addHelpFormRow(unintegrated,'production-costs','cost-1')
+ unintegrated=h.updateHelpFormRow(unintegrated,'production-costs','cost-1','item','Steel input')
+ assert.ok(forms.listUnintegratedFinancialDraftInputs({...auditDraft,helpDriven:unintegrated}).includes('production-costs.cost-1.item'))
+ const descriptiveOnly=h.updateHelpFormRow(auditDraft.helpDriven,'project-identification','project-identification-main','title','Test project')
+ assert.deepEqual(forms.listUnintegratedFinancialDraftInputs({...auditDraft,helpDriven:descriptiveOnly}),[])
+ const withAsset={...auditDraft,assets:[forms.createBlankFixedAssetFormDraft('asset-1')]}
+ assert.ok(forms.listUnintegratedFinancialDraftInputs(withAsset).includes('financialForms.assets.0'))
+
  console.log('Help-driven item-level finance forms: all assertions passed.')
 } finally {
  await rm(temp,{recursive:true,force:true})
