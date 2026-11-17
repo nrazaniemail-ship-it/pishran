@@ -1,7 +1,7 @@
 import { localStore } from '../storage/localStore'
 
 export type ProjectStatus = 'draft' | 'active' | 'archived'
-export type ProjectTemplateId = 'raw' | 'hot-rolling-200kt'
+export type ProjectTemplateId = 'raw'
 
 export interface FeasibilityProject {
   id: string
@@ -18,8 +18,6 @@ export interface FeasibilityProject {
 }
 
 const PROJECTS_KEY = 'projects:list:v1'
-const WORKBOOK_SEED_KEY = 'projects:workbook-seed:v1'
-const DRI_PROJECT_SEED_KEY = 'projects:dri-direct-reduction-seed:v1'
 
 export async function listProjects(): Promise<FeasibilityProject[]> {
   return (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
@@ -54,41 +52,38 @@ export async function deleteProject(id: string): Promise<void> {
 }
 
 /**
- * Remove only the built-in demonstration projects from the project list.
- * Project-specific local data is deliberately preserved so it can be reused
- * when the final project forms are ready.
+ * Purge the retired HRCR200 and integrated DRI/steelmaking case data.
+ * Generic project types and independent project drafts remain available.
  */
-export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
+export async function purgeRemovedCaseProjects(): Promise<FeasibilityProject[]> {
   const projects = await listProjects()
-  const sampleNames = new Set([
-    'پروژه نورد گرم ورق',
-    'نورد گرم ورق-تولید کلاف',
-    'نورد گرم ورق - تولید کلاف',
-    'پروژه نورد گرم ورق-تولید کلاف',
-    'پروژه احیاء مستقیم و فولادسازی',
-    'پروژه نورد سرد ورق فولادی (CRC200)',
-    'واحد احیاء مستقیم'
+  const isRemovedCase = (project: FeasibilityProject) => {
+    const name = project.name.trim()
+    const stage = project.steelStage ?? ''
+    const hrcrCase = project.templateId === 'hot-rolling-200kt'
+      || /HRCR200/i.test(name + ' ' + stage)
+      || ['نورد گرم ورق-تولید کلاف', 'نورد گرم ورق - تولید کلاف', 'پروژه نورد گرم ورق-تولید کلاف'].includes(name)
+      || (stage === 'نورد گرم / ورق' && project.capacity.includes('HRCR200'))
+    const integratedCase = /احیاء.*فولادسازی|فولادسازی.*احیاء/.test(name)
+      || stage.includes('مجتمع احیاء')
+      || stage === 'مجتمع احیاء و فولادسازی - تولید اسلب'
+    return hrcrCase || integratedCase
+  }
+  const removed = projects.filter(isRemovedCase)
+  const remaining = projects.filter(project => !isRemovedCase(project))
+  if (removed.length) await localStore.set(PROJECTS_KEY, remaining)
+
+  // Remove saved records belonging to the retired workspaces, including orphaned
+  // records left behind after an earlier sample-project list cleanup.
+  const [rollingRecords, processRecords] = await Promise.all([
+    localStore.list('pishran:rolling:'),
+    localStore.list('process-plant:')
   ])
-  const isSample = (project: FeasibilityProject) => {
-    if (sampleNames.has(project.name.trim())) return true
-    if (project.steelStage === 'نورد گرم / ورق'
-      && project.capacity === '۲۰۰٬۰۰۰ تن ورق در سال (مبنای فایل HRCR200)') return true
-    if (project.steelStage === 'مجتمع احیاء مستقیم و فولادسازی'
-      && project.capacity === '۱٬۷۶۰٬۰۰۰ تن DRI و ۱٬۲۰۰٬۰۰۰ تن تختال در سال') return true
-    if (project.steelStage === 'نورد سرد و پوشش‌دهی'
-      && project.capacity === '۲۰۰٬۰۰۰ تن در سال'
-      && project.location === 'کاشان، منطقه صنعتی کوثر') return true
-    if (project.steelStage === 'احیای مستقیم'
-      && project.capacity === '۱٬۰۰۰٬۰۰۰ تن آهن اسفنجی سرد (CDRI) در سال'
-      && project.location === 'شهرک صنعتی مربچه، شهرستان رامهرمز') return true
-    return false
-  }
-  const remaining = projects.filter(project => !isSample(project))
-  if (remaining.length !== projects.length) {
-    await localStore.set(PROJECTS_KEY, remaining)
-  }
-  // Retire the old seed markers so sample projects are never recreated.
-  await localStore.remove(WORKBOOK_SEED_KEY)
-  await localStore.remove(DRI_PROJECT_SEED_KEY)
+  await Promise.all([
+    ...rollingRecords.map(record => localStore.remove(record.key)),
+    ...processRecords.map(record => localStore.remove(record.key)),
+    localStore.remove('rolling:sample:v2'),
+    localStore.remove('projects:workbook-seed:v1')
+  ])
   return remaining
 }
