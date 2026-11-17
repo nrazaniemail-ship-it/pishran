@@ -295,6 +295,24 @@ assert.equal(result.finalRun.finance.rows[1].tax,380)
 assert.deepEqual(result.financeInput.workingCapitalByPeriod,[0,0])
 assert.equal(result.finalRun.finance.valid,true)
 assert.equal(result.finalRun.statements.length,2)
+
+const mismatchedWorkingCapitalOpening=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,workingCapital:drafts.workingCapital.map(component=>({...component,openingBalance:25}))},
+ foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(mismatchedWorkingCapitalOpening.valid,false)
+assert.ok(mismatchedWorkingCapitalOpening.issues.some(issue=>issue.includes('do not reconcile to the selected opening net working capital')))
+
+const partialWorkingCapitalOpening=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,workingCapital:drafts.workingCapital.map(component=>({...component,openingBalance:null}))},
+ foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(partialWorkingCapitalOpening.valid,true,partialWorkingCapitalOpening.issues.join('; '))
+
 let discountingHelp=helpForms.createBlankHelpDrivenProjectForms()
 discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','investmentRate',12)
 discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','equityRate',14)
