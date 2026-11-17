@@ -24,12 +24,17 @@ let help=forms.createBlankHelpDrivenProjectForms()
 help=forms.addHelpFormRow(help,'currencies','local-eur')
 for(const [key,value] of Object.entries({code:'EUR',name:'Euro',type:'local',accountingCurrency:true}))
  help=forms.updateHelpFormRow(help,'currencies','local-eur',key,value)
+for(const [id,name] of [['product-a','Product A'],['product-b','Product B']]){
+ help=forms.addHelpFormRow(help,'products',id)
+ help=forms.updateHelpFormRow(help,'products',id,'name',name)
+ help=forms.updateHelpFormRow(help,'products',id,'unit','unit')
+}
 help=forms.addHelpFormRow(help,'cost-centres','centre-a')
 for(const [key,value] of Object.entries({name:'General overhead',group:'services'}))
  help=forms.updateHelpFormRow(help,'cost-centres','centre-a',key,value)
 help=forms.addHelpFormRow(help,'production-costs','cost-a')
 for(const [key,value] of Object.entries({
- item:'Indirect shared cost',classification:'indirect',productId:'',allocationKeyId:'overhead-key',
+ item:'Indirect shared cost',classification:'indirect',productId:'',allocationKeyId:'share-a',
  costCentreId:'centre-a',currency:'EUR',origin:'local',basis:'nominal-capacity',
  activityBasis:'production',nominalCapacity:100,standardQuantity:1,standardUnitPrice:2,
  fixedPercent:50,variablePercent:50,
@@ -53,7 +58,7 @@ assert.ok(bound.boundSections.includes('cost-allocation'))
 assert.equal(bound.drafts.productionCosts.length,2)
 assert.deepEqual(bound.drafts.productionCosts.map(row=>row.productId),['product-a','product-b'])
 assert.deepEqual(bound.drafts.productionCosts.map(row=>row.standardQuantity),[0.6,0.4])
-assert.deepEqual(bound.drafts.productionCosts.map(row=>row.allocationKeyId),['overhead-key','overhead-key'])
+assert.deepEqual(bound.drafts.productionCosts.map(row=>row.allocationKeyId),['share-a','share-a'])
 
 let invalid=forms.updateHelpFormRow(help,'cost-allocation','share-b','allocationPercent',30)
 const invalidBound=binder.bindHelpDrivenFinancialDrafts(invalid,periods,{
