@@ -1,4 +1,3 @@
-import type { ProjectCalendarPeriod } from './projectFoundation'
 import {
   calculatePeriodicIrr,
   calculatePeriodicNpv,
