@@ -130,7 +130,8 @@ export function bindStartingBalancesToPeriodicFinance(input:{
       case 'retained-earnings':
         openingBalances.retainedEarnings!+=amountLocal;openingLiabilitiesAndEquity+=amountLocal;break
       case 'deferred-pre-operating-assets':
-        openingBalances.deferredPreOperatingAssets!+=amountLocal;openingAssets+=amountLocal;break
+        issues.push('Opening deferred pre-operating assets require an asset-specific amortization schedule that is not yet connected to the raw-template opening-balance model.')
+        continue
       case 'short-term-deposits':
         issues.push('Short-term deposits are not treated as immediately available cash; a separate restricted-deposit asset schedule is required.')
         continue
