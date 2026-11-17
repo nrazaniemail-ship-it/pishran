@@ -514,7 +514,7 @@ addOpeningRow('opening-equity',{category:'equity-capital',item:'Paid-in capital'
 addOpeningRow('opening-retained',{category:'retained-earnings',item:'Retained earnings',currency:'EUR',origin:'local',amount:37})
 for(const [id,period] of [['opening-wc-1','1'],['opening-wc-2','2']]){
  startingBalanceHelp=helpForms.addHelpFormRow(startingBalanceHelp,'working-capital',id)
- for(const [key,value] of Object.entries({item:'Trade receivables',category:'accounts-receivable',period,requiredValue:0,startingBalance:0}))
+ for(const [key,value] of Object.entries({item:'Trade receivables',category:'accounts-receivable',period,requiredValue:0,startingBalance:0,basis:'cost-of-products-sold-operating-plus-marketing'}))
   startingBalanceHelp=helpForms.updateHelpFormRow(startingBalanceHelp,'working-capital',id,key,value)
 }
 assert.deepEqual(helpForms.validateHelpDrivenProjectForms(startingBalanceHelp),[])
