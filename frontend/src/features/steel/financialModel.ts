@@ -317,9 +317,9 @@ export type IntegratedLoanInput = {
   capitalizeInterest: boolean
 }
 
-type AnnualTaxLossLot = { amount: number; originYearIndex: number }
+export type AnnualTaxLossLot = { amount: number; originYearIndex: number }
 
-function applyAnnualTaxLossCarryForward(
+export function applyAnnualTaxLossCarryForward(
   taxableProfitBeforeLoss: number,
   lots: AnnualTaxLossLot[],
   yearIndex: number,
