@@ -5,6 +5,20 @@ export type ProjectCostCentre = { id: string; code: string; name: string; parent
 export type ProjectInflationIndex = { id: string; name: string; currencyCode: string; rates: { period: string; ratePercent: number }[] }
 export type ProjectTaxRate = { id: string; period: string; ratePercent: number }
 
+export type OpeningCurrentAccounts = {
+  rawMaterials: number
+  factorySupplies: number
+  workInProgress: number
+  finishedGoods: number
+  receivables: number
+  cash: number
+  shortTermDeposits: number
+  cashSurplus: number
+  otherCurrentAssets: number
+  tradePayables: number
+  otherCurrentLiabilities: number
+  accruedInterest: number
+}
 export type StartingFinancialBalanceSummary = {
   cash: number
   netWorkingCapital: number
@@ -12,6 +26,7 @@ export type StartingFinancialBalanceSummary = {
   paidInCapital: number
   retainedEarnings: number
   grants: number
+  currentAccounts?: OpeningCurrentAccounts
 }
 export type StartingFinancialBalanceInputs = {
   currentAssets: number
@@ -29,6 +44,7 @@ export type StartingFinancialBalanceInputs = {
   retainedEarnings: number
   accumulatedLosses: number
   grants: number
+  currentAccounts?: OpeningCurrentAccounts
 }
 
 /** Converts the detailed opening-balance register into the net balances used by the periodic statements. */
@@ -43,6 +59,7 @@ export function calculateStartingFinancialBalanceSummary(input: StartingFinancia
     paidInCapital: input.paidInCapital,
     retainedEarnings: input.retainedEarnings - input.accumulatedLosses,
     grants: input.grants,
+    currentAccounts: input.currentAccounts ? { ...input.currentAccounts } : undefined,
   }
 }
 
