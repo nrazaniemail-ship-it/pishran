@@ -139,4 +139,35 @@ const acceleratedWithoutRate={...validAsset,depreciationMethod:'accelerated',dep
 assert.ok(foundation.validateStartingFixedAssetBalances([acceleratedWithoutRate],blank)
   .some(x=>x.code==='invalid-starting-asset-depreciation-rate'),
   'Accelerated depreciation must have an explicit rate below 100 percent')
+assert.ok(foundation.validateStartingFixedAssetBalances([{...validAsset,depreciationMethod:'accelerated',depreciationRatePercent:100}],blank)
+  .some(x=>x.code==='invalid-starting-asset-depreciation-rate'),
+  'Accelerated depreciation must reject a 100 percent rate')
+const disposalFoundation={...blank,planning:{...blank.planning,projectStartDate:'2025-01-01',projectEndDate:'2027-12-31'}}
+assert.ok(foundation.validateStartingFixedAssetBalances([{...validAsset,status:'sell'}],disposalFoundation)
+  .some(x=>x.code==='missing-starting-asset-disposal-date'),
+  'Assets marked for sale must have an explicit disposal date')
+assert.equal(foundation.validateStartingFixedAssetBalances([{
+  ...validAsset,status:'sell',disposalDate:'2026-06-30',disposalPriceMode:'self-defined',
+  disposalProceeds:500,disposalExchangeRateToLocal:1
+}],disposalFoundation).length,0)
+assert.ok(foundation.validateStartingFixedAssetBalances([{
+  ...validAsset,status:'replace',disposalDate:'2028-01-01'
+}],disposalFoundation).some(x=>x.code==='starting-asset-disposal-after-project'),
+  'Replacement disposal date must fall inside the project calendar')
+const openingAssetDisposal=financialModel.calculateComfarCalendarAssetLifecycle([{
+  id:'opening-sale-test',name:'Opening asset for sale',originalValue:1000,initialBookValue:700,
+  scrapPercent:10,lengthYears:7,lengthMonths:0,ratePercent:100/7,
+  method:'linear-to-scrap',acquisitionPeriod:0,startingAtPeriod:1,
+  acquisitionDate:'2020-01-01',startingAtDate:'2025-01-01',firstDepreciationMonths:12
+}],[{
+  id:'opening-sale-test-disposal',assetId:'opening-sale-test',period:1,
+  saleDate:'2026-06-30',priceMode:'self-defined',selfDefinedPrice:500,exchangeRateToLocal:1
+}],periods,1)
+assert.equal(openingAssetDisposal.valid,true,openingAssetDisposal.warnings.join('; '))
+assert.equal(openingAssetDisposal.sales.length,1)
+assert.equal(openingAssetDisposal.sales[0].period,2)
+assert.equal(openingAssetDisposal.sales[0].saleProceeds,500)
+assert.ok(openingAssetDisposal.sales[0].bookValueAtSale<700&&openingAssetDisposal.sales[0].bookValueAtSale>100)
+assert.ok(openingAssetDisposal.depreciation.periods[2].assets[0].closingBookValue===0,
+  'An opening asset must be removed from net fixed assets after its dated disposal')
 console.log('PASS: generic financial calculations, project calendar and opening-asset validation')
