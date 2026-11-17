@@ -323,6 +323,22 @@ assert.equal(preproductionModel.valid,true,preproductionModel.issues.join('; '))
 assert.deepEqual(preproductionModel.financeInput.annualPreOperatingCost,[100,0])
 assert.ok(preproductionModel.fixedAssets.assets.some(asset=>asset.assetClass==='preproduction'))
 
+let equityHelp=helpForms.createBlankHelpDrivenProjectForms()
+equityHelp=helpForms.addHelpFormRow(equityHelp,'currencies','local-eur')
+for(const [key,value] of Object.entries({code:'EUR',name:'Euro',type:'local',accountingCurrency:true}))
+ equityHelp=helpForms.updateHelpFormRow(equityHelp,'currencies','local-eur',key,value)
+equityHelp=helpForms.addHelpFormRow(equityHelp,'equity-grants','equity-contribution-a')
+for(const [key,value] of Object.entries({sourceName:'Ordinary equity',sourceType:'equity',period:'1',paidIn:250,paidOut:0,currency:'EUR'}))
+ equityHelp=helpForms.updateHelpFormRow(equityHelp,'equity-grants','equity-contribution-a',key,value)
+const equityModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:equityHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(equityModel.valid,true,equityModel.issues.join('; '))
+assert.deepEqual(equityModel.financeInput.annualEquityContributions,[250,0])
+assert.equal(equityModel.finalRun.finance.rows[0].equityContribution,250)
+
 let unsupportedDiscountingHelp=helpForms.createBlankHelpDrivenProjectForms()
 unsupportedDiscountingHelp=helpForms.updateHelpFormRow(unsupportedDiscountingHelp,'discounting','discounting-main','shortNpvYears',3)
 const unsupportedDiscountingModel=orchestrator.calculateProjectFinancialModelFromDrafts({
