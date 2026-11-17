@@ -1,7 +1,7 @@
 import { localStore } from '../storage/localStore'
 
 export type ProjectStatus = 'draft' | 'active' | 'archived'
-export type ProjectTemplateId = 'raw' | 'hot-rolling-200kt'
+export type ProjectTemplateId = 'raw'
 
 export interface FeasibilityProject {
   id: string
@@ -18,18 +18,19 @@ export interface FeasibilityProject {
 }
 
 const PROJECTS_KEY = 'projects:list:v1'
-const WORKBOOK_SEED_KEY = 'projects:workbook-seed:v1'
-const DRI_PROJECT_SEED_KEY = 'projects:dri-direct-reduction-seed:v1'
+
+
 
 export async function listProjects(): Promise<FeasibilityProject[]> {
   return (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
 }
 
-export async function createProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'steelStage' | 'capacity' | 'location' | 'templateId'>): Promise<FeasibilityProject> {
+export async function createProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'location'> & { templateId?: 'raw' }): Promise<FeasibilityProject> {
   const projects = await listProjects()
   const now = new Date().toISOString()
   const project: FeasibilityProject = {
     ...input,
+    templateId: 'raw',
     id: crypto.randomUUID?.() ?? `project-${Date.now()}`,
     status: 'draft',
     createdAt: now,
@@ -54,41 +55,37 @@ export async function deleteProject(id: string): Promise<void> {
 }
 
 /**
- * Remove only the built-in demonstration projects from the project list.
- * Project-specific local data is deliberately preserved so it can be reused
- * when the final project forms are ready.
+ * Remove built-in demonstration projects and their project-specific draft data.
+ * Migrate every surviving project to the single raw template while preserving
+ * user-entered model drafts and removing legacy stage-specific routing metadata.
  */
 export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
   const projects = await listProjects()
-  const sampleNames = new Set([
-    'پروژه نورد گرم ورق',
-    'نورد گرم ورق-تولید کلاف',
-    'نورد گرم ورق - تولید کلاف',
-    'پروژه نورد گرم ورق-تولید کلاف',
-    'پروژه احیاء مستقیم و فولادسازی',
-    'پروژه نورد سرد ورق فولادی (CRC200)',
-    'واحد احیاء مستقیم'
+  // Retire legacy stage-specific sample records without retaining project-specific identifiers.
+  const remaining = projects.filter(project => project.templateId === 'raw' && !project.steelStage)
+  if (remaining.length !== projects.length) await localStore.set(PROJECTS_KEY, remaining)
+  const retainedIds = new Set(remaining.map(project => project.id))
+  const [projectDrafts, advancedFinanceDrafts, expansionDrafts, seedRecords] = await Promise.all([
+    localStore.list('feasibility:project:'),
+    localStore.list('feasibility:advanced-finance:'),
+    localStore.list('feasibility:expansion-rehabilitation:'),
+    localStore.list('projects:')
   ])
-  const isSample = (project: FeasibilityProject) => {
-    if (sampleNames.has(project.name.trim())) return true
-    if (project.steelStage === 'نورد گرم / ورق'
-      && project.capacity === '۲۰۰٬۰۰۰ تن ورق در سال (مبنای فایل HRCR200)') return true
-    if (project.steelStage === 'مجتمع احیاء مستقیم و فولادسازی'
-      && project.capacity === '۱٬۷۶۰٬۰۰۰ تن DRI و ۱٬۲۰۰٬۰۰۰ تن تختال در سال') return true
-    if (project.steelStage === 'نورد سرد و پوشش‌دهی'
-      && project.capacity === '۲۰۰٬۰۰۰ تن در سال'
-      && project.location === 'کاشان، منطقه صنعتی کوثر') return true
-    if (project.steelStage === 'احیای مستقیم'
-      && project.capacity === '۱٬۰۰۰٬۰۰۰ تن آهن اسفنجی سرد (CDRI) در سال'
-      && project.location === 'شهرک صنعتی مربچه، شهرستان رامهرمز') return true
-    return false
-  }
-  const remaining = projects.filter(project => !isSample(project))
-  if (remaining.length !== projects.length) {
-    await localStore.set(PROJECTS_KEY, remaining)
-  }
-  // Retire the old seed markers so sample projects are never recreated.
-  await localStore.remove(WORKBOOK_SEED_KEY)
-  await localStore.remove(DRI_PROJECT_SEED_KEY)
+  const orphanedRecords = [
+    ...projectDrafts.filter(record => !retainedIds.has(record.key.slice('feasibility:project:'.length).split(':')[0])),
+    ...advancedFinanceDrafts.filter(record => !retainedIds.has(record.key.slice('feasibility:advanced-finance:'.length).split(':')[0])),
+    ...expansionDrafts.filter(record => !retainedIds.has(record.key.slice('feasibility:expansion-rehabilitation:'.length).split(':')[0])),
+    ...seedRecords.filter(record => record.key !== PROJECTS_KEY)
+  ]
+  if (orphanedRecords.length) await Promise.all(orphanedRecords.map(record => localStore.remove(record.key)))
   return remaining
+}
+/** Purge retired HRCR200 and integrated DRI/steelmaking project data. */
+export async function purgeRemovedCaseProjects(): Promise<FeasibilityProject[]> {
+ const projects=await listProjects()
+ const isRemoved=(p:FeasibilityProject)=>{const n=p.name.trim(),stage=p.steelStage??'';const hrcr=p.templateId==='hot-rolling-200kt'||/HRCR200/i.test(n+' '+stage)||['نورد گرم ورق-تولید کلاف','نورد گرم ورق - تولید کلاف','پروژه نورد گرم ورق-تولید کلاف'].includes(n)||(stage==='نورد گرم / ورق'&&p.capacity.includes('HRCR200'));const integrated=/احیاء.*فولادسازی|فولادسازی.*احیاء/.test(n)||stage.includes('مجتمع احیاء');return hrcr||integrated}
+ const removed=projects.filter(isRemoved),remaining=projects.filter(p=>!isRemoved(p));if(removed.length)await localStore.set(PROJECTS_KEY,remaining)
+ const [rolling,process]=await Promise.all([localStore.list('pishran:rolling:'),localStore.list('process-plant:')])
+ await Promise.all([...rolling.map(x=>localStore.remove(x.key)),...process.map(x=>localStore.remove(x.key)),localStore.remove('rolling:sample:v2'),localStore.remove('projects:workbook-seed:v1')])
+ return remaining
 }
