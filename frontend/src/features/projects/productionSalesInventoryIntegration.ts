@@ -381,3 +381,71 @@ export function calculateFinishedGoodsWeightedAverage(input: FinishedGoodsCostFl
   return {valid:issues.length===0,issues,availableQuantity,availableValue,
     weightedAverageUnitCost,costOfGoodsSold,closingInventoryValue,reconciliationDifference}
 }
+
+
+export type FinishedGoodsWeightedAveragePeriodInput = {
+  period: string
+  productionQuantity: number
+  productionCost: number
+  salesQuantity: number
+  closingQuantity: number
+}
+export type FinishedGoodsWeightedAveragePeriodResult = FinishedGoodsCostFlowResult & {
+  period: string
+  openingQuantity: number
+  openingValue: number
+  productionQuantity: number
+  productionCost: number
+  salesQuantity: number
+  closingQuantity: number
+}
+export type FinishedGoodsWeightedAverageScheduleResult = {
+  valid: boolean
+  issues: string[]
+  periods: FinishedGoodsWeightedAveragePeriodResult[]
+  closingQuantity: number
+  closingValue: number
+}
+
+/**
+ * Roll weighted-average finished-goods cost forward across ordered periods.
+ * Each period's closing carrying value becomes the next period's opening value.
+ * The first opening quantity and value must be explicitly supplied by the caller.
+ */
+export function calculateFinishedGoodsWeightedAverageSchedule(input: {
+  openingQuantity: number
+  openingValue: number
+  periods: FinishedGoodsWeightedAveragePeriodInput[]
+}): FinishedGoodsWeightedAverageScheduleResult {
+  const issues: string[] = []
+  if (!nonNegative(input.openingQuantity) || !nonNegative(input.openingValue))
+    issues.push('Opening finished-goods quantity and value must be finite, explicit and non-negative.')
+  if (!Array.isArray(input.periods) || input.periods.length === 0)
+    issues.push('At least one finished-goods valuation period is required.')
+  const keys = input.periods.map(row => row.period.trim())
+  if (keys.some(key => !key) || new Set(keys).size !== keys.length)
+    issues.push('Finished-goods valuation period keys must be non-empty and unique.')
+  if (issues.length) return {valid:false,issues,periods:[],closingQuantity:0,closingValue:0}
+
+  let openingQuantity = input.openingQuantity
+  let openingValue = input.openingValue
+  const results: FinishedGoodsWeightedAveragePeriodResult[] = []
+  for (const row of input.periods) {
+    const calculated = calculateFinishedGoodsWeightedAverage({
+      method:'weighted-average',openingQuantity,openingValue,
+      productionQuantity:row.productionQuantity,productionCost:row.productionCost,
+      salesQuantity:row.salesQuantity,closingQuantity:row.closingQuantity,
+    })
+    if (!calculated.valid) {
+      issues.push('Period '+row.period+': '+calculated.issues.join(' '))
+      continue
+    }
+    results.push({...calculated,period:row.period,openingQuantity,openingValue,
+      productionQuantity:row.productionQuantity,productionCost:row.productionCost,
+      salesQuantity:row.salesQuantity,closingQuantity:row.closingQuantity})
+    openingQuantity = row.closingQuantity
+    openingValue = calculated.closingInventoryValue
+  }
+  return {valid:issues.length===0,issues,periods:results,
+    closingQuantity:openingQuantity,closingValue:openingValue}
+}
