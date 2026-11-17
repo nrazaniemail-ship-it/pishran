@@ -108,9 +108,9 @@ export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPoli
 }
 
 /** COMFAR VII.Q: turnover coefficient (Coto) = day basis / minimum days coverage (Mdc). */
-export function calculateWorkingCapitalTurnoverCoefficient(minimumDaysCoverage: number, dayBasis: number = 360): number | null {
-  if (![minimumDaysCoverage,dayBasis].every(Number.isFinite) || minimumDaysCoverage < 0 || dayBasis <= 0 || minimumDaysCoverage === 0) return null
-  return dayBasis / minimumDaysCoverage
+export function calculateWorkingCapitalTurnoverCoefficient(minimumDaysCoverage: number): number | null {
+  if (!Number.isFinite(minimumDaysCoverage) || minimumDaysCoverage <= 0) return null
+  return 360 / minimumDaysCoverage
 }
 
 /** COMFAR XI.O: interest on short-term deposits = cash-in-hand × invested share × annual rate × months / 12. */
