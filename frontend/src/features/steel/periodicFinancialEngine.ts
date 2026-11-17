@@ -665,6 +665,7 @@ export type PeriodicProjectFinanceInput = {
   annualGrossSalesRevenue?: number[]
   annualSalesTax?: number[]
   annualSubsidy?: number[]
+  annualShortTermDepositInterest?: number[]
   annualVariableCost: number[]
   annualFixedCost: number[]
   annualDepreciation: number[]
@@ -724,6 +725,7 @@ export type PeriodicProjectFinanceRow = {
   grossSalesRevenue: number
   salesTax: number
   subsidy: number
+  shortTermDepositInterest: number
   variableCost: number
   fixedCost: number
   depreciation: number
@@ -1011,6 +1013,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     input.annualGrossSalesRevenue,
     input.annualSalesTax,
     input.annualSubsidy,
+    input.annualShortTermDepositInterest,
   ]
   if (salesAnnualSeries.some(series => series && (!Array.isArray(series) || !series.length || series.some(value=>!validFinite(value)||value<0)))) {
     warnings.push('Net/gross sales, sales tax and subsidy schedules must contain finite non-negative annual values.')
@@ -1055,7 +1058,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     }
   }
   const [revenue, variableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution, allocatedEquityWorkingCapitalContribution] = allocated
-  const [netSalesRevenue, grossSalesRevenue, salesTax, subsidy] = salesAllocated
+  const [netSalesRevenue, grossSalesRevenue, salesTax, subsidy, shortTermDepositInterest] = salesAllocated
   const equityWorkingCapitalContribution = allocatedEquityWorkingCapitalContribution ?? Array(periods.length).fill(Number.NaN)
   const depreciation = input.periodDepreciationSchedule ? [...input.periodDepreciationSchedule] : allocatedDepreciation
   if (input.periodDepreciationSchedule && (input.periodDepreciationSchedule.length!==periods.length ||
@@ -1154,7 +1157,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const salvageBookValueDisposed = index === periods.length - 1 ? Math.max(0,input.salvageBookValue ?? 0) : 0
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
     const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
-      assetSale.otherIncomeLoss + salvageGainLoss
+      assetSale.otherIncomeLoss + salvageGainLoss + shortTermDepositInterest[index]
     const fiscalYearIndex = fiscalYearIndexForPeriod(periods[index], periods, fiscalYearStartMonth)
     const productionStartFiscalYear = input.productionStartFiscalYear ?? 0
     const taxHolidayActive = input.taxHolidayYears != null && fiscalYearIndex >= productionStartFiscalYear &&
@@ -1192,7 +1195,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       warnings.push('Shareholder working-capital funding must be finite and non-negative (period ' + (index + 1) + ').')
       return empty()
     }
-    const cfads = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
+    const cfads = revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - periodTax.tax
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
@@ -1202,12 +1205,12 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
-    const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
+    const equityFreeCashFlow = -equityContribution[index] + revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index]
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
-      revenue:revenue[index],netSalesRevenue:input.annualNetSalesRevenue?netSalesRevenue[index]:revenue[index],grossSalesRevenue:input.annualGrossSalesRevenue?grossSalesRevenue[index]:revenue[index],salesTax:salesTax[index],subsidy:input.annualSubsidy?subsidy[index]:0,variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
+      revenue:revenue[index],shortTermDepositInterest:shortTermDepositInterest[index],netSalesRevenue:input.annualNetSalesRevenue?netSalesRevenue[index]:revenue[index],grossSalesRevenue:input.annualGrossSalesRevenue?grossSalesRevenue[index]:revenue[index],salesTax:salesTax[index],subsidy:input.annualSubsidy?subsidy[index]:0,variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
