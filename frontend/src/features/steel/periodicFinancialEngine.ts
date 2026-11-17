@@ -1165,7 +1165,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const currentFiscalYearIndex=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
     const periodTaxWithExpiry=calculatePeriodTaxWithLossExpiry(
       ebit+shortTermDepositInterest[index]-interestExpense,taxRates[index],taxLossVintages,currentFiscalYearIndex,
-      lossCarryForwardEnabled?lossCarryForwardYears:0,lossCarryForwardEnabled)
+      lossCarryForwardEnabled?lossCarryForwardYears:null,lossCarryForwardEnabled)
     const unleveredTaxWithExpiry=calculatePeriodTaxWithLossExpiry(
       ebit+shortTermDepositInterest[index],taxRates[index],unleveredTaxLossVintages,currentFiscalYearIndex,
       lossCarryForwardEnabled?lossCarryForwardYears:0,lossCarryForwardEnabled)
