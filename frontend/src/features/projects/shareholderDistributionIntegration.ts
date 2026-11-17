@@ -209,7 +209,10 @@ export function applyShareholderDistributions(
       issues.push('Capital refunds exceed cumulative paid-in capital in period '+row.period+'.')
     const preTerminalRetainedEarnings=retained+netIncome-totalDividend
     const preTerminalPaidInCapital=paidIn+row.equityContribution+row.equityWorkingCapitalContribution-scheduledCapitalRefund
-    const terminalPercent=rows.reduce((value,item)=>Math.max(value,finite(item.values.netWorthDistribution)?item.values.netWorthDistribution:0),0)
+    const terminalPercentValues=rows.map(item=>item.values.netWorthDistribution).filter(value=>value!==null&&value!==undefined&&value!=='')
+    if(terminalPercentValues.some(value=>!finite(value)||!close(value as number,terminalPercentValues[0] as number)))
+      issues.push('All shareholder classes in the final period must use the same net-worth distribution percentage.')
+    const terminalPercent=terminalPercentValues.length&&finite(terminalPercentValues[0])?terminalPercentValues[0]:0
     const netWorthBeforeTerminal=statement.balanceSheet.totalAssets-totalDividend-scheduledCapitalRefund-statement.balanceSheet.totalLiabilities
     const terminalNetWorthDistribution=i===finance.rows.length-1?Math.max(0,netWorthBeforeTerminal)*terminalPercent/100:0
     const terminalCapitalRefund=Math.min(terminalNetWorthDistribution,Math.max(0,preTerminalPaidInCapital))
