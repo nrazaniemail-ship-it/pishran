@@ -300,7 +300,6 @@ export type PeriodicLoanRow = {
   financingFeeExpense: number
   commitmentFeeExpense: number
   capitalizedFinancingFees: number
-  foreignExchangeLoss: number
   principal: number
   closingBalance: number
   debtService: number
@@ -736,6 +735,7 @@ export type PeriodicProjectFinanceRow = {
   commitmentFeeExpense: number
   capitalizedInterest: number
   capitalizedFinancingFees: number
+  foreignExchangeLoss: number
   principal: number
   debtDrawdown: number
   debtService: number
