@@ -690,6 +690,9 @@ export type PeriodicProjectFinanceInput = {
   discountPeriodsPerYear?: 1 | 2 | 4 | 12
   mirrFinanceRatePercent?: number | null
   mirrReinvestmentRatePercent?: number | null
+  /** Optional equity-specific MIRR rates; fall back to project MIRR rates when omitted. */
+  equityMirrFinanceRatePercent?: number | null
+  equityMirrReinvestmentRatePercent?: number | null
   salvageValue?: number
   salvageBookValue?: number
   annualAssetSaleSchedule?: {
@@ -1118,6 +1121,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       (input.equityDiscountRatePercent != null && (!validFinite(input.equityDiscountRatePercent) || input.equityDiscountRatePercent <= -100)) ||
       (input.mirrFinanceRatePercent != null && (!validFinite(input.mirrFinanceRatePercent) || input.mirrFinanceRatePercent <= -100)) ||
       (input.mirrReinvestmentRatePercent != null && (!validFinite(input.mirrReinvestmentRatePercent) || input.mirrReinvestmentRatePercent <= -100)) ||
+      (input.equityMirrFinanceRatePercent != null && (!validFinite(input.equityMirrFinanceRatePercent) || input.equityMirrFinanceRatePercent <= -100)) ||
+      (input.equityMirrReinvestmentRatePercent != null && (!validFinite(input.equityMirrReinvestmentRatePercent) || input.equityMirrReinvestmentRatePercent <= -100)) ||
       new Set(input.loans.map(loan => loan.id)).size !== input.loans.length) {
     warnings.push('Equity, opening working capital, salvage, discount rates or loan identifiers are invalid.')
     return empty()
@@ -1224,8 +1229,10 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const npvEquity = equityDiscountRate == null ? null : calculatePeriodicNpv(equityFlows,periods,equityDiscountRate,dayCountBasis,cashFlowTiming,input.valuationDate,input.discountConvention??'actual-days',input.discountPeriodsPerYear??1)
   const mirrProject = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
     : calculatePeriodicMirr(projectFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
-  const mirrEquity = input.mirrFinanceRatePercent == null || input.mirrReinvestmentRatePercent == null ? null
-    : calculatePeriodicMirr(equityFlows,periods,input.mirrFinanceRatePercent,input.mirrReinvestmentRatePercent,dayCountBasis,cashFlowTiming)
+  const equityMirrFinanceRate = input.equityMirrFinanceRatePercent ?? input.mirrFinanceRatePercent
+  const equityMirrReinvestmentRate = input.equityMirrReinvestmentRatePercent ?? input.mirrReinvestmentRatePercent
+  const mirrEquity = equityMirrFinanceRate == null || equityMirrReinvestmentRate == null ? null
+    : calculatePeriodicMirr(equityFlows,periods,equityMirrFinanceRate,equityMirrReinvestmentRate,dayCountBasis,cashFlowTiming)
   const signChanges = (flows: number[]) => { const nonZero=flows.filter(value=>value!==0); let changes=0; for(let index=1;index<nonZero.length;index++) if(Math.sign(nonZero[index])!==Math.sign(nonZero[index-1])) changes++; return changes }
   if (signChanges(projectFlows) > 1 || signChanges(equityFlows) > 1)
     warnings.push('Non-conventional cash-flow signs may produce multiple IRR roots; the reported IRR is one numerical root only.')
