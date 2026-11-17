@@ -549,7 +549,7 @@ const foreignOpeningResult=startingBalanceAdapter.bindStartingBalancesToPeriodic
 })
 assert.equal(foreignOpeningResult.valid,false)
 assert.ok(foreignOpeningResult.issues.some(issue=>issue.includes('period-by-period monetary revaluation')))
-const localOnlyStartingBalances=fxStartingBalances.filter(row=>row.id!=='fx-cash-usd')
+const localOnlyStartingBalances=fxStartingBalances.filter(row=>row.id!=='fx-cash-usd').map(row=>row.id==='fx-retained'?{...row,values:{...row.values,amount:37}}:row)
 const explicitDepreciationFinance={...finance,periodDepreciationSchedule:[10,10],annualDepreciation:[10,10]}
 const explicitDepreciationResult=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
  rows:[{id:'explicit-period-asset',values:{category:'fixed-assets',item:'Existing machine',currency:'EUR',origin:'local',amount:100,depreciationMethod:'linear-to-zero',remainingLife:5}}],
