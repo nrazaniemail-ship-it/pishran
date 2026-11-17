@@ -67,6 +67,52 @@ export function bindHelpDrivenFoundation(
     id:row.id,code:row.id,name:String(row.values.name??'').trim(),
     ...(typeof row.values.parentId==='string'&&row.values.parentId.trim()?{parentId:row.values.parentId.trim()}:{}),
   }))}}
+  const inflationRows=rows('inflation')
+  if(inflationRows.length){
+    const groups=new Map<string,typeof inflationRows>()
+    for(const row of inflationRows){
+      const code=String(row.values.currencyCode??'').trim().toUpperCase()
+      if(!code){issues.push('Inflation rows must identify a currency code.');continue}
+      groups.set(code,[...(groups.get(code)??[]),row])
+    }
+    const indices=[...groups.entries()].map(([code,group])=>{
+      const sorted=[...group].sort((a,b)=>{
+        const ai=resolvePeriod(String(a.values.period??'').trim())??''
+        const bi=resolvePeriod(String(b.values.period??'').trim())??''
+        return ai.localeCompare(bi)
+      })
+      let previousIndex:number|null=null
+      const rates=sorted.map(row=>{
+        const period=resolvePeriod(String(row.values.period??'').trim(),typeof row.values.effectiveDate==='string'?row.values.effectiveDate:undefined)
+        const priceIndex=typeof row.values.priceIndex==='number'?row.values.priceIndex:null
+        const explicitRate=typeof row.values.inflationPercent==='number'?row.values.inflationPercent:null
+        if(!period||((priceIndex===null)&&(explicitRate===null))||
+          (priceIndex!==null&&(!Number.isFinite(priceIndex)||priceIndex<=0))||
+          (explicitRate!==null&&(!Number.isFinite(explicitRate)||explicitRate< -100))){
+          issues.push('Invalid inflation index or period for currency '+code+'.')
+          return null
+        }
+        const derivedRate=priceIndex===null?null:previousIndex===null?0:(priceIndex/previousIndex-1)*100
+        if(derivedRate!==null&&explicitRate!==null&&Math.abs(derivedRate-explicitRate)>0.05){
+          issues.push('Inflation rate and price-index movement do not reconcile for '+code+' in period '+period+'.')
+          return null
+        }
+        if(priceIndex!==null)previousIndex=priceIndex
+        return {period,ratePercent:explicitRate??derivedRate as number}
+      }).filter((rate):rate is {period:string;ratePercent:number}=>rate!==null)
+      return {id:'inflation-'+code,name:code,currencyCode:code,rates}
+    })
+    if(indices.some(index=>!result.currencies.foreignCurrencies.some(currency=>currency.code===index.currencyCode)&&
+      result.currencies.localCurrencyCode!==index.currencyCode))
+      issues.push('Inflation schedules must reference a currency in the project currency directory.')
+    result={...result,inflation:{active:true,indices}}
+  }
+  const economicGlobal=rows('economic-global')[0]
+  if(economicGlobal&&typeof economicGlobal.values.discountRate==='number'){
+    const rate=economicGlobal.values.discountRate
+    if(!Number.isFinite(rate)||rate<0||rate>100)issues.push('Economic discount rate must be between 0% and 100%.')
+    else result={...result,discounting:{...result.discounting,economicRatePercent:rate}}
+  }
   return {foundation:result,issues}
 }
 
