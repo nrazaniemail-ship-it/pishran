@@ -602,6 +602,10 @@ export type PeriodicProjectFinanceInput = {
   dayCountBasis: 360 | 365
   cashFlowTiming: PeriodCashFlowTiming
   annualRevenue: number[]
+  /** Optional product-led revenue by exact project period; fiscal-year totals must reconcile to annualRevenue. */
+  periodRevenue?: number[]
+  /** Optional product-led cost of sales by exact project period; fiscal-year totals must reconcile to annualVariableCost. */
+  periodVariableCost?: number[]
   annualShortTermDepositInterest?: number[]
   annualVariableCost: number[]
   annualFixedCost: number[]
@@ -969,7 +973,25 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSalesByPeriod[target] = {...row}
     }
   }
-  const [revenue, variableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution, allocatedEquityWorkingCapitalContribution, shortTermDepositInterest] = allocated
+  const [allocatedRevenue, allocatedVariableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution, allocatedEquityWorkingCapitalContribution, shortTermDepositInterest] = allocated
+  const periodOperatingOverrides = [input.periodRevenue, input.periodVariableCost]
+  if (periodOperatingOverrides.some(series => series != null && (series.length !== periods.length || series.some(value => !validFinite(value) || value < 0)))) {
+    warnings.push('Product-led period revenue and cost-of-sales overrides must contain one finite non-negative amount for every project period.')
+    return empty()
+  }
+  const revenue = input.periodRevenue ? [...input.periodRevenue] : allocatedRevenue
+  const variableCost = input.periodVariableCost ? [...input.periodVariableCost] : allocatedVariableCost
+  for (let fiscalIndex = 0; fiscalIndex < input.annualRevenue.length; fiscalIndex++) {
+    const indices = periods.map((period,index)=>({period,index})).filter(item=>fiscalYearIndexForPeriod(item.period,periods,fiscalYearStartMonth)===fiscalIndex).map(item=>item.index)
+    if (input.periodRevenue && Math.abs(indices.reduce((sum,index)=>sum+revenue[index],0)-(input.annualRevenue[fiscalIndex]??0))>0.01) {
+      warnings.push('Product-led period revenue does not reconcile to annual revenue in fiscal year '+(fiscalIndex+1)+'.')
+      return empty()
+    }
+    if (input.periodVariableCost && Math.abs(indices.reduce((sum,index)=>sum+variableCost[index],0)-(input.annualVariableCost[fiscalIndex]??0))>0.01) {
+      warnings.push('Product-led period cost of sales does not reconcile to annual variable cost in fiscal year '+(fiscalIndex+1)+'.')
+      return empty()
+    }
+  }
   const equityWorkingCapitalContribution = allocatedEquityWorkingCapitalContribution ?? Array(periods.length).fill(Number.NaN)
   const depreciation = input.periodDepreciationSchedule ? [...input.periodDepreciationSchedule] : allocatedDepreciation
   if (input.periodDepreciationSchedule && (input.periodDepreciationSchedule.length!==periods.length ||
