@@ -29,13 +29,16 @@ export function createBlankProductionCostFormDraft(id=''):ProductionCostFormDraf
  standardQuantity:null,standardUnitPrice:null,standardTotal:null,nominalCapacity:null,fixedPercent:null,variablePercent:null,adjustments:[]
 }}
 
+export type FinishedGoodsValuationMethod='weighted-average'|'fifo'
 export type SalesProductFormDraft={
  productId:string
- /** Explicit opening finished-goods quantity; blank legacy records require user entry. */
+ /** Explicit opening finished-goods quantity and carrying value at the valuation date. */
  openingFinishedGoodsQuantity?:number|null
+ openingFinishedGoodsValue?:number|null
+ inventoryValuationMethod?:FinishedGoodsValuationMethod|null
  periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;finishedGoodsClosingQuantity:number|null;grossUnitPrice?:number|null;productionActive?:boolean|null}[]
 }
-export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,openingFinishedGoodsQuantity:null,periods:[]}}
+export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,openingFinishedGoodsQuantity:null,openingFinishedGoodsValue:null,inventoryValuationMethod:null,periods:[]}}
 
 export type WorkingCapitalComponentFormDraft={
  id:string; name:string; category:'inventory'|'work-in-progress'|'finished-goods'|'receivables'|'cash'|'payables'|'other-current-asset'|'other-current-liability'|null
