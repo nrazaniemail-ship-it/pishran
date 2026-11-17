@@ -22,6 +22,7 @@ import {
 import { searchPeriodicFinanceTarget, type PeriodicSensitivityMetric, type PeriodicSensitivityVariable, type PeriodicTargetSearchResult } from '../steel/periodicSensitivity'
 import { calculateIncrementalAnalysis, type IncrementalAnalysisResult } from './incrementalAnalysisIntegration'
 import { applyShareholderDistributions, type ShareholderDistributionResult } from './shareholderDistributionIntegration'
+import { bindStartingBalancesToPeriodicFinance, type StartingBalanceIntegrationResult } from './startingBalanceIntegration'
 
 export function bindHelpDrivenFoundation(
   foundation:ProjectFoundation,
@@ -150,6 +151,7 @@ export type ProjectFinancialModelOrchestrationResult={
   sensitivitySearches?:{rowId:string;alternative:string;result:PeriodicTargetSearchResult}[]
   incrementalAnalyses?:IncrementalAnalysisResult[]
   shareholderDistribution?:ShareholderDistributionResult
+  startingBalances?:StartingBalanceIntegrationResult
 }
 
 /**
@@ -173,8 +175,10 @@ export function calculateProjectFinancialModelFromDrafts(
   let productionSales:ProductionSalesInventorySchedule|null=null
   let workingCapital:WorkingCapitalDraftSchedule|null=null
   let fixedAssets:FixedAssetFinanceBinding|null=null
+  let startingBalances:StartingBalanceIntegrationResult|null=null
   const fail=(issues:string[]):ProjectFinancialModelOrchestrationResult=>({
     valid:false,issues,financeInput:null,productionSales,workingCapital,fixedAssets,finalRun:null,
+    ...(startingBalances?{startingBalances}:{}),
   })
   const openingDraft=effectiveDrafts.openingBalanceSheet
   const crossFormIssues=[...validateProjectModelCrossReferences(effectiveDrafts,input.projectProductIds),...(effectiveDrafts.helpDriven?validateHelpDrivenProjectForms(effectiveDrafts.helpDriven):[]),...(effectiveDrafts.helpDriven?validateHelpDrivenProjectPeriods(effectiveDrafts.helpDriven,input.finance.periods):[])]
@@ -182,8 +186,6 @@ export function calculateProjectFinancialModelFromDrafts(
   // These sections require dedicated adapters and are deliberately rejected until their
   // schedules are represented in the periodic engine (rather than being treated as zero).
   const notYetIntegratedSections=new Set([
-    'joint-venture',
-    'starting-balances',
     'economic-items','economic-effects',
   ])
   for(const [sectionId,sectionRows] of Object.entries(effectiveDrafts.helpDriven?.sections??{})){
@@ -201,6 +203,7 @@ export function calculateProjectFinancialModelFromDrafts(
     'sales-programme':['grossUnitPrice','productionActive','futureSalesQuantity','terminalInventorySale'],
     'working-capital':['mode','basis','activityBasis','daysCoverage','turnover','requiredQuantity','initialStockQuantity','initialStockValue','recoveryPeriod','depositPercent','depositRate','periodMonths'],
     'sensitivity':['quantityChange','priceChange','valueChange','chartVariable'],
+    'starting-balances':['productId','settlementDays'],
   }
   for(const [sectionId,fieldKeys] of Object.entries(notYetMappedFields)){
     for(const row of effectiveDrafts.helpDriven?.sections?.[sectionId]??[]){
@@ -481,6 +484,16 @@ export function calculateProjectFinancialModelFromDrafts(
     finance=fixedAssets.financeInput
   }
   let openingBalances=input.openingBalances
+  const startingBalanceRows=effectiveDrafts.helpDriven?.sections?.['starting-balances']??[]
+  if(startingBalanceRows.length){
+    startingBalances=bindStartingBalancesToPeriodicFinance({
+      rows:startingBalanceRows,periods:finance.periods,finance,currencies:effectiveFoundation.currencies,
+      existingOpeningBalances:input.openingBalances,summaryOpeningBalanceEnabled:!!openingDraft?.enabled,
+    })
+    if(!startingBalances.valid)return fail(startingBalances.issues)
+    finance=startingBalances.financeInput
+    openingBalances=startingBalances.openingBalances
+  }
   if(openingDraft?.enabled) {
     const openingIssues=validateOpeningBalanceSheetDraft(openingDraft)
     if(openingIssues.length)return fail(openingIssues)
@@ -560,5 +573,5 @@ export function calculateProjectFinancialModelFromDrafts(
       sensitivitySearches.push({rowId:row.id,alternative:typeof v.chartVariable==='string'&&v.chartVariable.trim()?v.chartVariable.trim():row.id,result})
     }
   }
-  return {valid:true,issues:[],financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,sensitivitySearches,shareholderDistribution,...(incrementalAnalysis.results.length?{incrementalAnalyses:incrementalAnalysis.results}:{})}
+  return {valid:true,issues:[],financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,sensitivitySearches,shareholderDistribution,...(startingBalances?{startingBalances}:{}),...(incrementalAnalysis.results.length?{incrementalAnalyses:incrementalAnalysis.results}:{})}
 }
