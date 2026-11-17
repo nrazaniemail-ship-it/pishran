@@ -4,7 +4,7 @@
 
 1. Product sales and production-cost forms -> sales revenue, fixed/variable costs, production quantity and finished-goods roll-forward.
 2. Detailed working-capital component balances -> net working-capital balances and period changes.
-3. Fixed-asset acquisition vintages -> period depreciation, annual depreciation, CAPEX and disposal schedule.
+3. Fixed-asset acquisition vintages and pre-production expenditure vintages -> period depreciation/amortization, annual depreciation, fixed CAPEX, pre-production cash expenditure and disposal schedule.
 4. Loan facility forms -> periodic debt schedules, foreign-currency remeasurement and linked three-statement posting.
 
 The orchestration is fail-fast. An invalid or incomplete upstream schedule prevents a downstream result from being presented as valid. It does not silently fall back to a parallel cash-flow engine.
@@ -19,4 +19,8 @@ The wizard passes the saved project financial forms and project foundation into 
 - Foreign exchange uses the period rate for aggregated movements and closing remeasurement.
 - Asset acquisition is dated at period-end because the form records acquisition periods rather than exact dates; disposal losses and multi-vintage disposal require additional accounting detail.
 - Indirect production costs require an explicit allocation basis before allocation to product cost.
-- The external reference fixture currently verifies production, sales, finished-goods inventory and revenue for project periods 5–10. Full financial parity across all statements remains unverified.
+- The raw-template pre-production expenditure section is bound through the same dated asset-lifecycle adapter as fixed assets, but is tagged as pre-production so its acquisition is posted to pre-operating expenditure rather than fixed CAPEX. Its amortization method, life, start rule, first-year months and salvage percentage are explicit inputs. The adapter rejects missing or inconsistent acquisition values and exchange rates.
+
+A calculation-coverage guard blocks any populated raw-template section or partially mapped field that does not yet have a periodic-engine posting. In particular, cost allocation, joint-venture/equity classes, equity grants, profit distribution, depreciation adjustments, separate starting-balance rows, economic-item/effect valuation, sensitivity inputs and incremental-analysis rows remain blocked until dedicated calculation adapters are implemented. The guard is intentional: an entered value must never be silently omitted from a result labelled valid.
+
+The external reference fixture currently verifies production, sales, finished-goods inventory and revenue for project periods 5–10. Full financial parity across all statements remains unverified.
