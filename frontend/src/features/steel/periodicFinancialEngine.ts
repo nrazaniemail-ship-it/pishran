@@ -890,9 +890,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       annualSeries.slice(0,7).some(series => series.some(value => value < 0)) ||
       input.annualTaxRates.some(value => value < 0 || value > 100) ||
       !Array.isArray(input.workingCapitalByPeriod) || input.workingCapitalByPeriod.length !== periods.length ||
-      input.workingCapitalByPeriod.some(value => !validFinite(value) || value < 0) ||
+      input.workingCapitalByPeriod.some(value => !validFinite(value)) ||
       input.loans.some(loan => !loan.id || !loan.input)) {
-    warnings.push('Annual flow arrays, tax rates, working-capital balances or loan definitions are invalid.')
+    warnings.push('Annual flow arrays, tax rates, working-capital balances must be finite (negative net working capital is valid), or loan definitions are invalid.')
     return empty()
   }
   if (input.taxRatesByPeriod && (input.taxRatesByPeriod.length !== periods.length ||
@@ -994,7 +994,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     loanSchedules[loan.id] = schedule.rows
   }
   if (input.annualEquityContributions.some(value => value < 0) ||
-      !validFinite(input.openingWorkingCapital ?? 0) || (input.openingWorkingCapital ?? 0) < 0 ||
+      !validFinite(input.openingWorkingCapital ?? 0) ||
       !validFinite(input.salvageValue ?? 0) || (input.salvageValue ?? 0) < 0 ||
       (input.discountRatePercent != null && (!validFinite(input.discountRatePercent) || input.discountRatePercent <= -100)) ||
       (input.equityDiscountRatePercent != null && (!validFinite(input.equityDiscountRatePercent) || input.equityDiscountRatePercent <= -100)) ||
