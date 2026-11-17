@@ -317,6 +317,36 @@ export type IntegratedLoanInput = {
   capitalizeInterest: boolean
 }
 
+type AnnualTaxLossLot = { amount: number; originYearIndex: number }
+
+function applyAnnualTaxLossCarryForward(
+  taxableProfitBeforeLoss: number,
+  lots: AnnualTaxLossLot[],
+  yearIndex: number,
+  carryForwardYears: number | null | undefined,
+  consumeLosses: boolean,
+): { taxableProfitAfterLoss: number; closingLossCarryForward: number } {
+  const active = lots.filter(lot => carryForwardYears == null || yearIndex - lot.originYearIndex <= carryForwardYears)
+  let taxableProfitAfterLoss = taxableProfitBeforeLoss
+  if (taxableProfitBeforeLoss < 0) {
+    active.push({ amount: -taxableProfitBeforeLoss, originYearIndex: yearIndex })
+    taxableProfitAfterLoss = 0
+  } else if (consumeLosses) {
+    let remaining = taxableProfitBeforeLoss
+    active.sort((a,b)=>a.originYearIndex-b.originYearIndex)
+    for (const lot of active) {
+      const used = Math.min(lot.amount,remaining)
+      lot.amount -= used
+      remaining -= used
+      if (remaining <= 0) break
+    }
+    taxableProfitAfterLoss = remaining
+  }
+  const retained = active.filter(lot=>lot.amount>1e-9)
+  lots.splice(0,lots.length,...retained)
+  return {taxableProfitAfterLoss,closingLossCarryForward:retained.reduce((sum,lot)=>sum+lot.amount,0)}
+}
+
 export type ComfarTaxBracket = {
   lowerLimit: number
   upperLimit: number | null
@@ -530,8 +560,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
 
   let priorCash = 0
   let priorWorkingCapital = 0
-  let taxLoss = 0
-  let unleveredTaxLoss = 0
+  const taxLossLots: AnnualTaxLossLot[] = []
+  const unleveredTaxLossLots: AnnualTaxLossLot[] = []
   let cumulativeProject = 0
   let cumulativeDiscounted = 0
   let simplePayback: number | null = null
@@ -578,31 +608,18 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const ebit = revenue - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss + salvageGainLoss
 
     const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
-    const taxableProfitBeforeLoss = ebit - interest
-    const taxableProfit = taxableProfitBeforeLoss - taxLoss
     const taxHolidayActive = (input.taxHolidayYears ?? 0) > 0 && year > constructionYears && year <= constructionYears + (input.taxHolidayYears ?? 0)
-    let tax = 0
-    if (taxHolidayActive) {
-      if (taxableProfitBeforeLoss < 0) taxLoss += -taxableProfitBeforeLoss
-    } else {
-      tax = input.taxBrackets
-        ? calculateComfarGraduatedTax(Math.max(0, taxableProfit), input.taxBrackets)
-        : Math.max(0, taxableProfit) * effectiveTaxRate / 100
-      taxLoss = taxableProfitBeforeLoss < 0 ? taxLoss - taxableProfitBeforeLoss : Math.max(0, taxLoss - taxableProfitBeforeLoss)
-    }
-    const taxLossCarryForward = taxLoss
-
-    const unleveredTaxableProfitBeforeLoss = ebit
-    const unleveredTaxableProfit = unleveredTaxableProfitBeforeLoss - unleveredTaxLoss
-    let unleveredTax = 0
-    if (taxHolidayActive) {
-      if (unleveredTaxableProfitBeforeLoss < 0) unleveredTaxLoss += -unleveredTaxableProfitBeforeLoss
-    } else {
-      unleveredTax = input.taxBrackets
-        ? calculateComfarGraduatedTax(Math.max(0, unleveredTaxableProfit), input.taxBrackets)
-        : Math.max(0, unleveredTaxableProfit) * effectiveTaxRate / 100
-      unleveredTaxLoss = unleveredTaxableProfitBeforeLoss < 0 ? unleveredTaxLoss - unleveredTaxableProfitBeforeLoss : Math.max(0, unleveredTaxLoss - unleveredTaxableProfitBeforeLoss)
-    }
+    const taxAdjusted = applyAnnualTaxLossCarryForward(ebit-interest,taxLossLots,index,input.lossCarryForwardYears,!taxHolidayActive)
+    const unleveredTaxAdjusted = applyAnnualTaxLossCarryForward(ebit,unleveredTaxLossLots,index,input.lossCarryForwardYears,!taxHolidayActive)
+    const taxableProfit = taxAdjusted.taxableProfitAfterLoss
+    const tax = taxHolidayActive ? 0 : input.taxBrackets
+      ? calculateComfarGraduatedTax(taxableProfit,input.taxBrackets)
+      : Math.max(0,taxableProfit)*effectiveTaxRate/100
+    const taxLossCarryForward = taxAdjusted.closingLossCarryForward
+    const unleveredTaxableProfit = unleveredTaxAdjusted.taxableProfitAfterLoss
+    const unleveredTax = taxHolidayActive ? 0 : input.taxBrackets
+      ? calculateComfarGraduatedTax(unleveredTaxableProfit,input.taxBrackets)
+      : Math.max(0,unleveredTaxableProfit)*effectiveTaxRate/100
 
     const terminalValue = salvageProceeds + assetSaleProceeds
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
@@ -665,6 +682,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   if (input.taxRateSchedule?.some(rate => !Number.isFinite(rate) || rate < 0 || rate > 100)) warnings.push('نرخ مالیات عملکرد سالانه باید در تمام دوره‌ها بین صفر تا ۱۰۰ درصد باشد.')
   if (input.taxBrackets && !Number.isFinite(calculateComfarGraduatedTax(1, input.taxBrackets))) warnings.push('پله‌های مالیاتی باید پیوسته، از صفر آغاز و با یک پله بدون سقف خاتمه یابند.')
   if (input.taxHolidayYears !== undefined && (!Number.isInteger(input.taxHolidayYears) || input.taxHolidayYears < 0)) warnings.push('مدت معافیت مالیاتی باید عدد صحیح و نامنفی باشد.')
+  if (input.lossCarryForwardYears != null && (!Number.isInteger(input.lossCarryForwardYears) || input.lossCarryForwardYears < 0)) warnings.push('مدت انتقال زیان باید عدد صحیح و نامنفی باشد یا خالی بماند.')
   if (input.waccTaxRate !== undefined && (!Number.isFinite(input.waccTaxRate) || input.waccTaxRate < 0 || input.waccTaxRate > 100)) warnings.push('نرخ مالیات سپر مالیاتی WACC باید بین صفر تا ۱۰۰ درصد باشد.')
   if (input.discountMode === 'wacc' && discountRate === null) warnings.push('برای محاسبه نرخ تنزیل، ساختار سرمایه و نرخ بازده مورد انتظار سهامدار را تکمیل کنید.')
   if (input.loans.some(loan => loan.repaymentStartYear + loan.graceYears + loan.termYears - 1 > years)) warnings.push('بخشی از بازپرداخت وام‌ها خارج از افق زمانی مدل قرار می‌گیرد.')
