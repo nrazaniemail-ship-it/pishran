@@ -88,7 +88,8 @@ export function bindHelpDrivenFinancialDrafts(
       const openingDebt=num(condition,'openingDebt')
       if(openingDebt!==null&&openingDebt>0){
         if(loan.marketOrigin==='foreign')loan.openingForeignBalance=openingDebt
-        else issues.push('loan-conditions:'+name+': local opening debt must be entered in the opening balance sheet; the facility schedule currently accepts only foreign opening balances.')
+        else if(loan.marketOrigin==='local')loan.openingLocalBalance=openingDebt
+        else issues.push('loan-conditions:'+name+': opening debt requires an explicit local or foreign facility origin.')
       }
       const disbursementUntil=str(condition,'disbursementUntil')
       const datedDrawdowns=disbursementRows.filter(row=>str(row,'loanName')===name)
