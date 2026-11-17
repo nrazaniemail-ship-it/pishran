@@ -65,7 +65,7 @@ export type LoanFacilityFormDraft={
  id:string; name:string; currencyCode:string|null; facilityLimit?:number|null; openingForeignBalance?:number|null; openingExchangeRateToLocal?:number|null; marketOrigin:'local'|'foreign'|null
  loanType:'annuity'|'constant-principal'|'profile'|null
  repaymentInterval:'annual'|'semiannual'|'quarterly'|'monthly'|null
- firstRepaymentDate:string; numberOfRepayments:number|null
+ firstRepaymentDate:string; graceMonths:number|null; numberOfRepayments:number|null
  disbursements:{date:string;amount:number|null}[]
  profileMovements:{date:string;amount:number|null}[]
  interestRateChanges:{effectiveDate:string;annualRatePercent:number|null}[]
