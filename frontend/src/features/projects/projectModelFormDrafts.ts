@@ -134,8 +134,7 @@ export function deriveFixedVariableSplit(fixedPercent:number|null,variablePercen
 }
 export function validateProductionCostFormDraft(value:ProductionCostFormDraft):string[]{
  const errors:string[]=[]
- if(value.classification==='direct'&&!value.productId)errors.push('direct-cost-missing-product')
- if(value.classification==='indirect'&&value.productId)errors.push('indirect-cost-must-not-have-product')
+ if((value.classification==='direct'||value.classification==='indirect')&&!value.productId)errors.push(value.classification+'-cost-missing-product-allocation')
  if(value.basis==='nominal-capacity'&&(!Number.isFinite(value.nominalCapacity)||!value.nominalCapacity||value.nominalCapacity<=0))errors.push('nominal-capacity-required')
  for(const [label,v] of [['fixed',value.fixedPercent],['variable',value.variablePercent]] as const)if(v!==null&&(!Number.isFinite(v)||v<0||v>100))errors.push('invalid-'+label+'-cost-percent')
  if(value.fixedPercent!==null&&value.variablePercent!==null&&Math.abs(value.fixedPercent+value.variablePercent-100)>1e-8)errors.push('fixed-variable-percentages-must-equal-100')
@@ -236,7 +235,7 @@ export function validateProjectModelCrossReferences(value:Pick<ProjectModelFinan
  if(new Set(productIds).size!==productIds.length)errors.push('sales:duplicate-product-id')
  const knownProducts=new Set(productIds.filter(Boolean))
  value.productionCosts.forEach((cost,index)=>{
-  if(cost.classification==='direct'&&cost.productId&&!knownProducts.has(cost.productId))
+  if(cost.productId&&!knownProducts.has(cost.productId))
    errors.push('production-cost-'+index+':unknown-product-reference')
  })
  value.sales.forEach((product,index)=>{
