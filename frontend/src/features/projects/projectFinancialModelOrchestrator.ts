@@ -133,6 +133,7 @@ export type ProjectFinancialModelOrchestrationInput={
   productionStartDate:string
   projectProductIds?:readonly string[]
   openingFinishedGoodsByProduct?:Record<string,number>
+  openingFinishedGoodsValueByProduct?:Record<string,number>
   openingWorkingCapital?:number
   openingBalances:PeriodicStatementOpeningBalances
   taxTreatment:'deductible'|'non-deductible'
@@ -505,9 +506,23 @@ export function calculateProjectFinancialModelFromDrafts(
 
   if(effectiveDrafts.sales.length||effectiveDrafts.productionCosts.length) {
     const openingFinishedGoodsByProduct=input.openingFinishedGoodsByProduct??Object.fromEntries(effectiveDrafts.sales.map(product=>[product.productId,product.openingFinishedGoodsQuantity??Number.NaN]))
-    const result=bindProductionSalesToPeriodicFinance(finance,effectiveDrafts,openingFinishedGoodsByProduct)
+    const openingFinishedGoodsValueByProduct=input.openingFinishedGoodsValueByProduct??Object.fromEntries(effectiveDrafts.sales.map(product=>[product.productId,product.openingFinishedGoodsValue??Number.NaN]))
+    const result=bindProductionSalesToPeriodicFinance(finance,effectiveDrafts,openingFinishedGoodsByProduct,openingFinishedGoodsValueByProduct)
     productionSales=result.schedule
     if(!result.valid||!result.financeInput)return fail(result.issues)
+    const openingFinishedGoodsValue=Object.values(productionSales.openingFinishedGoodsValueByProduct).reduce((sum,value)=>sum+value,0)
+    if(openingFinishedGoodsValue>0.01){
+      if(openingDraft?.enabled){
+        if(Math.abs(openingDraft.finishedGoods!-openingFinishedGoodsValue)>0.01)
+          return fail(['Opening finished-goods product valuations do not reconcile to the detailed opening balance sheet finished-goods balance.'])
+      }else{
+        const openingFinishedGoodsRows=rawStartingBalanceRows.filter(row=>row.values.category==='finished-products')
+        const rawFinishedGoodsValue=openingFinishedGoodsRows.reduce((sum,row)=>sum+(typeof row.values.amount==='number'?row.values.amount:0),0)
+        if(!openingFinishedGoodsRows.length||openingFinishedGoodsRows.some(row=>typeof row.values.amount!=='number'||!Number.isFinite(row.values.amount)||row.values.amount<0)||
+          Math.abs(rawFinishedGoodsValue-openingFinishedGoodsValue)>0.01)
+          return fail(['Opening finished-goods product valuations require a matching detailed opening balance-sheet or raw starting-balance finished-products value.'])
+      }
+    }
     finance=result.financeInput
   }
   if(effectiveDrafts.workingCapital.length) {
@@ -538,6 +553,18 @@ export function calculateProjectFinancialModelFromDrafts(
     workingCapital=result.schedule
     if(!result.valid||!result.financeInput)return fail(result.issues)
     finance=result.financeInput
+    if(productionSales){
+      const finishedGoodsComponents=effectiveDrafts.workingCapital.filter(component=>component.category==='finished-goods')
+      if(finishedGoodsComponents.length){
+        for(let periodIndex=0;periodIndex<finance.periods.length;periodIndex++){
+          const explicitValue=workingCapital.componentRows.filter(row=>row.category==='finished-goods'&&row.period===periodIndex+1)
+            .reduce((sum,row)=>sum+row.amount,0)
+          if(Math.abs(explicitValue-productionSales.periodClosingFinishedGoodsValue[periodIndex])>0.01)
+            return fail(['Finished-goods working-capital component does not reconcile to the calculated inventory valuation in period '+(periodIndex+1)+'.'])
+        }
+        finance={...finance,finishedGoodsInventoryValueByPeriod:Array(finance.periods.length).fill(0)}
+      }
+    }
   }
   if(effectiveDrafts.assets.length) {
     fixedAssets=bindFixedAssetDraftsToPeriodicFinance({
