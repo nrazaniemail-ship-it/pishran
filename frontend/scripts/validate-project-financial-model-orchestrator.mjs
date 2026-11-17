@@ -814,7 +814,7 @@ for (const field of ['daysCoverage','turnover']) {
   taxTreatment:'non-deductible',
  })
  assert.equal(unusedWorkingCapitalModel.valid,false,field+' must not be silently ignored')
- assert.ok(unusedWorkingCapitalModel.issues.some(issue=>issue.includes('days-coverage-currently-supports-sales-revenue-receivables-only')),unusedWorkingCapitalModel.issues.join('; '))
+ assert.ok(unusedWorkingCapitalModel.issues.some(issue=>issue.includes('days-coverage-driver-not-supported-for-component-and-valuation-basis')),unusedWorkingCapitalModel.issues.join('; '))
 }
 
 
