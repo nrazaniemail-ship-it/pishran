@@ -387,6 +387,19 @@ assert.equal(targetSensitivityModel.valid,true,targetSensitivityModel.issues.joi
 assert.equal(targetSensitivityModel.sensitivitySearches.length,1)
 assert.equal(targetSensitivityModel.sensitivitySearches[0].result.achieved,true)
 assert.equal(targetSensitivityModel.sensitivitySearches[0].result.iterations,0)
+let unsupportedSensitivityHelp=helpForms.createBlankHelpDrivenProjectForms()
+unsupportedSensitivityHelp=helpForms.addHelpFormRow(unsupportedSensitivityHelp,'sensitivity','global-sensitivity-a')
+for(const [key,value] of Object.entries({
+ analysisType:'global-input-variation',variableGroup:'sales-revenues',quantityChange:10,
+ maxIncrease:10,maxDecrease:10,order:1,
+})) unsupportedSensitivityHelp=helpForms.updateHelpFormRow(unsupportedSensitivityHelp,'sensitivity','global-sensitivity-a',key,value)
+const unsupportedSensitivityModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:unsupportedSensitivityHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(unsupportedSensitivityModel.valid,false)
+assert.ok(unsupportedSensitivityModel.issues.some(issue=>issue.includes('Only target IRR and target NPV searches are currently supported')))
 
 let unsupportedDiscountingHelp=helpForms.createBlankHelpDrivenProjectForms()
 unsupportedDiscountingHelp=helpForms.updateHelpFormRow(unsupportedDiscountingHelp,'discounting','discounting-main','shortNpvYears',3)
