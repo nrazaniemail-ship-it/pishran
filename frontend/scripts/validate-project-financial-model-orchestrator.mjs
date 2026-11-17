@@ -65,28 +65,6 @@ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'tax-allowances','usd-inve
 currencyHelp=helpForms.addHelpFormRow(currencyHelp,'cost-centres','factory-centre')
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','name','Factory')
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','group','production')
-assert.deepEqual(helpForms.validateHelpDrivenProjectForms(currencyHelp),[])
-const foundationBinding=orchestrator.bindHelpDrivenFoundation(foundation,currencyHelp,periods)
-assert.deepEqual(foundationBinding.issues,[])
-assert.equal(foundationBinding.foundation.currencies.localCurrencyCode,'EUR')
-assert.deepEqual(foundationBinding.foundation.currencies.foreignCurrencies[0].exchangeRates,[
- {period:'1',rateToLocal:1.08},{period:'2',rateToLocal:1.1},
-])
-assert.equal(foundationBinding.foundation.costCentres.active,true)
-assert.equal(foundationBinding.foundation.costCentres.items[0].name,'Factory')
-assert.deepEqual(foundationBinding.foundation.inflation.indices[0].rates,[
- {period:'1',ratePercent:0},{period:'2',ratePercent:5},
-])
-assert.equal(foundationBinding.foundation.discounting.economicRatePercent,8)
-const currencyBoundRun=orchestrator.calculateProjectFinancialModelFromDrafts({
- finance,drafts:{...drafts,helpDriven:currencyHelp},foundation,productionStartDate:'2025-01-01',
- openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
- taxTreatment:'non-deductible',
-})
-assert.equal(currencyBoundRun.valid,true,currencyBoundRun.issues.join('; '))
-assert.equal(currencyBoundRun.finalRun.finance.valid,true)
-assert.equal(currencyBoundRun.finalRun.finance.rows[0].tax,223)
-assert.equal(currencyBoundRun.finalRun.finance.rows[1].tax,380)
 const foundation={
  schemaVersion:1,
  planning:{periodFrequency:'annual',projectStartDate:'2025-01-01',projectEndDate:'2026-12-31',fiscalYearStartMonth:1,balanceDateMonth:12,balanceDateDay:31,dayCountBasis:365,valuationDate:'2025-01-01',discountConvention:'actual-days',cashFlowTiming:'period-end'},
@@ -116,6 +94,29 @@ const drafts={
   allowances:[{id:'investment-allowance',name:'Investment allowance',periodAmounts:[{period:'2',amount:100}]}],
   lossCarryForward:true,lossCarryForwardYears:2},
 }
+assert.deepEqual(helpForms.validateHelpDrivenProjectForms(currencyHelp),[])
+const foundationBinding=orchestrator.bindHelpDrivenFoundation(foundation,currencyHelp,periods)
+assert.deepEqual(foundationBinding.issues,[])
+assert.equal(foundationBinding.foundation.currencies.localCurrencyCode,'EUR')
+assert.deepEqual(foundationBinding.foundation.currencies.foreignCurrencies[0].exchangeRates,[
+ {period:'1',rateToLocal:1.08},{period:'2',rateToLocal:1.1},
+])
+assert.equal(foundationBinding.foundation.costCentres.active,true)
+assert.equal(foundationBinding.foundation.costCentres.items[0].name,'Factory')
+assert.deepEqual(foundationBinding.foundation.inflation.indices[0].rates,[
+ {period:'1',ratePercent:0},{period:'2',ratePercent:5},
+])
+assert.equal(foundationBinding.foundation.discounting.economicRatePercent,8)
+const currencyBoundRun=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:currencyHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(currencyBoundRun.valid,true,currencyBoundRun.issues.join('; '))
+assert.equal(currencyBoundRun.finalRun.finance.valid,true)
+assert.equal(currencyBoundRun.finalRun.finance.rows[0].tax,223)
+assert.equal(currencyBoundRun.finalRun.finance.rows[1].tax,380)
+
 const result=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts,foundation,productionStartDate:'2025-01-01',
  
