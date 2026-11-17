@@ -201,6 +201,12 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
     const entered=['salesQuantity','netUnitPrice','salesTaxPercent','subsidyPercent','subsidyAmount','closingFinishedGoods'].some(key=>v[key]!==null&&v[key]!=='')
     if(entered&&(!v.productId||!v.period))errors.push('sales-programme:'+i+':product-and-period-required')
     if(v.subsidyPercent!==null&&v.subsidyPercent!==''&&v.subsidyAmount!==null&&v.subsidyAmount!=='')errors.push('sales-programme:'+i+':choose-subsidy-percent-or-amount')
+    if(v.inventoryValuationMethod!==null&&v.inventoryValuationMethod!==''&&
+      v.inventoryValuationMethod!=='fifo'&&v.inventoryValuationMethod!=='weighted-average')
+      errors.push('sales-programme:'+i+':unsupported-finished-goods-valuation-method')
+    if(typeof v.openingFinishedGoodsValue==='number'&&v.openingFinishedGoodsValue>0&&
+      (typeof v.openingFinishedGoods!=='number'||v.openingFinishedGoods<=0))
+      errors.push('sales-programme:'+i+':opening-finished-goods-value-requires-opening-quantity')
    }
    if(section.id==='fixed-investment'){
     const v=row.values
