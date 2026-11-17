@@ -373,7 +373,7 @@ assert.equal(depreciationAdjustmentModel.finalRun.finance.rows[1].tax,384)
 let targetSensitivityHelp=helpForms.createBlankHelpDrivenProjectForms()
 targetSensitivityHelp=helpForms.addHelpFormRow(targetSensitivityHelp,'sensitivity','target-npv-a')
 for(const [key,value] of Object.entries({
- analysisType:'desired-npv',variableGroup:'sales-revenues',targetNpv:depreciationAdjustmentModel.finalRun.finance.npvProject,
+ analysisType:'desired-npv',variableGroup:'sales-revenues',targetNpv:result.finalRun.finance.npvProject,
  maxIncrease:10,maxDecrease:10,order:1,chartVariable:'Revenue',
 })) targetSensitivityHelp=helpForms.updateHelpFormRow(targetSensitivityHelp,'sensitivity','target-npv-a',key,value)
 const targetSensitivityModel=orchestrator.calculateProjectFinancialModelFromDrafts({
