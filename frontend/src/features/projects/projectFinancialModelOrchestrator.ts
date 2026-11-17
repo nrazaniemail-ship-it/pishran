@@ -543,5 +543,5 @@ export function calculateProjectFinancialModelFromDrafts(
       sensitivitySearches.push({rowId:row.id,alternative:typeof v.chartVariable==='string'&&v.chartVariable.trim()?v.chartVariable.trim():row.id,result})
     }
   }
-  return {valid:true,issues:[],financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,sensitivitySearches}
+  return {valid:true,issues:[],financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,sensitivitySearches,...(incrementalAnalysis.results.length?{incrementalAnalyses:incrementalAnalysis.results}:{})}
 }
