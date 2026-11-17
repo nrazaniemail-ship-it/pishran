@@ -172,6 +172,19 @@ export function calculateProjectFinancialModelFromDrafts(
   })
   const openingDraft=effectiveDrafts.openingBalanceSheet
   const crossFormIssues=[...validateProjectModelCrossReferences(effectiveDrafts,input.projectProductIds),...(effectiveDrafts.helpDriven?validateHelpDrivenProjectForms(effectiveDrafts.helpDriven):[]),...(effectiveDrafts.helpDriven?validateHelpDrivenProjectPeriods(effectiveDrafts.helpDriven,input.finance.periods):[])]
+  // Never let populated raw-template sections disappear silently from a financial run.
+  // These sections require dedicated adapters and are deliberately rejected until their
+  // schedules are represented in the periodic engine (rather than being treated as zero).
+  const notYetIntegratedSections=new Set([
+    'cost-allocation','joint-venture','preproduction-expenditure','equity-grants',
+    'profit-distribution','depreciation-adjustments','starting-balances',
+    'economic-items','economic-effects','sensitivity','incremental-analysis',
+  ])
+  for(const [sectionId,sectionRows] of Object.entries(effectiveDrafts.helpDriven?.sections??{})){
+    if(notYetIntegratedSections.has(sectionId)&&sectionRows.length){
+      crossFormIssues.push('Raw-template section "'+sectionId+'" contains data but is not yet connected to the periodic financial calculation. The model run is blocked to prevent silently ignored inputs.')
+    }
+  }
   if(crossFormIssues.length)return fail(crossFormIssues)
   const resolveTaxPeriod=(key:string):number=>{
     const matches:number[]=[]
