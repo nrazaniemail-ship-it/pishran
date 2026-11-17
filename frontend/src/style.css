@@ -1488,6 +1488,7 @@ input,select,textarea{color:var(--text)}
 .ui-modern .command-results{display:grid;gap:3px;padding:8px}
 .ui-modern .command-results button{display:flex;align-items:center;gap:10px;border:0;border-radius:7px;padding:10px;background:transparent;color:var(--modern-text);text-align:start;font-size:11px}
 .ui-modern .command-results button:hover{background:var(--modern-selected)}
+.ui-modern .command-results button.selected,.ui-modern .command-results button:focus-visible{background:var(--modern-selected);outline:2px solid var(--modern-primary);outline-offset:-2px}
 .ui-modern .command-results button span{margin-inline-start:auto;color:var(--modern-muted)}
 .ui-modern .hero{border-radius:13px;background:linear-gradient(115deg,#0c4a6e,#075985)}
 .ui-modern .section-head h2,.ui-modern .page-heading h1{color:var(--modern-text)}
