@@ -311,6 +311,20 @@ export function validateStartingFixedAssetBalances(
     if (asset.commissioningDate && asset.depreciationStartDate && asset.depreciationStartDate < asset.commissioningDate)
       issue(path + '.depreciationStartDate', 'depreciation-before-commissioning', 'Depreciation cannot start before the commissioning date.')
     const method = asset.depreciationMethod ?? 'linear-scrap'
+    if (asset.salvagePercent !== undefined &&
+        (!Number.isFinite(asset.salvagePercent) || asset.salvagePercent < 0 || asset.salvagePercent > 100))
+      issue(path + '.salvagePercent', 'invalid-starting-asset-salvage-percent', 'Scrap percentage must be between zero and 100 percent.')
+    const effectiveScrapPercent = asset.salvagePercent ??
+      (asset.grossCost > 0 ? (asset.residualValue ?? 0) / asset.grossCost * 100 : 0)
+    const netBookValue = Math.max(0, asset.grossCost - asset.accumulatedDepreciation)
+    if (method !== 'none' && method !== 'linear-zero' &&
+        Number.isFinite(effectiveScrapPercent) && effectiveScrapPercent >= 0 && effectiveScrapPercent <= 100 &&
+        asset.grossCost * effectiveScrapPercent / 100 > netBookValue + 0.01)
+      issue(path + '.salvagePercent', 'starting-asset-salvage-exceeds-net-book-value', 'Scrap value cannot exceed the opening net book value.')
+    if (method === 'accelerated' &&
+        (!Number.isFinite(asset.depreciationRatePercent) || (asset.depreciationRatePercent ?? 0) <= 0 ||
+         (asset.depreciationRatePercent ?? 0) >= 100))
+      issue(path + '.depreciationRatePercent', 'invalid-starting-asset-depreciation-rate', 'Accelerated depreciation requires a rate greater than zero and below 100 percent.')
     if (method !== 'none') {
       if (asset.status === 'active' && asset.remainingLife <= 0)
         issue(path + '.remainingLife', 'missing-starting-asset-remaining-life', 'An active depreciable asset requires positive remaining useful life.')
