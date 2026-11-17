@@ -1430,6 +1430,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     const starting = parsePeriod(item.depreciation.startingAt)
     if (method !== 'none' && !starting) {
       warnings.push(`${item.description || item.id}: تاریخ Starting at باید به‌صورت سال یا YYYY-MM-DD وارد شود.`)
+      if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+      else investmentScheduleVerified = false
       continue
     }
     const startingAtPeriod = starting ? Math.max(1, starting.year - projectStartYear + 1) : 1
@@ -1444,14 +1446,23 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       const acquired = parsePeriod(acquisition.period)
       if (!acquired) {
         warnings.push(`${item.description || item.id}: تاریخ/دوره تحصیل «${acquisition.period}» قابل تشخیص نیست.`)
+        if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+        else investmentScheduleVerified = false
         continue
       }
       if (acquired.year < projectStartYear) {
         warnings.push(`${item.description || item.id}: تحصیل قبل از شروع مدل باید از دفتر Starting Balances با بهای ناخالص و استهلاک انباشته وارد شود؛ این نوبت از محاسبه جدید کنار گذاشته شد.`)
+        if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+        else investmentScheduleVerified = false
         continue
       }
       const acquisitionPeriod = acquired.year - projectStartYear + 1
-      if (acquisitionPeriod > periodCount) continue
+      if (acquisitionPeriod > periodCount) {
+        warnings.push(`${item.description || item.id}: دوره تحصیل خارج از افق مدل است؛ برنامه سرمایه‌گذاری دوره‌ای قابل تأیید نیست.`)
+        if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+        else investmentScheduleVerified = false
+        continue
+      }
       const exchangeRate = item.origin === 'foreign' ? (acquisition.exchangeRateToLocal ?? 0) : 1
       const originalValue = acquisition.quantity * acquisition.unitPrice * exchangeRate
       if (acquisitionPeriod >= 1 && acquisitionPeriod <= investmentSchedule.length) {
@@ -1460,6 +1471,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       }
       if (!Number.isFinite(originalValue) || originalValue < 0) {
         warnings.push(`${item.description || item.id}: بهای تحصیل پس از تبدیل به ارز محلی معتبر نیست.`)
+        if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+        else investmentScheduleVerified = false
         continue
       }
       const assetId = `${item.id}:${acquisition.id}`
