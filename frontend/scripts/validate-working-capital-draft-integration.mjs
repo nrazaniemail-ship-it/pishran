@@ -99,4 +99,30 @@ const mismatchedExplicitBalance = adapter.buildWorkingCapitalScheduleFromDrafts(
 assert.equal(mismatchedExplicitBalance.valid, false)
 assert.ok(mismatchedExplicitBalance.issues.some(issue => issue.includes('explicit-balance-does-not-reconcile')))
 
+
+const driverBinding = adapter.bindWorkingCapitalDraftsToPeriodicFinance({
+  periods, fiscalYearStartMonth: 1, dayCountBasis: 360, cashFlowTiming: 'period-end',
+  annualRevenue: [720], annualVariableCost: [0], annualFixedCost: [0], annualDepreciation: [0],
+  annualFixedInvestment: [0], annualPreOperatingCost: [0], annualMaintenanceCapex: [0],
+  annualTaxRates: [0], annualEquityContributions: [0], workingCapitalByPeriod: [], loans: [],
+}, { workingCapital: [{
+  id: 'receivables', name: 'Trade receivables', category: 'receivables',
+  minimumDaysCoverage: 45, turnoverCoefficient: 8, calculationMode: 'value',
+  activityBasis: 'sales', valuationBasis: 'sales-revenue',
+  periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
+}] }, 0)
+assert.equal(driverBinding.valid, true, driverBinding.issues.join('; '))
+assert.deepEqual(driverBinding.financeInput.workingCapitalByPeriod, [90, 90])
+
+const unsupportedProductionDriver = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'inventory', name: 'Raw materials', category: 'inventory',
+    minimumDaysCoverage: 30, turnoverCoefficient: 12, calculationMode: 'value',
+    activityBasis: 'production', valuationBasis: 'cost-of-production',
+    periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
+  }],
+}, periods, 0, [720, 900])
+assert.equal(unsupportedProductionDriver.valid, false)
+assert.ok(unsupportedProductionDriver.issues.some(issue => issue.includes('days-coverage-currently-supports-sales-revenue-receivables-only')))
+
 console.log('Working-capital draft integration validation passed.')
