@@ -169,6 +169,20 @@ assert.deepEqual(progressiveTaxResult.financeInput.taxBracketsByPeriod,[
 ])
 assert.equal(progressiveTaxResult.finalRun.finance.rows[0].tax,150)
 assert.equal(progressiveTaxResult.finalRun.finance.rows[1].tax,330)
+let incomeTaxHelp=helpForms.createBlankHelpDrivenProjectForms()
+incomeTaxHelp=helpForms.updateHelpFormRow(incomeTaxHelp,'income-tax','income-tax-main','taxHolidayYears',1)
+incomeTaxHelp=helpForms.updateHelpFormRow(incomeTaxHelp,'income-tax','income-tax-main','lossCarryForwardYears',5)
+const holidayResult=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,tax:{...drafts.tax,lossCarryForwardYears:null},helpDriven:incomeTaxHelp},
+ foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(holidayResult.valid,true,holidayResult.issues.join('; '))
+assert.deepEqual(holidayResult.financeInput.taxRatesByPeriod,[0,20])
+assert.equal(holidayResult.financeInput.taxLossCarryForwardYears,5)
+assert.equal(holidayResult.finalRun.finance.rows[0].tax,0)
+assert.equal(holidayResult.finalRun.finance.rows[1].tax,380)
 assert.ok(result.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 const openingBalanceSheet={
  enabled:true,cash:100,inventory:20,workInProgress:10,finishedGoods:30,receivables:40,
