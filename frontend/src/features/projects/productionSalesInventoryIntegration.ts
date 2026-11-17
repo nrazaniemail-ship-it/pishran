@@ -323,3 +323,61 @@ export function bindProductionSalesToPeriodicFinance(
     schedule,
   }
 }
+
+
+export type FinishedGoodsCostFlowInput = {
+  method: 'weighted-average'
+  openingQuantity: number
+  openingValue: number
+  productionQuantity: number
+  productionCost: number
+  salesQuantity: number
+  closingQuantity: number
+}
+
+export type FinishedGoodsCostFlowResult = {
+  valid: boolean
+  issues: string[]
+  availableQuantity: number
+  availableValue: number
+  weightedAverageUnitCost: number
+  costOfGoodsSold: number
+  closingInventoryValue: number
+  reconciliationDifference: number
+}
+
+/**
+ * Calculate periodic weighted-average finished-goods valuation.
+ * Quantities must reconcile (opening + production = sales + closing).
+ * Values are kept at full precision; presentation rounding belongs downstream.
+ */
+export function calculateFinishedGoodsWeightedAverage(input: FinishedGoodsCostFlowInput): FinishedGoodsCostFlowResult {
+  const issues: string[] = []
+  const values = [input.openingQuantity,input.openingValue,input.productionQuantity,
+    input.productionCost,input.salesQuantity,input.closingQuantity]
+  if (values.some(value => !nonNegative(value))) issues.push('Finished-goods cost-flow inputs must be finite and non-negative.')
+  if (issues.length) return {valid:false,issues,availableQuantity:0,availableValue:0,
+    weightedAverageUnitCost:0,costOfGoodsSold:0,closingInventoryValue:0,reconciliationDifference:0}
+
+  const availableQuantity = input.openingQuantity + input.productionQuantity
+  const availableValue = input.openingValue + input.productionCost
+  const quantityDifference = availableQuantity - input.salesQuantity - input.closingQuantity
+  if (Math.abs(quantityDifference) > 1e-8)
+    issues.push('Finished-goods quantities do not reconcile: opening plus production must equal sales plus closing.')
+  if (availableQuantity <= 1e-12) {
+    if (availableValue > 0.01) issues.push('Finished-goods value exists without available quantity.')
+    if (input.salesQuantity > 1e-12 || input.closingQuantity > 1e-12)
+      issues.push('Sales or closing inventory cannot exist without available finished-goods quantity.')
+    return {valid:issues.length===0,issues,availableQuantity,availableValue,
+      weightedAverageUnitCost:0,costOfGoodsSold:0,closingInventoryValue:0,
+      reconciliationDifference:availableValue}
+  }
+  const weightedAverageUnitCost = availableValue / availableQuantity
+  const costOfGoodsSold = input.salesQuantity * weightedAverageUnitCost
+  const closingInventoryValue = input.closingQuantity * weightedAverageUnitCost
+  const reconciliationDifference = availableValue - costOfGoodsSold - closingInventoryValue
+  if (Math.abs(reconciliationDifference) > Math.max(0.01,Math.abs(availableValue)*1e-10))
+    issues.push('Finished-goods value does not reconcile to cost of goods sold plus closing inventory.')
+  return {valid:issues.length===0,issues,availableQuantity,availableValue,
+    weightedAverageUnitCost,costOfGoodsSold,closingInventoryValue,reconciliationDifference}
+}
