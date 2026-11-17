@@ -260,3 +260,36 @@ const fifoValueWithoutQuantity=adapter.calculateFinishedGoodsFifoSchedule({
 assert.equal(fifoValueWithoutQuantity.valid,false)
 assert.ok(fifoValueWithoutQuantity.issues.some(issue=>issue.includes('without production quantity')))
 console.log('Finished-goods multi-period FIFO layer valuation tests passed.')
+
+
+const fifoOpeningValueWithoutQuantity=adapter.calculateFinishedGoodsFifoSchedule({
+ openingQuantity:0,openingValue:250,
+ periods:[{period:'P1',productionQuantity:0,productionCost:0,salesQuantity:0,closingQuantity:0}]
+})
+assert.equal(fifoOpeningValueWithoutQuantity.valid,false)
+assert.ok(fifoOpeningValueWithoutQuantity.issues.some(issue=>issue.includes('Opening finished-goods value exists without opening quantity')))
+
+const fifoMissingPeriodArray=adapter.calculateFinishedGoodsFifoSchedule({
+ openingQuantity:0,openingValue:0,periods:null
+})
+assert.equal(fifoMissingPeriodArray.valid,false)
+assert.ok(fifoMissingPeriodArray.issues.some(issue=>issue.includes('At least one finished-goods FIFO period')))
+
+const fifoMalformedPeriod=adapter.calculateFinishedGoodsFifoSchedule({
+ openingQuantity:0,openingValue:0,periods:[null]
+})
+assert.equal(fifoMalformedPeriod.valid,false)
+assert.ok(fifoMalformedPeriod.issues.some(issue=>issue.includes('period keys must be non-empty and unique')))
+
+const weightedMissingPeriodArray=adapter.calculateFinishedGoodsWeightedAverageSchedule({
+ openingQuantity:0,openingValue:0,periods:null
+})
+assert.equal(weightedMissingPeriodArray.valid,false)
+assert.ok(weightedMissingPeriodArray.issues.some(issue=>issue.includes('At least one finished-goods valuation period')))
+
+const weightedMalformedPeriod=adapter.calculateFinishedGoodsWeightedAverageSchedule({
+ openingQuantity:0,openingValue:0,periods:[null]
+})
+assert.equal(weightedMalformedPeriod.valid,false)
+assert.ok(weightedMalformedPeriod.issues.some(issue=>issue.includes('period keys must be non-empty and unique')))
+console.log('Finished-goods malformed-input and opening-value guard tests passed.')
