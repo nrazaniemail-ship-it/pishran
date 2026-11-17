@@ -1013,7 +1013,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const rows: PeriodicProjectFinanceRow[] = []
   let taxLoss = openingLoss
   let unleveredTaxLoss = openingUnleveredLoss
-  let priorWorkingCapital = Math.max(0, input.openingWorkingCapital ?? 0)
+  let priorWorkingCapital = input.openingWorkingCapital ?? 0
   for (let index = 0; index < periods.length; index++) {
     const loanRows = Object.values(loanSchedules).map(schedule => schedule[index])
     // Financing fees paid as period expenses are deductible financing costs;
