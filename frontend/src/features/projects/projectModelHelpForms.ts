@@ -153,9 +153,13 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
     'incremental-analysis':['alternative','view','period'],
    }
    if(entered)for(const key of requiredBySection[section.id]??[]){
+    if(section.id==='production-costs'&&key==='productId'&&typeof row.values?.allocationKeyId==='string'&&row.values.allocationKeyId.trim())continue
     const requiredValue=row.values?.[key]
     if(requiredValue===null||requiredValue===undefined||requiredValue==='')errors.push(section.id+':'+i+':required-field:'+key)
    }
+   if(section.id==='cost-allocation'&&row.values.type==='user-defined'&&
+      (typeof row.values.productId!=='string'||!row.values.productId.trim()))
+    errors.push('cost-allocation:'+i+':required-field:productId')
    for(const field of section.fields){
     const v=row.values?.[field.key]
     if(v===undefined){errors.push(section.id+':'+i+':missing-field:'+field.key);continue}
