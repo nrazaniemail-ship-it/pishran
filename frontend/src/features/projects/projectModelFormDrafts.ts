@@ -79,10 +79,10 @@ export type ProjectTaxFormDraft={
  system:'corporate'|'none'|'custom'|null
  rates:{period:string;ratePercent:number|null}[]
  allowances:{id:string;name:string;periodAmounts:{period:string;amount:number|null}[]}[]
- lossCarryForward:boolean|null;lossCarryForwardYears:number|null
+ lossCarryForward:boolean|null;lossCarryForwardYears:number|null;openingLossVintages:{amount:number|null;originFiscalYearIndex:number|null}[]
 }
 export function createBlankProjectTaxFormDraft():ProjectTaxFormDraft{return{
- system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null
+ system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null,openingLossVintages:[]
 }}
 
 export function deriveFixedVariableSplit(fixedPercent:number|null,variablePercent:number|null):{fixedPercent:number|null;variablePercent:number|null}{
