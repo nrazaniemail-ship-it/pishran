@@ -3,7 +3,17 @@ import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 
 const projectsView=await readFile(new URL('../src/features/projects/ProjectsView.tsx',import.meta.url),'utf8')
-assert.match(projectsView,/const templateId = 'raw' as const/,'New projects must always use the raw template')
+assert.match(projectsView,/templateId: 'raw'/,'New projects must always use the raw template')
+assert.match(projectsView,/معدن سنگ آهن/,'Mining projects must expose the supported project types')
+assert.match(projectsView,/نورد ورق گرم- تولید کلاف/,'Industrial steel projects must expose the supported rolling project types')
+assert.match(projectsView,/type="number" min="0" step="any"/,'Capacity input must be numeric and non-negative')
+assert.match(projectsView,/capacityUnitFor/,'Project creation must assign capacity units by sector')
+const wizard=await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx',import.meta.url),'utf8')
+assert.match(wizard,/nameplate:project\.capacity\.trim\(\)/,'Capacity entered during project creation must be carried into the model')
+assert.match(wizard,/projectCapacityUnit/,'The model must display the project-specific capacity unit')
+assert.match(wizard,/blankZero&&value===0/,'Raw template numeric zeroes must render as blank')
+assert.match(wizard,/blankZero&&r\.quantity===0/,'Raw template row quantities must render as blank when untouched')
+assert.match(wizard,/blankZero&&r\.unitPrice===0/,'Raw template row prices must render as blank when untouched')
 assert.match(projectsView,/قالب خام/,'The raw template must remain available')
 assert.doesNotMatch(projectsView,/STEEL_PROJECT_OPTIONS|changeSteelProject|setSteelStage/,'The raw creation flow must not persist a preselected technical stage')
 
@@ -32,7 +42,7 @@ const capacityProject=await repository.createProject({name:'Power project',indus
 assert.equal(capacityProject.capacity,'25')
 assert.equal(capacityProject.capacityUnit,'MW')
 assert.equal(created.steelStage,undefined)
-assert.deepEqual((await repository.listProjects()).map(project=>project.id),[created.id])
+assert.deepEqual((await repository.listProjects()).map(project=>project.id),[capacityProject.id,created.id])
 
 state.set('projects:list:v1', [
   created,
