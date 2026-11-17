@@ -42,9 +42,15 @@ function calculatePeriodTaxWithVintages(
   fiscalYear:number,
   enabled:boolean,
   carryForwardYears:number|null,
+  progressiveBrackets?:readonly {lowerLimit:number;ratePercent:number}[],
 ):{tax:number;closingLossCarryForward:number;vintages:TaxLossVintage[]}|null {
   if(![taxableProfit,taxRatePercent,fiscalYear].every(validFinite)||taxRatePercent<0||taxRatePercent>100||
     (carryForwardYears!==null&&(!Number.isInteger(carryForwardYears)||carryForwardYears<1)))return null
+  const brackets=progressiveBrackets?[...progressiveBrackets].sort((a,b)=>a.lowerLimit-b.lowerLimit):null
+  if(brackets&&(!brackets.length||brackets[0].lowerLimit!==0||
+    brackets.some((row,index)=>!validFinite(row.lowerLimit)||row.lowerLimit<0||
+      !validFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100||
+      (index>0&&(row.lowerLimit<=brackets[index-1].lowerLimit||row.ratePercent<brackets[index-1].ratePercent)))))return null
   let vintages=enabled?openingVintages.filter(vintage=>fiscalYear-vintage.fiscalYear<= (carryForwardYears??Infinity))
     .map(vintage=>({...vintage})): []
   let remainingProfit=taxableProfit
@@ -59,8 +65,12 @@ function calculatePeriodTaxWithVintages(
     vintages=vintages.filter(vintage=>vintage.amount>1e-9)
   }
   if(enabled&&remainingProfit<0)vintages.push({fiscalYear,amount:-remainingProfit})
-  return {tax:Math.max(0,remainingProfit)*taxRatePercent/100,
-    closingLossCarryForward:vintages.reduce((sum,vintage)=>sum+vintage.amount,0),vintages}
+  const taxableAfterLoss=Math.max(0,remainingProfit)
+  const tax=brackets?brackets.reduce((sum,row,index)=>{
+    const upper=brackets[index+1]?.lowerLimit??Infinity
+    return sum+Math.max(0,Math.min(taxableAfterLoss,upper)-row.lowerLimit)*row.ratePercent/100
+  },0):taxableAfterLoss*taxRatePercent/100
+  return {tax,closingLossCarryForward:vintages.reduce((sum,vintage)=>sum+vintage.amount,0),vintages}
 }
 
 /** Apply tax-loss carry-forward to one financial period without allowing negative tax. */
@@ -655,6 +665,8 @@ export type PeriodicProjectFinanceInput = {
   annualMaintenanceCapex: number[]
   annualTaxRates: number[]
   taxRatesByPeriod?: number[]
+  /** Progressive marginal tax brackets for each project period; overrides the flat rate when supplied. */
+  taxBracketsByPeriod?: {lowerLimit:number;ratePercent:number}[][]
   /** Explicit deductible tax allowances by project period, applied before loss carry-forward. */
   taxAllowancesByPeriod?: number[]
   annualEquityContributions: number[]
@@ -1047,6 +1059,14 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Annual tax-rate schedule does not cover every project fiscal period.')
     return empty()
   }
+  if(input.taxBracketsByPeriod&&(input.taxBracketsByPeriod.length!==periods.length||
+    input.taxBracketsByPeriod.some(brackets=>!Array.isArray(brackets)||!brackets.length||
+      brackets[0]?.lowerLimit!==0||[...brackets].sort((a,b)=>a.lowerLimit-b.lowerLimit).some((row,index,sorted)=>
+        !validFinite(row.lowerLimit)||row.lowerLimit<0||!validFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100||
+        (index>0&&(row.lowerLimit<=sorted[index-1].lowerLimit||row.ratePercent<sorted[index-1].ratePercent)))))) {
+    warnings.push('Progressive tax brackets must cover every project period and start at zero with increasing limits and non-decreasing rates.')
+    return empty()
+  }
   if(input.taxAllowancesByPeriod&&(input.taxAllowancesByPeriod.length!==periods.length||
     input.taxAllowancesByPeriod.some(amount=>!validFinite(amount)||amount<0))) {
     warnings.push('Tax allowances must contain one finite non-negative amount for every project period.')
@@ -1140,10 +1160,11 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSale.otherIncomeLoss + salvageGainLoss
     const taxAllowances=input.taxAllowancesByPeriod?.[index]??0
     const fiscalYear=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
+    const progressiveBrackets=input.taxBracketsByPeriod?.[index]
     const periodTax=calculatePeriodTaxWithVintages(ebit-interestExpense-taxAllowances,taxRates[index],
-      taxLossVintages,fiscalYear,carryForwardEnabled,carryForwardYears)
+      taxLossVintages,fiscalYear,carryForwardEnabled,carryForwardYears,progressiveBrackets)
     const unleveredPeriodTax=calculatePeriodTaxWithVintages(ebit-taxAllowances,taxRates[index],
-      unleveredTaxLossVintages,fiscalYear,carryForwardEnabled,carryForwardYears)
+      unleveredTaxLossVintages,fiscalYear,carryForwardEnabled,carryForwardYears,progressiveBrackets)
     if(!periodTax||!unleveredPeriodTax) {
       warnings.push('Tax calculation failed in project period '+(index+1)+'.')
       return empty()
