@@ -657,4 +657,20 @@ const unsupportedExistingAsset=startingBalanceAdapter.bindStartingBalancesToPeri
 assert.equal(unsupportedExistingAsset.valid,false)
 assert.ok(unsupportedExistingAsset.issues.some(issue=>issue.includes('supports only linear-to-zero')))
 
+// Each economic-effect class has a distinct fail-closed explanation; none is silently posted as a benefit or cost.
+for (const [type,expected] of [
+ ['foreign-loan','financing transfer'],
+ ['indirect-effect','counterfactual'],
+ ['employment','opportunity wage'],
+ ['environmental','physical quantity'],
+]) {
+ let typedEffectHelp=helpForms.addHelpFormRow(economicHelp,'economic-effects','typed-'+type)
+ for(const [key,value] of Object.entries({type,period:'1',amount:10,currency:'EUR',market:'local',headcount:type==='employment'?5:null,shadowWageFactor:type==='employment'?0.8:null}))
+  typedEffectHelp=helpForms.updateHelpFormRow(typedEffectHelp,'economic-effects','typed-'+type,key,value)
+ const typedEffectResult=economicAppraisalModule.bindEconomicAppraisalConfiguration(typedEffectHelp,foundation,economicFinance)
+ assert.equal(typedEffectResult.valid,false,type+' effects must remain blocked until correctly valued')
+ assert.ok(typedEffectResult.issues.some(issue=>issue.includes(expected)),type+' must explain its missing valuation basis')
+ assert.equal(typedEffectResult.cashFlow,null,type+' must not enter economic cash flow')
+}
+
 console.log('Unified project form orchestration, shareholder model, and raw-template opening-balance integration passed.')
