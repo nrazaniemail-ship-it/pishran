@@ -105,6 +105,9 @@ type SavedState = {
   taxBrackets?: PeriodTaxBracket[]
   taxHolidayYears?: number
   lossCarryForwardYears?: number | null
+  salesTaxPercent?: number
+  subsidyPercent?: number
+  subsidyAbsoluteSchedule?: number[]
   fundingStructureVersion?: number
   minimumDscr?: number
 }
@@ -141,7 +144,7 @@ export default function AdvancedFinancePanel(props: Props) {
     workingCapitalDays:props.workingCapitalDefaults?.days??{raw:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
     workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
     wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),taxHolidayYears:0,lossCarryForwardYears:null,
-    discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0
+    discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0,salesTaxPercent:0,subsidyPercent:0,subsidyAbsoluteSchedule:Array(years).fill(0)
   }))
   const [loaded,setLoaded]=useState(false)
   useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const matchesLegacyDefault=Math.abs(legacyContribution-legacyWorkingCapitalEquity)<0.01;restored.equityWorkingCapitalContributions=Array(years).fill(0);if(matchesLegacyDefault){restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-legacyWorkingCapitalEquity):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??legacyWorkingCapitalEquity):0)}}if((saved.fundingStructureVersion??0)<2){const legacyDrawdowns=initialCapexSchedule.map((value,index)=>value*initialDebtShare+(index===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0));restored.loans=restored.loans.map(loan=>{const untouchedLegacyDefault=loan.label==='تسهیلات اصلی و سرمایه در گردش'&&loan.drawdowns.length===years&&loan.drawdowns.every((value,index)=>Math.abs(value-legacyDrawdowns[index])<0.01)&&Math.abs(loan.annualRate-props.costOfDebt)<0.0001&&loan.repaymentMethod==='equal-principal';return untouchedLegacyDefault?{...loan,label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(value=>value*initialDebtShare),annualRate:props.initialLoanRatePercent??props.costOfDebt,repaymentMethod:props.initialRepaymentMethod??'equal-principal'}:loan});if(props.initialWorkingCapitalEquityContribution&&restored.equityWorkingCapitalContributions.every(value=>value===0)){restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?props.initialWorkingCapitalEquityContribution!:0)}restored.fundingStructureVersion=2}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
@@ -261,7 +264,7 @@ export default function AdvancedFinancePanel(props: Props) {
     maintenanceCapexSchedule,fixedInvestment:props.fixedInvestment,preOperatingCost:props.preOperatingCost,
     fixedInvestmentSchedule,preOperatingSchedule:activePreOperatingSchedule,utilization,equityContributions,
     loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
-    taxRate:props.taxRate,taxRateSchedule:taxRates,taxBrackets:state.taxBrackets?.length?state.taxBrackets:undefined,taxHolidayYears:state.taxHolidayYears??0,lossCarryForwardYears:state.lossCarryForwardYears??null,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
+    taxRate:props.taxRate,taxRateSchedule:taxRates,taxBrackets:state.taxBrackets?.length?state.taxBrackets:undefined,taxHolidayYears:state.taxHolidayYears??0,lossCarryForwardYears:state.lossCarryForwardYears??null,salesTaxPercent:state.salesTaxPercent??0,subsidyPercent:state.subsidyPercent??0,annualSubsidyAbsoluteSchedule:Array.from({length:years},(_,i)=>Math.max(0,state.subsidyAbsoluteSchedule?.[i]??0)),waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
     workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:state.salesEscalationPercent,opexEscalationPercent:state.opexEscalationPercent,
     discountMode:state.discountMode,manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.mirrFinanceRate??props.costOfEquity,equityMirrReinvestmentRate:props.mirrReinvestmentRate??props.costOfEquity
   }
@@ -324,7 +327,7 @@ export default function AdvancedFinancePanel(props: Props) {
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     })
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(state.taxBrackets??[]),state.taxHolidayYears??0,state.lossCarryForwardYears??null,JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(state.taxBrackets??[]),state.taxHolidayYears??0,state.lossCarryForwardYears??null,state.salesTaxPercent??0,state.subsidyPercent??0,JSON.stringify(state.subsidyAbsoluteSchedule??[]),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
@@ -449,6 +452,15 @@ export default function AdvancedFinancePanel(props: Props) {
     <div className="fw-result">{tr('اوج نیاز سرمایه در گردش')}: <b>{money(result.peakWorkingCapital)} {props.currency}</b> · {tr('کسری منابع')}: <b>{money(result.fundingGap)} {props.currency}</b></div>
     <div className="fw-card"><b>{t('جدول دوره‌ای سرمایه در گردش','Periodic Working Capital Schedule')}</b>{result.years.map(r=><div className="fw-validation" key={r.year}><span>{tr('سال')} {r.year} · {tr('مواد')} {money(r.workingCapitalBreakdown.rawMaterials)} · {tr('انرژی')} {money(r.workingCapitalBreakdown.energy??0)} · {tr('قطعات یدکی')} {money(r.workingCapitalBreakdown.spareParts??0)} · WIP {money(r.workingCapitalBreakdown.workInProgress)} · {tr('محصول')} {money(r.workingCapitalBreakdown.finishedGoods)} · {tr('مطالبات')} {money(r.workingCapitalBreakdown.receivables)} · {tr('پرداختنی')} {money(r.workingCapitalBreakdown.payables)}</span><b>نیاز طی سال {money(r.workingCapital)} · مانده پایان {money(r.closingWorkingCapital)} · تغییر خالص {money(r.changeInWorkingCapital)}</b></div>)}</div>
 
+    <div className="fw-card">
+      <h4>{t('مالیات فروش و یارانه قیمت محصول','Product Sales Tax & Price Subsidies')}</h4>
+      <p className="fw-hint">{t('مالیات فروش به درآمد پروژه اضافه نمی‌شود؛ یارانه قیمت به فروش خالص افزوده می‌شود. یارانه درصدی و مبلغ مطلق با هم جمع می‌شوند.','Sales tax is excluded from project revenue; price subsidies are added to net sales. Percentage and absolute subsidies are aggregated.')}</p>
+      <div className="fw-grid">
+        <label className="fw-field"><span>{t('مالیات فروش (%)','Sales tax (%)')}</span><input type="number" min="0" value={state.salesTaxPercent??0} onChange={e=>setState(s=>({...s,salesTaxPercent:Math.max(0,Number(e.target.value)||0)}))}/></label>
+        <label className="fw-field"><span>{t('یارانه قیمت محصول (%)','Product price subsidy (%)')}</span><input type="number" min="0" value={state.subsidyPercent??0} onChange={e=>setState(s=>({...s,subsidyPercent:Math.max(0,Number(e.target.value)||0)}))}/></label>
+      </div>
+      <div className="fw-grid">{Array.from({length:years},(_,index)=><label className="fw-field" key={index}><span>{t('یارانه مطلق سال','Absolute subsidy — Year')} {index+1}</span><input type="number" min="0" value={state.subsidyAbsoluteSchedule?.[index]??0} onChange={e=>setState(s=>({...s,subsidyAbsoluteSchedule:Array.from({length:years},(_,i)=>i===index?Math.max(0,Number(e.target.value)||0):Math.max(0,s.subsidyAbsoluteSchedule?.[i]??0))}))}/></label>)}</div>
+    </div>
     <h4>{t('۳. استهلاک دارایی‌به‌دارایی و مالیات','3. Asset-Level Depreciation & Tax')}</h4>
     <p className="fw-hint">{tr('دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.')}</p>
     <div className="fw-grid">{taxRates.map((v,i)=><label className="fw-field" key={i}><span>{tr('نرخ مالیات سال')} {i+1} (%)</span><input type="number" min="0" max="100" value={v} onChange={e=>setState(s=>({...s,taxRates:taxRates.map((rate,j)=>j===i?Number(e.target.value):rate)}))}/></label>)}</div>
