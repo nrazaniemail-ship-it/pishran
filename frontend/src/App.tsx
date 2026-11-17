@@ -231,7 +231,7 @@ export default function App() {
       </nav>
       <div className="top-actions">{modern && <><button className="modern-header-action" onClick={() => setCommandOpen(true)}>{isEn ? 'Quick actions' : 'دستورات سریع'} <kbd>Ctrl K</kbd></button><button className="modern-header-action" onClick={() => setPage('projects')}>{isEn ? 'New project' : 'پروژه جدید'} <Plus size={15}/></button><button className="modern-header-avatar">P</button></>}</div>
     </header>
-    {modern && <div className="modern-workspace-heading"><div><small>{isEn ? 'WORKSPACE' : 'فضای کاری'}</small><h1>{activeProject?.name ?? (isEn ? 'Investment workspace' : 'فضای کاری ارزیابی سرمایه‌گذاری')}</h1></div><div className="modern-live-status"><span/> {loadError ? (isEn ? 'Data needs attention' : 'نیازمند بررسی داده‌ها') : (isEn ? 'Local data ready' : 'داده‌های محلی آماده‌اند')} <button onClick={() => setInspectorOpen(value => !value)}>{isEn ? 'Details' : 'جزئیات'}</button></div></div>}
+    {modern && <div className="modern-workspace-heading"><div><small>{isEn ? 'WORKSPACE' : 'فضای کاری'}</small><h1>{activeProject?.name ?? (isEn ? 'Investment workspace' : 'فضای کاری ارزیابی سرمایه‌گذاری')}</h1></div><div className="modern-live-status"><span/> <span className={loadError ? 'status-warning' : ''}/>{loadError ? (isEn ? 'Data needs attention' : 'نیازمند بررسی داده‌ها') : (isEn ? 'Local data ready' : 'داده‌های محلی آماده‌اند')} <button onClick={() => setInspectorOpen(value => !value)}>{isEn ? 'Details' : 'جزئیات'}</button></div></div>}
     <div className="modern-content-layout"><div className="modern-main-content">
 
     {page === 'dashboard' && <>
