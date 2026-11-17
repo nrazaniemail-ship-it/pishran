@@ -6,7 +6,7 @@ import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
 import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
-import { calculateOperatingCycleWorkingCapital, calculateWorkingCapitalTurnoverCoefficient } from '../steel/financialModel'
+import { calculateOperatingCycleWorkingCapital, calculateWorkingCapitalTurnoverCoefficient, calculateWorkingCapitalDaysCoverageFromTurnover } from '../steel/financialModel'
 import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
@@ -455,7 +455,7 @@ export default function AdvancedFinancePanel(props: Props) {
     <h4>{t('۲. سرمایه در گردش دوره‌ای','2. Periodic Working Capital')}</h4>
     <p className="fw-hint">{tr('مبنای روز ۳۶۰ روز است. روزهای نگهداری/وصول/پرداخت را از چرخه واقعی پروژه وارد کنید؛ مقدار صفر یعنی برای آن قلم سرمایه در گردش منظور نمی‌شود.')}</p>
     <div className="fw-grid">
-      {([['raw','روز موجودی مواد اولیه'],['factorySupplies','روز موجودی ملزومات کارخانه'],['utilities','روز موجودی اقلام خدماتی'],['energy','روز موجودی/پوشش هزینه انرژی'],['spareParts','روز موجودی قطعات یدکی'],['wip','روز کالای در جریان ساخت'],['finished','روز محصول نهایی'],['receivable','روز وصول مطالبات'],['cash','روز حداقل نقد عملیاتی'],['payable','روز پرداخت بدهی تجاری']] as [keyof SavedState['workingCapitalDays'],string][]).map(([key,label])=><label className="fw-field" key={key}><span>{tr(label)} · Coto {money(calculateWorkingCapitalTurnoverCoefficient(state.workingCapitalDays[key])??NaN)}</span><input type="number" min="0" value={state.workingCapitalDays[key]} onChange={e=>updateDay(key,Number(e.target.value))}/></label>)}
+      {([['raw','روز موجودی مواد اولیه'],['factorySupplies','روز موجودی ملزومات کارخانه'],['utilities','روز موجودی اقلام خدماتی'],['energy','روز موجودی/پوشش هزینه انرژی'],['spareParts','روز موجودی قطعات یدکی'],['wip','روز کالای در جریان ساخت'],['finished','روز محصول نهایی'],['receivable','روز وصول مطالبات'],['cash','روز حداقل نقد عملیاتی'],['payable','روز پرداخت بدهی تجاری']] as [keyof SavedState['workingCapitalDays'],string][]).map(([key,label])=><label className="fw-field" key={key}><span>{tr(label)} (Mdc)</span><input type="number" min="0" value={state.workingCapitalDays[key]} onChange={e=>updateDay(key,Number(e.target.value))}/><span>Coto</span><input type="number" min="0.0001" step="0.01" value={calculateWorkingCapitalTurnoverCoefficient(state.workingCapitalDays[key])??''} onChange={e=>{const coto=Number(e.target.value);const days=calculateWorkingCapitalDaysCoverageFromTurnover(coto);if(days!==null)updateDay(key,days)}}/></label>)}
     </div>
     <div className="fw-grid">
       <label className="fw-field"><span>{tr('سهم سپرده کوتاه‌مدت از نقدینگی (%)')}</span><input type="number" min="0" max="100" value={state.shortTermDepositSharePercent??0} onChange={e=>setState(s=>({...s,shortTermDepositSharePercent:Math.max(0,Math.min(100,Number(e.target.value)||0))}))}/></label>
