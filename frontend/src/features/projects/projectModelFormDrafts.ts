@@ -136,6 +136,7 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
 }
 
 
+export type EconomicAdjustmentFormDraft = { id:string; name:string; period:string; treatment:'benefit'|'cost'|null; effectType:'general'|'foreign-exchange'|'employment'|null; financialAmount:number|null; economicAmount:number|null }
 export type ProjectModelFinancialFormDrafts = {
  helpDriven: HelpDrivenProjectForms
  assets: FixedAssetFormDraft[]
@@ -144,9 +145,10 @@ export type ProjectModelFinancialFormDrafts = {
  workingCapital: WorkingCapitalComponentFormDraft[]
  loans: LoanFacilityFormDraft[]
  tax: ProjectTaxFormDraft
+ economic: { discountRatePercent:number|null; adjustments:EconomicAdjustmentFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft()}
+ return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{
