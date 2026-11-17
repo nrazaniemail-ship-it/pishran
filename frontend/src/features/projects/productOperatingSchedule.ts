@@ -61,6 +61,7 @@ export function buildProductOperatingSchedule(
     issues.push('Product identifiers must be present and unique.')
 
   const unitCostByProduct = new Map<string,number>()
+  const periodAdjustmentByProduct = new Map<string,Map<number,number>>()
   for (const cost of drafts.productionCosts) {
     if (!cost || !cost.id) { issues.push('Every production-cost item requires a stable identifier.'); continue }
     const entered = cost.metadata.description.trim()!=='' || cost.standardQuantity!==null ||
@@ -84,20 +85,39 @@ export function buildProductOperatingSchedule(
       issues.push('Production-cost item '+cost.id+' has price escalation; a dated price-index schedule is required before applying it.')
       continue
     }
-    if (cost.adjustments.length) {
-      issues.push('Production-cost item '+cost.id+' contains period adjustments; the adjustment basis must be explicitly normalized before product costing.')
-      continue
-    }
     let unitCost=Number.NaN
     if (cost.basis==='per-unit-output'&&cost.standardQuantity!==null&&cost.standardUnitPrice!==null)
       unitCost=cost.standardQuantity*cost.standardUnitPrice
     else if (cost.basis==='nominal-capacity'&&cost.standardTotal!==null&&cost.nominalCapacity!==null&&cost.nominalCapacity>0)
       unitCost=cost.standardTotal/cost.nominalCapacity
+    else if(cost.basis==='period-adjustments')unitCost=0
     if (!Number.isFinite(unitCost)||unitCost<0) {
-      issues.push('Production-cost item '+cost.id+' requires a supported per-unit-output or nominal-capacity basis with complete non-negative values.')
+      issues.push('Production-cost item '+cost.id+' requires a supported per-unit-output, nominal-capacity or period-adjustments basis with complete non-negative values.')
       continue
     }
     unitCostByProduct.set(cost.productId,(unitCostByProduct.get(cost.productId)??0)+unitCost)
+    if(cost.basis==='period-adjustments'&&!cost.adjustments.length)
+      issues.push('Period-adjustment cost item '+cost.id+' requires at least one dated amount.')
+    for(const adjustment of cost.adjustments){
+      const matches:number[]=[]
+      periods.forEach((period,index)=>{
+        if(adjustment.period===String(index+1)||adjustment.period===String(period.index)||
+          adjustment.period===period.startDate||adjustment.period===period.endDate)matches.push(index)
+      })
+      if(matches.length!==1){issues.push('Production-cost item '+cost.id+' has an unknown or ambiguous adjustment period: '+adjustment.period);continue}
+      const hasUnit=adjustment.quantity!==null&&adjustment.unitPrice!==null
+      const calculated=hasUnit?(adjustment.quantity as number)*(adjustment.unitPrice as number):null
+      if(adjustment.total===null&&calculated===null||adjustment.total!==null&&(!Number.isFinite(adjustment.total)||adjustment.total<0)||
+        calculated!==null&&(!Number.isFinite(calculated)||calculated<0)||
+        adjustment.total!==null&&calculated!==null&&Math.abs(adjustment.total-calculated)>0.01){
+        issues.push('Production-cost item '+cost.id+' has an incomplete or inconsistent adjustment in period '+(matches[0]+1)+'.')
+        continue
+      }
+      const amount=adjustment.total??calculated as number
+      const productAdjustments=periodAdjustmentByProduct.get(cost.productId)??new Map<number,number>()
+      productAdjustments.set(matches[0],(productAdjustments.get(matches[0])??0)+amount)
+      periodAdjustmentByProduct.set(cost.productId,productAdjustments)
+    }
   }
 
   const periodRevenue=Array(count).fill(0) as number[]
@@ -156,8 +176,14 @@ export function buildProductOperatingSchedule(
         issues.push('Product '+sale.productId+' sales exceed opening inventory plus non-negative production in period '+(index+1)+'.')
         continue
       }
-      const unitProductionCost=unitCostByProduct.get(sale.productId) as number
-      const productionCost=Math.max(0,productionQuantity)*unitProductionCost
+      const baseUnitProductionCost=unitCostByProduct.get(sale.productId) as number
+      const periodAdjustment=periodAdjustmentByProduct.get(sale.productId)?.get(index)??0
+      if(periodAdjustment>0&&productionQuantity<=0){issues.push('Product '+sale.productId+' has period production costs but no production quantity in period '+(index+1)+'.');continue}
+      if(productionQuantity>0&&baseUnitProductionCost===0&&!periodAdjustmentByProduct.get(sale.productId)?.has(index)){
+        issues.push('Product '+sale.productId+' has no production-cost amount for period '+(index+1)+'.');continue
+      }
+      const productionCost=Math.max(0,productionQuantity)*baseUnitProductionCost+periodAdjustment
+      const unitProductionCost=productionQuantity>0?productionCost/productionQuantity:baseUnitProductionCost
       const availableQuantity=openingQuantity+Math.max(0,productionQuantity)
       const availableValue=openingValue+productionCost
       if(availableQuantity<=0&&(salesQuantity>0||closingQuantity>0)) {
