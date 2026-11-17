@@ -64,6 +64,7 @@ export function buildProjectLoanDraftIntegration(
     if(loan.capitalizedInterestPercent===0&&loan.capitalizeUntilDate)
       issues.push(prefix+'remove the capitalization end date when interest capitalization is zero.')
     if(loan.fees.length)issues.push(prefix+'fee rates need explicit fee amounts, dates and fee bases before they can enter cash flow.')
+    if(loan.interestPaymentMonth!==null)issues.push(prefix+'intra-period interest payment month is not yet modeled; use the project-period interest settlement convention or leave this field blank.')
     if(loan.marketOrigin===null||loan.loanType===null)issues.push(prefix+'select the loan type and currency origin.')
     const currencyResolution=resolveLoanFacilityCurrency(loan,foundation)
     if(!currencyResolution.valid)issues.push(...currencyResolution.issues.map(item=>prefix+item))
