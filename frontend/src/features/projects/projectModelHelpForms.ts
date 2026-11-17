@@ -118,14 +118,21 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
  for(const sectionId of Object.keys(value.sections))if(!knownSections.has(sectionId))errors.push('help-forms:unknown-section:'+sectionId)
  for(const section of HELP_FORM_SECTIONS){
   const rows=value.sections?.[section.id]??[]
+  if(!Array.isArray(rows)){errors.push(section.id+':rows-must-be-array');continue}
   if(!section.repeatable&&rows.length!==1)errors.push(section.id+':expected-single-record')
-  if(new Set(rows.map(row=>row.id)).size!==rows.length)errors.push(section.id+':duplicate-row-id')
+  if(new Set(rows.map(row=>row?.id)).size!==rows.length)errors.push(section.id+':duplicate-row-id')
+  const allowedFields=new Set(section.fields.map(field=>field.key))
   for(const [i,row] of rows.entries()){
+   if(!row||typeof row!=='object'||typeof row.id!=='string'||!row.id.trim()){errors.push(section.id+':'+i+':invalid-row-id');continue}
+   if(!row.values||typeof row.values!=='object'||Array.isArray(row.values)){errors.push(section.id+':'+i+':invalid-values-object');continue}
+   for(const fieldKey of Object.keys(row.values))if(!allowedFields.has(fieldKey))errors.push(section.id+':'+i+':unknown-field:'+fieldKey)
    for(const field of section.fields){
-    const v=row.values?.[field.key]
+    const v=row.values[field.key]
     if(v===undefined){errors.push(section.id+':'+i+':missing-field:'+field.key);continue}
     if((field.type==='number'||field.type==='percent')&&v!==null&&v!==''&&(typeof v!=='number'||!Number.isFinite(v)))errors.push(section.id+':'+i+':invalid-number:'+field.key)
     if(field.type==='percent'&&typeof v==='number'&&(v<0||v>100))errors.push(section.id+':'+i+':percent-out-of-range:'+field.key)
+    if(field.type==='boolean'&&v!==null&&v!==''&&typeof v!=='boolean')errors.push(section.id+':'+i+':invalid-boolean:'+field.key)
+    if((field.type==='text'||field.type==='date'||field.type==='select')&&v!==null&&typeof v!=='string')errors.push(section.id+':'+i+':invalid-text:'+field.key)
     if(field.type==='select'&&v!==null&&v!==''&&field.options&&!field.options.includes(String(v)))errors.push(section.id+':'+i+':invalid-option:'+field.key)
    }
    const q=row.values.quantity,p=row.values.unitPrice,t=row.values.total

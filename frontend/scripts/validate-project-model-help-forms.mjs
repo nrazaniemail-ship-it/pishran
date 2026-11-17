@@ -84,6 +84,17 @@ try {
  assert.ok(h.validateHelpDrivenProjectForms(invalidType).includes('products:0:invalid-text:name'))
  assert.throws(()=>h.updateHelpFormRow(draft.helpDriven,'products','products-main','unknownField',1),/unknown-help-form-field/)
  assert.throws(()=>h.updateHelpFormRow(draft.helpDriven,'unknown-section','x','name','x'),/unknown-help-form-section/)
+ let invalidSection={...draft.helpDriven,sections:{...draft.helpDriven.sections,unexpected:[]}}
+ assert.ok(h.validateHelpDrivenProjectForms(invalidSection).includes('help-forms:unknown-section:unexpected'))
+ let invalidField=h.addHelpFormRow(draft.helpDriven,'products','invalid-field')
+ invalidField={...invalidField,sections:{...invalidField.sections,products:invalidField.sections.products.map(row=>({...row,values:{...row.values,unregisteredInput:12}}))}}
+ assert.ok(h.validateHelpDrivenProjectForms(invalidField).includes('products:0:unknown-field:unregisteredInput'))
+ let invalidType=h.addHelpFormRow(draft.helpDriven,'products','invalid-type')
+ invalidType=h.updateHelpFormRow(invalidType,'products','invalid-type','name','Product A')
+ invalidType={...invalidType,sections:{...invalidType.sections,products:invalidType.sections.products.map(row=>({...row,values:{...row.values,name:42}}))}}
+ assert.ok(h.validateHelpDrivenProjectForms(invalidType).includes('products:0:invalid-text:name'))
+ assert.throws(()=>h.updateHelpFormRow(draft.helpDriven,'products','products-main','unknownField',1),/unknown-help-form-field/)
+ assert.throws(()=>h.updateHelpFormRow(draft.helpDriven,'unknown-section','x','name','x'),/unknown-help-form-section/)
  console.log('COMFAR help form coverage tests passed')
 } finally {
  await rm(temp,{recursive:true,force:true})
