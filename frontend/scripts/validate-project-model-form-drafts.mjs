@@ -35,6 +35,7 @@ try {
  const blankWorkingCapital=forms.createBlankWorkingCapitalComponentFormDraft()
  assert.equal(blankWorkingCapital.openingBalance,null,'Raw working-capital opening balance must remain unspecified')
  assert.equal(blankWorkingCapital.category,null,'Raw working-capital category must remain unspecified')
+ assert.equal(blankWorkingCapital.recoveryPercent,null,'Raw working-capital recovery must remain unspecified')
  const blankSales=forms.createBlankSalesProductFormDraft()
  assert.equal(blankSales.openingFinishedGoodsQuantity,null,'Raw opening finished-goods quantity must not be silently assumed to be zero')
  assert.deepEqual(blankSales.periods,[])
@@ -59,6 +60,8 @@ try {
  const complete=forms.createBlankProjectModelFinancialFormDrafts()
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts(complete),[])
  const invalidFinishedGoodsCoverage={...complete,sales:[{...forms.createBlankSalesProductFormDraft('p1'),finishedGoodsDaysCoverage:0}]}
+ const invalidWorkingCapitalRecovery={...complete,workingCapital:[{...blankWorkingCapital,id:'wc-recovery',recoveryPercent:101}]}
+ assert.ok(forms.validateProjectModelFinancialFormDrafts(invalidWorkingCapitalRecovery).includes('working-capital-0:invalid-recovery-percent'))
  assert.ok(forms.validateProjectModelFinancialFormDrafts(invalidFinishedGoodsCoverage).includes('sales-0:invalid-finished-goods-days-coverage'))
  const balancedOpening={enabled:true,cash:10,inventory:20,workInProgress:0,finishedGoods:0,receivables:0,otherCurrentAssets:0,tradePayables:5,otherCurrentLiabilities:0,grossFixedAssets:100,accumulatedDepreciation:0,deferredPreOperatingAssets:0,shortTermDebt:10,longTermDebt:20,shareCapital:95,retainedEarnings:0}
  assert.deepEqual(forms.validateOpeningBalanceSheetDraft(balancedOpening),[],'Trade payables must be included in liabilities, not subtracted from total assets')
@@ -106,6 +109,8 @@ try {
  assert.match(financialFormsPanelSource,/value=\{item\.calculationMode\?\?''\}/,'Working-capital forms must expose calculation mode')
  assert.match(financialFormsPanelSource,/value=\{item\.activityBasis\?\?''\}/,'Working-capital forms must expose activity basis')
  assert.match(financialFormsPanelSource,/value=\{item\.valuationBasis\?\?''\}/,'Working-capital forms must expose valuation basis')
+ assert.match(financialFormsPanelSource,/value=\{item\.recoveryPercent\?\?null\}/,'Working-capital forms must expose final-period recovery percentage')
+ assert.match(financialFormsPanelSource,/pre-recovery balance in the final period/,'Working-capital forms must explain when recovery is applied')
  assert.match(financialFormsPanelSource,/value="value"/,'Working-capital forms must offer value-mode calculations')
  assert.match(financialFormsPanelSource,/value="sales"/,'Working-capital forms must offer sales activity')
  assert.match(financialFormsPanelSource,/value="production"/,'Working-capital forms must offer production activity')
