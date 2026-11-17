@@ -320,4 +320,14 @@ assert.equal(preproductionModel.valid,true,preproductionModel.issues.join('; '))
 assert.deepEqual(preproductionModel.financeInput.annualPreOperatingCost,[100,0])
 assert.ok(preproductionModel.fixedAssets.assets.some(asset=>asset.assetClass==='preproduction'))
 
-console.log('Unified project form orchestration, pre-production amortization and opening-balance-sheet validation passed.')
+let unsupportedDiscountingHelp=helpForms.createBlankHelpDrivenProjectForms()
+unsupportedDiscountingHelp=helpForms.updateHelpFormRow(unsupportedDiscountingHelp,'discounting','discounting-main','shortNpvYears',3)
+const unsupportedDiscountingModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:unsupportedDiscountingHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(unsupportedDiscountingModel.valid,false)
+assert.ok(unsupportedDiscountingModel.issues.some(issue=>issue.includes('discounting.shortNpvYears')&&issue.includes('not yet connected')))
+
+console.log('Unified project form orchestration, pre-production amortization, input-coverage guards and opening-balance-sheet validation passed.')
