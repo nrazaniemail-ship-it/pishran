@@ -10,6 +10,13 @@ export type WorkingCapitalComponentPeriodRow = {
   signedAmount: number
 }
 
+export type WorkingCapitalDriverBases = {
+  /** Period production cost, before inventory valuation. */
+  costOfProductionByPeriod?: readonly number[]
+  /** Period cost of goods sold after finished-goods valuation. */
+  costOfSalesByPeriod?: readonly number[]
+}
+
 export type WorkingCapitalDraftSchedule = {
   valid: boolean
   issues: string[]
@@ -31,6 +38,7 @@ export function buildWorkingCapitalScheduleFromDrafts(
   periods: ProjectCalendarPeriod[],
   openingWorkingCapital: number,
   salesRevenueByPeriod?: readonly number[],
+  driverBases: WorkingCapitalDriverBases = {},
 ): WorkingCapitalDraftSchedule {
   const issues: string[] = []
   const count = periods.length
@@ -106,16 +114,38 @@ export function buildWorkingCapitalScheduleFromDrafts(
       issues.push(prefix + 'activity-basis-requires-days-coverage-driver')
     if (!driverEnabled && component.calculationMode === 'units')
       issues.push(prefix + 'unit-mode-requires-quantity-valuation-adapter')
+    let driverBase: readonly number[] | undefined
+    let driverBaseKind: 'sales-revenue' | 'period-cost' | null = null
     if (driverEnabled) {
       if (component.calculationMode !== 'value')
         issues.push(prefix + 'days-coverage-requires-value-calculation-mode')
-      if (component.activityBasis !== 'sales')
-        issues.push(prefix + 'current-period-production-activity-basis-is-not-supported-for-days-coverage')
-      if (component.valuationBasis !== 'sales-revenue' || component.category !== 'receivables')
-        issues.push(prefix + 'days-coverage-currently-supports-sales-revenue-receivables-only')
-      if (!salesRevenueByPeriod || salesRevenueByPeriod.length !== count ||
-          salesRevenueByPeriod.some(value => !Number.isFinite(value) || value < 0))
-        issues.push(prefix + 'valid-period-sales-revenue-base-required')
+      if (component.valuationBasis === 'sales-revenue' && component.category === 'receivables' && component.activityBasis === 'sales') {
+        driverBase = salesRevenueByPeriod
+        driverBaseKind = 'sales-revenue'
+      } else if (component.valuationBasis === 'cost-of-production' &&
+        (component.category === 'inventory' || component.category === 'work-in-progress' || component.category === 'payables') &&
+        component.activityBasis === 'production') {
+        driverBase = driverBases.costOfProductionByPeriod
+        driverBaseKind = 'period-cost'
+      } else if (component.valuationBasis === 'cost-of-sales' && component.category === 'payables' && component.activityBasis === 'sales') {
+        driverBase = driverBases.costOfSalesByPeriod
+        driverBaseKind = 'period-cost'
+      } else {
+        issues.push(prefix + 'days-coverage-driver-not-supported-for-component-and-valuation-basis')
+      }
+      if (!driverBase || driverBase.length !== count || driverBase.some(value => !Number.isFinite(value) || value < 0))
+        issues.push(prefix + (driverBaseKind === 'sales-revenue'
+          ? 'valid-period-sales-revenue-base-required'
+          : driverBaseKind === 'period-cost'
+            ? 'valid-period-cost-base-required'
+            : 'valid-period-driver-base-required'))
+    }
+    const deriveDriverBalance = (periodIndex: number, coverageDays: number) => {
+      const base = driverBase?.[periodIndex]
+      if (base === undefined) return Number.NaN
+      if (driverBaseKind === 'sales-revenue') return base * coverageDays / 360
+      const periodDays = periods[periodIndex]?.days
+      return Number.isFinite(periodDays) && periodDays > 0 ? base * coverageDays / periodDays : Number.NaN
     }
     const resolved = new Map<number, number>()
     for (const balance of component.periodBalances) {
@@ -130,17 +160,14 @@ export function buildWorkingCapitalScheduleFromDrafts(
         continue
       }
       let amount = balance.amount
-      if (amount === null && driverEnabled && salesRevenueByPeriod) {
-        const days = hasDays ? daysCoverage! : 360 / turnover!
-        amount = salesRevenueByPeriod[periodIndex] * days / 360
-      }
+      const coverageDays = hasDays ? daysCoverage! : 360 / turnover!
+      if (amount === null && driverEnabled) amount = deriveDriverBalance(periodIndex, coverageDays)
       if (amount === null || !Number.isFinite(amount) || amount < 0) {
         issues.push(prefix + 'missing-or-invalid-balance:' + (periodIndex + 1))
         continue
       }
-      if (driverEnabled && salesRevenueByPeriod) {
-        const days = hasDays ? daysCoverage! : 360 / turnover!
-        const derived = salesRevenueByPeriod[periodIndex] * days / 360
+      if (driverEnabled) {
+        const derived = deriveDriverBalance(periodIndex, coverageDays)
         if (balance.amount !== null && Math.abs(balance.amount - derived) > 0.01)
           issues.push(prefix + 'explicit-balance-does-not-reconcile-to-days-coverage:' + (periodIndex + 1))
       }
@@ -198,12 +225,13 @@ export function bindWorkingCapitalDraftsToPeriodicFinance(
   input: PeriodicProjectFinanceInput,
   drafts: Pick<ProjectModelFinancialFormDrafts, 'workingCapital'>,
   openingWorkingCapital: number,
+  driverBases: WorkingCapitalDriverBases = {},
 ): PeriodicFinanceWorkingCapitalBinding {
   const salesRevenueByPeriod = input.periods.map(period => {
     const fiscalYear = fiscalYearIndexForPeriod(period, input.periods, input.fiscalYearStartMonth)
     return fiscalYear >= 0 && fiscalYear < input.annualRevenue.length ? input.annualRevenue[fiscalYear] : Number.NaN
   })
-  const schedule = buildWorkingCapitalScheduleFromDrafts(drafts, input.periods, openingWorkingCapital, salesRevenueByPeriod)
+  const schedule = buildWorkingCapitalScheduleFromDrafts(drafts, input.periods, openingWorkingCapital, salesRevenueByPeriod, driverBases)
   if (!schedule.valid) return { valid: false, issues: schedule.issues, financeInput: null, schedule }
   return {
     valid: true,
