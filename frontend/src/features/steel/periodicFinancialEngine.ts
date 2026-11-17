@@ -1679,6 +1679,7 @@ function scalePeriodicOperatingInput(
     periodVariableCost:scale(input.periodVariableCost,variableCostFactor*volumeFactor),
     annualFixedCost:input.annualFixedCost.map(value=>value*fixedCostFactor),
     annualDepreciation:input.annualDepreciation.map(value=>value*capexFactor),
+    periodDepreciationSchedule:scale(input.periodDepreciationSchedule,capexFactor),
     annualFixedInvestment:input.annualFixedInvestment.map(value=>value*capexFactor),
     annualPreOperatingCost:input.annualPreOperatingCost.map(value=>value*capexFactor),
     annualMaintenanceCapex:input.annualMaintenanceCapex.map(value=>value*capexFactor),
