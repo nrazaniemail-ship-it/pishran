@@ -586,9 +586,19 @@ export type PeriodicProjectLoan = {
   id: string
   input: PeriodicLoanInput
 }
+export type ComfarAutomaticFundingRow = {
+  period: number
+  automaticEquity: number
+  automaticOverdraftDrawdown: number
+  automaticOverdraftRepayment: number
+  automaticOverdraftBalance: number
+}
+
 export type PeriodicProjectFinanceInput = {
   periods: ProjectCalendarPeriod[]
   fiscalYearStartMonth: number
+  /** Number of initial periods belonging to construction; subsequent deficits use an automatic overdraft. */
+  constructionPeriodCount?: number
   dayCountBasis: 360 | 365
   cashFlowTiming: PeriodCashFlowTiming
   annualRevenue: number[]
@@ -708,6 +718,10 @@ export type PeriodicProjectFinanceResult = {
   peakWorkingCapital: number
   peakFundingGap: number
   openingCash: number
+  automaticFundingSchedule: ComfarAutomaticFundingRow[]
+  totalAutomaticEquity: number
+  peakAutomaticOverdraft: number
+  closingAutomaticOverdraft: number
   warnings: string[]
 }
 
@@ -882,7 +896,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const empty = (): PeriodicProjectFinanceResult => ({
     valid: false, rows: [], loanSchedules: {}, npvProject: null, presentValueInvestment: null, npvrProject: null, irrProject: null, mirrProject: null,
     npvEquity: null, irrEquity: null, mirrEquity: null, totalDebtDrawdown: 0,
-    totalEquityContribution: 0, totalCapitalizedInterest: 0, peakWorkingCapital: 0, peakFundingGap: 0, openingCash: input.openingCash ?? 0, warnings
+    totalEquityContribution: 0, totalCapitalizedInterest: 0, peakWorkingCapital: 0, peakFundingGap: 0, openingCash: input.openingCash ?? 0,
+    automaticFundingSchedule:[],totalAutomaticEquity:0,peakAutomaticOverdraft:0,closingAutomaticOverdraft:0,warnings
   })
   if (input.minimumDscr != null && (!validFinite(input.minimumDscr) || input.minimumDscr <= 0)) warnings.push('Minimum DSCR covenant must be a positive finite multiple.')
   if (!periods.length || (input.salvageValue != null && (!validFinite(input.salvageValue) || input.salvageValue < 0)) ||
@@ -1118,6 +1133,36 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     cashBalance = closingCash
     priorWorkingCapital = closingWorkingCapital
   }
+  const constructionPeriodCount = Math.max(0,Math.min(periods.length,Math.floor(input.constructionPeriodCount ?? 0)))
+  let rawCashBalance = input.openingCash ?? 0
+  let automaticallyFundedCashBalance = input.openingCash ?? 0
+  let automaticOverdraftBalance = 0
+  const automaticFundingSchedule: ComfarAutomaticFundingRow[] = rows.map((row,index) => {
+    const periodCashChange = row.closingCash - rawCashBalance
+    rawCashBalance = row.closingCash
+    automaticallyFundedCashBalance += periodCashChange
+    let automaticEquity = 0
+    let automaticOverdraftDrawdown = 0
+    let automaticOverdraftRepayment = 0
+    if (index < constructionPeriodCount) {
+      if (automaticallyFundedCashBalance < 0) {
+        automaticEquity = -automaticallyFundedCashBalance
+        automaticallyFundedCashBalance = 0
+      }
+    } else if (automaticallyFundedCashBalance < 0) {
+      automaticOverdraftDrawdown = -automaticallyFundedCashBalance
+      automaticOverdraftBalance += automaticOverdraftDrawdown
+      automaticallyFundedCashBalance = 0
+    } else if (automaticallyFundedCashBalance > 0 && automaticOverdraftBalance > 0) {
+      automaticOverdraftRepayment = Math.min(automaticallyFundedCashBalance,automaticOverdraftBalance)
+      automaticallyFundedCashBalance -= automaticOverdraftRepayment
+      automaticOverdraftBalance -= automaticOverdraftRepayment
+    }
+    return {period:row.period,automaticEquity,automaticOverdraftDrawdown,automaticOverdraftRepayment,automaticOverdraftBalance}
+  })
+  const totalAutomaticEquity = automaticFundingSchedule.reduce((sum,row)=>sum+row.automaticEquity,0)
+  const peakAutomaticOverdraft = Math.max(0,...automaticFundingSchedule.map(row=>row.automaticOverdraftBalance))
+  const closingAutomaticOverdraft = automaticFundingSchedule.at(-1)?.automaticOverdraftBalance ?? 0
   const projectFlows = rows.map(row=>row.projectFreeCashFlow)
   const equityFlows = rows.map(row=>row.equityFreeCashFlow)
   const investmentFlows = rows.map(row=>row.fixedInvestment + row.preOperatingCost + Math.max(0,row.changeInWorkingCapital))
@@ -1141,7 +1186,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     valid:true,rows,loanSchedules,npvProject,presentValueInvestment,npvrProject,irrProject:calculatePeriodicIrr(projectFlows,periods,dayCountBasis,cashFlowTiming),
     mirrProject,npvEquity,irrEquity:calculatePeriodicIrr(equityFlows,periods,dayCountBasis,cashFlowTiming),mirrEquity,
     totalDebtDrawdown,totalEquityContribution,totalCapitalizedInterest,
-    peakWorkingCapital:Math.max(0,...input.workingCapitalByPeriod),peakFundingGap,openingCash:input.openingCash??0,warnings
+    peakWorkingCapital:Math.max(0,...input.workingCapitalByPeriod),peakFundingGap,openingCash:input.openingCash??0,
+    automaticFundingSchedule,totalAutomaticEquity,peakAutomaticOverdraft,closingAutomaticOverdraft,warnings
   }
 }
 
