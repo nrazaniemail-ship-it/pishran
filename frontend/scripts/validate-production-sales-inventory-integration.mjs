@@ -182,3 +182,37 @@ const valueWithoutQuantity=adapter.calculateFinishedGoodsWeightedAverage({
 assert.equal(valueWithoutQuantity.valid,false)
 assert.ok(valueWithoutQuantity.issues.some(x=>x.includes('without available quantity')))
 console.log('Finished-goods weighted-average cost-flow tests passed.')
+
+
+const weightedAverageSchedule=adapter.calculateFinishedGoodsWeightedAverageSchedule({
+ openingQuantity:10,openingValue:1000,
+ periods:[
+  {period:'P1',productionQuantity:10,productionCost:1400,salesQuantity:12,closingQuantity:8},
+  {period:'P2',productionQuantity:12,productionCost:1800,salesQuantity:15,closingQuantity:5},
+ ]
+})
+assert.equal(weightedAverageSchedule.valid,true,weightedAverageSchedule.issues.join('; '))
+assert.equal(weightedAverageSchedule.periods.length,2)
+assert.equal(weightedAverageSchedule.periods[0].weightedAverageUnitCost,120)
+assert.equal(weightedAverageSchedule.periods[0].costOfGoodsSold,1440)
+assert.equal(weightedAverageSchedule.periods[0].closingInventoryValue,960)
+assert.equal(weightedAverageSchedule.periods[1].openingQuantity,8)
+assert.equal(weightedAverageSchedule.periods[1].openingValue,960)
+assert.equal(weightedAverageSchedule.periods[1].availableQuantity,20)
+assert.equal(weightedAverageSchedule.periods[1].availableValue,2760)
+assert.equal(weightedAverageSchedule.periods[1].weightedAverageUnitCost,138)
+assert.equal(weightedAverageSchedule.periods[1].costOfGoodsSold,2070)
+assert.equal(weightedAverageSchedule.periods[1].closingInventoryValue,690)
+assert.equal(weightedAverageSchedule.closingQuantity,5)
+assert.equal(weightedAverageSchedule.closingValue,690)
+
+const brokenCarryForward=adapter.calculateFinishedGoodsWeightedAverageSchedule({
+ openingQuantity:10,openingValue:1000,
+ periods:[
+  {period:'P1',productionQuantity:10,productionCost:1400,salesQuantity:12,closingQuantity:8},
+  {period:'P1',productionQuantity:12,productionCost:1800,salesQuantity:15,closingQuantity:5},
+ ]
+})
+assert.equal(brokenCarryForward.valid,false)
+assert.ok(brokenCarryForward.issues.some(issue=>issue.includes('non-empty and unique')))
+console.log('Finished-goods multi-period weighted-average roll-forward tests passed.')
