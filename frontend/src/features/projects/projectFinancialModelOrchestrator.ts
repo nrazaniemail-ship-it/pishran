@@ -1,4 +1,4 @@
-import type { ProjectFoundation } from './projectFoundation'
+import type { ProjectFoundation, ProjectCalendarPeriod } from './projectFoundation'
 import { validateOpeningBalanceSheetDraft, validateProjectModelCrossReferences, type ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import { validateHelpDrivenProjectForms, validateHelpDrivenProjectPeriods, type HelpDrivenProjectForms } from './projectModelHelpForms'
 import type { PeriodicProjectFinanceInput, PeriodicStatementOpeningBalances } from '../steel/periodicFinancialEngine'
@@ -18,6 +18,57 @@ import {
   calculatePeriodicFinanceWithForeignCurrencyLoans,
   type ForeignCurrencyFinanceRunResult,
 } from './foreignCurrencyLoanFinanceBinding'
+
+export function bindHelpDrivenFoundation(
+  foundation:ProjectFoundation,
+  forms:HelpDrivenProjectForms|undefined,
+  periods:readonly ProjectCalendarPeriod[],
+):{foundation:ProjectFoundation;issues:string[]} {
+  if(!forms)return {foundation,issues:[]}
+  const issues:string[]=[]
+  let result=f​​oundation
+  const rows=(id:string)=>forms.sections?.[id]??[]
+  const currencies=rows('currencies')
+  if(currencies.length){
+    const local=currencies.find(row=>row.values.type==='local')
+    if(!local){issues.push('A local currency is required in the help-driven currency directory.');return {foundation,issues}}
+    const localCode=String(local.values.code??'').trim().toUpperCase()
+    const localName=String(local.values.name??'').trim()
+    const resolvePeriod=(key:string,date?:string):string|null=>{
+      const match=periods.find(period=>key===String(period.index)||key===String(period.index+1)||
+        key===period.startDate||key===period.endDate||
+        (key.length===7&&key===period.startDate.slice(0,7)&&key===period.endDate.slice(0,7))||
+        (date!=null&&date>=period.startDate&&date<=period.endDate))
+      return match?String(match.index):null
+    }
+    const rateRows=rows('currency-rates')
+    const foreignCurrencies=currencies.filter(row=>row.values.type==='foreign').map(row=>{
+      const code=String(row.values.code??'').trim().toUpperCase()
+      const rates=rateRows.filter(rate=>String(rate.values.currencyCode??'').trim().toUpperCase()===code)
+      const mapped=rates.map(rate=>{
+        const period=resolvePeriod(String(rate.values.period??'').trim(),typeof rate.values.effectiveDate==='string'?rate.values.effectiveDate:undefined)
+        if(!period||typeof rate.values.exchangeRate!=='number'||!Number.isFinite(rate.values.exchangeRate)||rate.values.exchangeRate<=0){
+          issues.push('Invalid or out-of-calendar exchange-rate row for '+code+'.')
+          return null
+        }
+        return {period,rateToLocal:rate.values.exchangeRate}
+      }).filter((rate):rate is {period:string;rateToLocal:number}=>rate!==null)
+      if(!mapped.length&&typeof row.values.exchangeRate==='number'&&typeof row.values.effectiveDate==='string'){
+        const period=resolvePeriod('',row.values.effectiveDate)
+        if(period)mapped.push({period,rateToLocal:row.values.exchangeRate})
+      }
+      if(!mapped.length)issues.push('Foreign currency '+code+' requires at least one dated period exchange rate.')
+      return {id:row.id,code,name:String(row.values.name??'').trim(),exchangeRates:mapped}
+    })
+    result={...result,currencies:{...result.currencies,localCurrencyCode:localCode,localCurrencyName:localName,foreignCurrencies}}
+  }
+  const costCentres=rows('cost-centres')
+  if(costCentres.length)result={...result,costCentres:{active:true,items:costCentres.map(row=>({
+    id:row.id,code:row.id,name:String(row.values.name??'').trim(),
+    ...(typeof row.values.parentId==='string'&&row.values.parentId.trim()?{parentId:row.values.parentId.trim()}:{}),
+  }))}}
+  return {foundation:result,issues}
+}
 
 export type ProjectFinancialModelOrchestrationInput={
   finance:PeriodicProjectFinanceInput
@@ -53,6 +104,9 @@ export function calculateProjectFinancialModelFromDrafts(
   input:ProjectFinancialModelOrchestrationInput,
 ):ProjectFinancialModelOrchestrationResult {
   let finance=input.finance
+  const foundationBinding=bindHelpDrivenFoundation(input.foundation,input.drafts.helpDriven,input.finance.periods)
+  if(foundationBinding.issues.length)return {valid:false,issues:foundationBinding.issues,financeInput:null,productionSales:null,workingCapital:null,fixedAssets:null,finalRun:null}
+  const effectiveFoundation=foundationBinding.foundation
   let productionSales:ProductionSalesInventorySchedule|null=null
   let workingCapital:WorkingCapitalDraftSchedule|null=null
   let fixedAssets:FixedAssetFinanceBinding|null=null
@@ -180,7 +234,7 @@ export function calculateProjectFinancialModelFromDrafts(
   }
   if(input.drafts.assets.length) {
     fixedAssets=bindFixedAssetDraftsToPeriodicFinance({
-      finance,assets:input.drafts.assets,foundation:input.foundation,
+      finance,assets:input.drafts.assets,foundation:effectiveFoundation,
       productionStartDate:input.productionStartDate,
     })
     if(!fixedAssets.valid||!fixedAssets.financeInput)return fail(fixedAssets.issues)
@@ -208,7 +262,7 @@ export function calculateProjectFinancialModelFromDrafts(
     .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
     .map(loan=>[loan.id,loan.openingExchangeRateToLocal as number]))}
   const finalRun=calculatePeriodicFinanceWithForeignCurrencyLoans({
-    finance,loans:input.drafts.loans,foundation:input.foundation,
+    finance,loans:input.drafts.loans,foundation:effectiveFoundation,
     openingBalances,taxTreatment:input.taxTreatment,
     openingTaxLossCarryForward:input.openingTaxLossCarryForward,
     openingForeignBalances,openingExchangeRatesToLocal,
