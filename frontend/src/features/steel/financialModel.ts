@@ -379,6 +379,12 @@ export type IntegratedFinanceInput = {
   fullCapacityRevenue: number
   fullCapacityVariableCashCost: number
   fullCapacityFixedCashCost: number
+  /** Sales tax charged on net product sales; excluded from project revenue. */
+  salesTaxPercent?: number
+  /** Price subsidy as a percentage of net sales. */
+  subsidyPercent?: number
+  /** Absolute subsidies by model year, aggregated with percentage subsidies. */
+  annualSubsidyAbsoluteSchedule?: number[]
   annualDepreciation: number
   depreciationSchedule?: number[]
   maintenanceCapexSchedule?: number[]
@@ -426,6 +432,10 @@ export type IntegratedFinanceYear = {
   utilization: number
   production: number
   revenue: number
+  netSalesRevenue: number
+  grossSalesRevenue: number
+  salesTax: number
+  subsidy: number
   variableCashCost: number
   fixedCashCost: number
   depreciation: number
@@ -575,7 +585,14 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const operatingYear = Math.max(0, year - constructionYears - 1)
     const salesFactor = Math.pow(1 + Math.max(-99, input.salesEscalationPercent) / 100, operatingYear)
     const opexFactor = Math.pow(1 + Math.max(-99, input.opexEscalationPercent) / 100, operatingYear)
-    const revenue = Math.max(0, input.fullCapacityRevenue) * utilization * salesFactor
+    const netSalesRevenue = Math.max(0, input.fullCapacityRevenue) * utilization * salesFactor
+    const salesTaxPercent = Math.max(0, input.salesTaxPercent ?? 0)
+    const subsidyPercent = Math.max(0, input.subsidyPercent ?? 0)
+    const salesTax = netSalesRevenue * salesTaxPercent / 100
+    const subsidy = netSalesRevenue * subsidyPercent / 100 + Math.max(0, Number(input.annualSubsidyAbsoluteSchedule?.[index] ?? 0))
+    const grossSalesRevenue = netSalesRevenue + salesTax
+    // COMFAR sales revenue excludes sales tax but includes price subsidies.
+    const revenue = netSalesRevenue + subsidy
     const variableCashCost = Math.max(0, input.fullCapacityVariableCashCost) * utilization * opexFactor
     const fixedCashCost = year > constructionYears && utilization > 0 ? Math.max(0, input.fullCapacityFixedCashCost) * opexFactor : 0
     const depreciation = year > constructionYears && utilization > 0 ? Math.max(0, Number(input.depreciationSchedule?.[index] ?? input.annualDepreciation)) : 0
@@ -641,7 +658,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     }
 
     annualRows.push({
-      year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
+      year, utilization, production: Math.max(0, input.capacity) * utilization, revenue, netSalesRevenue, grossSalesRevenue, salesTax, subsidy,
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
       equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, salvageBookValueDisposed, salvageGainLoss, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
@@ -681,6 +698,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     fixedCostCaps.forEach(([label, fixed, total]) => { if (Number.isFinite(fixed) && Number.isFinite(total) && fixed > total) warnings.push(`${label} از کل مبنای هزینه بیشتر است؛ در محاسبه به سقف کل هزینه محدود می‌شود.`) })
   }
   if (input.taxRateSchedule?.some(rate => !Number.isFinite(rate) || rate < 0 || rate > 100)) warnings.push('نرخ مالیات عملکرد سالانه باید در تمام دوره‌ها بین صفر تا ۱۰۰ درصد باشد.')
+  if (![input.salesTaxPercent ?? 0,input.subsidyPercent ?? 0].every(value=>Number.isFinite(value)&&value>=0)) warnings.push('نرخ مالیات فروش و یارانه قیمت باید عددی معتبر و نامنفی باشد.')
+  if (input.annualSubsidyAbsoluteSchedule?.some(value=>!Number.isFinite(value)||value<0)) warnings.push('یارانه مطلق هر سال باید عددی معتبر و نامنفی باشد.')
   if (input.taxBrackets && !Number.isFinite(calculateComfarGraduatedTax(1, input.taxBrackets))) warnings.push('پله‌های مالیاتی باید پیوسته، از صفر آغاز و با یک پله بدون سقف خاتمه یابند.')
   if (input.taxHolidayYears !== undefined && (!Number.isInteger(input.taxHolidayYears) || input.taxHolidayYears < 0)) warnings.push('مدت معافیت مالیاتی باید عدد صحیح و نامنفی باشد.')
   if (input.lossCarryForwardYears != null && (!Number.isInteger(input.lossCarryForwardYears) || input.lossCarryForwardYears < 0)) warnings.push('مدت انتقال زیان باید عدد صحیح و نامنفی باشد یا خالی بماند.')
