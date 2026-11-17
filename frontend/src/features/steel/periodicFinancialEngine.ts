@@ -1109,6 +1109,16 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     }
     loanSchedules[loan.id] = schedule.rows
   }
+  if(input.foreignExchangeLossByPeriod){
+    const scheduledFx=input.foreignExchangeLossByPeriod.map((_,index)=>Object.values(loanSchedules).reduce((sum,schedule)=>{
+      const row=schedule[index]
+      return sum+row.closingBalance-row.openingBalance-row.drawdown-row.capitalizedInterest-row.capitalizedFinancingFees+row.principal
+    },0))
+    if(scheduledFx.some((amount,index)=>Math.abs(amount-input.foreignExchangeLossByPeriod![index])>0.01)){
+      warnings.push('Foreign-exchange debt remeasurement does not reconcile to the translated loan schedules.')
+      return empty()
+    }
+  }
   if (input.annualEquityContributions.some(value => value < 0) ||
       !validFinite(input.openingWorkingCapital ?? 0) ||
       (input.openingCash != null && !validFinite(input.openingCash)) ||
