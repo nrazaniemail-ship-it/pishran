@@ -529,6 +529,7 @@ assert.equal(startingBalanceModel.finalRun.statements[0].openingBalances.debt,50
 assert.equal(startingBalanceModel.finalRun.statements[0].openingBalances.paidInCapital,40)
 assert.equal(startingBalanceModel.finalRun.statements[0].openingBalances.retainedEarnings,37)
 assert.deepEqual(startingBalanceModel.financeInput.annualDepreciation,[20,20])
+assert.equal(startingBalanceModel.financeInput.openingWorkingCapital,17)
 assert.equal(startingBalanceModel.finalRun.finance.rows[0].depreciation,20)
 assert.equal(startingBalanceModel.finalRun.statements[0].balanceSheet.reconciled,true)
 
