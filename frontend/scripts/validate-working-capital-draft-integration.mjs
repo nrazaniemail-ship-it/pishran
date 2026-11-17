@@ -168,6 +168,49 @@ assert.ok(Math.abs(costOfSalesPayables.closingWorkingCapital[0] - 400) < 0.00000
 assert.ok(Math.abs(costOfSalesPayables.closingWorkingCapital[1] - (600 - 910 * 20 / 90)) < 0.000001)
 assert.deepEqual(costOfSalesPayables.componentRows.filter(row => row.category === 'payables').map(row => row.signedAmount), [-100, -(910 * 20 / 90)])
 
+const assetRecovery = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'inventory-recovery', name: 'Raw materials', category: 'inventory', openingBalance: 50,
+    minimumDaysCoverage: null, turnoverCoefficient: null, calculationMode: 'value',
+    valuationBasis: 'user-defined', recoveryPercent: 50,
+    periodBalances: [{ period: '1', amount: 100 }, { period: '2', amount: 200 }],
+  }],
+}, periods, 50)
+assert.equal(assetRecovery.valid, true, assetRecovery.issues.join('; '))
+assert.deepEqual(assetRecovery.closingWorkingCapital, [100, 100])
+assert.deepEqual(assetRecovery.changeInWorkingCapital, [50, 0])
+assert.deepEqual(assetRecovery.recoveryImpactByPeriod, [0, -100])
+assert.equal(assetRecovery.componentRows[1].preRecoveryAmount, 200)
+assert.equal(assetRecovery.componentRows[1].recoveredAmount, 100)
+assert.equal(assetRecovery.componentRows[1].amount, 100)
+assert.equal(assetRecovery.componentRows[1].signedRecoveryImpact, -100)
+
+const liabilityRecovery = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [
+    { id: 'asset', name: 'Receivables', category: 'receivables', openingBalance: 100,
+      minimumDaysCoverage: null, turnoverCoefficient: null, calculationMode: 'value', valuationBasis: 'user-defined',
+      recoveryPercent: 0, periodBalances: [{ period: '1', amount: 100 }, { period: '2', amount: 100 }] },
+    { id: 'payable-recovery', name: 'Payables', category: 'payables', openingBalance: 50,
+      minimumDaysCoverage: null, turnoverCoefficient: null, calculationMode: 'value', valuationBasis: 'user-defined',
+      recoveryPercent: 100, periodBalances: [{ period: '1', amount: 50 }, { period: '2', amount: 80 }] },
+  ],
+}, periods, 50)
+assert.equal(liabilityRecovery.valid, true, liabilityRecovery.issues.join('; '))
+assert.deepEqual(liabilityRecovery.closingWorkingCapital, [50, 100])
+assert.deepEqual(liabilityRecovery.recoveryImpactByPeriod, [0, 80])
+assert.equal(liabilityRecovery.componentRows.find(row => row.componentId === 'payable-recovery' && row.period === 2).signedRecoveryImpact, 80)
+
+const invalidRecovery = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'invalid-recovery', name: 'Inventory', category: 'inventory',
+    minimumDaysCoverage: null, turnoverCoefficient: null, calculationMode: 'value',
+    valuationBasis: 'user-defined', recoveryPercent: 101,
+    periodBalances: [{ period: '1', amount: 100 }, { period: '2', amount: 100 }],
+  }],
+}, periods, 0)
+assert.equal(invalidRecovery.valid, false)
+assert.ok(invalidRecovery.issues.some(issue => issue.includes('recovery-percent-must-be-between-0-and-100')))
+
 const missingProductionCostBase = adapter.buildWorkingCapitalScheduleFromDrafts({
   workingCapital: [{
     id: 'inventory', name: 'Raw materials', category: 'inventory',
