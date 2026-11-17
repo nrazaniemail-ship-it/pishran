@@ -90,7 +90,6 @@ export function bindStartingBalancesToPeriodicFinance(input:{
     if(!Number.isFinite(amountLocal)){issues.push('Starting-balance row '+row.id+' overflows after currency translation.');continue}
     switch(category){
       case 'cash-in-hand':
-      case 'short-term-deposits':
       case 'cash-surplus':
         openingBalances.cash!+=amountLocal;openingAssets+=amountLocal;break
       case 'fixed-assets': {
@@ -132,6 +131,9 @@ export function bindStartingBalancesToPeriodicFinance(input:{
         openingBalances.retainedEarnings!+=amountLocal;openingLiabilitiesAndEquity+=amountLocal;break
       case 'deferred-pre-operating-assets':
         openingBalances.deferredPreOperatingAssets!+=amountLocal;openingAssets+=amountLocal;break
+      case 'short-term-deposits':
+        issues.push('Short-term deposits are not treated as immediately available cash; a separate restricted-deposit asset schedule is required.')
+        continue
       case 'other-assets':
         issues.push('Starting-balance category other-assets is ambiguous; classify the balance as other-current-assets, fixed-assets or deferred-pre-operating-assets.')
         continue
