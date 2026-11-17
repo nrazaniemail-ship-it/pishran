@@ -7,7 +7,7 @@ import { HOT_ROLLING_COMFAR_OUTPUT_AUDIT } from '../steel/hotRollingExcelBenchma
 type ReportFormRow = { id:string; name:string; quantity:number; unit:string; unitPrice:number; source:string; valueText?:string; flowType?:'input'|'output' }
 type Props = {
   language: 'fa' | 'en'
-  isHotRollingCoil: boolean
+  isHotRollingCoil?: boolean
   project: { name: string; location: string; owner: string; startYear: number; constructionYears: number; operatingYears: number; currency: string; fxRate: number }
   capacity: number
   sellingPrice: number
@@ -153,8 +153,9 @@ function ReferenceSensitivityChart({ language }: { language:'fa'|'en' }) {
   </div>
 }
 
-function BreakEvenChart({ capacity, chartMaxQuantity, price, variable, fixed, breakEven, currency, language }: { capacity:number; chartMaxQuantity?:number; price:number; variable:number; fixed:number; breakEven:number; currency:string; language:'fa'|'en' }) {
+function BreakEvenChart({ capacity, chartMaxQuantity, price, variable, fixed, breakEven, currency, language, quantityUnit }: { capacity:number; chartMaxQuantity?:number; price:number; variable:number; fixed:number; breakEven:number; currency:string; language:'fa'|'en'; quantityUnit?:string }) {
   const chartMax = chartMaxQuantity ?? capacity
+  const unitLabel=quantityUnit??(language==='en'?'units/year':'واحد/سال')
   const valid = capacity > 0 && chartMax > 0 && price >= 0 && variable >= 0 && fixed >= 0
   if (!valid) return <p className="fw-hint">{t('برای ترسیم نمودار، ظرفیت، قیمت فروش و هزینه‌ها را تکمیل کنید.','Enter capacity, selling price and costs to draw the chart.',language)}</p>
   const maxRevenue = chartMax * price
@@ -179,19 +180,23 @@ function BreakEvenChart({ capacity, chartMaxQuantity, price, variable, fixed, br
       <path d={totalPath} fill="none" stroke="#c75b54" strokeWidth="3"/>
       <path d={revenuePath} fill="none" stroke="#2f9676" strokeWidth="3"/>
       {markerVisible&&<g><line x1={x(breakEven)} x2={x(breakEven)} y1="48" y2="258" stroke="#c28b36" strokeDasharray="4 4" strokeWidth="2"/><circle cx={x(breakEven)} cy={y(breakEven*price)} r="5" fill="#c28b36"/><text x={Math.min(680,x(breakEven)+8)} y={Math.max(45,y(breakEven*price)-10)} fontSize="11" fill="currentColor">{t('نقطه سربه‌سر','Break-even',language)}</text></g>}
-      <text x="374" y="294" textAnchor="middle" fontSize="12" fill="currentColor">{t('حجم تولید (تن در سال)','Production volume (tonnes/year)',language)}</text>
+      <text x="374" y="294" textAnchor="middle" fontSize="12" fill="currentColor">{t('حجم تولید','Production volume',language)} ({unitLabel})</text>
     </svg>
     <div className="fw-grid" style={{gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:8}}>
       {[[t('درآمد فروش','Sales revenue',language),'#2f9676'],[t('هزینه کل','Total cost',language),'#c75b54'],[t('هزینه ثابت','Fixed cost',language),'#9b8c70'],[t('هزینه متغیر','Variable cost',language),'#8a9eaa']].map(([label,color])=><div key={label} className="fw-hint"><span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:color,marginInlineEnd:6}}/>{label}</div>)}
     </div>
-    <div className="fw-validation"><span>{t('مقدار نقطه سربه‌سر','Break-even volume',language)}</span><b>{fmt(breakEven,language)} {t('تن','tonnes',language)} · {fmt(capacity>0?breakEven/capacity*100:NaN,language)}٪ {t('ظرفیت','capacity',language)}</b></div>
+    <div className="fw-validation"><span>{t('مقدار نقطه سربه‌سر','Break-even volume',language)}</span><b>{fmt(breakEven,language)} {unitLabel} · {fmt(capacity>0?breakEven/capacity*100:NaN,language)}٪ {t('ظرفیت','capacity',language)}</b></div>
     {breakEven>capacity&&<p className="fw-hint">{t('نقطه سربه‌سر بالاتر از ظرفیت عملی پروژه است؛ در ظرفیت فعلی، پروژه به حاشیه مشارکت کافی نمی‌رسد.','Break-even exceeds project capacity; the current project does not reach sufficient contribution margin.',language)}</p>}
   </div>
 }
 
 export default function ProjectReportVisuals(props: Props) {
-  const { language, isHotRollingCoil, project } = props
+  const { language, project } = props
+  const isHotRollingCoil = props.isHotRollingCoil === true
   const fmtValue=(value:number|null|undefined,digits=2)=>fmt(value,language,digits)
+  const firstProductUnit=props.products?.find(product=>product.unit.trim())?.unit.trim()??''
+  const productUnit=firstProductUnit.replace(/\s*\/\s*(سال|year)$/i,'').trim()||t('واحد محصول','product unit',language)
+  const annualProductUnit=firstProductUnit||productUnit+(language==='en'?'/year':'/سال')
   const comfarReference = HOT_ROLLING_200KT_AUDIT.alternativeMetricsInWorkbook
   const expectedComfarTaxRates = HOT_ROLLING_COMFAR_OUTPUT_AUDIT.taxScheduleByOperatingYear.map(row=>row.ratePercent)
   const annualComparisonRows = aggregatePeriodicFinanceByFiscalYear(
@@ -231,7 +236,7 @@ export default function ProjectReportVisuals(props: Props) {
   const comfarCurrentNpv = props.periodicResult?.npvProject ?? null
   const comfarCurrentIrr = props.periodicResult?.irrProject ?? null
   const currentRows: [string,string,string][] = [
-    [t('ظرفیت عملی قابل فروش','Saleable capacity',language),fmtValue(props.capacity,0),t('تن در سال','tonnes/year',language)],
+    [t('ظرفیت عملی قابل فروش','Saleable capacity',language),fmtValue(props.capacity,0),annualProductUnit],
     [t('سرمایه‌گذاری ثبت‌شده','Recorded investment',language),fmtValue(props.capex),props.project.currency],
     [t('سرمایه در گردش','Working capital',language),fmtValue(props.workingCapital),props.project.currency],
     [t('آورده / تسهیلات','Equity / debt',language),`${fmtValue(props.equityPercent,1)}% / ${fmtValue(props.debtPercent,1)}%`,t('درصد','percent',language)],
@@ -373,9 +378,9 @@ export default function ProjectReportVisuals(props: Props) {
         </div>}
        </div>}
      </div>}
-     {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ محور نمایش تا ۸۳ هزار تن است، اما درصد ظرفیت بر مبنای ظرفیت واقعی ۲۰۰ هزار تن محاسبه می‌شود.','Reconstructed from the OPEX “Break-even Analysis” sheet. The visible axis ends at 83,000 tonnes, while the capacity percentage uses the actual 200,000-tonne project capacity.',language)}</p><BreakEvenChart capacity={200000} chartMaxQuantity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language}/></>}
+     {isHotRollingCoil&&<><p className="fw-hint">{t('نمودار مرجع بازسازی‌شده از شیت «تحلیل نقطه سر به سر» فایل OPEX؛ محور نمایش تا ۸۳ هزار تن است، اما درصد ظرفیت بر مبنای ظرفیت واقعی ۲۰۰ هزار تن محاسبه می‌شود.','Reconstructed from the OPEX “Break-even Analysis” sheet. The visible axis ends at 83,000 tonnes, while the capacity percentage uses the actual 200,000-tonne project capacity.',language)}</p><BreakEvenChart capacity={200000} chartMaxQuantity={83000} price={311.298} variable={207.196445} fixed={2568789} breakEven={24675.79855075171} currency="میلیون ریال" language={language} quantityUnit="تن در سال"/></>}
       <h4>{t('نقطه سربه‌سر بر اساس مفروضات جاری پروژه','Break-even Based on Current Project Assumptions',language)}</h4>
-      <BreakEvenChart capacity={props.capacity} price={props.sellingPrice} variable={props.variableCostPerUnit} fixed={props.fixedAnnualCost} breakEven={props.breakEvenQuantity} currency={project.currency} language={language}/>
+      <BreakEvenChart capacity={props.capacity} price={props.sellingPrice} variable={props.variableCostPerUnit} fixed={props.fixedAnnualCost} breakEven={props.breakEvenQuantity} currency={project.currency} language={language} quantityUnit={annualProductUnit}/>
     </div>
     <div className="fw-card">
       <h4>{t('مشخصات جاری پروژه','Current Project Specifications',language)}</h4>
@@ -394,7 +399,7 @@ export default function ProjectReportVisuals(props: Props) {
           [t('واردات','Imports',language),fmtValue(props.marketSummary.imports,0),t('تن/سال','tonnes/year',language)],
           [t('صادرات','Exports',language),fmtValue(props.marketSummary.exports,0),t('تن/سال','tonnes/year',language)],
           [t('سهم هدف پروژه از بازار','Target Project Market Share',language),fmtValue(props.marketSummary.targetShare,2)+'%',t('درصد','percent',language)],
-          [t('قیمت فروش داخلی','Domestic Selling Price',language),fmtValue(props.marketSummary.domesticPrice),project.currency+'/تن'],
+          [t('قیمت فروش داخلی','Domestic Selling Price',language),fmtValue(props.marketSummary.domesticPrice),project.currency+'/'+productUnit],
           [t('قیمت فروش صادراتی','Export Selling Price',language),fmtValue(props.marketSummary.exportPrice),project.currency+'/تن'],
           [t('سهم فروش داخلی','Domestic Sales Share',language),fmtValue(props.marketSummary.domesticShare,2)+'%',t('درصد','percent',language)],
           [t('رشد سالانه تقاضا','Annual Demand Growth',language),fmtValue(props.marketSummary.growth,2)+'%',t('درصد','percent',language)],
