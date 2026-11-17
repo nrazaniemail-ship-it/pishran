@@ -47,10 +47,12 @@ export type WorkingCapitalComponentFormDraft={
  /** Opening balance at the project valuation date; liabilities are deducted from net working capital. */
  openingBalance?:number|null
  minimumDaysCoverage:number|null; turnoverCoefficient:number|null; calculationMode?:'units'|'value'|null; activityBasis?:'sales'|'production'|null; valuationBasis:'cost-of-production'|'cost-of-sales'|'sales-revenue'|'user-defined'|null
+ /** Percentage of the final-period component balance released at project end. */
+ recoveryPercent?:number|null
  periodBalances:{period:string;amount:number|null}[]
 }
 export function createBlankWorkingCapitalComponentFormDraft(id=''):WorkingCapitalComponentFormDraft{return{
- id,name:'',category:null,openingBalance:null,minimumDaysCoverage:null,turnoverCoefficient:null,calculationMode:null,activityBasis:null,valuationBasis:null,periodBalances:[]
+ id,name:'',category:null,openingBalance:null,minimumDaysCoverage:null,turnoverCoefficient:null,calculationMode:null,activityBasis:null,valuationBasis:null,recoveryPercent:null,periodBalances:[]
 }}
 /** COMFAR reference uses a 360-day year for days coverage / turnover. */
 export function deriveWorkingCapitalTurnover(daysCoverage:number|null,periodDays=360):number|null{
