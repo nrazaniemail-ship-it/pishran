@@ -67,4 +67,31 @@ const fxCost=module.buildProductOperatingSchedule({
 },periods,1,'IRR')
 assert.equal(fxCost.valid,false)
 assert.ok(fxCost.issues.some(issue=>issue.includes('foreign-currency schedule')))
+const daysCoverageDraft={
+ sales:[{productId:'P1',inventoryPolicy:'comfar-days-coverage',finishedGoodsDaysCoverage:30,
+  productionStartPeriod:1,productionEndPeriod:2,periods:[
+   {period:'1',salesQuantity:100,netUnitPrice:20,salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
+    openingFinishedGoodsQuantity:0,openingFinishedGoodsValue:0,finishedGoodsClosingQuantity:null},
+   {period:'2',salesQuantity:100,netUnitPrice:20,salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
+    openingFinishedGoodsQuantity:null,openingFinishedGoodsValue:null,finishedGoodsClosingQuantity:null},
+   {period:'3',salesQuantity:100*30/360,netUnitPrice:20,salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
+    openingFinishedGoodsQuantity:null,openingFinishedGoodsValue:null,finishedGoodsClosingQuantity:null},
+  ]}],
+ productionCosts:[{id:'cost-p1',metadata:{description:'Direct manufacturing cost',currencyCode:'IRR',escalationPercent:0},
+  classification:'direct',productId:'P1',basis:'per-unit-output',standardQuantity:1,standardUnitPrice:10,
+  standardTotal:null,nominalCapacity:null,fixedPercent:null,variablePercent:null,adjustments:[]}],
+}
+const coverageResult=module.buildProductOperatingSchedule(daysCoverageDraft,periods,1,'IRR')
+assert.equal(coverageResult.valid,true,coverageResult.issues.join('; '))
+const close=(a,b)=>assert.ok(Math.abs(a-b)<0.0001,'Expected '+b+', got '+a)
+coverageResult.rows.filter(row=>row.productId==='P1').forEach((row,index)=>{
+ close(row.closingInventoryQuantity,[100*30/360,100*30/360,0][index])
+ close(row.productionQuantity,[100+100*30/360,100,0][index])
+})
+const noLiquidation=module.buildProductOperatingSchedule({
+ ...daysCoverageDraft,sales:[{...daysCoverageDraft.sales[0],periods:daysCoverageDraft.sales[0].periods.map((row,index)=>index===2?{...row,salesQuantity:0}:row)}]
+},periods,1,'IRR')
+assert.equal(noLiquidation.valid,false)
+assert.ok(noLiquidation.issues.some(issue=>issue.includes('unsold finished goods')))
+
 console.log('Product-by-product production, weighted-average inventory, COGS and sales validation passed.')
