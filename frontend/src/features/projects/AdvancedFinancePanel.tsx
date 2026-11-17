@@ -403,6 +403,19 @@ export default function AdvancedFinancePanel(props: Props) {
     {workingCapitalDraftSchedule&&!workingCapitalDraftSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه سرمایه در گردش از فرم‌های تفصیلی معتبر نیست؛ محاسبات دوره‌ای متوقف شده است.','The detailed working-capital schedule is invalid; periodic calculations are blocked.')}</b>{workingCapitalDraftSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {workingCapitalDraftSchedule?.valid&&<>
       <p className="fw-hint">{t('مانده‌های سرمایه در گردش از فرم‌های تفصیلی به موتور دوره‌ای متصل شده‌اند؛ افزایش/کاهش مانده خالص در جریان نقدی ثبت می‌شود.','Detailed working-capital closing balances are connected to the periodic engine; net balance movements are posted to cash flow.')}</p>
+      <div className="fw-card"><b>{t('گردش تفصیلی دارایی‌ها و بدهی‌های جاری به تفکیک دوره','Detailed Current Asset & Liability Roll-forward by Period')}</b>
+        {(props.projectPeriods??[]).map((period,index)=>{
+          const rows=workingCapitalDraftSchedule.componentRows.filter(item=>item.period===index+1)
+          const categoryNames:Record<string,string>={'inventory':'موجودی مواد/کالا','work-in-progress':'کالای در جریان ساخت','finished-goods':'محصول نهایی','receivables':'مطالبات','cash':'نقد عملیاتی','payables':'پرداختنی‌ها','other-current-asset':'سایر دارایی جاری','other-current-liability':'سایر بدهی جاری'}
+          const categoryNamesEn:Record<string,string>={'inventory':'Inventory','work-in-progress':'Work in progress','finished-goods':'Finished goods','receivables':'Receivables','cash':'Operating cash','payables':'Payables','other-current-asset':'Other current assets','other-current-liability':'Other current liabilities'}
+          return <div className="fw-validation" key={period.startDate}>
+            <span><b>{t('دوره','Period')} {index+1} · {period.startDate} — {period.endDate}</b>
+              {rows.map((item,rowIndex)=><span key={item.componentId+'-'+rowIndex} style={{display:'block'}}>{t(categoryNames[item.category]??item.category,categoryNamesEn[item.category]??item.category)} · {money(item.signedAmount)} {props.currency}</span>)}
+            </span>
+            <b>{t('مانده خالص پایان دوره','Closing net balance')}: {money(workingCapitalDraftSchedule.closingWorkingCapital[index])} {props.currency}</b>
+          </div>
+        })}
+      </div>
       {Math.abs(workingCapitalDraftSchedule.terminalRecoveryAmount)>0.01&&<p className="fw-hint">{t('در پایان آخرین دوره، مانده خالص سرمایه در گردش به‌طور کامل آزاد یا تسویه می‌شود؛ اثر نقدی خالص این تسویه:','At the end of the final period, net working capital is fully released or settled; net cash effect of this settlement:')} <b>{money(workingCapitalDraftSchedule.terminalRecoveryAmount)} {props.currency}</b></p>}
     </>}
     {props.fixedInvestmentSchedule?.length===years && props.preOperatingSchedule?.length===years
