@@ -28,6 +28,7 @@ const key = 'projects:list:v1'
 await store.__store.set(key, [
   project('retired-a','Steel Slab','steel-slab','steel-slab'),
   project('retired-b','Extra DRI','extra-dri','extra-dri'),
+  project('retired-c','HRCR200','hot-rolling','raw'),
   project('kept-legacy','User-defined raw model','hot-rolling','legacy-template'),
 ])
 const normalized = await repository.listProjects()
@@ -37,6 +38,7 @@ assert.equal(normalized.find(row => row.id === 'kept-legacy').steelStage,'hot-ro
 await store.__store.set(key, [
   project('retired-a','Steel Slab','steel-slab','steel-slab'),
   project('retired-b','Extra DRI','extra-dri','extra-dri'),
+  project('retired-c','HRCR200','hot-rolling','raw'),
   project('kept','Raw model','user-defined','legacy-template'),
 ])
 await store.__store.set('pishran:rolling:sample',{value:1})
