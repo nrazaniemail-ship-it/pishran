@@ -9,6 +9,9 @@ const helpFormulaUrl=url(await transpile('../src/features/projects/projectModelH
 const helpFormsUrl=url(await transpile('../src/features/projects/projectModelHelpForms.ts'))
 let draftsOutput=(await transpile('../src/features/projects/projectModelFormDrafts.ts')).replace("'./projectModelHelpForms'",JSON.stringify(helpFormsUrl))
 const draftsUrl=url(draftsOutput)
+let bindingOutput=await transpile('../src/features/projects/helpDrivenFinancialDraftBinding.ts')
+bindingOutput=bindingOutput.replace("'./projectModelFormDrafts'",JSON.stringify(draftsUrl))
+const bindingUrl=url(bindingOutput)
 let productionOutput=await transpile('../src/features/projects/productionSalesInventoryIntegration.ts')
 productionOutput=productionOutput.replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl)).replace("'./projectModelHelpFormulaRules'",JSON.stringify(helpFormulaUrl))
 const productionUrl=url(productionOutput)
@@ -28,8 +31,10 @@ orchestratorOutput=orchestratorOutput.replace("'./productionSalesInventoryIntegr
  .replace("'./workingCapitalDraftIntegration'",JSON.stringify(workingCapitalUrl))
  .replace("'./fixedAssetDraftIntegration'",JSON.stringify(fixedUrl))
  .replace("'./foreignCurrencyLoanFinanceBinding'",JSON.stringify(loanUrl))
+ .replace("'./helpDrivenFinancialDraftBinding'",JSON.stringify(bindingUrl))
 const orchestrator=await import(url(orchestratorOutput))
 const helpForms=await import(helpFormsUrl)
+const helpBinding=await import(bindingUrl)
 
 const periods=[
  {index:1,startDate:'2025-01-01',endDate:'2025-12-31',days:365,partial:false},
@@ -68,6 +73,46 @@ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-ce
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','group','production')
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','level','unit')
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','productIds','finished-product,by-product')
+
+// Raw-form bridge: independently entered asset, cost, sales and working-capital rows
+// must become the exact typed drafts consumed by the calculation adapters.
+let rawHelp=helpForms.createBlankHelpDrivenProjectForms()
+for(const [id,key,value] of [
+ ['asset-a','assetName','Generic asset'],['asset-a','currency','EUR'],['asset-a','origin','local'],
+ ['asset-a','acquisitionDate','2025-02-01'],['asset-a','quantity',2],['asset-a','unitPrice',50],['asset-a','total',100],
+ ['asset-a','method','linear-to-scrap'],['asset-a','startMode','production-start'],
+ ['asset-a','firstDepreciationYearMonths',12],['asset-a','lengthYears',5],['asset-a','scrapPercent',10],
+]){
+ if(!rawHelp.sections['fixed-investment'].some(row=>row.id===id))rawHelp=helpForms.addHelpFormRow(rawHelp,'fixed-investment',id)
+ rawHelp=helpForms.updateHelpFormRow(rawHelp,'fixed-investment',id,key,value)
+}
+for(const [id,key,value] of [
+ ['cost-a','item','Generic direct cost'],['cost-a','classification','direct'],['cost-a','productId','product-a'],
+ ['cost-a','basis','nominal-capacity'],['cost-a','standardQuantity',1],['cost-a','standardUnitPrice',2],
+ ['cost-a','nominalCapacity',100],['cost-a','fixedPercent',20],['cost-a','variablePercent',80],
+]){
+ if(!rawHelp.sections['production-costs'].some(row=>row.id===id))rawHelp=helpForms.addHelpFormRow(rawHelp,'production-costs',id)
+ rawHelp=helpForms.updateHelpFormRow(rawHelp,'production-costs',id,key,value)
+}
+for(const [id,period] of [['sale-a1','1'],['sale-a2','2']]){
+ rawHelp=helpForms.addHelpFormRow(rawHelp,'sales-programme',id)
+ for(const [key,value] of Object.entries({productId:'product-a',period,salesQuantity:10,netUnitPrice:5,salesTaxPercent:0,subsidyPercent:0,openingFinishedGoods:0,closingFinishedGoods:0}))
+  rawHelp=helpForms.updateHelpFormRow(rawHelp,'sales-programme',id,key,value)
+}
+for(const [id,period] of [['wc-a1','1'],['wc-a2','2']]){
+ rawHelp=helpForms.addHelpFormRow(rawHelp,'working-capital',id)
+ for(const [key,value] of Object.entries({item:'Receivables',category:'accounts-receivable',period,requiredValue:25,startingBalance:10,basis:'cost-of-products-sold-operating-cost'}))
+  rawHelp=helpForms.updateHelpFormRow(rawHelp,'working-capital',id,key,value)
+}
+const rawBound=helpBinding.bindHelpDrivenFinancialDrafts(rawHelp,periods,{assets:[],productionCosts:[],sales:[],workingCapital:[]})
+assert.deepEqual(rawBound.issues,[])
+assert.deepEqual(rawBound.boundSections,['fixed-investment','production-costs','sales-programme','working-capital'])
+assert.equal(rawBound.drafts.assets[0].acquisitionPeriods[0].period,'1')
+assert.equal(rawBound.drafts.assets[0].depreciation.usefulLifeMonths,60)
+assert.equal(rawBound.drafts.productionCosts[0].productId,'product-a')
+assert.equal(rawBound.drafts.sales[0].periods.length,2)
+assert.equal(rawBound.drafts.workingCapital[0].periodBalances.length,2)
+
 const foundation={
  schemaVersion:1,
  planning:{periodFrequency:'annual',projectStartDate:'2025-01-01',projectEndDate:'2026-12-31',fiscalYearStartMonth:1,balanceDateMonth:12,balanceDateDay:31,dayCountBasis:365,valuationDate:'2025-01-01',discountConvention:'actual-days',cashFlowTiming:'period-end'},
