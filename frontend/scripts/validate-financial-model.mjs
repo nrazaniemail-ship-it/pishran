@@ -2,13 +2,19 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 
-const load = async relativePath => {
+const compile = async (relativePath, replacements = []) => {
   const source = await readFile(new URL(relativePath, import.meta.url), 'utf8')
-  const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
-  return import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
+  let output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
+  for (const [search, replacement] of replacements) output = output.replace(search, replacement)
+  return 'data:text/javascript;base64,' + Buffer.from(output).toString('base64')
 }
+const load = async relativePath => import(await compile(relativePath))
+const formulaRulesUrl = await compile('../src/features/projects/projectModelFormulaRules.ts')
+const engineUrl = await compile('../src/features/steel/financialModel.ts', [
+  ["from '../projects/projectModelFormulaRules'", `from '${formulaRulesUrl}'`]
+])
 const [engine, foundation] = await Promise.all([
-  load('../src/features/steel/financialModel.ts'),
+  import(engineUrl),
   load('../src/features/projects/projectFoundation.ts')
 ])
 const near = (actual, expected, tolerance, label) => assert.ok(Number.isFinite(actual) && Math.abs(actual-expected)<=tolerance, label+': '+actual+' vs '+expected)
@@ -23,6 +29,19 @@ const reconciliation=engine.reconcileCashFlowSeries([-100,60,60],[-100,60,60])
 assert.equal(reconciliation.matched,true,'Identical cash-flow series must reconcile')
 const scaled=engine.calculateCapacityScaledCapex(1000,100,200,0.8)
 near(scaled.amount,1741.1011265922482,1e-8,'Capacity-scaled CAPEX')
+
+
+const sydAssetSchedule = (lengthYears, lengthMonths, firstDepreciationMonths) => engine.calculateComfarAssetDepreciationSchedule([{
+  id:'syd-asset',name:'SYD asset',originalValue:1200,initialBookValue:1200,scrapPercent:10,
+  lengthYears,lengthMonths,method:'sum-of-years-digits',acquisitionPeriod:0,startingAtPeriod:1,
+  firstDepreciationMonths
+}],8)
+for (const [years,months,firstMonths] of [[2,0,8],[2,6,4],[2,6,8]]) {
+  const sydSchedule=sydAssetSchedule(years,months,firstMonths)
+  assert.equal(sydSchedule.valid,true,sydSchedule.warnings.join('; '))
+  near(sydSchedule.periods.reduce((sum,row)=>sum+row.depreciation,0),1080,1e-7,'COMFAR SYD total depreciation')
+  near(sydSchedule.periods.at(-1).closingBookValue,120,1e-7,'COMFAR SYD salvage book value')
+}
 
 const blank=foundation.createBlankProjectFoundation()
 assert.equal(blank.planning.projectStartDate,'')
