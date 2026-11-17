@@ -532,6 +532,7 @@ export default function AdvancedFinancePanel(props: Props) {
     <h4>{t('۴. شاخص‌های مالی، CFADS و DSCR','4. Financial Metrics, CFADS & DSCR')}</h4>
     <div className="fw-kpis">
       <article><small>{tr('NPV پروژه')}</small><b>{money(result.npvProject??NaN)}</b></article>
+       <article><small>NPVR {tr('پروژه')}</small><b>{result.npvrProject==null?'—':money(result.npvrProject)}</b></article>
       <article><small>{tr('IRR پروژه')}</small><b>{result.irrProject==null?'—':money(result.irrProject*100)+'٪'}</b></article>
       <article><small>{tr('NPV سهامدار')}</small><b>{money(result.npvEquity??NaN)}</b></article>
       <article><small>{tr('IRR سهامدار')}</small><b>{result.irrEquity==null?'—':money(result.irrEquity*100)+'٪'}</b></article>
@@ -565,6 +566,8 @@ export default function AdvancedFinancePanel(props: Props) {
       <p className="fw-hint">{t('جریان‌های عملیاتی سالانه با تعداد روز واقعی به دوره‌های پروژه تخصیص یافته‌اند. برداشت وام می‌تواند روزشمار از مبالغ سالانه توزیع شود یا برای هر دوره مستقلاً ثبت شود. نرخ مالیات قابل تنظیم در هر دوره است و زیان انتقالی، بهره، اصل بدهی و سرمایه در گردش در سطح هر دوره محاسبه می‌شوند. در صورت وجود تاریخ‌های مستند دفتر دارایی، استهلاک و واگذاری دارایی‌به‌دارایی در سطح ماه/فصل اعمال می‌شود. صورت‌های مالی دوره‌ای نیز مانده وام، سرمایه در گردش خالص و گردش دارایی‌ها را کنترل می‌کنند؛ مانده‌های افتتاحیه برای پروژه جدید صفر فرض شده‌اند.','Annual operating flows are allocated to project periods by actual day counts. Loan drawdowns can be day-weighted from annual amounts or entered directly by period. Tax rates can be set for each period, and loss carry-forward, interest, principal and working capital are calculated period by period. Current limitation: Annual operating flows are allocated by actual days; asset-level depreciation and disposals use the dated monthly/quarterly asset lifecycle when verified. The periodic statements expose net working capital, loan closing balances and disposal accounting; opening balances default to zero for greenfield projects.')}</p>
       <div className="fw-kpis">
         <article><small>NPV {t('پروژه','Project')}</small><b>{money(periodicFinanceResult.npvProject??NaN)}</b></article>
+        <article><small>NPVR {t('پروژه','Project')}</small><b>{periodicFinanceResult.npvrProject==null?'—':money(periodicFinanceResult.npvrProject)}</b></article>
+        <article><small>PVI</small><b>{money(periodicFinanceResult.presentValueInvestment??NaN)}</b></article>
         <article><small>IRR {t('پروژه','Project')}</small><b>{periodicFinanceResult.irrProject==null?'—':money(periodicFinanceResult.irrProject)+'%'}</b></article>
         <article><small>MIRR {t('پروژه','Project')}</small><b>{periodicFinanceResult.mirrProject==null?'—':money(periodicFinanceResult.mirrProject)+'%'}</b></article>
         <article><small>NPV {t('سهامدار','Equity')}</small><b>{money(periodicFinanceResult.npvEquity??NaN)}</b></article>
