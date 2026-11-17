@@ -367,6 +367,10 @@ export default function AdvancedFinancePanel(props: Props) {
     retainedEarnings:props.openingRetainedEarnings??0,grants:props.openingGrants??0,
   }):[],[periodicFinanceResult,props.openingCashBalance,props.openingDebtBalance,props.openingFixedAssetsNetBookValue,
     props.openingWorkingCapitalBalance,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants])
+  const scheduledOpeningDebt=useMemo(()=>periodicFinanceResult?.valid
+    ?Object.values(periodicFinanceResult.loanSchedules??{}).reduce((sum,schedule)=>sum+(schedule[0]?.openingBalance??0),0)
+    :0,[periodicFinanceResult])
+  const unmodelledOpeningDebt=Math.max(0,(props.openingDebtBalance??0)-scheduledOpeningDebt)
   const sensitivity=useMemo(()=>calculateSensitivityMatrix(input,[-20,-10,0,10,20],[-20,-10,0,10,20]),[JSON.stringify(input)])
   const scenarios=useMemo(()=>calculateFinancialScenarios(input),[JSON.stringify(input)])
   useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
@@ -588,7 +592,11 @@ export default function AdvancedFinancePanel(props: Props) {
     <h4>{t('۸. موتور یکپارچه جریان نقدی ماهانه/فصلی','8. Integrated Monthly / Quarterly Cash-Flow Engine')}</h4>
     {periodicFinanceResult?.valid?<div className="fw-card">
       <p className="fw-hint">{t('جریان‌های عملیاتی سالانه با تعداد روز واقعی به دوره‌های پروژه تخصیص یافته‌اند. برداشت وام می‌تواند روزشمار از مبالغ سالانه توزیع شود یا برای هر دوره مستقلاً ثبت شود. نرخ مالیات قابل تنظیم در هر دوره است و زیان انتقالی، بهره، اصل بدهی و سرمایه در گردش در سطح هر دوره محاسبه می‌شوند. در صورت وجود تاریخ‌های مستند دفتر دارایی، استهلاک و واگذاری دارایی‌به‌دارایی در سطح ماه/فصل اعمال می‌شود. مانده افتتاحیه نقد، سرمایه در گردش، دارایی ثابت، بدهی، آورده، سود انباشته و کمک‌ها از دفتر مانده‌های افتتاحیه به صورت‌های مالی منتقل می‌شود؛ برای پروژه جدید این مانده‌ها صفر هستند.','Annual operating flows are allocated to project periods by actual day counts. Loan drawdowns can be day-weighted from annual amounts or entered directly by period. Tax rates can be set for each period, and loss carry-forward, interest, principal and working capital are calculated period by period. Dated asset-level depreciation and disposals feed the monthly/quarterly model. Opening cash, net working capital, fixed assets, debt, paid-in capital, retained earnings and grants are carried into the statements; these balances default to zero for greenfield projects.')}</p>
-      {(props.openingDebtBalance??0)>0.01&&<p className="fw-hint">{t('بدهی افتتاحیه در ترازنامه منتقل شده است؛ اگر برنامه بازپرداخت آن در تسهیلات دوره‌ای وارد نشده باشد، مانده آن به‌عنوان بدهی قدیمی ثابت می‌ماند و خدمت بدهی آن در DSCR منظور نمی‌شود.','Opening debt is carried into the balance sheet. If its repayment schedule is not entered in the periodic loan module, it remains a static legacy liability and its debt service is excluded from DSCR.')}</p>}
+      {unmodelledOpeningDebt>0.01&&<div className="fw-validation" role="alert">
+        <b>{t('هشدار: بخشی از بدهی افتتاحیه برنامه بازپرداخت ندارد.','Warning: part of opening debt has no repayment schedule.')}</b>
+        <p>{t('مانده بدهی افتتاحیه بدون برنامه: ','Unscheduled opening debt: ')}{money(unmodelledOpeningDebt)} {props.currency}</p>
+        <p>{t('این مانده در بدهی ترازنامه حفظ می‌شود، اما چون برنامه خدمت بدهی برای آن تعریف نشده، بهره و اصل آن در جریان دوره‌ای و DSCR منظور نمی‌شود. برای جلوگیری از کم‌نمایی خدمت بدهی، برنامه تسویه/بازپرداخت آن باید به‌عنوان تسهیلات دوره‌ای ثبت شود.','This balance remains in balance-sheet debt, but its interest and principal are excluded from periodic cash flow and DSCR because no debt-service schedule exists. Add a periodic facility and repayment schedule to avoid understating debt service.')}</p>
+      </div>}
       <div className="fw-kpis">
         <article><small>NPV {t('پروژه','Project')}</small><b>{money(periodicFinanceResult.npvProject??NaN)}</b></article>
         <article><small>NPVR {t('پروژه','Project')}</small><b>{periodicFinanceResult.npvrProject==null?'—':money(periodicFinanceResult.npvrProject)}</b></article>
