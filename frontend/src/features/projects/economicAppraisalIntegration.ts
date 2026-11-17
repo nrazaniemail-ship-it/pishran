@@ -133,6 +133,12 @@ export function bindEconomicAppraisalConfiguration(
     return date.getUTCFullYear()!==y||date.getUTCMonth()!==m-1||date.getUTCDate()!==d
   })())issues.push('Economic reference date must be a valid ISO calendar date.')
 
+  if(typeof referenceDate==='string'&&finance.periods.length){
+    const referenceTimestamp=Date.parse(referenceDate+'T00:00:00Z')
+    const finalPeriodEnd=Date.parse(finance.periods[finance.periods.length-1].endDate+'T23:59:59Z')
+    if(Number.isFinite(referenceTimestamp)&&Number.isFinite(finalPeriodEnd)&&referenceTimestamp>finalPeriodEnd)
+      issues.push('Economic reference date cannot be later than the final project period.')
+  }
   if(populatedEffects.length)issues.push('Economic effects are not yet valued. Foreign-loan transfers, indirect effects, employment and environmental effects require distinct period-specific shadow-price valuation rules before they can enter economic cash flow.')
   if(!assignedItems.length)issues.push('Economic appraisal requires at least one item assigned to the economic browser with a period-specific numeraire value.')
   const unsupportedFields=['financialValue','firstAppearancePrice','firstAppearanceQuantity','borderPrice','adjustmentFactor','adjustedMarketValue','fxExposure','taxesDutiesIncludedPercent','valueAddedIncludedPercent','exportablePercent','importablePercent','importSubstitutionPercent','transportAdjustedValue','transportForeignExposurePercent','otherAdjustedValue','otherForeignExposurePercent','consumerOrProducerPrice','subsidyNegativeTax']
