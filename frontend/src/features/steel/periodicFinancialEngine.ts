@@ -640,6 +640,10 @@ export type PeriodicProjectFinanceInput = {
   taxRatesByPeriod?: number[]
   /** Optional graduated tax scale; when present it overrides flat period rates. */
   taxBrackets?: PeriodTaxBracket[]
+  /** Number of production fiscal years exempt from corporate income tax. */
+  taxHolidayYears?: number
+  /** Zero-based fiscal-year index in which commercial production begins. */
+  productionStartFiscalYear?: number
   annualEquityContributions: number[]
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
@@ -947,6 +951,11 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       return empty()
     }
   }
+  if (input.taxHolidayYears != null && (!Number.isInteger(input.taxHolidayYears) || input.taxHolidayYears < 0 ||
+      !Number.isInteger(input.productionStartFiscalYear ?? 0) || (input.productionStartFiscalYear ?? 0) < 0)) {
+    warnings.push('Tax holiday years and production start fiscal year must be non-negative integers.')
+    return empty()
+  }
   const allocated = annualSeries.map(series => allocateAnnualFlowsToPeriods(series, periods, fiscalYearStartMonth))
   if (allocated.some(series => series.length !== periods.length || series.some(value => !validFinite(value)))) {
     warnings.push('Annual model horizon does not cover every project fiscal period; annual flows cannot be allocated.')
@@ -1082,12 +1091,27 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
     const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
-    const periodTax = input.taxBrackets
-      ? calculateGraduatedPeriodTax(ebit - interestExpense, taxLoss, input.taxBrackets)
-      : calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
-    const unleveredPeriodTax = input.taxBrackets
-      ? calculateGraduatedPeriodTax(ebit, unleveredTaxLoss, input.taxBrackets)
-      : calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
+    const fiscalYearIndex = fiscalYearIndexForPeriod(periods[index], periods, fiscalYearStartMonth)
+    const productionStartFiscalYear = input.productionStartFiscalYear ?? 0
+    const taxHolidayActive = input.taxHolidayYears != null && fiscalYearIndex >= productionStartFiscalYear &&
+      fiscalYearIndex < productionStartFiscalYear + input.taxHolidayYears
+    const taxDuringHoliday = (profit: number, openingLoss: number): PeriodTaxResult => ({
+      taxableProfitAfterLoss: profit - openingLoss,
+      tax: 0,
+      // COMFAR's tax holiday postpones tax payable; positive income during the
+      // holiday does not consume losses carried into taxable production years.
+      closingLossCarryForward: profit < 0 ? openingLoss - profit : openingLoss,
+    })
+    const periodTax = taxHolidayActive
+      ? taxDuringHoliday(ebit - interestExpense, taxLoss)
+      : input.taxBrackets
+        ? calculateGraduatedPeriodTax(ebit - interestExpense, taxLoss, input.taxBrackets)
+        : calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
+    const unleveredPeriodTax = taxHolidayActive
+      ? taxDuringHoliday(ebit, unleveredTaxLoss)
+      : input.taxBrackets
+        ? calculateGraduatedPeriodTax(ebit, unleveredTaxLoss, input.taxBrackets)
+        : calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
     if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
       warnings.push('Tax calculation failed in project period ' + (index + 1) + '.')
       return empty()
