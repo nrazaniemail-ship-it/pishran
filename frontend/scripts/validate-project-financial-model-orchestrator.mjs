@@ -369,4 +369,19 @@ const unsupportedDiscountingModel=orchestrator.calculateProjectFinancialModelFro
 assert.equal(unsupportedDiscountingModel.valid,false)
 assert.ok(unsupportedDiscountingModel.issues.some(issue=>issue.includes('discounting.shortNpvYears')&&issue.includes('not yet connected')))
 
+for (const field of ['basis','daysCoverage','turnover']) {
+ let unusedWorkingCapitalHelp=helpForms.createBlankHelpDrivenProjectForms()
+ unusedWorkingCapitalHelp=helpForms.addHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field)
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'item','Receivables')
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'category','accounts-receivable')
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,field,field==='basis'?'cost-of-products-sold-operating-cost':30)
+ const unusedWorkingCapitalModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+  finance,drafts:{...drafts,helpDriven:unusedWorkingCapitalHelp},foundation,productionStartDate:'2025-01-01',
+  openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+  taxTreatment:'non-deductible',
+ })
+ assert.equal(unusedWorkingCapitalModel.valid,false,field+' must not be silently ignored')
+ assert.ok(unusedWorkingCapitalModel.issues.some(issue=>issue.includes('working-capital.'+field)&&issue.includes('not yet connected')))
+}
+
 console.log('Unified project form orchestration, pre-production amortization, input-coverage guards and opening-balance-sheet validation passed.')
