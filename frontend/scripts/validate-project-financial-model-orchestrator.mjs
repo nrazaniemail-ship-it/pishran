@@ -436,6 +436,9 @@ for (const field of ['basis','daysCoverage','turnover']) {
  unusedWorkingCapitalHelp=helpForms.addHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field)
  unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'item','Receivables')
  unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'category','accounts-receivable')
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'period','1')
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'requiredValue',100)
+ unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,'startingBalance',0)
  unusedWorkingCapitalHelp=helpForms.updateHelpFormRow(unusedWorkingCapitalHelp,'working-capital','unused-wc-'+field,field,field==='basis'?'cost-of-products-sold-operating-cost':30)
  const unusedWorkingCapitalModel=orchestrator.calculateProjectFinancialModelFromDrafts({
   finance,drafts:{...drafts,helpDriven:unusedWorkingCapitalHelp},foundation,productionStartDate:'2025-01-01',
