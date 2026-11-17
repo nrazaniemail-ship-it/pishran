@@ -1,5 +1,5 @@
 import type { ProjectCalendarPeriod } from './projectFoundation'
-import type { PeriodicProjectFinanceInput } from '../steel/periodicFinancialEngine'
+import { fiscalYearIndexForPeriod, type PeriodicProjectFinanceInput } from '../steel/periodicFinancialEngine'
 import type { ProjectModelFinancialFormDrafts, WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 
 export type WorkingCapitalComponentPeriodRow = {
@@ -30,6 +30,7 @@ export function buildWorkingCapitalScheduleFromDrafts(
   drafts: Pick<ProjectModelFinancialFormDrafts, 'workingCapital'>,
   periods: ProjectCalendarPeriod[],
   openingWorkingCapital: number,
+  salesRevenueByPeriod?: readonly number[],
 ): WorkingCapitalDraftSchedule {
   const issues: string[] = []
   const count = periods.length
@@ -90,6 +91,28 @@ export function buildWorkingCapitalScheduleFromDrafts(
       issues.push(prefix + 'explicit-period-balances-required')
       continue
     }
+    const daysCoverage = component.minimumDaysCoverage
+    const turnover = component.turnoverCoefficient
+    const hasDays = daysCoverage !== null
+    const hasTurnover = turnover !== null
+    if (hasDays && (!Number.isFinite(daysCoverage) || daysCoverage! <= 0))
+      issues.push(prefix + 'days-coverage-must-be-positive')
+    if (hasTurnover && (!Number.isFinite(turnover) || turnover! <= 0))
+      issues.push(prefix + 'turnover-must-be-positive')
+    if (hasDays && hasTurnover && Math.abs((360 / daysCoverage!) - turnover!) > 0.01)
+      issues.push(prefix + 'days-coverage-and-turnover-do-not-reconcile')
+    const driverEnabled = hasDays || hasTurnover
+    if (driverEnabled) {
+      if (component.calculationMode !== 'value')
+        issues.push(prefix + 'days-coverage-requires-value-calculation-mode')
+      if (component.activityBasis !== 'sales')
+        issues.push(prefix + 'current-period-production-activity-basis-is-not-supported-for-days-coverage')
+      if (component.valuationBasis !== 'sales-revenue' || component.category !== 'receivables')
+        issues.push(prefix + 'days-coverage-currently-supports-sales-revenue-receivables-only')
+      if (!salesRevenueByPeriod || salesRevenueByPeriod.length !== count ||
+          salesRevenueByPeriod.some(value => !Number.isFinite(value) || value < 0))
+        issues.push(prefix + 'valid-period-sales-revenue-base-required')
+    }
     const resolved = new Map<number, number>()
     for (const balance of component.periodBalances) {
       const matches = resolvePeriod(balance.period)
@@ -102,11 +125,22 @@ export function buildWorkingCapitalScheduleFromDrafts(
         issues.push(prefix + 'duplicate-period-balance:' + (periodIndex + 1))
         continue
       }
-      if (balance.amount === null || !Number.isFinite(balance.amount) || balance.amount < 0) {
+      let amount = balance.amount
+      if (amount === null && driverEnabled && salesRevenueByPeriod) {
+        const days = hasDays ? daysCoverage! : 360 / turnover!
+        amount = salesRevenueByPeriod[periodIndex] * days / 360
+      }
+      if (amount === null || !Number.isFinite(amount) || amount < 0) {
         issues.push(prefix + 'missing-or-invalid-balance:' + (periodIndex + 1))
         continue
       }
-      resolved.set(periodIndex, balance.amount)
+      if (driverEnabled && salesRevenueByPeriod) {
+        const days = hasDays ? daysCoverage! : 360 / turnover!
+        const derived = salesRevenueByPeriod[periodIndex] * days / 360
+        if (balance.amount !== null && Math.abs(balance.amount - derived) > 0.01)
+          issues.push(prefix + 'explicit-balance-does-not-reconcile-to-days-coverage:' + (periodIndex + 1))
+      }
+      resolved.set(periodIndex, amount)
     }
     for (let periodIndex = 0; periodIndex < count; periodIndex++) {
       const amount = resolved.get(periodIndex)
@@ -161,7 +195,11 @@ export function bindWorkingCapitalDraftsToPeriodicFinance(
   drafts: Pick<ProjectModelFinancialFormDrafts, 'workingCapital'>,
   openingWorkingCapital: number,
 ): PeriodicFinanceWorkingCapitalBinding {
-  const schedule = buildWorkingCapitalScheduleFromDrafts(drafts, input.periods, openingWorkingCapital)
+  const salesRevenueByPeriod = input.periods.map(period => {
+    const fiscalYear = fiscalYearIndexForPeriod(period, input.periods, input.fiscalYearStartMonth)
+    return fiscalYear >= 0 && fiscalYear < input.annualRevenue.length ? input.annualRevenue[fiscalYear] : Number.NaN
+  })
+  const schedule = buildWorkingCapitalScheduleFromDrafts(drafts, input.periods, openingWorkingCapital, salesRevenueByPeriod)
   if (!schedule.valid) return { valid: false, issues: schedule.issues, financeInput: null, schedule }
   return {
     valid: true,
