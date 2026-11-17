@@ -663,6 +663,10 @@ export type PeriodicProjectFinanceInput = {
   annualFixedInvestment: number[]
   annualPreOperatingCost: number[]
   annualMaintenanceCapex: number[]
+  /** Production cost of units sold, kept separate from period operating expenses. */
+  annualCostOfGoodsSold?: number[]
+  /** Closing finished-goods inventory value, added to non-finished-goods working capital. */
+  finishedGoodsInventoryValueByPeriod?: number[]
   annualTaxRates: number[]
   taxRatesByPeriod?: number[]
   /** Progressive marginal tax brackets for each project period; overrides the flat rate when supplied. */
@@ -729,6 +733,7 @@ export type PeriodicProjectFinanceRow = {
   revenue: number
   variableCost: number
   fixedCost: number
+  costOfGoodsSold: number
   depreciation: number
   ebit: number
   assetSaleProceeds: number
@@ -974,6 +979,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const annualSeries = [
     input.annualRevenue, input.annualVariableCost, input.annualFixedCost, input.annualDepreciation,
     input.annualFixedInvestment, input.annualPreOperatingCost, input.annualMaintenanceCapex,
+    input.annualCostOfGoodsSold ?? Array(input.annualRevenue.length).fill(0),
     input.annualTaxRates, input.annualEquityContributions,
     ...(input.annualEquityWorkingCapitalContributions ? [input.annualEquityWorkingCapitalContributions] : []),
   ]
@@ -982,6 +988,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       input.annualTaxRates.some(value => value < 0 || value > 100) ||
       !Array.isArray(input.workingCapitalByPeriod) || input.workingCapitalByPeriod.length !== periods.length ||
       input.workingCapitalByPeriod.some(value => !validFinite(value) || value < 0) ||
+      (input.finishedGoodsInventoryValueByPeriod!==undefined&&
+        (input.finishedGoodsInventoryValueByPeriod.length!==periods.length||
+          input.finishedGoodsInventoryValueByPeriod.some(value=>!validFinite(value)||value<0))) ||
       input.loans.some(loan => !loan.id || !loan.input)) {
     warnings.push('Annual flow arrays, tax rates, working-capital balances or loan definitions are invalid.')
     return empty()
@@ -1028,7 +1037,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSalesByPeriod[target] = {...row}
     }
   }
-  let [revenue, variableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution, allocatedEquityWorkingCapitalContribution] = allocated
+  let [revenue, variableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, costOfGoodsSold, , equityContribution, allocatedEquityWorkingCapitalContribution] = allocated
   const periodAdjustments=input.periodIncrementalAdjustments
   if(periodAdjustments){
     for(const [key,values] of Object.entries(periodAdjustments) as [keyof NonNullable<PeriodicProjectFinanceInput['periodIncrementalAdjustments']>,number[]|undefined][]){
@@ -1048,6 +1057,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     }
   }
   const equityWorkingCapitalContribution = allocatedEquityWorkingCapitalContribution ?? Array(periods.length).fill(Number.NaN)
+  const finishedGoodsInventoryValueByPeriod=input.finishedGoodsInventoryValueByPeriod??Array(periods.length).fill(0)
   const depreciation = input.periodDepreciationSchedule ? [...input.periodDepreciationSchedule] : allocatedDepreciation
   if (input.periodDepreciationSchedule && (input.periodDepreciationSchedule.length!==periods.length ||
       input.periodDepreciationSchedule.some(value=>!validFinite(value)||value<0))) {
@@ -1203,7 +1213,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const terminalSalvage = index === periods.length - 1 ? Math.max(0,input.salvageValue ?? 0) : 0
     const salvageBookValueDisposed = index === periods.length - 1 ? Math.max(0,input.salvageBookValue ?? 0) : 0
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
-    const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
+    const ebit = revenue[index] - variableCost[index] - fixedCost[index] - costOfGoodsSold[index] - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
     const taxAllowances=input.taxAllowancesByPeriod?.[index]??0
     const taxDepreciationAdjustment=input.taxDepreciationAdjustmentsByPeriod?.[index]??0
@@ -1225,7 +1235,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     unleveredTaxLossVintages=unleveredPeriodTax.vintages
     taxLoss=periodTax.closingLossCarryForward
     unleveredTaxLoss=unleveredPeriodTax.closingLossCarryForward
-    const closingWorkingCapital = input.workingCapitalByPeriod[index]
+    const closingWorkingCapital = input.workingCapitalByPeriod[index] + finishedGoodsInventoryValueByPeriod[index]
     const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
     const equityWorkingCapitalContributionAmount = input.annualEquityWorkingCapitalContributions
       ? equityWorkingCapitalContribution[index]
@@ -1240,7 +1250,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       warnings.push('Shareholder working-capital funding must be finite and non-negative (period ' + (index + 1) + ').')
       return empty()
     }
-    const cfads = revenue[index] - variableCost[index] - fixedCost[index] - adjustedTax
+    const cfads = revenue[index] - variableCost[index] - fixedCost[index] - costOfGoodsSold[index] - adjustedTax
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
@@ -1250,12 +1260,12 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - adjustedUnleveredTax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
-    const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
+    const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index] - costOfGoodsSold[index]
       - adjustedTax - interestExpense - principal - maintenanceCapex[index]
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
-      revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
+      revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],costOfGoodsSold:costOfGoodsSold[index],depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
@@ -1290,7 +1300,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     valid:true,rows,loanSchedules,npvProject,irrProject:calculatePeriodicIrr(projectFlows,periods,dayCountBasis,cashFlowTiming),
     mirrProject,npvEquity,irrEquity:calculatePeriodicIrr(equityFlows,periods,dayCountBasis,cashFlowTiming),mirrEquity,
     totalDebtDrawdown,totalEquityContribution,totalCapitalizedInterest,
-    peakWorkingCapital:Math.max(0,...input.workingCapitalByPeriod),warnings
+    peakWorkingCapital:Math.max(0,...input.workingCapitalByPeriod.map((value,index)=>value+finishedGoodsInventoryValueByPeriod[index])),warnings
   }
 }
 
@@ -1624,7 +1634,7 @@ export type PeriodicFinancialStatement = {
   endDate: string
   openingBalances: Required<PeriodicStatementOpeningBalances>
   incomeStatement: {
-    revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number
+    revenue: number; cashOperatingCosts: number; costOfGoodsSold:number; ebitda: number; depreciation: number
     assetDisposalGainLoss: number; ebit: number; interest: number
     cashInterestExpense: number; financingFeeExpense: number; commitmentFeeExpense: number
     profitBeforeTax: number; tax: number; netIncome: number
@@ -1693,7 +1703,7 @@ export function buildPeriodicThreeFinancialStatements(
     const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees - row.principal + scheduledPeriod.foreignExchangeLoss
     if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance)) > tolerance) return []
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
-    const cashOperatingCosts = row.variableCost + row.fixedCost
+    const cashOperatingCosts = row.variableCost + row.fixedCost + row.costOfGoodsSold
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
     const ebitda = row.revenue - cashOperatingCosts
     const ebit = ebitda - row.depreciation + assetDisposalGainLoss
@@ -1728,7 +1738,7 @@ export function buildPeriodicThreeFinancialStatements(
     }
     statements.push({
       period: row.period, startDate: row.startDate, endDate: row.endDate, openingBalances,
-      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation,
+      incomeStatement: { revenue: row.revenue, cashOperatingCosts, costOfGoodsSold:row.costOfGoodsSold, ebitda, depreciation: row.depreciation,
         assetDisposalGainLoss, ebit, interest: row.interestExpense,
         cashInterestExpense: row.cashInterestExpense, financingFeeExpense: row.financingFeeExpense,
         commitmentFeeExpense: row.commitmentFeeExpense,
