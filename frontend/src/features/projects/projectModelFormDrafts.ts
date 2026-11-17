@@ -171,6 +171,36 @@ export function listUnintegratedFinancialDraftInputs(value:ProjectModelFinancial
  return issues
 }
 
+
+/** Convert internal integration-blocker paths into readable bilingual report messages. */
+export function describeUnintegratedFinancialDraftInput(path:string,language:'fa'|'en'='fa'):string {
+ const en=language==='en'
+ const collection=/^financialForms\\.(assets|productionCosts|sales|loans)\\.(\\d+)$/.exec(path)
+ if(collection){
+  const labels:Record<string,[string,string]> = {
+   assets:['دارایی ثابت','Fixed asset'],
+   productionCosts:['قلم هزینه تولید','Production-cost item'],
+   sales:['برنامه فروش محصول','Product sales programme'],
+   loans:['تسهیلات مالی','Loan facility'],
+  }
+  const label=labels[collection[1]]??['ورودی مالی','Financial input']
+  return (en?label[1]:label[0])+' '+(Number(collection[2])+1)+' — '+(en?'not yet connected and validated in the calculation engine':'هنوز به موتور محاسبات متصل و اعتبارسنجی نشده است')
+ }
+ if(path==='financialForms.tax')return en?'Tax assumptions are not yet integrated and validated':'مفروضات مالیاتی هنوز به موتور محاسبات متصل و اعتبارسنجی نشده‌اند'
+ const help=/^([a-z0-9-]+)\\.([^.]+)\\.([^.]+)$/.exec(path)
+ if(help){
+  const sections:Record<string,[string,string]> = {
+   'production-costs':['هزینه‌های تولید','Production costs'],
+   'sales-programme':['برنامه فروش','Sales programme'],
+   'project-identification':['مشخصات پروژه','Project identification'],
+  }
+  const section=sections[help[1]]
+  return (section?(en?section[1]:section[0]):help[1])+' · '+help[2]+' · '+help[3]+' — '+(en?'requires calculation-engine integration and validation':'نیازمند اتصال به موتور محاسبات و اعتبارسنجی است')
+ }
+ if(path.startsWith('financialForms.workingCapital:'))return en?'Working-capital schedule is invalid or incomplete':'برنامه سرمایه در گردش ناقص یا نامعتبر است'
+ return path
+}
+
 export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinancialFormDrafts):string[] {
  const errors:string[]=[]
  errors.push(...validateHelpDrivenProjectForms(value.helpDriven ?? createBlankHelpDrivenProjectForms()))
