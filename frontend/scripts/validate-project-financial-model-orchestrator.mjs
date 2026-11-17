@@ -377,6 +377,19 @@ const foreignTaxCurrencyModel=orchestrator.calculateProjectFinancialModelFromDra
 })
 assert.equal(foreignTaxCurrencyModel.valid,false)
 assert.ok(foreignTaxCurrencyModel.issues.some(issue=>issue.includes('foreign tax currency requires a dedicated tax-liability translation')))
+
+// Absolute tax adjustments remain explicitly blocked until the engine defines whether
+// the amount adjusts taxable income, tax payable, or a jurisdiction-specific credit.
+for (const [field,value] of [['adjustmentPeriod','2'],['adjustmentAmount',25]]) {
+ const adjustmentHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main',field,value)
+ const adjustmentModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+  finance,drafts:{...drafts,helpDriven:adjustmentHelp},foundation,productionStartDate:'2025-01-01',
+  openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+  taxTreatment:'non-deductible',
+ })
+ assert.equal(adjustmentModel.valid,false,field+' must not be silently ignored')
+ assert.ok(adjustmentModel.issues.some(issue=>issue.includes('income-tax.'+field)&&issue.includes('not yet connected')))
+}
 assert.ok(result.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 const openingBalanceSheet={
  enabled:true,cash:100,inventory:20,workInProgress:10,finishedGoods:30,receivables:40,
