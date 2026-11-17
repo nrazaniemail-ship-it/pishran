@@ -66,6 +66,9 @@ export function bindHelpDrivenFoundation(
   if(costCentres.length)result={...result,costCentres:{active:true,items:costCentres.map(row=>({
     id:row.id,code:row.id,name:String(row.values.name??'').trim(),
     ...(typeof row.values.parentId==='string'&&row.values.parentId.trim()?{parentId:row.values.parentId.trim()}:{}),
+    ...(typeof row.values.group==='string'&&row.values.group.trim()?{group:row.values.group.trim()}:{}),
+    ...(typeof row.values.level==='number'&&Number.isInteger(row.values.level)?{level:row.values.level}:{}),
+    ...(Array.isArray(row.values.productIds)?{productIds:row.values.productIds.filter((id):id is string=>typeof id==='string'&&id.trim().length>0)}:{}),
   }))}}
   const inflationRows=rows('inflation')
   if(inflationRows.length){
