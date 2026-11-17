@@ -113,6 +113,9 @@ export function createBlankHelpDrivenProjectForms():HelpDrivenProjectForms{
 }
 export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):string[]{
  const errors:string[]=[]
+ if(!value||typeof value!=='object'||!value.sections||typeof value.sections!=='object'||Array.isArray(value.sections))return ['help-forms:invalid-root']
+ const knownSections=new Set(HELP_FORM_SECTIONS.map(section=>section.id))
+ for(const sectionId of Object.keys(value.sections))if(!knownSections.has(sectionId))errors.push('help-forms:unknown-section:'+sectionId)
  for(const section of HELP_FORM_SECTIONS){
   const rows=value.sections?.[section.id]??[]
   if(!section.repeatable&&rows.length!==1)errors.push(section.id+':expected-single-record')
@@ -215,6 +218,9 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
  return errors
 }
 export function updateHelpFormRow(value:HelpDrivenProjectForms,sectionId:string,rowId:string,fieldKey:string,next:HelpFieldValue):HelpDrivenProjectForms{
+ const section=HELP_FORM_SECTIONS.find(item=>item.id===sectionId)
+ if(!section)throw new Error('unknown-help-form-section:'+sectionId)
+ if(!section.fields.some(field=>field.key===fieldKey))throw new Error('unknown-help-form-field:'+sectionId+':'+fieldKey)
  const rows=(value.sections[sectionId]??[]).map(row=>{
   if(row.id!==rowId)return row
   const values={...row.values,[fieldKey]:next}
