@@ -150,7 +150,7 @@ export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinanci
 
 const hasEnteredValue=(value:unknown):boolean=>{
  if(value===null||value===undefined||value==='')return false
- if(typeof value==='boolean')return value
+ if(typeof value==='boolean')return true
  if(typeof value==='number')return Number.isFinite(value)
  if(Array.isArray(value))return value.some(hasEnteredValue)
  if(typeof value==='object')return Object.entries(value as Record<string,unknown>).some(([key,child])=>key!=='id'&&hasEnteredValue(child))

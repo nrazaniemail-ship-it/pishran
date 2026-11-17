@@ -61,6 +61,12 @@ try {
  unintegrated=h.addHelpFormRow(unintegrated,'production-costs','cost-1')
  unintegrated=h.updateHelpFormRow(unintegrated,'production-costs','cost-1','item','Steel input')
  assert.ok(forms.listUnintegratedFinancialDraftInputs({...auditDraft,helpDriven:unintegrated}).includes('production-costs.cost-1.item'))
+
+ let explicitFalse=auditDraft.helpDriven
+ explicitFalse=h.addHelpFormRow(explicitFalse,'sales-programme','sales-1')
+ explicitFalse=h.updateHelpFormRow(explicitFalse,'sales-programme','sales-1','productionActive',false)
+ assert.ok(forms.listUnintegratedFinancialDraftInputs({...auditDraft,helpDriven:explicitFalse}).includes('sales-programme.sales-1.productionActive'))
+
  const descriptiveOnly=h.updateHelpFormRow(auditDraft.helpDriven,'project-identification','project-identification-main','title','Test project')
  assert.deepEqual(forms.listUnintegratedFinancialDraftInputs({...auditDraft,helpDriven:descriptiveOnly}),[])
  const blankAsset=forms.createBlankFixedAssetFormDraft('asset-1')
