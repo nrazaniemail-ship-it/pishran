@@ -132,7 +132,7 @@ for(const [id,key,value] of [
 }
 for(const [id,period] of [['sale-a1','1'],['sale-a2','2']]){
  rawHelp=helpForms.addHelpFormRow(rawHelp,'sales-programme',id)
- for(const [key,value] of Object.entries({productId:'product-a',period,salesQuantity:10,netUnitPrice:5,salesTaxPercent:0,subsidyPercent:0,openingFinishedGoods:0,closingFinishedGoods:0}))
+ for(const [key,value] of Object.entries({productId:'product-a',period,salesQuantity:10,netUnitPrice:5,salesTaxPercent:0,subsidyPercent:0,openingFinishedGoods:0,openingFinishedGoodsValue:0,inventoryValuationMethod:'weighted-average',closingFinishedGoods:0}))
   rawHelp=helpForms.updateHelpFormRow(rawHelp,'sales-programme',id,key,value)
 }
 for(const [id,period] of [['wc-a1','1'],['wc-a2','2']]){
@@ -165,6 +165,8 @@ assert.equal(rawBound.drafts.assets[0].acquisitionPeriods[0].period,'1')
 assert.equal(rawBound.drafts.assets[0].depreciation.usefulLifeMonths,60)
 assert.equal(rawBound.drafts.productionCosts[0].productId,'product-a')
 assert.equal(rawBound.drafts.sales[0].periods.length,2)
+assert.equal(rawBound.drafts.sales[0].openingFinishedGoodsValue,0)
+assert.equal(rawBound.drafts.sales[0].inventoryValuationMethod,'weighted-average')
 assert.equal(rawBound.drafts.workingCapital[0].periodBalances.length,2)
 assert.equal(rawBound.drafts.workingCapital[0].calculationMode,'value')
 assert.equal(rawBound.drafts.workingCapital[0].activityBasis,'sales')
