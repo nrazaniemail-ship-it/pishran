@@ -393,6 +393,7 @@ export type IntegratedFinanceInput = {
   taxRateSchedule?: number[]
   taxBrackets?: ComfarTaxBracket[]
   taxHolidayYears?: number
+  lossCarryForwardYears?: number | null
   waccTaxRate?: number
   costOfEquity: number
   workingCapitalPercent: number
