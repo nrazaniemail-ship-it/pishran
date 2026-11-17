@@ -20,6 +20,7 @@ const result=finance.calculateIntegratedPeriodicFinance({
  workingCapitalByPeriod:[0,0],periodSubsidyIncome:[5,0],loans:[],discountRatePercent:10,
 })
 assert.equal(result.valid,true,result.warnings.join('; '))
+assert.deepEqual(result.rows.map(row=>row.subsidyIncome),[5,0])
 const adjustments=[
  {id:'fx',name:'Imported equipment FX shadow adjustment',period:'1',treatment:'cost',effectType:'foreign-exchange',financialAmount:10,economicAmount:8},
  {id:'jobs',name:'Employment shadow benefit',period:'2',treatment:'benefit',effectType:'employment',financialAmount:0,economicAmount:5},
