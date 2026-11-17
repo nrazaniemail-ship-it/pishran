@@ -50,6 +50,14 @@ export function bindEconomicAppraisalConfiguration(
     if(issues.length)return {valid:false,issues,configuration:null,status:'blocked'}
     return {valid:true,issues:[],configuration:null,status:'not-requested'}
   }
+  if(!enabled){
+    const economicRate=values.discountRate
+    if(economicRate!==null&&economicRate!==undefined&&economicRate!==''&&
+      (!finite(economicRate)||economicRate<0||economicRate>100))
+      issues.push('Economic discount rate must be between 0% and 100%.')
+    if(issues.length)return {valid:false,issues,configuration:null,status:'blocked'}
+    return {valid:true,issues:[],configuration:null,status:'not-requested'}
+  }
   const required=(key:string,label:string):unknown=>{
     const value=values[key]
     if(value===null||value===undefined||value===''){issues.push('Economic appraisal requires '+label+'.');return null}
