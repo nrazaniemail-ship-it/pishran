@@ -29,8 +29,9 @@ const invalid=engine.calculatePeriodicLoanSchedule({
 assert.equal(invalid.valid,false,'Loan schedule with mismatched period drawdowns must be rejected')
 console.log('PASS: generic periodic loan schedule validates drawdowns, amortization and maturity balance')
 
+const inventoryPeriods=[periods[0]]
 const inventoryFinance=engine.calculateIntegratedPeriodicFinance({
- periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+ periods:inventoryPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
  annualRevenue:[1000],annualVariableCost:[100],annualFixedCost:[100],annualDepreciation:[0],
  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
  annualCostOfGoodsSold:[200],annualTaxRates:[25],annualEquityContributions:[0],
@@ -46,13 +47,13 @@ assert.equal(inventoryFinance.rows[0].cfads,430)
 const inventoryStatements=engine.buildPeriodicThreeFinancialStatements(inventoryFinance,{
  cash:100,debt:0,netFixedAssets:0,netWorkingCapital:60,deferredPreOperatingAssets:0,paidInCapital:160,retainedEarnings:0,
 })
-assert.equal(inventoryStatements.length,periods.length)
+assert.equal(inventoryStatements.length,inventoryPeriods.length)
 assert.equal(inventoryStatements[0].incomeStatement.costOfGoodsSold,200)
 assert.equal(inventoryStatements[0].incomeStatement.cashOperatingCosts,400)
 assert.equal(inventoryStatements[0].balanceSheet.netWorkingCapital,80)
 assert.equal(inventoryStatements[0].balanceSheet.reconciled,true)
 const invalidInventoryCost=engine.calculateIntegratedPeriodicFinance({
- periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+ periods:inventoryPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
  annualRevenue:[1000],annualVariableCost:[100],annualFixedCost:[100],annualDepreciation:[0],
  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
  annualCostOfGoodsSold:[-1],annualTaxRates:[25],annualEquityContributions:[0],
@@ -60,7 +61,7 @@ const invalidInventoryCost=engine.calculateIntegratedPeriodicFinance({
 })
 assert.equal(invalidInventoryCost.valid,false,'Negative cost of goods sold must be rejected')
 const invalidInventoryValue=engine.calculateIntegratedPeriodicFinance({
- periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+ periods:inventoryPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
  annualRevenue:[1000],annualVariableCost:[100],annualFixedCost:[100],annualDepreciation:[0],
  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],
  annualTaxRates:[25],annualEquityContributions:[0],workingCapitalByPeriod:[50],
