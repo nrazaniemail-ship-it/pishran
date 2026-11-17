@@ -39,7 +39,7 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
   const helpDrivenPeriods=planning&&planning.periodFrequency!=='unspecified'&&planning.fiscalYearStartMonth!==null&&planning.projectStartDate&&planning.projectEndDate
    ?buildProjectCalendarPeriods(planning.projectStartDate,planning.projectEndDate,planning.periodFrequency,planning.fiscalYearStartMonth)
    :[]
- const errors=validateProjectModelFinancialFormDrafts(value)
+ const errors=validateProjectModelFinancialFormDrafts(value,products.map(product=>product.id))
  const patchAsset=(id:string,patch:Partial<FixedAssetFormDraft>)=>onChange({...value,assets:value.assets.map(x=>x.id===id?{...x,...patch}:x)})
  const patchCost=(id:string,patch:Partial<ProductionCostFormDraft>)=>onChange({...value,productionCosts:value.productionCosts.map(x=>x.id===id?{...x,...patch}:x)})
  const patchSales=(index:number,patch:Partial<(typeof value.sales)[number]>)=>onChange({...value,sales:value.sales.map((x,i)=>i===index?{...x,...patch}:x)})
