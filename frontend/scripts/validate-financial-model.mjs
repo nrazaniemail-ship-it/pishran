@@ -37,3 +37,29 @@ const validAsset={id:'asset-1',name:'Test asset',grossCost:1000,accumulatedDepre
 assert.equal(foundation.validateStartingFixedAssetBalances([validAsset],blank).length,0)
 assert.ok(foundation.validateStartingFixedAssetBalances([{...validAsset,commissioningDate:'2023-02-29'}],blank).some(x=>x.code==='invalid-starting-asset-date'))
 console.log('PASS: generic financial calculations, project calendar and opening-asset validation')
+
+const comfarTaxBrackets = [
+  { lowerLimit: 0, upperLimit: 1200, ratePercent: 15 },
+  { lowerLimit: 1200, upperLimit: 2000, ratePercent: 25 },
+  { lowerLimit: 2000, upperLimit: 5000, ratePercent: 40 },
+  { lowerLimit: 5000, upperLimit: 10000, ratePercent: 60 },
+  { lowerLimit: 10000, upperLimit: null, ratePercent: 75 },
+]
+near(engine.calculateComfarGraduatedTax(7500, comfarTaxBrackets), 3080, 1e-9, 'COMFAR Reference Manual Table 22 graduated tax')
+assert.ok(Number.isNaN(engine.calculateComfarGraduatedTax(7500, [
+  { lowerLimit: 0, upperLimit: 1000, ratePercent: 15 },
+  { lowerLimit: 1200, upperLimit: null, ratePercent: 25 },
+])), 'Non-contiguous tax brackets must be rejected')
+const annualTaxHoliday = engine.calculateIntegratedFinance({
+  years:3,constructionYears:1,capacity:1,fullCapacityRevenue:1000,
+  fullCapacityVariableCashCost:0,fullCapacityFixedCashCost:0,annualDepreciation:0,
+  depreciationSchedule:[0,0,0],maintenanceCapexSchedule:[0,0,0],
+  fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0,0],preOperatingSchedule:[0,0,0],
+  utilization:[0,1,1],equityContributions:[0,0,0],loans:[],
+  taxRate:25,taxBrackets:[{lowerLimit:0,upperLimit:null,ratePercent:25}],taxHolidayYears:1,
+  costOfEquity:0,workingCapitalPercent:0,salesEscalationPercent:0,opexEscalationPercent:0,
+  discountMode:'manual',manualDiscountRate:0,
+})
+assert.equal(annualTaxHoliday.years[1].tax,0,'First production year must be tax-exempt during the one-year tax holiday')
+assert.equal(annualTaxHoliday.years[2].tax,250,'Progressive tax calculation must resume after tax holiday')
+console.log('PASS: COMFAR progressive tax Table 22 and production tax holiday in annual financial model')
