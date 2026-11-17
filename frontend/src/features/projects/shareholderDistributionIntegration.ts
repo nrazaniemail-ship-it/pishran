@@ -14,6 +14,7 @@ export type ShareholderDistributionPeriod = {
   ordinaryAllocations: {shareholderClass:string;amount:number}[]
   preferredAllocations: {shareholderClass:string;amount:number}[]
   capitalRefund: number
+  terminalNetWorthDistribution: number
   closingRetainedEarnings: number
   closingPaidInCapital: number
   closingCash: number
@@ -58,8 +59,6 @@ export function applyShareholderDistributions(
     return matches.length===1?matches[0]:-1
   }
   const issues:string[]=[]
-  if(partners.some(row=>finite(row.values.netWorthDistribution)&&row.values.netWorthDistribution!==0))
-    issues.push('Net-worth distribution at project end requires a separate liquidation and residual-asset waterfall; it cannot be inferred from ordinary dividends.')
   const policyByPeriod=new Map<number,typeof policies>()
   for(const [index,row] of policies.entries()){
     const p=periodIndex(row.values.period)
@@ -71,8 +70,10 @@ export function applyShareholderDistributions(
     if(repatriated!==null&&repatriated!==undefined&&(!finite(repatriated)||repatriated<0||repatriated>100))
       issues.push('Profit-distribution row '+row.id+' has an invalid repatriation percentage.')
     const netWorthDistribution=row.values.netWorthDistribution
-    if(netWorthDistribution!==null&&netWorthDistribution!==undefined&&netWorthDistribution!==''&&netWorthDistribution!==0)
-      issues.push('Net-worth distribution at project end requires a separate liquidation and residual-asset waterfall; it cannot be inferred from ordinary dividends.')
+    if(netWorthDistribution!==null&&netWorthDistribution!==undefined&&netWorthDistribution!==''&&(!finite(netWorthDistribution)||netWorthDistribution<0||netWorthDistribution>100))
+      issues.push('Net-worth distribution percentage must be between 0% and 100%.')
+    if(finite(netWorthDistribution)&&netWorthDistribution>0&&p!==finance.rows.length-1)
+      issues.push('Net-worth distribution can only be entered in the final project period.')
     const share=row.values.remainingProfitShare
     if(share!==null&&share!==undefined&&(!finite(share)||share<0||share>100))
       issues.push('Profit-distribution row '+row.id+' has an invalid remaining-profit share.')
@@ -201,16 +202,30 @@ export function applyShareholderDistributions(
       issues.push('All shareholder classes in one period must use the same dividend repatriation percentage.')
     const repatriationPercent=repatriationValues.length&&finite(repatriationValues[0])?repatriationValues[0]:0
     const repatriatedDividend=totalDividend*repatriationPercent/100
-    const capitalRefund=refunds.get(i)??0
+    const scheduledCapitalRefund=refunds.get(i)??0
     cumulativePaidIn+=row.equityContribution+row.equityWorkingCapitalContribution
-    if(priorRefunds+capitalRefund>cumulativePaidIn+0.01)
+    if(priorRefunds+scheduledCapitalRefund>cumulativePaidIn+0.01)
       issues.push('Capital refunds exceed cumulative paid-in capital in period '+row.period+'.')
-    const totalOutflow=totalDividend+capitalRefund
+    const preTerminalRetainedEarnings=retained+netIncome-totalDividend
+    const preTerminalPaidInCapital=paidIn+row.equityContribution+row.equityWorkingCapitalContribution-scheduledCapitalRefund
+    const preTerminalCash=statement.cashFlowStatement.closingCash-totalDividend-scheduledCapitalRefund
+    const terminalPercent=rows.reduce((value,item)=>Math.max(value,finite(item.values.netWorthDistribution)?item.values.netWorthDistribution:0),0)
+    const netWorthBeforeTerminal=statement.balanceSheet.totalAssets-totalDividend-scheduledCapitalRefund-statement.balanceSheet.totalLiabilities
+    const terminalNetWorthDistribution=i===finance.rows.length-1?Math.max(0,netWorthBeforeTerminal)*terminalPercent/100:0
+    const terminalCapitalRefund=Math.min(terminalNetWorthDistribution,Math.max(0,preTerminalPaidInCapital))
+    const terminalDividend=terminalNetWorthDistribution-terminalCapitalRefund
+    if(terminalDividend>preTerminalRetainedEarnings+0.01)
+      issues.push('Terminal net-worth distribution exceeds the remaining retained earnings and paid-in capital available for return in period '+row.period+'.')
+    const capitalRefund=scheduledCapitalRefund+terminalCapitalRefund
+    const totalDividendWithTerminal=totalDividend+terminalDividend
+    const totalOutflow=totalDividendWithTerminal+capitalRefund
     const availableCash=Math.max(0,statement.cashFlowStatement.closingCash)
     if(totalOutflow>availableCash+0.01)
       issues.push('Dividends and capital refunds exceed closing cash available in period '+row.period+'.')
-    const closingRetainedEarnings=retained+netIncome-totalDividend
-    const closingPaidInCapital=paidIn+row.equityContribution+row.equityWorkingCapitalContribution-capitalRefund
+    if(priorRefunds+capitalRefund>cumulativePaidIn+0.01)
+      issues.push('Total scheduled and terminal capital refunds exceed cumulative paid-in capital in period '+row.period+'.')
+    const closingRetainedEarnings=preTerminalRetainedEarnings-terminalDividend
+    const closingPaidInCapital=preTerminalPaidInCapital-terminalCapitalRefund
     const closingCash=statement.cashFlowStatement.closingCash-totalOutflow
     const bs=statement.balanceSheet
     const totalAssets=bs.totalAssets-totalOutflow
@@ -231,8 +246,8 @@ export function applyShareholderDistributions(
     updatedFinance.rows[i]={...row,equityFreeCashFlow:row.equityFreeCashFlow-totalOutflow}
     periods.push({period:row.period,openingDistributableProfit,netIncome,profitAvailable,
       retainedProfit:profitAvailable*retainedPercent/100,preferredDividend,ordinaryDividend,totalDividend,
-      repatriatedDividend,ordinaryAllocations,preferredAllocations,capitalRefund,closingRetainedEarnings,closingPaidInCapital,closingCash})
-    totalDividends+=totalDividend;totalCapitalRefund+=capitalRefund;totalRepatriatedDividend+=repatriatedDividend
+      repatriatedDividend,ordinaryAllocations,preferredAllocations,capitalRefund,terminalNetWorthDistribution,closingRetainedEarnings,closingPaidInCapital,closingCash})
+    totalDividends+=totalDividendWithTerminal;totalCapitalRefund+=capitalRefund;totalRepatriatedDividend+=repatriatedDividend
     priorRefunds+=capitalRefund;retained=closingRetainedEarnings;paidIn=closingPaidInCapital
     for(const [partnerKey,schedule] of partnerContributions){partnerCapitalBalances.set(partnerKey,(partnerCapitalBalances.get(partnerKey)??0)+(schedule.get(i)??0))}
   }
