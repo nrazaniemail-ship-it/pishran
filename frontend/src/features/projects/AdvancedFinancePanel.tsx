@@ -140,7 +140,7 @@ export default function AdvancedFinancePanel(props: Props) {
     assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??0):0),fundingStructureVersion:2,
     workingCapitalDays:props.workingCapitalDefaults?.days??{raw:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0},
     workingCapitalBases:props.workingCapitalDefaults?.bases??{rawMaterials:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0},
-    wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),taxHolidayYears:0,lossCarryForwardYears:null,taxHolidayYears:0,
+    wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},taxRates:Array(years).fill(props.taxRate),taxHolidayYears:0,lossCarryForwardYears:null,
     discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0
   }))
   const [loaded,setLoaded]=useState(false)
@@ -317,7 +317,6 @@ export default function AdvancedFinancePanel(props: Props) {
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
       taxBrackets:state.taxBrackets?.length?state.taxBrackets:undefined,
       taxHolidayYears:state.taxHolidayYears??0,lossCarryForwardYears:state.lossCarryForwardYears??null,productionStartFiscalYear:construction,
-      taxHolidayYears:state.taxHolidayYears??0,productionStartFiscalYear:construction,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
       equityDiscountRatePercent:props.costOfEquity,
       valuationDate:props.valuationDate||undefined,
