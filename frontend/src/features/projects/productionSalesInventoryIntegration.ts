@@ -358,15 +358,26 @@ export function bindProductionSalesToPeriodicFinance(
 ):ProductionSalesFinanceBinding {
   const schedule=buildProductionSalesInventorySchedule(drafts,input.periods,input.fiscalYearStartMonth,openingFinishedGoodsByProduct,openingFinishedGoodsValueByProduct)
   if (!schedule.valid) return {valid:false,issues:schedule.issues,financeInput:null,schedule}
+  const issues:string[]=[]
+  if(input.annualVariableCost.length!==schedule.annualVariableCost.length||
+    input.annualFixedCost.length!==schedule.annualFixedCost.length||
+    (input.annualCostOfGoodsSold!==undefined&&input.annualCostOfGoodsSold.length!==schedule.annualCostOfGoodsSold.length))
+    issues.push('Existing annual operating-cost and cost-of-sales arrays must cover the same fiscal horizon as the product sales schedule.')
+  if(input.finishedGoodsInventoryValueByPeriod!==undefined&&
+    input.finishedGoodsInventoryValueByPeriod.length!==schedule.periodClosingFinishedGoodsValue.length)
+    issues.push('Existing finished-goods inventory values must cover every project period.')
+  if(issues.length)return {valid:false,issues,financeInput:null,schedule}
+  const existingCogs=input.annualCostOfGoodsSold??Array(schedule.annualCostOfGoodsSold.length).fill(0)
+  const existingInventory=input.finishedGoodsInventoryValueByPeriod??Array(schedule.periodClosingFinishedGoodsValue.length).fill(0)
   return {
     valid:true,issues:[],
     financeInput:{
       ...input,
       annualRevenue:schedule.annualRevenue,
-      annualVariableCost:schedule.annualVariableCost,
-      annualFixedCost:schedule.annualFixedCost,
-      annualCostOfGoodsSold:schedule.annualCostOfGoodsSold,
-      finishedGoodsInventoryValueByPeriod:schedule.periodClosingFinishedGoodsValue,
+      annualVariableCost:input.annualVariableCost.map((value,index)=>value+schedule.annualVariableCost[index]),
+      annualFixedCost:input.annualFixedCost.map((value,index)=>value+schedule.annualFixedCost[index]),
+      annualCostOfGoodsSold:existingCogs.map((value,index)=>value+schedule.annualCostOfGoodsSold[index]),
+      finishedGoodsInventoryValueByPeriod:existingInventory.map((value,index)=>value+schedule.periodClosingFinishedGoodsValue[index]),
     },
     schedule,
   }
