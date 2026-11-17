@@ -30,6 +30,21 @@ assert.equal(reconciliation.matched,true,'Identical cash-flow series must reconc
 const scaled=engine.calculateCapacityScaledCapex(1000,100,200,0.8)
 near(scaled.amount,1741.1011265922482,1e-8,'Capacity-scaled CAPEX')
 
+const depositPolicy={
+  dayBasis:360,rawMaterialDays:0,workInProgressDays:0,
+  workInProgressMaterialCompletionPercent:0,workInProgressConversionCompletionPercent:0,
+  finishedGoodsDays:0,receivableDays:0,cashDays:30,payableDays:0,
+  annualRawMaterialCost:0,annualConversionCost:0,annualFinishedGoodsCost:0,
+  annualRevenue:0,annualCashOperatingCost:1200,
+  shortTermDepositSharePercent:50,shortTermDepositRatePercent:12,
+}
+const depositWorkingCapital=engine.calculateOperatingCycleWorkingCapital(depositPolicy,1)
+near(depositWorkingCapital.minimumCash,100,1e-9,'COMFAR cash-in-hand requirement')
+near(depositWorkingCapital.shortTermDeposits??0,50,1e-9,'Short-term deposits are a portion of cash-in-hand')
+near(depositWorkingCapital.netWorkingCapital,100,1e-9,'Short-term deposits must not be double-counted in net working capital')
+near(engine.calculateShortTermDepositInterest(100,50,12,12),6,1e-9,'COMFAR XI.O annual deposit interest')
+near(engine.calculateShortTermDepositInterest(100,50,12,6),3,1e-9,'COMFAR XI.O partial-period deposit interest')
+
 
 const sydAssetSchedule = (lengthYears, lengthMonths, firstDepreciationMonths) => engine.calculateComfarAssetDepreciationSchedule([{
   id:'syd-asset',name:'SYD asset',originalValue:1200,initialBookValue:1200,scrapPercent:10,
