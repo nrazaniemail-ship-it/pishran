@@ -592,6 +592,7 @@ export type PeriodicProjectFinanceInput = {
   dayCountBasis: 360 | 365
   cashFlowTiming: PeriodCashFlowTiming
   annualRevenue: number[]
+  annualShortTermDepositInterest?: number[]
   annualVariableCost: number[]
   annualFixedCost: number[]
   annualDepreciation: number[]
@@ -641,6 +642,7 @@ export type PeriodicProjectFinanceRow = {
   endDate: string
   days: number
   revenue: number
+  shortTermDepositInterest: number
   variableCost: number
   fixedCost: number
   depreciation: number
@@ -890,7 +892,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     input.annualRevenue, input.annualVariableCost, input.annualFixedCost, input.annualDepreciation,
     input.annualFixedInvestment, input.annualPreOperatingCost, input.annualMaintenanceCapex,
     input.annualTaxRates, input.annualEquityContributions,
-    ...(input.annualEquityWorkingCapitalContributions ? [input.annualEquityWorkingCapitalContributions] : []),
+    input.annualEquityWorkingCapitalContributions ?? Array(input.annualRevenue.length).fill(0),
+    input.annualShortTermDepositInterest ?? Array(input.annualRevenue.length).fill(0),
   ]
   if (annualSeries.some(series => !Array.isArray(series) || !series.length || series.some(value => !validFinite(value))) ||
       annualSeries.slice(0,7).some(series => series.some(value => value < 0)) ||
@@ -942,7 +945,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSalesByPeriod[target] = {...row}
     }
   }
-  const [revenue, variableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution, allocatedEquityWorkingCapitalContribution] = allocated
+  const [revenue, variableCost, fixedCost, allocatedDepreciation, fixedInvestment, preOperatingCost, maintenanceCapex, , equityContribution, allocatedEquityWorkingCapitalContribution, shortTermDepositInterest] = allocated
   const equityWorkingCapitalContribution = allocatedEquityWorkingCapitalContribution ?? Array(periods.length).fill(Number.NaN)
   const depreciation = input.periodDepreciationSchedule ? [...input.periodDepreciationSchedule] : allocatedDepreciation
   if (input.periodDepreciationSchedule && (input.periodDepreciationSchedule.length!==periods.length ||
@@ -1044,8 +1047,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
     const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
-    const periodTax = calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
-    const unleveredPeriodTax = calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
+    const periodTax = calculatePeriodTax(ebit + shortTermDepositInterest[index] - interestExpense, taxRates[index], taxLoss)
+    const unleveredPeriodTax = calculatePeriodTax(ebit + shortTermDepositInterest[index], taxRates[index], unleveredTaxLoss)
     if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
       warnings.push('Tax calculation failed in project period ' + (index + 1) + '.')
       return empty()
@@ -1067,20 +1070,20 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       warnings.push('Shareholder working-capital funding must be finite and non-negative (period ' + (index + 1) + ').')
       return empty()
     }
-    const cfads = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
+    const cfads = revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - periodTax.tax
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
     const dscrCovenantStatus: 'not-tested' | 'pass' | 'breach' = input.minimumDscr == null || dscr == null
       ? 'not-tested' : dscr + 1e-9 >= input.minimumDscr ? 'pass' : 'breach'
     if (dscrCovenantStatus === 'breach') warnings.push('Minimum DSCR covenant breached in period ' + (index + 1) + ': actual ' + dscr!.toFixed(4) + ', minimum ' + input.minimumDscr!.toFixed(4) + '.')
-    const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
+    const projectFreeCashFlow = ebit + shortTermDepositInterest[index] - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
-    const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
+    const equityFreeCashFlow = -equityContribution[index] + revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index]
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
-    const periodCashChange = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
+    const periodCashChange = revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - periodTax.tax
       - interestExpense - principal - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage + debtDrawdown
       + equityContribution[index] + equityWorkingCapitalContributionAmount
@@ -1090,7 +1093,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     if (fundingGap > 0.01) warnings.push('Funding shortfall at the end of project period ' + (index + 1) + ': ' + fundingGap.toFixed(2) + '.')
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
-      revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
+      revenue:revenue[index],shortTermDepositInterest:shortTermDepositInterest[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
@@ -1424,7 +1427,7 @@ export type PeriodicFinancialStatement = {
   endDate: string
   openingBalances: Required<PeriodicStatementOpeningBalances>
   incomeStatement: {
-    revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number
+    revenue: number; shortTermDepositInterest: number; cashOperatingCosts: number; ebitda: number; depreciation: number
     assetDisposalGainLoss: number; ebit: number; interest: number
     cashInterestExpense: number; financingFeeExpense: number; commitmentFeeExpense: number
     profitBeforeTax: number; tax: number; netIncome: number
@@ -1496,7 +1499,7 @@ export function buildPeriodicThreeFinancialStatements(
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
     const ebitda = row.revenue - cashOperatingCosts
     const ebit = ebitda - row.depreciation + assetDisposalGainLoss
-    const profitBeforeTax = ebit - row.interestExpense
+    const profitBeforeTax = ebit + row.shortTermDepositInterest - row.interestExpense
     const netIncome = profitBeforeTax - row.tax
     const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital
     const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex +
@@ -1528,7 +1531,7 @@ export function buildPeriodicThreeFinancialStatements(
     }
     statements.push({
       period: row.period, startDate: row.startDate, endDate: row.endDate, openingBalances,
-      incomeStatement: { revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation,
+      incomeStatement: { revenue: row.revenue, shortTermDepositInterest: row.shortTermDepositInterest, cashOperatingCosts, ebitda, depreciation: row.depreciation,
         assetDisposalGainLoss, ebit, interest: row.interestExpense,
         cashInterestExpense: row.cashInterestExpense, financingFeeExpense: row.financingFeeExpense,
         commitmentFeeExpense: row.commitmentFeeExpense,
