@@ -102,6 +102,10 @@ export function buildWorkingCapitalScheduleFromDrafts(
     if (hasDays && hasTurnover && Math.abs((360 / daysCoverage!) - turnover!) > 0.01)
       issues.push(prefix + 'days-coverage-and-turnover-do-not-reconcile')
     const driverEnabled = hasDays || hasTurnover
+    if (!driverEnabled && component.activityBasis)
+      issues.push(prefix + 'activity-basis-requires-days-coverage-driver')
+    if (!driverEnabled && component.calculationMode === 'units')
+      issues.push(prefix + 'unit-mode-requires-quantity-valuation-adapter')
     if (driverEnabled) {
       if (component.calculationMode !== 'value')
         issues.push(prefix + 'days-coverage-requires-value-calculation-mode')
