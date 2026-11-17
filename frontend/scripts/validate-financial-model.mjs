@@ -83,6 +83,9 @@ near(annualDepositStatements[1].incomeStatement.profitBeforeTax,66,1e-9,'Deposit
 near(annualDepositStatements[1].balanceSheet.cashInHand,50,1e-9,'Cash-in-hand net of short-term deposits')
 near(annualDepositStatements[1].balanceSheet.shortTermDeposits,50,1e-9,'Short-term deposits shown separately on balance sheet')
 near(annualDepositStatements[1].balanceSheet.workingCapitalAssets,100,1e-9,'Cash-in-hand plus deposits included once in current assets')
+near(annualDepositModel.years[2].closingWorkingCapital,0,1e-9,'Terminal-period working capital recovery')
+near(annualDepositStatements[2].balanceSheet.workingCapitalAssets,0,1e-9,'Terminal-period current asset liquidation')
+near(annualDepositStatements[2].balanceSheet.shortTermDeposits,0,1e-9,'Terminal-period short-term deposit liquidation')
 near(engine.calculateWorkingCapitalTurnoverCoefficient(540),2/3,1e-9,'COMFAR Coto for coverage above one year')
 
 
