@@ -158,7 +158,7 @@ const openingAssetDisposal=engine.calculateComfarCalendarAssetLifecycle([{
   id:'opening-sale-test',name:'Opening asset for sale',originalValue:1000,initialBookValue:700,
   scrapPercent:10,lengthYears:7,lengthMonths:0,ratePercent:100/7,
   method:'linear-to-scrap',acquisitionPeriod:0,startingAtPeriod:1,
-  acquisitionDate:'2020-01-01',startingAtDate:'2025-01-01',firstDepreciationMonths:12
+  acquisitionDate:'2020-01-01',startingAtDate:'2026-10-15',firstDepreciationMonths:12
 }],[{
   id:'opening-sale-test-disposal',assetId:'opening-sale-test',period:1,
   saleDate:'2026-11-15',priceMode:'self-defined',selfDefinedPrice:500,exchangeRateToLocal:1
