@@ -190,6 +190,19 @@ export function describeUnintegratedFinancialDraftInput(path:string,language:'fa
   return (en?label[1]:label[0])+' '+(Number(collection[2])+1)+' — '+(en?'not yet connected and validated in the calculation engine':'هنوز به موتور محاسبات متصل و اعتبارسنجی نشده است')
  }
  if(path==='financialForms.tax')return en?'Tax assumptions are not yet integrated and validated':'مفروضات مالیاتی هنوز به موتور محاسبات متصل و اعتبارسنجی نشده‌اند'
+ if(path.startsWith('financialForms.economic:')){
+  const messages:Record<string,[string,string]> = {
+   'foreign-exchange-effect-required':['برای اثر ارز خارجی، تعدیل اقتصادی با طبقه ارز خارجی ثبت کنید','Add at least one foreign-exchange economic adjustment'],
+   'employment-effect-required':['برای اثر اشتغال، تعدیل اقتصادی اشتغال ثبت کنید','Add at least one employment economic adjustment'],
+   'value-added-analysis-not-integrated':['گزارش ارزش افزوده هنوز به تفکیک مصرف واسطه‌ای و عوامل تولید متصل نشده است','Value-added reporting is not yet connected to intermediate consumption and factor inputs'],
+   'cost-centre-analysis-not-integrated':['گزارش مراکز هزینه هنوز به دفتر هزینه تفصیلی متصل نشده است','Cost-centre reporting is not yet connected to the detailed cost ledger'],
+   'cost-allocation-not-integrated':['تخصیص هزینه هنوز به مبانی و محرک‌های هزینه متصل نشده است','Cost allocation is not yet connected to cost drivers and allocation bases'],
+   'economic-analysis-not-valid':['نرخ تنزیل یا تعدیلات قیمت سایه‌ای اقتصادی ناقص یا نامعتبر است','Economic discount rate or shadow-price adjustments are incomplete or invalid'],
+  }
+  const code=path.split(':')[1]??''
+  const message=messages[code]
+  if(message)return en?message[1]:message[0]
+ }
  const help=/^([a-z0-9-]+)\.([^.]+)\.([^.]+)$/.exec(path)
  if(help){
   const sections:Record<string,[string,string]> = {
