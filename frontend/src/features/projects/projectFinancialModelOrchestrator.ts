@@ -271,9 +271,11 @@ export function calculateProjectFinancialModelFromDrafts(
     }
     if(taxDraft.lossCarryForward===false)finance={...finance,openingTaxLoss:0,openingUnleveredTaxLoss:0,taxLossCarryForwardEnabled:false}
     if(taxDraft.lossCarryForward===true) {
-      if(taxDraft.lossCarryForwardYears!==null&&(!Number.isInteger(taxDraft.lossCarryForwardYears)||taxDraft.lossCarryForwardYears<1))
+      const carryForwardYears=taxDraft.lossCarryForwardYears??
+        (typeof incomeTaxRow?.values.lossCarryForwardYears==='number'?incomeTaxRow.values.lossCarryForwardYears:null)
+      if(carryForwardYears!==null&&(!Number.isInteger(carryForwardYears)||carryForwardYears<1))
         return fail(['Tax-loss carry-forward duration must be a positive whole number of years.'])
-      finance={...finance,taxLossCarryForwardEnabled:true,taxLossCarryForwardYears:taxDraft.lossCarryForwardYears}
+      finance={...finance,taxLossCarryForwardEnabled:true,taxLossCarryForwardYears:carryForwardYears}
     }
   }
   if(incomeTaxRow){
