@@ -165,7 +165,7 @@ export function listUnintegratedFinancialDraftInputs(value:ProjectModelFinancial
   if(section.id==='project-identification'&&descriptiveProjectFields.has(field.key))continue
   if(hasEnteredValue(row.values?.[field.key]))issues.push(section.id+'.'+row.id+'.'+field.key)
  }
- const collections:[string,unknown[]][]=[['financialForms.assets',value.assets],['financialForms.loans',value.loans]]
+ const collections:[string,unknown[]][]=[['financialForms.assets',value.assets]]
  // Working-capital component balances are bound to the periodic finance engine; do not block reports for these integrated rows.
  for(const [label,rows] of collections)for(const [index,row] of (rows??[]).entries())if(hasEnteredValue(row))issues.push(label+'.'+index)
  // Tax form fields are bound to the period engine; schedule validity is checked by the periodic result gate.
