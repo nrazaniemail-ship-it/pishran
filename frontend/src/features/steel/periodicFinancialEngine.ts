@@ -300,6 +300,7 @@ export type PeriodicLoanRow = {
   financingFeeExpense: number
   commitmentFeeExpense: number
   capitalizedFinancingFees: number
+  foreignExchangeLoss: number
   principal: number
   closingBalance: number
   debtService: number
@@ -681,6 +682,9 @@ export type PeriodicProjectFinanceInput = {
   taxLossCarryForwardEnabled?: boolean
   taxLossCarryForwardYears?: number | null
   loans: PeriodicProjectLoan[]
+  /** Pretranslated local-currency schedules for foreign facilities; FX gains/losses are posted separately. */
+  loanScheduleOverrides?: Record<string, PeriodicLoanRow[]>
+  foreignExchangeLossByPeriod?: number[]
   /** Minimum covenant DSCR as a multiple (e.g. 1.20); breaches are warnings, not automatic cash-flow changes. */
   minimumDscr?: number
   discountRatePercent?: number | null
@@ -982,7 +986,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       input.workingCapitalByPeriod.some(value => !validFinite(value)) ||
       (input.cashInHandByPeriod != null && (input.cashInHandByPeriod.length !== periods.length || input.cashInHandByPeriod.some(value => !validFinite(value) || value < 0))) ||
       (input.shortTermDepositsByPeriod != null && (input.shortTermDepositsByPeriod.length !== periods.length || input.shortTermDepositsByPeriod.some(value => !validFinite(value) || value < 0))) ||
-      input.loans.some(loan => !loan.id || !loan.input)) {
+      input.loans.some(loan => !loan.id || !loan.input) ||
+      (input.foreignExchangeLossByPeriod!=null&&(input.foreignExchangeLossByPeriod.length!==periods.length||input.foreignExchangeLossByPeriod.some(value=>!validFinite(value)))) ||
+      Object.entries(input.loanScheduleOverrides??{}).some(([id,rows])=>!input.loans.some(loan=>loan.id===id)||!Array.isArray(rows)||rows.length!==periods.length||rows.some((row,index)=>!row||row.period!==index+1||![row.drawdown,row.openingBalance,row.periodRatePercent,row.interestExpense,row.capitalizedInterest,row.financingFeeExpense,row.commitmentFeeExpense,row.capitalizedFinancingFees,row.principal,row.closingBalance,row.debtService].every(validFinite)||[row.drawdown,row.openingBalance,row.interestExpense,row.capitalizedInterest,row.financingFeeExpense,row.commitmentFeeExpense,row.capitalizedFinancingFees,row.principal,row.closingBalance,row.debtService].some(value=>value<0)))) {
     warnings.push('Annual flow arrays, tax rates, working-capital balances must be finite (negative net working capital is valid), or loan definitions are invalid.')
     return empty()
   }
@@ -1095,7 +1101,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   }
   const loanSchedules: Record<string, PeriodicLoanRow[]> = {}
   for (const loan of input.loans) {
-    const schedule = calculatePeriodicLoanSchedule(loan.input, periods, dayCountBasis)
+    const override=input.loanScheduleOverrides?.[loan.id]
+    const schedule = override?{valid:true,rows:override,issues:[]}:calculatePeriodicLoanSchedule(loan.input, periods, dayCountBasis)
     if (!schedule.valid) {
       warnings.push(...schedule.issues.map(issue => loan.id + ': ' + issue))
       return empty()
@@ -1152,6 +1159,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     // Preserve the existing total-financing-cost field for downstream consumers,
     // while exposing its components for audit trails and lender reporting.
     const interestExpense = cashInterestExpense + financingFeeExpense
+    const foreignExchangeLoss=input.foreignExchangeLossByPeriod?.[index]??0
     const capitalizedInterest = loanRows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
     const capitalizedFinancingFees = loanRows.reduce((sum,row)=>sum+row.capitalizedFinancingFees,0)
     const principal = loanRows.reduce((sum,row)=>sum+row.principal,0)
@@ -1164,11 +1172,11 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSale.otherIncomeLoss + salvageGainLoss
     const currentFiscalYearIndex=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
     const periodTaxWithExpiry=calculatePeriodTaxWithLossExpiry(
-      ebit+shortTermDepositInterest[index]-interestExpense,taxRates[index],taxLossVintages,currentFiscalYearIndex,
+      ebit+shortTermDepositInterest[index]-interestExpense-foreignExchangeLoss,taxRates[index],taxLossVintages,currentFiscalYearIndex,
       lossCarryForwardEnabled?lossCarryForwardYears:null,lossCarryForwardEnabled)
     const unleveredTaxWithExpiry=calculatePeriodTaxWithLossExpiry(
       ebit+shortTermDepositInterest[index],taxRates[index],unleveredTaxLossVintages,currentFiscalYearIndex,
-      lossCarryForwardEnabled?lossCarryForwardYears:0,lossCarryForwardEnabled)
+      lossCarryForwardEnabled?lossCarryForwardYears:null,lossCarryForwardEnabled)
     const periodTax:PeriodTaxResult=periodTaxWithExpiry
     const unleveredPeriodTax:PeriodTaxResult=unleveredTaxWithExpiry
     if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
@@ -1221,7 +1229,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
-      capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
+      capitalizedInterest,capitalizedFinancingFees,foreignExchangeLoss,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,cashInHand:input.cashInHandByPeriod?.[index]??0,shortTermDeposits:input.shortTermDepositsByPeriod?.[index]??0,
@@ -1695,7 +1703,7 @@ export function buildPeriodicThreeFinancialStatements(
         Math.abs(scheduledPeriod.capitalizedFinancingFees - row.capitalizedFinancingFees) > tolerance ||
         Math.abs(scheduledPeriod.principal - row.principal) > tolerance) return []
     const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees -
-      row.principal + automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
+      row.principal + row.foreignExchangeLoss + automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
     if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance +
         automaticFunding.automaticOverdraftBalance)) > tolerance) return []
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings, grants }
@@ -1703,9 +1711,9 @@ export function buildPeriodicThreeFinancialStatements(
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
     const ebitda = row.revenue - cashOperatingCosts
     const ebit = ebitda - row.depreciation + assetDisposalGainLoss
-    const profitBeforeTax = ebit + row.shortTermDepositInterest - row.interestExpense
+    const profitBeforeTax = ebit + row.shortTermDepositInterest - row.interestExpense - row.foreignExchangeLoss
     const netIncome = profitBeforeTax - row.tax
-    const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital
+    const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital + row.foreignExchangeLoss
     const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex +
       row.assetSaleProceeds + row.salvageValue
     const automaticFinancingCashFlow = automaticFunding.automaticEquity +
@@ -1731,7 +1739,7 @@ export function buildPeriodicThreeFinancialStatements(
       cash: closingCash - cash - netChangeInCash,
       cashRollForward: closingCash - (row.closingCash + automaticFundingCashBalance),
       debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest +
-        row.capitalizedFinancingFees - row.principal + automaticFunding.automaticOverdraftDrawdown -
+        row.capitalizedFinancingFees - row.principal + row.foreignExchangeLoss + automaticFunding.automaticOverdraftDrawdown -
         automaticFunding.automaticOverdraftRepayment),
       automaticOverdraft: automaticOverdraftBalance - automaticFunding.automaticOverdraftBalance,
       netWorkingCapital: closingWorkingCapital - netWorkingCapital - row.changeInWorkingCapital,
