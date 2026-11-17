@@ -33,6 +33,16 @@ export type ProductOperatingSchedule = {
   totalClosingInventoryValue: number
 }
 
+function comfarDaysInPeriod(period:ProjectCalendarPeriod):number {
+  const start=new Date(period.startDate+'T00:00:00Z')
+  const end=new Date(period.endDate+'T00:00:00Z')
+  if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<start)return Number.NaN
+  const months=(end.getUTCFullYear()-start.getUTCFullYear())*12+end.getUTCMonth()-start.getUTCMonth()+1
+  const lastDay=new Date(Date.UTC(end.getUTCFullYear(),end.getUTCMonth()+1,0)).getUTCDate()
+  const fullMonths=start.getUTCDate()===1&&end.getUTCDate()===lastDay
+  return fullMonths?30*months:period.days
+}
+
 /**
  * Builds product-by-product production, weighted-average finished-goods inventory,
  * cost of sales and net revenue. No missing quantity, opening inventory or unit-cost
@@ -132,6 +142,21 @@ export function buildProductOperatingSchedule(
       issues.push('Product '+sale.productId+' has no validated direct production-cost basis.')
       continue
     }
+    if(!sale.inventoryPolicy){
+      issues.push('Product '+sale.productId+' must select manual inventory or COMFAR days-coverage production.')
+      continue
+    }
+    let productionStartIndex=0,productionEndIndex=count-1
+    if(sale.inventoryPolicy==='comfar-days-coverage'){
+      if(sale.finishedGoodsDaysCoverage===null||!Number.isFinite(sale.finishedGoodsDaysCoverage)||sale.finishedGoodsDaysCoverage<0)
+        issues.push('Product '+sale.productId+' requires non-negative finished-goods days coverage.')
+      if(!Number.isInteger(sale.productionStartPeriod)||!Number.isInteger(sale.productionEndPeriod)||
+        sale.productionStartPeriod===null||sale.productionEndPeriod===null||
+        sale.productionStartPeriod<1||sale.productionEndPeriod<sale.productionStartPeriod||
+        sale.productionEndPeriod>=count)
+        issues.push('Product '+sale.productId+' production interval must be explicit and leave at least one project period for final stock liquidation.')
+      else {productionStartIndex=sale.productionStartPeriod-1;productionEndIndex=sale.productionEndPeriod-1}
+    }
     const mapped=new Map<number,SalesProductFormDraft['periods'][number]>()
     for (const row of sale.periods) {
       const matches:number[]=[]
@@ -148,19 +173,61 @@ export function buildProductOperatingSchedule(
     for(let index=0;index<count;index++) {
       const source=mapped.get(index)
       if(!source) { issues.push('Product '+sale.productId+' is missing period '+(index+1)+'.'); continue }
-      const required=[source.salesQuantity,source.netUnitPrice,source.salesTaxPercent,source.finishedGoodsClosingQuantity,
-        source.openingFinishedGoodsQuantity,source.openingFinishedGoodsValue]
+      const required=[source.salesQuantity,source.netUnitPrice,source.salesTaxPercent]
       if(required.some(value=>value===null||!Number.isFinite(value))||
         required.some(value=>(value as number)<0)) {
-        issues.push('Product '+sale.productId+' requires non-negative sales, price, opening/closing inventory quantities and opening inventory value in period '+(index+1)+'.')
+        issues.push('Product '+sale.productId+' requires non-negative sales quantity, price and explicit sales-tax rate in period '+(index+1)+'.')
         continue
       }
-      const openingQuantity=source.openingFinishedGoodsQuantity as number
-      const openingValue=source.openingFinishedGoodsValue as number
+      const openingQuantity=index===0
+        ?source.openingFinishedGoodsQuantity
+        :sale.inventoryPolicy==='comfar-days-coverage'?previousClosingQuantity:source.openingFinishedGoodsQuantity
+      const openingValue=index===0
+        ?source.openingFinishedGoodsValue
+        :sale.inventoryPolicy==='comfar-days-coverage'?previousClosingValue:source.openingFinishedGoodsValue
+      if(openingQuantity===null||openingValue===null||!Number.isFinite(openingQuantity)||!Number.isFinite(openingValue)||
+        openingQuantity<0||openingValue<0){
+        issues.push('Product '+sale.productId+' requires explicit opening inventory quantity and value in period '+(index+1)+'.')
+        continue
+      }
       const salesQuantity=source.salesQuantity as number
-      const closingQuantity=source.finishedGoodsClosingQuantity as number
-      if(index>0&&(Math.abs(openingQuantity-(previousClosingQuantity??Number.NaN))>0.000001||
-        Math.abs(openingValue-(previousClosingValue??Number.NaN))>0.01)) {
+      if(sale.inventoryPolicy==='manual'&&
+        (source.finishedGoodsClosingQuantity===null||!Number.isFinite(source.finishedGoodsClosingQuantity)||source.finishedGoodsClosingQuantity<0)){
+        issues.push('Product '+sale.productId+' requires a non-negative manual closing inventory quantity in period '+(index+1)+'.')
+        continue
+      }
+      let closingQuantity:number
+      let productionQuantity:number
+      if(sale.inventoryPolicy==='comfar-days-coverage'){
+        const insideProduction=index>=productionStartIndex&&index<=productionEndIndex
+        if(insideProduction){
+          const periodDays=comfarDaysInPeriod(periods[index])
+          if(!Number.isFinite(periodDays)||periodDays<=0){
+            issues.push('Product '+sale.productId+' has an invalid period length for COMFAR finished-goods coverage.')
+            continue
+          }
+          const requiredStock=salesQuantity*(sale.finishedGoodsDaysCoverage as number)/periodDays
+          closingQuantity=Math.max(openingQuantity-salesQuantity,requiredStock)
+          productionQuantity=salesQuantity-openingQuantity+closingQuantity
+        }else{
+          productionQuantity=0
+          closingQuantity=openingQuantity-salesQuantity
+          if(closingQuantity< -0.000001){
+            issues.push('Product '+sale.productId+' sales exceed available finished-goods stock outside the production interval in period '+(index+1)+'.')
+            continue
+          }
+        }
+        if(index===count-1&&closingQuantity>0.000001){
+          issues.push('Product '+sale.productId+' has unsold finished goods at the end of the model; add a liquidation period or extend sales until the closing stock is zero.')
+          continue
+        }
+      }else{
+        closingQuantity=source.finishedGoodsClosingQuantity as number
+        productionQuantity=salesQuantity+closingQuantity-openingQuantity
+      }
+      if(index>0&&sale.inventoryPolicy==='manual'&&
+        (Math.abs((source.openingFinishedGoodsQuantity as number)-(previousClosingQuantity??Number.NaN))>0.000001||
+         Math.abs((source.openingFinishedGoodsValue as number)-(previousClosingValue??Number.NaN))>0.01)){
         issues.push('Product '+sale.productId+' opening inventory in period '+(index+1)+' must reconcile to the previous period closing inventory.')
         continue
       }
@@ -174,7 +241,6 @@ export function buildProductOperatingSchedule(
         issues.push('Product '+sale.productId+' subsidy must use one non-negative method (percentage or fixed amount) in period '+(index+1)+'.')
         continue
       }
-      const productionQuantity=salesQuantity+closingQuantity-openingQuantity
       if(productionQuantity< -0.000001) {
         issues.push('Product '+sale.productId+' sales exceed opening inventory plus non-negative production in period '+(index+1)+'.')
         continue
