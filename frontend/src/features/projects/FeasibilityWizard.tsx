@@ -15,7 +15,7 @@ import ProjectModelFinancialFormsPanel from './ProjectModelFinancialFormsPanel'
 import ProjectModelHelpCoveragePanel from './ProjectModelHelpCoveragePanel'
 import { createBlankProjectModelFinancialFormDrafts, listUnintegratedFinancialDraftInputs, type ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import FixedInvestmentPanel from './FixedInvestmentPanel'
-import { buildProjectCalendarPeriods, createBlankProjectFoundation, mergeProjectFoundation, type ProjectFoundation, type FixedInvestmentItem, type StartingFixedAssetBalance, type StartingFinancialBalanceSummary, type OpeningCurrentAccounts } from './projectFoundation'
+import { buildProjectCalendarPeriods, createBlankProjectFoundation, mergeProjectFoundation, type ProjectFoundation, type FixedInvestmentItem, type StartingFixedAssetBalance, type StartingFinancialBalanceSummary } from './projectFoundation'
 
 type Row = { id:string; name:string; quantity:number; unit:string; unitPrice:number; source:string; valueText?:string; flowType?:'input'|'output' }
 const blankStartingBalanceSummary:StartingFinancialBalanceSummary={cash:0,netWorkingCapital:0,debt:0,paidInCapital:0,retainedEarnings:0,grants:0,currentAccounts:undefined}
