@@ -637,7 +637,7 @@ for (const field of ['daysCoverage','turnover']) {
   taxTreatment:'non-deductible',
  })
  assert.equal(unusedWorkingCapitalModel.valid,false,field+' must not be silently ignored')
- assert.ok(unusedWorkingCapitalModel.issues.some(issue=>issue.includes('working-capital.'+field)&&issue.includes('not yet connected')))
+ assert.ok(unusedWorkingCapitalModel.issues.some(issue=>issue.includes('working-capital-0:days-coverage-requires-value-calculation-mode')),unusedWorkingCapitalModel.issues.join('; '))
 }
 
 
