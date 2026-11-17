@@ -45,6 +45,19 @@ near(depositWorkingCapital.netWorkingCapital,100,1e-9,'Short-term deposits must 
 near(engine.calculateShortTermDepositInterest(100,50,12,12),6,1e-9,'COMFAR XI.O annual deposit interest')
 near(engine.calculateShortTermDepositInterest(100,50,12,6),3,1e-9,'COMFAR XI.O partial-period deposit interest')
 
+const suppliesUtilitiesPolicy={
+  dayBasis:360,rawMaterialDays:0,factorySuppliesDays:30,utilitiesDays:15,
+  workInProgressDays:0,workInProgressMaterialCompletionPercent:0,
+  workInProgressConversionCompletionPercent:0,finishedGoodsDays:0,receivableDays:0,
+  cashDays:0,payableDays:0,annualRawMaterialCost:0,annualFactorySuppliesCost:360,
+  annualUtilitiesCost:720,annualConversionCost:0,annualFinishedGoodsCost:0,
+  annualRevenue:0,annualCashOperatingCost:0,
+}
+const suppliesUtilities=engine.calculateOperatingCycleWorkingCapital(suppliesUtilitiesPolicy,1)
+near(suppliesUtilities.factorySupplies??0,30,1e-9,'COMFAR factory supplies inventory')
+near(suppliesUtilities.utilities??0,30,1e-9,'COMFAR utilities inventory')
+near(suppliesUtilities.netWorkingCapital,60,1e-9,'Factory supplies and utilities included in net working capital')
+
 
 const sydAssetSchedule = (lengthYears, lengthMonths, firstDepreciationMonths) => engine.calculateComfarAssetDepreciationSchedule([{
   id:'syd-asset',name:'SYD asset',originalValue:1200,initialBookValue:1200,scrapPercent:10,
