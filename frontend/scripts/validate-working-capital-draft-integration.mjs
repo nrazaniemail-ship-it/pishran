@@ -65,4 +65,38 @@ const invalidCalendar = adapter.buildWorkingCapitalScheduleFromDrafts({ workingC
 assert.equal(invalidCalendar.valid, false)
 assert.ok(invalidCalendar.issues.some(issue => issue.includes('dates and day count')))
 
+
+const driver = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'receivables', name: 'Trade receivables', category: 'receivables',
+    minimumDaysCoverage: 45, turnoverCoefficient: 8, calculationMode: 'value',
+    activityBasis: 'sales', valuationBasis: 'sales-revenue',
+    periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
+  }],
+}, periods, 0, [720, 900])
+assert.equal(driver.valid, true, driver.issues.join('; '))
+assert.deepEqual(driver.closingWorkingCapital, [90, 112.5])
+
+const conflictingDriver = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'receivables', name: 'Trade receivables', category: 'receivables',
+    minimumDaysCoverage: 45, turnoverCoefficient: 10, calculationMode: 'value',
+    activityBasis: 'sales', valuationBasis: 'sales-revenue',
+    periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
+  }],
+}, periods, 0, [720, 900])
+assert.equal(conflictingDriver.valid, false)
+assert.ok(conflictingDriver.issues.some(issue => issue.includes('days-coverage-and-turnover-do-not-reconcile')))
+
+const mismatchedExplicitBalance = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'receivables', name: 'Trade receivables', category: 'receivables',
+    minimumDaysCoverage: 45, turnoverCoefficient: 8, calculationMode: 'value',
+    activityBasis: 'sales', valuationBasis: 'sales-revenue',
+    periodBalances: [{ period: '1', amount: 100 }, { period: '2', amount: null }],
+  }],
+}, periods, 0, [720, 900])
+assert.equal(mismatchedExplicitBalance.valid, false)
+assert.ok(mismatchedExplicitBalance.issues.some(issue => issue.includes('explicit-balance-does-not-reconcile')))
+
 console.log('Working-capital draft integration validation passed.')
