@@ -23,15 +23,13 @@ export async function listProjects(): Promise<FeasibilityProject[]> {
   return (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
 }
 
-export async function createProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'steelStage' | 'capacity' | 'location' | 'templateId'>): Promise<FeasibilityProject> {
+export async function createProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'location'>): Promise<FeasibilityProject> {
   const projects = await listProjects()
   const now = new Date().toISOString()
   const project: FeasibilityProject = {
-    ...input,
-    id: crypto.randomUUID?.() ?? `project-${Date.now()}`,
-    status: 'draft',
-    createdAt: now,
-    updatedAt: now
+    name: input.name, industry: input.industry, projectType: input.projectType,
+    capacity: input.capacity, location: input.location, templateId: 'raw',
+    id: crypto.randomUUID?.() ?? `project-${Date.now()}`, status: 'draft', createdAt: now, updatedAt: now
   }
   await localStore.set(PROJECTS_KEY, [project, ...projects])
   return project
