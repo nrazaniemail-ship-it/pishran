@@ -70,6 +70,30 @@ export function calculateProjectFinancialModelFromDrafts(
     })
     return matches.length===1?matches[0]:-1
   }
+  // Explicit reference-driven discounting inputs override foundation-derived rates only when populated.
+  const discountingRow=input.drafts.helpDriven?.sections?.['discounting']?.[0]
+  if(discountingRow){
+    const values=discountingRow.values
+    const investmentRate=values.investmentRate
+    const equityRate=values.equityRate
+    const referenceDate=values.referenceDate
+    if(investmentRate!==null&&investmentRate!==undefined&&investmentRate!==''){
+      if(typeof investmentRate!=='number'||!Number.isFinite(investmentRate)||investmentRate<0||investmentRate>100)
+        return fail(['Total-investment discount rate must be between 0% and 100%.'])
+      finance={...finance,discountRatePercent:investmentRate}
+    }
+    if(equityRate!==null&&equityRate!==undefined&&equityRate!==''){
+      if(typeof equityRate!=='number'||!Number.isFinite(equityRate)||equityRate<0||equityRate>100)
+        return fail(['Total-equity discount rate must be between 0% and 100%.'])
+      finance={...finance,equityDiscountRatePercent:equityRate}
+    }
+    if(typeof referenceDate==='string'&&referenceDate.trim()){
+      const parsed=Date.parse(referenceDate+'T00:00:00.000Z')
+      if(!Number.isFinite(parsed)||new Date(parsed).toISOString().slice(0,10)!==referenceDate)
+        return fail(['Discount reference date must be a valid ISO calendar date.'])
+      finance={...finance,valuationDate:referenceDate}
+    }
+  }
   const taxDraft=input.drafts.tax??{system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null}
   if(taxDraft.system==='none') {
     finance={...finance,taxRatesByPeriod:finance.periods.map(()=>0),taxAllowancesByPeriod:finance.periods.map(()=>0),
