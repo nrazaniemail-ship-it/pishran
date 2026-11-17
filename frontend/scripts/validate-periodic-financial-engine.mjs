@@ -61,3 +61,18 @@ assert.equal(taxHolidayModel.valid,true,taxHolidayModel.warnings.join('; '))
 assert.equal(taxHolidayModel.rows[0].tax,0,'The first production fiscal year must be tax-exempt during a one-year holiday')
 assert.equal(taxHolidayModel.rows[1].tax,250,'Normal corporate tax must resume after the tax holiday')
 console.log('PASS: COMFAR production tax holiday suspends tax in the specified first production years')
+
+const lossPeriods = foundation.buildProjectCalendarPeriods('2025-01-01','2030-12-31','annual',1)
+const lossCarryModel = engine.calculateIntegratedPeriodicFinance({
+  periods:lossPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,20,130,200,300],annualVariableCost:[0,0,0,0,0,0],
+  annualFixedCost:[200,80,0,0,0,0],annualDepreciation:[0,0,0,0,0,0],
+  annualFixedInvestment:[0,0,0,0,0,0],annualPreOperatingCost:[0,0,0,0,0,0],
+  annualMaintenanceCapex:[0,0,0,0,0,0],annualTaxRates:[25,25,25,25,25,25],
+  annualEquityContributions:[0,0,0,0,0,0],workingCapitalByPeriod:[0,0,0,0,0,0],loans:[],
+  lossCarryForwardYears:3,
+})
+assert.equal(lossCarryModel.valid,true,lossCarryModel.warnings.join('; '))
+assert.deepEqual(lossCarryModel.rows.map(row=>row.tax),[0,0,0,0,30,75])
+assert.deepEqual(lossCarryModel.rows.map(row=>row.taxLossCarryForward),[200,280,260,130,0,0])
+console.log('PASS: periodic COMFAR loss carry-forward expires after the configured three fiscal years')
