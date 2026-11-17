@@ -1598,7 +1598,7 @@ export type PeriodicFinancialStatement = {
     revenue: number; shortTermDepositInterest: number; cashOperatingCosts: number; ebitda: number; depreciation: number
     assetDisposalGainLoss: number; ebit: number; interest: number
     cashInterestExpense: number; financingFeeExpense: number; commitmentFeeExpense: number
-    profitBeforeTax: number; tax: number; netIncome: number
+    profitBeforeTax: number; foreignExchangeGainLoss: number; tax: number; netIncome: number
   }
   cashFlowStatement: {
     operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number
@@ -1677,6 +1677,7 @@ export function buildPeriodicThreeFinancialStatements(
   const statements: PeriodicFinancialStatement[] = []
   for (let index = 0; index < result.rows.length; index++) {
     const row = result.rows[index]
+    const foreignExchangeLoss=row.foreignExchangeLoss??0
     const automaticFunding = result.automaticFundingSchedule?.[index] ?? {
       period: row.period, automaticEquity: 0, automaticOverdraftDrawdown: 0,
       automaticOverdraftRepayment: 0, automaticOverdraftBalance: 0,
@@ -1703,7 +1704,7 @@ export function buildPeriodicThreeFinancialStatements(
         Math.abs(scheduledPeriod.capitalizedFinancingFees - row.capitalizedFinancingFees) > tolerance ||
         Math.abs(scheduledPeriod.principal - row.principal) > tolerance) return []
     const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees -
-      row.principal + row.foreignExchangeLoss + automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
+      row.principal + foreignExchangeLoss + automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
     if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance +
         automaticFunding.automaticOverdraftBalance)) > tolerance) return []
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings, grants }
@@ -1711,9 +1712,9 @@ export function buildPeriodicThreeFinancialStatements(
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
     const ebitda = row.revenue - cashOperatingCosts
     const ebit = ebitda - row.depreciation + assetDisposalGainLoss
-    const profitBeforeTax = ebit + row.shortTermDepositInterest - row.interestExpense - row.foreignExchangeLoss
+    const profitBeforeTax = ebit + row.shortTermDepositInterest - row.interestExpense - foreignExchangeLoss
     const netIncome = profitBeforeTax - row.tax
-    const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital + row.foreignExchangeLoss
+    const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital + foreignExchangeLoss
     const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex +
       row.assetSaleProceeds + row.salvageValue
     const automaticFinancingCashFlow = automaticFunding.automaticEquity +
@@ -1739,7 +1740,7 @@ export function buildPeriodicThreeFinancialStatements(
       cash: closingCash - cash - netChangeInCash,
       cashRollForward: closingCash - (row.closingCash + automaticFundingCashBalance),
       debt: closingDebt - debt - (row.debtDrawdown + row.capitalizedInterest +
-        row.capitalizedFinancingFees - row.principal + row.foreignExchangeLoss + automaticFunding.automaticOverdraftDrawdown -
+        row.capitalizedFinancingFees - row.principal + foreignExchangeLoss + automaticFunding.automaticOverdraftDrawdown -
         automaticFunding.automaticOverdraftRepayment),
       automaticOverdraft: automaticOverdraftBalance - automaticFunding.automaticOverdraftBalance,
       netWorkingCapital: closingWorkingCapital - netWorkingCapital - row.changeInWorkingCapital,
@@ -1757,7 +1758,7 @@ export function buildPeriodicThreeFinancialStatements(
         assetDisposalGainLoss, ebit, interest: row.interestExpense,
         cashInterestExpense: row.cashInterestExpense, financingFeeExpense: row.financingFeeExpense,
         commitmentFeeExpense: row.commitmentFeeExpense,
-        profitBeforeTax, tax: row.tax, netIncome },
+        profitBeforeTax, foreignExchangeGainLoss:-foreignExchangeLoss, tax: row.tax, netIncome },
       cashFlowStatement: { operatingCashFlow, investingCashFlow, financingCashFlow,
         automaticEquityContribution: automaticFunding.automaticEquity,
         automaticOverdraftDrawdown: automaticFunding.automaticOverdraftDrawdown,
