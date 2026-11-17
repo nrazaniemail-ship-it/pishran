@@ -87,7 +87,7 @@ try {
  const fixedInvestmentPanelSource=await readFile(new URL('../src/features/projects/FixedInvestmentPanel.tsx',import.meta.url),'utf8')
  const projectFoundationSource=await readFile(new URL('../src/features/projects/projectFoundation.ts',import.meta.url),'utf8')
  const reportVisualsSource=await readFile(new URL('../src/features/projects/ProjectReportVisuals.tsx',import.meta.url),'utf8')
- assert.match(wizardSource,/projectCategory:project\.industry==='معدن'\?'mining'/,'Raw project category must derive from the selected industry')
+ assert.match(wizardSource,/const projectCategory:Model\['projectCategory'\]=project\.industry==='معدن'\?'mining'/,'Raw project category must derive from the selected industry')
  assert.match(wizardSource,/function baseModel\(project:FeasibilityProject\):Model/,'The raw wizard must construct one generic project model')
  assert.match(wizardSource,/const isRawTemplate=project\.templateId==='raw'/,'All blank-template controls must use the raw-template flag')
  assert.match(wizardSource,/AdvancedFinancePanel blankStart=\{isRawTemplate\}/,'The integrated finance engine must not seed default financing in raw projects')
