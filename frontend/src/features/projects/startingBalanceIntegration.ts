@@ -146,11 +146,14 @@ export function bindStartingBalancesToPeriodicFinance(input:{
     }
     translatedRows.push({rowId:row.id,category,amountLocal,exchangeRate})
   }
+  if(openingBalances.netWorkingCapital!<0)
+    issues.push('Opening net working capital is negative; the current periodic engine requires a non-negative opening working-capital balance.')
   const balanceDifference=openingAssets-openingLiabilitiesAndEquity
   if(Math.abs(balanceDifference)>0.01)
     issues.push('Translated opening balances do not reconcile: assets minus liabilities and equity equals '+balanceDifference.toFixed(2)+'.')
   if(issues.length)return fail()
   financeInput.annualDepreciation=annualDepreciation
+  financeInput.openingWorkingCapital=openingBalances.netWorkingCapital
   if(input.finance.periodDepreciationSchedule){
     const allocatedOpeningDepreciation=allocateAnnualFlowsToPeriods(incrementalAnnualDepreciation,[...input.periods],input.finance.fiscalYearStartMonth)
     if(allocatedOpeningDepreciation.length!==input.periods.length||allocatedOpeningDepreciation.some(value=>!Number.isFinite(value))){
