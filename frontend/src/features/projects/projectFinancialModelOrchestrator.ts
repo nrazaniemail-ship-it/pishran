@@ -199,7 +199,7 @@ export function calculateProjectFinancialModelFromDrafts(
   // engine posting exists; supported sibling fields in the same section remain usable.
   const notYetMappedFields:Record<string,readonly string[]> = {
     'discounting':['shortNpvYears','referencePoint'],
-    'income-tax':['adjustmentPeriod','adjustmentAmount'],
+    'income-tax':[],
     'production-costs':['initialStockQuantity','initialStockValue'],
     'sales-programme':['grossUnitPrice','productionActive','futureSalesQuantity','terminalInventorySale'],
     'working-capital':['mode','activityBasis','daysCoverage','turnover','requiredQuantity','initialStockQuantity','initialStockValue','recoveryPeriod','depositPercent','depositRate','periodMonths'],
@@ -364,6 +364,20 @@ export function calculateProjectFinancialModelFromDrafts(
         return fail(['Tax currency '+normalizedTaxCurrency+' is not defined in the project currency directory.'])
       if(normalizedTaxCurrency!==effectiveFoundation.currencies.localCurrencyCode.toUpperCase())
         return fail(['The tax engine currently calculates and posts income tax in the project local accounting currency. A foreign tax currency requires a dedicated tax-liability translation and settlement schedule; the model run is blocked rather than silently mixing currencies.'])
+    }
+    const adjustmentPeriod=incomeTaxRow.values.adjustmentPeriod
+    const adjustmentAmount=incomeTaxRow.values.adjustmentAmount
+    const hasAdjustmentPeriod=adjustmentPeriod!==null&&adjustmentPeriod!==undefined&&adjustmentPeriod!==''
+    const hasAdjustmentAmount=adjustmentAmount!==null&&adjustmentAmount!==undefined&&adjustmentAmount!==''
+    if(hasAdjustmentPeriod!==hasAdjustmentAmount)
+      return fail(['Absolute income-tax adjustment requires both a project-calendar period and a signed amount.'])
+    if(hasAdjustmentPeriod&&hasAdjustmentAmount){
+      const adjustmentIndex=typeof adjustmentPeriod==='string'?resolveTaxPeriod(adjustmentPeriod.trim()):-1
+      if(adjustmentIndex<0||typeof adjustmentAmount!=='number'||!Number.isFinite(adjustmentAmount))
+        return fail(['Absolute income-tax adjustment must contain a valid project period and a finite signed amount in the local accounting currency.'])
+      const adjustments=Array(finance.periods.length).fill(0) as number[]
+      adjustments[adjustmentIndex]=adjustmentAmount
+      finance={...finance,taxAdjustmentsByPeriod:adjustments}
     }
     const carryYears=incomeTaxRow.values.lossCarryForwardYears
     if(typeof carryYears==='number'){
