@@ -429,9 +429,13 @@ export function calculateFinishedGoodsFifoSchedule(input: {
   })
   if (!nonNegative(input.openingQuantity) || !nonNegative(input.openingValue))
     issues.push('Opening finished-goods quantity and value must be finite, explicit and non-negative.')
-  if (!Array.isArray(input.periods) || input.periods.length === 0)
+  if (!Array.isArray(input.periods) || input.periods.length === 0) {
     issues.push('At least one finished-goods FIFO period is required.')
-  const keys = input.periods.map(row => typeof row.period === 'string' ? row.period.trim() : '')
+    return fail()
+  }
+  if (input.openingQuantity <= 1e-12 && input.openingValue > 0.01)
+    issues.push('Opening finished-goods value exists without opening quantity.')
+  const keys = input.periods.map(row => row && typeof row.period === 'string' ? row.period.trim() : '')
   if (keys.some(key => !key) || new Set(keys).size !== keys.length)
     issues.push('Finished-goods FIFO period keys must be non-empty and unique.')
   if (issues.length) return fail()
@@ -530,9 +534,11 @@ export function calculateFinishedGoodsWeightedAverageSchedule(input: {
   const issues: string[] = []
   if (!nonNegative(input.openingQuantity) || !nonNegative(input.openingValue))
     issues.push('Opening finished-goods quantity and value must be finite, explicit and non-negative.')
-  if (!Array.isArray(input.periods) || input.periods.length === 0)
+  if (!Array.isArray(input.periods) || input.periods.length === 0) {
     issues.push('At least one finished-goods valuation period is required.')
-  const keys = input.periods.map(row => row.period.trim())
+    return {valid:false,issues,periods:[],closingQuantity:0,closingValue:0}
+  }
+  const keys = input.periods.map(row => row && typeof row.period === 'string' ? row.period.trim() : '')
   if (keys.some(key => !key) || new Set(keys).size !== keys.length)
     issues.push('Finished-goods valuation period keys must be non-empty and unique.')
   if (issues.length) return {valid:false,issues,periods:[],closingQuantity:0,closingValue:0}
