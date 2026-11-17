@@ -24,6 +24,7 @@ export type ProjectFinancialModelOrchestrationInput={
   drafts:Pick<ProjectModelFinancialFormDrafts,'sales'|'productionCosts'|'workingCapital'|'assets'|'loans'|'tax'> & Partial<Pick<ProjectModelFinancialFormDrafts,'openingBalanceSheet'>> & {helpDriven?:HelpDrivenProjectForms}
   foundation:ProjectFoundation
   productionStartDate:string
+  projectProductIds?:readonly string[]
   openingFinishedGoodsByProduct?:Record<string,number>
   openingWorkingCapital?:number
   openingBalances:PeriodicStatementOpeningBalances
@@ -59,7 +60,7 @@ export function calculateProjectFinancialModelFromDrafts(
     valid:false,issues,financeInput:null,productionSales,workingCapital,fixedAssets,finalRun:null,
   })
   const openingDraft=input.drafts.openingBalanceSheet
-  const crossFormIssues=[...validateProjectModelCrossReferences(input.drafts),...(input.drafts.helpDriven?validateHelpDrivenProjectForms(input.drafts.helpDriven):[]),...(input.drafts.helpDriven?validateHelpDrivenProjectPeriods(input.drafts.helpDriven,input.finance.periods):[])]
+  const crossFormIssues=[...validateProjectModelCrossReferences(input.drafts,input.projectProductIds),...(input.drafts.helpDriven?validateHelpDrivenProjectForms(input.drafts.helpDriven):[]),...(input.drafts.helpDriven?validateHelpDrivenProjectPeriods(input.drafts.helpDriven,input.finance.periods):[])]
   if(crossFormIssues.length)return fail(crossFormIssues)
   const resolveTaxPeriod=(key:string):number=>{
     const matches:number[]=[]
