@@ -49,8 +49,7 @@ function projectTypesForIndustry(industry: string) {
 
 function capacityUnitFor(industry: string, projectType: string) {
   if (industry === 'انرژی و نیروگاه') return 'مگاوات'
-  if (industry === 'معدن' && projectType && projectType !== 'سایر') return 'تن در سال'
-  if (industry === 'صنعتی' && projectType && projectType !== 'سایر') return 'تن در سال'
+  if (industry === 'معدن' || industry === 'صنعتی') return 'تن در سال'
   return ''
 }
 
