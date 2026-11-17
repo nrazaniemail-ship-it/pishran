@@ -48,6 +48,8 @@ export type WorkingCapitalPolicy = {
   annualRevenue: number
   annualCashOperatingCost: number
   annualFixedCashOperatingCost?: number
+  shortTermDepositSharePercent?: number
+  shortTermDepositRatePercent?: number
 }
 
 export type WorkingCapitalBreakdown = {
@@ -60,13 +62,14 @@ export type WorkingCapitalBreakdown = {
   finishedGoods: number
   receivables: number
   minimumCash: number
+  shortTermDeposits?: number
   payables: number
   netWorkingCapital: number
 }
 
 export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPolicy, utilization: number, salesFactor = 1, opexFactor = 1): WorkingCapitalBreakdown {
-  const values = [policy.dayBasis, policy.rawMaterialDays, policy.factorySuppliesDays ?? 0, policy.utilitiesDays ?? 0, policy.energyDays ?? 0, policy.sparePartsDays ?? 0, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualFactorySuppliesCost ?? 0, policy.annualUtilitiesCost ?? 0, policy.annualEnergyCost ?? 0, policy.annualSparePartsCost ?? 0, policy.annualFixedRawMaterialCost ?? 0, policy.annualFixedFactorySuppliesCost ?? 0, policy.annualFixedUtilitiesCost ?? 0, policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, utilization, salesFactor, opexFactor]
-  if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1).some(value => value < 0) || policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100) return { rawMaterials: 0, factorySupplies: 0, utilities: 0, energy: 0, spareParts: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 }
+  const values = [policy.dayBasis, policy.rawMaterialDays, policy.factorySuppliesDays ?? 0, policy.utilitiesDays ?? 0, policy.energyDays ?? 0, policy.sparePartsDays ?? 0, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualFactorySuppliesCost ?? 0, policy.annualUtilitiesCost ?? 0, policy.annualEnergyCost ?? 0, policy.annualSparePartsCost ?? 0, policy.annualFixedRawMaterialCost ?? 0, policy.annualFixedFactorySuppliesCost ?? 0, policy.annualFixedUtilitiesCost ?? 0, policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, policy.shortTermDepositSharePercent ?? 0, policy.shortTermDepositRatePercent ?? 0, utilization, salesFactor, opexFactor]
+  if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1).some(value => value < 0) || policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100 || (policy.shortTermDepositSharePercent ?? 0) > 100) return { rawMaterials: 0, factorySupplies: 0, utilities: 0, energy: 0, spareParts: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 }
   const day = (base: number, days: number, factor: number) => base * factor * Math.min(days, policy.dayBasis) / policy.dayBasis
   const activeFactor = utilization > 0 ? 1 : 0
   const fixedRawMaterials = Math.min(policy.annualRawMaterialCost, policy.annualFixedRawMaterialCost ?? 0)
@@ -93,11 +96,25 @@ export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPoli
   const fixedCash = Math.min(policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0)
   const minimumCash = day(policy.annualCashOperatingCost - fixedCash, policy.cashDays, utilization * opexFactor)
     + day(fixedCash, policy.cashDays, activeFactor * opexFactor)
+  const shortTermDeposits = minimumCash * (policy.shortTermDepositSharePercent ?? 0) / 100
   const fixedPayables = Math.min(policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0)
   const variablePayables = Math.max(0, (policy.annualPayablesCost ?? policy.annualRawMaterialCost) - fixedPayables)
   const payables = day(variablePayables, policy.payableDays, utilization * opexFactor)
     + day(fixedPayables, policy.payableDays, activeFactor * opexFactor)
-  return { rawMaterials, factorySupplies, utilities, energy, spareParts, workInProgress, finishedGoods, receivables, minimumCash, payables, netWorkingCapital: rawMaterials + factorySupplies + utilities + energy + spareParts + workInProgress + finishedGoods + receivables + minimumCash - payables }
+  return { rawMaterials, factorySupplies, utilities, energy, spareParts, workInProgress, finishedGoods, receivables, minimumCash, shortTermDeposits, payables, netWorkingCapital: rawMaterials + factorySupplies + utilities + energy + spareParts + workInProgress + finishedGoods + receivables + minimumCash - payables }
+}
+
+/** COMFAR XI.O: short-term deposit interest = cash-in-hand × invested share × annual rate × months / 12. */
+export function calculateShortTermDepositInterest(
+  cashInHand: number,
+  investedSharePercent: number,
+  annualRatePercent: number,
+  periodMonths: number,
+): number {
+  if (![cashInHand,investedSharePercent,annualRatePercent,periodMonths].every(Number.isFinite) ||
+      cashInHand < 0 || investedSharePercent < 0 || investedSharePercent > 100 ||
+      annualRatePercent < 0 || periodMonths < 0 || periodMonths > 12) return Number.NaN
+  return cashInHand * investedSharePercent / 100 * annualRatePercent / 100 * periodMonths / 12
 }
 
 /** COMFAR's working-capital turnover coefficient: Coto = day basis / minimum days coverage. */
@@ -464,6 +481,7 @@ export type IntegratedFinanceYear = {
   grossSalesRevenue: number
   salesTax: number
   subsidy: number
+  shortTermDepositInterest: number
   variableCashCost: number
   fixedCashCost: number
   depreciation: number
@@ -651,7 +669,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
     const salvageBookValueDisposed = year === years ? Math.max(0, Number(input.salvageBookValue) || 0) : 0
     const salvageGainLoss = salvageProceeds - salvageBookValueDisposed
-    const ebit = revenue - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss + salvageGainLoss
+    const shortTermDepositInterest = calculateShortTermDepositInterest(workingCapitalBreakdown.minimumCash, input.workingCapitalPolicy?.shortTermDepositSharePercent ?? 0, input.workingCapitalPolicy?.shortTermDepositRatePercent ?? 0, 12)
+    const ebit = revenue + shortTermDepositInterest - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss + salvageGainLoss
 
     const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
     const taxHolidayActive = (input.taxHolidayYears ?? 0) > 0 && year > constructionYears && year <= constructionYears + (input.taxHolidayYears ?? 0)
@@ -670,11 +689,11 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const terminalValue = salvageProceeds + assetSaleProceeds
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
     const projectFreeCashFlow = ebit - assetSaleOtherIncomeLoss - salvageGainLoss - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
-    const equityFreeCashFlow = -equityContribution + revenue - variableCashCost - fixedCashCost - tax - interest - principal - maintenanceCapex - changeInWorkingCapital + terminalValue
+    const equityFreeCashFlow = -equityContribution + revenue + shortTermDepositInterest - variableCashCost - fixedCashCost - tax - interest - principal - maintenanceCapex - changeInWorkingCapital + terminalValue
     const debtService = principal + interest
-    const cfads = revenue - variableCashCost - fixedCashCost - tax - maintenanceCapex - changeInWorkingCapital
+    const cfads = revenue + shortTermDepositInterest - variableCashCost - fixedCashCost - tax - maintenanceCapex - changeInWorkingCapital
     const dscr = debtService > 0 ? cfads / debtService : null
-    const cashBalance = priorCash + equityContribution + debtDrawdown + revenue - variableCashCost - fixedCashCost -
+    const cashBalance = priorCash + equityContribution + debtDrawdown + revenue + shortTermDepositInterest - variableCashCost - fixedCashCost -
       fixedInvestment - preOperatingCost - maintenanceCapex - tax - interest - principal - changeInWorkingCapital + terminalValue
     priorCash = cashBalance
 
@@ -686,7 +705,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     }
 
     annualRows.push({
-      year, utilization, production: Math.max(0, input.capacity) * utilization, revenue, netSalesRevenue, grossSalesRevenue, salesTax, subsidy,
+      year, utilization, production: Math.max(0, input.capacity) * utilization, revenue, netSalesRevenue, grossSalesRevenue, salesTax, subsidy, shortTermDepositInterest,
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
       equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, salvageBookValueDisposed, salvageGainLoss, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
