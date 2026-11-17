@@ -68,6 +68,7 @@ const terminalHelp=forms.updateHelpFormRow(help,'profit-distribution','distribut
 const terminalResult=integration.applyShareholderDistributions(finance,[statement],terminalHelp,financeInput)
 assert.equal(terminalResult.valid,true,terminalResult.issues.join('; '))
 assert.equal(terminalResult.periods[0].terminalNetWorthDistribution,10.8)
+assert.equal(terminalResult.periods[0].terminalDividend,0)
 assert.equal(terminalResult.periods[0].capitalRefund,20.8)
 assert.equal(terminalResult.periods[0].closingCash,137.2)
 assert.equal(terminalResult.statements[0].balanceSheet.balanceDifference,0)
