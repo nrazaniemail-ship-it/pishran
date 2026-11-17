@@ -170,8 +170,8 @@ export function calculateProjectFinancialModelFromDrafts(
   const fail=(issues:string[]):ProjectFinancialModelOrchestrationResult=>({
     valid:false,issues,financeInput:null,productionSales,workingCapital,fixedAssets,finalRun:null,
   })
-  const openingDraft=input.drafts.openingBalanceSheet
-  const crossFormIssues=[...validateProjectModelCrossReferences(input.drafts,input.projectProductIds),...(input.drafts.helpDriven?validateHelpDrivenProjectForms(input.drafts.helpDriven):[]),...(input.drafts.helpDriven?validateHelpDrivenProjectPeriods(input.drafts.helpDriven,input.finance.periods):[])]
+  const openingDraft=effectiveDrafts.openingBalanceSheet
+  const crossFormIssues=[...validateProjectModelCrossReferences(effectiveDrafts,input.projectProductIds),...(effectiveDrafts.helpDriven?validateHelpDrivenProjectForms(effectiveDrafts.helpDriven):[]),...(effectiveDrafts.helpDriven?validateHelpDrivenProjectPeriods(effectiveDrafts.helpDriven,input.finance.periods):[])]
   if(crossFormIssues.length)return fail(crossFormIssues)
   const resolveTaxPeriod=(key:string):number=>{
     const matches:number[]=[]
@@ -182,7 +182,7 @@ export function calculateProjectFinancialModelFromDrafts(
     return matches.length===1?matches[0]:-1
   }
   // Explicit reference-driven discounting inputs override foundation-derived rates only when populated.
-  const discountingRow=input.drafts.helpDriven?.sections?.['discounting']?.[0]
+  const discountingRow=effectiveDrafts.helpDriven?.sections?.['discounting']?.[0]
   if(discountingRow){
     const values=discountingRow.values
     const investmentRate=values.investmentRate
@@ -221,7 +221,7 @@ export function calculateProjectFinancialModelFromDrafts(
       finance={...finance,[key]:rate}
     }
   }
-  const progressiveTaxRows=input.drafts.helpDriven?.sections?.['tax-brackets']??[]
+  const progressiveTaxRows=effectiveDrafts.helpDriven?.sections?.['tax-brackets']??[]
   if(progressiveTaxRows.length){
     const bracketsByPeriod=finance.periods.map(()=>[] as {lowerLimit:number;ratePercent:number}[])
     for(const row of progressiveTaxRows){
@@ -243,8 +243,8 @@ export function calculateProjectFinancialModelFromDrafts(
     }
     finance={...finance,taxBracketsByPeriod:bracketsByPeriod}
   }
-  const taxDraft=input.drafts.tax??{system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null}
-  const incomeTaxRow=input.drafts.helpDriven?.sections?.['income-tax']?.[0]
+  const taxDraft=effectiveDrafts.tax??{system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null}
+  const incomeTaxRow=effectiveDrafts.helpDriven?.sections?.['income-tax']?.[0]
   if(incomeTaxRow){
     const carryYears=incomeTaxRow.values.lossCarryForwardYears
     if(typeof carryYears==='number'){
@@ -270,7 +270,7 @@ export function calculateProjectFinancialModelFromDrafts(
       if(rates.some(rate=>!Number.isFinite(rate)))return fail(['The tax form must provide a rate for every project period when period rates are used.'])
       finance={...finance,taxRatesByPeriod:rates}
     }
-    const helpTaxAllowances=input.drafts.helpDriven?.sections?.['tax-allowances']??[]
+    const helpTaxAllowances=effectiveDrafts.helpDriven?.sections?.['tax-allowances']??[]
     if(taxDraft.allowances.length||helpTaxAllowances.length) {
       const allowances=Array(finance.periods.length).fill(0) as number[]
       for(const allowance of taxDraft.allowances)for(const row of allowance.periodAmounts) {
@@ -344,32 +344,32 @@ export function calculateProjectFinancialModelFromDrafts(
       openingDraft.otherCurrentAssets!-openingDraft.tradePayables!-openingDraft.otherCurrentLiabilities!
     :undefined
 
-  if(input.drafts.sales.length||input.drafts.productionCosts.length) {
-    const openingFinishedGoodsByProduct=input.openingFinishedGoodsByProduct??Object.fromEntries(input.drafts.sales.map(product=>[product.productId,product.openingFinishedGoodsQuantity??Number.NaN]))
-    const result=bindProductionSalesToPeriodicFinance(finance,input.drafts,openingFinishedGoodsByProduct)
+  if(effectiveDrafts.sales.length||effectiveDrafts.productionCosts.length) {
+    const openingFinishedGoodsByProduct=input.openingFinishedGoodsByProduct??Object.fromEntries(effectiveDrafts.sales.map(product=>[product.productId,product.openingFinishedGoodsQuantity??Number.NaN]))
+    const result=bindProductionSalesToPeriodicFinance(finance,effectiveDrafts,openingFinishedGoodsByProduct)
     productionSales=result.schedule
     if(!result.valid||!result.financeInput)return fail(result.issues)
     finance=result.financeInput
   }
-  if(input.drafts.workingCapital.length) {
-    const componentOpeningBalances=input.drafts.workingCapital.map(component=>component.openingBalance)
+  if(effectiveDrafts.workingCapital.length) {
+    const componentOpeningBalances=effectiveDrafts.workingCapital.map(component=>component.openingBalance)
     if(input.openingWorkingCapital==null&&componentOpeningBalances.some(value=>!Number.isFinite(value)||value!<0))
       return fail(['Every working-capital component requires an explicit non-negative opening balance.'])
-    const openingWorkingCapital=input.openingWorkingCapital??detailedOpeningNwc??input.drafts.workingCapital.reduce((sum,component)=>{
+    const openingWorkingCapital=input.openingWorkingCapital??detailedOpeningNwc??effectiveDrafts.workingCapital.reduce((sum,component)=>{
       const liability=component.category==='payables'||component.category==='other-current-liability'
       return sum+(liability?-1:1)*(component.openingBalance??0)
     },0)
     if(openingWorkingCapital<0)return fail(['Opening net working capital cannot be negative in this model input.'])
     const result=bindWorkingCapitalDraftsToPeriodicFinance(
-      finance,{workingCapital:input.drafts.workingCapital},openingWorkingCapital,
+      finance,{workingCapital:effectiveDrafts.workingCapital},openingWorkingCapital,
     )
     workingCapital=result.schedule
     if(!result.valid||!result.financeInput)return fail(result.issues)
     finance=result.financeInput
   }
-  if(input.drafts.assets.length) {
+  if(effectiveDrafts.assets.length) {
     fixedAssets=bindFixedAssetDraftsToPeriodicFinance({
-      finance,assets:input.drafts.assets,foundation:effectiveFoundation,
+      finance,assets:effectiveDrafts.assets,foundation:effectiveFoundation,
       productionStartDate:input.productionStartDate,
     })
     if(!fixedAssets.valid||!fixedAssets.financeInput)return fail(fixedAssets.issues)
@@ -390,14 +390,14 @@ export function calculateProjectFinancialModelFromDrafts(
       retainedEarnings:openingDraft.retainedEarnings!,
     }
   }
-  const openingForeignBalances={...input.openingForeignBalances,...Object.fromEntries(input.drafts.loans
+  const openingForeignBalances={...input.openingForeignBalances,...Object.fromEntries(effectiveDrafts.loans
     .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
     .map(loan=>[loan.id,loan.openingForeignBalance as number]))}
-  const openingExchangeRatesToLocal={...input.openingExchangeRatesToLocal,...Object.fromEntries(input.drafts.loans
+  const openingExchangeRatesToLocal={...input.openingExchangeRatesToLocal,...Object.fromEntries(effectiveDrafts.loans
     .filter(loan=>loan.marketOrigin==='foreign'&&(loan.openingForeignBalance??0)>0)
     .map(loan=>[loan.id,loan.openingExchangeRateToLocal as number]))}
   const finalRun=calculatePeriodicFinanceWithForeignCurrencyLoans({
-    finance,loans:input.drafts.loans,foundation:effectiveFoundation,
+    finance,loans:effectiveDrafts.loans,foundation:effectiveFoundation,
     openingBalances,taxTreatment:input.taxTreatment,
     openingTaxLossCarryForward:input.openingTaxLossCarryForward,
     openingForeignBalances,openingExchangeRatesToLocal,
