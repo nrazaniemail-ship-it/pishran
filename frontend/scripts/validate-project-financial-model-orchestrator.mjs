@@ -472,6 +472,33 @@ assert.deepEqual(indirectCostModel.financeInput.annualCostOfGoodsSold,[1040,1040
 assert.deepEqual(indirectCostModel.financeInput.finishedGoodsInventoryValueByPeriod,[960,1920])
 assert.ok(indirectCostModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 
+const finishedGoodsDriverDrafts={
+ ...drafts,
+ sales:[{productId:'finished-product',openingFinishedGoodsQuantity:0,openingFinishedGoodsValue:0,
+  inventoryValuationMethod:'weighted-average',finishedGoodsDaysCoverage:5,periods:[
+   {period:'1',salesQuantity:360,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:null},
+   {period:'2',salesQuantity:360,netUnitPrice:100,salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,finishedGoodsClosingQuantity:null},
+  ]}],
+ productionCosts:[{id:'direct-unit-cost',metadata:{description:'Direct unit cost',currencyCode:'EUR',marketOrigin:'local',escalationPercent:0,remarks:'',costCentreId:null},
+  classification:'direct',productId:'finished-product',basis:'per-unit-output',activityBasis:'production',
+  standardQuantity:1,standardUnitPrice:100,standardTotal:0,nominalCapacity:null,fixedPercent:0,variablePercent:100,adjustments:[]}],
+ workingCapital:[{id:'finished-goods',name:'Finished goods',category:'finished-goods',openingBalance:0,
+  minimumDaysCoverage:5,turnoverCoefficient:72,calculationMode:'value',activityBasis:'sales',valuationBasis:'cost-of-sales',
+  periodBalances:[{period:'1',amount:null},{period:'2',amount:null}]}],
+}
+const finishedGoodsDriverModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:finishedGoodsDriverDrafts,foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:500,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:500,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(finishedGoodsDriverModel.valid,true,finishedGoodsDriverModel.issues.join('; '))
+assert.deepEqual(finishedGoodsDriverModel.productionSales.periodClosingFinishedGoodsValue,[500,500])
+assert.deepEqual(finishedGoodsDriverModel.productionSales.periodCostOfGoodsSold,[36000,36000])
+assert.deepEqual(finishedGoodsDriverModel.workingCapital.closingWorkingCapital,[500,500])
+assert.deepEqual(finishedGoodsDriverModel.financeInput.workingCapitalByPeriod,[500,500])
+assert.deepEqual(finishedGoodsDriverModel.financeInput.finishedGoodsInventoryValueByPeriod,[0,0])
+assert.ok(finishedGoodsDriverModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
+
 const mismatchedWorkingCapitalOpening=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,workingCapital:drafts.workingCapital.map(component=>({...component,openingBalance:25}))},
  foundation,productionStartDate:'2025-01-01',
