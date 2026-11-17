@@ -1,4 +1,4 @@
-import type { PeriodicProjectFinanceResult, PeriodicFinancialStatement } from '../steel/periodicFinancialEngine'
+import { calculatePeriodicIrr, calculatePeriodicMirr, calculatePeriodicNpv, type PeriodicProjectFinanceInput, type PeriodicProjectFinanceResult, type PeriodicFinancialStatement } from '../steel/periodicFinancialEngine'
 import type { HelpDrivenProjectForms } from './projectModelHelpForms'
 
 export type ShareholderDistributionPeriod = {
@@ -43,6 +43,7 @@ export function applyShareholderDistributions(
   finance:PeriodicProjectFinanceResult,
   statements:PeriodicFinancialStatement[],
   forms:HelpDrivenProjectForms|undefined,
+  financeInput:PeriodicProjectFinanceInput,
 ):ShareholderDistributionResult {
   const empty=(issues:string[]):ShareholderDistributionResult=>({
     valid:false,issues,periods:[],finance,statements,totalDividends:0,totalCapitalRefund:0,totalRepatriatedDividend:0,
@@ -244,12 +245,25 @@ export function applyShareholderDistributions(
     statement.balanceSheet.reconciled=statement.balanceSheet.reconciled&&Math.abs(balanceDifference)<=0.01
     updatedFinance.rows[i]={...row,equityFreeCashFlow:row.equityFreeCashFlow-totalOutflow}
     periods.push({period:row.period,openingDistributableProfit,netIncome,profitAvailable,
-      retainedProfit:profitAvailable*retainedPercent/100,preferredDividend,ordinaryDividend,totalDividend,
+      retainedProfit:profitAvailable*retainedPercent/100,preferredDividend,ordinaryDividend,totalDividend:totalDividendWithTerminal,
       repatriatedDividend,ordinaryAllocations,preferredAllocations,capitalRefund,terminalNetWorthDistribution,closingRetainedEarnings,closingPaidInCapital,closingCash})
     totalDividends+=totalDividendWithTerminal;totalCapitalRefund+=capitalRefund;totalRepatriatedDividend+=repatriatedDividend
     priorRefunds+=capitalRefund;retained=closingRetainedEarnings;paidIn=closingPaidInCapital
     for(const [partnerKey,schedule] of partnerContributions){partnerCapitalBalances.set(partnerKey,(partnerCapitalBalances.get(partnerKey)??0)+(schedule.get(i)??0))}
   }
   if(issues.length)return empty(issues)
+  const equityFlows=updatedFinance.rows.map(row=>row.equityFreeCashFlow)
+  const equityDiscountRate=financeInput.equityDiscountRatePercent??financeInput.discountRatePercent
+  updatedFinance.npvEquity=equityDiscountRate==null?null:calculatePeriodicNpv(
+    equityFlows,financeInput.periods,equityDiscountRate,financeInput.dayCountBasis,financeInput.cashFlowTiming,
+    financeInput.valuationDate,financeInput.discountConvention??'actual-days',financeInput.discountPeriodsPerYear??1,
+  )
+  updatedFinance.irrEquity=calculatePeriodicIrr(equityFlows,financeInput.periods,financeInput.dayCountBasis,financeInput.cashFlowTiming)
+  const equityFinanceRate=financeInput.equityMirrFinanceRatePercent??financeInput.mirrFinanceRatePercent
+  const equityReinvestmentRate=financeInput.equityMirrReinvestmentRatePercent??financeInput.mirrReinvestmentRatePercent
+  updatedFinance.mirrEquity=equityFinanceRate==null||equityReinvestmentRate==null?null:calculatePeriodicMirr(
+    equityFlows,financeInput.periods,equityFinanceRate,equityReinvestmentRate,financeInput.dayCountBasis,financeInput.cashFlowTiming,
+  )
+  updatedFinance.totalEquityContribution=updatedFinance.rows.reduce((sum,row)=>sum+row.equityContribution+row.equityWorkingCapitalContribution,0)
   return {valid:true,issues:[],periods,finance:updatedFinance,statements:updatedStatements,totalDividends,totalCapitalRefund,totalRepatriatedDividend}
 }
