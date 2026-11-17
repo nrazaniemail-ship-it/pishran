@@ -437,6 +437,7 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
    const amount=row.values[key]
    if(typeof amount==='number'&&amount<0)errors.push('incremental-analysis:'+index+':'+key+'-must-be-nonnegative')
   }
+  if(typeof row.values.investmentDelta==='number'&&row.values.investmentDelta>0&&typeof row.values.depreciationDelta!=='number')errors.push('incremental-analysis:'+index+':depreciationDelta-required-when-investment-is-entered')
  }
  for(const row of value.sections?.['sensitivity']??[]){
   const v=row.values
