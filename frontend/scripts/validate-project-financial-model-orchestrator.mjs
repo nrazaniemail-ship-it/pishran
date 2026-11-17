@@ -47,6 +47,16 @@ for(const [id,period,rate] of [['usd-1','1',1.08],['usd-2','2',1.1]]){
  currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'currency-rates',id,'period',period)
  currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'currency-rates',id,'exchangeRate',rate)
 }
+for(const [id,period,inflationPercent,priceIndex] of [
+ ['eur-inflation-1','1',0,100],['eur-inflation-2','2',5,105],
+]){
+ currencyHelp=helpForms.addHelpFormRow(currencyHelp,'inflation',id)
+ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'inflation',id,'currencyCode','EUR')
+ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'inflation',id,'period',period)
+ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'inflation',id,'inflationPercent',inflationPercent)
+ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'inflation',id,'priceIndex',priceIndex)
+}
+currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'economic-global','economic-global-main','discountRate',8)
 currencyHelp=helpForms.addHelpFormRow(currencyHelp,'cost-centres','factory-centre')
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','name','Factory')
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','group','production')
@@ -59,6 +69,10 @@ assert.deepEqual(foundationBinding.foundation.currencies.foreignCurrencies[0].ex
 ])
 assert.equal(foundationBinding.foundation.costCentres.active,true)
 assert.equal(foundationBinding.foundation.costCentres.items[0].name,'Factory')
+assert.deepEqual(foundationBinding.foundation.inflation.indices[0].rates,[
+ {period:'1',ratePercent:0},{period:'2',ratePercent:5},
+])
+assert.equal(foundationBinding.foundation.discounting.economicRatePercent,8)
 const foundation={
  schemaVersion:1,
  planning:{periodFrequency:'annual',projectStartDate:'2025-01-01',projectEndDate:'2026-12-31',fiscalYearStartMonth:1,balanceDateMonth:12,balanceDateDay:31,dayCountBasis:365,valuationDate:'2025-01-01',discountConvention:'actual-days',cashFlowTiming:'period-end'},
