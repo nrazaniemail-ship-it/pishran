@@ -112,11 +112,15 @@ export function calculateMinimumDaysCoverageFromTurnover(turnoverCoefficient: nu
   return turnoverCoefficient === 0 ? null : dayBasis / turnoverCoefficient
 }
 
-export function calculateCashConversionCycleDays(policy: Pick<WorkingCapitalPolicy, 'dayBasis' | 'rawMaterialDays' | 'workInProgressDays' | 'finishedGoodsDays' | 'receivableDays' | 'payableDays'>) {
-  const values = [policy.rawMaterialDays, policy.workInProgressDays, policy.finishedGoodsDays, policy.receivableDays, policy.payableDays]
+export function calculateCashConversionCycleDays(policy: Pick<WorkingCapitalPolicy, 'dayBasis' | 'rawMaterialDays' | 'workInProgressDays' | 'finishedGoodsDays' | 'receivableDays' | 'payableDays'> & Partial<Pick<WorkingCapitalPolicy, 'factorySuppliesDays' | 'utilitiesDays' | 'energyDays' | 'sparePartsDays'>>) {
+  const values = [
+    policy.rawMaterialDays, policy.factorySuppliesDays ?? 0, policy.utilitiesDays ?? 0,
+    policy.energyDays ?? 0, policy.sparePartsDays ?? 0, policy.workInProgressDays,
+    policy.finishedGoodsDays, policy.receivableDays, policy.payableDays
+  ]
   if (!Number.isFinite(policy.dayBasis) || policy.dayBasis <= 0 || !values.every(Number.isFinite) || values.some(value => value < 0)) return Number.NaN
-  const [raw, wip, finished, receivables, payables] = values.map(value => Math.min(value, policy.dayBasis))
-  return raw + wip + finished + receivables - payables
+  const [raw, factorySupplies, utilities, energy, spareParts, wip, finished, receivables, payables] = values.map(value => Math.min(value, policy.dayBasis))
+  return raw + factorySupplies + utilities + energy + spareParts + wip + finished + receivables - payables
 }
 
 export function calculateCapacityScaledCapex(referenceCapex: number, referenceCapacity: number, targetCapacity: number, elasticity: number) {
