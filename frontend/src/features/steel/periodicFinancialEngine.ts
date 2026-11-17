@@ -605,6 +605,8 @@ export type PeriodicProjectFinanceInput = {
   annualEquityWorkingCapitalContributions?: number[]
   workingCapitalByPeriod: number[]
   openingWorkingCapital?: number
+  /** Opening cash balance for the period cash roll-forward. */
+  openingCash?: number
   openingTaxLoss?: number
   openingUnleveredTaxLoss?: number
   loans: PeriodicProjectLoan[]
@@ -679,6 +681,8 @@ export type PeriodicProjectFinanceRow = {
   dscrCovenantStatus: 'not-tested' | 'pass' | 'breach'
   projectFreeCashFlow: number
   equityFreeCashFlow: number
+  closingCash: number
+  fundingGap: number
 }
 export type PeriodicProjectFinanceResult = {
   valid: boolean
@@ -694,6 +698,8 @@ export type PeriodicProjectFinanceResult = {
   totalEquityContribution: number
   totalCapitalizedInterest: number
   peakWorkingCapital: number
+  peakFundingGap: number
+  openingCash: number
   warnings: string[]
 }
 
@@ -868,7 +874,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const empty = (): PeriodicProjectFinanceResult => ({
     valid: false, rows: [], loanSchedules: {}, npvProject: null, irrProject: null, mirrProject: null,
     npvEquity: null, irrEquity: null, mirrEquity: null, totalDebtDrawdown: 0,
-    totalEquityContribution: 0, totalCapitalizedInterest: 0, peakWorkingCapital: 0, warnings
+    totalEquityContribution: 0, totalCapitalizedInterest: 0, peakWorkingCapital: 0, peakFundingGap: 0, openingCash: input.openingCash ?? 0, warnings
   })
   if (input.minimumDscr != null && (!validFinite(input.minimumDscr) || input.minimumDscr <= 0)) warnings.push('Minimum DSCR covenant must be a positive finite multiple.')
   if (!periods.length || (input.salvageValue != null && (!validFinite(input.salvageValue) || input.salvageValue < 0)) ||
@@ -995,6 +1001,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   }
   if (input.annualEquityContributions.some(value => value < 0) ||
       !validFinite(input.openingWorkingCapital ?? 0) ||
+      (input.openingCash != null && !validFinite(input.openingCash)) ||
       !validFinite(input.salvageValue ?? 0) || (input.salvageValue ?? 0) < 0 ||
       (input.discountRatePercent != null && (!validFinite(input.discountRatePercent) || input.discountRatePercent <= -100)) ||
       (input.equityDiscountRatePercent != null && (!validFinite(input.equityDiscountRatePercent) || input.equityDiscountRatePercent <= -100)) ||
@@ -1011,6 +1018,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     return empty()
   }
   const rows: PeriodicProjectFinanceRow[] = []
+  let cashBalance = input.openingCash ?? 0
+  let peakFundingGap = 0
   let taxLoss = openingLoss
   let unleveredTaxLoss = openingUnleveredLoss
   let priorWorkingCapital = input.openingWorkingCapital ?? 0
@@ -1071,6 +1080,14 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
+    const periodCashChange = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
+      - interestExpense - principal - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
+      - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage + debtDrawdown
+      + equityContribution[index] + equityWorkingCapitalContributionAmount
+    const closingCash = cashBalance + periodCashChange
+    const fundingGap = Math.max(0, -closingCash)
+    peakFundingGap = Math.max(peakFundingGap, fundingGap)
+    if (fundingGap > 0.01) warnings.push('Funding shortfall at the end of project period ' + (index + 1) + ': ' + fundingGap.toFixed(2) + '.')
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
       revenue:revenue[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
@@ -1082,8 +1099,10 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
       equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
-      salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,dscrCovenantStatus,projectFreeCashFlow,equityFreeCashFlow
+      salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,dscrCovenantStatus,projectFreeCashFlow,equityFreeCashFlow,
+      closingCash,fundingGap
     })
+    cashBalance = closingCash
     priorWorkingCapital = closingWorkingCapital
   }
   const projectFlows = rows.map(row=>row.projectFreeCashFlow)
@@ -1106,7 +1125,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     valid:true,rows,loanSchedules,npvProject,irrProject:calculatePeriodicIrr(projectFlows,periods,dayCountBasis,cashFlowTiming),
     mirrProject,npvEquity,irrEquity:calculatePeriodicIrr(equityFlows,periods,dayCountBasis,cashFlowTiming),mirrEquity,
     totalDebtDrawdown,totalEquityContribution,totalCapitalizedInterest,
-    peakWorkingCapital:Math.max(0,...input.workingCapitalByPeriod),warnings
+    peakWorkingCapital:Math.max(0,...input.workingCapitalByPeriod),peakFundingGap,openingCash:input.openingCash??0,warnings
   }
 }
 
@@ -1438,7 +1457,7 @@ export function buildPeriodicThreeFinancialStatements(
 ): PeriodicFinancialStatement[] {
   if (!result.valid || !Number.isFinite(tolerance) || tolerance < 0) return []
   const balances: Required<PeriodicStatementOpeningBalances> = {
-    cash: opening.cash ?? 0, debt: opening.debt ?? 0, netFixedAssets: opening.netFixedAssets ?? 0,
+    cash: opening.cash ?? result.openingCash ?? 0, debt: opening.debt ?? 0, netFixedAssets: opening.netFixedAssets ?? 0,
     netWorkingCapital: opening.netWorkingCapital ?? 0, deferredPreOperatingAssets: opening.deferredPreOperatingAssets ?? 0,
     paidInCapital: opening.paidInCapital ?? 0, retainedEarnings: opening.retainedEarnings ?? 0,
   }
