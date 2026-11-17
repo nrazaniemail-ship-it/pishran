@@ -124,7 +124,7 @@ for(const [key,value] of Object.entries({loanName:'Generic facility',type:'agenc
  rawHelp=helpForms.updateHelpFormRow(rawHelp,'loan-fees','loan-fee-a',key,value)
 const rawBound=helpBinding.bindHelpDrivenFinancialDrafts(rawHelp,periods,{assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[]})
 assert.deepEqual(rawBound.issues,[])
-assert.deepEqual(rawBound.boundSections,['fixed-investment','production-costs','sales-programme','working-capital'])
+assert.deepEqual(rawBound.boundSections,['loan-conditions','loan-disbursements','loan-interest','loan-fees','fixed-investment','production-costs','sales-programme','working-capital'])
 assert.equal(rawBound.drafts.assets[0].acquisitionPeriods[0].period,'1')
 assert.equal(rawBound.drafts.assets[0].depreciation.usefulLifeMonths,60)
 assert.equal(rawBound.drafts.productionCosts[0].productId,'product-a')
