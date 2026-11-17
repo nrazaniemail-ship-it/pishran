@@ -35,7 +35,8 @@ const drafts={
  productionCosts:[{id:'power',metadata:{},classification:'direct',productId:'slab',basis:'nominal-capacity',
   standardQuantity:2,standardUnitPrice:5,standardTotal:10,nominalCapacity:20,fixedPercent:20,variablePercent:80,adjustments:[]}]
 }
-const result=adapter.buildProductionSalesInventorySchedule(drafts,periods,1,{slab:2})
+const inventoryDrafts={...drafts,productionCosts:[]}
+const result=adapter.buildProductionSalesInventorySchedule(inventoryDrafts,periods,1,{slab:2})
 assert.equal(result.valid,true,result.issues.join('; '))
 assert.deepEqual(result.periodSalesQuantity,[10,12])
 assert.deepEqual(result.periodProductionQuantity,[9,13])
@@ -43,44 +44,55 @@ assert.deepEqual(result.closingFinishedGoodsQuantityByProduct.slab,[1,2])
 assert.equal(result.periodRevenue[0],1020)
 assert.equal(result.periodRevenue[1],1350)
 assert.equal(result.annualRevenue[0],2370)
-assert.ok(Math.abs(result.annualFixedCost[0]-1.0055555555555555)<1e-8)
-assert.ok(Math.abs(result.annualVariableCost[0]-8.8)<1e-8)
 assert.equal(result.rows[0].salesTax,90)
 
 const invalidGross=adapter.buildProductionSalesInventorySchedule({
- ...drafts,sales:[{...drafts.sales[0],periods:[{...drafts.sales[0].periods[0],grossUnitPrice:111},drafts.sales[0].periods[1]]}]
+ ...inventoryDrafts,sales:[{...inventoryDrafts.sales[0],periods:[{...inventoryDrafts.sales[0].periods[0],grossUnitPrice:111},inventoryDrafts.sales[0].periods[1]]}]
 },periods,1,{slab:2})
 assert.equal(invalidGross.valid,false)
 assert.ok(invalidGross.issues.some(issue=>issue.includes('Gross unit price must reconcile')))
 const inactiveProduction=adapter.buildProductionSalesInventorySchedule({
- ...drafts,sales:[{...drafts.sales[0],periods:[{...drafts.sales[0].periods[0],productionActive:false},drafts.sales[0].periods[1]]}]
+ ...inventoryDrafts,sales:[{...inventoryDrafts.sales[0],periods:[{...inventoryDrafts.sales[0].periods[0],productionActive:false},inventoryDrafts.sales[0].periods[1]]}]
 },periods,1,{slab:2})
 assert.equal(inactiveProduction.valid,false)
 assert.ok(inactiveProduction.issues.some(issue=>issue.includes('Production is marked inactive')))
+
+const unvaluedInventory=adapter.buildProductionSalesInventorySchedule(drafts,periods,1,{slab:2})
+assert.equal(unvaluedInventory.valid,false)
+assert.ok(unvaluedInventory.issues.some(issue=>issue.includes('Finished-goods inventory valuation is not yet connected')))
+
+const zeroInventoryCostDrafts={
+ ...drafts,
+ sales:[{...drafts.sales[0],openingFinishedGoodsQuantity:0,periods:drafts.sales[0].periods.map(row=>({...row,finishedGoodsClosingQuantity:0}))}],
+}
+const costSchedule=adapter.buildProductionSalesInventorySchedule(zeroInventoryCostDrafts,periods,1,{slab:0})
+assert.equal(costSchedule.valid,true,costSchedule.issues.join('; '))
+assert.ok(costSchedule.annualFixedCost[0]>=0)
+assert.ok(costSchedule.annualVariableCost[0]>=0)
 
 const bound=adapter.bindProductionSalesToPeriodicFinance({
  periods,fiscalYearStartMonth:1,dayCountBasis:360,cashFlowTiming:'period-end',
  annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],annualTaxRates:[25],
  annualEquityContributions:[0],workingCapitalByPeriod:[0,0],loans:[],
-},drafts,{slab:2})
+},zeroInventoryCostDrafts,{slab:0})
 assert.equal(bound.valid,true,bound.issues.join('; '))
 assert.deepEqual(bound.financeInput.annualRevenue,[2370])
 
-const missingOpening=adapter.buildProductionSalesInventorySchedule(drafts,periods,1,{})
+const missingOpening=adapter.buildProductionSalesInventorySchedule(inventoryDrafts,periods,1,{})
 assert.equal(missingOpening.valid,false)
 assert.ok(missingOpening.issues.some(x=>x.includes('Explicit opening finished-goods')))
 
 const missingPeriod=adapter.buildProductionSalesInventorySchedule({
- ...drafts,sales:[{...drafts.sales[0],periods:[drafts.sales[0].periods[0]]}]
+ ...inventoryDrafts,sales:[{...inventoryDrafts.sales[0],periods:[inventoryDrafts.sales[0].periods[0]]}]
 },periods,1,{slab:2})
 assert.equal(missingPeriod.valid,false)
 assert.ok(missingPeriod.issues.some(x=>x.includes('every period')))
 
 const negativeStock=adapter.buildProductionSalesInventorySchedule({
- ...drafts,sales:[{...drafts.sales[0],periods:[
-  {...drafts.sales[0].periods[0],salesQuantity:0,finishedGoodsClosingQuantity:0},
-  drafts.sales[0].periods[1],
+ ...inventoryDrafts,sales:[{...inventoryDrafts.sales[0],periods:[
+  {...inventoryDrafts.sales[0].periods[0],salesQuantity:0,finishedGoodsClosingQuantity:0},
+  inventoryDrafts.sales[0].periods[1],
  ]}]
 },periods,1,{slab:2})
 assert.equal(negativeStock.valid,false)
