@@ -26,13 +26,11 @@ const reference={
  corporateTax:[3241651.69,5314352.78,6215483.75],
  netProfit:[9724955.06,15943058.34,18646451.25],
 }
-const sales=[700000,1000000,1000000].map((quantity,index)=>({
- productId:'DRI',periods:[{
-  period:String(index+1),salesQuantity:quantity,netUnitPrice:99.97,salesTaxPercent:0,
-  subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:0,
-  openingFinishedGoodsValue:0,finishedGoodsClosingQuantity:0,
- }]
-}))[0]
+const sales=[{productId:'DRI',periods:[700000,1000000,1000000].map((quantity,index)=>({
+ period:String(index+1),salesQuantity:quantity,netUnitPrice:99.97,salesTaxPercent:0,
+ subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:0,
+ openingFinishedGoodsValue:0,finishedGoodsClosingQuantity:0,
+}))}]
 const productionCosts=[{
  id:'dri-factory-cost',metadata:{description:'Direct factory cost',currencyCode:'IRR',escalationPercent:0},
  classification:'direct',productId:'DRI',basis:'nominal-capacity',
