@@ -215,7 +215,7 @@ export function calculateProjectFinancialModelFromDrafts(
       }
     }
   }
-  economicAppraisal=bindEconomicAppraisalConfiguration(effectiveDrafts.helpDriven,effectiveFoundation)
+  economicAppraisal=bindEconomicAppraisalConfiguration(effectiveDrafts.helpDriven,effectiveFoundation,finance)
   crossFormIssues.push(...economicAppraisal.issues)
   if(crossFormIssues.length)return fail(crossFormIssues)
   const resolveTaxPeriod=(key:string):number=>{
