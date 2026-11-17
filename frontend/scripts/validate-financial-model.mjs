@@ -22,7 +22,7 @@ near(wacc.value,0.15,1e-12,'WACC calculation')
 const reconciliation=engine.reconcileCashFlowSeries([-100,60,60],[-100,60,60])
 assert.equal(reconciliation.matched,true,'Identical cash-flow series must reconcile')
 const scaled=engine.calculateCapacityScaledCapex(1000,100,200,0.8)
-near(scaled,1741.1011265922482,1e-8,'Capacity-scaled CAPEX')
+near(scaled.amount,1741.1011265922482,1e-8,'Capacity-scaled CAPEX')
 
 const blank=foundation.createBlankProjectFoundation()
 assert.equal(blank.planning.projectStartDate,'')
