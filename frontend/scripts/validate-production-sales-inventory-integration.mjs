@@ -45,6 +45,16 @@ assert.equal(result.periodRevenue[0],1020)
 assert.equal(result.periodRevenue[1],1350)
 assert.equal(result.annualRevenue[0],2370)
 assert.equal(result.rows[0].salesTax,90)
+assert.ok(result.rows[0].costOfGoodsSold>0)
+assert.ok(result.rows[0].closingFinishedGoodsValue>0)
+assert.ok(result.periodClosingFinishedGoodsValue[1]>0)
+const fifoInventoryDrafts={...inventoryDrafts,sales:[{...inventoryDrafts.sales[0],inventoryValuationMethod:'fifo'}]}
+const fifoInventoryResult=adapter.buildProductionSalesInventorySchedule(fifoInventoryDrafts,periods,1,{slab:2})
+assert.equal(fifoInventoryResult.valid,true,fifoInventoryResult.issues.join('; '))
+assert.equal(fifoInventoryResult.rows[0].costOfGoodsSold,200)
+assert.equal(fifoInventoryResult.rows[0].closingFinishedGoodsValue,0)
+assert.equal(fifoInventoryResult.rows[1].costOfGoodsSold,0)
+assert.equal(fifoInventoryResult.periodClosingFinishedGoodsValue[1],0)
 
 const invalidGross=adapter.buildProductionSalesInventorySchedule({
  ...inventoryDrafts,sales:[{...inventoryDrafts.sales[0],periods:[{...inventoryDrafts.sales[0].periods[0],grossUnitPrice:111},inventoryDrafts.sales[0].periods[1]]}]
@@ -83,12 +93,14 @@ assert.deepEqual(costSchedule.periodClosingFinishedGoodsValue,[0,0])
 
 const bound=adapter.bindProductionSalesToPeriodicFinance({
  periods,fiscalYearStartMonth:1,dayCountBasis:360,cashFlowTiming:'period-end',
- annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],
+ annualRevenue:[0],annualVariableCost:[7],annualFixedCost:[11],annualDepreciation:[0],
  annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],annualTaxRates:[25],
  annualEquityContributions:[0],workingCapitalByPeriod:[0,0],loans:[],
 },zeroInventoryCostDrafts,{slab:0})
 assert.equal(bound.valid,true,bound.issues.join('; '))
 assert.deepEqual(bound.financeInput.annualRevenue,[2370])
+assert.deepEqual(bound.financeInput.annualVariableCost,[7])
+assert.deepEqual(bound.financeInput.annualFixedCost,[11])
 assert.deepEqual(bound.financeInput.annualCostOfGoodsSold,costSchedule.annualCostOfGoodsSold)
 assert.deepEqual(bound.financeInput.finishedGoodsInventoryValueByPeriod,[0,0])
 
