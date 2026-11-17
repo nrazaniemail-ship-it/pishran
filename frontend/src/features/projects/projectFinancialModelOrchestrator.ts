@@ -519,6 +519,18 @@ export function calculateProjectFinancialModelFromDrafts(
       return sum+(liability?-1:1)*(component.openingBalance??0)
     },0)
     if(openingWorkingCapital<0)return fail(['Opening net working capital cannot be negative in this model input.'])
+    const hasComponentOpeningBalance=componentOpeningBalances.some(value=>value!==null&&value!==undefined)
+    const hasCompleteComponentOpeningBalances=componentOpeningBalances.every(value=>typeof value==='number'&&Number.isFinite(value)&&value>=0)
+    if(hasComponentOpeningBalance&&!hasCompleteComponentOpeningBalances)
+      return fail(['Working-capital component opening balances must be provided for every component or omitted for every component; partial opening subledgers are not accepted.'])
+    if(hasCompleteComponentOpeningBalances){
+      const componentOpeningNwc=effectiveDrafts.workingCapital.reduce((sum,component)=>{
+        const liability=component.category==='payables'||component.category==='other-current-liability'
+        return sum+(liability?-1:1)*(component.openingBalance as number)
+      },0)
+      if(Math.abs(componentOpeningNwc-openingWorkingCapital)>0.01)
+        return fail(['Working-capital component opening balances do not reconcile to the selected opening net working capital.'])
+    }
     const result=bindWorkingCapitalDraftsToPeriodicFinance(
       finance,{workingCapital:effectiveDrafts.workingCapital},openingWorkingCapital,
     )
