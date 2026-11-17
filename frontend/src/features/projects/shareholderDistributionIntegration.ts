@@ -66,6 +66,9 @@ export function applyShareholderDistributions(
     const repatriated=row.values.repatriatedPercent
     if(repatriated!==null&&repatriated!==undefined&&(!finite(repatriated)||repatriated<0||repatriated>100))
       issues.push('Profit-distribution row '+row.id+' has an invalid repatriation percentage.')
+    const netWorthDistribution=row.values.netWorthDistribution
+    if(netWorthDistribution!==null&&netWorthDistribution!==undefined&&netWorthDistribution!==''&&netWorthDistribution!==0)
+      issues.push('Net-worth distribution at project end requires a separate liquidation and residual-asset waterfall; it cannot be inferred from ordinary dividends.')
     const share=row.values.remainingProfitShare
     if(share!==null&&share!==undefined&&(!finite(share)||share<0||share>100))
       issues.push('Profit-distribution row '+row.id+' has an invalid remaining-profit share.')
@@ -137,7 +140,10 @@ export function applyShareholderDistributions(
     }
     const ordinaryDividend=ordinaryPool
     const totalDividend=preferredDividend+ordinaryDividend
-    const repatriationPercent=rows.length&&finite(rows[0].values.repatriatedPercent)?rows[0].values.repatriatedPercent:0
+    const repatriationValues=rows.map(item=>item.values.repatriatedPercent).filter(value=>value!==null&&value!==undefined&&value!=='')
+    if(repatriationValues.some(value=>!finite(value)||!close(value as number,repatriationValues.length?repatriationValues[0] as number:0)))
+      issues.push('All shareholder classes in one period must use the same dividend repatriation percentage.')
+    const repatriationPercent=repatriationValues.length&&finite(repatriationValues[0])?repatriationValues[0]:0
     const repatriatedDividend=totalDividend*repatriationPercent/100
     const capitalRefund=refunds.get(i)??0
     cumulativePaidIn+=row.equityContribution+row.equityWorkingCapitalContribution
@@ -166,9 +172,6 @@ export function applyShareholderDistributions(
     statement.balanceSheet.totalLiabilitiesAndEquity=totalLiabilitiesAndEquity
     statement.balanceSheet.balanceDifference=balanceDifference
     statement.balanceSheet.reconciled=statement.balanceSheet.reconciled&&Math.abs(balanceDifference)<=0.01
-    statement.movementChecks.cash-=totalOutflow
-    statement.movementChecks.paidInCapital-=capitalRefund
-    statement.movementChecks.retainedEarnings-=totalDividend
     updatedFinance.rows[i]={...row,equityFreeCashFlow:row.equityFreeCashFlow-totalOutflow}
     periods.push({period:row.period,openingDistributableProfit,netIncome,profitAvailable,
       retainedProfit:profitAvailable*retainedPercent/100,preferredDividend,ordinaryDividend,totalDividend,
