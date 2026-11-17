@@ -60,7 +60,7 @@ assert.ok(Math.abs(fundingCase.npvrProject-fundingCase.npvProject/fundingCase.pr
 assert.ok(fundingCase.warnings.some(message=>message.includes('Funding shortfall')))
 const statements=engine.buildPeriodicThreeFinancialStatements(fundingCase)
 assert.equal(statements.length,periods.length)
-assert.deepEqual(statements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[-50,10,70])
+assert.deepEqual(statements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[0,10,70])
 assert.ok(statements.every(row=>Math.abs(row.movementChecks.cashRollForward)<=0.01),'Statement cash must reconcile to the engine cash roll-forward')
 const openingCashCase=engine.calculateIntegratedPeriodicFinance({
   periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
@@ -93,13 +93,15 @@ const depositStatements=engine.buildPeriodicThreeFinancialStatements(depositCase
 assert.equal(depositStatements[1].incomeStatement.ebit,60)
 assert.equal(depositStatements[1].incomeStatement.shortTermDepositInterest,5)
 assert.equal(depositStatements[1].incomeStatement.profitBeforeTax,65)
-assert.deepEqual(depositStatements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[-50,-85,80])
+assert.deepEqual(depositStatements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[0,0,80])
 assert.equal(depositStatements[1].balanceSheet.cashInHand,50)
 assert.equal(depositStatements[1].balanceSheet.shortTermDeposits,50)
 assert.equal(depositStatements[1].balanceSheet.netWorkingCapital,100)
 assert.equal(depositStatements[2].balanceSheet.netWorkingCapital,0)
 assert.equal(depositStatements[2].balanceSheet.cashInHand,0)
 assert.equal(depositStatements[2].balanceSheet.shortTermDeposits,0)
+assert.deepEqual(depositStatements.map(row=>Math.round(row.balanceSheet.debt)),[50,85,0])
+assert.ok(depositStatements.every(row=>row.balanceSheet.reconciled),'Deposit scenario balance sheet must reconcile after automatic overdraft funding')
 assert.ok(depositStatements.every(row=>Math.abs(row.movementChecks.cashRollForward)<=0.01))
 console.log('PASS: COMFAR short-term deposit interest flows through tax, CFADS, cash and linked statements')
 
