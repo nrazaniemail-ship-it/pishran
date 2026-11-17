@@ -19,6 +19,7 @@ export type OpeningCurrentAccounts = {
   otherCurrentLiabilities: number
   accruedInterest: number
 }
+/** Detailed current-account balances are retained for opening reconciliation; the periodic balance sheet continues to post their net working-capital aggregate until each account has its own validated roll-forward. */
 export type StartingFinancialBalanceSummary = {
   cash: number
   netWorkingCapital: number
