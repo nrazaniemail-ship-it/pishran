@@ -466,5 +466,10 @@ const invalidIncrementalModel=orchestrator.calculateProjectFinancialModelFromDra
 })
 assert.equal(invalidIncrementalModel.valid,false)
 assert.ok(invalidIncrementalModel.issues.some(issue=>issue.includes('exactly one project period')))
+let missingIncrementalDepreciation=helpForms.createBlankHelpDrivenProjectForms()
+missingIncrementalDepreciation=helpForms.addHelpFormRow(missingIncrementalDepreciation,'incremental-analysis','missing-incremental-depreciation')
+for(const [key,value] of Object.entries({alternative:'Upgrade C',view:'project-in-isolation',period:'1',investmentDelta:100}))
+ missingIncrementalDepreciation=helpForms.updateHelpFormRow(missingIncrementalDepreciation,'incremental-analysis','missing-incremental-depreciation',key,value)
+assert.ok(helpForms.validateHelpDrivenProjectForms(missingIncrementalDepreciation).some(issue=>issue.includes('depreciationDelta-required-when-investment-is-entered')))
 
 console.log('Unified project form orchestration, pre-production amortization, input-coverage guards and opening-balance-sheet validation passed.')
