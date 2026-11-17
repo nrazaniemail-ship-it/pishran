@@ -180,6 +180,21 @@ export function buildProductionSalesInventorySchedule(
       }
       const closing=sales.finishedGoodsClosingQuantity as number
       const production=sales.salesQuantity as number + closing - opening
+      if (sales.grossUnitPrice != null) {
+        if (!nonNegative(sales.grossUnitPrice)) {
+          issues.push('Gross unit price must be finite and non-negative for '+product.productId+' period '+(i+1)+'.')
+          continue
+        }
+        const expectedGrossUnitPrice=(sales.netUnitPrice as number)*(1+(sales.salesTaxPercent as number)/100)
+        if (Math.abs((sales.grossUnitPrice as number)-expectedGrossUnitPrice)>0.01) {
+          issues.push('Gross unit price must reconcile to net unit price plus sales tax for '+product.productId+' period '+(i+1)+'.')
+          continue
+        }
+      }
+      if (sales.productionActive === false && Math.abs(production)>1e-8) {
+        issues.push('Production is marked inactive but the inventory roll-forward requires production for '+product.productId+' period '+(i+1)+'.')
+        continue
+      }
       if (production < -1e-8) {
         issues.push('Sales exceed opening stock plus production for '+product.productId+' period '+(i+1)+'.')
         continue
