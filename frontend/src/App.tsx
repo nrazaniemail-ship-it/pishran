@@ -6,15 +6,12 @@ import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSe
 import { createProject, deleteProject, removeSampleProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
 import ProjectsView from './features/projects/ProjectsView'
 import SettingsView from './features/settings/SettingsView'
-import RollingWorkspace from './features/steel/RollingWorkspace'
 import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
 import FeasibilityWizard from './features/projects/FeasibilityWizard'
-import ProcessPlantWorkspace from './features/steel/ProcessPlantWorkspace'
-import IntegratedSteelComplexWorkspace from './features/steel/IntegratedSteelComplexWorkspace'
 import Guide from './features/guide/Guide'
 import BackupScheduler from './features/settings/BackupScheduler'
 
-type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'hot-rolling' | 'project-wizard' | 'split-integrated' | 'integrated-plant' | 'process-plant' | 'guide'
+type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wizard' | 'guide'
 
 const modules = [
   { icon: Factory, title: 'مهندسی و طراحی فرآیند', enTitle: 'Process Engineering & Design', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', enSub: 'Capacity, material balance, energy and equipment', status: 'در نقشه راه', enStatus: 'Roadmap' },
@@ -72,7 +69,6 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [projects, setProjects] = useState<FeasibilityProject[]>([])
   const [activeProject, setActiveProject] = useState<FeasibilityProject | null>(null)
-  const [activePlantType, setActivePlantType] = useState<'dri'|'steelmaking'>('dri')
   const [storageInfo, setStorageInfo] = useState({ backend: 'در حال بررسی', items: 0 })
   const [ready, setReady] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -290,19 +286,8 @@ export default function App() {
     {page === 'projects' && <ProjectsView language={settings.language} projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard') }}/>}
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
-    {page === 'steel-group' && <SteelGroupWorkspace language={settings.language} onOpenHotRolling={() => { setActiveProject(null); setPage('hot-rolling') }}/>}
-    {page === 'hot-rolling' && <RollingWorkspace language={settings.language} project={activeProject ?? undefined} onUpdateProject={handleUpdateProject} onBack={() => setPage('projects')}/>}
+    {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
-    {page === 'split-integrated' && activeProject && <section className="projects-page split-integrated-page" dir={isEn?"ltr":"rtl"}>
-      <div className="page-heading"><div><h1>{isEn?"Split Integrated Steel Project":"تفکیک پروژه مجتمع فولادی"}</h1><p>{activeProject.name}</p></div><button className="secondary-button" onClick={() => setPage('projects')}>{isEn?"Back to Projects":"بازگشت به پروژه‌ها"}</button></div>
-      <div className="ppw-note"><b>{isEn?"This legacy project was defined as an integrated facility.":"این پروژه قدیمی به‌صورت یکپارچه تعریف شده است."}</b><p>{isEn?"To preserve study independence, two separate projects will be created. Each unit’s capacity is intentionally left blank so you can enter its independent DRI and steelmaking capacity. Technical and financial data from the integrated project will not be copied automatically.":"برای رعایت استقلال مطالعات، دو پروژه جداگانه ایجاد می‌شوند. ظرفیت هر واحد عمداً خالی می‌ماند تا ظرفیت مستقل احیاء و فولادسازی را جداگانه وارد کنید. اطلاعات مالی یا فنی پروژه یکپارچه به‌طور خودکار بین دو پروژه کپی نمی‌شود."}</p></div>
-      <div className="project-grid">
-        <article className="project-card"><div className="module-icon"><Factory size={22}/></div><h3>{isEn?"Standalone Direct Reduction (DRI) Project":"پروژه مستقل احیاء مستقیم (DRI)"}</h3><p>{isEn?"Pellet feed, sponge iron capacity, DRI-specific materials and energy, staffing and unit CAPEX.":"خوراک گندله، ظرفیت تولید آهن اسفنجی، مواد و انرژی مختص احیاء، نیروی انسانی و CAPEX واحد احیاء."}</p><button className="primary" onClick={async()=>{const created=await createProject({name:activeProject.name+(isEn?' — Direct Reduction':' — احیاء مستقیم'),industry:activeProject.industry,capacity:'',location:activeProject.location});setProjects(await listProjects());setActiveProject(created);setActivePlantType('dri');setPage('process-plant');await refreshStorage()}}>{isEn?"Create & Open DRI Project":"ایجاد و ورود به پروژه احیاء"}</button></article>
-        <article className="project-card"><div className="module-icon"><Layers3 size={22}/></div><h3>{isEn?"Standalone Steelmaking & Casting Project":"پروژه مستقل فولادسازی و ریخته‌گری"}</h3><p>{isEn?"Melting furnace, secondary refining, continuous casting, product grades, alloying materials and steelmaking-specific costs.":"کوره ذوب، پالایش ثانویه، ریخته‌گری مداوم، گریدهای محصول، مواد آلیاژی و هزینه‌های اختصاصی فولادسازی."}</p><button className="primary" onClick={async()=>{const created=await createProject({name:activeProject.name+(isEn?' — Steelmaking & Casting':' — فولادسازی و ریخته‌گری'),industry:activeProject.industry,capacity:'',location:activeProject.location});setProjects(await listProjects());setActiveProject(created);setActivePlantType('steelmaking');setPage('process-plant');await refreshStorage()}}>{isEn?"Create & Open Steelmaking Project":"ایجاد و ورود به پروژه فولادسازی"}</button></article>
-      </div>
-    </section>}
-    {page === 'integrated-plant' && activeProject && <IntegratedSteelComplexWorkspace language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
-    {page === 'process-plant' && activeProject && <ProcessPlantWorkspace language={settings.language} project={activeProject} plantType={activePlantType} onBack={() => setPage('projects')}/>} 
 
     </div>
     {modern && inspectorOpen && <aside className="modern-inspector"><div className="inspector-heading"><b>{isEn ? 'Context & details' : 'جزئیات و راهنما'}</b><button onClick={() => setInspectorOpen(false)}>×</button></div>
