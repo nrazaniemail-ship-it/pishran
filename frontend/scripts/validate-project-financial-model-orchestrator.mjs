@@ -4,7 +4,8 @@ import ts from 'typescript'
 async function transpile(path){const source=await readFile(new URL(path,import.meta.url),'utf8');return ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText}
 const url=output=>'data:text/javascript;base64,'+Buffer.from(output).toString('base64')
 const engineUrl=url(await transpile('../src/features/steel/periodicFinancialEngine.ts'))
-const startingBalanceOutput=await transpile('../src/features/projects/startingBalanceIntegration.ts')
+let startingBalanceOutput=await transpile('../src/features/projects/startingBalanceIntegration.ts')
+startingBalanceOutput=startingBalanceOutput.replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl))
 const startingBalanceUrl=url(startingBalanceOutput)
 let sensitivityOutput=await transpile('../src/features/steel/periodicSensitivity.ts')
 sensitivityOutput=sensitivityOutput.replace("'./periodicFinancialEngine'",JSON.stringify(engineUrl))
@@ -552,6 +553,14 @@ assert.equal(fxOpeningResult.openingBalances.cash,21)
 assert.equal(fxOpeningResult.openingAssets,138)
 assert.equal(fxOpeningResult.openingLiabilitiesAndEquity,138)
 assert.equal(fxOpeningResult.translatedRows.find(row=>row.rowId==='fx-cash-usd').exchangeRate,1.1)
+const explicitDepreciationFinance={...finance,periodDepreciationSchedule:[10,10],annualDepreciation:[10,10]}
+const explicitDepreciationResult=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
+ rows:[{id:'explicit-period-asset',values:{category:'fixed-assets',item:'Existing machine',currency:'EUR',origin:'local',amount:100,depreciationMethod:'linear-to-zero',remainingLife:5}}],
+ periods,finance:explicitDepreciationFinance,currencies:foundation.currencies,
+})
+assert.equal(explicitDepreciationResult.valid,true,explicitDepreciationResult.issues.join('; '))
+assert.deepEqual(explicitDepreciationResult.financeInput.annualDepreciation,[30,30])
+assert.deepEqual(explicitDepreciationResult.financeInput.periodDepreciationSchedule,[30,30])
 
 const ambiguousOpening=startingBalanceAdapter.bindStartingBalancesToPeriodicFinance({
  rows:[{id:'ambiguous',values:{category:'other-assets',item:'Unclassified asset',currency:'EUR',origin:'local',amount:10}}],
