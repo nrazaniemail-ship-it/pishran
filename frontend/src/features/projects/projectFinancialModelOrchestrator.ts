@@ -181,6 +181,10 @@ export function calculateProjectFinancialModelFromDrafts(
     const investmentRate=values.investmentRate
     const equityRate=values.equityRate
     const referenceDate=values.referenceDate
+    const investmentReinvestmentRate=values.investmentReinvestmentRate
+    const investmentBorrowingRate=values.investmentBorrowingRate
+    const equityReinvestmentRate=values.equityReinvestmentRate
+    const equityBorrowingRate=values.equityBorrowingRate
     if(investmentRate!==null&&investmentRate!==undefined&&investmentRate!==''){
       if(typeof investmentRate!=='number'||!Number.isFinite(investmentRate)||investmentRate<0||investmentRate>100)
         return fail(['Total-investment discount rate must be between 0% and 100%.'])
@@ -196,6 +200,18 @@ export function calculateProjectFinancialModelFromDrafts(
       if(!Number.isFinite(parsed)||new Date(parsed).toISOString().slice(0,10)!==referenceDate)
         return fail(['Discount reference date must be a valid ISO calendar date.'])
       finance={...finance,valuationDate:referenceDate}
+    }
+    const mirrRates=[
+      ['mirrFinanceRatePercent',investmentBorrowingRate,'Total-investment MIRR borrowing rate'],
+      ['mirrReinvestmentRatePercent',investmentReinvestmentRate,'Total-investment MIRR reinvestment rate'],
+      ['equityMirrFinanceRatePercent',equityBorrowingRate,'Equity MIRR borrowing rate'],
+      ['equityMirrReinvestmentRatePercent',equityReinvestmentRate,'Equity MIRR reinvestment rate'],
+    ] as const
+    for(const [key,rate,label] of mirrRates){
+      if(rate===null||rate===undefined||rate==='')continue
+      if(typeof rate!=='number'||!Number.isFinite(rate)||rate<=-100)
+        return fail([label+' must be a finite rate greater than -100%.'])
+      finance={...finance,[key]:rate}
     }
   }
   const progressiveTaxRows=input.drafts.helpDriven?.sections?.['tax-brackets']??[]
