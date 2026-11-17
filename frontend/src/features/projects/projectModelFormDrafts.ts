@@ -196,7 +196,7 @@ export type ProjectModelFinancialFormDrafts = {
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
  return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),openingBalanceSheet:createBlankOpeningBalanceSheetDraft()}
 }
-export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinancialFormDrafts):string[] {
+export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinancialFormDrafts,knownProjectProductIds?:readonly string[]):string[] {
  const errors:string[]=[]
  if(value.openingBalanceSheet)errors.push(...validateOpeningBalanceSheetDraft(value.openingBalanceSheet))
  errors.push(...validateHelpDrivenProjectForms(value.helpDriven ?? createBlankHelpDrivenProjectForms()))
@@ -209,7 +209,7 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
  }
  for(const [index,row] of value.tax.rates.entries())if(row.ratePercent!==null&&(!Number.isFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100))errors.push('tax-rate-'+index+':invalid-tax-rate')
  if(value.tax.lossCarryForwardYears!==null&&(!Number.isInteger(value.tax.lossCarryForwardYears)||value.tax.lossCarryForwardYears<0))errors.push('invalid-loss-carry-forward-years')
- errors.push(...validateProjectModelCrossReferences(value))
+ errors.push(...validateProjectModelCrossReferences(value,knownProjectProductIds))
  return errors
 }
 
@@ -218,7 +218,7 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
  * These checks deliberately validate references without supplying defaults:
  * an omitted optional module stays omitted, while a referenced item must exist.
  */
-export function validateProjectModelCrossReferences(value:Pick<ProjectModelFinancialFormDrafts,'assets'|'productionCosts'|'workingCapital'|'loans'|'sales'>):string[] {
+export function validateProjectModelCrossReferences(value:Pick<ProjectModelFinancialFormDrafts,'assets'|'productionCosts'|'workingCapital'|'loans'|'sales'>,knownProjectProductIds?:readonly string[]):string[] {
  const errors:string[]=[]
  const checkUnique=(items:{id:string}[],label:string)=>{
   const ids=items.map(item=>item.id.trim())
@@ -233,7 +233,8 @@ export function validateProjectModelCrossReferences(value:Pick<ProjectModelFinan
  const productIds=value.sales.map(item=>item.productId.trim())
  if(productIds.some(id=>!id))errors.push('sales:blank-product-id')
  if(new Set(productIds).size!==productIds.length)errors.push('sales:duplicate-product-id')
- const knownProducts=new Set(productIds.filter(Boolean))
+ const knownProducts=new Set((knownProjectProductIds??productIds).map(id=>id.trim()).filter(Boolean))
+ value.sales.forEach((product,index)=>{if(product.productId&&!knownProducts.has(product.productId))errors.push('sales-'+index+':unknown-product-reference')})
  value.productionCosts.forEach((cost,index)=>{
   if(cost.productId&&!knownProducts.has(cost.productId))
    errors.push('production-cost-'+index+':unknown-product-reference')
