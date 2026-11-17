@@ -457,7 +457,7 @@ assert.deepEqual(incrementalModel.incrementalAnalyses[0].workingCapitalDeltaByPe
 assert.equal(incrementalModel.incrementalAnalyses[0].basis,'after-tax-unlevered')
 let invalidIncrementalHelp=helpForms.createBlankHelpDrivenProjectForms()
 invalidIncrementalHelp=helpForms.addHelpFormRow(invalidIncrementalHelp,'incremental-analysis','invalid-incremental-period')
-for(const [key,value] of Object.entries({alternative:'Upgrade B',view:'project-in-isolation',period:'not-a-period',investmentDelta:10}))
+for(const [key,value] of Object.entries({alternative:'Upgrade B',view:'project-in-isolation',period:'not-a-period',investmentDelta:10,depreciationDelta:0}))
  invalidIncrementalHelp=helpForms.updateHelpFormRow(invalidIncrementalHelp,'incremental-analysis','invalid-incremental-period',key,value)
 const invalidIncrementalModel=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,helpDriven:invalidIncrementalHelp},foundation,productionStartDate:'2025-01-01',
