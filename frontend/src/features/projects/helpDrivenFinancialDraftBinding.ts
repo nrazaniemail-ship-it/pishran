@@ -315,6 +315,12 @@ export function bindHelpDrivenFinancialDrafts(
       const groupKey=allocationGroupByRowId.get(allocationKeyId)
       const shares=groupKey?allocationsByKey.get(groupKey)??[]:[]
       if(!shares.length){issues.push('production-costs:'+row.id+': allocation key "'+allocationKeyId+'" was not defined.');continue}
+      const sourceCostCentre=str(row,'costCentreId')
+      const allocationCostCentre=groupKey?.split('|').slice(1).join('|')??''
+      if(!sourceCostCentre||sourceCostCentre!==allocationCostCentre){
+        issues.push('production-costs:'+row.id+': indirect-cost allocation key must belong to the same cost centre as the source cost item.')
+        continue
+      }
       if(shares.some(share=>str(share,'type')!=='user-defined')){
         issues.push('cost-allocation:'+allocationKeyId+': only explicit user-defined allocation percentages are currently supported.')
         continue
