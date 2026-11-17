@@ -610,9 +610,21 @@ export default function AdvancedFinancePanel(props: Props) {
       {props.openingCurrentAccounts&&openingCurrentAccountControl&&<div className="fw-card">
         <h4>{t('تفکیک مانده‌های افتتاحیه دارایی‌ها و بدهی‌های جاری','Opening Current Assets & Liabilities Breakdown')}</h4>
         <p className="fw-hint">{t('این تفکیک از دفتر مانده‌های افتتاحیه بنگاه موجود منتقل شده است. ارقام تفصیلی در این قسمت برای کنترل و ردیابی ارائه می‌شوند؛ گردش دوره‌ای سرمایه در گردش از برنامه دوره‌ای اقلام تشکیل می‌شود و از این مانده‌ها دوباره ساخته نمی‌شود.','These details are carried from the existing-enterprise opening register for control and traceability. Periodic working-capital movements continue to come from the period-level component schedule; opening balances are not added a second time.')}</p>
-        <div className="fw-validation"><span>{t('مواد اولیه','Raw materials')} · {t('ملزومات','Supplies')} · WIP · {t('محصول نهایی','Finished goods')} · {t('مطالبات','Receivables')} · {t('سایر دارایی جاری','Other current assets')}</span><b>{money(props.openingCurrentAccounts.rawMaterials+props.openingCurrentAccounts.factorySupplies+props.openingCurrentAccounts.workInProgress+props.openingCurrentAccounts.finishedGoods+props.openingCurrentAccounts.receivables+props.openingCurrentAccounts.otherCurrentAssets)} {props.currency}</b></div>
-        <div className="fw-validation"><span>{t('وجه نقد','Cash')} · {t('سپرده کوتاه‌مدت','Short-term deposits')} · {t('مازاد نقد','Cash surplus')}</span><b>{money(openingCurrentAccountControl.cashTotal)} {props.currency}</b></div>
-        <div className="fw-validation"><span>{t('حساب‌های پرداختنی','Trade payables')} · {t('سایر بدهی‌های جاری','Other current liabilities')}</span><b>{money(openingCurrentAccountControl.liabilityTotal)} {props.currency}</b></div>
+        {([
+          ['rawMaterials','موجودی مواد اولیه','Raw materials inventory'],
+          ['factorySupplies','مواد و ملزومات','Factory supplies'],
+          ['workInProgress','کالای در جریان ساخت','Work in progress'],
+          ['finishedGoods','محصول نهایی','Finished goods'],
+          ['receivables','حساب‌های دریافتنی','Accounts receivable'],
+          ['cash','وجه نقد','Cash-in-hand'],
+          ['shortTermDeposits','سپرده کوتاه‌مدت','Short-term deposits'],
+          ['cashSurplus','مازاد نقد','Cash surplus'],
+          ['otherCurrentAssets','سایر دارایی‌های جاری','Other current assets'],
+          ['tradePayables','حساب‌های پرداختنی','Trade payables'],
+          ['otherCurrentLiabilities','سایر بدهی‌های جاری','Other current liabilities'],
+        ] as [keyof OpeningCurrentAccounts,string,string][]).map(([key,label,english])=><div className="fw-validation" key={key}><span>{t(label,english)}</span><b>{money(props.openingCurrentAccounts![key])} {props.currency}</b></div>)}
+        <div className="fw-validation"><span>{t('جمع دارایی‌های جاری','Total current assets')}</span><b>{money(openingCurrentAccountControl.assetTotal)} {props.currency}</b></div>
+        <div className="fw-validation"><span>{t('جمع بدهی‌های جاری عملیاتی','Total operating current liabilities')}</span><b>{money(openingCurrentAccountControl.liabilityTotal)} {props.currency}</b></div>
         <div className="fw-validation"><span>{t('بهره تعهدشده افتتاحیه (در بدهی افتتاحیه)','Opening accrued interest (included in opening debt)')}</span><b>{money(props.openingCurrentAccounts.accruedInterest)} {props.currency}</b></div>
         <div className="fw-validation"><span>{t('سرمایه در گردش خالص محاسبه‌شده از اقلام ناخالص','Net working capital derived from gross accounts')}</span><b>{money(openingCurrentAccountControl.netWorkingCapital)} {props.currency}</b></div>
         {openingCurrentAccountControl.valid?<p className="fw-hint">{t('تطبیق مانده‌های ناخالص با نقد و سرمایه در گردش خالص افتتاحیه برقرار است.','Gross opening balances reconcile to opening cash and net working capital.')}</p>:<div className="fw-validation" role="alert"><b>{t('عدم تطبیق دفتر مانده افتتاحیه','Opening balance register does not reconcile')}</b><p>{t('جمع اقلام جاری تفصیلی با مانده نقد یا سرمایه در گردش خالص منتقل‌شده برابر نیست. تا اصلاح ورودی‌های دفتر افتتاحیه، صورت‌های مالی دوره‌ای را تأییدشده تلقی نکنید.','Detailed current-account balances do not match the transferred opening cash or net working-capital balances. Do not treat periodic statements as validated until the opening register is corrected.')}</p></div>}
