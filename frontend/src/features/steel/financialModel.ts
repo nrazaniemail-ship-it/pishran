@@ -71,7 +71,7 @@ export type WorkingCapitalBreakdown = {
 export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPolicy, utilization: number, salesFactor = 1, opexFactor = 1): WorkingCapitalBreakdown {
   const values = [policy.dayBasis, policy.rawMaterialDays, policy.factorySuppliesDays ?? 0, policy.utilitiesDays ?? 0, policy.energyDays ?? 0, policy.sparePartsDays ?? 0, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualFactorySuppliesCost ?? 0, policy.annualUtilitiesCost ?? 0, policy.annualEnergyCost ?? 0, policy.annualSparePartsCost ?? 0, policy.annualFixedRawMaterialCost ?? 0, policy.annualFixedFactorySuppliesCost ?? 0, policy.annualFixedUtilitiesCost ?? 0, policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, policy.shortTermDepositSharePercent ?? 0, policy.shortTermDepositRatePercent ?? 0, utilization, salesFactor, opexFactor]
   if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1).some(value => value < 0) || policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100 || (policy.shortTermDepositSharePercent ?? 0) > 100) return { rawMaterials: 0, factorySupplies: 0, utilities: 0, energy: 0, spareParts: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, shortTermDeposits: 0, payables: 0, netWorkingCapital: 0 }
-  const day = (base: number, days: number, factor: number) => base * factor * Math.min(days, policy.dayBasis) / policy.dayBasis
+  const day = (base: number, days: number, factor: number) => base * factor * days / policy.dayBasis
   const activeFactor = utilization > 0 ? 1 : 0
   const fixedRawMaterials = Math.min(policy.annualRawMaterialCost, policy.annualFixedRawMaterialCost ?? 0)
   const variableRawMaterials = policy.annualRawMaterialCost - fixedRawMaterials
@@ -128,7 +128,7 @@ export function calculateShortTermDepositInterest(cashInHand: number, investedSh
 export function calculateCashConversionCycleDays(policy: Pick<WorkingCapitalPolicy, 'dayBasis' | 'rawMaterialDays' | 'workInProgressDays' | 'finishedGoodsDays' | 'receivableDays' | 'payableDays'>) {
   const values = [policy.rawMaterialDays, policy.workInProgressDays, policy.finishedGoodsDays, policy.receivableDays, policy.payableDays]
   if (!Number.isFinite(policy.dayBasis) || policy.dayBasis <= 0 || !values.every(Number.isFinite) || values.some(value => value < 0)) return Number.NaN
-  const [raw, wip, finished, receivables, payables] = values.map(value => Math.min(value, policy.dayBasis))
+  const [raw, wip, finished, receivables, payables] = values
   return raw + wip + finished + receivables - payables
 }
 
@@ -174,7 +174,7 @@ export function calculateWorkingCapital(items: WorkingCapitalItem[], ramp = 1, d
   if (!Number.isFinite(ramp) || ramp < 0 || !Number.isFinite(dayBasis) || dayBasis <= 0) return 0
   return items.reduce((total, item) => {
     if (!finiteNonNegative(item.annualBase) || !finiteNonNegative(item.days)) return total
-    const amount = item.annualBase * Math.min(item.days, dayBasis) / dayBasis * ramp
+    const amount = item.annualBase * item.days / dayBasis * ramp
     return total + (item.classification === 'liability' ? -amount : amount)
   }, 0)
 }
