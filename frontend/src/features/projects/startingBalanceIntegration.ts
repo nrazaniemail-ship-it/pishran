@@ -150,7 +150,7 @@ export function bindStartingBalancesToPeriodicFinance(input:{
   if(issues.length)return fail()
   financeInput.annualDepreciation=annualDepreciation
   if(input.finance.periodDepreciationSchedule){
-    const allocatedOpeningDepreciation=allocateAnnualFlowsToPeriods(incrementalAnnualDepreciation,input.periods,input.finance.fiscalYearStartMonth)
+    const allocatedOpeningDepreciation=allocateAnnualFlowsToPeriods(incrementalAnnualDepreciation,[...input.periods],input.finance.fiscalYearStartMonth)
     if(allocatedOpeningDepreciation.length!==input.periods.length||allocatedOpeningDepreciation.some(value=>!Number.isFinite(value))){
       issues.push('Opening fixed-asset depreciation could not be allocated to the project calendar.')
       return fail()
