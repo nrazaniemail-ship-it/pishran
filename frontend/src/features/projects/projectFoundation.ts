@@ -267,6 +267,10 @@ export type StartingFixedAssetBalance = {
   firstDepreciationMonths?: number
   salvagePercent?: number
   depreciationStartDate?: string
+  disposalDate?: string
+  disposalPriceMode?: 'book-value' | 'self-defined'
+  disposalProceeds?: number
+  disposalExchangeRateToLocal?: number
   costCentre?: string
   foreignSharePercent?: number
   status: 'active' | 'replace' | 'idle' | 'sell'
@@ -310,6 +314,20 @@ export function validateStartingFixedAssetBalances(
       issue(path + '.dates', 'invalid-starting-asset-date', 'Commissioning date and depreciation start date must use YYYY-MM-DD.')
     if (asset.commissioningDate && asset.depreciationStartDate && asset.depreciationStartDate < asset.commissioningDate)
       issue(path + '.depreciationStartDate', 'depreciation-before-commissioning', 'Depreciation cannot start before the commissioning date.')
+    if (asset.disposalDate !== undefined && !validDate(asset.disposalDate))
+      issue(path + '.disposalDate', 'invalid-starting-asset-disposal-date', 'Disposal date must use YYYY-MM-DD.')
+    if ((asset.status === 'replace' || asset.status === 'sell') && !asset.disposalDate)
+      issue(path + '.disposalDate', 'missing-starting-asset-disposal-date', 'A planned replacement or sale requires an explicit disposal date.')
+    if (asset.disposalDate && foundation.planning.projectStartDate && asset.disposalDate < foundation.planning.projectStartDate)
+      issue(path + '.disposalDate', 'starting-asset-disposal-before-project', 'Opening asset disposal cannot precede the project start date.')
+    if (asset.disposalDate && foundation.planning.projectEndDate && asset.disposalDate > foundation.planning.projectEndDate)
+      issue(path + '.disposalDate', 'starting-asset-disposal-after-project', 'Opening asset disposal must fall within the project calendar.')
+    if (asset.disposalPriceMode === 'self-defined') {
+      if (!Number.isFinite(asset.disposalProceeds) || (asset.disposalProceeds ?? -1) < 0)
+        issue(path + '.disposalProceeds', 'invalid-starting-asset-disposal-proceeds', 'Self-defined disposal proceeds must be a finite non-negative amount.')
+      if (!Number.isFinite(asset.disposalExchangeRateToLocal) || (asset.disposalExchangeRateToLocal ?? 0) <= 0)
+        issue(path + '.disposalExchangeRateToLocal', 'invalid-starting-asset-disposal-exchange-rate', 'A positive exchange rate to local currency is required for self-defined proceeds.')
+    }
     const method = asset.depreciationMethod ?? 'linear-scrap'
     if (asset.salvagePercent !== undefined &&
         (!Number.isFinite(asset.salvagePercent) || asset.salvagePercent < 0 || asset.salvagePercent > 100))
