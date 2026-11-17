@@ -30,15 +30,20 @@ assert.equal(created.templateId,'raw')
 assert.equal(created.steelStage,undefined)
 assert.deepEqual((await repository.listProjects()).map(project=>project.id),[created.id])
 
-state.set('pishran:rolling:legacy-record',{value:1})
-state.set('process-plant:legacy-record',{value:2})
+state.set('projects:list:v1', [
+  created,
+  {id:'HRCR200',name:'نورد گرم ورق-تولید کلاف',industry:'صنعتی',projectType:'نورد گرم ورق-تولید کلاف',capacity:'',location:'',status:'draft',createdAt:'2026-01-01',updatedAt:'2026-01-01'},
+  {id:'other-rolling',name:'نورد ورق نمونه دیگر',industry:'صنعتی',projectType:'نورد',capacity:'',location:'',status:'draft',createdAt:'2026-01-01',updatedAt:'2026-01-01'}
+])
+state.set('pishran:rolling:HRCR200:assets',{value:1})
+state.set('process-plant:other-rolling',{value:2})
 state.set('rolling:sample:v2',{value:3})
 state.set('projects:workbook-seed:v1',{value:4})
 state.set('unrelated:project-data',{value:5})
 const remaining=await repository.purgeRemovedCaseProjects()
-assert.deepEqual(remaining.map(project=>project.id),[created.id])
-assert.equal(await mockStore.get('pishran:rolling:legacy-record'),undefined)
-assert.equal(await mockStore.get('process-plant:legacy-record'),undefined)
+assert.deepEqual(remaining.map(project=>project.id),[created.id,'other-rolling'])
+assert.equal(await mockStore.get('pishran:rolling:HRCR200:assets'),undefined)
+assert.deepEqual(await mockStore.get('process-plant:other-rolling'),{value:2})
 assert.equal(await mockStore.get('rolling:sample:v2'),undefined)
 assert.equal(await mockStore.get('projects:workbook-seed:v1'),undefined)
 assert.deepEqual(await mockStore.get('unrelated:project-data'),{value:5})
