@@ -86,6 +86,8 @@ export function bindHelpDrivenFinancialDrafts(
       loan.facilityLimit=num(condition,'facilityLimit')
       loan.interestPaymentMonth=num(condition,'interestPaymentMonth')
       const openingDebt=num(condition,'openingDebt')
+      loan.openingExchangeRateToLocal=num(condition,'openingExchangeRateToLocal')
+      if(loan.marketOrigin==='local'&&loan.openingExchangeRateToLocal!==null)issues.push('loan-conditions:'+name+': opening exchange rate is only applicable to foreign-currency facilities.')
       if(openingDebt!==null&&openingDebt>0){
         if(loan.marketOrigin==='foreign')loan.openingForeignBalance=openingDebt
         else if(loan.marketOrigin==='local')loan.openingLocalBalance=openingDebt
@@ -107,20 +109,21 @@ export function bindHelpDrivenFinancialDrafts(
           issues.push('loan-disbursements:'+row.id+': drawdown/repayment date exceeds the facility disbursement end date.')
       }
       const datedRates=interestRows.filter(row=>str(row,'loanName')===name)
-      const capitalizationValues=new Set<string>()
+      const capitalizationPercentages=new Set<number>()
+      const capitalizationEndDates=new Set<string>()
       for(const row of datedRates){
         const effectiveDate=str(row,'effectiveDate'),annualRate=num(row,'annualRate')
         if(!validDate(effectiveDate)||annualRate===null){issues.push('loan-interest:'+row.id+': valid effective date and annual rate are required.');continue}
         loan.interestRateChanges.push({effectiveDate,annualRatePercent:annualRate})
         const capitalization=num(row,'capitalizePercent')
-        if(capitalization!==null)capitalizationValues.add(String(capitalization))
+        if(capitalization!==null)capitalizationPercentages.add(capitalization)
         const until=str(row,'capitalizeUntil')
-        if(until)capitalizationValues.add('until:'+until)
+        if(until)capitalizationEndDates.add(until)
         for(const key of ['capitalizedInterestMethod','capitalizedInterestStart','capitalizedInterestRate','capitalizedInterestLength'])
           if(row.values[key]!==null&&row.values[key]!==undefined&&row.values[key]!=='')
             issues.push('loan-interest:'+row.id+': capitalized-interest amortization fields are not yet supported by the periodic loan adapter.')
       }
-      if(capitalizationValues.size>2)issues.push('loan-interest:'+name+': capitalization settings conflict between rate rows.')
+      if(capitalizationPercentages.size>1||capitalizationEndDates.size>1)issues.push('loan-interest:'+name+': capitalization settings conflict between rate rows.')
       const firstCapitalization=datedRates.find(row=>num(row,'capitalizePercent')!==null)
       loan.capitalizedInterestPercent=firstCapitalization?num(firstCapitalization,'capitalizePercent'):null
       loan.capitalizeUntilDate=firstCapitalization?str(firstCapitalization,'capitalizeUntil'):''
