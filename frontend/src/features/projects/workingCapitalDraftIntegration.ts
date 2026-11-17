@@ -8,6 +8,9 @@ export type WorkingCapitalComponentPeriodRow = {
   period: number
   amount: number
   signedAmount: number
+  preRecoveryAmount: number
+  recoveredAmount: number
+  signedRecoveryImpact: number
 }
 
 export type WorkingCapitalDriverBases = {
@@ -23,6 +26,8 @@ export type WorkingCapitalDraftSchedule = {
   componentRows: WorkingCapitalComponentPeriodRow[]
   closingWorkingCapital: number[]
   changeInWorkingCapital: number[]
+  /** Signed net-working-capital movement caused by project-end recovery; assets release cash, liabilities require settlement. */
+  recoveryImpactByPeriod: number[]
   openingWorkingCapital: number
 }
 
@@ -83,6 +88,7 @@ export function buildWorkingCapitalScheduleFromDrafts(
 
   const rows: WorkingCapitalComponentPeriodRow[] = []
   const totals = Array(count).fill(0) as number[]
+  const recoveryImpactByPeriod = Array(count).fill(0) as number[]
   const seenIds = new Set<string>()
   for (const [componentIndex, component] of drafts.workingCapital.entries()) {
     const prefix = 'working-capital-' + componentIndex + ':'
@@ -107,6 +113,9 @@ export function buildWorkingCapitalScheduleFromDrafts(
       issues.push(prefix + 'days-coverage-must-be-positive')
     if (hasTurnover && (!Number.isFinite(turnover) || turnover! <= 0))
       issues.push(prefix + 'turnover-must-be-positive')
+    const recoveryPercent=component.recoveryPercent??0
+    if(!Number.isFinite(recoveryPercent)||recoveryPercent<0||recoveryPercent>100)
+      issues.push(prefix+'recovery-percent-must-be-between-0-and-100')
     if (hasDays && hasTurnover && Math.abs((360 / daysCoverage!) - turnover!) > 0.01)
       issues.push(prefix + 'days-coverage-and-turnover-do-not-reconcile')
     const driverEnabled = hasDays || hasTurnover
@@ -190,14 +199,22 @@ export function buildWorkingCapitalScheduleFromDrafts(
         continue
       }
       const isLiability = component.category === 'payables' || component.category === 'other-current-liability'
-      const signedAmount = isLiability ? -amount : amount
+      const preRecoveryAmount=amount
+      const recoveredAmount=periodIndex===count-1?preRecoveryAmount*recoveryPercent/100:0
+      const closingAmount=preRecoveryAmount-recoveredAmount
+      const signedAmount = isLiability ? -closingAmount : closingAmount
+      const signedRecoveryImpact=isLiability?recoveredAmount:-recoveredAmount
       totals[periodIndex] += signedAmount
+      recoveryImpactByPeriod[periodIndex] += signedRecoveryImpact
       rows.push({
         componentId: component.id,
         category: component.category,
         period: periodIndex + 1,
-        amount,
+        amount:closingAmount,
         signedAmount,
+        preRecoveryAmount,
+        recoveredAmount,
+        signedRecoveryImpact,
       })
     }
   }
@@ -208,6 +225,7 @@ export function buildWorkingCapitalScheduleFromDrafts(
     componentRows: [],
     closingWorkingCapital: [],
     changeInWorkingCapital: [],
+    recoveryImpactByPeriod: [],
     openingWorkingCapital,
   }
   const changeInWorkingCapital = totals.map((closing, index) =>
@@ -218,6 +236,7 @@ export function buildWorkingCapitalScheduleFromDrafts(
     componentRows: rows,
     closingWorkingCapital: totals,
     changeInWorkingCapital,
+    recoveryImpactByPeriod,
     openingWorkingCapital,
   }
 }
