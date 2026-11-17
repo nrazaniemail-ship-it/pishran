@@ -336,6 +336,24 @@ assert.deepEqual(inventoryCostModel.finalRun.statements.map(row=>row.balanceShee
 assert.ok(inventoryCostModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 assert.deepEqual(inventoryCostModel.finalRun.finance.rows.map(row=>row.ebit),[0,-80])
 
+const costDrivenWorkingCapitalDrafts={
+ ...inventoryCostDrafts,
+ workingCapital:[{id:'wip-days',name:'Work in progress',category:'work-in-progress',openingBalance:0,
+  minimumDaysCoverage:30,turnoverCoefficient:12,calculationMode:'value',activityBasis:'production',
+  valuationBasis:'cost-of-production',periodBalances:[{period:'1',amount:null},{period:'2',amount:null}]}],
+}
+const costDrivenWorkingCapitalModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:costDrivenWorkingCapitalDrafts,foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(costDrivenWorkingCapitalModel.valid,true,costDrivenWorkingCapitalModel.issues.join('; '))
+assert.ok(Math.abs(costDrivenWorkingCapitalModel.financeInput.workingCapitalByPeriod[0]-1500*30/365)<0.000001)
+assert.ok(Math.abs(costDrivenWorkingCapitalModel.financeInput.workingCapitalByPeriod[1]-600*30/365)<0.000001)
+assert.ok(Math.abs(costDrivenWorkingCapitalModel.finalRun.statements[0].balanceSheet.netWorkingCapital-(500+1500*30/365))<0.000001)
+assert.ok(Math.abs(costDrivenWorkingCapitalModel.finalRun.statements[1].balanceSheet.netWorkingCapital-(220+600*30/365))<0.000001)
+assert.ok(costDrivenWorkingCapitalModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
+
 const fifoInventoryCostDrafts={
  ...inventoryCostDrafts,
  sales:inventoryCostDrafts.sales.map(product=>({...product,inventoryValuationMethod:'fifo'})),
