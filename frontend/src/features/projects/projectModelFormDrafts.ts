@@ -224,6 +224,7 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
  for(const [index,item] of value.workingCapital.entries()) {
   if(item.minimumDaysCoverage!==null&&(!Number.isFinite(item.minimumDaysCoverage)||item.minimumDaysCoverage<=0))errors.push('working-capital-'+index+':invalid-days-coverage')
   if(item.turnoverCoefficient!==null&&(!Number.isFinite(item.turnoverCoefficient)||item.turnoverCoefficient<0))errors.push('working-capital-'+index+':invalid-turnover')
+  if(item.recoveryPercent!==undefined&&item.recoveryPercent!==null&&(!Number.isFinite(item.recoveryPercent)||item.recoveryPercent<0||item.recoveryPercent>100))errors.push('working-capital-'+index+':invalid-recovery-percent')
  }
  for(const [index,row] of value.tax.rates.entries())if(row.ratePercent!==null&&(!Number.isFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100))errors.push('tax-rate-'+index+':invalid-tax-rate')
  if(value.tax.lossCarryForwardYears!==null&&(!Number.isInteger(value.tax.lossCarryForwardYears)||value.tax.lossCarryForwardYears<0))errors.push('invalid-loss-carry-forward-years')
