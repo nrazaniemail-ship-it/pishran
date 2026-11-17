@@ -39,6 +39,7 @@ orchestratorOutput=orchestratorOutput.replace("'./productionSalesInventoryIntegr
  .replace("'./workingCapitalDraftIntegration'",JSON.stringify(workingCapitalUrl))
  .replace("'./fixedAssetDraftIntegration'",JSON.stringify(fixedUrl))
  .replace("'./foreignCurrencyLoanFinanceBinding'",JSON.stringify(loanUrl))
+ .replace("'./shareholderDistributionIntegration'",JSON.stringify(url(await transpile('../src/features/projects/shareholderDistributionIntegration.ts').then(output=>output.replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl))))))
  .replace("'./helpDrivenFinancialDraftBinding'",JSON.stringify(bindingUrl))
 const orchestrator=await import(url(orchestratorOutput))
 const helpForms=await import(helpFormsUrl)
