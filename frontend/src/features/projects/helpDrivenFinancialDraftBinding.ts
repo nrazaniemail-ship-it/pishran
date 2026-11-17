@@ -262,15 +262,25 @@ export function bindHelpDrivenFinancialDrafts(
   }
 
   const costRows=rows('production-costs')
+  const allocationRows=rows('cost-allocation')
   if(costRows.length){
-    const costs=costRows.map(row=>{
+    const allocationsByKey=new Map<string,HelpFormRow[]>()
+    for(const row of allocationRows){
+      const key=str(row,'name')
+      if(!key){issues.push('cost-allocation:'+row.id+': allocation key name is required.');continue}
+      allocationsByKey.set(key,[...(allocationsByKey.get(key)??[]),row])
+    }
+    const costs:ReturnType<typeof createBlankProductionCostFormDraft>[]=[]
+    for(const row of costRows){
       const cost=createBlankProductionCostFormDraft(row.id)
       const classification=str(row,'classification')
       const basis=str(row,'basis')
       const productId=str(row,'productId')
+      const allocationKeyId=str(row,'allocationKeyId')
       if(classification!=='direct'&&classification!=='indirect')issues.push('production-costs:'+row.id+': cost classification is required.')
       if(!['nominal-capacity','per-unit-output','period-adjustments'].includes(basis))issues.push('production-costs:'+row.id+': valid cost basis is required.')
-      required(productId,'production-costs:'+row.id+': product',issues)
+      if(!allocationKeyId)required(productId,'production-costs:'+row.id+': product',issues)
+      if(allocationKeyId&&classification!=='indirect')issues.push('production-costs:'+row.id+': allocation keys can only be used for indirect costs.')
       const fixedPercent=num(row,'fixedPercent'),variablePercent=num(row,'variablePercent')
       required(fixedPercent,'production-costs:'+row.id+': fixed share',issues)
       required(variablePercent,'production-costs:'+row.id+': variable share',issues)
@@ -279,6 +289,7 @@ export function bindHelpDrivenFinancialDrafts(
         costCentreId:str(row,'costCentreId')||null}
       cost.classification=classification==='direct'||classification==='indirect'?classification:null
       cost.productId=productId||null
+      cost.allocationKeyId=allocationKeyId||null
       const activityBasis=str(row,'activityBasis')
       if(activityBasis!=='sales'&&activityBasis!=='production')issues.push('production-costs:'+row.id+': activity basis must be explicitly set to sales or production.')
       cost.activityBasis=activityBasis==='sales'||activityBasis==='production'?activityBasis:null
@@ -297,12 +308,53 @@ export function bindHelpDrivenFinancialDrafts(
         else cost.adjustments=[{period:resolved,quantity:num(row,'adjustmentQuantity'),unitPrice:num(row,'adjustmentUnitPrice'),
           total:adjustmentTotal,fixedPercent:num(row,'adjustmentFixedPercent'),variablePercent:num(row,'adjustmentVariablePercent')}]
       }
-      return cost
-    })
+      if(!allocationKeyId){costs.push(cost);continue}
+      const shares=allocationsByKey.get(allocationKeyId)??[]
+      if(!shares.length){issues.push('production-costs:'+row.id+': allocation key "'+allocationKeyId+'" was not defined.');continue}
+      if(shares.some(share=>str(share,'type')!=='user-defined')){
+        issues.push('cost-allocation:'+allocationKeyId+': only explicit user-defined allocation percentages are currently supported.')
+        continue
+      }
+      const parsedShares=shares.map(share=>({row:share,productId:str(share,'productId'),percent:num(share,'allocationPercent')}))
+      if(parsedShares.some(share=>!share.productId||share.percent===null||share.percent<0||share.percent>100)){
+        issues.push('cost-allocation:'+allocationKeyId+': every share requires a product and an allocation percentage from 0% to 100%.')
+        continue
+      }
+      const totalShare=parsedShares.reduce((sum,share)=>sum+(share.percent??0),0)
+      if(Math.abs(totalShare-100)>0.000001){
+        issues.push('cost-allocation:'+allocationKeyId+': allocation percentages must total exactly 100%.')
+        continue
+      }
+      if(new Set(parsedShares.map(share=>share.productId)).size!==parsedShares.length){
+        issues.push('cost-allocation:'+allocationKeyId+': a product may appear only once in one allocation key.')
+        continue
+      }
+      for(const share of parsedShares){
+        const factor=(share.percent??0)/100
+        costs.push({
+          ...cost,id:cost.id+'@'+share.row.id,productId:share.productId,
+          metadata:{...cost.metadata,costCentreId:str(share.row,'costCentreId')||cost.metadata.costCentreId},
+          standardQuantity:cost.standardQuantity===null?null:cost.standardQuantity*factor,
+          standardTotal:cost.standardTotal===null?null:cost.standardTotal*factor,
+          adjustments:cost.adjustments.map(adjustment=>({
+            ...adjustment,
+            quantity:adjustment.quantity===null?null:adjustment.quantity*factor,
+            total:adjustment.total===null?null:adjustment.total*factor,
+          })),
+        })
+      }
+    }
     result.productionCosts=costs
     boundSections.push('production-costs')
+    if(allocationRows.length)boundSections.push('cost-allocation')
+    for(const row of allocationRows){
+      const key=str(row,'name')
+      if(!costRows.some(cost=>str(cost,'allocationKeyId')===key))
+        issues.push('cost-allocation:'+row.id+': allocation key is not referenced by an indirect production-cost item.')
+    }
+  } else if(allocationRows.length){
+    issues.push('Cost-allocation rows require at least one production-cost item that references the allocation key.')
   }
-
   const salesRows=rows('sales-programme')
   if(salesRows.length){
     const grouped=new Map<string,HelpFormRow[]>()
