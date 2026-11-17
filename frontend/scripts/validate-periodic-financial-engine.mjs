@@ -48,3 +48,16 @@ const invalidBrackets = engine.calculateGraduatedPeriodTax(7500, 0, [
 ])
 assert.equal(Number.isNaN(invalidBrackets.tax), true, 'Gaps in graduated tax brackets must be rejected')
 console.log('PASS: COMFAR graduated corporate-tax brackets reproduce Reference Manual Table 22 and validate bracket continuity')
+
+const taxHolidayPeriods = foundation.buildProjectCalendarPeriods('2025-01-01','2026-12-31','annual',1)
+const taxHolidayModel = engine.calculateIntegratedPeriodicFinance({
+  periods:taxHolidayPeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[1000,1000],annualVariableCost:[0,0],annualFixedCost:[0,0],annualDepreciation:[0,0],
+  annualFixedInvestment:[0,0],annualPreOperatingCost:[0,0],annualMaintenanceCapex:[0,0],
+  annualTaxRates:[25,25],annualEquityContributions:[0,0],workingCapitalByPeriod:[0,0],loans:[],
+  taxHolidayYears:1,productionStartFiscalYear:0,
+})
+assert.equal(taxHolidayModel.valid,true,taxHolidayModel.warnings.join('; '))
+assert.equal(taxHolidayModel.rows[0].tax,0,'The first production fiscal year must be tax-exempt during a one-year holiday')
+assert.equal(taxHolidayModel.rows[1].tax,250,'Normal corporate tax must resume after the tax holiday')
+console.log('PASS: COMFAR production tax holiday suspends tax in the specified first production years')
