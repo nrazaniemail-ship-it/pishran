@@ -898,6 +898,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   if (annualSeries.some(series => !Array.isArray(series) || !series.length || series.some(value => !validFinite(value))) ||
       annualSeries.slice(0,7).some(series => series.some(value => value < 0)) ||
       input.annualTaxRates.some(value => value < 0 || value > 100) ||
+      (input.annualShortTermDepositInterest?.some(value => value < 0) ?? false) ||
       !Array.isArray(input.workingCapitalByPeriod) || input.workingCapitalByPeriod.length !== periods.length ||
       input.workingCapitalByPeriod.some(value => !validFinite(value)) ||
       input.loans.some(loan => !loan.id || !loan.input)) {
