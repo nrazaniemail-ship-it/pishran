@@ -216,6 +216,51 @@ export function bindHelpDrivenFinancialDrafts(
     boundSections.push('fixed-investment')
   }
 
+  const preproductionRows=rows('preproduction-expenditure')
+  if(preproductionRows.length){
+    const assets=preproductionRows.map(row=>{
+      const asset=createBlankFixedAssetFormDraft(row.id)
+      asset.assetClass='preproduction'
+      const period=periodKey(str(row,'period'),periods)
+      const periodRecord=period?periods.find(item=>String(item.index)===period):undefined
+      const quantity=num(row,'quantity'),unitPrice=num(row,'unitPrice'),total=num(row,'total')
+      required(quantity,'preproduction-expenditure:'+row.id+': quantity',issues)
+      required(unitPrice,'preproduction-expenditure:'+row.id+': unit price',issues)
+      required(total,'preproduction-expenditure:'+row.id+': total',issues)
+      if(!periodRecord)issues.push('preproduction-expenditure:'+row.id+': expenditure period must resolve to exactly one project period.')
+      if(quantity!==null&&unitPrice!==null&&total!==null&&Math.abs(quantity*unitPrice-total)>0.01)
+        issues.push('preproduction-expenditure:'+row.id+': quantity × unit price does not reconcile to total.')
+      const method=str(row,'amortizationMethod')
+      const startMode=str(row,'amortizationStartMode')
+      const lifeYears=num(row,'amortizationLength')
+      const firstMonths=num(row,'firstAmortizationYearMonths')
+      const salvage=num(row,'scrapPercent')
+      const methods=['linear-to-zero','linear-to-scrap','accelerated-declining-balance','sum-of-years-digits'] as const
+      if(!methods.includes(method as typeof methods[number]))issues.push('preproduction-expenditure:'+row.id+': valid amortization method is required.')
+      if(startMode!=='production-start'&&startMode!=='specified-date')issues.push('preproduction-expenditure:'+row.id+': amortization start mode is required.')
+      if(startMode==='specified-date'&&!validDate(str(row,'amortizationStartDate')))
+        issues.push('preproduction-expenditure:'+row.id+': specified amortization start requires a valid date.')
+      if(lifeYears===null||lifeYears<=0)issues.push('preproduction-expenditure:'+row.id+': positive amortization life in years is required.')
+      if(firstMonths===null||!Number.isInteger(firstMonths)||firstMonths<1||firstMonths>12)
+        issues.push('preproduction-expenditure:'+row.id+': first amortization-year months must be between 1 and 12.')
+      if(method!=='linear-to-zero'&&(salvage===null||salvage<0||salvage>100))
+        issues.push('preproduction-expenditure:'+row.id+': salvage percentage is required for this amortization method.')
+      asset.metadata={...asset.metadata,description:str(row,'description'),currencyCode:str(row,'currency').toUpperCase()||null,
+        marketOrigin:str(row,'origin')==='foreign'?'foreign':str(row,'origin')==='local'?'local':null}
+      asset.acquisitionPeriods=periodRecord?[{period:String(periodRecord.index),quantity,unitPrice,total}]:[]
+      asset.depreciation={
+        method:methods.includes(method as typeof methods[number])?method as typeof methods[number]:null,
+        startMode:startMode==='production-start'||startMode==='specified-date'?startMode:null,
+        startDate:str(row,'amortizationStartDate'),firstDepreciationYearMonths:firstMonths,
+        ratePercent:num(row,'ratePercent'),usefulLifeMonths:lifeYears!==null?Math.round(lifeYears*12):null,
+        salvagePercent:method==='linear-to-zero'?0:salvage,
+      }
+      return asset
+    })
+    result.assets=[...result.assets,...assets]
+    boundSections.push('preproduction-expenditure')
+  }
+
   const costRows=rows('production-costs')
   if(costRows.length){
     const costs=costRows.map(row=>{
