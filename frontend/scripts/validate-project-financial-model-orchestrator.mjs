@@ -378,18 +378,38 @@ const foreignTaxCurrencyModel=orchestrator.calculateProjectFinancialModelFromDra
 assert.equal(foreignTaxCurrencyModel.valid,false)
 assert.ok(foreignTaxCurrencyModel.issues.some(issue=>issue.includes('foreign tax currency requires a dedicated tax-liability translation')))
 
-// Absolute tax adjustments remain explicitly blocked until the engine defines whether
-// the amount adjusts taxable income, tax payable, or a jurisdiction-specific credit.
-for (const [field,value] of [['adjustmentPeriod','2'],['adjustmentAmount',25]]) {
- const adjustmentHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main',field,value)
- const adjustmentModel=orchestrator.calculateProjectFinancialModelFromDrafts({
-  finance,drafts:{...drafts,helpDriven:adjustmentHelp},foundation,productionStartDate:'2025-01-01',
-  openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
-  taxTreatment:'non-deductible',
- })
- assert.equal(adjustmentModel.valid,false,field+' must not be silently ignored')
- assert.ok(adjustmentModel.issues.some(issue=>issue.includes('income-tax.'+field)&&issue.includes('not yet connected')))
-}
+// COMFAR's annual tax adjustment is a signed increase/deduction to tax payable.
+// It is applied to both leveraged and unleveraged tax, with deductions floored at zero.
+let positiveTaxAdjustmentHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main','adjustmentPeriod','1')
+positiveTaxAdjustmentHelp=helpForms.updateHelpFormRow(positiveTaxAdjustmentHelp,'income-tax','income-tax-main','adjustmentAmount',25)
+const positiveTaxAdjustmentModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:positiveTaxAdjustmentHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(positiveTaxAdjustmentModel.valid,true,positiveTaxAdjustmentModel.issues.join('; '))
+assert.deepEqual(positiveTaxAdjustmentModel.financeInput.taxAdjustmentsByPeriod,[25,0])
+assert.equal(positiveTaxAdjustmentModel.finalRun.finance.rows[0].tax,result.finalRun.finance.rows[0].tax+25)
+assert.equal(positiveTaxAdjustmentModel.finalRun.finance.rows[0].unleveredTax,result.finalRun.finance.rows[0].unleveredTax+25)
+assert.equal(positiveTaxAdjustmentModel.finalRun.finance.rows[0].taxAdjustment,25)
+let negativeTaxAdjustmentHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main','adjustmentPeriod','2')
+negativeTaxAdjustmentHelp=helpForms.updateHelpFormRow(negativeTaxAdjustmentHelp,'income-tax','income-tax-main','adjustmentAmount',-10)
+const negativeTaxAdjustmentModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:negativeTaxAdjustmentHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(negativeTaxAdjustmentModel.valid,true,negativeTaxAdjustmentModel.issues.join('; '))
+assert.deepEqual(negativeTaxAdjustmentModel.financeInput.taxAdjustmentsByPeriod,[0,-10])
+assert.equal(negativeTaxAdjustmentModel.finalRun.finance.rows[1].tax,result.finalRun.finance.rows[1].tax-10)
+let incompleteTaxAdjustmentHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main','adjustmentAmount',25)
+const incompleteTaxAdjustmentModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:incompleteTaxAdjustmentHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(incompleteTaxAdjustmentModel.valid,false)
+assert.ok(incompleteTaxAdjustmentModel.issues.some(issue=>issue.includes('requires both a project-calendar period and a signed amount')))
 assert.ok(result.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 const openingBalanceSheet={
  enabled:true,cash:100,inventory:20,workInProgress:10,finishedGoods:30,receivables:40,
