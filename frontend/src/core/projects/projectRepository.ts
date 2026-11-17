@@ -9,7 +9,7 @@ export interface FeasibilityProject {
   industry: string
   projectType?: string
   steelStage?: string
-  templateId: ProjectTemplateId
+  templateId?: ProjectTemplateId
   capacity: string
   location: string
   status: ProjectStatus
