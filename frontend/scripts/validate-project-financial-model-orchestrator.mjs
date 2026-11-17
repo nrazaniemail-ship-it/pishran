@@ -57,6 +57,11 @@ for(const [id,period,inflationPercent,priceIndex] of [
  currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'inflation',id,'priceIndex',priceIndex)
 }
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'economic-global','economic-global-main','discountRate',8)
+currencyHelp=helpForms.addHelpFormRow(currencyHelp,'tax-allowances','usd-investment-allowance')
+currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'tax-allowances','usd-investment-allowance','type','investment-allowance')
+currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'tax-allowances','usd-investment-allowance','period','1')
+currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'tax-allowances','usd-investment-allowance','amount',100)
+currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'tax-allowances','usd-investment-allowance','currency','USD')
 currencyHelp=helpForms.addHelpFormRow(currencyHelp,'cost-centres','factory-centre')
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','name','Factory')
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','group','production')
@@ -80,6 +85,8 @@ const currencyBoundRun=orchestrator.calculateProjectFinancialModelFromDrafts({
 })
 assert.equal(currencyBoundRun.valid,true,currencyBoundRun.issues.join('; '))
 assert.equal(currencyBoundRun.finalRun.finance.valid,true)
+assert.equal(currencyBoundRun.finalRun.finance.rows[0].tax,223)
+assert.equal(currencyBoundRun.finalRun.finance.rows[1].tax,380)
 const foundation={
  schemaVersion:1,
  planning:{periodFrequency:'annual',projectStartDate:'2025-01-01',projectEndDate:'2026-12-31',fiscalYearStartMonth:1,balanceDateMonth:12,balanceDateDay:31,dayCountBasis:365,valuationDate:'2025-01-01',discountConvention:'actual-days',cashFlowTiming:'period-end'},
