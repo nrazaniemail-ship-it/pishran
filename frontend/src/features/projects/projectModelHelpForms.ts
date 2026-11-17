@@ -269,7 +269,7 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
  const globalEconomic=(value.sections?.['economic-global']??[])[0]?.values
  if(globalEconomic){
   const scf=globalEconomic.standardConversionFactor,fccf=globalEconomic.foreignCurrencyConversionFactor
-  if(typeof scf==='number'&&typeof fccf==='number'&&Math.abs(scf*fccf-1)>1e-8)errors.push('economic-global:scf-fccf-must-be-reciprocal')
+  if(typeof scf==='number'&&typeof fccf==='number'&&Math.abs(scf*fccf-1)>0.01)errors.push('economic-global:scf-fccf-must-be-reciprocal')
   if(globalEconomic.numeraireType==='foreign-border-prices'&&(!globalEconomic.numeraireCurrency||globalEconomic.numeraireCurrency===''))errors.push('economic-global:foreign-numeraire-currency-required')
  }
  for(const row of value.sections?.['economic-items']??[]){
