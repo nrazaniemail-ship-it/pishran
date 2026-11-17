@@ -378,12 +378,14 @@ export function bindHelpDrivenFinancialDrafts(
         const salesTaxPercent=num(row,'salesTaxPercent')
         const subsidyPercent=num(row,'subsidyPercent'),subsidyAmount=num(row,'subsidyAmount')
         const closing=num(row,'closingFinishedGoods')
+        const grossUnitPrice=num(row,'grossUnitPrice')
+        const productionActive=bool(row,'productionActive')
         for(const [field,value] of [['sales quantity',salesQuantity],['net unit price',netUnitPrice],['sales tax',salesTaxPercent],['closing finished goods',closing]] as const)
           required(value,'sales-programme:'+row.id+': '+field,issues)
         if((subsidyPercent===null)===(subsidyAmount===null))
           issues.push('sales-programme:'+row.id+': provide exactly one subsidy basis (percentage or absolute amount).')
         return {period:period??str(row,'period'),salesQuantity,netUnitPrice,salesTaxPercent,
-          subsidyPercent,subsidyAmount,finishedGoodsClosingQuantity:closing}
+          subsidyPercent,subsidyAmount,finishedGoodsClosingQuantity:closing,grossUnitPrice,productionActive}
       })
       const opening=items.map(row=>num(row,'openingFinishedGoods')).filter((value):value is number=>value!==null)
       if(opening.length&&opening.some(value=>Math.abs(value-opening[0])>0.000001))
