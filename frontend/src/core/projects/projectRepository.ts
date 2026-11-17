@@ -77,16 +77,27 @@ export async function purgeRemovedCaseProjects(): Promise<FeasibilityProject[]> 
     retiredProjectNameHashes.has(hashLegacyProjectKey(project.name))
     || retiredProjectStageHashes.has(hashLegacyProjectKey(project.steelStage ?? ''))
     || hashLegacyProjectKey(project.templateId ?? '') === retiredProjectTemplateHash
+  const retiredProjects = projects.filter(isRemovedCase)
   const remaining = projects.filter(project => !isRemovedCase(project)).map(project => ({ ...project, templateId: 'raw' as const }))
   if (remaining.length !== projects.length || projects.some(project => project.templateId !== 'raw')) await localStore.set(PROJECTS_KEY, remaining)
 
-  const [rollingRecords, processRecords] = await Promise.all([
+  const [rollingRecords, processRecords, retiredModelRecords] = await Promise.all([
     localStore.list('pishran:rolling:'),
-    localStore.list('process-plant:')
+    localStore.list('process-plant:'),
+    Promise.all(retiredProjects.flatMap(project => [
+      localStore.list('feasibility:project:' + project.id + ':'),
+      localStore.list('feasibility:advanced-finance:' + project.id + ':')
+    ]))
+  ])
+  const retiredFinanceKeys = retiredProjects.flatMap(project => [
+    'feasibility:project:' + project.id + ':v1',
+    'feasibility:advanced-finance:' + project.id
   ])
   await Promise.all([
     ...rollingRecords.map(record => localStore.remove(record.key)),
     ...processRecords.map(record => localStore.remove(record.key)),
+    ...retiredModelRecords.flat().map(record => localStore.remove(record.key)),
+    ...retiredFinanceKeys.map(key => localStore.remove(key)),
     localStore.remove('rolling:sample:v2'),
     localStore.remove('projects:workbook-seed:v1')
   ])
