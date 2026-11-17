@@ -149,7 +149,7 @@ export function bindEconomicAppraisalConfiguration(
     }else if(type==='indirect-effect'){
       issues.push('Economic effect '+effect.id+' is an indirect effect. It cannot enter economic cash flow until its physical impact, counterfactual, affected period and applicable shadow price are explicitly evidenced.')
     }else if(type==='employment'){
-      issues.push('Economic effect '+effect.id+' is employment. Headcount and shadow-wage factor alone are insufficient: a period-specific wage/cost base and a defensible counterfactual opportunity wage are required before calculating an economic employment benefit.')
+      issues.push('Economic effect '+effect.id+' is employment. It remains blocked until explicit shadow-price valuation rules are satisfied: headcount and shadow-wage factor alone are insufficient; a period-specific wage/cost base and a defensible counterfactual opportunity wage are required before calculating an economic employment benefit.')
     }else if(type==='environmental'){
       issues.push('Economic effect '+effect.id+' is environmental. A physical quantity, measurement unit, counterfactual and period-specific shadow damage/abatement price are required before valuation.')
     }else{
