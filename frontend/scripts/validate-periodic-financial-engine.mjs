@@ -995,10 +995,9 @@ assert.ok(feasibilityWizardSource.includes('productPricingComplete')
 assert.ok(feasibilityWizardSource.includes("n(r.quantity)*n(r.unitPrice)")
   && feasibilityWizardSource.includes("sumMaterialInputs(m.balance)+sum(m.utilities)"),
   'Raw variable-cost aggregation must use quantity times unit price and exclude material outputs')
-assert.ok(projectsViewSource.includes("{steelStage && <label>")
-  && projectsViewSource.includes("t('نام پروژه','Project Name')")
+assert.ok(projectsViewSource.includes("t('نام پروژه','Project Name')")
   && projectsViewSource.includes('placeholder={t(\'نام دلخواه پروژه را وارد کنید\''),
-  'Steel project creation must request a manually entered project name immediately after project type selection')
+  'Raw project creation must always request a manually entered project name')
 assert.ok(feasibilityWizardSource.includes('buildProjectCalendarPeriods')
   && feasibilityWizardSource.includes('projectPeriods={projectCalendarPeriods}')
   && feasibilityWizardSource.includes('cashFlowTiming={m.foundation.planning.cashFlowTiming}'),
