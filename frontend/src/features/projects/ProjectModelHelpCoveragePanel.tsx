@@ -17,9 +17,10 @@ function FieldControl({field,row,onChange,language,referenceOptions}:{field:Help
  return <label className="fw-field"><span>{label}{suffix}</span><input type={field.type==='date'?'date':'text'} value={typeof value==='string'?value:''} onChange={e=>onChange(e.target.value)}/></label>
 }
 
-function referenceOptionsFor(fieldKey:string,model:HelpDrivenProjectForms):{value:string;label:string}[]|undefined{
+function referenceOptionsFor(fieldKey:string,model:HelpDrivenProjectForms,periods:readonly HelpDrivenCalendarPeriod[]):{value:string;label:string}[]|undefined{
  const rows=(id:string)=>model.sections?.[id]??[]
  const name=(row:HelpFormRow,key:string)=>typeof row.values[key]==='string'?String(row.values[key]).trim():''
+ if(fieldKey==='period')return periods.map(period=>({value:String(period.index),label:'P'+period.index+' · '+period.startDate+' – '+period.endDate}))
  if(fieldKey==='productId')return rows('products').filter(row=>name(row,'name')).map(row=>({value:row.id,label:name(row,'name')}))
  if(fieldKey==='costCentreId'||fieldKey==='parentId')return rows('cost-centres').filter(row=>name(row,'name')).map(row=>({value:row.id,label:name(row,'name')}))
  if(fieldKey==='allocationKeyId')return rows('cost-allocation').filter(row=>name(row,'name')).map(row=>({value:row.id,label:name(row,'name')}))
@@ -56,7 +57,7 @@ export default function ProjectModelHelpCoveragePanel({value,onChange,language='
     return <details className="fw-validation" key={section.id} open={hasEnteredValues} style={{marginTop:10,padding:12}}>
      <summary className="fw-card-head" style={{cursor:'pointer'}}><div><h5>{en?section.en:section.fa}</h5><small className="fw-hint">{t('مرجع مستند: ','Manual reference: ')}{section.source}</small></div></summary>
      {rows.map(row=><div key={row.id} style={{marginTop:10,padding:10,border:'1px solid var(--border-color, #d7dee8)',borderRadius:8}}>
-      <div className="fw-grid">{section.fields.map(field=><FieldControl key={field.key} field={field} row={row} language={language} referenceOptions={referenceOptionsFor(field.key,model)} onChange={next=>onChange(updateHelpFormRow(model,section.id,row.id,field.key,next))}/>)}</div>
+      <div className="fw-grid">{section.fields.map(field=><FieldControl key={field.key} field={field} row={row} language={language} referenceOptions={referenceOptionsFor(field.key,model,periods)} onChange={next=>onChange(updateHelpFormRow(model,section.id,row.id,field.key,next))}/>)}</div>
       {section.repeatable&&<button type="button" className="secondary-button" onClick={()=>onChange(removeHelpFormRow(model,section.id,row.id))}>{t('حذف ردیف','Remove row')}</button>}
      </div>)}
      {section.repeatable&&<button type="button" className="secondary-button" style={{marginTop:8}} onClick={()=>onChange(addHelpFormRow(model,section.id,crypto.randomUUID()))}>{t('افزودن ردیف','Add row')}</button>}
