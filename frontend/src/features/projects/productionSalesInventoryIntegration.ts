@@ -71,6 +71,14 @@ function periodMonths(period: ProjectCalendarPeriod): number {
   return Math.min(12, Math.max(1 / 30, months))
 }
 
+function periodCoverageMonths(period:ProjectCalendarPeriod):number {
+  const start=new Date(period.startDate+'T00:00:00.000Z')
+  const end=new Date(period.endDate+'T00:00:00.000Z')
+  if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<start)return Number.NaN
+  if(period.partial)return Math.max(1/30,period.days/30)
+  return Math.max(1,(end.getUTCFullYear()-start.getUTCFullYear())*12+end.getUTCMonth()-start.getUTCMonth()+1)
+}
+
 function validCalendar(periods: ProjectCalendarPeriod[]): string[] {
   const issues: string[] = []
   if (!periods.length) return ['At least one project period is required.']
@@ -156,6 +164,9 @@ export function buildProductionSalesInventorySchedule(
     const openingQuantity=openingFinishedGoodsByProduct[product.productId]??product.openingFinishedGoodsQuantity
     if (!nonNegative(openingQuantity))
       issues.push('Explicit opening finished-goods quantity is required for product '+product.productId+'.')
+    if(product.finishedGoodsDaysCoverage!==undefined&&product.finishedGoodsDaysCoverage!==null&&
+      (!finite(product.finishedGoodsDaysCoverage)||product.finishedGoodsDaysCoverage<=0))
+      issues.push('Finished-goods days coverage must be finite and positive for product '+product.productId+'.')
     const openingValue=openingFinishedGoodsValueByProduct[product.productId]??product.openingFinishedGoodsValue
     if(openingValue!==undefined&&openingValue!==null&&!nonNegative(openingValue))
       issues.push('Opening finished-goods carrying value must be finite and non-negative for product '+product.productId+'.')
@@ -185,8 +196,10 @@ export function buildProductionSalesInventorySchedule(
   for(const product of drafts.sales){
     const opening=openingFinishedGoodsByProduct[product.productId]??product.openingFinishedGoodsQuantity??0
     const salesMap=salesByProduct.get(product.productId)
-    const hasClosingStock=Array.from(salesMap?.values()??[]).some(row=>(row.finishedGoodsClosingQuantity??0)>1e-8)
-    if((opening>1e-8||hasClosingStock)&&product.inventoryValuationMethod!=='fifo'&&product.inventoryValuationMethod!=='weighted-average')
+    const hasExplicitClosingStock=Array.from(salesMap?.values()??[]).some(row=>(row.finishedGoodsClosingQuantity??0)>1e-8)
+    const hasCoverageDerivedStock=finite(product.finishedGoodsDaysCoverage)&&product.finishedGoodsDaysCoverage>0&&
+      Array.from(salesMap?.values()??[]).some(row=>(row.salesQuantity??0)>1e-8)
+    if((opening>1e-8||hasExplicitClosingStock||hasCoverageDerivedStock)&&product.inventoryValuationMethod!=='fifo'&&product.inventoryValuationMethod!=='weighted-average')
       issues.push('An explicit FIFO or weighted-average finished-goods valuation method is required for product '+product.productId+'.')
   }
   if (issues.length) return empty()
@@ -199,7 +212,15 @@ export function buildProductionSalesInventorySchedule(
     const salesMap=salesByProduct.get(product.productId)!
     for (let i=0;i<periods.length;i++) {
       const sales=salesMap.get(i)!
-      const required=[sales.salesQuantity,sales.netUnitPrice,sales.finishedGoodsClosingQuantity]
+      const explicitClosing=sales.finishedGoodsClosingQuantity
+      const coverage=product.finishedGoodsDaysCoverage
+      const months=periodCoverageMonths(periods[i])
+      const coverageClosing=coverage!==undefined&&coverage!==null&&finite(coverage)&&coverage>0&&
+        nonNegative(sales.salesQuantity)&&finite(months)&&months>0
+        ?Math.max(0,opening-(sales.salesQuantity as number),(sales.salesQuantity as number)*coverage/(30*months))
+        :null
+      const resolvedClosing=explicitClosing??coverageClosing
+      const required=[sales.salesQuantity,sales.netUnitPrice,resolvedClosing]
       if (!required.every(nonNegative) || sales.salesTaxPercent===null ||
           (sales.subsidyPercent===null&&sales.subsidyAmount===null) ||
           (sales.subsidyPercent!==null&&sales.subsidyAmount!==null) ||
@@ -209,7 +230,7 @@ export function buildProductionSalesInventorySchedule(
         issues.push('Sales quantity, net price and closing stock (plus valid tax/subsidy) are required for '+product.productId+' period '+(i+1)+'.')
         continue
       }
-      const closing=sales.finishedGoodsClosingQuantity as number
+      const closing=resolvedClosing as number
       const production=sales.salesQuantity as number + closing - opening
       if (sales.grossUnitPrice != null) {
         if (!nonNegative(sales.grossUnitPrice)) {
