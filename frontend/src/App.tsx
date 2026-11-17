@@ -75,6 +75,7 @@ export default function App() {
   const [activePlantType, setActivePlantType] = useState<'dri'|'steelmaking'>('dri')
   const [storageInfo, setStorageInfo] = useState({ backend: 'در حال بررسی', items: 0 })
   const [ready, setReady] = useState(false)
+  const [loadError, setLoadError] = useState('')
   const [calculatorOpen, setCalculatorOpen] = useState(false)
   const [calculatorExpression, setCalculatorExpression] = useState('')
   const [calculatorError, setCalculatorError] = useState('')
@@ -132,7 +133,7 @@ export default function App() {
         setProjects(orderedProjects)
         setStorageInfo(info)
         setReady(true)
-      }).catch(() => setReady(true))
+      }).catch(error => { if (alive) { setLoadError(error instanceof Error ? error.message : 'خطا در بارگذاری داده‌ها'); setReady(true) } })
     return () => { alive = false }
   }, [])
 
@@ -230,7 +231,7 @@ export default function App() {
       </nav>
       <div className="top-actions">{modern && <><button className="modern-header-action" onClick={() => setCommandOpen(true)}>{isEn ? 'Quick actions' : 'دستورات سریع'} <kbd>Ctrl K</kbd></button><button className="modern-header-action" onClick={() => setPage('projects')}>{isEn ? 'New project' : 'پروژه جدید'} <Plus size={15}/></button><button className="modern-header-avatar">P</button></>}</div>
     </header>
-    {modern && <div className="modern-workspace-heading"><div><small>{isEn ? 'WORKSPACE' : 'فضای کاری'}</small><h1>{activeProject?.name ?? (isEn ? 'Investment workspace' : 'فضای کاری ارزیابی سرمایه‌گذاری')}</h1></div><div className="modern-live-status"><span/> {isEn ? 'Local data ready' : 'داده‌های محلی آماده‌اند'} <button onClick={() => setInspectorOpen(value => !value)}>{isEn ? 'Details' : 'جزئیات'}</button></div></div>}
+    {modern && <div className="modern-workspace-heading"><div><small>{isEn ? 'WORKSPACE' : 'فضای کاری'}</small><h1>{activeProject?.name ?? (isEn ? 'Investment workspace' : 'فضای کاری ارزیابی سرمایه‌گذاری')}</h1></div><div className="modern-live-status"><span/> {loadError ? (isEn ? 'Data needs attention' : 'نیازمند بررسی داده‌ها') : (isEn ? 'Local data ready' : 'داده‌های محلی آماده‌اند')} <button onClick={() => setInspectorOpen(value => !value)}>{isEn ? 'Details' : 'جزئیات'}</button></div></div>}
     <div className="modern-content-layout"><div className="modern-main-content">
 
     {page === 'dashboard' && <>
@@ -296,11 +297,11 @@ export default function App() {
     </div>
     {modern && inspectorOpen && <aside className="modern-inspector"><div className="inspector-heading"><b>{isEn ? 'Context & details' : 'جزئیات و راهنما'}</b><button onClick={() => setInspectorOpen(false)}>×</button></div>
       <section><small>{isEn ? 'CURRENT PROJECT' : 'پروژه انتخاب‌شده'}</small><b>{activeProject?.name ?? (isEn ? 'No project selected' : 'پروژه‌ای انتخاب نشده')}</b><p>{activeProject ? (isEn ? 'Project workspace is active.' : 'فضای کاری پروژه فعال است.') : (isEn ? 'Select a project from the browser to inspect its context.' : 'برای مشاهده جزئیات، پروژه‌ای را از مرورگر انتخاب کنید.')}</p></section>
-      <section><small>{isEn ? 'WORKSPACE STATUS' : 'وضعیت فضای کاری'}</small><div className="inspector-status"><span/> {isEn ? 'Local storage available' : 'ذخیره‌سازی محلی در دسترس'}</div><p>{isEn ? 'Project data uses the current storage layer.' : 'اطلاعات پروژه از لایه ذخیره‌سازی فعلی استفاده می‌کند.'}</p></section>
+      <section><small>{isEn ? 'WORKSPACE STATUS' : 'وضعیت فضای کاری'}</small><div className={`inspector-status ${loadError ? 'status-warning' : ''}`}><span/> {loadError ? (isEn ? 'Data loading issue' : 'اختلال در بارگذاری داده‌ها') : (isEn ? 'Local storage available' : 'ذخیره‌سازی محلی در دسترس')}</div><p>{loadError || (isEn ? 'Project data uses the current storage layer.' : 'اطلاعات پروژه از لایه ذخیره‌سازی فعلی استفاده می‌کند.')}</p></section>
       <section><small>{isEn ? 'QUICK HELP' : 'راهنمای سریع'}</small><button className="inspector-link" onClick={() => setPage('guide')}>{isEn ? 'Open user guide' : 'مشاهده راهنمای کاربر'} <BookOpen size={14}/></button></section>
     </aside>}
     </div>
-    {modern && <div className="modern-statusbar"><span><i/> {isEn ? 'Ready' : 'آماده'}</span><span>{isEn ? `${projects.length} projects` : `${projects.length.toLocaleString('fa-IR')} پروژه`}</span><span>{isEn ? 'Autosave enabled' : 'ذخیره‌سازی خودکار فعال'}</span><span>{isEn ? 'Calculations on demand' : 'محاسبه با فرمان کاربر'}</span></div>}
+    {modern && <div className="modern-statusbar"><span className={loadError ? 'status-warning' : ''}><i/> {loadError ? (isEn ? 'Needs attention' : 'نیازمند بررسی') : (isEn ? 'Ready' : 'آماده')}</span><span>{isEn ? `${projects.length} projects` : `${projects.length.toLocaleString('fa-IR')} پروژه`}</span><span>{isEn ? 'Autosave enabled' : 'ذخیره‌سازی خودکار فعال'}</span><span>{isEn ? 'Calculations on demand' : 'محاسبه با فرمان کاربر'}</span></div>}
     {modern && commandOpen && <div className="command-overlay" onMouseDown={event => { if (event.target === event.currentTarget) setCommandOpen(false) }}><section className="command-dialog"><div className="command-input-row"><span>⌕</span><input autoFocus value={commandQuery} onChange={event => setCommandQuery(event.target.value)} placeholder={isEn ? 'Search pages and actions...' : 'جستجوی صفحه و دستور...'} onKeyDown={event => { if (event.key === 'Enter') { const q=commandQuery.trim().toLocaleLowerCase(); const target=navigation.find(item => item.label.toLocaleLowerCase().includes(q) || item.id.includes(q)); if (target) setPage(target.id); else if (q.includes('new') || q.includes('جدید')) setPage('projects'); setCommandOpen(false); setCommandQuery('') } }}/><kbd>ESC</kbd></div><div className="command-results">{navigation.filter(item => !commandQuery || item.label.toLocaleLowerCase().includes(commandQuery.toLocaleLowerCase()) || item.id.includes(commandQuery.toLocaleLowerCase())).map(item => <button key={item.id} onClick={() => { setPage(item.id); setCommandOpen(false); setCommandQuery('') }}><item.icon size={16}/>{item.label}<span>↵</span></button>)}{projects.filter(project => !commandQuery || project.name.toLocaleLowerCase().includes(commandQuery.toLocaleLowerCase())).slice(0, 6).map(project => <button key={project.id} onClick={() => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard'); setCommandOpen(false); setCommandQuery('') }}><FolderKanban size={16}/>{project.name}<span>↵</span></button>)}<button onClick={() => { setPage('projects'); setCommandOpen(false); setCommandQuery('') }}><Plus size={16}/>{isEn ? 'Create or open a project' : 'ایجاد یا بازکردن پروژه'}<span>↵</span></button></div></section></div>}
     <div className="floating-calculator" dir="ltr">
       {calculatorOpen && <section className="calculator-panel" aria-label={isEn ? 'Calculator' : 'ماشین حساب'}>
