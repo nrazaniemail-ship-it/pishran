@@ -154,6 +154,7 @@ const benchmarkPeriods=benchmark.periods.map((year,index)=>({
 }))
 const benchmarkSales=benchmark.products.map(product=>({
  productId:product.productId,
+ inventoryValuationMethod:product.inventoryValuationMethod,
  periods:benchmark.periods.map((period,index)=>({
   period:benchmarkPeriods[index].startDate,salesQuantity:product.sales[index],netUnitPrice:product.unitPrice,
   salesTaxPercent:0,subsidyPercent:0,subsidyAmount:null,
