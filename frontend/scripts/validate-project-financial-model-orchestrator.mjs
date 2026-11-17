@@ -9,7 +9,6 @@ sensitivityOutput=sensitivityOutput.replace("'./periodicFinancialEngine'",JSON.s
 const sensitivityUrl=url(sensitivityOutput)
 let incrementalOutput=await transpile('../src/features/projects/incrementalAnalysisIntegration.ts')
 incrementalOutput=incrementalOutput.replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl))
- .replace("'./projectModelHelpForms'",JSON.stringify(helpFormsUrl))
 const incrementalUrl=url(incrementalOutput)
 const fxUrl=url(await transpile('../src/features/steel/foreignCurrencyTranslation.ts'))
 const helpFormulaUrl=url(await transpile('../src/features/projects/projectModelHelpFormulaRules.ts'))
