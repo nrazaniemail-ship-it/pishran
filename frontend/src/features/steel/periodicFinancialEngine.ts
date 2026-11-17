@@ -671,6 +671,8 @@ export type PeriodicProjectFinanceInput = {
   taxAllowancesByPeriod?: number[]
   /** Signed tax-only depreciation adjustments; positive values increase deductible depreciation. */
   taxDepreciationAdjustmentsByPeriod?: number[]
+  /** Signed local-currency adjustments to income tax payable; positive increases tax, negative reduces it (floored at zero). */
+  taxAdjustmentsByPeriod?: number[]
   annualEquityContributions: number[]
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
@@ -749,6 +751,7 @@ export type PeriodicProjectFinanceRow = {
   taxRatePercent: number
   taxAllowances: number
   taxDepreciationAdjustment: number
+  taxAdjustment: number
   tax: number
   unleveredTax: number
   taxLossCarryForward: number
@@ -1109,6 +1112,11 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Tax depreciation adjustments must contain one finite signed amount for every project period.')
     return empty()
   }
+  if(input.taxAdjustmentsByPeriod&&(input.taxAdjustmentsByPeriod.length!==periods.length||
+    input.taxAdjustmentsByPeriod.some(amount=>!validFinite(amount)))) {
+    warnings.push('Income-tax adjustments must contain one finite signed local-currency amount for every project period.')
+    return empty()
+  }
   const loanSchedules: Record<string, PeriodicLoanRow[]> = {}
   const suppliedSchedules = input.precomputedLoanSchedules ?? {}
   const loanIds = new Set(input.loans.map(loan => loan.id))
@@ -1199,6 +1207,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSale.otherIncomeLoss + salvageGainLoss
     const taxAllowances=input.taxAllowancesByPeriod?.[index]??0
     const taxDepreciationAdjustment=input.taxDepreciationAdjustmentsByPeriod?.[index]??0
+    const taxAdjustment=input.taxAdjustmentsByPeriod?.[index]??0
     const taxableIncomeAdjustment=taxAllowances+taxDepreciationAdjustment
     const fiscalYear=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
     const progressiveBrackets=input.taxBracketsByPeriod?.[index]
@@ -1210,6 +1219,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       warnings.push('Tax calculation failed in project period '+(index+1)+'.')
       return empty()
     }
+    const adjustedTax=Math.max(0,periodTax.tax+taxAdjustment)
+    const adjustedUnleveredTax=Math.max(0,unleveredPeriodTax.tax+taxAdjustment)
     taxLossVintages=periodTax.vintages
     unleveredTaxLossVintages=unleveredPeriodTax.vintages
     taxLoss=periodTax.closingLossCarryForward
@@ -1229,18 +1240,18 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       warnings.push('Shareholder working-capital funding must be finite and non-negative (period ' + (index + 1) + ').')
       return empty()
     }
-    const cfads = revenue[index] - variableCost[index] - fixedCost[index] - periodTax.tax
+    const cfads = revenue[index] - variableCost[index] - fixedCost[index] - adjustedTax
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
     const dscrCovenantStatus: 'not-tested' | 'pass' | 'breach' = input.minimumDscr == null || dscr == null
       ? 'not-tested' : dscr + 1e-9 >= input.minimumDscr ? 'pass' : 'breach'
     if (dscrCovenantStatus === 'breach') warnings.push('Minimum DSCR covenant breached in period ' + (index + 1) + ': actual ' + dscr!.toFixed(4) + ', minimum ' + input.minimumDscr!.toFixed(4) + '.')
-    const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
+    const projectFreeCashFlow = ebit - assetSale.otherIncomeLoss - salvageGainLoss - adjustedUnleveredTax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
     const equityFreeCashFlow = -equityContribution[index] + revenue[index] - variableCost[index] - fixedCost[index]
-      - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
+      - adjustedTax - interestExpense - principal - maintenanceCapex[index]
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
@@ -1249,7 +1260,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
       capitalizedInterest,capitalizedFinancingFees,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],
-      taxAllowances,taxDepreciationAdjustment,tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
+      taxAllowances,taxDepreciationAdjustment,taxAdjustment,tax:adjustedTax,unleveredTax:adjustedUnleveredTax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,changeInWorkingCapital,equityContribution:equityContribution[index],
       equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
