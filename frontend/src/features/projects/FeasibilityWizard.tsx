@@ -159,26 +159,27 @@ const stepTitleEn:Record<string,string>={'تعریف پروژه و بازار':'
 type Step = typeof steps[number][0]
 const makeRow=(name:string,unit='تن',quantity=0,unitPrice=0,source='فرض کاربر'):Row=>({id:crypto.randomUUID?.()??String(Date.now()+Math.random()),name,quantity,unit,unitPrice,source,flowType:'input'})
 function baseModel(project:FeasibilityProject):Model {
- const rawProject=project.templateId==='raw'||project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
- const selectedStage=rawProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
+ const blankCustomProject=project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
+ const selectedStage=blankCustomProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
  const parsedCapacity=Number(project.capacity.replace(/[^0-9.]/g,''))||0
+ const blankTemplate=project.templateId==='raw'
  return {
   projectCategory:selectedStage.id==='mining'?'mining':'industrial',analysisMode:'new',partners:[],partnerDistributionPercent:100,
   scope:{studyLevel:'feasibility',jointVenture:false,economicAnalysis:false,costCentreAnalysis:false,costAllocation:false,valueAddedAnalysis:false,foreignExchangeEffect:false,employmentEffects:false},
   foundation:createBlankProjectFoundation(),financialForms:createBlankProjectModelFinancialFormDrafts(),fixedInvestmentItems:[],fixedInvestmentSeedVersion:0,startingFixedAssets:[],
-  project:{name:project.name,location:project.location,owner:'',startYear:rawProject?0:1403,constructionYears:rawProject?0:2,operatingYears:rawProject?0:10,currency:rawProject?'':'میلیون ریال',fxRate:rawProject?0:1},
+  project:{name:project.name,location:project.location,owner:'',startYear:blankTemplate?0:1403,constructionYears:blankTemplate?0:2,operatingYears:blankTemplate?0:10,currency:blankTemplate?'':'میلیون ریال',fxRate:blankTemplate?0:1},
   stage:selectedStage.id,
-  products:rawProject?[]:[makeRow('محصول اصلی','تن/سال',parsedCapacity,0)],
-  capacity:{nameplate:rawProject?0:parsedCapacity,operatingDays:rawProject?0:330,hoursPerDay:rawProject?0:24,availability:rawProject?0:100,yield:rawProject?0:100,ramp:rawProject?[]:[70,80,90,100]},
-  process:{technology:rawProject?'':selectedStage.name,route:rawProject?'':selectedStage.route,equipment:'',bottleneck:0,notes:''},
-  technical:rawProject?[]:selectedStage.fields.map(field=>makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',0,0,'برآورد مهندسی')),
-  balance:rawProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.materials??[],'فرم تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
-  utilities:rawProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.utilities??[],'فرم تخصصی یوتیلیتی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
-  market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:rawProject?0:10,domesticPrice:0,exportPrice:0,domesticShare:rawProject?0:85,growth:0},
-  capex:rawProject?[]:stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex??[],'میلیون ریال','فرم سرمایه‌گذاری تخصصی مرحله '+selectedStage.name+'؛ مبلغ باید از CAPEX و استعلام‌های پروژه تکمیل شود'),
-  opex:rawProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[],'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه'),
-  finance:{equity:rawProject?0:40,debt:rawProject?0:60,equityCost:rawProject?0:35,debtCost:rawProject?0:23,tax:rawProject?0:20,manualRate:rawProject?0:30,method:rawProject?'unspecified':'wacc',depreciationYears:rawProject?0:10,workingCapital:0,financeRate:rawProject?0:23,reinvestmentRate:rawProject?0:30},
-  risks:rawProject?[]:[makeRow('افزایش قیمت مواد اولیه','درصد',10),makeRow('کاهش قیمت فروش','درصد',10),makeRow('افت ظرفیت تولید','درصد',10),makeRow('تأخیر در راه‌اندازی','ماه',6)]
+  products:[makeRow('محصول اصلی','تن/سال',blankTemplate?0:parsedCapacity,0)],
+  capacity:{nameplate:blankTemplate?0:parsedCapacity,operatingDays:blankTemplate?0:330,hoursPerDay:blankTemplate?0:24,availability:blankTemplate?0:100,yield:blankTemplate?0:100,ramp:blankTemplate?[]:[70,80,90,100]},
+  process:{technology:blankCustomProject||blankTemplate?'':selectedStage.name,route:blankCustomProject||blankTemplate?'':selectedStage.route,equipment:'',bottleneck:0,notes:''},
+  technical:blankCustomProject?[]:selectedStage.fields.map(field=>makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',0,0,'برآورد مهندسی')),
+  balance:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.materials??[],'فرم تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
+  utilities:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.utilities??[],'فرم تخصصی یوتیلیتی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
+  market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:blankTemplate?0:10,domesticPrice:0,exportPrice:0,domesticShare:blankTemplate?0:85,growth:0},
+  capex:blankCustomProject?[]:stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex??[],'میلیون ریال','فرم سرمایه‌گذاری تخصصی مرحله '+selectedStage.name+'؛ مبلغ باید از CAPEX و استعلام‌های پروژه تکمیل شود'),
+  opex:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[],'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه'),
+  finance:{equity:blankTemplate?0:40,debt:blankTemplate?0:60,equityCost:blankTemplate?0:35,debtCost:blankTemplate?0:23,tax:blankTemplate?0:20,manualRate:blankTemplate?0:30,method:blankTemplate?'unspecified':'wacc',depreciationYears:blankTemplate?0:10,workingCapital:0,financeRate:blankTemplate?0:23,reinvestmentRate:blankTemplate?0:30},
+  risks:blankCustomProject?[]:[makeRow('افزایش قیمت مواد اولیه','درصد',0),makeRow('کاهش قیمت فروش','درصد',0),makeRow('افت ظرفیت تولید','درصد',0),makeRow('تأخیر در راه‌اندازی','ماه',0)]
  }
 }
 const n=(v:number)=>Number.isFinite(v)?v:0
