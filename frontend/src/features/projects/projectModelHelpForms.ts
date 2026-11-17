@@ -136,7 +136,7 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
     'preproduction-expenditure':['description','currency','origin','period','quantity','unitPrice','total','amortizationMethod','amortizationLength','amortizationStartMode','firstAmortizationYearMonths'],
     'production-costs':['item','classification','currency','origin','basis'],
     'sales-programme':['productId','period'],
-    'working-capital':['item','category','mode','basis'],
+    'working-capital':['item','category','basis'],
     'equity-grants':['sourceName','sourceType','period','currency'],
     'loan-conditions':['loanName','kind','currency','origin','repaymentType','interval'],
     'loan-disbursements':['loanName','date','amount','flowType'],
