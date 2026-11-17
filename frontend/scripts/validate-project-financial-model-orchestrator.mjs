@@ -390,7 +390,7 @@ assert.equal(targetSensitivityModel.sensitivitySearches[0].result.iterations,0)
 let unsupportedSensitivityHelp=helpForms.createBlankHelpDrivenProjectForms()
 unsupportedSensitivityHelp=helpForms.addHelpFormRow(unsupportedSensitivityHelp,'sensitivity','global-sensitivity-a')
 for(const [key,value] of Object.entries({
- analysisType:'global-input-variation',variableGroup:'sales-revenues',quantityChange:10,
+ analysisType:'global-input-variation',variableGroup:'sales-revenues',
  maxIncrease:10,maxDecrease:10,order:1,
 })) unsupportedSensitivityHelp=helpForms.updateHelpFormRow(unsupportedSensitivityHelp,'sensitivity','global-sensitivity-a',key,value)
 const unsupportedSensitivityModel=orchestrator.calculateProjectFinancialModelFromDrafts({
