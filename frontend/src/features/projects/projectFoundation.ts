@@ -59,7 +59,7 @@ export function calculateStartingFinancialBalanceSummary(input: StartingFinancia
     paidInCapital: input.paidInCapital,
     retainedEarnings: input.retainedEarnings - input.accumulatedLosses,
     grants: input.grants,
-    currentAccounts: input.currentAccounts ? { ...input.currentAccounts } : undefined,
+    ...(input.currentAccounts ? { currentAccounts: { ...input.currentAccounts } } : {}),
   }
 }
 
