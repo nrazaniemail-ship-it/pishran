@@ -104,7 +104,25 @@ for(const [id,period] of [['wc-a1','1'],['wc-a2','2']]){
  for(const [key,value] of Object.entries({item:'Receivables',category:'accounts-receivable',period,requiredValue:25,startingBalance:10,basis:'cost-of-products-sold-operating-cost'}))
   rawHelp=helpForms.updateHelpFormRow(rawHelp,'working-capital',id,key,value)
 }
-const rawBound=helpBinding.bindHelpDrivenFinancialDrafts(rawHelp,periods,{assets:[],productionCosts:[],sales:[],workingCapital:[]})
+for(const [id,key,value] of [
+ ['loan-a','loanName','Generic facility'],['loan-a','kind','long-term'],['loan-a','currency','EUR'],
+ ['loan-a','origin','local'],['loan-a','repaymentType','annuity'],['loan-a','interval','yearly'],
+ ['loan-a','firstRepaymentDate','2025-12-31'],['loan-a','numberOfRepayments',2],
+ ['loan-a','graceMonths',0],['loan-a','facilityLimit',1000],
+]){
+ if(!rawHelp.sections['loan-conditions'].some(row=>row.id===id))rawHelp=helpForms.addHelpFormRow(rawHelp,'loan-conditions',id)
+ rawHelp=helpForms.updateHelpFormRow(rawHelp,'loan-conditions',id,key,value)
+}
+rawHelp=helpForms.addHelpFormRow(rawHelp,'loan-disbursements','loan-draw-a')
+for(const [key,value] of Object.entries({loanName:'Generic facility',date:'2025-01-01',amount:1000,flowType:'drawdown'}))
+ rawHelp=helpForms.updateHelpFormRow(rawHelp,'loan-disbursements','loan-draw-a',key,value)
+rawHelp=helpForms.addHelpFormRow(rawHelp,'loan-interest','loan-rate-a')
+for(const [key,value] of Object.entries({loanName:'Generic facility',effectiveDate:'2025-01-01',annualRate:8,capitalizePercent:0}))
+ rawHelp=helpForms.updateHelpFormRow(rawHelp,'loan-interest','loan-rate-a',key,value)
+rawHelp=helpForms.addHelpFormRow(rawHelp,'loan-fees','loan-fee-a')
+for(const [key,value] of Object.entries({loanName:'Generic facility',type:'agency',rate:1,basis:'each-positive-disbursement',payment:'at-each-disbursement',paymentDate:'2025-01-01',treatment:'expense',currency:'loan-currency'}))
+ rawHelp=helpForms.updateHelpFormRow(rawHelp,'loan-fees','loan-fee-a',key,value)
+const rawBound=helpBinding.bindHelpDrivenFinancialDrafts(rawHelp,periods,{assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[]})
 assert.deepEqual(rawBound.issues,[])
 assert.deepEqual(rawBound.boundSections,['fixed-investment','production-costs','sales-programme','working-capital'])
 assert.equal(rawBound.drafts.assets[0].acquisitionPeriods[0].period,'1')
@@ -112,6 +130,10 @@ assert.equal(rawBound.drafts.assets[0].depreciation.usefulLifeMonths,60)
 assert.equal(rawBound.drafts.productionCosts[0].productId,'product-a')
 assert.equal(rawBound.drafts.sales[0].periods.length,2)
 assert.equal(rawBound.drafts.workingCapital[0].periodBalances.length,2)
+assert.equal(rawBound.drafts.loans[0].name,'Generic facility')
+assert.equal(rawBound.drafts.loans[0].disbursements[0].amount,1000)
+assert.equal(rawBound.drafts.loans[0].interestRateChanges[0].annualRatePercent,8)
+assert.equal(rawBound.drafts.loans[0].fees[0].paymentDate,'2025-01-01')
 
 const foundation={
  schemaVersion:1,
