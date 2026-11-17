@@ -31,10 +31,20 @@ for (const retiredModelMarker of [
   assert.equal(modelSource.includes(retiredModelMarker), false,
     `Retired sample-project data must not be embedded in the feasibility model: ${retiredModelMarker}`)
 }
+
+assert.match(modelSource, /const blankTemplate=project\.templateId==='raw'/)
+assert.match(modelSource, /const blankCustomProject=project\.industry!==['"]فولاد و صنایع معدنی['"]\|\|project\.steelStage===['"]سایر['"]/)
+assert.match(modelSource, /technical:blankCustomProject\?\[\]:selectedStage\.fields\.map/)
+assert.match(modelSource, /balance:blankCustomProject\?\[\]:stageRows/)
+assert.match(modelSource, /utilities:blankCustomProject\?\[\]:stageRows/)
+assert.match(modelSource, /capex:blankCustomProject\?\[\]:stageCapexRows/)
+assert.match(modelSource, /opex:blankCustomProject\?\[\]:stageRows/)
+assert.match(modelSource, /equity:blankTemplate\?0:40,debt:blankTemplate\?0:60/)
+assert.match(modelSource, /startYear:blankTemplate\?0:1403,constructionYears:blankTemplate\?0:2/)
 const store = await import(storeUrl)
 
 const project = (id, name, steelStage, templateId) => ({
-  id, name, industry:'steel-and-mining', steelStage, templateId, capacity:'100000', location:'', status:'draft',
+  id, name, industry:'فولاد و صنایع معدنی', steelStage, templateId, capacity:'100000', location:'', status:'draft',
   createdAt:'2026-01-01T00:00:00.000Z', updatedAt:'2026-01-01T00:00:00.000Z'
 })
 const key = 'projects:list:v1'
