@@ -348,10 +348,10 @@ const costDrivenWorkingCapitalModel=orchestrator.calculateProjectFinancialModelF
  taxTreatment:'non-deductible',
 })
 assert.equal(costDrivenWorkingCapitalModel.valid,true,costDrivenWorkingCapitalModel.issues.join('; '))
-assert.ok(Math.abs(costDrivenWorkingCapitalModel.financeInput.workingCapitalByPeriod[0]-1500*30/365)<0.000001)
-assert.ok(Math.abs(costDrivenWorkingCapitalModel.financeInput.workingCapitalByPeriod[1]-600*30/365)<0.000001)
-assert.ok(Math.abs(costDrivenWorkingCapitalModel.finalRun.statements[0].balanceSheet.netWorkingCapital-(500+1500*30/365))<0.000001)
-assert.ok(Math.abs(costDrivenWorkingCapitalModel.finalRun.statements[1].balanceSheet.netWorkingCapital-(220+600*30/365))<0.000001)
+assert.ok(Math.abs(costDrivenWorkingCapitalModel.financeInput.workingCapitalByPeriod[0]-1500*30/360)<0.000001)
+assert.ok(Math.abs(costDrivenWorkingCapitalModel.financeInput.workingCapitalByPeriod[1]-600*30/360)<0.000001)
+assert.ok(Math.abs(costDrivenWorkingCapitalModel.finalRun.statements[0].balanceSheet.netWorkingCapital-(500+1500*30/360))<0.000001)
+assert.ok(Math.abs(costDrivenWorkingCapitalModel.finalRun.statements[1].balanceSheet.netWorkingCapital-(220+600*30/360))<0.000001)
 assert.ok(costDrivenWorkingCapitalModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 
 const fifoInventoryCostDrafts={
