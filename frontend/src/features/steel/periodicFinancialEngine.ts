@@ -1572,7 +1572,8 @@ export function buildPeriodicThreeFinancialStatements(
         Math.abs(scheduledPeriod.principal - row.principal) > tolerance) return []
     const closingDebt = debt + row.debtDrawdown + row.capitalizedInterest + row.capitalizedFinancingFees -
       row.principal + automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
-    if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance)) > tolerance) return []
+    if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance +
+        automaticFunding.automaticOverdraftBalance)) > tolerance) return []
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
     const cashOperatingCosts = row.variableCost + row.fixedCost
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
