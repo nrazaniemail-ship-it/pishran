@@ -15,11 +15,10 @@ import ProjectModelFinancialFormsPanel from './ProjectModelFinancialFormsPanel'
 import ProjectModelHelpCoveragePanel from './ProjectModelHelpCoveragePanel'
 import { createBlankProjectModelFinancialFormDrafts, listUnintegratedFinancialDraftInputs, type ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import FixedInvestmentPanel from './FixedInvestmentPanel'
-import { buildProjectCalendarPeriods, createBlankProjectFoundation, mergeProjectFoundation, type ProjectFoundation, type FixedInvestmentItem, type StartingFixedAssetBalance } from './projectFoundation'
+import { buildProjectCalendarPeriods, createBlankProjectFoundation, mergeProjectFoundation, type ProjectFoundation, type FixedInvestmentItem, type StartingFixedAssetBalance, type StartingFinancialBalanceSummary } from './projectFoundation'
 
 type Row = { id:string; name:string; quantity:number; unit:string; unitPrice:number; source:string; valueText?:string; flowType?:'input'|'output' }
-type StartingBalanceSummary={cash:number;netWorkingCapital:number;debt:number;paidInCapital:number;retainedEarnings:number;grants:number}
-const blankStartingBalanceSummary:StartingBalanceSummary={cash:0,netWorkingCapital:0,debt:0,paidInCapital:0,retainedEarnings:0,grants:0}
+const blankStartingBalanceSummary:StartingFinancialBalanceSummary={cash:0,netWorkingCapital:0,debt:0,paidInCapital:0,retainedEarnings:0,grants:0}
 type Model = {
   projectCategory:'industrial'|'maritime'|'agricultural'|'infrastructure'|'tourism'|'mining'|'other'
   analysisMode: 'new'|'expansion'|'rehabilitation'|'combined'
@@ -290,9 +289,9 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
 
  const key='feasibility:project:'+project.id+':v1'
  const handleScenarioAnalysis=useCallback((matrix:SensitivityCell[][],scenarios:ReturnType<typeof import('../steel/financialModel').calculateFinancialScenarios>)=>{setReportScenarioMatrix(matrix);setReportScenarios(scenarios)},[])
- const [m,setM]=useState<Model>(()=>baseModel(project)),[step,setStep]=useState<Step>('profile'),[loaded,setLoaded]=useState(false),[saved,setSaved]=useState(''),[integratedFinanceResult,setIntegratedFinanceResult]=useState<IntegratedFinanceResult|null>(null),[reportSensitivity,setReportSensitivity]=useState<OneWaySensitivityAnalysis|null>(null),[reportScenarioMatrix,setReportScenarioMatrix]=useState<SensitivityCell[][]>([]),[reportScenarios,setReportScenarios]=useState<ReturnType<typeof import('../steel/financialModel').calculateFinancialScenarios>|null>(null),[reportPeriodicFinance,setReportPeriodicFinance]=useState<PeriodicProjectFinanceResult|null>(null),[reportPartnerFinance,setReportPartnerFinance]=useState<PartnerFinanceResult|null>(null),[startingBalances,setStartingBalances]=useState<StartingBalanceSummary>(blankStartingBalanceSummary)
+ const [m,setM]=useState<Model>(()=>baseModel(project)),[step,setStep]=useState<Step>('profile'),[loaded,setLoaded]=useState(false),[saved,setSaved]=useState(''),[integratedFinanceResult,setIntegratedFinanceResult]=useState<IntegratedFinanceResult|null>(null),[reportSensitivity,setReportSensitivity]=useState<OneWaySensitivityAnalysis|null>(null),[reportScenarioMatrix,setReportScenarioMatrix]=useState<SensitivityCell[][]>([]),[reportScenarios,setReportScenarios]=useState<ReturnType<typeof import('../steel/financialModel').calculateFinancialScenarios>|null>(null),[reportPeriodicFinance,setReportPeriodicFinance]=useState<PeriodicProjectFinanceResult|null>(null),[reportPartnerFinance,setReportPartnerFinance]=useState<PartnerFinanceResult|null>(null),[startingBalances,setStartingBalances]=useState<StartingFinancialBalanceSummary>(blankStartingBalanceSummary)
  const handleStartingAssetsChange=useCallback((assets:StartingFixedAssetBalance[])=>setM(current=>JSON.stringify(current.startingFixedAssets)===JSON.stringify(assets)?current:{...current,startingFixedAssets:assets}),[])
- const handleStartingBalancesChange=useCallback((balances:StartingBalanceSummary)=>setStartingBalances(current=>JSON.stringify(current)===JSON.stringify(balances)?current:balances),[])
+ const handleStartingBalancesChange=useCallback((balances:StartingFinancialBalanceSummary)=>setStartingBalances(current=>JSON.stringify(current)===JSON.stringify(balances)?current:balances),[])
   const isRawTemplate=project.templateId==='raw'||project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
   const projectCalendarPeriods=m.foundation.planning.projectStartDate&&m.foundation.planning.projectEndDate&&m.foundation.planning.periodFrequency!=='unspecified'&&m.foundation.planning.fiscalYearStartMonth!==null
     ?buildProjectCalendarPeriods(m.foundation.planning.projectStartDate,m.foundation.planning.projectEndDate,m.foundation.planning.periodFrequency,m.foundation.planning.fiscalYearStartMonth)
