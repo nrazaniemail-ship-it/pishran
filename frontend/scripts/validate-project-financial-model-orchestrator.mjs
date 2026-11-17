@@ -512,6 +512,11 @@ addOpeningRow('opening-fixed-assets',{category:'fixed-assets',item:'Existing mac
 addOpeningRow('opening-debt',{category:'long-term-debt',item:'Legacy debt',currency:'EUR',origin:'local',amount:50})
 addOpeningRow('opening-equity',{category:'equity-capital',item:'Paid-in capital',currency:'EUR',origin:'local',amount:40})
 addOpeningRow('opening-retained',{category:'retained-earnings',item:'Retained earnings',currency:'EUR',origin:'local',amount:37})
+for(const [id,period] of [['opening-wc-1','1'],['opening-wc-2','2']]){
+ startingBalanceHelp=helpForms.addHelpFormRow(startingBalanceHelp,'working-capital',id)
+ for(const [key,value] of Object.entries({item:'Trade receivables',category:'accounts-receivable',period,requiredValue:0,startingBalance:0,basis:'cost-of-products-sold-operating-cost'}))
+  startingBalanceHelp=helpForms.updateHelpFormRow(startingBalanceHelp,'working-capital',id,key,value)
+}
 assert.deepEqual(helpForms.validateHelpDrivenProjectForms(startingBalanceHelp),[])
 const startingBalanceModel=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,helpDriven:startingBalanceHelp},foundation,productionStartDate:'2025-01-01',
@@ -589,6 +594,6 @@ const unsupportedExistingAsset=startingBalanceAdapter.bindStartingBalancesToPeri
  periods,finance,currencies:foundation.currencies,
 })
 assert.equal(unsupportedExistingAsset.valid,false)
-assert.ok(unsupportedExistingAsset.issues.some(issue=>issue.includes('only supports linear-to-zero')))
+assert.ok(unsupportedExistingAsset.issues.some(issue=>issue.includes('supports only linear-to-zero')))
 
 console.log('Unified project form orchestration, shareholder model, and raw-template opening-balance integration passed.')
