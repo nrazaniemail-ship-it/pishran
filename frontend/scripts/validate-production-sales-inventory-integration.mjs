@@ -63,11 +63,11 @@ assert.ok(unvaluedInventory.issues.some(issue=>issue.includes('Finished-goods in
 
 const indirectCostDrafts={
  ...inventoryDrafts,
- productionCosts:[{...drafts.productionCosts[0],classification:'indirect',allocationKeyId:'overhead-key'}],
+ productionCosts:[{...drafts.productionCosts[0],classification:'indirect',allocationKeyId:null}],
 }
 const unallocatedIndirectCost=adapter.buildProductionSalesInventorySchedule(indirectCostDrafts,periods,1,{slab:2})
 assert.equal(unallocatedIndirectCost.valid,false)
-assert.ok(unallocatedIndirectCost.issues.some(issue=>issue.includes('validated allocation-key schedule and period-level allocation shares are required')))
+assert.ok(unallocatedIndirectCost.issues.some(issue=>issue.includes('expanded by a validated user-defined allocation key')))
 
 const zeroInventoryCostDrafts={
  ...drafts,
