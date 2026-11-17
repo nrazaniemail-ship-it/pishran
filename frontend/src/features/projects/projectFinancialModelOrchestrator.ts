@@ -524,7 +524,7 @@ export function calculateProjectFinancialModelFromDrafts(
     const hasCompleteComponentOpeningBalances=componentOpeningBalances.every(value=>typeof value==='number'&&Number.isFinite(value)&&value>=0)
     if(hasComponentOpeningBalance&&!hasCompleteComponentOpeningBalances)
       return fail(['Working-capital component opening balances must be provided for every component or omitted for every component; partial opening subledgers are not accepted.'])
-    if(hasCompleteComponentOpeningBalances){
+    if(hasCompleteComponentOpeningBalances&&detailedOpeningNwc===undefined&&rawOpeningNwcFromRows===undefined){
       const componentOpeningNwc=effectiveDrafts.workingCapital.reduce((sum,component)=>{
         const liability=component.category==='payables'||component.category==='other-current-liability'
         return sum+(liability?-1:1)*(component.openingBalance as number)
