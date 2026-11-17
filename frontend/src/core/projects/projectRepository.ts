@@ -67,25 +67,40 @@ const retiredProjectNameHashes = new Set(['8ed4fe00', 'c686cc66', 'cc8f9036', '8
 const retiredProjectStageHashes = new Set(['965f8c3e', '03af782d', '83746ace'])
 const retiredProjectTemplateHash = 'cc307164'
 
+const normalizeProjectIdentity = (value: unknown) =>
+  typeof value === 'string' ? value.normalize('NFKC').toLowerCase().replace(/[\\s_-]+/g, '') : ''
+
+/**
+ * Removes retired sample projects and only their associated local records.
+ * HRCR200 is identified by its stable project code or canonical sample title.
+ */
 export async function purgeRemovedCaseProjects(): Promise<FeasibilityProject[]> {
   const projects = await listProjects()
-  const isRemovedCase = (project: FeasibilityProject) =>
+  const canonicalHrcrTitle = normalizeProjectIdentity('نورد گرم ورق-تولید کلاف')
+  const isHrcr200Sample = (project: FeasibilityProject) => [
+    project.id, project.name, project.industry, project.projectType, project.steelStage
+  ].map(normalizeProjectIdentity).some(value =>
+    value.includes('hrcr200') || value === canonicalHrcrTitle
+  )
+  const isRemovedLegacyCase = (project: FeasibilityProject) =>
     retiredProjectNameHashes.has(hashLegacyProjectKey(project.name))
     || retiredProjectStageHashes.has(hashLegacyProjectKey(project.steelStage ?? ''))
     || hashLegacyProjectKey(project.templateId ?? '') === retiredProjectTemplateHash
-  const removed = projects.filter(isRemovedCase)
-  const remaining = projects.filter(project => !isRemovedCase(project))
-  if (removed.length) await localStore.set(PROJECTS_KEY, remaining)
+  const removedProjects = projects.filter(project => isHrcr200Sample(project) || isRemovedLegacyCase(project))
+  const removedIds = removedProjects.map(project => normalizeProjectIdentity(project.id)).filter(Boolean)
+  const remaining = projects.filter(project => !removedProjects.includes(project))
+  if (removedProjects.length) await localStore.set(PROJECTS_KEY, remaining)
 
-  const [rollingRecords, processRecords] = await Promise.all([
-    localStore.list('pishran:rolling:'),
-    localStore.list('process-plant:')
-  ])
-  await Promise.all([
-    ...rollingRecords.map(record => localStore.remove(record.key)),
-    ...processRecords.map(record => localStore.remove(record.key)),
-    localStore.remove('rolling:sample:v2'),
-    localStore.remove('projects:workbook-seed:v1')
-  ])
+  const records = await localStore.list()
+  const keysToRemove = records.filter(record => {
+    const key = normalizeProjectIdentity(record.key)
+    return key.includes('hrcr200')
+      || key.includes(canonicalHrcrTitle)
+      || removedIds.some(id => key.includes(id))
+  }).map(record => record.key)
+
+  // These two keys are retired sample-only data from earlier releases.
+  keysToRemove.push('rolling:sample:v2', 'projects:workbook-seed:v1')
+  await Promise.all([...new Set(keysToRemove)].map(key => localStore.remove(key)))
   return remaining
 }
