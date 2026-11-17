@@ -28,19 +28,19 @@ export function bindHelpDrivenFoundation(
   const issues:string[]=[]
   let result=foundation
   const rows=(id:string)=>forms.sections?.[id]??[]
+  const resolvePeriod=(key:string,date?:string):string|null=>{
+    const match=periods.find(period=>key===String(period.index)||key===String(period.index+1)||
+      key===period.startDate||key===period.endDate||
+      (key.length===7&&key===period.startDate.slice(0,7)&&key===period.endDate.slice(0,7))||
+      (date!=null&&date>=period.startDate&&date<=period.endDate))
+    return match?String(match.index):null
+  }
   const currencies=rows('currencies')
   if(currencies.length){
     const local=currencies.find(row=>row.values.type==='local')
     if(!local){issues.push('A local currency is required in the help-driven currency directory.');return {foundation,issues}}
     const localCode=String(local.values.code??'').trim().toUpperCase()
     const localName=String(local.values.name??'').trim()
-    const resolvePeriod=(key:string,date?:string):string|null=>{
-      const match=periods.find(period=>key===String(period.index)||key===String(period.index+1)||
-        key===period.startDate||key===period.endDate||
-        (key.length===7&&key===period.startDate.slice(0,7)&&key===period.endDate.slice(0,7))||
-        (date!=null&&date>=period.startDate&&date<=period.endDate))
-      return match?String(match.index):null
-    }
     const rateRows=rows('currency-rates')
     const foreignCurrencies=currencies.filter(row=>row.values.type==='foreign').map(row=>{
       const code=String(row.values.code??'').trim().toUpperCase()
