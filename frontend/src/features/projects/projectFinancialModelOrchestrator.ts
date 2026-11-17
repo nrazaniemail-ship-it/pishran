@@ -210,8 +210,6 @@ export function calculateProjectFinancialModelFromDrafts(
       }
     }
   }
-  const incrementalAnalysis=calculateIncrementalAnalysis(effectiveDrafts.helpDriven,finance)
-  if(incrementalAnalysis.issues.length)crossFormIssues.push(...incrementalAnalysis.issues)
   if(crossFormIssues.length)return fail(crossFormIssues)
   const resolveTaxPeriod=(key:string):number=>{
     const matches:number[]=[]
@@ -510,6 +508,8 @@ export function calculateProjectFinancialModelFromDrafts(
   if(!finalRun.valid)return {
     valid:false,issues:finalRun.issues,financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,
   }
+  const incrementalAnalysis=calculateIncrementalAnalysis(effectiveDrafts.helpDriven,finance)
+  if(incrementalAnalysis.issues.length)return fail(incrementalAnalysis.issues)
   const sensitivitySearches:{rowId:string;alternative:string;result:PeriodicTargetSearchResult}[]=[]
   const sensitivityRows=effectiveDrafts.helpDriven?.sections?.['sensitivity']??[]
   if(sensitivityRows.length){
