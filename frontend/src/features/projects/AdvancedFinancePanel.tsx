@@ -91,6 +91,7 @@ type Props = {
   valuationDate?: string
   discountConvention?: ProjectDiscountConvention
   financialForms?: ProjectModelFinancialFormDrafts
+  products?: {id:string}[]
   foundation?: ProjectFoundation
   productionStartDate?: string
   greenfield?: boolean
@@ -351,7 +352,7 @@ export default function AdvancedFinancePanel(props: Props) {
       }
       const orchestration=calculateProjectFinancialModelFromDrafts({
         finance:financeInput,drafts:props.financialForms,foundation:props.foundation,
-        productionStartDate:props.productionStartDate??'',
+        productionStartDate:props.productionStartDate??'',projectProductIds:props.products?.map(product=>product.id),
         openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
         taxTreatment:fxTreatment==='deductible'?'deductible':'non-deductible',
       })
