@@ -74,7 +74,7 @@ const daysCoverageDraft={
     openingFinishedGoodsQuantity:0,openingFinishedGoodsValue:0,finishedGoodsClosingQuantity:null},
    {period:'2',salesQuantity:100,netUnitPrice:20,salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
     openingFinishedGoodsQuantity:null,openingFinishedGoodsValue:null,finishedGoodsClosingQuantity:null},
-   {period:'3',salesQuantity:100*30/360,netUnitPrice:20,salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
+   {period:'3',salesQuantity:100*30/90,netUnitPrice:20,salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
     openingFinishedGoodsQuantity:null,openingFinishedGoodsValue:null,finishedGoodsClosingQuantity:null},
   ]}],
  productionCosts:[{id:'cost-p1',metadata:{description:'Direct manufacturing cost',currencyCode:'IRR',escalationPercent:0},
@@ -86,7 +86,7 @@ const coverageResult=module.buildProductOperatingSchedule(daysCoverageDraft,cove
 assert.equal(coverageResult.valid,true,coverageResult.issues.join('; '))
 const close=(a,b)=>assert.ok(Math.abs(a-b)<0.0001,'Expected '+b+', got '+a)
 coverageResult.rows.filter(row=>row.productId==='P1').forEach((row,index)=>{
- close(row.closingInventoryQuantity,[100*30/360,100*30/360,0][index])
+ close(row.closingInventoryQuantity,[100*30/90,100*30/90,0][index])
  close(row.productionQuantity,[100+100*30/360,100,0][index])
 })
 const noLiquidation=module.buildProductOperatingSchedule({
