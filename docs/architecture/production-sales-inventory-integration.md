@@ -46,8 +46,8 @@ Indirect cost items remain visible in separate fixed/variable buckets. The form-
 
 ## Independent external benchmark
 
-The regression fixture `frontend/scripts/fixtures/comfar-steel-sales-output.fixture.mjs` transcribes actual output from `COMFAR III - 001 - Summary sheet1.pdf`, pages 34–40. It covers project periods 5–10 for Steel Slab and Extra DRI, including opening/closing finished goods, production, sales quantities, unit prices and period revenue.
+The regression fixture `frontend/scripts/fixtures/comfar-steel-sales-output.fixture.mjs` transcribes actual output from `COMFAR III - 001 - Summary sheet.pdf`, pages 34–40. It covers project periods 5–10 for Steel Slab and Extra DRI, including opening/closing finished goods, production, sales quantities, unit prices and period revenue.
 
-The test compares each product-period production quantity, sales quantity, closing inventory and sales revenue with the reported values, using a 0.02 tolerance for printed two-decimal inventory quantities. The fixture is test-only and is not imported by the production engine.
+The test compares each product-period production quantity, sales quantity, closing inventory and sales revenue with the reported values, using a 0.02 tolerance for printed two-decimal inventory quantities. The benchmark supplies weighted-average as an adapter-required test input only; the COMFAR pages do not identify an inventory cost-flow method, so the fixture does not claim that COMFAR used weighted-average. The fixture is test-only and is not imported by the production engine.
 
 This benchmark validates the production/sales/inventory roll-forward and sales revenue only. It does not establish full financial-model parity, because it does not by itself reconcile the loan, depreciation, working-capital valuation, tax, cash-flow and three-statement schedules. The FIFO/weighted-average integration regression tests verify the local financial posting mechanics; a separate complete COMFAR period-by-period output comparison is still required before claiming reference parity.
