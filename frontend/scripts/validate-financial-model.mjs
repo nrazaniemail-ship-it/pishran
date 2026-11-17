@@ -46,7 +46,10 @@ near(engine.calculateShortTermDepositInterest(100,50,12,12),6,1e-9,'COMFAR XI.O 
 near(engine.calculateShortTermDepositInterest(100,50,12,6),3,1e-9,'COMFAR XI.O partial-period deposit interest')
 near(engine.calculateWorkingCapitalTurnoverCoefficient(30),12,1e-9,'COMFAR VII.Q turnover coefficient')
 near(engine.calculateWorkingCapitalTurnoverCoefficient(90),4,1e-9,'COMFAR VII.Q 90-day turnover coefficient')
-assert.equal(engine.calculateWorkingCapitalTurnoverCoefficient(0,360),null,'Zero days coverage has no finite turnover coefficient')
+assert.equal(engine.calculateWorkingCapitalTurnoverCoefficient(0),null,'Zero days coverage has no finite turnover coefficient')
+near(engine.calculateWorkingCapitalDaysCoverageFromTurnover(12),30,1e-9,'COMFAR VII.Q inverse Coto conversion')
+near(engine.calculateWorkingCapitalDaysCoverageFromTurnover(4),90,1e-9,'COMFAR VII.Q inverse 90-day conversion')
+assert.equal(engine.calculateWorkingCapitalDaysCoverageFromTurnover(0),null,'Zero turnover coefficient has no finite days coverage')
 
 const suppliesUtilitiesPolicy={
   dayBasis:360,rawMaterialDays:0,factorySuppliesDays:30,utilitiesDays:15,
