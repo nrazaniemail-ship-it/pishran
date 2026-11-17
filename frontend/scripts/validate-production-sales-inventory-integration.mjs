@@ -140,3 +140,45 @@ console.log('Independent COMFAR output benchmark: periods 5-10 production, sales
 }
 
 console.log('Production, sales and finished-goods integration validation passed.')
+
+
+const weightedAverage=adapter.calculateFinishedGoodsWeightedAverage({
+ method:'weighted-average',openingQuantity:10,openingValue:1000,
+ productionQuantity:10,productionCost:1400,salesQuantity:12,closingQuantity:8,
+})
+assert.equal(weightedAverage.valid,true,weightedAverage.issues.join('; '))
+assert.equal(weightedAverage.availableQuantity,20)
+assert.equal(weightedAverage.availableValue,2400)
+assert.equal(weightedAverage.weightedAverageUnitCost,120)
+assert.equal(weightedAverage.costOfGoodsSold,1440)
+assert.equal(weightedAverage.closingInventoryValue,960)
+assert.ok(Math.abs(weightedAverage.reconciliationDifference)<1e-8)
+
+const zeroCostFlow=adapter.calculateFinishedGoodsWeightedAverage({
+ method:'weighted-average',openingQuantity:0,openingValue:0,
+ productionQuantity:0,productionCost:0,salesQuantity:0,closingQuantity:0,
+})
+assert.equal(zeroCostFlow.valid,true,zeroCostFlow.issues.join('; '))
+assert.equal(zeroCostFlow.weightedAverageUnitCost,0)
+
+const mismatchedCostFlow=adapter.calculateFinishedGoodsWeightedAverage({
+ method:'weighted-average',openingQuantity:10,openingValue:1000,
+ productionQuantity:10,productionCost:1400,salesQuantity:11,closingQuantity:8,
+})
+assert.equal(mismatchedCostFlow.valid,false)
+assert.ok(mismatchedCostFlow.issues.some(x=>x.includes('quantities do not reconcile')))
+
+const missingValueCostFlow=adapter.calculateFinishedGoodsWeightedAverage({
+ method:'weighted-average',openingQuantity:10,openingValue:-1,
+ productionQuantity:10,productionCost:1400,salesQuantity:12,closingQuantity:8,
+})
+assert.equal(missingValueCostFlow.valid,false)
+assert.ok(missingValueCostFlow.issues.some(x=>x.includes('finite and non-negative')))
+
+const valueWithoutQuantity=adapter.calculateFinishedGoodsWeightedAverage({
+ method:'weighted-average',openingQuantity:0,openingValue:500,
+ productionQuantity:0,productionCost:0,salesQuantity:0,closingQuantity:0,
+})
+assert.equal(valueWithoutQuantity.valid,false)
+assert.ok(valueWithoutQuantity.issues.some(x=>x.includes('without available quantity')))
+console.log('Finished-goods weighted-average cost-flow tests passed.')
