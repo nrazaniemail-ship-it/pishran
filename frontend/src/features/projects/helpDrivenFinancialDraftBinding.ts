@@ -432,6 +432,16 @@ export function bindHelpDrivenFinancialDrafts(
       component.valuationBasis=basis.includes('sold')?'cost-of-sales':basis.includes('produced')?'cost-of-production':'user-defined'
       component.minimumDaysCoverage=num(first,'daysCoverage')
       component.turnoverCoefficient=num(first,'turnover')
+      const mode=str(first,'mode')
+      component.calculationMode=mode==='units'||mode==='value'?mode:null
+      const activityBasis=str(first,'activityBasis')
+      component.activityBasis=activityBasis==='sales'||activityBasis==='production'?activityBasis:null
+      for(const row of items){
+        if(str(row,'mode')!==mode||str(row,'activityBasis')!==activityBasis||
+          str(row,'basis')!==basis||num(row,'daysCoverage')!==component.minimumDaysCoverage||
+          num(row,'turnover')!==component.turnoverCoefficient)
+          issues.push('working-capital:'+row.id+': calculation drivers must remain consistent across all periods of a component.')
+      }
       return component
     })
     boundSections.push('working-capital')
