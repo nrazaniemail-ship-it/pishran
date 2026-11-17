@@ -92,10 +92,10 @@ function FormRowsTable({title,rows,language,kind='cost'}:{title:string;rows:Repo
     const headers=[t('قلم / پارامتر','Item / Parameter',language),t('مقدار / مشخصه','Quantity / Value',language),t('واحد','Unit',language),t('قیمت واحد','Unit price',language),t('جمع','Total',language),t('منبع','Source',language),...(kind==='material'?[t('جهت جریان','Flow direction',language)]:[])]
     const records=visibleRows.map(row=>[row.name,kind==='technical'?(row.valueText||(row.quantity!==0?String(row.quantity):'')):String(row.quantity),row.unit,kind==='technical'||row.unitPrice===0?'':String(row.unitPrice),kind==='technical'||row.unitPrice===0?'':String(row.quantity*row.unitPrice),row.source,...(kind==='material'?[direction(row)]:[])])
     const quote=(value:unknown)=>'"'+String(value??'').replace(/"/g,'""')+'"'
-    const csv='\\uFEFF'+[headers,...records].map(record=>record.map(quote).join(',')).join('\\r\\n')
+    const csv='\uFEFF'+[headers,...records].map(record=>record.map(quote).join(',')).join('\r\n')
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'})
     const url=URL.createObjectURL(blob)
-    const anchor=document.createElement('a');anchor.href=url;anchor.download=(title.trim().replace(/[^\\p{L}\\p{N}-]+/gu,'-')||'report')+'.csv';document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url)
+    const anchor=document.createElement('a');anchor.href=url;anchor.download=(title.trim().replace(/[^\p{L}\p{N}-]+/gu,'-')||'report')+'.csv';document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url)
   }
   return <div className="fw-card report-data-card"><div className="report-table-toolbar"><h4>{title}</h4><div className="report-table-actions">
     <input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={t('جستجو در ردیف‌ها...','Filter rows...',language)} aria-label={t('جستجو در جدول','Search table',language)}/>
