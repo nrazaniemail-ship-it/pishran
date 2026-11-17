@@ -130,7 +130,7 @@ for(const [id,period] of [['sale-a1','1'],['sale-a2','2']]){
 }
 for(const [id,period] of [['wc-a1','1'],['wc-a2','2']]){
  rawHelp=helpForms.addHelpFormRow(rawHelp,'working-capital',id)
- for(const [key,value] of Object.entries({item:'Receivables',category:'accounts-receivable',period,requiredValue:25,startingBalance:10,basis:'cost-of-products-sold-operating-cost'}))
+ for(const [key,value] of Object.entries({item:'Receivables',category:'accounts-receivable',period,requiredValue:25,startingBalance:10,basis:'cost-of-products-sold-operating-plus-marketing'}))
   rawHelp=helpForms.updateHelpFormRow(rawHelp,'working-capital',id,key,value)
 }
 for(const [id,key,value] of [
