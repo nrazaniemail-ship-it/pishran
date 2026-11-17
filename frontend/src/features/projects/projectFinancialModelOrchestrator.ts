@@ -198,7 +198,7 @@ export function calculateProjectFinancialModelFromDrafts(
   // Several sections are partially mapped. Reject only populated fields for which no
   // engine posting exists; supported sibling fields in the same section remain usable.
   const notYetMappedFields:Record<string,readonly string[]> = {
-    'discounting':['shortNpvYears','referencePoint'],
+    'discounting':['shortNpvYears'],
     'income-tax':[],
     'production-costs':['initialStockQuantity','initialStockValue'],
     'sales-programme':['grossUnitPrice','productionActive','futureSalesQuantity','terminalInventorySale'],
@@ -233,6 +233,17 @@ export function calculateProjectFinancialModelFromDrafts(
     const investmentRate=values.investmentRate
     const equityRate=values.equityRate
     const referenceDate=values.referenceDate
+    const referencePoint=values.referencePoint
+    if(referencePoint!==null&&referencePoint!==undefined&&referencePoint!==''){
+      if(referencePoint!=='beginning-of-first-period'&&referencePoint!=='end-of-first-period')
+        return fail(['Discount reference point must be beginning-of-first-period or end-of-first-period.'])
+      if(referenceDate!==null&&referenceDate!==undefined&&referenceDate!=='')
+        return fail(['Specify either a discount reference date or a temporal reference point, not both.'])
+      const firstPeriod=finance.periods[0]
+      if(!firstPeriod||!firstPeriod.startDate||!firstPeriod.endDate)
+        return fail(['A valid first project period is required to resolve the discount reference point.'])
+      finance={...finance,valuationDate:referencePoint==='beginning-of-first-period'?firstPeriod.startDate:firstPeriod.endDate}
+    }
     const investmentReinvestmentRate=values.investmentReinvestmentRate
     const investmentBorrowingRate=values.investmentBorrowingRate
     const equityReinvestmentRate=values.equityReinvestmentRate
