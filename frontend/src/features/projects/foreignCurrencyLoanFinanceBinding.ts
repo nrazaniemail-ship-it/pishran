@@ -88,6 +88,7 @@ export function buildPeriodicLoanFacilityBinding(input:{
   foundation:ProjectFoundation
   periods:ProjectCalendarPeriod[]
   dayCountBasis:360|365
+  openingLocalBalance?:number
   openingForeignBalance?:number
   openingExchangeRateToLocal?:number
 }):PeriodicLoanFacilityBinding {
@@ -163,7 +164,9 @@ export function buildPeriodicLoanFacilityBinding(input:{
     interestConvention:'comfar-months-plus-360',
     ...(repaymentMethod==='custom'?{customPrincipalRepayments:profileRows}:{}),
   }
-  const openingForeignBalance=input.openingForeignBalance??0
+  const openingLocalBalance=input.openingLocalBalance??loan.openingLocalBalance??0
+  const openingForeignBalance=input.openingForeignBalance??loan.openingForeignBalance??0
+  if(!nonNegative(openingLocalBalance))issues.push('Opening local debt must be finite and non-negative.')
   if(loan.fees.length) {
     const openingForFeeBasis=input.openingForeignBalance??0
     const preliminary=calculatePeriodicLoanSchedule({...loanInput,openingBalance:openingForFeeBasis,fees:[]},periods,dayCountBasis)
@@ -274,7 +277,8 @@ export function bindLoanFacilitiesToPeriodicFinance(input:{
   const issues:string[]=[]
   const bindings=input.loans.map(loan=>buildPeriodicLoanFacilityBinding({
     loan,foundation:input.foundation,periods:input.finance.periods,dayCountBasis:input.finance.dayCountBasis,
-    openingForeignBalance:input.openingForeignBalances?.[loan.id]??0,
+    openingLocalBalance:loan.openingLocalBalance??0,
+    openingForeignBalance:input.openingForeignBalances?.[loan.id]??loan.openingForeignBalance??0,
     openingExchangeRateToLocal:input.openingExchangeRatesToLocal?.[loan.id],
   }))
   bindings.forEach((binding,index)=>{if(!binding.valid)issues.push(...binding.issues.map(issue=>input.loans[index].id+': '+issue))})
