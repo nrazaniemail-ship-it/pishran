@@ -265,6 +265,40 @@ assert.deepEqual(taxExpiryCase.rows.map(row=>row.tax),[0,0,10],
   'Tax losses must offset FIFO in the next fiscal year and expire after the configured carry-forward window')
 console.log('PASS: FIFO tax-loss vintages, explicit carry-forward enablement and expiry')
 
+const foreignCurrencyStatementCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[100,100,100],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[20,20,20],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[{id:'fx-facility',input:{
+    annualRatePercent:0,drawdowns:[0,0,0],repaymentMethod:'bullet',repaymentStartPeriod:1,
+    gracePeriods:0,termPeriods:1,capitalizeInterest:false,openingBalance:110,
+  }}],
+  loanScheduleOverrides:{'fx-facility':[
+    {period:1,drawdown:0,openingBalance:110,periodRatePercent:0,interestExpense:0,capitalizedInterest:0,
+      financingFeeExpense:0,commitmentFeeExpense:0,capitalizedFinancingFees:0,principal:0,closingBalance:120,debtService:0},
+    {period:2,drawdown:0,openingBalance:120,periodRatePercent:0,interestExpense:0,capitalizedInterest:0,
+      financingFeeExpense:0,commitmentFeeExpense:0,capitalizedFinancingFees:0,principal:0,closingBalance:120,debtService:0},
+    {period:3,drawdown:0,openingBalance:120,periodRatePercent:0,interestExpense:0,capitalizedInterest:0,
+      financingFeeExpense:0,commitmentFeeExpense:0,capitalizedFinancingFees:0,principal:0,closingBalance:120,debtService:0},
+  ]},
+  foreignExchangeLossByPeriod:[10,0,0],
+})
+assert.equal(foreignCurrencyStatementCase.valid,true,foreignCurrencyStatementCase.warnings.join('; '))
+const foreignCurrencyStatements=engine.buildPeriodicThreeFinancialStatements(foreignCurrencyStatementCase,{
+  debt:110,netFixedAssets:220,paidInCapital:110,
+})
+assert.equal(foreignCurrencyStatements.length,3)
+assert.equal(foreignCurrencyStatements[0].incomeStatement.foreignExchangeGainLoss,-10)
+assert.equal(foreignCurrencyStatements[0].incomeStatement.profitBeforeTax,90)
+assert.equal(foreignCurrencyStatements[0].incomeStatement.tax,18)
+assert.equal(foreignCurrencyStatements[0].cashFlowStatement.operatingCashFlow,82,
+  'Non-cash FX loss is added back in operating cash flow')
+assert.equal(foreignCurrencyStatements[0].balanceSheet.debt,120)
+assert.ok(foreignCurrencyStatements.every(row=>row.balanceSheet.reconciled),
+  'FX remeasurement must reconcile income statement, cash flow and debt on the balance sheet')
+console.log('PASS: foreign-currency debt remeasurement flows through all three periodic financial statements')
+
 const automaticFundingCase=engine.calculateIntegratedPeriodicFinance({
   periods,fiscalYearStartMonth:1,constructionPeriodCount:1,dayCountBasis:365,cashFlowTiming:'period-end',
   annualRevenue:[0,0,100],annualShortTermDepositInterest:[0,0,0],
