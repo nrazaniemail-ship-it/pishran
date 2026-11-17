@@ -185,6 +185,26 @@ export function calculateProjectFinancialModelFromDrafts(
       crossFormIssues.push('Raw-template section "'+sectionId+'" contains data but is not yet connected to the periodic financial calculation. The model run is blocked to prevent silently ignored inputs.')
     }
   }
+  // Several sections are partially mapped. Reject only populated fields for which no
+  // engine posting exists; supported sibling fields in the same section remain usable.
+  const notYetMappedFields:Record<string,readonly string[]> = {
+    'discounting':['shortNpvYears','referencePoint'],
+    'economic-global':['method','numeraireType','numeraireCurrency','numeraireUnit','officialExchangeRate','shadowExchangeRate','standardConversionFactor','foreignCurrencyConversionFactor','referenceDate'],
+    'income-tax':['taxSystem','taxCurrency','adjustmentPeriod','adjustmentAmount'],
+    'production-costs':['initialStockQuantity','initialStockValue','allocationKeyId'],
+    'sales-programme':['grossUnitPrice','productionActive','futureSalesQuantity','terminalInventorySale'],
+    'working-capital':['mode','activityBasis','requiredQuantity','initialStockQuantity','initialStockValue','recoveryPeriod','depositPercent','depositRate','periodMonths'],
+  }
+  for(const [sectionId,fieldKeys] of Object.entries(notYetMappedFields)){
+    for(const row of effectiveDrafts.helpDriven?.sections?.[sectionId]??[]){
+      for(const fieldKey of fieldKeys){
+        const value=row.values[fieldKey]
+        if(value!==null&&value!==undefined&&value!==''){
+          crossFormIssues.push('Raw-template field "'+sectionId+'.'+fieldKey+'" contains data but is not yet connected to the periodic financial calculation. The model run is blocked to prevent silently ignored inputs.')
+        }
+      }
+    }
+  }
   if(crossFormIssues.length)return fail(crossFormIssues)
   const resolveTaxPeriod=(key:string):number=>{
     const matches:number[]=[]
