@@ -433,7 +433,7 @@ export function bindHelpDrivenFinancialDrafts(
       component.openingBalance=opening
       if(opening===null)issues.push('working-capital:'+first.id+': explicit opening balance is required.')
       const basis=str(first,'basis')
-      component.valuationBasis=basis.includes('sold')?'cost-of-sales':basis.includes('produced')?'cost-of-production':'user-defined'
+      component.valuationBasis=basis==='sales-revenue'?'sales-revenue':basis.includes('sold')?'cost-of-sales':basis.includes('produced')?'cost-of-production':'user-defined'
       component.minimumDaysCoverage=num(first,'daysCoverage')
       component.turnoverCoefficient=num(first,'turnover')
       const mode=str(first,'mode')
