@@ -6,6 +6,8 @@ import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention, OpeningCurrentAccounts } from './projectFoundation'
 import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
+import { buildProductOperatingSchedule } from './productOperatingSchedule'
+import type { ProjectModelFinancialFormDrafts } from './projectModelFormDrafts'
 import { calculateOperatingCycleWorkingCapital, calculateWorkingCapitalTurnoverCoefficient, calculateWorkingCapitalDaysCoverageFromTurnover } from '../steel/financialModel'
 import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
 import {
@@ -62,6 +64,7 @@ type Props = {
   openingGrants?: number
   openingCurrentAccounts?: OpeningCurrentAccounts
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
+  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'>
   initialWorkingCapitalEquityContribution?: number
   initialLoanRatePercent?: number
   initialRepaymentMethod?: Loan['repaymentMethod']
@@ -277,6 +280,9 @@ export default function AdvancedFinancePanel(props: Props) {
   const workingCapitalDraftSchedule=useMemo(()=>props.workingCapitalDrafts?.length
     ?buildWorkingCapitalScheduleFromDrafts({workingCapital:props.workingCapitalDrafts},projectPeriods,props.openingWorkingCapitalBalance??0)
     :null,[JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods),props.openingWorkingCapitalBalance])
+  const productOperatingSchedule=useMemo(()=>props.productFinancialDrafts&&(props.productFinancialDrafts.sales.length||props.productFinancialDrafts.productionCosts.length)
+    ?buildProductOperatingSchedule(props.productFinancialDrafts,projectPeriods,props.fiscalYearStartMonth??1,props.currency)
+    :null,[JSON.stringify(props.productFinancialDrafts??null),JSON.stringify(projectPeriods),props.fiscalYearStartMonth,props.currency])
   const periodicFinanceResult=useMemo<PeriodicProjectFinanceResult|null>(()=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
@@ -322,7 +328,7 @@ export default function AdvancedFinancePanel(props: Props) {
     const periodicInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,constructionPeriodCount:periods.filter(period=>fiscalYearIndexForPeriod(period,periods,fiscalMonth)<construction).length,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
-      annualRevenue:result.years.map(row=>row.revenue),annualVariableCost:result.years.map(row=>row.variableCashCost),
+      annualRevenue:productOperatingSchedule?.valid?productOperatingSchedule.annualRevenue:productOperatingSchedule?Array(years).fill(Number.NaN):result.years.map(row=>row.revenue),periodRevenue:productOperatingSchedule?.valid?productOperatingSchedule.periodRevenue:undefined,annualVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.annualCostOfSales:productOperatingSchedule?Array(years).fill(Number.NaN):result.years.map(row=>row.variableCashCost),periodVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.periodCostOfSales:undefined,
       annualFixedCost:result.years.map(row=>row.fixedCashCost),annualDepreciation:depreciationValues,
       annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
       annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:taxRates,annualEquityContributions:equityContributions,
@@ -350,7 +356,7 @@ export default function AdvancedFinancePanel(props: Props) {
       return calculateIntegratedPeriodicFinance(binding.financeInput)
     }
     return calculateIntegratedPeriodicFinance(periodicInput)
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),props.openingWorkingCapitalBalance,props.openingCashBalance])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),productOperatingSchedule,props.openingWorkingCapitalBalance,props.openingCashBalance])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
@@ -400,6 +406,7 @@ export default function AdvancedFinancePanel(props: Props) {
 
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
+    {productOperatingSchedule&&!productOperatingSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه تولید، موجودی و فروش محصول‌به‌محصول کامل یا معتبر نیست؛ گزارش مالی دوره‌ای متوقف شده است.','Product-by-product production, inventory and sales schedules are incomplete or invalid; periodic financial reporting is blocked.')}</b>{productOperatingSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {workingCapitalDraftSchedule&&!workingCapitalDraftSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه سرمایه در گردش از فرم‌های تفصیلی معتبر نیست؛ محاسبات دوره‌ای متوقف شده است.','The detailed working-capital schedule is invalid; periodic calculations are blocked.')}</b>{workingCapitalDraftSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {workingCapitalDraftSchedule?.valid&&<>
       <p className="fw-hint">{t('مانده‌های سرمایه در گردش از فرم‌های تفصیلی به موتور دوره‌ای متصل شده‌اند؛ افزایش/کاهش مانده خالص در جریان نقدی ثبت می‌شود.','Detailed working-capital closing balances are connected to the periodic engine; net balance movements are posted to cash flow.')}</p>
