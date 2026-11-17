@@ -942,7 +942,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
   const validateSaleRow = (row: {saleProceeds:number;returnOfCapital:number;otherIncomeLoss:number;bookValueDisposed:number}) =>
     [row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(validFinite) &&
     row.saleProceeds >= 0 && row.returnOfCapital >= 0 && row.bookValueDisposed >= 0 &&
-    row.returnOfCapital <= row.saleProceeds + 0.01 && row.returnOfCapital <= row.bookValueDisposed + 0.01 &&
+    row.returnOfCapital <= row.bookValueDisposed + 0.01 &&
     Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss) <= 0.01
   if (assetSaleSchedule.some(row=>!validateSaleRow(row)) ||
       (input.periodAssetSaleSchedule && (input.periodAssetSaleSchedule.length!==periods.length ||
