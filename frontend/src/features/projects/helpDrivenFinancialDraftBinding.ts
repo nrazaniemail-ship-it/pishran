@@ -3,12 +3,14 @@ import {
   createBlankProductionCostFormDraft,
   createBlankSalesProductFormDraft,
   createBlankWorkingCapitalComponentFormDraft,
+  createBlankLoanFacilityFormDraft,
+  type LoanFacilityFormDraft,
   type ProjectModelFinancialFormDrafts,
 } from './projectModelFormDrafts'
 import type { HelpDrivenProjectForms, HelpFormRow } from './projectModelHelpForms'
 import type { ProjectCalendarPeriod } from './projectFoundation'
 
-type DraftCollections = Pick<ProjectModelFinancialFormDrafts, 'assets'|'productionCosts'|'sales'|'workingCapital'>
+type DraftCollections = Pick<ProjectModelFinancialFormDrafts, 'assets'|'productionCosts'|'sales'|'workingCapital'|'loans'>
 type BindingResult = { drafts: DraftCollections; issues: string[]; boundSections: string[] }
 
 const str=(row:HelpFormRow,key:string):string=>{
@@ -54,6 +56,116 @@ export function bindHelpDrivenFinancialDrafts(
   const boundSections:string[]=[]
   const result:DraftCollections={...existing}
   const rows=(id:string)=>sections[id]??[]
+
+  const conditionRows=rows('loan-conditions')
+  if(conditionRows.length){
+    const loans:LoanFacilityFormDraft[]=[]
+    const disbursementRows=rows('loan-disbursements')
+    const interestRows=rows('loan-interest')
+    const feeRows=rows('loan-fees')
+    const names=new Set<string>()
+    for(const condition of conditionRows){
+      const name=str(condition,'loanName')
+      if(!name){issues.push('loan-conditions:'+condition.id+': loan name is required.');continue}
+      if(names.has(name)){issues.push('loan-conditions:'+name+': duplicate facility definition.');continue}
+      names.add(name)
+      const loan=createBlankLoanFacilityFormDraft(condition.id)
+      loan.name=name
+      loan.currencyCode=str(condition,'currency').toUpperCase()||null
+      loan.marketOrigin=str(condition,'origin')==='foreign'?'foreign':str(condition,'origin')==='local'?'local':null
+      const repaymentType=str(condition,'repaymentType')
+      loan.loanType=repaymentType==='annuity'?'annuity':repaymentType==='constant-principal'?'constant-principal':repaymentType==='profile'?'profile':null
+      if(!loan.loanType)issues.push('loan-conditions:'+name+': repayment type is required.')
+      const interval=str(condition,'interval')
+      loan.repaymentInterval=interval==='yearly'?'annual':interval==='half-yearly'?'semiannual':
+        interval==='quarterly'?'quarterly':interval==='monthly'?'monthly':null
+      if(!loan.repaymentInterval)issues.push('loan-conditions:'+name+': repayment interval is required.')
+      loan.firstRepaymentDate=str(condition,'firstRepaymentDate')
+      loan.graceMonths=num(condition,'graceMonths')
+      loan.numberOfRepayments=num(condition,'numberOfRepayments')
+      loan.facilityLimit=num(condition,'facilityLimit')
+      loan.interestPaymentMonth=num(condition,'interestPaymentMonth')
+      const openingDebt=num(condition,'openingDebt')
+      if(openingDebt!==null&&openingDebt>0){
+        if(loan.marketOrigin==='foreign')loan.openingForeignBalance=openingDebt
+        else issues.push('loan-conditions:'+name+': local opening debt must be entered in the opening balance sheet; the facility schedule currently accepts only foreign opening balances.')
+      }
+      const disbursementUntil=str(condition,'disbursementUntil')
+      const datedDrawdowns=disbursementRows.filter(row=>str(row,'loanName')===name)
+      for(const row of datedDrawdowns){
+        const date=str(row,'date'),amount=num(row,'amount'),flowType=str(row,'flowType')
+        if(!validDate(date)||amount===null){issues.push('loan-disbursements:'+row.id+': valid date and explicit amount are required.');continue}
+        if(flowType==='drawdown'){
+          if(amount<0)issues.push('loan-disbursements:'+row.id+': drawdown amount must be non-negative.')
+          else loan.disbursements.push({date,amount})
+        }else if(flowType==='profile-repayment'){
+          if(amount>=0)issues.push('loan-disbursements:'+row.id+': profile repayment must be entered as a negative amount.')
+          else loan.profileMovements.push({date,amount:Math.abs(amount)})
+        }else issues.push('loan-disbursements:'+row.id+': flow type must be drawdown or profile repayment.')
+        if(disbursementUntil&&validDate(disbursementUntil)&&date>disbursementUntil)
+          issues.push('loan-disbursements:'+row.id+': drawdown/repayment date exceeds the facility disbursement end date.')
+      }
+      const datedRates=interestRows.filter(row=>str(row,'loanName')===name)
+      const capitalizationValues=new Set<string>()
+      for(const row of datedRates){
+        const effectiveDate=str(row,'effectiveDate'),annualRate=num(row,'annualRate')
+        if(!validDate(effectiveDate)||annualRate===null){issues.push('loan-interest:'+row.id+': valid effective date and annual rate are required.');continue}
+        loan.interestRateChanges.push({effectiveDate,annualRatePercent:annualRate})
+        const capitalization=num(row,'capitalizePercent')
+        if(capitalization!==null)capitalizationValues.add(String(capitalization))
+        const until=str(row,'capitalizeUntil')
+        if(until)capitalizationValues.add('until:'+until)
+        for(const key of ['capitalizedInterestMethod','capitalizedInterestStart','capitalizedInterestRate','capitalizedInterestLength'])
+          if(row.values[key]!==null&&row.values[key]!==undefined&&row.values[key]!=='')
+            issues.push('loan-interest:'+row.id+': capitalized-interest amortization fields are not yet supported by the periodic loan adapter.')
+      }
+      if(capitalizationValues.size>2)issues.push('loan-interest:'+name+': capitalization settings conflict between rate rows.')
+      const firstCapitalization=datedRates.find(row=>num(row,'capitalizePercent')!==null)
+      loan.capitalizedInterestPercent=firstCapitalization?num(firstCapitalization,'capitalizePercent'):null
+      loan.capitalizeUntilDate=firstCapitalization?str(firstCapitalization,'capitalizeUntil'):''
+      if(loan.capitalizedInterestPercent===null)issues.push('loan-interest:'+name+': an explicit interest capitalization percentage is required.')
+      const fees=feeRows.filter(row=>str(row,'loanName')===name)
+      for(const row of fees){
+        const type=str(row,'type'),rate=num(row,'rate'),paymentDate=str(row,'paymentDate')
+        const treatment=str(row,'treatment'),currencyChoice=str(row,'currency')
+        if(!['agency','guarantee','commitment','other'].includes(type)||rate===null||
+          !validDate(paymentDate)||(treatment!=='expense'&&treatment!=='capitalize')){
+          issues.push('loan-fees:'+row.id+': fee type, rate, payment date and accounting treatment are required.')
+          continue
+        }
+        const expectedBasis=type==='agency'?'each-positive-disbursement':
+          type==='guarantee'?'outstanding-loan-including-current-disbursement-excluding-current-repayment':
+          type==='commitment'?'undisbursed-commitment':'total-loan'
+        if(str(row,'basis')!==expectedBasis)
+          issues.push('loan-fees:'+row.id+': selected fee basis is not supported for this fee type by the current periodic adapter.')
+        if(currencyChoice==='local-currency'&&loan.marketOrigin==='foreign')
+          issues.push('loan-fees:'+row.id+': local-currency fees on a foreign-currency facility are not supported by the current adapter.')
+        const payment=str(row,'payment')
+        if(type==='agency'&&payment!=='at-each-disbursement')
+          issues.push('loan-fees:'+row.id+': agency fees must use the per-disbursement payment basis.')
+        if(type==='other'&&payment!=='at-first-disbursement')
+          issues.push('loan-fees:'+row.id+': other fees must use first-disbursement payment timing.')
+        if((type==='guarantee'||type==='commitment')&&payment==='with-interest')
+          issues.push('loan-fees:'+row.id+': recurring fee payment with each interest period is not yet supported; provide a dated one-off fee only.')
+        for(const key of ['depreciationMethod','depreciationStart','depreciationRate','depreciationLength'])
+          if(row.values[key]!==null&&row.values[key]!==undefined&&row.values[key]!=='')
+            issues.push('loan-fees:'+row.id+': fee amortization settings are not yet supported by the periodic adapter.')
+        const feeCurrency=currencyChoice==='local-currency'?str(row,'currency'):loan.currencyCode
+        loan.fees.push({id:row.id,type:type as LoanFacilityFormDraft['fees'][number]['type'],
+          ratePercent:rate,currencyCode:feeCurrency,paymentDate,
+          treatment:treatment as 'expense'|'capitalize'})
+      }
+      loans.push(loan)
+    }
+    result.loans=loans
+    boundSections.push('loan-conditions','loan-disbursements','loan-interest','loan-fees')
+    for(const row of disbursementRows)if(!conditionRows.some(condition=>str(condition,'loanName')===str(row,'loanName')))
+      issues.push('loan-disbursements:'+row.id+': references an unknown loan facility.')
+    for(const row of interestRows)if(!conditionRows.some(condition=>str(condition,'loanName')===str(row,'loanName')))
+      issues.push('loan-interest:'+row.id+': references an unknown loan facility.')
+    for(const row of feeRows)if(!conditionRows.some(condition=>str(condition,'loanName')===str(row,'loanName')))
+      issues.push('loan-fees:'+row.id+': references an unknown loan facility.')
+  }
 
   const assetRows=rows('fixed-investment')
   if(assetRows.length){
