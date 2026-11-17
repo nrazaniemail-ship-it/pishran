@@ -549,6 +549,9 @@ export function calculateProjectFinancialModelFromDrafts(
     }
     const result=bindWorkingCapitalDraftsToPeriodicFinance(
       finance,{workingCapital:effectiveDrafts.workingCapital},openingWorkingCapital,
+      productionSales&&effectiveDrafts.productionCosts.length
+        ?{costOfProductionByPeriod:productionSales.periodProductionCost,costOfSalesByPeriod:productionSales.periodCostOfGoodsSold}
+        :{},
     )
     workingCapital=result.schedule
     if(!result.valid||!result.financeInput)return fail(result.issues)
