@@ -29,7 +29,7 @@ export function bindHelpDrivenFoundation(
   let result=foundation
   const rows=(id:string)=>forms.sections?.[id]??[]
   const resolvePeriod=(key:string,date?:string):string|null=>{
-    const match=periods.find(period=>key===String(period.index)||key===String(period.index+1)||
+    const match=periods.find(period=>key===String(period.index)||
       key===period.startDate||key===period.endDate||
       (key.length===7&&key===period.startDate.slice(0,7)&&key===period.endDate.slice(0,7))||
       (date!=null&&date>=period.startDate&&date<=period.endDate))
