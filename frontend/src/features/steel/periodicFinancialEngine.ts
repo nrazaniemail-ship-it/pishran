@@ -645,6 +645,8 @@ export type PeriodicProjectFinanceInput = {
   annualEquityWorkingCapitalContributions?: number[]
   workingCapitalByPeriod: number[]
   openingWorkingCapital?: number
+  /** Opening cash balance used to test period-by-period financing sufficiency. */
+  openingCash?: number
   openingTaxLoss?: number
   openingUnleveredTaxLoss?: number
   loans: PeriodicProjectLoan[]
@@ -719,6 +721,9 @@ export type PeriodicProjectFinanceRow = {
   dscrCovenantStatus: 'not-tested' | 'pass' | 'breach'
   projectFreeCashFlow: number
   equityFreeCashFlow: number
+  /** Closing cash after operating, investing and financing flows; negative values indicate a funding gap. */
+  closingCash: number
+  fundingGap: number
 }
 export type PeriodicProjectFinanceResult = {
   valid: boolean
@@ -734,6 +739,7 @@ export type PeriodicProjectFinanceResult = {
   totalEquityContribution: number
   totalCapitalizedInterest: number
   peakWorkingCapital: number
+  peakFundingGap: number
   warnings: string[]
 }
 
