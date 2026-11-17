@@ -73,6 +73,20 @@ try {
  const withAsset={...auditDraft,assets:[{...blankAsset,metadata:{...blankAsset.metadata,description:'Plant equipment'}}]}
  assert.ok(forms.listUnintegratedFinancialDraftInputs(withAsset).includes('financialForms.assets.0'))
 
+ const salesDraft=forms.createBlankSalesProductFormDraft('product-1')
+ const costDraft=forms.createBlankProductionCostFormDraft('cost-1')
+ const loanDraft=forms.createBlankLoanFacilityFormDraft('loan-1')
+ const taxDraft={...forms.createBlankProjectTaxFormDraft(),system:'corporate'}
+ const withAllUnintegrated={...auditDraft,assets:[blankAsset],productionCosts:[costDraft],sales:[salesDraft],loans:[loanDraft],tax:taxDraft}
+ const blocked=forms.listUnintegratedFinancialDraftInputs(withAllUnintegrated)
+ for(const path of ['financialForms.assets.0','financialForms.productionCosts.0','financialForms.sales.0','financialForms.loans.0','financialForms.tax'])
+  assert.ok(blocked.includes(path),'Every populated but unintegrated finance form must block report generation: '+path)
+ assert.match(forms.describeUnintegratedFinancialDraftInput('financialForms.sales.0','fa'),/برنامه فروش محصول 1/)
+ assert.match(forms.describeUnintegratedFinancialDraftInput('financialForms.productionCosts.0','en'),/Production-cost item 1/)
+ assert.match(forms.describeUnintegratedFinancialDraftInput('financialForms.tax','fa'),/مالیاتی/)
+ assert.doesNotMatch(forms.describeUnintegratedFinancialDraftInput('financialForms.loans.0','fa'),/financialForms\\./)
+ assert.match(forms.describeUnintegratedFinancialDraftInput('financialForms.workingCapital:periodic-working-capital-schedule-not-valid','en'),/Working-capital schedule/)
+
  console.log('Help-driven item-level finance forms: all assertions passed.')
 } finally {
  await rm(temp,{recursive:true,force:true})
