@@ -434,7 +434,7 @@ for (const field of ['basis','daysCoverage','turnover']) {
 
 let incrementalHelp=helpForms.createBlankHelpDrivenProjectForms()
 for(const [id,values] of [
- ['incremental-period-1',{alternative:'Upgrade A',view:'existing-with-project',period:'1',investmentDelta:100,financingDelta:50,assetOpportunityValue:20,workingCapitalDelta:5}],
+ ['incremental-period-1',{alternative:'Upgrade A',view:'existing-with-project',period:'1',investmentDelta:100,depreciationDelta:0,financingDelta:50,assetOpportunityValue:20,workingCapitalDelta:5}],
  ['incremental-period-2',{alternative:'Upgrade A',view:'existing-with-project',period:'2',revenueDelta:80,costDelta:20,depreciationDelta:10,workingCapitalDelta:-5}],
 ]){
  incrementalHelp=helpForms.addHelpFormRow(incrementalHelp,'incremental-analysis',id)
