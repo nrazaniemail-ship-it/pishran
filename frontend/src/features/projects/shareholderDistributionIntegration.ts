@@ -58,6 +58,8 @@ export function applyShareholderDistributions(
     return matches.length===1?matches[0]:-1
   }
   const issues:string[]=[]
+  if(partners.some(row=>finite(row.values.netWorthDistribution)&&row.values.netWorthDistribution!==0))
+    issues.push('Net-worth distribution at project end requires a separate liquidation and residual-asset waterfall; it cannot be inferred from ordinary dividends.')
   const policyByPeriod=new Map<number,typeof policies>()
   for(const [index,row] of policies.entries()){
     const p=periodIndex(row.values.period)
