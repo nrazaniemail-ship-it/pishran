@@ -67,4 +67,17 @@ const invalid=forms.updateHelpFormRow(help,'profit-distribution','distribution-p
 const invalidResult=integration.applyShareholderDistributions(finance,[statement],invalid)
 assert.equal(invalidResult.valid,false)
 assert.ok(invalidResult.issues.some(issue=>issue.includes('sum to 100%')))
+
+let capitalOnly=forms.createBlankHelpDrivenProjectForms()
+capitalOnly=forms.addHelpFormRow(capitalOnly,'joint-venture','new-partner')
+for(const [key,value] of Object.entries({name:'New investor',type:'ordinary-shareholder',period:'1',paidIn:25}))
+ capitalOnly=forms.updateHelpFormRow(capitalOnly,'joint-venture','new-partner',key,value)
+const capitalResult=integration.applyShareholderDistributions(finance,[statement],capitalOnly)
+assert.equal(capitalResult.valid,true,capitalResult.issues.join('; '))
+assert.equal(capitalResult.finance.rows[0].equityContribution,45)
+assert.equal(capitalResult.finance.rows[0].equityFreeCashFlow,105)
+assert.equal(capitalResult.statements[0].cashFlowStatement.closingCash,255)
+assert.equal(capitalResult.statements[0].balanceSheet.paidInCapital,95)
+assert.equal(capitalResult.statements[0].balanceSheet.balanceDifference,0)
+
 console.log('Shareholder distribution integration validation passed.')
