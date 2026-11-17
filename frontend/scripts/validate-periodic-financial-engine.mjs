@@ -318,4 +318,32 @@ const priorYearPreproduction=financialModel.buildComfarDepreciationAssetsFromFix
   2025,2,'annual')
 assert.equal(priorYearPreproduction.preOperatingScheduleVerified,false,
   'Pre-production expenditure acquired before model start must not be marked as a verified in-period schedule')
+
+const productLedPeriods = engine.calculateIntegratedPeriodicFinance({
+  periods, fiscalYearStartMonth:1, dayCountBasis:365, cashFlowTiming:'period-end',
+  annualRevenue:[30,0,0], periodRevenue:[10,20,0],
+  annualVariableCost:[12,0,0], periodVariableCost:[4,8,0],
+  annualFixedCost:[0,0,0], annualDepreciation:[0,0,0],
+  annualFixedInvestment:[0,0,0], annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0], annualTaxRates:[0,0,0],
+  annualEquityContributions:[0,0,0], workingCapitalByPeriod:[0,0,0], loans:[],
+})
+assert.equal(productLedPeriods.valid,true,productLedPeriods.warnings.join('; '))
+assert.deepEqual(productLedPeriods.rows.map(row=>row.revenue),[10,20,0],
+  'Product-led sales must enter the exact project periods instead of being re-spread evenly across a fiscal year')
+assert.deepEqual(productLedPeriods.rows.map(row=>row.variableCost),[4,8,0],
+  'Product-led cost of sales must enter the exact project periods')
+const mismatchedProductPeriodTotals=engine.calculateIntegratedPeriodicFinance({
+  periods, fiscalYearStartMonth:1, dayCountBasis:365, cashFlowTiming:'period-end',
+  annualRevenue:[30,0,0], periodRevenue:[10,19,0],
+  annualVariableCost:[12,0,0], periodVariableCost:[4,8,0],
+  annualFixedCost:[0,0,0], annualDepreciation:[0,0,0],
+  annualFixedInvestment:[0,0,0], annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0], annualTaxRates:[0,0,0],
+  annualEquityContributions:[0,0,0], workingCapitalByPeriod:[0,0,0], loans:[],
+})
+assert.equal(mismatchedProductPeriodTotals.valid,false,
+  'Product-led period schedules must be rejected if they do not reconcile to fiscal-year totals')
+console.log('PASS: exact-period product revenue and cost-of-sales overrides reconcile to fiscal-year totals')
+
 console.log('PASS: fixed-investment and pre-production timing cannot be verified when acquisitions fall outside the modeled horizon')
