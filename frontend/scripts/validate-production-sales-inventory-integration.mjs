@@ -136,7 +136,7 @@ const coverageCarryDrafts={
   ]}],
  productionCosts:[],
 }
-const coverageCarryResult=adapter.buildProductionSalesInventorySchedule(coverageCarryDrafts,periods,1,{slab:500})
+const coverageCarryResult=adapter.buildProductionSalesInventorySchedule(coverageCarryDrafts,periods,1,{slab:50},{slab:500})
 assert.equal(coverageCarryResult.valid,true,coverageCarryResult.issues.join('; '))
 assert.deepEqual(coverageCarryResult.periodProductionQuantity,[0,0])
 assert.deepEqual(coverageCarryResult.rows.map(row=>row.closingFinishedGoodsQuantity),[40,35])
@@ -144,7 +144,7 @@ assert.deepEqual(coverageCarryResult.periodCostOfGoodsSold,[100,50])
 assert.deepEqual(coverageCarryResult.periodClosingFinishedGoodsValue,[400,350])
 const invalidCoverageResult=adapter.buildProductionSalesInventorySchedule({
  ...coverageCarryDrafts,sales:coverageCarryDrafts.sales.map(product=>({...product,finishedGoodsDaysCoverage:0})),
-},periods,1,{slab:500})
+},periods,1,{slab:50},{slab:500})
 assert.equal(invalidCoverageResult.valid,false)
 assert.ok(invalidCoverageResult.issues.some(issue=>issue.includes('Finished-goods days coverage must be finite and positive')))
 const missingOpening=adapter.buildProductionSalesInventorySchedule(inventoryDrafts,periods,1,{})
