@@ -97,7 +97,17 @@ assert.deepEqual(openingCashCase.rows.map(row=>Math.round(row.closingCash)),[0,6
 const openingStatements=engine.buildPeriodicThreeFinancialStatements(openingCashCase)
 assert.deepEqual(openingStatements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[0,60,120])
 assert.ok(openingStatements.every(row=>Math.abs(row.movementChecks.cashRollForward)<=0.01),'Opening cash must be carried consistently into linked statements')
+const openingFixedAssetStatements=engine.buildPeriodicThreeFinancialStatements(openingCashCase,{
+  netFixedAssets:500,paidInCapital:550
+})
+assert.equal(openingFixedAssetStatements[0].openingBalances.netFixedAssets,500,
+  'Opening fixed asset net book value must be carried into the first statement period')
+assert.deepEqual(openingFixedAssetStatements.map(row=>Math.round(row.balanceSheet.netFixedAssets)),[600,600,600],
+  'Opening fixed assets must roll forward with new CAPEX without being counted twice')
+assert.ok(openingFixedAssetStatements.every(row=>row.balanceSheet.reconciled),
+  'Opening fixed assets and their corresponding opening equity must reconcile without a balancing plug')
 console.log('PASS: period cash roll-forward, opening cash, funding-gap alerts and three-statement cash reconciliation')
+console.log('PASS: opening fixed asset net book value is carried into the balance sheet and reconciled with opening equity')
 
 const depositCase=engine.calculateIntegratedPeriodicFinance({
   periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
