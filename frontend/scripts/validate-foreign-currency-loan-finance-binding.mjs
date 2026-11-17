@@ -39,7 +39,7 @@ const foundation={
 }
 const loan={
  id:'foreign-facility',name:'USD Facility',currencyCode:'USD',marketOrigin:'foreign',
- loanType:'annuity',repaymentInterval:'annual',firstRepaymentDate:'2026-01-01',numberOfRepayments:2,
+ loanType:'annuity',repaymentInterval:'annual',firstRepaymentDate:'2026-01-01',graceMonths:0,numberOfRepayments:2,
  disbursements:[{date:'2025-01-01',amount:1000}],profileMovements:[],
  interestRateChanges:[{effectiveDate:'2025-01-01',annualRatePercent:10}],
  interestPaymentMonth:12,capitalizedInterestPercent:50,capitalizeUntilDate:'2025-06-30',fees:[],
@@ -54,6 +54,25 @@ assert.ok(facility.localSchedule[0].capitalizedInterest>0)
 assert.ok(facility.localSchedule[0].interestExpense>0)
 assert.ok(facility.localSchedule[0].capitalizedInterest<
   (facility.localSchedule[0].capitalizedInterest+facility.localSchedule[0].interestExpense)*0.5)
+
+const graceFacility=binding.buildPeriodicLoanFacilityBinding({
+ loan:{...loan,firstRepaymentDate:'2025-01-01',graceMonths:12,numberOfRepayments:2},
+ foundation,periods,dayCountBasis:365,
+})
+assert.equal(graceFacility.valid,true,graceFacility.issues.join('; '))
+assert.equal(graceFacility.loan.input.gracePeriods,1)
+assert.equal(graceFacility.localSchedule[0].principal,0,'Principal must not be repaid during the explicit 12-month grace period')
+assert.ok(graceFacility.localSchedule[1].principal>0,'Principal repayment must begin after the grace period')
+const invalidGrace=binding.buildPeriodicLoanFacilityBinding({
+ loan:{...loan,graceMonths:1},foundation,periods,dayCountBasis:365,
+})
+assert.equal(invalidGrace.valid,false)
+assert.ok(invalidGrace.issues.some(issue=>issue.includes('exact multiple of the repayment interval')))
+const missingGrace=binding.buildPeriodicLoanFacilityBinding({
+ loan:{...loan,graceMonths:null},foundation,periods,dayCountBasis:365,
+})
+assert.equal(missingGrace.valid,false)
+
 
 const badFrequency=binding.buildPeriodicLoanFacilityBinding({
  loan:{...loan,repaymentInterval:'quarterly'},foundation,periods,dayCountBasis:365,
