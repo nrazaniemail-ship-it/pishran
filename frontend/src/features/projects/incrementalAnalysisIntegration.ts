@@ -2,6 +2,7 @@ import {
   calculateIntegratedPeriodicFinance,
   calculatePeriodicIrr,
   calculatePeriodicNpv,
+  fiscalYearIndexForPeriod,
   type PeriodicProjectFinanceInput,
 } from '../steel/periodicFinancialEngine'
 import type { HelpDrivenProjectForms } from './projectModelHelpForms'
@@ -98,21 +99,35 @@ export function calculateIncrementalAnalysis(
       workingCapitalByPeriod: [...baseInput.workingCapitalByPeriod],
       taxAllowancesByPeriod: baseInput.taxAllowancesByPeriod ? [...baseInput.taxAllowancesByPeriod] : undefined,
       taxDepreciationAdjustmentsByPeriod: baseInput.taxDepreciationAdjustmentsByPeriod ? [...baseInput.taxDepreciationAdjustmentsByPeriod] : undefined,
+      periodIncrementalAdjustments: undefined,
     }
+    const periodAdjustments = {
+      revenue: finance.periods.map(() => 0),
+      fixedCost: finance.periods.map(() => 0),
+      fixedInvestment: finance.periods.map(() => 0),
+      preOperatingCost: finance.periods.map(() => 0),
+      maintenanceCapex: finance.periods.map(() => 0),
+    }
+    const depreciationDeltaByPeriod = finance.periods.map(() => 0)
     const financingDeltaByPeriod = finance.periods.map(() => 0)
     const workingCapitalDeltaByPeriod = finance.periods.map(() => 0)
     for (const row of group) {
       const periodIndex = resolvePeriod(String(row.values.period ?? '').trim())
       const amount = (field: typeof fields[number]) => typeof row.values[field] === 'number' ? row.values[field] as number : 0
-      scenario.annualRevenue[periodIndex] += amount('revenueDelta')
-      scenario.annualFixedCost[periodIndex] += amount('costDelta')
-      scenario.annualFixedInvestment[periodIndex] += amount('investmentDelta') + amount('assetOpportunityValue')
-      scenario.annualDepreciation[periodIndex] += amount('depreciationDelta')
-      scenario.annualMaintenanceCapex[periodIndex] += amount('maintenanceCapexDelta')
-      scenario.annualPreOperatingCost[periodIndex] += amount('preOperatingCostDelta')
+      periodAdjustments.revenue[periodIndex] += amount('revenueDelta')
+      periodAdjustments.fixedCost[periodIndex] += amount('costDelta')
+      periodAdjustments.fixedInvestment[periodIndex] += amount('investmentDelta') + amount('assetOpportunityValue')
+      depreciationDeltaByPeriod[periodIndex] += amount('depreciationDelta')
+      periodAdjustments.maintenanceCapex[periodIndex] += amount('maintenanceCapexDelta')
+      periodAdjustments.preOperatingCost[periodIndex] += amount('preOperatingCostDelta')
       workingCapitalDeltaByPeriod[periodIndex] += amount('workingCapitalDelta')
       financingDeltaByPeriod[periodIndex] += amount('financingDelta')
     }
+    scenario.periodIncrementalAdjustments = periodAdjustments
+    scenario.periodDepreciationSchedule = baseRun.rows.map((row,index)=>row.depreciation+depreciationDeltaByPeriod[index])
+    scenario.annualDepreciation = scenario.annualDepreciation.map((_,fiscalYear)=>finance.periods.reduce((sum,period,index)=>
+      fiscalYearIndexForPeriod(period,finance.periods,finance.fiscalYearStartMonth)===fiscalYear
+        ? sum+scenario.periodDepreciationSchedule![index] : sum,0))
     scenario.workingCapitalByPeriod = scenario.workingCapitalByPeriod.map((value,index)=>value+workingCapitalDeltaByPeriod[index])
     if (scenario.workingCapitalByPeriod.some(value=>!Number.isFinite(value)||value<0)) {
       issues.push('Incremental alternative "' + alternative + '" (' + view + ') produces a negative or invalid closing working-capital balance.')
