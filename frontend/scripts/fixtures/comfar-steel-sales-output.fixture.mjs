@@ -8,6 +8,9 @@
  * Steel Slab (PDF page 34) and Extra DRI (PDF page 38).
  * The "finished goods consumed" line in the Persian output is the
  * closing stock carried forward: opening stock + production - sales.
+ * Five-day coverage is inferred from closing stock / sales for periods 5-10.
+ * Weighted-average is an adapter-required test input only; the source pages
+ * do not identify COMFAR's inventory cost-flow method.
  */
 export const STEEL_SLAB_EXTRA_DRI_SALES_BENCHMARK = Object.freeze({
   source: "COMFAR III - 001 - Summary sheet.pdf",
@@ -22,6 +25,7 @@ export const STEEL_SLAB_EXTRA_DRI_SALES_BENCHMARK = Object.freeze({
       name: "Steel Slab",
       unitPrice: 634,
       inventoryValuationMethod: 'weighted-average',
+      finishedGoodsDaysCoverage: 5,
       openingFinishedGoods: [0, 11666.67, 13333.33, 15000, 16666.67, 16666.67],
       production: [851666.67, 961666.67, 1081666.67, 1201666.67, 1200000, 1200000],
       sales: [840000, 960000, 1080000, 1200000, 1200000, 1200000],
