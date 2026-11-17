@@ -27,4 +27,18 @@ const invalid=engine.calculatePeriodicLoanSchedule({
   repaymentStartPeriod:2,gracePeriods:0,termPeriods:2,capitalizeInterest:false
 },periods,365)
 assert.equal(invalid.valid,false,'Loan schedule with mismatched period drawdowns must be rejected')
+
+const negativeWorkingCapital = engine.calculateIntegratedPeriodicFinance({
+  periods, fiscalYearStartMonth:1, dayCountBasis:365, cashFlowTiming:'period-end',
+  annualRevenue:[100,100,100], annualVariableCost:[20,20,20], annualFixedCost:[10,10,10],
+  annualDepreciation:[0,0,0], annualFixedInvestment:[0,0,0], annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0], annualTaxRates:[0,0,0], annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[-10,-20,-5], openingWorkingCapital:-5, loans:[],
+  discountRatePercent:10, equityDiscountRatePercent:10
+})
+assert.equal(negativeWorkingCapital.valid,true,negativeWorkingCapital.warnings.join('; '))
+assert.equal(negativeWorkingCapital.rows[0].changeInWorkingCapital,-5)
+assert.equal(negativeWorkingCapital.rows[1].changeInWorkingCapital,-10)
+assert.equal(negativeWorkingCapital.rows[2].changeInWorkingCapital,15)
+
 console.log('PASS: generic periodic loan schedule validates drawdowns, amortization and maturity balance')
