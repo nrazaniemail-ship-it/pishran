@@ -407,7 +407,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
   ?[...fixedInvestmentLifecycleInputs.warnings,...fixedInvestmentRegisterReconciliation.warnings,'زمان‌بندی هزینه‌های قبل از بهره‌برداری برای تمام اقلام به تفکیک دوره مستند یا تأیید نشده است؛ خروجی مالی تا تکمیل دفتر مربوط قابل تأیید نیست.']
   :[]
  const unintegratedFinancialDraftInputs=[...listUnintegratedFinancialDraftInputs(m.financialForms),...new Set([...fixedAssetTimingIssues,...preOperatingTimingIssues])]
- const reportFinancialInputIssues=[...unintegratedFinancialDraftInputs,...((m.financialForms.workingCapital??[]).length>0&&reportPeriodicFinance?.valid!==true?['financialForms.workingCapital:periodic-working-capital-schedule-not-valid']:[])]
+ const reportFinancialInputIssues=[...unintegratedFinancialDraftInputs,...((m.financialForms.workingCapital??[]).length>0&&reportPeriodicFinance?.valid!==true?['financialForms.workingCapital:periodic-working-capital-schedule-not-valid']:[]),...((m.financialForms.sales??[]).length>0&&(reportPeriodicFinance?.valid!==true)?['financialForms.sales:product-operating-schedule-not-valid']:[]),...((m.financialForms.productionCosts??[]).length>0&&(reportPeriodicFinance?.valid!==true)?['financialForms.productionCosts:product-cost-schedule-not-valid']:[])]
  const activeFinanceResult=integratedFinanceResult
  const displayProjectFlows=activeFinanceResult?activeFinanceResult.years.map(r=>r.projectFreeCashFlow):model.flows
  const displayEquityFlows=activeFinanceResult?activeFinanceResult.years.map(r=>r.equityFreeCashFlow):model.equityFlows
