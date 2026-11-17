@@ -429,6 +429,15 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
  if(incremental.some(row=>!['alternative','view','period'].every(key=>typeof row.values[key]==='string'&&String(row.values[key]).trim())))
   errors.push('incremental-analysis:alternative-view-and-period-required')
  if(new Set(incrementalKeys).size!==incrementalKeys.length)errors.push('incremental-analysis:duplicate-alternative-view-period')
+ for(const [index,row] of incremental.entries()){
+  const amountKeys=['investmentDelta','financingDelta','revenueDelta','costDelta','assetOpportunityValue'] as const
+  const populated=amountKeys.filter(key=>typeof row.values[key]==='number')
+  if(!populated.length)errors.push('incremental-analysis:'+index+':at-least-one-financial-delta-required')
+  for(const key of ['investmentDelta','assetOpportunityValue'] as const){
+   const amount=row.values[key]
+   if(typeof amount==='number'&&amount<0)errors.push('incremental-analysis:'+index+':'+key+'-must-be-nonnegative')
+  }
+ }
  for(const row of value.sections?.['sensitivity']??[]){
   const v=row.values
   for(const key of ['quantityChange','priceChange','valueChange','maxIncrease','maxDecrease'] as const){
