@@ -427,10 +427,8 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
   }
   if(typeof v.order==='number'&&(!Number.isInteger(v.order)||v.order<1))errors.push('sensitivity:invalid-variable-order')
  }
- const currencyRows=value.sections?.['currencies']??[]
  if(currencyRows.length){
   const localCurrencies=currencyRows.filter(row=>row.values.type==='local')
-  const accountingCurrencies=currencyRows.filter(row=>row.values.accountingCurrency===true)
   if(localCurrencies.length!==1)errors.push('currencies:exactly-one-local-currency-required')
   if(accountingCurrencies.length!==1)errors.push('currencies:exactly-one-accounting-currency-required')
   if(accountingCurrencies.length===1&&accountingCurrencies[0].values.type!=='local')
@@ -448,7 +446,6 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
     errors.push('currencies:accounting-currency-must-be-local:'+code)
   }
  }
- const currencyCodes=new Set(currencyRows.map(row=>typeof row.values.code==='string'?row.values.code.trim().toUpperCase():'').filter(Boolean))
  const currencySections=['fixed-investment','preproduction-expenditure','production-costs','equity-grants','loan-conditions','loan-fees']
  for(const sectionId of currencySections){
   for(const [index,row] of (value.sections?.[sectionId]??[]).entries()){
