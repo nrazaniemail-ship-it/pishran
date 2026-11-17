@@ -506,7 +506,7 @@ export function calculateProjectFinancialModelFromDrafts(
 
   if(effectiveDrafts.sales.length||effectiveDrafts.productionCosts.length) {
     const openingFinishedGoodsByProduct=input.openingFinishedGoodsByProduct??Object.fromEntries(effectiveDrafts.sales.map(product=>[product.productId,product.openingFinishedGoodsQuantity??Number.NaN]))
-    const openingFinishedGoodsValueByProduct=input.openingFinishedGoodsValueByProduct??Object.fromEntries(effectiveDrafts.sales.map(product=>[product.productId,product.openingFinishedGoodsValue??Number.NaN]))
+    const openingFinishedGoodsValueByProduct=input.openingFinishedGoodsValueByProduct??{}
     const result=bindProductionSalesToPeriodicFinance(finance,effectiveDrafts,openingFinishedGoodsByProduct,openingFinishedGoodsValueByProduct)
     productionSales=result.schedule
     if(!result.valid||!result.financeInput)return fail(result.issues)
