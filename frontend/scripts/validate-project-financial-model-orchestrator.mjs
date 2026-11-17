@@ -483,7 +483,7 @@ const invalidIncrementalModel=orchestrator.calculateProjectFinancialModelFromDra
  taxTreatment:'non-deductible',
 })
 assert.equal(invalidIncrementalModel.valid,false)
-assert.ok(invalidIncrementalModel.issues.some(issue=>issue.includes('exactly one project period')))
+assert.ok(invalidIncrementalModel.issues.some(issue=>issue.includes('incremental-analysis:0:period-outside-project-calendar:period:not-a-period')))
 let missingIncrementalDepreciation=helpForms.createBlankHelpDrivenProjectForms()
 missingIncrementalDepreciation=helpForms.addHelpFormRow(missingIncrementalDepreciation,'incremental-analysis','missing-incremental-depreciation')
 for(const [key,value] of Object.entries({alternative:'Upgrade C',view:'project-in-isolation',period:'1',investmentDelta:100}))
