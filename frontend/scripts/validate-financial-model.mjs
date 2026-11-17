@@ -111,3 +111,9 @@ near(engine.calculateWorkingCapitalTurnoverCoefficient(30,360),12,1e-12,'COMFAR 
 near(engine.calculateMinimumDaysCoverageFromTurnover(12,360),30,1e-12,'COMFAR turnover coefficient to days coverage')
 assert.equal(engine.calculateWorkingCapitalTurnoverCoefficient(0,360),null,'Zero days coverage means no working-capital holding period')
 console.log('PASS: COMFAR working-capital minimum-days and turnover-coefficient conversion')
+
+near(engine.calculateCashConversionCycleDays({
+  dayBasis:360,rawMaterialDays:30,factorySuppliesDays:15,utilitiesDays:10,energyDays:5,sparePartsDays:20,
+  workInProgressDays:10,finishedGoodsDays:20,receivableDays:30,payableDays:40,
+}),100,1e-9,'COMFAR full-inventory cash conversion cycle')
+console.log('PASS: COMFAR cash conversion cycle includes all material inventories and trade credit')
