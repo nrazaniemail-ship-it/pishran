@@ -58,7 +58,7 @@ const vat=module.buildProductOperatingSchedule({
 assert.equal(vat.valid,false)
 assert.ok(vat.issues.some(issue=>issue.includes('sales tax/VAT')))
 const negativeProduction=module.buildProductOperatingSchedule({
- ...base,sales:[{...base.sales[0],periods:[{...base.sales[0].periods[0],salesQuantity:100,finishedGoodsClosingQuantity:0,openingFinishedGoodsQuantity:10},base.sales[0].periods[1]]}]
+ ...base,sales:[{...base.sales[0],periods:[{...base.sales[0].periods[0],salesQuantity:5,finishedGoodsClosingQuantity:0,openingFinishedGoodsQuantity:10},base.sales[0].periods[1]]}]
 },periods,1,'IRR')
 assert.equal(negativeProduction.valid,false)
 assert.ok(negativeProduction.issues.some(issue=>issue.includes('sales exceed opening inventory plus non-negative production')))
