@@ -370,8 +370,9 @@ const unsupportedTaxSystemModel=orchestrator.calculateProjectFinancialModelFromD
 assert.equal(unsupportedTaxSystemModel.valid,false)
 assert.ok(unsupportedTaxSystemModel.issues.some(issue=>issue.includes('tax system is not supported')))
 let foreignTaxCurrencyHelp=helpForms.updateHelpFormRow(corporateTaxHelp,'income-tax','income-tax-main','taxCurrency','USD')
+const foreignTaxFoundation={...foundation,currencies:{...foundation.currencies,foreignCurrencies:[{code:'USD',name:'US Dollar',exchangeRates:[]}]}}
 const foreignTaxCurrencyModel=orchestrator.calculateProjectFinancialModelFromDrafts({
- finance,drafts:{...drafts,helpDriven:foreignTaxCurrencyHelp},foundation,productionStartDate:'2025-01-01',
+ finance,drafts:{...drafts,helpDriven:foreignTaxCurrencyHelp},foundation:foreignTaxFoundation,productionStartDate:'2025-01-01',
  openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
  taxTreatment:'non-deductible',
 })
