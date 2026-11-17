@@ -10,7 +10,7 @@
     "android:add": "cap add android",
     "android:sync": "npm run build && cap sync android",
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
-    "test:financial": "node scripts/validate-financial-model.mjs"
+    "test:financial": "node scripts/validate-financial-model.mjs && node scripts/validate-periodic-financial-engine.mjs"
   },
   "dependencies": {
     "react": "latest",
