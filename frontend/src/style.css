@@ -1545,3 +1545,9 @@ input,select,textarea{color:var(--text)}
 .ui-modern .tree-status-filter:focus-visible{outline:2px solid var(--modern-primary);outline-offset:2px}
 .ui-modern .tree-project-wrap[role="listitem"]{list-style:none}
 @media(max-width:760px){.ui-modern .tree-status-filter{display:none}}
+
+.ui-modern .tree-status{display:inline-block;width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:var(--modern-muted)}
+.ui-modern .tree-status.status-draft{background:var(--modern-warning)}
+.ui-modern .tree-status.status-active{background:var(--modern-success)}
+.ui-modern .tree-status.status-archived{background:var(--modern-muted);box-shadow:0 0 0 2px var(--modern-line)}
+.ui-modern .tree-project-wrap>button{min-height:34px}
