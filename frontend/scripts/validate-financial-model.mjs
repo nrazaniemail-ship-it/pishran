@@ -63,6 +63,9 @@ const suppliesUtilities=engine.calculateOperatingCycleWorkingCapital(suppliesUti
 near(suppliesUtilities.factorySupplies??0,30,1e-9,'COMFAR factory supplies inventory')
 near(suppliesUtilities.utilities??0,30,1e-9,'COMFAR utilities inventory')
 near(suppliesUtilities.netWorkingCapital,60,1e-9,'Factory supplies and utilities included in net working capital')
+const longCoveragePolicy={...depositPolicy,rawMaterialDays:540,annualRawMaterialCost:360,cashDays:0,annualCashOperatingCost:0}
+near(engine.calculateOperatingCycleWorkingCapital(longCoveragePolicy,1).rawMaterials,540,1e-9,'Working-capital days coverage may exceed one year')
+near(engine.calculateWorkingCapitalTurnoverCoefficient(540),2/3,1e-9,'COMFAR Coto for coverage above one year')
 
 
 const sydAssetSchedule = (lengthYears, lengthMonths, firstDepreciationMonths) => engine.calculateComfarAssetDepreciationSchedule([{
