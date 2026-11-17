@@ -129,7 +129,29 @@ const productionCostDriver = adapter.buildWorkingCapitalScheduleFromDrafts({
 }, periods, 0, undefined, { costOfProductionByPeriod: [900, 1200] })
 assert.equal(productionCostDriver.valid, true, productionCostDriver.issues.join('; '))
 assert.ok(Math.abs(productionCostDriver.closingWorkingCapital[0] - 300) < 0.000001)
-assert.ok(Math.abs(productionCostDriver.closingWorkingCapital[1] - (1200 * 30 / 91)) < 0.000001)
+assert.ok(Math.abs(productionCostDriver.closingWorkingCapital[1] - 400) < 0.000001)
+
+const finishedGoodsProductionDriver = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'finished-goods-production', name: 'Finished goods', category: 'finished-goods',
+    minimumDaysCoverage: 5, turnoverCoefficient: 72, calculationMode: 'value',
+    activityBasis: 'production', valuationBasis: 'cost-of-production',
+    periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
+  }],
+}, periods, 0, undefined, { costOfProductionByPeriod: [3600, 7200] })
+assert.equal(finishedGoodsProductionDriver.valid, true, finishedGoodsProductionDriver.issues.join('; '))
+assert.deepEqual(finishedGoodsProductionDriver.closingWorkingCapital, [200, 400])
+
+const finishedGoodsCostOfSalesDriver = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'finished-goods-sales', name: 'Finished goods', category: 'finished-goods',
+    minimumDaysCoverage: 5, turnoverCoefficient: 72, calculationMode: 'value',
+    activityBasis: 'sales', valuationBasis: 'cost-of-sales',
+    periodBalances: [{ period: '1', amount: null }, { period: '2', amount: null }],
+  }],
+}, periods, 0, undefined, { costOfSalesByPeriod: [3600, 7200] })
+assert.equal(finishedGoodsCostOfSalesDriver.valid, true, finishedGoodsCostOfSalesDriver.issues.join('; '))
+assert.deepEqual(finishedGoodsCostOfSalesDriver.closingWorkingCapital, [200, 400])
 
 const costOfSalesPayables = adapter.buildWorkingCapitalScheduleFromDrafts({
   workingCapital: [
@@ -142,8 +164,9 @@ const costOfSalesPayables = adapter.buildWorkingCapitalScheduleFromDrafts({
   ],
 }, periods, 0, undefined, { costOfSalesByPeriod: [450, 910] })
 assert.equal(costOfSalesPayables.valid, true, costOfSalesPayables.issues.join('; '))
-assert.deepEqual(costOfSalesPayables.closingWorkingCapital, [400, 400])
-assert.deepEqual(costOfSalesPayables.componentRows.filter(row => row.category === 'payables').map(row => row.signedAmount), [-100, -200])
+assert.ok(Math.abs(costOfSalesPayables.closingWorkingCapital[0] - 400) < 0.000001)
+assert.ok(Math.abs(costOfSalesPayables.closingWorkingCapital[1] - (600 - 910 * 20 / 90)) < 0.000001)
+assert.deepEqual(costOfSalesPayables.componentRows.filter(row => row.category === 'payables').map(row => row.signedAmount), [-100, -(910 * 20 / 90)])
 
 const missingProductionCostBase = adapter.buildWorkingCapitalScheduleFromDrafts({
   workingCapital: [{
@@ -188,7 +211,7 @@ const productionCostBinding = adapter.bindWorkingCapitalDraftsToPeriodicFinance(
 }] }, 0, { costOfProductionByPeriod: [900, 1200] })
 assert.equal(productionCostBinding.valid, true, productionCostBinding.issues.join('; '))
 assert.ok(Math.abs(productionCostBinding.financeInput.workingCapitalByPeriod[0] - 300) < 0.000001)
-assert.ok(Math.abs(productionCostBinding.financeInput.workingCapitalByPeriod[1] - (1200 * 30 / 91)) < 0.000001)
+assert.ok(Math.abs(productionCostBinding.financeInput.workingCapitalByPeriod[1] - 400) < 0.000001)
 
 
 const missingSalesBase = adapter.buildWorkingCapitalScheduleFromDrafts({
