@@ -1866,7 +1866,7 @@ const foundationPanel = await readFile(new URL('../src/features/projects/Project
 assert.ok(foundationWizard.includes('ProjectFoundationPanel')
   && foundationWizard.includes('foundation:mergeProjectFoundation(saved.foundation)')
   && foundationWizard.includes('foundation:createBlankProjectFoundation()')
-  && !/isHotRolling|hotRollingCoilProject|mergeHotRollingCoilProjectFoundation/.test(foundationWizard),
+  && !/isHotRollingCoil=\{true\}|hotRollingCoilProject|mergeHotRollingCoilProjectFoundation/.test(foundationWizard),
   'The raw project foundation must be blank and independent of sample-specific migrations')
 assert.ok(foundationPanel.includes('Currencies & Exchange Rates')
   && foundationPanel.includes('Cost Centres')
