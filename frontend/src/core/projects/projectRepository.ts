@@ -20,7 +20,10 @@ export interface FeasibilityProject {
 const PROJECTS_KEY = 'projects:list:v1'
 
 export async function listProjects(): Promise<FeasibilityProject[]> {
-  return (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
+  const stored = (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
+  const normalized = stored.map(project => ({ ...project, templateId: 'raw' as const }))
+  if (stored.some(project => project.templateId !== 'raw')) await localStore.set(PROJECTS_KEY, normalized)
+  return normalized
 }
 
 export async function createProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'location'>): Promise<FeasibilityProject> {
@@ -63,19 +66,19 @@ const hashLegacyProjectKey = (value: string) => {
   }
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
-const retiredProjectNameHashes = new Set(['8ed4fe00', 'c686cc66', 'cc8f9036', '83746ace', '3adafd09', '8b4f0421'])
-const retiredProjectStageHashes = new Set(['965f8c3e', '03af782d', '83746ace'])
+const retiredProjectNameHashes = new Set(['8ed4fe00', 'c686cc66', 'cc8f9036', '83746ace', '3adafd09', '8b4f0421', 'bc59aba4', '2539f5ef', '0ba54e2d', 'c3757c02', 'e6a99e35', 'f40958eb'])
+const retiredProjectStageHashes = new Set(['965f8c3e', '03af782d', '83746ace', 'bc59aba4', '2539f5ef', '0ba54e2d', 'c3757c02', 'e6a99e35', 'f40958eb'])
 const retiredProjectTemplateHash = 'cc307164'
 
 export async function purgeRemovedCaseProjects(): Promise<FeasibilityProject[]> {
-  const projects = await listProjects()
+  // Match retired labels before listProjects normalizes every legacy record to the sole raw template.
+  const projects = (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
   const isRemovedCase = (project: FeasibilityProject) =>
     retiredProjectNameHashes.has(hashLegacyProjectKey(project.name))
     || retiredProjectStageHashes.has(hashLegacyProjectKey(project.steelStage ?? ''))
     || hashLegacyProjectKey(project.templateId ?? '') === retiredProjectTemplateHash
-  const removed = projects.filter(isRemovedCase)
-  const remaining = projects.filter(project => !isRemovedCase(project))
-  if (removed.length) await localStore.set(PROJECTS_KEY, remaining)
+  const remaining = projects.filter(project => !isRemovedCase(project)).map(project => ({ ...project, templateId: 'raw' as const }))
+  if (remaining.length !== projects.length || projects.some(project => project.templateId !== 'raw')) await localStore.set(PROJECTS_KEY, remaining)
 
   const [rollingRecords, processRecords] = await Promise.all([
     localStore.list('pishran:rolling:'),
