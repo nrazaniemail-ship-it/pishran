@@ -81,6 +81,7 @@ export default function App() {
   const [calculatorError, setCalculatorError] = useState('')
   const [commandOpen, setCommandOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
+  const [commandSelection, setCommandSelection] = useState(0)
   const [focusMode, setFocusMode] = useState(false)
   const [inspectorOpen, setInspectorOpen] = useState(true)
   const [treeQuery, setTreeQuery] = useState('')
@@ -160,6 +161,15 @@ export default function App() {
     yAxis: { type: 'value', axisLabel: { formatter: '{value}%' }, splitLine: { lineStyle: { color: '#edf0f4' } } },
     series: [{ name: isEn ? 'Illustrative return' : 'بازده نمونه', type: 'line', smooth: true, data: [8, 12, 16, 19, 23], areaStyle: { opacity: .08 }, lineStyle: { width: 3 }, symbolSize: 8 }]
   }), [isEn])
+
+  const normalizedCommandQuery = commandQuery.trim().toLocaleLowerCase()
+  const commandItems = [
+    ...navigation.filter(item => !normalizedCommandQuery || item.label.toLocaleLowerCase().includes(normalizedCommandQuery) || item.id.includes(normalizedCommandQuery)).map(item => ({ key: `page:${item.id}`, label: item.label, icon: item.icon, run: () => setPage(item.id) })),
+    ...projects.filter(project => !normalizedCommandQuery || project.name.toLocaleLowerCase().includes(normalizedCommandQuery)).slice(0, 6).map(project => ({ key: `project:${project.id}`, label: project.name, icon: FolderKanban, run: () => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard') } })),
+    { key: 'create-project', label: isEn ? 'Create or open a project' : 'ایجاد یا بازکردن پروژه', icon: Plus, run: () => setPage('projects') }
+  ]
+
+  useEffect(() => { setCommandSelection(0) }, [commandQuery, commandOpen])
 
   async function refreshStorage() {
     try {
@@ -307,7 +317,7 @@ export default function App() {
     </aside>}
     </div>
     {modern && <div className="modern-statusbar"><span className={loadError ? 'status-warning' : ''}><i/> {loadError ? (isEn ? 'Needs attention' : 'نیازمند بررسی') : (isEn ? 'Ready' : 'آماده')}</span><span>{isEn ? `${projects.length} projects` : `${projects.length.toLocaleString('fa-IR')} پروژه`}</span><span>{isEn ? 'Autosave enabled' : 'ذخیره‌سازی خودکار فعال'}</span><span>{isEn ? 'Calculations on demand' : 'محاسبه با فرمان کاربر'}</span></div>}
-    {modern && commandOpen && <div className="command-overlay" onMouseDown={event => { if (event.target === event.currentTarget) setCommandOpen(false) }}><section className="command-dialog"><div className="command-input-row"><span>⌕</span><input autoFocus value={commandQuery} onChange={event => setCommandQuery(event.target.value)} placeholder={isEn ? 'Search pages and actions...' : 'جستجوی صفحه و دستور...'} onKeyDown={event => { if (event.key === 'Enter') { const q=commandQuery.trim().toLocaleLowerCase(); const target=navigation.find(item => item.label.toLocaleLowerCase().includes(q) || item.id.includes(q)); if (target) setPage(target.id); else if (q.includes('new') || q.includes('جدید')) setPage('projects'); setCommandOpen(false); setCommandQuery('') } }}/><kbd>ESC</kbd></div><div className="command-results">{navigation.filter(item => !commandQuery || item.label.toLocaleLowerCase().includes(commandQuery.toLocaleLowerCase()) || item.id.includes(commandQuery.toLocaleLowerCase())).map(item => <button key={item.id} onClick={() => { setPage(item.id); setCommandOpen(false); setCommandQuery('') }}><item.icon size={16}/>{item.label}<span>↵</span></button>)}{projects.filter(project => !commandQuery || project.name.toLocaleLowerCase().includes(commandQuery.toLocaleLowerCase())).slice(0, 6).map(project => <button key={project.id} onClick={() => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard'); setCommandOpen(false); setCommandQuery('') }}><FolderKanban size={16}/>{project.name}<span>↵</span></button>)}<button onClick={() => { setPage('projects'); setCommandOpen(false); setCommandQuery('') }}><Plus size={16}/>{isEn ? 'Create or open a project' : 'ایجاد یا بازکردن پروژه'}<span>↵</span></button></div></section></div>}
+    {modern && commandOpen && <div className="command-overlay" onMouseDown={event => { if (event.target === event.currentTarget) { setCommandOpen(false); setCommandQuery('') } }}><section className="command-dialog" role="dialog" aria-modal="true" aria-label={isEn ? 'Quick command search' : 'جستجوی دستورات سریع'}><div className="command-input-row"><span>⌕</span><input autoFocus value={commandQuery} onChange={event => setCommandQuery(event.target.value)} placeholder={isEn ? 'Search pages and actions...' : 'جستجوی صفحه و دستور...'} aria-controls="command-results-list" onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setCommandSelection(index => Math.min(index + 1, commandItems.length - 1)) } else if (event.key === 'ArrowUp') { event.preventDefault(); setCommandSelection(index => Math.max(0, index - 1)) } else if (event.key === 'Enter') { event.preventDefault(); const selected = commandItems[commandSelection]; if (selected) { selected.run(); setCommandOpen(false); setCommandQuery('') } } }}/><kbd>ESC</kbd></div><div className="command-results" id="command-results-list" role="listbox">{commandItems.map((item,index) => <button type="button" role="option" aria-selected={commandSelection === index} className={commandSelection === index ? 'selected' : ''} key={item.key} onMouseEnter={() => setCommandSelection(index)} onClick={() => { item.run(); setCommandOpen(false); setCommandQuery('') }}><item.icon size={16}/>{item.label}<span>↵</span></button>)}</div></section></div>}
     <div className="floating-calculator" dir="ltr">
       {calculatorOpen && <section className="calculator-panel" aria-label={isEn ? 'Calculator' : 'ماشین حساب'}>
         <div className="calculator-heading"><b>{isEn ? 'Calculator' : 'ماشین حساب'}</b><button type="button" aria-label={isEn ? 'Close calculator' : 'بستن ماشین حساب'} onClick={() => setCalculatorOpen(false)}><X size={18}/></button></div>
