@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { calculateIncrementalEnterpriseAnalysis, calculateExistingLoanSchedule, type ExistingLoanRepaymentType, type EnterpriseScenarioPeriodInput } from '../steel/financialModel'
-import { calculateStartingFinancialBalanceSummary, validateStartingFixedAssetBalances, type StartingFixedAssetBalance, type StartingFinancialBalanceSummary, type ProjectFoundation } from './projectFoundation'
+import { calculateStartingFinancialBalanceSummary, validateStartingFixedAssetBalances, type StartingFixedAssetBalance, type StartingFinancialBalanceSummary, type ProjectFoundation, type OpeningCurrentAccounts } from './projectFoundation'
 
 type Asset = StartingFixedAssetBalance
 type ProductBalance = {id:string;productName:string;localValue:number;foreignValue:number}
@@ -147,6 +147,19 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   accruedInterest:accruedLoanInterest,paidInCapital:openingPaidInCapital,
   retainedEarnings:state.opening.retainedEarnings,accumulatedLosses:state.opening.accumulatedLosses,
   grants:state.opening.grants,
+  currentAccounts:{
+   rawMaterials:state.opening.rawMaterialsLocal+state.opening.rawMaterialsForeign,
+   factorySupplies:state.opening.suppliesLocal+state.opening.suppliesForeign,
+   workInProgress:wipTotal,finishedGoods:finished,
+   receivables:state.opening.receivablesLocal+state.opening.receivablesForeign,
+   cash:state.opening.cashLocal+state.opening.cashForeign,
+   shortTermDeposits:state.opening.shortTermDepositsLocal,
+   cashSurplus:state.opening.cashSurplusLocal+state.opening.cashSurplusForeign,
+   otherCurrentAssets:state.opening.otherAssetsLocal,
+   tradePayables:state.opening.payablesLocal+state.opening.payablesForeign,
+   otherCurrentLiabilities:state.opening.otherLiabilitiesLocal,
+   accruedInterest:accruedLoanInterest,
+  } satisfies OpeningCurrentAccounts,
  }),[currentAssets,state.opening.cashLocal,state.opening.cashForeign,state.opening.shortTermDepositsLocal,
   state.opening.cashSurplusLocal,state.opening.cashSurplusForeign,state.opening.payablesLocal,
   state.opening.payablesForeign,state.opening.otherLiabilitiesLocal,debt,accruedLoanInterest,
