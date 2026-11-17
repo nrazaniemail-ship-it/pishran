@@ -536,6 +536,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   let simplePayback: number | null = null
   let discountedPayback: number | null = null
   const annualRows: IntegratedFinanceYear[] = []
+  let invalidShortTermDepositAssumptions = false
 
   for (let index = 0; index < years; index++) {
     const year = index + 1
@@ -574,7 +575,9 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
     const salvageBookValueDisposed = year === years ? Math.max(0, Number(input.salvageBookValue) || 0) : 0
     const salvageGainLoss = salvageProceeds - salvageBookValueDisposed
-    const shortTermDepositInterest = input.workingCapitalPolicy ? calculateShortTermDepositInterest(workingCapitalBreakdown.minimumCash, input.workingCapitalPolicy.shortTermDepositSharePercent ?? 0, input.workingCapitalPolicy.shortTermDepositRatePercent ?? 0, 12) : 0
+    const rawShortTermDepositInterest = input.workingCapitalPolicy ? calculateShortTermDepositInterest(workingCapitalBreakdown.minimumCash, input.workingCapitalPolicy.shortTermDepositSharePercent ?? 0, input.workingCapitalPolicy.shortTermDepositRatePercent ?? 0, 12) : 0
+    if (!Number.isFinite(rawShortTermDepositInterest)) invalidShortTermDepositAssumptions = true
+    const shortTermDepositInterest = Number.isFinite(rawShortTermDepositInterest) ? rawShortTermDepositInterest : 0
     const ebit = revenue - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss + salvageGainLoss
 
     const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
@@ -624,6 +627,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   const peakWorkingCapital = Math.max(0, ...annualRows.map(row => row.workingCapital))
   const fundingGap = totalInvestment + peakWorkingCapital - totalFunding
   const warnings: string[] = []
+  if (invalidShortTermDepositAssumptions) warnings.push('Short-term deposit share must be 0–100% and the annual interest rate must be finite and non-negative.')
   if (input.assetSaleSchedule?.some(row => ![row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(Number.isFinite) || row.saleProceeds < 0 || row.returnOfCapital < 0 || row.bookValueDisposed < 0 || Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss)>0.01)) warnings.push('برنامه فروش دارایی باید عواید فروش را با Return of capital و Other income/loss تطبیق دهد و ارزش‌ها معتبر باشند.')
   if (totalFunding <= 0) warnings.push('ساختار تأمین مالی ثبت نشده است؛ WACC محاسبه نمی‌شود.')
   if (totalEquityContribution <= 0 && totalDebtDrawdown > 0) warnings.push('آورده نقدی سهامدار ثبت نشده است؛ وزن حقوق صاحبان سهام صفر است.')
