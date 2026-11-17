@@ -1480,6 +1480,7 @@ export type PeriodicStatementOpeningBalances = {
   deferredPreOperatingAssets?: number
   paidInCapital?: number
   retainedEarnings?: number
+  grants?: number
 }
 export type PeriodicFinancialStatement = {
   period: number
@@ -1501,12 +1502,12 @@ export type PeriodicFinancialStatement = {
     cash: number; cashInHand: number; shortTermDeposits: number; netWorkingCapital: number; netFixedAssets: number; deferredPreOperatingAssets: number
     automaticOverdraft: number
     totalAssets: number; debt: number; totalLiabilities: number; paidInCapital: number
-    retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number
+    retainedEarnings: number; grants: number; totalEquity: number; totalLiabilitiesAndEquity: number
     balanceDifference: number; reconciled: boolean
   }
   movementChecks: {
     cash: number; cashRollForward: number; debt: number; automaticOverdraft: number; netWorkingCapital: number; netFixedAssets: number
-    deferredPreOperatingAssets: number; paidInCapital: number; retainedEarnings: number
+    deferredPreOperatingAssets: number; paidInCapital: number; retainedEarnings: number; grants: number
   }
 }
 
@@ -1527,6 +1528,7 @@ export function buildPeriodicThreeFinancialStatements(
     cash: opening.cash ?? result.openingCash ?? 0, debt: opening.debt ?? 0, netFixedAssets: opening.netFixedAssets ?? 0,
     netWorkingCapital: opening.netWorkingCapital ?? 0, deferredPreOperatingAssets: opening.deferredPreOperatingAssets ?? 0,
     paidInCapital: opening.paidInCapital ?? 0, retainedEarnings: opening.retainedEarnings ?? 0,
+    grants: opening.grants ?? 0,
   }
   if (Object.values(balances).some(value => !validFinite(value))) return []
   const automaticSchedule = result.automaticFundingSchedule
@@ -1562,7 +1564,7 @@ export function buildPeriodicThreeFinancialStatements(
   const unmodelledOpeningDebt = balances.debt - scheduledOpeningDebt
   let cash = balances.cash, debt = balances.debt, netFixedAssets = balances.netFixedAssets
   let netWorkingCapital = balances.netWorkingCapital, deferredPreOperatingAssets = balances.deferredPreOperatingAssets
-  let paidInCapital = balances.paidInCapital, retainedEarnings = balances.retainedEarnings
+  let paidInCapital = balances.paidInCapital, retainedEarnings = balances.retainedEarnings, grants = balances.grants
   let automaticFundingCashBalance = 0
   let automaticOverdraftBalance = 0
   const statements: PeriodicFinancialStatement[] = []
@@ -1597,7 +1599,7 @@ export function buildPeriodicThreeFinancialStatements(
       row.principal + automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
     if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance +
         automaticFunding.automaticOverdraftBalance)) > tolerance) return []
-    const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings }
+    const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings, grants }
     const cashOperatingCosts = row.variableCost + row.fixedCost
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
     const ebitda = row.revenue - cashOperatingCosts
@@ -1620,9 +1622,10 @@ export function buildPeriodicThreeFinancialStatements(
     const closingPaidInCapital = paidInCapital + row.equityContribution +
       row.equityWorkingCapitalContribution + automaticFunding.automaticEquity
     const closingRetainedEarnings = retainedEarnings + netIncome
+    const closingGrants = grants
     const totalAssets = closingCash + closingWorkingCapital + closingNetFixedAssets + closingPreOperatingAssets
     const totalLiabilities = closingDebt
-    const totalEquity = closingPaidInCapital + closingRetainedEarnings
+    const totalEquity = closingPaidInCapital + closingRetainedEarnings + closingGrants
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
     const balanceDifference = totalAssets - totalLiabilitiesAndEquity
     const movementChecks = {
@@ -1639,6 +1642,7 @@ export function buildPeriodicThreeFinancialStatements(
       paidInCapital: closingPaidInCapital - paidInCapital - row.equityContribution -
         row.equityWorkingCapitalContribution - automaticFunding.automaticEquity,
       retainedEarnings: closingRetainedEarnings - retainedEarnings - netIncome,
+      grants: closingGrants - grants,
     }
     statements.push({
       period: row.period, startDate: row.startDate, endDate: row.endDate, openingBalances,
@@ -1655,7 +1659,7 @@ export function buildPeriodicThreeFinancialStatements(
       balanceSheet: { cash: closingCash, cashInHand: row.cashInHand, shortTermDeposits: row.shortTermDeposits, netWorkingCapital: closingWorkingCapital, netFixedAssets: closingNetFixedAssets,
         deferredPreOperatingAssets: closingPreOperatingAssets, automaticOverdraft: automaticFunding.automaticOverdraftBalance,
         totalAssets, debt: closingDebt, totalLiabilities,
-        paidInCapital: closingPaidInCapital, retainedEarnings: closingRetainedEarnings, totalEquity,
+        paidInCapital: closingPaidInCapital, retainedEarnings: closingRetainedEarnings, grants: closingGrants, totalEquity,
         totalLiabilitiesAndEquity, balanceDifference,
         reconciled: Math.abs(balanceDifference) <= tolerance && Object.values(movementChecks).every(value => Math.abs(value) <= tolerance) },
       movementChecks,
