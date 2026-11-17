@@ -161,4 +161,16 @@ const missingSalesBase = adapter.buildWorkingCapitalScheduleFromDrafts({
 assert.equal(missingSalesBase.valid, false)
 assert.ok(missingSalesBase.issues.some(issue => issue.includes('valid-period-sales-revenue-base-required')))
 
+
+const ignoredActivityBasis = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [{
+    id: 'manual-receivables', name: 'Receivables', category: 'receivables',
+    minimumDaysCoverage: null, turnoverCoefficient: null, calculationMode: 'value',
+    activityBasis: 'sales', valuationBasis: 'user-defined',
+    periodBalances: [{ period: '1', amount: 25 }, { period: '2', amount: 25 }],
+  }],
+}, periods, 0)
+assert.equal(ignoredActivityBasis.valid, false)
+assert.ok(ignoredActivityBasis.issues.some(issue => issue.includes('activity-basis-requires-days-coverage-driver')))
+
 console.log('Working-capital draft integration validation passed.')
