@@ -123,11 +123,14 @@ export function buildWorkingCapitalScheduleFromDrafts(
         driverBase = salesRevenueByPeriod
         driverBaseKind = 'sales-revenue'
       } else if (component.valuationBasis === 'cost-of-production' &&
-        (component.category === 'inventory' || component.category === 'work-in-progress' || component.category === 'payables') &&
+        (component.category === 'inventory' || component.category === 'work-in-progress' ||
+          component.category === 'finished-goods' || component.category === 'payables') &&
         component.activityBasis === 'production') {
         driverBase = driverBases.costOfProductionByPeriod
         driverBaseKind = 'period-cost'
-      } else if (component.valuationBasis === 'cost-of-sales' && component.category === 'payables' && component.activityBasis === 'sales') {
+      } else if (component.valuationBasis === 'cost-of-sales' &&
+        (component.category === 'finished-goods' || component.category === 'payables') &&
+        component.activityBasis === 'sales') {
         driverBase = driverBases.costOfSalesByPeriod
         driverBaseKind = 'period-cost'
       } else {
@@ -144,8 +147,15 @@ export function buildWorkingCapitalScheduleFromDrafts(
       const base = driverBase?.[periodIndex]
       if (base === undefined) return Number.NaN
       if (driverBaseKind === 'sales-revenue') return base * coverageDays / 360
-      const periodDays = periods[periodIndex]?.days
-      return Number.isFinite(periodDays) && periodDays > 0 ? base * coverageDays / periodDays : Number.NaN
+      const period = periods[periodIndex]
+      if(!period)return Number.NaN
+      const start = new Date(period.startDate + 'T00:00:00.000Z')
+      const end = new Date(period.endDate + 'T00:00:00.000Z')
+      if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<start)return Number.NaN
+      const periodBasisDays = period.partial
+        ? period.days
+        : ((end.getUTCFullYear()-start.getUTCFullYear())*12+end.getUTCMonth()-start.getUTCMonth()+1)*30
+      return Number.isFinite(periodBasisDays) && periodBasisDays > 0 ? base * coverageDays / periodBasisDays : Number.NaN
     }
     const resolved = new Map<number, number>()
     for (const balance of component.periodBalances) {
