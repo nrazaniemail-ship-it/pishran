@@ -78,8 +78,32 @@ export default function App() {
   const [calculatorOpen, setCalculatorOpen] = useState(false)
   const [calculatorExpression, setCalculatorExpression] = useState('')
   const [calculatorError, setCalculatorError] = useState('')
+  const [commandOpen, setCommandOpen] = useState(false)
+  const [commandQuery, setCommandQuery] = useState('')
+  const [focusMode, setFocusMode] = useState(false)
+  const [inspectorOpen, setInspectorOpen] = useState(true)
   const isEn = settings.language === 'en'
   const toggleLanguage = () => setSettings(current => ({ ...current, language: current.language === 'fa' ? 'en' : 'fa' }))
+  const modern = settings.uiMode === 'modern'
+  const navigation = [
+    { id: 'dashboard' as Page, label: isEn ? 'Overview' : 'نمای کلی', icon: LayoutDashboard },
+    { id: 'projects' as Page, label: isEn ? 'Projects' : 'پروژه‌ها', icon: FolderKanban },
+    { id: 'steel-group' as Page, label: isEn ? 'Steel value chain' : 'زنجیره فولاد', icon: Factory },
+    { id: 'guide' as Page, label: isEn ? 'Knowledge base' : 'راهنما', icon: BookOpen },
+    { id: 'settings' as Page, label: isEn ? 'Settings' : 'تنظیمات', icon: Settings },
+  ]
+  useEffect(() => {
+    if (!modern) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setCommandOpen(value => !value)
+      }
+      if (event.key === 'Escape') setCommandOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [modern])
 
   useEffect(() => {
     let alive = true
@@ -143,8 +167,20 @@ export default function App() {
     await refreshStorage()
   }
 
-  return <main className={`app-shell app-page-${page}`} dir={isEn?"ltr":"rtl"}>
+  return <main className={`app-shell app-page-${page} ${modern ? 'ui-modern' : 'ui-simple'} ${focusMode ? 'focus-mode' : ''}`} dir={isEn?"ltr":"rtl"}>
     <BackupScheduler/>
+    {modern && <aside className="modern-sidebar">
+      <div className="modern-brand"><span className="modern-brand-mark">P</span><div><b>{isEn ? 'Pishran' : 'پیشران'}</b><small>{isEn ? 'PROJECT INTELLIGENCE' : 'مدیریت هوشمند پروژه'}</small></div></div>
+      <button className="modern-search" type="button" onClick={() => setCommandOpen(true)}><span>⌕ {isEn ? 'Search commands...' : 'جستجو در پیشران...'}</span><kbd>Ctrl K</kbd></button>
+      <div className="modern-side-label">{isEn ? 'WORKSPACE' : 'فضای کاری'}</div>
+      <nav className="modern-side-nav">{navigation.map(item => <button key={item.id} className={page === item.id || (item.id === 'steel-group' && page === 'hot-rolling') ? 'active' : ''} onClick={() => setPage(item.id)}><item.icon size={17}/><span>{item.label}</span></button>)}</nav>
+      <div className="modern-side-label">{isEn ? 'PROJECT BROWSER' : 'مرورگر پروژه‌ها'}</div>
+      <div className="modern-project-tree"><div className="tree-root"><FolderKanban size={15}/><b>{isEn ? 'My projects' : 'پروژه‌های من'}</b><span>{projects.length}</span></div>
+        {projects.slice(0, 12).map(project => <button key={project.id} className={activeProject?.id === project.id ? 'selected' : ''} onClick={() => { setActiveProject({...project,templateId:'raw',steelStage:undefined}); setPage('project-wizard') }}><span className="tree-status"/><span>{project.name}</span></button>)}
+        {projects.length === 0 && <small className="tree-empty">{isEn ? 'No projects yet' : 'هنوز پروژه‌ای ثبت نشده است'}</small>}
+      </div>
+      <div className="modern-sidebar-bottom"><button onClick={() => setFocusMode(value => !value)}><Layers3 size={16}/>{focusMode ? (isEn ? 'Exit focus mode' : 'خروج از حالت تمرکز') : (isEn ? 'Focus mode' : 'حالت تمرکز')}</button><button onClick={() => setInspectorOpen(value => !value)}><ShieldCheck size={16}/>{isEn ? 'Context panel' : 'پنل جزئیات'}</button></div>
+    </aside>}
     <header className="topbar">
       <button className="language-switch page-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button>
       <div className="brand"><button className="brand-title" type="button" onClick={() => setPage('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
@@ -155,8 +191,10 @@ export default function App() {
         <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
         <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('settings')}><Settings size={17}/> {isEn ? "Settings" : "تنظیمات"}</button>
       </nav>
-      <div className="top-actions"></div>
+      <div className="top-actions">{modern && <><button className="modern-header-action" onClick={() => setCommandOpen(true)}>{isEn ? 'Quick actions' : 'دستورات سریع'} <kbd>Ctrl K</kbd></button><button className="modern-header-action" onClick={() => setPage('projects')}>{isEn ? 'New project' : 'پروژه جدید'} <Plus size={15}/></button><button className="modern-header-avatar">P</button></>}</div>
     </header>
+    {modern && <div className="modern-workspace-heading"><div><small>{isEn ? 'WORKSPACE' : 'فضای کاری'}</small><h1>{activeProject?.name ?? (isEn ? 'Investment workspace' : 'فضای کاری ارزیابی سرمایه‌گذاری')}</h1></div><div className="modern-live-status"><span/> {isEn ? 'Local data ready' : 'داده‌های محلی آماده‌اند'} <button onClick={() => setInspectorOpen(value => !value)}>{isEn ? 'Details' : 'جزئیات'}</button></div></div>}
+    <div className="modern-content-layout"><div className="modern-main-content">
 
     {page === 'dashboard' && <>
       <section className="hero">
@@ -218,6 +256,15 @@ export default function App() {
     {page === 'integrated-plant' && activeProject && <IntegratedSteelComplexWorkspace language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
     {page === 'process-plant' && activeProject && <ProcessPlantWorkspace language={settings.language} project={activeProject} plantType={activePlantType} onBack={() => setPage('projects')}/>} 
 
+    </div>
+    {modern && inspectorOpen && <aside className="modern-inspector"><div className="inspector-heading"><b>{isEn ? 'Context & details' : 'جزئیات و راهنما'}</b><button onClick={() => setInspectorOpen(false)}>×</button></div>
+      <section><small>{isEn ? 'CURRENT PROJECT' : 'پروژه انتخاب‌شده'}</small><b>{activeProject?.name ?? (isEn ? 'No project selected' : 'پروژه‌ای انتخاب نشده')}</b><p>{activeProject ? (isEn ? 'Project workspace is active.' : 'فضای کاری پروژه فعال است.') : (isEn ? 'Select a project from the browser to inspect its context.' : 'برای مشاهده جزئیات، پروژه‌ای را از مرورگر انتخاب کنید.')}</p></section>
+      <section><small>{isEn ? 'WORKSPACE STATUS' : 'وضعیت فضای کاری'}</small><div className="inspector-status"><span/> {isEn ? 'Local storage available' : 'ذخیره‌سازی محلی در دسترس'}</div><p>{isEn ? 'Project data uses the current storage layer.' : 'اطلاعات پروژه از لایه ذخیره‌سازی فعلی استفاده می‌کند.'}</p></section>
+      <section><small>{isEn ? 'QUICK HELP' : 'راهنمای سریع'}</small><button className="inspector-link" onClick={() => setPage('guide')}>{isEn ? 'Open user guide' : 'مشاهده راهنمای کاربر'} <BookOpen size={14}/></button></section>
+    </aside>}
+    </div>
+    {modern && <div className="modern-statusbar"><span><i/> {isEn ? 'Ready' : 'آماده'}</span><span>{isEn ? `${projects.length} projects` : `${projects.length.toLocaleString('fa-IR')} پروژه`}</span><span>{isEn ? 'Autosave enabled' : 'ذخیره‌سازی خودکار فعال'}</span><span>{isEn ? 'Calculations on demand' : 'محاسبه با فرمان کاربر'}</span></div>}
+    {modern && commandOpen && <div className="command-overlay" onMouseDown={event => { if (event.target === event.currentTarget) setCommandOpen(false) }}><section className="command-dialog"><div className="command-input-row"><span>⌕</span><input autoFocus value={commandQuery} onChange={event => setCommandQuery(event.target.value)} placeholder={isEn ? 'Search pages and actions...' : 'جستجوی صفحه و دستور...'} onKeyDown={event => { if (event.key === 'Enter') { const q=commandQuery.trim().toLocaleLowerCase(); const target=navigation.find(item => item.label.toLocaleLowerCase().includes(q) || item.id.includes(q)); if (target) setPage(target.id); else if (q.includes('new') || q.includes('جدید')) setPage('projects'); setCommandOpen(false); setCommandQuery('') } }}/><kbd>ESC</kbd></div><div className="command-results">{navigation.filter(item => !commandQuery || item.label.toLocaleLowerCase().includes(commandQuery.toLocaleLowerCase()) || item.id.includes(commandQuery.toLocaleLowerCase())).map(item => <button key={item.id} onClick={() => { setPage(item.id); setCommandOpen(false); setCommandQuery('') }}><item.icon size={16}/>{item.label}<span>↵</span></button>)}<button onClick={() => { setPage('projects'); setCommandOpen(false); setCommandQuery('') }}><Plus size={16}/>{isEn ? 'Create or open a project' : 'ایجاد یا بازکردن پروژه'}<span>↵</span></button></div></section></div>}
     <div className="floating-calculator" dir="ltr">
       {calculatorOpen && <section className="calculator-panel" aria-label={isEn ? 'Calculator' : 'ماشین حساب'}>
         <div className="calculator-heading"><b>{isEn ? 'Calculator' : 'ماشین حساب'}</b><button type="button" aria-label={isEn ? 'Close calculator' : 'بستن ماشین حساب'} onClick={() => setCalculatorOpen(false)}><X size={18}/></button></div>
