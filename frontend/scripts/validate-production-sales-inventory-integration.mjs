@@ -216,3 +216,47 @@ const brokenCarryForward=adapter.calculateFinishedGoodsWeightedAverageSchedule({
 assert.equal(brokenCarryForward.valid,false)
 assert.ok(brokenCarryForward.issues.some(issue=>issue.includes('non-empty and unique')))
 console.log('Finished-goods multi-period weighted-average roll-forward tests passed.')
+
+
+const fifoSchedule=adapter.calculateFinishedGoodsFifoSchedule({
+ openingQuantity:10,openingValue:1000,
+ periods:[
+  {period:'P1',productionQuantity:10,productionCost:1400,salesQuantity:12,closingQuantity:8},
+  {period:'P2',productionQuantity:12,productionCost:1800,salesQuantity:15,closingQuantity:5},
+ ]
+})
+assert.equal(fifoSchedule.valid,true,fifoSchedule.issues.join('; '))
+assert.equal(fifoSchedule.periods.length,2)
+assert.equal(fifoSchedule.periods[0].costOfGoodsSold,1280)
+assert.equal(fifoSchedule.periods[0].closingInventoryValue,1120)
+assert.equal(fifoSchedule.periods[1].openingQuantity,8)
+assert.equal(fifoSchedule.periods[1].openingValue,1120)
+assert.equal(fifoSchedule.periods[1].costOfGoodsSold,2170)
+assert.equal(fifoSchedule.periods[1].closingInventoryValue,750)
+assert.equal(fifoSchedule.closingQuantity,5)
+assert.equal(fifoSchedule.closingValue,750)
+
+const fifoDuplicatePeriods=adapter.calculateFinishedGoodsFifoSchedule({
+ openingQuantity:1,openingValue:100,
+ periods:[
+  {period:'P1',productionQuantity:0,productionCost:0,salesQuantity:0,closingQuantity:1},
+  {period:'P1',productionQuantity:0,productionCost:0,salesQuantity:0,closingQuantity:1},
+ ]
+})
+assert.equal(fifoDuplicatePeriods.valid,false)
+assert.ok(fifoDuplicatePeriods.issues.some(issue=>issue.includes('non-empty and unique')))
+
+const fifoInsufficientLayers=adapter.calculateFinishedGoodsFifoSchedule({
+ openingQuantity:1,openingValue:100,
+ periods:[{period:'P1',productionQuantity:0,productionCost:0,salesQuantity:2,closingQuantity:0}]
+})
+assert.equal(fifoInsufficientLayers.valid,false)
+assert.ok(fifoInsufficientLayers.issues.some(issue=>issue.includes('quantities do not reconcile')))
+
+const fifoValueWithoutQuantity=adapter.calculateFinishedGoodsFifoSchedule({
+ openingQuantity:0,openingValue:0,
+ periods:[{period:'P1',productionQuantity:0,productionCost:500,salesQuantity:0,closingQuantity:0}]
+})
+assert.equal(fifoValueWithoutQuantity.valid,false)
+assert.ok(fifoValueWithoutQuantity.issues.some(issue=>issue.includes('without production quantity')))
+console.log('Finished-goods multi-period FIFO layer valuation tests passed.')
