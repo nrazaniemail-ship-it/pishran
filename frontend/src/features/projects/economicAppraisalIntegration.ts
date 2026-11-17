@@ -81,7 +81,7 @@ export function bindEconomicAppraisalConfiguration(
   if(fcf!==null&&fcf!==undefined&&fcf!==''&&finite(oer)&&oer>0&&finite(ser)&&ser>0&&finite(fcf)&&Math.abs(fcf-ser/oer)>Math.max(0.000001,Math.abs(ser/oer)*0.01))
     issues.push('Foreign-currency conversion factor does not reconcile to the entered SER/OER ratio within 1%.')
   if(!finite(discount)||discount<0||discount>100)issues.push('Economic discount rate must be between 0% and 100%.')
-  if(typeof referenceDate!=='string'||!/^\\d{4}-\\d{2}-\\d{2}$/.test(referenceDate)||(()=>{if(typeof referenceDate!=='string')return true;const [y,m,d]=referenceDate.split('-').map(Number);const date=new Date(Date.UTC(y,m-1,d));return date.getUTCFullYear()!==y||date.getUTCMonth()!==m-1||date.getUTCDate()!==d})())
+  if(typeof referenceDate!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(referenceDate)||(()=>{if(typeof referenceDate!=='string')return true;const [y,m,d]=referenceDate.split('-').map(Number);const date=new Date(Date.UTC(y,m-1,d));return date.getUTCFullYear()!==y||date.getUTCMonth()!==m-1||date.getUTCDate()!==d})())
     issues.push('Economic reference date must be a valid ISO calendar date.')
   if(issues.length)return {valid:false,issues,configuration:null,status:'blocked'}
   return {
