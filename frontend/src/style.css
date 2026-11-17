@@ -1551,3 +1551,28 @@ input,select,textarea{color:var(--text)}
 .ui-modern .tree-status.status-active{background:var(--modern-success)}
 .ui-modern .tree-status.status-archived{background:var(--modern-muted);box-shadow:0 0 0 2px var(--modern-line)}
 .ui-modern .tree-project-wrap>button{min-height:34px}
+
+/* Modern report tables: filtering, sorting and spreadsheet/print actions. */
+.ui-modern .report-data-card{min-width:0}
+.ui-modern .report-table-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ui-modern .report-table-toolbar h4{margin:0;flex:1 1 180px}
+.ui-modern .report-table-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ui-modern .report-table-actions input{width:min(220px,100%);min-width:120px;border-radius:7px;font-size:11px}
+.ui-modern .report-table-actions select{min-width:120px;border-radius:7px;font-size:11px}
+.ui-modern .report-table-actions .secondary-button{min-height:34px;padding:6px 9px;font-size:10px}
+.ui-modern .report-table-scroll{max-height:min(62vh,680px);overflow:auto;border:1px solid var(--modern-line);border-radius:8px}
+.ui-modern .report-table-scroll table{min-width:680px}
+.ui-modern .report-table-scroll thead th{top:0}
+.ui-modern .report-table-scroll tbody td:first-child{font-weight:600}
+.ui-modern .report-table-footnote{margin-top:8px;color:var(--modern-muted);font-size:10px}
+@media(max-width:760px){.ui-modern .report-table-toolbar{align-items:stretch}.ui-modern .report-table-actions{width:100%}.ui-modern .report-table-actions input{flex:1}.ui-modern .report-table-actions select{flex:1}}
+@media print{
+ body *{visibility:hidden!important}
+ .report-data-card,.report-data-card *{visibility:visible!important}
+ .report-data-card{break-inside:avoid;border:0!important;box-shadow:none!important;margin:0 0 14px!important;padding:8px!important}
+ .report-table-actions,.report-table-footnote{display:none!important}
+ .report-table-scroll{max-height:none!important;overflow:visible!important;border:0!important}
+ .report-table-scroll table{min-width:0!important;font-size:8pt!important}
+ .report-table-scroll thead th{position:static!important}
+ .report-table-scroll th,.report-table-scroll td{padding:4px!important}
+}
