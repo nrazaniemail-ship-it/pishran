@@ -29,3 +29,6 @@ The working-capital days-coverage adapter currently supports sales-based receiva
 
 
 Discount temporal reference points are now mapped to the first project period's start or end date. A temporal reference point and explicit reference date are mutually exclusive. Short NPV horizon remains blocked until a dedicated truncated-horizon metric is implemented.
+
+
+A standalone weighted-average finished-goods cost-flow primitive has now been added and regression-tested. It requires explicit opening quantity/value, period production quantity/cost, sales quantity and closing quantity; it reconciles both the quantity equation and the value equation (available cost = cost of goods sold + closing inventory value). It rejects negative/non-finite inputs, unexplained inventory value without quantity and quantity mismatches. This primitive is not yet connected to the production-cost adapter or the periodic statement engine, and it does not establish FIFO, specific identification, indirect-cost allocation, or opening inventory value capture in the raw form. The existing fail-closed inventory guard therefore remains in force until those integrations and end-to-end statement postings are complete.
