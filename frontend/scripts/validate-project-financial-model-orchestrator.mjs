@@ -66,6 +66,8 @@ currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'tax-allowances','usd-inve
 currencyHelp=helpForms.addHelpFormRow(currencyHelp,'cost-centres','factory-centre')
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','name','Factory')
 currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','group','production')
+currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','level','unit')
+currencyHelp=helpForms.updateHelpFormRow(currencyHelp,'cost-centres','factory-centre','productIds','finished-product,by-product')
 const foundation={
  schemaVersion:1,
  planning:{periodFrequency:'annual',projectStartDate:'2025-01-01',projectEndDate:'2026-12-31',fiscalYearStartMonth:1,balanceDateMonth:12,balanceDateDay:31,dayCountBasis:365,valuationDate:'2025-01-01',discountConvention:'actual-days',cashFlowTiming:'period-end'},
@@ -104,6 +106,9 @@ assert.deepEqual(foundationBinding.foundation.currencies.foreignCurrencies[0].ex
 ])
 assert.equal(foundationBinding.foundation.costCentres.active,true)
 assert.equal(foundationBinding.foundation.costCentres.items[0].name,'Factory')
+assert.equal(foundationBinding.foundation.costCentres.items[0].group,'production')
+assert.equal(foundationBinding.foundation.costCentres.items[0].level,'unit')
+assert.deepEqual(foundationBinding.foundation.costCentres.items[0].productIds,['finished-product','by-product'])
 assert.deepEqual(foundationBinding.foundation.inflation.indices[0].rates,[
  {period:'1',ratePercent:0},{period:'2',ratePercent:5},
 ])
