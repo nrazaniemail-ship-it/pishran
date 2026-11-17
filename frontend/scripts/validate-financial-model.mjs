@@ -78,6 +78,8 @@ const annualDepositModel=engine.calculateIntegratedFinance({
 near(annualDepositModel.years[1].shortTermDepositInterest,6,1e-9,'Annual integrated model deposit interest')
 near(annualDepositModel.years[1].taxableProfit,66,1e-9,'Deposit interest included in taxable profit')
 near(annualDepositModel.years[1].cfads,-34,1e-9,'Deposit interest included in CFADS')
+near(annualDepositModel.presentValueInvestment,100/1.1,1e-9,'COMFAR PVI discounts fixed investment and positive NWC increments')
+near(annualDepositModel.npvrProject,annualDepositModel.npvProject/(100/1.1),1e-9,'COMFAR NPVR = NPV / PVI')
 const annualDepositStatements=engine.buildThreeFinancialStatements(annualDepositModel.years)
 near(annualDepositStatements[1].incomeStatement.profitBeforeTax,66,1e-9,'Deposit interest included in annual income statement')
 near(annualDepositStatements[1].balanceSheet.cashInHand,50,1e-9,'Cash-in-hand net of short-term deposits')
