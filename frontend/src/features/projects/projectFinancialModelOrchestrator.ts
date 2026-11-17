@@ -514,7 +514,7 @@ export function calculateProjectFinancialModelFromDrafts(
     const componentOpeningBalances=effectiveDrafts.workingCapital.map(component=>component.openingBalance)
     if(input.openingWorkingCapital==null&&detailedOpeningNwc===undefined&&rawOpeningNwcFromRows===undefined&&componentOpeningBalances.some(value=>!Number.isFinite(value)||value!<0))
       return fail(['Every working-capital component requires an explicit non-negative opening balance.'])
-    const openingWorkingCapital=input.openingWorkingCapital??detailedOpeningNwc??rawOpeningNwcFromRows??effectiveDrafts.workingCapital.reduce((sum,component)=>{
+    const openingWorkingCapital=input.openingWorkingCapital??detailedOpeningNwc??rawOpeningNwcFromRows??input.openingBalances.netWorkingCapital??effectiveDrafts.workingCapital.reduce((sum,component)=>{
       const liability=component.category==='payables'||component.category==='other-current-liability'
       return sum+(liability?-1:1)*(component.openingBalance??0)
     },0)
