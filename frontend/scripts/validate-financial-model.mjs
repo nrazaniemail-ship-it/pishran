@@ -80,6 +80,8 @@ near(annualDepositModel.years[0].taxableProfit,66,1e-9,'Deposit interest include
 near(annualDepositModel.years[0].cfads,-34,1e-9,'Deposit interest included in CFADS')
 const annualDepositStatements=engine.buildThreeFinancialStatements(annualDepositModel.years)
 near(annualDepositStatements[0].incomeStatement.profitBeforeTax,66,1e-9,'Deposit interest included in annual income statement')
+near(annualDepositStatements[0].balanceSheet.cashInHand,50,1e-9,'Cash-in-hand net of short-term deposits')
+near(annualDepositStatements[0].balanceSheet.shortTermDeposits,50,1e-9,'Short-term deposits shown separately on balance sheet')
 near(engine.calculateWorkingCapitalTurnoverCoefficient(540),2/3,1e-9,'COMFAR Coto for coverage above one year')
 
 
