@@ -435,6 +435,12 @@ export function calculateProjectFinancialModelFromDrafts(
     ?openingDraft.inventory!+openingDraft.workInProgress!+openingDraft.finishedGoods!+openingDraft.receivables!+
       openingDraft.otherCurrentAssets!-openingDraft.tradePayables!-openingDraft.otherCurrentLiabilities!
     :undefined
+  // A separately supplied opening NWC must agree with the detailed opening balance sheet.
+  // Otherwise the model would start its working-capital schedule from one balance while
+  // the linked statements start from another, creating a hidden opening-period mismatch.
+  if(detailedOpeningNwc!==undefined&&input.openingWorkingCapital!==undefined&&input.openingWorkingCapital!==null&&
+    Math.abs(detailedOpeningNwc-input.openingWorkingCapital)>0.01)
+    return fail(['Explicit opening working capital does not reconcile to the detailed opening balance sheet.'])
 
   if(effectiveDrafts.sales.length||effectiveDrafts.productionCosts.length) {
     const openingFinishedGoodsByProduct=input.openingFinishedGoodsByProduct??Object.fromEntries(effectiveDrafts.sales.map(product=>[product.productId,product.openingFinishedGoodsQuantity??Number.NaN]))
