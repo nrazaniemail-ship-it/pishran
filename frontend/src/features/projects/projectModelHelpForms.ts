@@ -456,7 +456,7 @@ export function validateHelpDrivenProjectForms(value:HelpDrivenProjectForms):str
     errors.push('currencies:accounting-currency-must-be-local:'+code)
   }
  }
- const currencySections=['fixed-investment','preproduction-expenditure','production-costs','equity-grants','loan-conditions','loan-fees','tax-allowances']
+ const currencySections=['fixed-investment','preproduction-expenditure','production-costs','equity-grants','loan-conditions','loan-fees','tax-allowances','depreciation-adjustments']
  for(const sectionId of currencySections){
   for(const [index,row] of (value.sections?.[sectionId]??[]).entries()){
    const raw=row.values.currency
