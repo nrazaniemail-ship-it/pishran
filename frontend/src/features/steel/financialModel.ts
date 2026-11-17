@@ -1516,7 +1516,7 @@ export type FinancialStatementYear = {
   movementChecks: { cash: number; debt: number; netFixedAssets: number; workingCapital: number; preOperatingAssets: number; paidInCapital: number; retainedEarnings: number }
   incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; otherIncomeLoss: number; ebit: number; shortTermDepositInterest: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
   cashFlowStatement: { operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number; netChangeInCash: number; closingCash: number }
-  balanceSheet: { cash: number; workingCapitalAssets: number; netFixedAssets: number; deferredPreOperatingAssets: number; totalAssets: number; tradePayables: number; debt: number; totalLiabilities: number; paidInCapital: number; retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number; balanceDifference: number; reconciled: boolean }
+  balanceSheet: { cash: number; cashInHand: number; shortTermDeposits: number; workingCapitalAssets: number; netFixedAssets: number; deferredPreOperatingAssets: number; totalAssets: number; tradePayables: number; debt: number; totalLiabilities: number; paidInCapital: number; retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number; balanceDifference: number; reconciled: boolean }
 }
 
 /** Builds linked annual P&L, cash flow and balance sheet; never forces the balance sheet to balance with a plug. */
@@ -1551,6 +1551,8 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
       (row.workingCapitalBreakdown.spareParts ?? 0) + row.workingCapitalBreakdown.workInProgress +
       row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables +
       row.workingCapitalBreakdown.minimumCash
+    const shortTermDeposits = row.workingCapitalBreakdown.shortTermDeposits ?? 0
+    const cashInHand = Math.max(0, row.workingCapitalBreakdown.minimumCash - shortTermDeposits)
     const tradePayables = row.workingCapitalBreakdown.payables
     const netWorkingCapital = currentAssets - tradePayables
     const netFixedAssets = cumulativeGrossFixedAssets - accumulatedDepreciation - cumulativeBookValueDisposed
@@ -1596,7 +1598,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
         closingCash: row.cashBalance,
       },
       balanceSheet: {
-        cash: row.cashBalance, workingCapitalAssets: currentAssets, netFixedAssets,
+        cash: row.cashBalance, cashInHand, shortTermDeposits, workingCapitalAssets: currentAssets, netFixedAssets,
         deferredPreOperatingAssets, totalAssets, tradePayables, debt: row.debtBalance,
         totalLiabilities, paidInCapital, retainedEarnings, totalEquity,
         totalLiabilitiesAndEquity, balanceDifference,
