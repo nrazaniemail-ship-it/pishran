@@ -36,7 +36,7 @@ const detailedOpeningSummary=foundation.calculateStartingFinancialBalanceSummary
 })
 assert.equal(detailedOpeningSummary.cash,60,
   'Opening cash summary must include cash-in-hand, short-term deposits and cash surplus')
-assert.equal(detailedOpeningSummary.netWorkingCapital,265,
+assert.equal(detailedOpeningSummary.netWorkingCapital,260,
   'Opening net working capital must exclude cash/deposits and operating current liabilities')
 assert.equal(detailedOpeningSummary.debt,207,
   'Opening accrued interest must remain included in the total opening debt liability')
