@@ -7,6 +7,37 @@ export type PeriodTaxResult = {
   closingLossCarryForward: number
 }
 
+type TaxLossLot = { amount: number; originFiscalYear: number }
+
+/** FIFO loss carry-forward with COMFAR's maximum age measured in fiscal years. */
+function applyTaxLossCarryForward(
+  taxableProfitBeforeLoss: number,
+  lots: TaxLossLot[],
+  fiscalYearIndex: number,
+  carryForwardYears: number | null | undefined,
+  consumeLosses: boolean,
+): { taxableProfitAfterLoss: number; closingLossCarryForward: number } {
+  const active = lots.filter(lot => carryForwardYears == null || fiscalYearIndex - lot.originFiscalYear <= carryForwardYears)
+  let taxableProfitAfterLoss = taxableProfitBeforeLoss
+  if (taxableProfitBeforeLoss < 0) {
+    active.push({ amount: -taxableProfitBeforeLoss, originFiscalYear: fiscalYearIndex })
+    taxableProfitAfterLoss = 0
+  } else if (consumeLosses) {
+    let remainingProfit = taxableProfitBeforeLoss
+    active.sort((a,b) => a.originFiscalYear-b.originFiscalYear)
+    for (const lot of active) {
+      const used = Math.min(lot.amount, remainingProfit)
+      lot.amount -= used
+      remainingProfit -= used
+      if (remainingProfit <= 0) break
+    }
+    taxableProfitAfterLoss = remainingProfit
+  }
+  const retained = active.filter(lot => lot.amount > 1e-9)
+  lots.splice(0,lots.length,...retained)
+  return { taxableProfitAfterLoss, closingLossCarryForward: retained.reduce((sum,lot)=>sum+lot.amount,0) }
+}
+
 function validFinite(value: number): boolean {
   return Number.isFinite(value)
 }
@@ -642,6 +673,8 @@ export type PeriodicProjectFinanceInput = {
   taxBrackets?: PeriodTaxBracket[]
   /** Number of production fiscal years exempt from corporate income tax. */
   taxHolidayYears?: number
+  /** Maximum number of subsequent fiscal years in which an annual loss remains available; null/undefined means no expiry. */
+  lossCarryForwardYears?: number | null
   /** Zero-based fiscal-year index in which commercial production begins. */
   productionStartFiscalYear?: number
   annualEquityContributions: number[]
@@ -944,6 +977,10 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Period-specific tax-rate schedule must contain one rate from 0% to 100% for every project period.')
     return empty()
   }
+  if (input.lossCarryForwardYears != null && (!Number.isInteger(input.lossCarryForwardYears) || input.lossCarryForwardYears < 0)) {
+    warnings.push('Loss carry-forward years must be a non-negative integer or blank for no expiry.')
+    return empty()
+  }
   if (input.taxBrackets) {
     const probe = calculateGraduatedPeriodTax(1, 0, input.taxBrackets)
     if (!validFinite(probe.tax)) {
@@ -1102,22 +1139,24 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       // holiday does not consume losses carried into taxable production years.
       closingLossCarryForward: profit < 0 ? openingLoss - profit : openingLoss,
     })
+    const taxAdjusted = applyTaxLossCarryForward(ebit - interestExpense,taxLossLots,fiscalYearIndex,input.lossCarryForwardYears,!taxHolidayActive)
+    const unleveredTaxAdjusted = applyTaxLossCarryForward(ebit,unleveredTaxLossLots,fiscalYearIndex,input.lossCarryForwardYears,!taxHolidayActive)
     const periodTax = taxHolidayActive
-      ? taxDuringHoliday(ebit - interestExpense, taxLoss)
+      ? {taxableProfitAfterLoss:taxAdjusted.taxableProfitAfterLoss,tax:0,closingLossCarryForward:taxAdjusted.closingLossCarryForward}
       : input.taxBrackets
-        ? calculateGraduatedPeriodTax(ebit - interestExpense, taxLoss, input.taxBrackets)
-        : calculatePeriodTax(ebit - interestExpense, taxRates[index], taxLoss)
+        ? calculateGraduatedPeriodTax(taxAdjusted.taxableProfitAfterLoss,0,input.taxBrackets)
+        : calculatePeriodTax(taxAdjusted.taxableProfitAfterLoss,taxRates[index],0)
     const unleveredPeriodTax = taxHolidayActive
-      ? taxDuringHoliday(ebit, unleveredTaxLoss)
+      ? {taxableProfitAfterLoss:unleveredTaxAdjusted.taxableProfitAfterLoss,tax:0,closingLossCarryForward:unleveredTaxAdjusted.closingLossCarryForward}
       : input.taxBrackets
-        ? calculateGraduatedPeriodTax(ebit, unleveredTaxLoss, input.taxBrackets)
-        : calculatePeriodTax(ebit, taxRates[index], unleveredTaxLoss)
+        ? calculateGraduatedPeriodTax(unleveredTaxAdjusted.taxableProfitAfterLoss,0,input.taxBrackets)
+        : calculatePeriodTax(unleveredTaxAdjusted.taxableProfitAfterLoss,taxRates[index],0)
     if (![periodTax.tax,unleveredPeriodTax.tax].every(validFinite)) {
       warnings.push('Tax calculation failed in project period ' + (index + 1) + '.')
       return empty()
     }
-    taxLoss = periodTax.closingLossCarryForward
-    unleveredTaxLoss = unleveredPeriodTax.closingLossCarryForward
+    const taxLoss = taxAdjusted.closingLossCarryForward
+    const unleveredTaxLoss = unleveredTaxAdjusted.closingLossCarryForward
     const closingWorkingCapital = input.workingCapitalByPeriod[index]
     const changeInWorkingCapital = closingWorkingCapital - priorWorkingCapital
     const equityWorkingCapitalContributionAmount = input.annualEquityWorkingCapitalContributions
