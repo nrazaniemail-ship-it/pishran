@@ -1,4 +1,4 @@
-import { type PeriodicProjectFinanceInput, type PeriodicStatementOpeningBalances } from '../steel/periodicFinancialEngine'
+import { allocateAnnualFlowsToPeriods, type PeriodicProjectFinanceInput, type PeriodicStatementOpeningBalances } from '../steel/periodicFinancialEngine'
 import type { ProjectFoundation, ProjectCalendarPeriod } from './projectFoundation'
 import type { HelpFormRow } from './projectModelHelpForms'
 
@@ -55,6 +55,7 @@ export function bindStartingBalancesToPeriodicFinance(input:{
   const openingRatePeriod=input.periods[0]
   let openingAssets=0,openingLiabilitiesAndEquity=0
   const annualDepreciation=[...input.finance.annualDepreciation]
+  const incrementalAnnualDepreciation=Array(annualDepreciation.length).fill(0) as number[]
   for(const row of input.rows){
     const v=row.values
     const category=typeof v.category==='string'?v.category:''
@@ -104,7 +105,11 @@ export function bindStartingBalancesToPeriodicFinance(input:{
             const annualCharge=amountLocal/v.remainingLife
             for(let year=0;year<annualDepreciation.length;year++){
               const fraction=Math.min(1,Math.max(0,v.remainingLife-year))
-              if(fraction>0)annualDepreciation[year]+=annualCharge*fraction
+              if(fraction>0){
+                const charge=annualCharge*fraction
+                annualDepreciation[year]+=charge
+                incrementalAnnualDepreciation[year]+=charge
+              }
             }
           }
         }
@@ -145,5 +150,13 @@ export function bindStartingBalancesToPeriodicFinance(input:{
     issues.push('Translated opening balances do not reconcile: assets minus liabilities and equity equals '+balanceDifference.toFixed(2)+'.')
   if(issues.length)return fail()
   financeInput.annualDepreciation=annualDepreciation
+  if(input.finance.periodDepreciationSchedule){
+    const allocatedOpeningDepreciation=allocateAnnualFlowsToPeriods(incrementalAnnualDepreciation,input.periods,input.finance.fiscalYearStartMonth)
+    if(allocatedOpeningDepreciation.length!==input.periods.length||allocatedOpeningDepreciation.some(value=>!Number.isFinite(value))){
+      issues.push('Opening fixed-asset depreciation could not be allocated to the project calendar.')
+      return fail()
+    }
+    financeInput.periodDepreciationSchedule=input.finance.periodDepreciationSchedule.map((value,index)=>value+allocatedOpeningDepreciation[index])
+  }
   return {valid:true,issues:[],openingBalances,financeInput,translatedRows,openingAssets,openingLiabilitiesAndEquity}
 }
