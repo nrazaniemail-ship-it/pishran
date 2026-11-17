@@ -100,6 +100,18 @@ export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPoli
   return { rawMaterials, factorySupplies, utilities, energy, spareParts, workInProgress, finishedGoods, receivables, minimumCash, payables, netWorkingCapital: rawMaterials + factorySupplies + utilities + energy + spareParts + workInProgress + finishedGoods + receivables + minimumCash - payables }
 }
 
+/** COMFAR's working-capital turnover coefficient: Coto = day basis / minimum days coverage. */
+export function calculateWorkingCapitalTurnoverCoefficient(minimumDaysCoverage: number, dayBasis: 360 | 365 = 360): number | null {
+  if (!Number.isFinite(minimumDaysCoverage) || minimumDaysCoverage < 0 || (dayBasis !== 360 && dayBasis !== 365)) return Number.NaN
+  return minimumDaysCoverage === 0 ? null : dayBasis / minimumDaysCoverage
+}
+
+/** Inverse of the COMFAR turnover coefficient relation: Mdc = day basis / Coto. */
+export function calculateMinimumDaysCoverageFromTurnover(turnoverCoefficient: number, dayBasis: 360 | 365 = 360): number | null {
+  if (!Number.isFinite(turnoverCoefficient) || turnoverCoefficient < 0 || (dayBasis !== 360 && dayBasis !== 365)) return Number.NaN
+  return turnoverCoefficient === 0 ? null : dayBasis / turnoverCoefficient
+}
+
 export function calculateCashConversionCycleDays(policy: Pick<WorkingCapitalPolicy, 'dayBasis' | 'rawMaterialDays' | 'workInProgressDays' | 'finishedGoodsDays' | 'receivableDays' | 'payableDays'>) {
   const values = [policy.rawMaterialDays, policy.workInProgressDays, policy.finishedGoodsDays, policy.receivableDays, policy.payableDays]
   if (!Number.isFinite(policy.dayBasis) || policy.dayBasis <= 0 || !values.every(Number.isFinite) || values.some(value => value < 0)) return Number.NaN
