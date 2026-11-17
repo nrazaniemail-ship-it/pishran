@@ -353,6 +353,24 @@ assert.deepEqual(fifoInventoryCostModel.financeInput.finishedGoodsInventoryValue
 assert.deepEqual(fifoInventoryCostModel.finalRun.statements.map(row=>row.balanceSheet.netWorkingCapital),[500,240])
 assert.ok(fifoInventoryCostModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 
+const combinedInventoryComponentDrafts={
+ ...inventoryCostDrafts,
+ workingCapital:[{id:'finished-goods',name:'Finished goods',category:'finished-goods',openingBalance:0,
+  minimumDaysCoverage:null,turnoverCoefficient:null,calculationMode:'value',activityBasis:'production',
+  valuationBasis:'user-defined',periodBalances:[{period:'1',amount:600},{period:'2',amount:320}]}],
+}
+const combinedInventoryFinance={...finance,finishedGoodsInventoryValueByPeriod:[100,100]}
+const combinedInventoryModel=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance:combinedInventoryFinance,drafts:combinedInventoryComponentDrafts,foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(combinedInventoryModel.valid,true,combinedInventoryModel.issues.join('; '))
+assert.deepEqual(combinedInventoryModel.financeInput.finishedGoodsInventoryValueByPeriod,[0,0])
+assert.deepEqual(combinedInventoryModel.financeInput.workingCapitalByPeriod,[600,320])
+assert.deepEqual(combinedInventoryModel.finalRun.statements.map(row=>row.balanceSheet.netWorkingCapital),[600,320])
+assert.ok(combinedInventoryModel.finalRun.statements.every(row=>row.balanceSheet.reconciled))
+
 const mismatchedWorkingCapitalOpening=orchestrator.calculateProjectFinancialModelFromDrafts({
  finance,drafts:{...drafts,workingCapital:drafts.workingCapital.map(component=>({...component,openingBalance:25}))},
  foundation,productionStartDate:'2025-01-01',
