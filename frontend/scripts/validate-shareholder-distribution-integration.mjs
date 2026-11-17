@@ -14,6 +14,7 @@ let integrationOutput=await transpile('../src/features/projects/shareholderDistr
 integrationOutput=integrationOutput.replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl))
 const integration=await import(url(integrationOutput))
 const forms=await import(formsUrl)
+const financeInput={periods:[{index:1,startDate:'2025-01-01',endDate:'2025-12-31',days:365,partial:false}],fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',annualRevenue:[0],annualVariableCost:[0],annualFixedCost:[0],annualDepreciation:[0],annualFixedInvestment:[0],annualPreOperatingCost:[0],annualMaintenanceCapex:[0],annualTaxRates:[20],annualEquityContributions:[20],workingCapitalByPeriod:[0],loans:[],discountRatePercent:10,equityDiscountRatePercent:10}
 
 let help=forms.createBlankHelpDrivenProjectForms()
 help=forms.addHelpFormRow(help,'profit-distribution','distribution-period-1')
@@ -49,7 +50,7 @@ const statement={
 statement.balanceSheet.totalAssets=340
 statement.balanceSheet.balanceDifference=0
 statement.balanceSheet.reconciled=true
-const result=integration.applyShareholderDistributions(finance,[statement],help)
+const result=integration.applyShareholderDistributions(finance,[statement],help,financeInput)
 assert.equal(result.valid,true,result.issues.join('; '))
 assert.equal(result.periods[0].profitAvailable,120)
 assert.equal(result.periods[0].totalDividend,72)
@@ -64,7 +65,7 @@ assert.equal(result.statements[0].balanceSheet.balanceDifference,0)
 assert.equal(result.statements[0].balanceSheet.reconciled,true)
 
 const terminalHelp=forms.updateHelpFormRow(help,'profit-distribution','distribution-period-1','netWorthDistribution',10)
-const terminalResult=integration.applyShareholderDistributions(finance,[statement],terminalHelp)
+const terminalResult=integration.applyShareholderDistributions(finance,[statement],terminalHelp,financeInput)
 assert.equal(terminalResult.valid,true,terminalResult.issues.join('; '))
 assert.equal(terminalResult.periods[0].terminalNetWorthDistribution,10.8)
 assert.equal(terminalResult.periods[0].capitalRefund,20.8)
@@ -72,7 +73,7 @@ assert.equal(terminalResult.periods[0].closingCash,137.2)
 assert.equal(terminalResult.statements[0].balanceSheet.balanceDifference,0)
 
 const invalid=forms.updateHelpFormRow(help,'profit-distribution','distribution-period-1','distributedPercent',70)
-const invalidResult=integration.applyShareholderDistributions(finance,[statement],invalid)
+const invalidResult=integration.applyShareholderDistributions(finance,[statement],invalid,financeInput)
 assert.equal(invalidResult.valid,false)
 assert.ok(invalidResult.issues.some(issue=>issue.includes('sum to 100%')))
 
@@ -80,7 +81,7 @@ let capitalOnly=forms.createBlankHelpDrivenProjectForms()
 capitalOnly=forms.addHelpFormRow(capitalOnly,'joint-venture','new-partner')
 for(const [key,value] of Object.entries({name:'New investor',type:'ordinary-shareholder',period:'1',paidIn:25}))
  capitalOnly=forms.updateHelpFormRow(capitalOnly,'joint-venture','new-partner',key,value)
-const capitalResult=integration.applyShareholderDistributions(finance,[statement],capitalOnly)
+const capitalResult=integration.applyShareholderDistributions(finance,[statement],capitalOnly,financeInput)
 assert.equal(capitalResult.valid,true,capitalResult.issues.join('; '))
 assert.equal(capitalResult.finance.rows[0].equityContribution,45)
 assert.equal(capitalResult.finance.rows[0].equityFreeCashFlow,105)
