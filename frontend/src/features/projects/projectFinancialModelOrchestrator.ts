@@ -514,7 +514,17 @@ export function calculateProjectFinancialModelFromDrafts(
   if(!shareholderDistribution.valid)return {
     valid:false,issues:shareholderDistribution.issues,financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,
   }
-  finalRun={...finalRun,finance:shareholderDistribution.finance,statements:shareholderDistribution.statements}
+  const adjustedFxPosting=finalRun.fxPosting?{
+    ...finalRun.fxPosting,
+    statements:finalRun.fxPosting.statements.map((statement,index)=>({
+      ...shareholderDistribution.statements[index],
+      incomeStatement:{
+        ...shareholderDistribution.statements[index].incomeStatement,
+        foreignExchangeGainLoss:statement.incomeStatement.foreignExchangeGainLoss,
+      },
+    })),
+  }:null
+  finalRun={...finalRun,finance:shareholderDistribution.finance,statements:shareholderDistribution.statements,fxPosting:adjustedFxPosting}
   const incrementalAnalysis=calculateIncrementalAnalysis(effectiveDrafts.helpDriven,finance)
   if(incrementalAnalysis.issues.length)return fail(incrementalAnalysis.issues)
   const sensitivitySearches:{rowId:string;alternative:string;result:PeriodicTargetSearchResult}[]=[]
