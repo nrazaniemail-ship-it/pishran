@@ -8,12 +8,12 @@ const createBlankCommonFinancialItemMetadata=():CommonFinancialItemMetadata=>({d
 
 export type DepreciationMethod='linear-to-zero'|'linear-to-scrap'|'accelerated-declining-balance'|'sum-of-years-digits'
 export type FixedAssetFormDraft={
- id:string; metadata:CommonFinancialItemMetadata; acquisitionPeriods:{period:string;quantity:number|null;unitPrice:number|null;total:number|null}[]
+ id:string; assetClass?:'fixed'|'preproduction'; metadata:CommonFinancialItemMetadata; acquisitionPeriods:{period:string;quantity:number|null;unitPrice:number|null;total:number|null}[]
  depreciation:{method:DepreciationMethod|null;startMode:'production-start'|'specified-date'|null;startDate:string;firstDepreciationYearMonths:number|null;ratePercent:number|null;usefulLifeMonths:number|null;salvagePercent:number|null}
  disposal:{date:string;proceeds:number|null}|null
 }
 export function createBlankFixedAssetFormDraft(id=''):FixedAssetFormDraft{return{
- id,metadata:createBlankCommonFinancialItemMetadata(),acquisitionPeriods:[],
+ id,assetClass:'fixed',metadata:createBlankCommonFinancialItemMetadata(),acquisitionPeriods:[],
  depreciation:{method:null,startMode:null,startDate:'',firstDepreciationYearMonths:null,ratePercent:null,usefulLifeMonths:null,salvagePercent:null},disposal:null
 }}
 
