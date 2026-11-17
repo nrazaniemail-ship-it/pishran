@@ -81,6 +81,7 @@ export function calculateIncrementalAnalysis(
     precomputedLoanSchedules: undefined,
     annualEquityContributions: finance.periods.map(() => 0),
     annualEquityWorkingCapitalContributions: undefined,
+    periodIncrementalAdjustments: undefined,
   }
   const baseRun = calculateIntegratedPeriodicFinance(baseInput)
   if (!baseRun.valid) return { results: [], issues: ['Incremental analysis base-case tax and cash-flow calculation failed: ' + baseRun.warnings.join(' ')] }
