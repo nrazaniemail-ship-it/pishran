@@ -93,7 +93,7 @@ export function bindFixedAssetDraftsToPeriodicFinance(input:{
         :asset.depreciation.startMode==='production-start'?productionStartDate:undefined
       const method=asset.depreciation.method?methodMap[asset.depreciation.method]:'none'
       assets.push({
-        id:vintage.id,name:asset.metadata.description||asset.id,assetClass:'fixed',
+        id:vintage.id,name:asset.metadata.description||asset.id,assetClass:asset.assetClass??'fixed',
         originalValue:vintage.value,initialBookValue:vintage.value,
         scrapPercent:asset.depreciation.method==='linear-to-zero'?0:(asset.depreciation.salvagePercent??0),
         lengthYears:Math.floor(usefulMonths/12),lengthMonths:usefulMonths%12,
