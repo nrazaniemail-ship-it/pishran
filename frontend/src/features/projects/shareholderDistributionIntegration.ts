@@ -119,11 +119,13 @@ export function applyShareholderDistributions(
   let paidIn=statements[0].openingBalances.paidInCapital
   const partnerCapitalBalances=new Map<string,number>()
   for(let i=0;i<finance.rows.length;i++){
-    const row=updatedFinance.rows[i], statement=updatedStatements[i]
+    let row=updatedFinance.rows[i]
+    const statement=updatedStatements[i]
     const newPartnerContribution=contributions.get(i)??0
     if(newPartnerContribution>0){
       updatedFinance.rows[i]={...row,equityContribution:row.equityContribution+newPartnerContribution,equityFreeCashFlow:row.equityFreeCashFlow+newPartnerContribution}
       updatedFinance.totalEquityContribution+=newPartnerContribution
+      row=updatedFinance.rows[i]
       statement.cashFlowStatement.financingCashFlow+=newPartnerContribution
       statement.cashFlowStatement.netChangeInCash+=newPartnerContribution
       statement.cashFlowStatement.closingCash+=newPartnerContribution
@@ -148,6 +150,8 @@ export function applyShareholderDistributions(
     let preferredDividend=0
     const preferredAllocations:{shareholderClass:string;amount:number}[]=[]
     for(const partner of preferredRows){
+      const partnerPeriod=partner.values.period
+      if(typeof partnerPeriod==='string'&&partnerPeriod.trim()&&periodIndex(partnerPeriod)!==i)continue
       const partnerKey=String(partner.values.name??partner.id).trim()||partner.id
       const contribution=partnerContributions.get(partnerKey)?.get(i)??0
       const basis=(partnerCapitalBalances.get(partnerKey)??0)+contribution
