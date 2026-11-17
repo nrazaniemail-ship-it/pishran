@@ -19,18 +19,15 @@ export interface FeasibilityProject {
 
 const PROJECTS_KEY = 'projects:list:v1'
 
-
-
 export async function listProjects(): Promise<FeasibilityProject[]> {
   return (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
 }
 
-export async function createProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'location'> & { templateId?: 'raw' }): Promise<FeasibilityProject> {
+export async function createProject(input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'steelStage' | 'capacity' | 'location' | 'templateId'>): Promise<FeasibilityProject> {
   const projects = await listProjects()
   const now = new Date().toISOString()
   const project: FeasibilityProject = {
     ...input,
-    templateId: 'raw',
     id: crypto.randomUUID?.() ?? `project-${Date.now()}`,
     status: 'draft',
     createdAt: now,
@@ -55,37 +52,42 @@ export async function deleteProject(id: string): Promise<void> {
 }
 
 /**
- * Remove built-in demonstration projects and their project-specific draft data.
- * Migrate every surviving project to the single raw template while preserving
- * user-entered model drafts and removing legacy stage-specific routing metadata.
+ * One-time cleanup of retired legacy project records.
+ * Hash-only identifiers avoid retaining the old project labels in source code.
  */
-export async function removeSampleProjects(): Promise<FeasibilityProject[]> {
-  const projects = await listProjects()
-  // Retire legacy stage-specific sample records without retaining project-specific identifiers.
-  const remaining = projects.filter(project => project.templateId === 'raw' && !project.steelStage)
-  if (remaining.length !== projects.length) await localStore.set(PROJECTS_KEY, remaining)
-  const retainedIds = new Set(remaining.map(project => project.id))
-  const [projectDrafts, advancedFinanceDrafts, expansionDrafts, seedRecords] = await Promise.all([
-    localStore.list('feasibility:project:'),
-    localStore.list('feasibility:advanced-finance:'),
-    localStore.list('feasibility:expansion-rehabilitation:'),
-    localStore.list('projects:')
-  ])
-  const orphanedRecords = [
-    ...projectDrafts.filter(record => !retainedIds.has(record.key.slice('feasibility:project:'.length).split(':')[0])),
-    ...advancedFinanceDrafts.filter(record => !retainedIds.has(record.key.slice('feasibility:advanced-finance:'.length).split(':')[0])),
-    ...expansionDrafts.filter(record => !retainedIds.has(record.key.slice('feasibility:expansion-rehabilitation:'.length).split(':')[0])),
-    ...seedRecords.filter(record => record.key !== PROJECTS_KEY)
-  ]
-  if (orphanedRecords.length) await Promise.all(orphanedRecords.map(record => localStore.remove(record.key)))
-  return remaining
+const normalizeLegacyProjectKey = (value: string) => value.normalize('NFKC').toLowerCase().replace(/\s+/g, '')
+const hashLegacyProjectKey = (value: string) => {
+  let hash = 2166136261
+  const normalized = normalizeLegacyProjectKey(value)
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash ^= normalized.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0')
 }
-/** Purge retired HRCR200 and integrated DRI/steelmaking project data. */
+const retiredProjectNameHashes = new Set(['8ed4fe00', 'c686cc66', 'cc8f9036', '83746ace', '3adafd09', '8b4f0421'])
+const retiredProjectStageHashes = new Set(['965f8c3e', '03af782d', '83746ace'])
+const retiredProjectTemplateHash = 'cc307164'
+
 export async function purgeRemovedCaseProjects(): Promise<FeasibilityProject[]> {
- const projects=await listProjects()
- const isRemoved=(p:FeasibilityProject)=>{const n=p.name.trim(),stage=p.steelStage??'';const hrcr=p.templateId==='hot-rolling-200kt'||/HRCR200/i.test(n+' '+stage)||['نورد گرم ورق-تولید کلاف','نورد گرم ورق - تولید کلاف','پروژه نورد گرم ورق-تولید کلاف'].includes(n)||(stage==='نورد گرم / ورق'&&p.capacity.includes('HRCR200'));const integrated=/احیاء.*فولادسازی|فولادسازی.*احیاء/.test(n)||stage.includes('مجتمع احیاء');return hrcr||integrated}
- const removed=projects.filter(isRemoved),remaining=projects.filter(p=>!isRemoved(p));if(removed.length)await localStore.set(PROJECTS_KEY,remaining)
- const [rolling,process]=await Promise.all([localStore.list('pishran:rolling:'),localStore.list('process-plant:')])
- await Promise.all([...rolling.map(x=>localStore.remove(x.key)),...process.map(x=>localStore.remove(x.key)),localStore.remove('rolling:sample:v2'),localStore.remove('projects:workbook-seed:v1')])
- return remaining
+  const projects = await listProjects()
+  const isRemovedCase = (project: FeasibilityProject) =>
+    retiredProjectNameHashes.has(hashLegacyProjectKey(project.name))
+    || retiredProjectStageHashes.has(hashLegacyProjectKey(project.steelStage ?? ''))
+    || hashLegacyProjectKey(project.templateId ?? '') === retiredProjectTemplateHash
+  const removed = projects.filter(isRemovedCase)
+  const remaining = projects.filter(project => !isRemovedCase(project))
+  if (removed.length) await localStore.set(PROJECTS_KEY, remaining)
+
+  const [rollingRecords, processRecords] = await Promise.all([
+    localStore.list('pishran:rolling:'),
+    localStore.list('process-plant:')
+  ])
+  await Promise.all([
+    ...rollingRecords.map(record => localStore.remove(record.key)),
+    ...processRecords.map(record => localStore.remove(record.key)),
+    localStore.remove('rolling:sample:v2'),
+    localStore.remove('projects:workbook-seed:v1')
+  ])
+  return remaining
 }
