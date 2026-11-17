@@ -168,6 +168,39 @@ assert.ok(negativeStock.issues.some(x=>x.includes('Sales exceed opening stock'))
 
 
 if(benchmark){
+assert.equal(benchmark.products.length,2,'Independent reference must retain two separate products.')
+assert.deepEqual(benchmark.products.map(product=>product.productId),['steel-slab','extra-dri'])
+assert.deepEqual(benchmark.products.map(product=>product.name),['Steel Slab','Extra DRI'])
+assert.deepEqual(benchmark.products.map(product=>product.unitPrice),[634,275])
+assert.deepEqual(benchmark.products.map(product=>product.sales[3]),[1200000,460000])
+assert.deepEqual(benchmark.products.map(product=>product.salesRevenue[3]),[760800000,126500000])
+assert.deepEqual(benchmark.totalSalesRevenue.slice(3),[887300000,887300000,887300000])
+for(const product of benchmark.products){
+ assert.equal(product.periods?.length??benchmark.periods.length,benchmark.periods.length)
+ assert.equal(product.openingFinishedGoods.length,benchmark.periods.length)
+ assert.equal(product.production.length,benchmark.periods.length)
+ assert.equal(product.sales.length,benchmark.periods.length)
+ assert.equal(product.closingFinishedGoods.length,benchmark.periods.length)
+ assert.equal(product.salesRevenue.length,benchmark.periods.length)
+ for(let i=0;i<benchmark.periods.length;i++){
+  const opening=product.openingFinishedGoods[i]
+  const production=product.production[i]
+  const sales=product.sales[i]
+  const closing=product.closingFinishedGoods[i]
+  const revenue=product.salesRevenue[i]
+  assert.ok(Math.abs(opening+production-sales-closing)<0.02,
+   'independent quantity roll-forward mismatch: '+product.productId+'/'+benchmark.periods[i])
+  assert.ok(Math.abs(sales*product.unitPrice-revenue)<0.02,
+   'independent sales revenue mismatch: '+product.productId+'/'+benchmark.periods[i])
+  if(i>0)assert.ok(Math.abs(product.openingFinishedGoods[i]-product.closingFinishedGoods[i-1])<0.02,
+   'opening stock must carry forward only within the same product: '+product.productId+'/'+benchmark.periods[i])
+ }
+}
+for(let i=0;i<benchmark.periods.length;i++){
+ const sum=benchmark.products.reduce((total,product)=>total+product.salesRevenue[i],0)
+ assert.ok(Math.abs(sum-benchmark.totalSalesRevenue[i])<0.02,
+  'two-product revenue total mismatch in period '+benchmark.periods[i])
+}
 const benchmarkPeriods=benchmark.periods.map((year,index)=>({
  index:year,startDate:(2025+index)+'-01-01',endDate:(2025+index)+'-12-31',
  days:((2025+index)%4===0?366:365),partial:false,
