@@ -1,0 +1,97 @@
+import type { ProjectCalendarPeriod } from './projectFoundation'
+import type { ProjectTaxFormDraft } from './projectModelFormDrafts'
+import { fiscalYearIndexForPeriod, type TaxLossVintage } from '../steel/periodicFinancialEngine'
+
+export type ProjectTaxDraftSchedule = {
+  active:boolean
+  valid:boolean
+  issues:string[]
+  annualTaxRates:number[]
+  taxRatesByPeriod:number[]
+  taxLossCarryForwardEnabled:boolean
+  taxLossCarryForwardYears:number|null
+  openingTaxLoss:number
+  openingTaxLossVintages:TaxLossVintage[]
+}
+
+/** Resolve explicit tax-form rates and opening loss vintages onto the exact project calendar. */
+export function buildProjectTaxDraftSchedule(
+  draft:ProjectTaxFormDraft,
+  periods:ProjectCalendarPeriod[],
+  fiscalYearStartMonth:number,
+):ProjectTaxDraftSchedule {
+  const active=draft.system!==null||draft.rates.length>0||draft.allowances.length>0||
+    draft.lossCarryForward!==null||draft.lossCarryForwardYears!==null||draft.openingLossVintages.length>0
+  const issues:string[]=[]
+  const fiscalYearCount=periods.length
+    ?Math.max(...periods.map(period=>fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)))+1:0
+  const empty:ProjectTaxDraftSchedule={active,valid:false,issues,annualTaxRates:[],taxRatesByPeriod:[],
+    taxLossCarryForwardEnabled:false,taxLossCarryForwardYears:null,openingTaxLoss:0,openingTaxLossVintages:[]}
+  if(!active)return {...empty,valid:true,annualTaxRates:[],taxRatesByPeriod:[]}
+  if(!periods.length||!Number.isInteger(fiscalYearStartMonth)||fiscalYearStartMonth<1||fiscalYearStartMonth>12)
+    issues.push('A valid project calendar and fiscal-year start month are required for detailed taxation.')
+  if(draft.system===null)issues.push('Select the project tax system before entering tax rates.')
+  if(draft.allowances.some(item=>item.name.trim()||item.periodAmounts.length))
+    issues.push('Tax allowances and deductions are not yet posted to taxable profit; remove or complete their integration before using this tax schedule.')
+  let taxRatesByPeriod:number[]=[]
+  if(draft.system==='none'){
+    if(draft.rates.length)issues.push('A tax-free project cannot also contain taxable-rate rows.')
+    taxRatesByPeriod=Array(periods.length).fill(0)
+  } else if(draft.system==='corporate'||draft.system==='custom') {
+    const resolved=new Map<number,number>()
+    for(const row of draft.rates){
+      const matches:number[]=[]
+      periods.forEach((period,index)=>{
+        if(row.period===String(index+1)||row.period===String(period.index)||
+          row.period===period.startDate||row.period===period.endDate||
+          (row.period.length===7&&row.period===period.startDate.slice(0,7)&&row.period===period.endDate.slice(0,7)))
+          matches.push(index)
+      })
+      if(matches.length!==1){issues.push('Tax rate period is unknown or ambiguous: '+row.period);continue}
+      const index=matches[0]
+      if(resolved.has(index)){issues.push('Duplicate tax rate for project period '+(index+1)+'.');continue}
+      if(row.ratePercent===null||!Number.isFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100){
+        issues.push('A tax rate from 0% to 100% is required for project period '+(index+1)+'.');continue
+      }
+      resolved.set(index,row.ratePercent)
+    }
+    taxRatesByPeriod=periods.map((_,index)=>resolved.get(index)??Number.NaN)
+    if(taxRatesByPeriod.some(rate=>!Number.isFinite(rate)))
+      issues.push('Every project period requires one explicit tax rate; missing periods are not assigned a default.')
+  } else issues.push('Unsupported project tax system.')
+
+  if(draft.system==='none'){
+    if(draft.lossCarryForward===true||draft.openingLossVintages.length)
+      issues.push('Tax-loss carry-forward cannot be enabled for a tax-free project.')
+  } else if(draft.lossCarryForward===null) {
+    issues.push('Explicitly select whether tax losses can be carried forward.')
+  } else if(draft.lossCarryForward&&(!Number.isInteger(draft.lossCarryForwardYears)||!draft.lossCarryForwardYears||draft.lossCarryForwardYears<1)) {
+    issues.push('A positive carry-forward duration in years is required when tax-loss carry-forward is enabled.')
+  }
+  const openingTaxLossVintages:TaxLossVintage[]=[]
+  for(const [index,item] of draft.openingLossVintages.entries()){
+    if(item.amount===null||!Number.isFinite(item.amount)||item.amount<=0||
+      item.originFiscalYearIndex===null||!Number.isInteger(item.originFiscalYearIndex)||item.originFiscalYearIndex>0){
+      issues.push('Opening tax-loss vintage '+(index+1)+' requires a positive amount and a fiscal-year index no later than model year zero.')
+      continue
+    }
+    openingTaxLossVintages.push({amount:item.amount,originFiscalYearIndex:item.originFiscalYearIndex})
+  }
+  if(draft.lossCarryForward!==true&&openingTaxLossVintages.length)
+    issues.push('Opening tax-loss vintages cannot be retained when loss carry-forward is disabled.')
+  if(issues.length)return empty()
+  const annualTaxRates=Array(fiscalYearCount).fill(0) as number[]
+  const dayTotals=Array(fiscalYearCount).fill(0) as number[]
+  periods.forEach((period,index)=>{
+    const year=fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)
+    annualTaxRates[year]+=taxRatesByPeriod[index]*period.days
+    dayTotals[year]+=period.days
+  })
+  for(let year=0;year<fiscalYearCount;year++)annualTaxRates[year]=dayTotals[year]>0?annualTaxRates[year]/dayTotals[year]:Number.NaN
+  if(annualTaxRates.some(rate=>!Number.isFinite(rate)))issues.push('Tax rates do not cover every fiscal year.')
+  if(issues.length)return empty()
+  return {active:true,valid:true,issues:[],annualTaxRates,taxRatesByPeriod,
+    taxLossCarryForwardEnabled:draft.system==='none'?false:draft.lossCarryForward===true,
+    taxLossCarryForwardYears:draft.lossCarryForward===true?draft.lossCarryForwardYears:null,
+    openingTaxLoss:openingTaxLossVintages.reduce((sum,item)=>sum+item.amount,0),openingTaxLossVintages}
+}
