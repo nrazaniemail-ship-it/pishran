@@ -275,7 +275,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
   const workingCapitalDraftSchedule=useMemo(()=>props.workingCapitalDrafts?.length
     ?buildWorkingCapitalScheduleFromDrafts({workingCapital:props.workingCapitalDrafts},projectPeriods,props.openingWorkingCapitalBalance??0)
-    :null,[JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods),props.openingWorkingCapitalBalance,props.openingCashBalance])
+    :null,[JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods),props.openingWorkingCapitalBalance])
   const periodicFinanceResult=useMemo<PeriodicProjectFinanceResult|null>(()=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
@@ -349,7 +349,7 @@ export default function AdvancedFinancePanel(props: Props) {
       return calculateIntegratedPeriodicFinance(binding.financeInput)
     }
     return calculateIntegratedPeriodicFinance(periodicInput)
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),props.openingWorkingCapitalBalance])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),props.openingWorkingCapitalBalance,props.openingCashBalance])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
