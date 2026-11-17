@@ -513,7 +513,11 @@ export default function AdvancedFinancePanel(props: Props) {
           <button className="secondary-button" onClick={addAsset}><Plus size={14}/> {tr('افزودن دارایی')}</button>
           <div className="fw-validation"><span>{tr('جمع استهلاک سالانه (به ترتیب سال مدل)')}</span><b>{depreciationValues.map(value=>money(value)).join(' · ')}</b></div>
     </>}
-    {props.useFixedInvestmentRegister&&!comfarLifecycle&&<p className="fw-hint">{tr('برنامه استهلاک فقط از دفتر عمومی Fixed Investment خوانده می‌شود. هنوز نوبت تحصیل مستهلک‌شونده‌ای در دفتر ثبت نشده است؛ هیچ عمر مفید یا نرخ استهلاک فرضی اعمال نمی‌شود.','Depreciation is sourced only from the shared Fixed Investment Register. No depreciable acquisition is registered yet; no assumed useful life or depreciation rate is applied.')}</p>}
+    {props.useFixedInvestmentRegister&&!comfarLifecycle&&<p className="fw-hint">{tr('برنامه استهلاک فقط از دفتر عمومی Fixed Investment و دارایی‌های افتتاحیه متصل‌شده خوانده می‌شود. هنوز دارایی مستهلک‌شونده معتبری در برنامه ثبت نشده است؛ هیچ عمر مفید یا نرخ استهلاک فرضی اعمال نمی‌شود.','Depreciation is sourced only from the shared Fixed Investment Register and linked opening assets. No valid depreciable asset is registered yet; no assumed useful life or depreciation rate is applied.')}</p>}
+    {props.useFixedInvestmentRegister&&!comfarLifecycle&&!!props.comfarDepreciationWarnings?.length&&<div className="fw-validation">
+      <span>{tr('هشدارهای دارایی‌های افتتاحیه','Opening Asset Warnings')}</span>
+      {props.comfarDepreciationWarnings.map((warning,index)=><p className="fw-hint" key={index}>{warning}</p>)}
+    </div>}
     {props.useFixedInvestmentRegister&&comfarLifecycle&&<div className="fw-validation">
       <span>{tr('جمع استهلاک سالانه از دفتر دارایی','Annual Depreciation from Fixed Investment Register')}</span>
       <b>{depreciationValues.map(value=>money(value)).join(' · ')}</b>
