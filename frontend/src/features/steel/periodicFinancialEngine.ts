@@ -1529,6 +1529,27 @@ export function buildPeriodicThreeFinancialStatements(
     paidInCapital: opening.paidInCapital ?? 0, retainedEarnings: opening.retainedEarnings ?? 0,
   }
   if (Object.values(balances).some(value => !validFinite(value))) return []
+  const automaticSchedule = result.automaticFundingSchedule
+  if (!Array.isArray(automaticSchedule) || automaticSchedule.length !== result.rows.length ||
+      automaticSchedule.some((row, index) => !row || row.period !== result.rows[index].period ||
+        ![row.automaticEquity, row.automaticOverdraftDrawdown, row.automaticOverdraftRepayment,
+          row.automaticOverdraftBalance].every(validFinite) ||
+        [row.automaticEquity, row.automaticOverdraftDrawdown, row.automaticOverdraftRepayment,
+          row.automaticOverdraftBalance].some(value => value < 0) ||
+        (index === 0 && Math.abs(row.automaticOverdraftBalance -
+          row.automaticOverdraftDrawdown + row.automaticOverdraftRepayment) > tolerance) ||
+        (index > 0 && Math.abs(row.automaticOverdraftBalance -
+          automaticSchedule[index - 1].automaticOverdraftBalance -
+          row.automaticOverdraftDrawdown + row.automaticOverdraftRepayment) > tolerance))) return []
+  const automaticEquityTotal = automaticSchedule.reduce((sum, row) => sum + row.automaticEquity, 0)
+  const automaticOverdraftPeak = Math.max(0, ...automaticSchedule.map(row => row.automaticOverdraftBalance))
+  const automaticOverdraftClosing = automaticSchedule.length
+    ? automaticSchedule[automaticSchedule.length - 1].automaticOverdraftBalance : 0
+  if (!validFinite(result.totalAutomaticEquity) || !validFinite(result.peakAutomaticOverdraft) ||
+      !validFinite(result.closingAutomaticOverdraft) ||
+      Math.abs(automaticEquityTotal - result.totalAutomaticEquity) > tolerance ||
+      Math.abs(automaticOverdraftPeak - result.peakAutomaticOverdraft) > tolerance ||
+      Math.abs(automaticOverdraftClosing - result.closingAutomaticOverdraft) > tolerance) return []
   const loanSchedules = Object.values(result.loanSchedules ?? {})
   if (loanSchedules.some(schedule => !Array.isArray(schedule) || schedule.length !== result.rows.length ||
       schedule.some(row => !row || ![row.openingBalance, row.drawdown, row.capitalizedInterest,
