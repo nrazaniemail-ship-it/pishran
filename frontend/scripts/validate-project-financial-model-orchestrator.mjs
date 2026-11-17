@@ -94,6 +94,28 @@ assert.equal(discountedResult.financeInput.discountRatePercent,12)
 assert.equal(discountedResult.financeInput.equityDiscountRatePercent,14)
 assert.equal(discountedResult.financeInput.valuationDate,'2025-01-01')
 assert.notEqual(discountedResult.finalRun.finance.npvProject,result.finalRun.finance.npvProject)
+let progressiveTaxHelp=helpForms.createBlankHelpDrivenProjectForms()
+for(const period of ['1','2']){
+ for(const [lowerLimit,rate] of [[0,10],[500,20]]){
+  const id='tax-'+period+'-'+lowerLimit
+  progressiveTaxHelp=helpForms.addHelpFormRow(progressiveTaxHelp,'tax-brackets',id)
+  progressiveTaxHelp=helpForms.updateHelpFormRow(progressiveTaxHelp,'tax-brackets',id,'period',period)
+  progressiveTaxHelp=helpForms.updateHelpFormRow(progressiveTaxHelp,'tax-brackets',id,'lowerLimit',lowerLimit)
+  progressiveTaxHelp=helpForms.updateHelpFormRow(progressiveTaxHelp,'tax-brackets',id,'rate',rate)
+ }
+}
+const progressiveTaxResult=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,helpDriven:progressiveTaxHelp},foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(progressiveTaxResult.valid,true,progressiveTaxResult.issues.join('; '))
+assert.deepEqual(progressiveTaxResult.financeInput.taxBracketsByPeriod,[
+ [{lowerLimit:0,ratePercent:10},{lowerLimit:500,ratePercent:20}],
+ [{lowerLimit:0,ratePercent:10},{lowerLimit:500,ratePercent:20}],
+])
+assert.equal(progressiveTaxResult.finalRun.finance.rows[0].tax,150)
+assert.equal(progressiveTaxResult.finalRun.finance.rows[1].tax,330)
 assert.ok(result.finalRun.statements.every(row=>row.balanceSheet.reconciled))
 const openingBalanceSheet={
  enabled:true,cash:100,inventory:20,workInProgress:10,finishedGoods:30,receivables:40,
