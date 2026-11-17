@@ -411,8 +411,8 @@ assert.equal(priorYearPreproduction.preOperatingScheduleVerified,false,
 
 const productLedPeriods = engine.calculateIntegratedPeriodicFinance({
   periods, fiscalYearStartMonth:1, dayCountBasis:365, cashFlowTiming:'period-end',
-  annualRevenue:[30,0,0], periodRevenue:[10,20,0],
-  annualVariableCost:[12,0,0], periodVariableCost:[4,8,0],
+  annualRevenue:[10,20,0], periodRevenue:[10,20,0],
+  annualVariableCost:[4,8,0], periodVariableCost:[4,8,0],
   annualFixedCost:[0,0,0], annualDepreciation:[0,0,0],
   annualFixedInvestment:[0,0,0], annualPreOperatingCost:[0,0,0],
   annualMaintenanceCapex:[0,0,0], annualTaxRates:[0,0,0],
@@ -425,8 +425,8 @@ assert.deepEqual(productLedPeriods.rows.map(row=>row.variableCost),[4,8,0],
   'Product-led cost of sales must enter the exact project periods')
 const mismatchedProductPeriodTotals=engine.calculateIntegratedPeriodicFinance({
   periods, fiscalYearStartMonth:1, dayCountBasis:365, cashFlowTiming:'period-end',
-  annualRevenue:[30,0,0], periodRevenue:[10,19,0],
-  annualVariableCost:[12,0,0], periodVariableCost:[4,8,0],
+  annualRevenue:[10,20,0], periodRevenue:[10,19,0],
+  annualVariableCost:[4,8,0], periodVariableCost:[4,8,0],
   annualFixedCost:[0,0,0], annualDepreciation:[0,0,0],
   annualFixedInvestment:[0,0,0], annualPreOperatingCost:[0,0,0],
   annualMaintenanceCapex:[0,0,0], annualTaxRates:[0,0,0],
