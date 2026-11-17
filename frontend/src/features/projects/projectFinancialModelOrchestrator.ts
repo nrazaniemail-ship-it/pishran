@@ -559,6 +559,8 @@ export function calculateProjectFinancialModelFromDrafts(
         for(let periodIndex=0;periodIndex<finance.periods.length;periodIndex++){
           const explicitValue=workingCapital.componentRows.filter(row=>row.category==='finished-goods'&&row.period===periodIndex+1)
             .reduce((sum,row)=>sum+row.amount,0)
+          // The production adapter adds product-level valuation to any separately supplied inventory series.
+          // Reconcile the component to that combined amount before suppressing the engine's separate posting.
           const calculatedInventoryValue=finance.finishedGoodsInventoryValueByPeriod?.[periodIndex]??productionSales.periodClosingFinishedGoodsValue[periodIndex]
           if(Math.abs(explicitValue-calculatedInventoryValue)>0.01)
             return fail(['Finished-goods working-capital component does not reconcile to the combined calculated inventory valuation in period '+(periodIndex+1)+'.'])
