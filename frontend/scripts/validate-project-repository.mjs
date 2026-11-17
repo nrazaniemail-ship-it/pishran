@@ -16,9 +16,10 @@ for (const type of ['معدن سنگ آهن','کنستانتره','گندله س
 const wizard=await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx',import.meta.url),'utf8')
 assert.match(wizard,/nameplate:project\.capacity\.trim\(\)/,'Capacity entered during project creation must be carried into the model')
 assert.match(wizard,/projectCapacityUnit/,'The model must display the project-specific capacity unit')
-assert.match(wizard,/blankZero&&value===0/,'Raw template numeric zeroes must render as blank')
-assert.match(wizard,/blankZero&&r\.quantity===0/,'Raw template row quantities must render as blank when untouched')
-assert.match(wizard,/blankZero&&r\.unitPrice===0/,'Raw template row prices must render as blank when untouched')
+assert.ok(wizard.includes("const displayValue=value==null?'':value"),'Explicit zero values must remain visible after user entry')
+assert.ok(wizard.includes("value={r.quantity==null?'':r.quantity}"),'Blank raw row quantities must use null, while explicit zero remains visible')
+assert.ok(wizard.includes("value={r.unitPrice==null?'':r.unitPrice}"),'Blank raw row prices must use null, while explicit zero remains visible')
+assert.ok(wizard.includes('blankZero?null as unknown as number:0'),'New rows in the raw template must begin with null values')
 assert.match(projectsView,/قالب خام/,'The raw template must remain available')
 assert.doesNotMatch(projectsView,/STEEL_PROJECT_OPTIONS|changeSteelProject|setSteelStage/,'The raw creation flow must not persist a preselected technical stage')
 
