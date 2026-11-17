@@ -120,4 +120,18 @@ assert.deepEqual(automaticFundingCase.automaticFundingSchedule.map(row=>Math.rou
 assert.equal(automaticFundingCase.totalAutomaticEquity,100)
 assert.equal(automaticFundingCase.peakAutomaticOverdraft,30)
 assert.equal(automaticFundingCase.closingAutomaticOverdraft,0)
-console.log('PASS: COMFAR XI.N construction equity, production overdraft and earliest-surplus repayment')
+const automaticFundingStatements=engine.buildPeriodicThreeFinancialStatements(automaticFundingCase)
+assert.equal(automaticFundingStatements.length,periods.length,'Automatic funding must be represented in linked statements')
+assert.deepEqual(automaticFundingStatements.map(row=>Math.round(row.cashFlowStatement.closingCash)),[0,0,40],
+  'Construction equity and production overdraft must prevent negative statement cash')
+assert.deepEqual(automaticFundingStatements.map(row=>Math.round(row.balanceSheet.automaticOverdraft)),[0,30,0])
+assert.deepEqual(automaticFundingStatements.map(row=>Math.round(row.balanceSheet.debt)),[0,30,0],
+  'Automatic overdraft must be included in total liabilities')
+assert.deepEqual(automaticFundingStatements.map(row=>Math.round(row.balanceSheet.paidInCapital)),[150,150,150],
+  'Automatic construction equity must increase paid-in capital')
+assert.deepEqual(automaticFundingStatements.map(row=>Math.round(row.cashFlowStatement.financingCashFlow)),[150,30,-30])
+assert.ok(automaticFundingStatements.every(row=>row.balanceSheet.reconciled),
+  'Balance sheet must reconcile after automatic equity and overdraft integration')
+assert.ok(automaticFundingStatements.every(row=>Object.values(row.movementChecks).every(value=>Math.abs(value)<=0.01)),
+  'All statement movement checks must reconcile after automatic funding')
+console.log('PASS: COMFAR XI.N automatic construction equity and overdraft are integrated into cash flow, balance sheet and equity')
