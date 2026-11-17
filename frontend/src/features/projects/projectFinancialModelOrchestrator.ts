@@ -233,13 +233,29 @@ export function calculateProjectFinancialModelFromDrafts(
       if(rates.some(rate=>!Number.isFinite(rate)))return fail(['The tax form must provide a rate for every project period when period rates are used.'])
       finance={...finance,taxRatesByPeriod:rates}
     }
-    if(taxDraft.allowances.length) {
+    const helpTaxAllowances=input.drafts.helpDriven?.sections?.['tax-allowances']??[]
+    if(taxDraft.allowances.length||helpTaxAllowances.length) {
       const allowances=Array(finance.periods.length).fill(0) as number[]
       for(const allowance of taxDraft.allowances)for(const row of allowance.periodAmounts) {
         const index=resolveTaxPeriod(row.period)
         if(index<0||row.amount===null||!Number.isFinite(row.amount)||row.amount<0)
           return fail(['Every tax allowance amount must have a valid project-period key and a non-negative amount.'])
         allowances[index]+=row.amount
+      }
+      for(const row of helpTaxAllowances) {
+        const periodKey=row.values.period
+        const amount=row.values.amount
+        const index=typeof periodKey==='string'?resolveTaxPeriod(periodKey):-1
+        const currencyCode=typeof row.values.currency==='string'&&row.values.currency.trim()
+          ?row.values.currency.trim().toUpperCase():effectiveFoundation.currencies.localCurrencyCode
+        if(index<0||typeof amount!=='number'||!Number.isFinite(amount)||amount<0)
+          return fail(['Every reference-driven tax allowance must have a valid period and a non-negative amount.'])
+        const exchangeRate=currencyCode===effectiveFoundation.currencies.localCurrencyCode?1:
+          effectiveFoundation.currencies.foreignCurrencies.find(currency=>currency.code===currencyCode)
+            ?.exchangeRates.find(rate=>rate.period===String(finance.periods[index].index))?.rateToLocal
+        if(!Number.isFinite(exchangeRate)||exchangeRate!<=0)
+          return fail(['Tax allowance currency '+currencyCode+' has no exchange rate for period '+periodKey+'.'])
+        allowances[index]+=amount*exchangeRate!
       }
       finance={...finance,taxAllowancesByPeriod:allowances}
     }
