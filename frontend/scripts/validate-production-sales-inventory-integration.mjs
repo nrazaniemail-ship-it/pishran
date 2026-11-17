@@ -29,8 +29,8 @@ const periods=[
 ]
 const drafts={
  sales:[{productId:'slab',periods:[
-  {period:'1',salesQuantity:10,netUnitPrice:100,salesTaxPercent:9,subsidyPercent:2,subsidyAmount:null,finishedGoodsClosingQuantity:1},
-  {period:'2025-04-01',salesQuantity:12,netUnitPrice:110,salesTaxPercent:9,subsidyPercent:null,subsidyAmount:30,finishedGoodsClosingQuantity:2},
+  {period:'1',salesQuantity:10,netUnitPrice:100,salesTaxPercent:9,subsidyPercent:2,subsidyAmount:null,finishedGoodsClosingQuantity:1,grossUnitPrice:109,productionActive:true},
+  {period:'2025-04-01',salesQuantity:12,netUnitPrice:110,salesTaxPercent:9,subsidyPercent:null,subsidyAmount:30,finishedGoodsClosingQuantity:2,grossUnitPrice:119.9,productionActive:true},
  ]}],
  productionCosts:[{id:'power',metadata:{},classification:'direct',productId:'slab',basis:'nominal-capacity',
   standardQuantity:2,standardUnitPrice:5,standardTotal:10,nominalCapacity:20,fixedPercent:20,variablePercent:80,adjustments:[]}]
@@ -46,6 +46,17 @@ assert.equal(result.annualRevenue[0],2370)
 assert.ok(Math.abs(result.annualFixedCost[0]-1.0055555555555555)<1e-8)
 assert.ok(Math.abs(result.annualVariableCost[0]-8.8)<1e-8)
 assert.equal(result.rows[0].salesTax,90)
+
+const invalidGross=adapter.buildProductionSalesInventorySchedule({
+ ...drafts,sales:[{...drafts.sales[0],periods:[{...drafts.sales[0].periods[0],grossUnitPrice:111},drafts.sales[0].periods[1]]}]
+},periods,1,{slab:2})
+assert.equal(invalidGross.valid,false)
+assert.ok(invalidGross.issues.some(issue=>issue.includes('Gross unit price must reconcile')))
+const inactiveProduction=adapter.buildProductionSalesInventorySchedule({
+ ...drafts,sales:[{...drafts.sales[0],periods:[{...drafts.sales[0].periods[0],productionActive:false},drafts.sales[0].periods[1]]}]
+},periods,1,{slab:2})
+assert.equal(inactiveProduction.valid,false)
+assert.ok(inactiveProduction.issues.some(issue=>issue.includes('Production is marked inactive')))
 
 const bound=adapter.bindProductionSalesToPeriodicFinance({
  periods,fiscalYearStartMonth:1,dayCountBasis:360,cashFlowTiming:'period-end',
