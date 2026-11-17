@@ -129,6 +129,26 @@ const openingForeignFacility=binding.buildPeriodicLoanFacilityBinding({
 })
 assert.equal(openingForeignFacility.valid,true,openingForeignFacility.issues.join('; '))
 assert.equal(openingForeignFacility.openingCarryingAmountLocal,85)
+const localOpeningLoan={...loan,id:'local-opening-facility',name:'Local opening facility',currencyCode:'EUR',
+ marketOrigin:'local',openingLocalBalance:100,disbursements:[],numberOfRepayments:2}
+const localOpeningFacility=binding.buildPeriodicLoanFacilityBinding({
+ loan:localOpeningLoan,foundation,periods,dayCountBasis:365,
+})
+assert.equal(localOpeningFacility.valid,true,localOpeningFacility.issues.join('; '))
+assert.equal(localOpeningFacility.loan.input.openingBalance,100)
+assert.equal(localOpeningFacility.openingCarryingAmountLocal,100)
+const localOpeningBound=binding.bindLoanFacilitiesToPeriodicFinance({
+ finance:baseFinance,loans:[localOpeningLoan],foundation,
+})
+assert.equal(localOpeningBound.valid,true,localOpeningBound.issues.join('; '))
+assert.equal(localOpeningBound.openingDebtFromFacilitiesLocal,100)
+const localOpeningRun=binding.calculatePeriodicFinanceWithForeignCurrencyLoans({
+ finance:baseFinance,loans:[localOpeningLoan],foundation,
+ openingBalances:{cash:100,debt:100,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(localOpeningRun.valid,true,localOpeningRun.issues.join('; '))
+assert.ok(localOpeningRun.statements.every(row=>row.balanceSheet.reconciled))
 const missingOpeningRate=binding.buildPeriodicLoanFacilityBinding({
  loan:{...loan,disbursements:[],numberOfRepayments:2},
  foundation,periods,dayCountBasis:365,openingForeignBalance:100,
