@@ -241,6 +241,30 @@ assert.ok(depositStatements.every(row=>row.balanceSheet.reconciled),'Deposit sce
 assert.ok(depositStatements.every(row=>Math.abs(row.movementChecks.cashRollForward)<=0.01))
 console.log('PASS: COMFAR short-term deposit interest flows through tax, CFADS, cash and linked statements')
 
+const taxLossVintage=engine.calculatePeriodTaxWithLossExpiry(100,20,[{amount:50,originFiscalYearIndex:0}],1,2,true)
+assert.equal(taxLossVintage.taxableProfitAfterLoss,50)
+assert.equal(taxLossVintage.tax,10)
+assert.equal(taxLossVintage.closingLossCarryForward,0)
+const expiredTaxLoss=engine.calculatePeriodTaxWithLossExpiry(100,20,[{amount:50,originFiscalYearIndex:0}],3,2,true)
+assert.equal(expiredTaxLoss.tax,20,'Expired tax losses must not shelter taxable profit')
+const newTaxLoss=engine.calculatePeriodTaxWithLossExpiry(-40,20,[],1,3,true)
+assert.equal(newTaxLoss.closingLossCarryForward,40)
+assert.deepEqual(newTaxLoss.closingLossVintages,[{amount:40,originFiscalYearIndex:1}])
+const disabledTaxLoss=engine.calculatePeriodTaxWithLossExpiry(-40,20,[],1,null,false)
+assert.equal(disabledTaxLoss.closingLossCarryForward,0,'Disabled loss carry-forward must not create a reusable loss vintage')
+const taxExpiryCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,50,50],annualVariableCost:[0,0,0],annualFixedCost:[100,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[20,20,20],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],taxLossCarryForwardEnabled:true,taxLossCarryForwardYears:1,
+})
+assert.equal(taxExpiryCase.valid,true,taxExpiryCase.warnings.join('; '))
+assert.deepEqual(taxExpiryCase.rows.map(row=>row.taxLossCarryForward),[100,50,0])
+assert.deepEqual(taxExpiryCase.rows.map(row=>row.tax),[0,0,10],
+  'Tax losses must offset FIFO in the next fiscal year and expire after the configured carry-forward window')
+console.log('PASS: FIFO tax-loss vintages, explicit carry-forward enablement and expiry')
+
 const automaticFundingCase=engine.calculateIntegratedPeriodicFinance({
   periods,fiscalYearStartMonth:1,constructionPeriodCount:1,dayCountBasis:365,cashFlowTiming:'period-end',
   annualRevenue:[0,0,100],annualShortTermDepositInterest:[0,0,0],
