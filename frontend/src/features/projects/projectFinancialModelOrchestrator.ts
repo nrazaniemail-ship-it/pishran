@@ -176,7 +176,7 @@ export function calculateProjectFinancialModelFromDrafts(
   // These sections require dedicated adapters and are deliberately rejected until their
   // schedules are represented in the periodic engine (rather than being treated as zero).
   const notYetIntegratedSections=new Set([
-    'joint-venture','equity-grants',
+    'joint-venture',
     'profit-distribution','depreciation-adjustments','starting-balances',
     'economic-items','economic-effects','sensitivity','incremental-analysis',
   ])
@@ -253,6 +253,39 @@ export function calculateProjectFinancialModelFromDrafts(
         return fail([label+' must be a finite rate greater than -100%.'])
       finance={...finance,[key]:rate}
     }
+  }
+  const equityRows=effectiveDrafts.helpDriven?.sections?.['equity-grants']??[]
+  if(equityRows.length){
+    const annualContributions=[...finance.annualEquityContributions]
+    for(const row of equityRows){
+      const sourceType=row.values.sourceType
+      const periodKey=typeof row.values.period==='string'?row.values.period.trim():''
+      const periodIndex=periodKey?resolveTaxPeriod(periodKey):-1
+      const amount=row.values.paidIn
+      const paidOut=row.values.paidOut
+      const preferredAbsolute=row.values.preferredDividendAbsolute
+      const preferredPercent=row.values.preferredDividendPercent
+      const shareClass=typeof row.values.shareClass==='string'?row.values.shareClass.trim():''
+      if(sourceType!=='equity')
+        return fail(['Equity/grant row '+row.id+' uses a grant or subsidy source; only paid-in equity contributions are currently connected to the periodic model.'])
+      if(periodIndex<0||typeof amount!=='number'||!Number.isFinite(amount)||amount<0)
+        return fail(['Equity contribution '+row.id+' requires a valid project period and a non-negative paid-in amount.'])
+      if((typeof paidOut==='number'&&paidOut!==0)||(typeof preferredAbsolute==='number'&&preferredAbsolute!==0)||
+        (typeof preferredPercent==='number'&&preferredPercent!==0)||shareClass)
+        return fail(['Equity contribution '+row.id+' includes capital refunds, preferred dividends or share-class terms that are not yet supported by the periodic equity engine.'])
+      const currencyCode=typeof row.values.currency==='string'&&row.values.currency.trim()
+        ?row.values.currency.trim().toUpperCase():effectiveFoundation.currencies.localCurrencyCode
+      const exchangeRate=currencyCode===effectiveFoundation.currencies.localCurrencyCode?1:
+        effectiveFoundation.currencies.foreignCurrencies.find(currency=>currency.code===currencyCode)
+          ?.exchangeRates.find(rate=>rate.period===String(finance.periods[periodIndex].index))?.rateToLocal
+      if(!Number.isFinite(exchangeRate)||exchangeRate!<=0)
+        return fail(['Equity contribution currency '+currencyCode+' has no exchange rate for period '+periodKey+'.'])
+      const fiscalYear=fiscalYearIndexForPeriod(finance.periods[periodIndex],finance.periods,finance.fiscalYearStartMonth)
+      if(fiscalYear<0||fiscalYear>=annualContributions.length)
+        return fail(['Equity contribution '+row.id+' cannot be allocated to a project fiscal year.'])
+      annualContributions[fiscalYear]+=amount*exchangeRate!
+    }
+    finance={...finance,annualEquityContributions:annualContributions}
   }
   const progressiveTaxRows=effectiveDrafts.helpDriven?.sections?.['tax-brackets']??[]
   if(progressiveTaxRows.length){
