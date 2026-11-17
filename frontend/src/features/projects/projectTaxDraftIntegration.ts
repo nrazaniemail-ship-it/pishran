@@ -26,9 +26,9 @@ export function buildProjectTaxDraftSchedule(
   const issues:string[]=[]
   const fiscalYearCount=periods.length
     ?Math.max(...periods.map(period=>fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)))+1:0
-  const empty:ProjectTaxDraftSchedule={active,valid:false,issues,annualTaxRates:[],taxRatesByPeriod:[],
-    taxLossCarryForwardEnabled:false,taxLossCarryForwardYears:null,openingTaxLoss:0,openingTaxLossVintages:[],taxableDeductionsByPeriod:[]}
-  if(!active)return {...empty,valid:true,annualTaxRates:[],taxRatesByPeriod:[]}
+  const empty=():ProjectTaxDraftSchedule=>({active,valid:false,issues,annualTaxRates:[],taxRatesByPeriod:[],
+    taxLossCarryForwardEnabled:false,taxLossCarryForwardYears:null,openingTaxLoss:0,openingTaxLossVintages:[],taxableDeductionsByPeriod:[]})
+  if(!active)return {...empty(),valid:true,annualTaxRates:[],taxRatesByPeriod:[]}
   if(!periods.length||!Number.isInteger(fiscalYearStartMonth)||fiscalYearStartMonth<1||fiscalYearStartMonth>12)
     issues.push('A valid project calendar and fiscal-year start month are required for detailed taxation.')
   if(draft.system===null)issues.push('Select the project tax system before entering tax rates.')
