@@ -265,10 +265,13 @@ export function bindHelpDrivenFinancialDrafts(
   const allocationRows=rows('cost-allocation')
   if(costRows.length){
     const allocationsByKey=new Map<string,HelpFormRow[]>()
+    const allocationGroupByRowId=new Map<string,string>()
     for(const row of allocationRows){
-      const key=str(row,'name')
-      if(!key){issues.push('cost-allocation:'+row.id+': allocation key name is required.');continue}
-      allocationsByKey.set(key,[...(allocationsByKey.get(key)??[]),row])
+      const name=str(row,'name'),centre=str(row,'costCentreId')
+      if(!name||!centre){issues.push('cost-allocation:'+row.id+': allocation key name and cost centre are required.');continue}
+      const groupKey=name+'|'+centre
+      allocationsByKey.set(groupKey,[...(allocationsByKey.get(groupKey)??[]),row])
+      allocationGroupByRowId.set(row.id,groupKey)
     }
     const costs:ReturnType<typeof createBlankProductionCostFormDraft>[]=[]
     for(const row of costRows){
@@ -309,7 +312,8 @@ export function bindHelpDrivenFinancialDrafts(
           total:adjustmentTotal,fixedPercent:num(row,'adjustmentFixedPercent'),variablePercent:num(row,'adjustmentVariablePercent')}]
       }
       if(!allocationKeyId){costs.push(cost);continue}
-      const shares=allocationsByKey.get(allocationKeyId)??[]
+      const groupKey=allocationGroupByRowId.get(allocationKeyId)
+      const shares=groupKey?allocationsByKey.get(groupKey)??[]:[]
       if(!shares.length){issues.push('production-costs:'+row.id+': allocation key "'+allocationKeyId+'" was not defined.');continue}
       if(shares.some(share=>str(share,'type')!=='user-defined')){
         issues.push('cost-allocation:'+allocationKeyId+': only explicit user-defined allocation percentages are currently supported.')
@@ -347,10 +351,9 @@ export function bindHelpDrivenFinancialDrafts(
     result.productionCosts=costs
     boundSections.push('production-costs')
     if(allocationRows.length)boundSections.push('cost-allocation')
-    for(const row of allocationRows){
-      const key=str(row,'name')
-      if(!costRows.some(cost=>str(cost,'allocationKeyId')===key))
-        issues.push('cost-allocation:'+row.id+': allocation key is not referenced by an indirect production-cost item.')
+    for(const [groupKey,shares] of allocationsByKey){
+      if(!shares.some(share=>costRows.some(cost=>str(cost,'allocationKeyId')===share.id)))
+        issues.push('cost-allocation:'+groupKey+': allocation key is not referenced by an indirect production-cost item.')
     }
   } else if(allocationRows.length){
     issues.push('Cost-allocation rows require at least one production-cost item that references the allocation key.')
