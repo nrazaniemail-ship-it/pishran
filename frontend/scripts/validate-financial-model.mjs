@@ -106,3 +106,8 @@ near(workingCapitalBreakdown.factorySupplies,15,1e-9,'Factory-supplies inventory
 near(workingCapitalBreakdown.utilities,10,1e-9,'Utilities inventory working capital')
 near(workingCapitalBreakdown.netWorkingCapital,55,1e-9,'COMFAR inventory working-capital total')
 console.log('PASS: COMFAR raw materials, factory supplies and utilities working-capital inventory')
+
+near(engine.calculateWorkingCapitalTurnoverCoefficient(30,360),12,1e-12,'COMFAR 30-day inventory turnover coefficient')
+near(engine.calculateMinimumDaysCoverageFromTurnover(12,360),30,1e-12,'COMFAR turnover coefficient to days coverage')
+assert.equal(engine.calculateWorkingCapitalTurnoverCoefficient(0,360),null,'Zero days coverage means no working-capital holding period')
+console.log('PASS: COMFAR working-capital minimum-days and turnover-coefficient conversion')
