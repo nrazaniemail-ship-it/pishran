@@ -19,6 +19,7 @@ import {
   calculatePeriodicFinanceWithForeignCurrencyLoans,
   type ForeignCurrencyFinanceRunResult,
 } from './foreignCurrencyLoanFinanceBinding'
+import { searchPeriodicFinanceTarget, type PeriodicSensitivityMetric, type PeriodicSensitivityVariable, type PeriodicTargetSearchResult } from '../steel/periodicSensitivity'
 
 export function bindHelpDrivenFoundation(
   foundation:ProjectFoundation,
@@ -144,6 +145,7 @@ export type ProjectFinancialModelOrchestrationResult={
   workingCapital:WorkingCapitalDraftSchedule|null
   fixedAssets:FixedAssetFinanceBinding|null
   finalRun:ForeignCurrencyFinanceRunResult|null
+  sensitivitySearches?:{rowId:string;alternative:string;result:PeriodicTargetSearchResult}[]
 }
 
 /**
@@ -178,7 +180,7 @@ export function calculateProjectFinancialModelFromDrafts(
   const notYetIntegratedSections=new Set([
     'joint-venture',
     'profit-distribution','starting-balances',
-    'economic-items','economic-effects','sensitivity','incremental-analysis',
+    'economic-items','economic-effects','incremental-analysis',
   ])
   for(const [sectionId,sectionRows] of Object.entries(effectiveDrafts.helpDriven?.sections??{})){
     if(notYetIntegratedSections.has(sectionId)&&sectionRows.length){
@@ -194,6 +196,7 @@ export function calculateProjectFinancialModelFromDrafts(
     'production-costs':['initialStockQuantity','initialStockValue'],
     'sales-programme':['grossUnitPrice','productionActive','futureSalesQuantity','terminalInventorySale'],
     'working-capital':['mode','basis','activityBasis','daysCoverage','turnover','requiredQuantity','initialStockQuantity','initialStockValue','recoveryPeriod','depositPercent','depositRate','periodMonths'],
+    'sensitivity':['quantityChange','priceChange','valueChange','chartVariable'],
   }
   for(const [sectionId,fieldKeys] of Object.entries(notYetMappedFields)){
     for(const row of effectiveDrafts.helpDriven?.sections?.[sectionId]??[]){
@@ -503,5 +506,38 @@ export function calculateProjectFinancialModelFromDrafts(
   if(!finalRun.valid)return {
     valid:false,issues:finalRun.issues,financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,
   }
-  return {valid:true,issues:[],financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun}
+  const sensitivitySearches:{rowId:string;alternative:string;result:PeriodicTargetSearchResult}[]=[]
+  const sensitivityRows=effectiveDrafts.helpDriven?.sections?.['sensitivity']??[]
+  if(sensitivityRows.length){
+    const variableMap:Record<string,PeriodicSensitivityVariable>={
+      'fixed-investment':'investment','production-costs':'variable-cost','sales-programme':'revenue',
+      'financial-costs':'loan-interest-rate','fixed-costs':'fixed-cost','operating-costs':'fixed-cost',
+      'personnel-costs':'fixed-cost','sales-revenues':'revenue','variable-costs':'variable-cost',
+    }
+    if(effectiveDrafts.loans.some(loan=>loan.marketOrigin==='foreign'))
+      return fail(['Target IRR/NPV sensitivity is not yet enabled for foreign-currency facilities; their translated repayment schedules must be rebuilt for each shock.'])
+    for(const row of sensitivityRows){
+      const v=row.values
+      const analysisType=v.analysisType
+      const variable=typeof v.variableGroup==='string'?variableMap[v.variableGroup]:undefined
+      if(analysisType!=='desired-irr'&&analysisType!=='desired-npv')
+        return fail(['Sensitivity row '+row.id+' uses an analysis type that is not yet connected. Only target IRR and target NPV searches are currently supported.'])
+      if(!variable)
+        return fail(['Sensitivity row '+row.id+' must select a supported financial variable group.'])
+      const target=analysisType==='desired-irr'?v.targetIrr:v.targetNpv
+      const metric:PeriodicSensitivityMetric=analysisType==='desired-irr'?'irrProject':'npvProject'
+      const baseValue=metric==='irrProject'?finalRun.finance.irrProject:finalRun.finance.npvProject
+      if(typeof target!=='number'||!Number.isFinite(target)||baseValue===null||!Number.isFinite(baseValue))
+        return fail(['Sensitivity row '+row.id+' requires a finite target and an available baseline '+metric+'.'])
+      const direction=target>=baseValue?'increase':'decrease'
+      const maxVariation=direction==='increase'?v.maxIncrease:v.maxDecrease
+      if(typeof maxVariation!=='number'||!Number.isFinite(maxVariation)||maxVariation<=0||maxVariation>1000)
+        return fail(['Sensitivity row '+row.id+' requires a positive maximum '+direction+' variation no greater than 1000%.'])
+      const result=searchPeriodicFinanceTarget({
+        finance,variable,metric,target,direction,maxVariationPercent:maxVariation,
+      })
+      sensitivitySearches.push({rowId:row.id,alternative:typeof v.chartVariable==='string'&&v.chartVariable.trim()?v.chartVariable.trim():row.id,result})
+    }
+  }
+  return {valid:true,issues:[],financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,sensitivitySearches}
 }
