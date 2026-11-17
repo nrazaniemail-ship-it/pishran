@@ -313,6 +313,16 @@ const partialWorkingCapitalOpening=orchestrator.calculateProjectFinancialModelFr
 })
 assert.equal(partialWorkingCapitalOpening.valid,true,partialWorkingCapitalOpening.issues.join('; '))
 
+const incompleteWorkingCapitalSubledger=orchestrator.calculateProjectFinancialModelFromDrafts({
+ finance,drafts:{...drafts,workingCapital:[...drafts.workingCapital,
+  {...drafts.workingCapital[0],id:'payables',name:'Trade payables',category:'payables',openingBalance:null}]},
+ foundation,productionStartDate:'2025-01-01',
+ openingBalances:{cash:0,debt:0,netFixedAssets:0,netWorkingCapital:0,deferredPreOperatingAssets:0,paidInCapital:0,retainedEarnings:0},
+ taxTreatment:'non-deductible',
+})
+assert.equal(incompleteWorkingCapitalSubledger.valid,false)
+assert.ok(incompleteWorkingCapitalSubledger.issues.some(issue=>issue.includes('provided for every component or omitted for every component')))
+
 let discountingHelp=helpForms.createBlankHelpDrivenProjectForms()
 discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','investmentRate',12)
 discountingHelp=helpForms.updateHelpFormRow(discountingHelp,'discounting','discounting-main','equityRate',14)
