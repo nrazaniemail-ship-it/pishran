@@ -357,16 +357,18 @@ export default function AdvancedFinancePanel(props: Props) {
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     }
-    if(loanDraftIntegration&&!loanDraftIntegration.valid)
+    if(loanDraftIntegration&&!loanDraftIntegration.valid){
       const invalidInput={...periodicInput,annualTaxRates:Array(years).fill(Number.NaN)}
       return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
+    }
     if(props.workingCapitalDrafts?.length){
       const binding=bindWorkingCapitalDraftsToPeriodicFinance(
-        periodicInput,{workingCapital:props.workingCapitalDrafts},props.openingWorkingCapitalBalance??0
+        periodicInput,{workingCapital:props.workingCapitalDrafts??[]},props.openingWorkingCapitalBalance??0
       )
-      if(!binding.valid||!binding.financeInput)
+      if(!binding.valid||!binding.financeInput){
         const invalidInput={...periodicInput,workingCapitalByPeriod:Array(periods.length).fill(Number.NaN)}
         return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
+      }
       return {result:calculateIntegratedPeriodicFinance(binding.financeInput),input:binding.financeInput}
     }
     return {result:calculateIntegratedPeriodicFinance(periodicInput),input:periodicInput}
