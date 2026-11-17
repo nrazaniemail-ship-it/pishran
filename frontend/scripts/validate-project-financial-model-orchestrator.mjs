@@ -453,7 +453,7 @@ for (const field of ['basis','daysCoverage','turnover']) {
 let incrementalHelp=helpForms.createBlankHelpDrivenProjectForms()
 for(const [id,values] of [
  ['incremental-period-1',{alternative:'Upgrade A',view:'existing-with-project',period:'1',investmentDelta:100,depreciationDelta:0,financingDelta:50,assetOpportunityValue:20,workingCapitalDelta:5}],
- ['incremental-period-2',{alternative:'Upgrade A',view:'existing-with-project',period:'2',revenueDelta:80,costDelta:20,depreciationDelta:10,workingCapitalDelta:-5}],
+ ['incremental-period-2',{alternative:'Upgrade A',view:'existing-with-project',period:'2',revenueDelta:80,costDelta:20,depreciationDelta:10,workingCapitalDelta:0}],
 ]){
  incrementalHelp=helpForms.addHelpFormRow(incrementalHelp,'incremental-analysis',id)
  for(const [key,value] of Object.entries(values))
@@ -471,7 +471,7 @@ assert.equal(incrementalModel.incrementalAnalyses[0].view,'existing-with-project
 assert.deepEqual(incrementalModel.incrementalAnalyses[0].cashFlows,[-125,52.5])
 assert.deepEqual(incrementalModel.incrementalAnalyses[0].financingDeltaByPeriod,[50,0])
 assert.deepEqual(incrementalModel.incrementalAnalyses[0].taxDeltaByPeriod,[0,12.5])
-assert.deepEqual(incrementalModel.incrementalAnalyses[0].workingCapitalDeltaByPeriod,[5,-5])
+assert.deepEqual(incrementalModel.incrementalAnalyses[0].workingCapitalDeltaByPeriod,[5,0])
 assert.equal(incrementalModel.incrementalAnalyses[0].basis,'after-tax-unlevered')
 let invalidIncrementalHelp=helpForms.createBlankHelpDrivenProjectForms()
 invalidIncrementalHelp=helpForms.addHelpFormRow(invalidIncrementalHelp,'incremental-analysis','invalid-incremental-period')
