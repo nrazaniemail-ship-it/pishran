@@ -31,9 +31,13 @@ export function createBlankProductionCostFormDraft(id=''):ProductionCostFormDraf
 
 export type SalesProductFormDraft={
  productId:string
+ inventoryPolicy:'manual'|'comfar-days-coverage'|null
+ finishedGoodsDaysCoverage:number|null
+ productionStartPeriod:number|null
+ productionEndPeriod:number|null
  periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;openingFinishedGoodsQuantity:number|null;openingFinishedGoodsValue:number|null;finishedGoodsClosingQuantity:number|null}[]
 }
-export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,periods:[]}}
+export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,inventoryPolicy:null,finishedGoodsDaysCoverage:null,productionStartPeriod:null,productionEndPeriod:null,periods:[]}}
 
 export type WorkingCapitalComponentFormDraft={
  id:string; name:string; category:'inventory'|'work-in-progress'|'finished-goods'|'receivables'|'cash'|'payables'|'other-current-asset'|'other-current-liability'|null
