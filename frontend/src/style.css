@@ -1518,3 +1518,19 @@ input,select,textarea{color:var(--text)}
 .ui-modern .tree-context-menu button{border:0;border-radius:5px;background:transparent;color:var(--modern-text);padding:7px 8px;text-align:start;font-size:9px}
 .ui-modern .tree-context-menu button:hover{background:var(--modern-selected)}
 @media(max-width:760px){.ui-modern .tree-search-input,.ui-modern .tree-context-menu{display:none}}
+
+.ui-modern table{border-collapse:separate;border-spacing:0;width:100%;color:var(--modern-text);font-size:11px}
+.ui-modern table thead th{position:sticky;top:0;z-index:2;background:var(--modern-page);color:var(--modern-muted);font-weight:700;border-bottom:1px solid var(--modern-line)}
+.ui-modern table th,.ui-modern table td{padding:10px 12px;border-bottom:1px solid var(--modern-line);text-align:start}
+.ui-modern table tbody tr:nth-child(even){background:color-mix(in srgb,var(--modern-page) 55%,var(--modern-surface))}
+.ui-modern table tbody tr:hover{background:var(--modern-selected)}
+.ui-modern input:not([type="checkbox"]):not([type="radio"]),.ui-modern select,.ui-modern textarea{min-height:38px;border:1px solid var(--modern-line);background:var(--modern-surface);color:var(--modern-text);padding:8px 10px}
+.ui-modern input:not([type="checkbox"]):not([type="radio"]):focus,.ui-modern select:focus,.ui-modern textarea:focus{border-color:var(--modern-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--modern-primary) 14%,transparent)}
+.ui-modern .secondary-button,.ui-modern button.secondary{min-height:40px;border:1px solid var(--modern-line);border-radius:7px;background:var(--modern-surface);color:var(--modern-text);padding:8px 13px}
+.ui-modern .secondary-button:hover,.ui-modern button.secondary:hover{border-color:var(--modern-primary);background:var(--modern-selected)}
+.ui-modern .destructive,.ui-modern button.destructive{border:1px solid color-mix(in srgb,var(--modern-danger) 30%,var(--modern-line));border-radius:7px;background:color-mix(in srgb,var(--modern-danger) 10%,var(--modern-surface));color:var(--modern-danger)}
+.ui-modern .settings-grid{align-items:start}
+.ui-modern .font-directory-note{color:var(--modern-muted)}
+.ui-modern .setting-row{border-bottom-color:var(--modern-line)}
+.ui-modern .setting-row>span{color:var(--modern-text)}
+.ui-modern .notice{background:var(--modern-selected);color:var(--modern-text)}
