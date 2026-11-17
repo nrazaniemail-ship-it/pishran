@@ -4,8 +4,10 @@ import { localStore } from '../../core/storage/localStore'
 import { allocateJointVentureCashFlows, type JointVenturePartner, type PartnerFinanceResult } from './partnerFinance'
 import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
+import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
+import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { calculateOperatingCycleWorkingCapital } from '../steel/financialModel'
-import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
+import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput } from '../steel/periodicFinancialEngine'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule, calculateSensitivityMatrix,
   calculateFinancialScenarios, calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
@@ -51,6 +53,8 @@ type Props = {
   fixedInvestmentSchedule?: number[]
   preOperatingSchedule?: number[]
   initialWorkingCapital?: number
+  openingWorkingCapitalBalance?: number
+  workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
   initialWorkingCapitalEquityContribution?: number
   initialLoanRatePercent?: number
   initialRepaymentMethod?: Loan['repaymentMethod']
@@ -260,6 +264,9 @@ export default function AdvancedFinancePanel(props: Props) {
     discountMode:state.discountMode,manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.mirrFinanceRate??props.costOfEquity,equityMirrReinvestmentRate:props.mirrReinvestmentRate??props.costOfEquity
   }
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
+  const workingCapitalDraftSchedule=useMemo(()=>props.workingCapitalDrafts?.length
+    ?buildWorkingCapitalScheduleFromDrafts({workingCapital:props.workingCapitalDrafts},projectPeriods,props.openingWorkingCapitalBalance??0)
+    :null,[JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods),props.openingWorkingCapitalBalance])
   const periodicFinanceResult=useMemo<PeriodicProjectFinanceResult|null>(()=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
@@ -288,7 +295,7 @@ export default function AdvancedFinancePanel(props: Props) {
         interestConvention:loan.periodInterestConvention??(loan.drawdownMode==='period-manual'?'comfar-months-plus-360':undefined)
       } as PeriodicLoanInput}
     })
-    const workingCapitalByPeriod=periods.map(period=>{
+    const estimatedWorkingCapitalByPeriod=periods.map(period=>{
       const fiscalIndex=fiscalYearIndexForPeriod(period,periods,fiscalMonth)
       const annualRow=result.years[fiscalIndex]
       if(!annualRow) return 0
@@ -297,7 +304,7 @@ export default function AdvancedFinancePanel(props: Props) {
       const opexFactor=Math.pow(1+state.opexEscalationPercent/100,operatingYear)
       return calculateOperatingCycleWorkingCapital(workingCapitalPolicy,annualRow.utilization,salesFactor,opexFactor).netWorkingCapital
     })
-    return calculateIntegratedPeriodicFinance({
+    const periodicInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
       annualRevenue:result.years.map(row=>row.revenue),annualVariableCost:result.years.map(row=>row.variableCashCost),
@@ -307,7 +314,10 @@ export default function AdvancedFinancePanel(props: Props) {
       annualEquityWorkingCapitalContributions:equityWorkingCapitalContributions,
       annualAssetSaleSchedule:assetSaleSchedule,
       periodDepreciationSchedule,periodAssetSaleSchedule,
-      workingCapitalByPeriod,openingWorkingCapital:0,loans:periodLoans,
+      workingCapitalByPeriod:workingCapitalDraftSchedule?.valid
+        ?workingCapitalDraftSchedule.closingWorkingCapital
+        :estimatedWorkingCapitalByPeriod,
+      openingWorkingCapital:props.openingWorkingCapitalBalance??0,loans:periodLoans,
       taxRatesByPeriod:periodTaxRateDatesMatch()?state.periodTaxRates:undefined,
       discountRatePercent:result.discountRate==null?null:result.discountRate*100,
       equityDiscountRatePercent:props.costOfEquity,
@@ -315,8 +325,17 @@ export default function AdvancedFinancePanel(props: Props) {
       discountConvention:props.discountConvention??'actual-days',
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
-    })
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
+    }
+    if(props.workingCapitalDrafts?.length){
+      const binding=bindWorkingCapitalDraftsToPeriodicFinance(
+        periodicInput,{workingCapital:props.workingCapitalDrafts},props.openingWorkingCapitalBalance??0
+      )
+      if(!binding.valid||!binding.financeInput)
+        return calculateIntegratedPeriodicFinance({...periodicInput,workingCapitalByPeriod:Array(periods.length).fill(Number.NaN)})
+      return calculateIntegratedPeriodicFinance(binding.financeInput)
+    }
+    return calculateIntegratedPeriodicFinance(periodicInput)
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),props.openingWorkingCapitalBalance])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
@@ -339,6 +358,8 @@ export default function AdvancedFinancePanel(props: Props) {
 
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
+    {workingCapitalDraftSchedule&&!workingCapitalDraftSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه سرمایه در گردش از فرم‌های تفصیلی معتبر نیست؛ محاسبات دوره‌ای متوقف شده است.','The detailed working-capital schedule is invalid; periodic calculations are blocked.')}</b>{workingCapitalDraftSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
+    {workingCapitalDraftSchedule?.valid&&<p className="fw-hint">{t('مانده‌های سرمایه در گردش از فرم‌های تفصیلی به موتور دوره‌ای متصل شده‌اند؛ افزایش/کاهش مانده خالص در جریان نقدی ثبت می‌شود.','Detailed working-capital closing balances are connected to the periodic engine; net balance movements are posted to cash flow.')}</p>}
     {props.fixedInvestmentSchedule?.length===years && props.preOperatingSchedule?.length===years
       ? <p className="fw-hint">{t('زمان‌بندی CAPEX دارایی‌های ثابت و هزینه‌های قبل از بهره‌برداری از نوبت‌های تحصیل مستند یا تأییدشده استخراج شده است.','Fixed-asset CAPEX and pre-production timing both use source-supported or user-confirmed acquisition vintages.')}</p>
       : props.fixedInvestmentSchedule?.length===years
