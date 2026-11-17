@@ -23,6 +23,7 @@ import { searchPeriodicFinanceTarget, type PeriodicSensitivityMetric, type Perio
 import { calculateIncrementalAnalysis, type IncrementalAnalysisResult } from './incrementalAnalysisIntegration'
 import { applyShareholderDistributions, type ShareholderDistributionResult } from './shareholderDistributionIntegration'
 import { bindStartingBalancesToPeriodicFinance, type StartingBalanceIntegrationResult } from './startingBalanceIntegration'
+import { bindEconomicAppraisalConfiguration, type EconomicAppraisalConfigurationResult } from './economicAppraisalIntegration'
 
 export function bindHelpDrivenFoundation(
   foundation:ProjectFoundation,
@@ -152,6 +153,7 @@ export type ProjectFinancialModelOrchestrationResult={
   incrementalAnalyses?:IncrementalAnalysisResult[]
   shareholderDistribution?:ShareholderDistributionResult
   startingBalances?:StartingBalanceIntegrationResult
+  economicAppraisal?:EconomicAppraisalConfigurationResult
 }
 
 /**
@@ -176,18 +178,18 @@ export function calculateProjectFinancialModelFromDrafts(
   let workingCapital:WorkingCapitalDraftSchedule|null=null
   let fixedAssets:FixedAssetFinanceBinding|null=null
   let startingBalances:StartingBalanceIntegrationResult|null=null
+  let economicAppraisal:EconomicAppraisalConfigurationResult|null=null
   const fail=(issues:string[]):ProjectFinancialModelOrchestrationResult=>({
     valid:false,issues,financeInput:null,productionSales,workingCapital,fixedAssets,finalRun:null,
     ...(startingBalances?{startingBalances}:{}),
+    ...(economicAppraisal?{economicAppraisal}:{}),
   })
   const openingDraft=effectiveDrafts.openingBalanceSheet
   const crossFormIssues=[...validateProjectModelCrossReferences(effectiveDrafts,input.projectProductIds),...(effectiveDrafts.helpDriven?validateHelpDrivenProjectForms(effectiveDrafts.helpDriven):[]),...(effectiveDrafts.helpDriven?validateHelpDrivenProjectPeriods(effectiveDrafts.helpDriven,input.finance.periods):[])]
   // Never let populated raw-template sections disappear silently from a financial run.
   // These sections require dedicated adapters and are deliberately rejected until their
   // schedules are represented in the periodic engine (rather than being treated as zero).
-  const notYetIntegratedSections=new Set([
-    'economic-items','economic-effects',
-  ])
+  const notYetIntegratedSections=new Set<string>([])
   for(const [sectionId,sectionRows] of Object.entries(effectiveDrafts.helpDriven?.sections??{})){
     if(notYetIntegratedSections.has(sectionId)&&sectionRows.length){
       crossFormIssues.push('Raw-template section "'+sectionId+'" contains data but is not yet connected to the periodic financial calculation. The model run is blocked to prevent silently ignored inputs.')
@@ -197,7 +199,6 @@ export function calculateProjectFinancialModelFromDrafts(
   // engine posting exists; supported sibling fields in the same section remain usable.
   const notYetMappedFields:Record<string,readonly string[]> = {
     'discounting':['shortNpvYears','referencePoint'],
-    'economic-global':['method','numeraireType','numeraireCurrency','numeraireUnit','officialExchangeRate','shadowExchangeRate','standardConversionFactor','foreignCurrencyConversionFactor','referenceDate'],
     'income-tax':['taxSystem','taxCurrency','adjustmentPeriod','adjustmentAmount'],
     'production-costs':['initialStockQuantity','initialStockValue'],
     'sales-programme':['grossUnitPrice','productionActive','futureSalesQuantity','terminalInventorySale'],
@@ -214,6 +215,8 @@ export function calculateProjectFinancialModelFromDrafts(
       }
     }
   }
+  economicAppraisal=bindEconomicAppraisalConfiguration(effectiveDrafts.helpDriven,effectiveFoundation)
+  crossFormIssues.push(...economicAppraisal.issues)
   if(crossFormIssues.length)return fail(crossFormIssues)
   const resolveTaxPeriod=(key:string):number=>{
     const matches:number[]=[]
@@ -584,5 +587,5 @@ export function calculateProjectFinancialModelFromDrafts(
       sensitivitySearches.push({rowId:row.id,alternative:typeof v.chartVariable==='string'&&v.chartVariable.trim()?v.chartVariable.trim():row.id,result})
     }
   }
-  return {valid:true,issues:[],financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,sensitivitySearches,shareholderDistribution,...(startingBalances?{startingBalances}:{}),...(incrementalAnalysis.results.length?{incrementalAnalyses:incrementalAnalysis.results}:{})}
+  return {valid:true,issues:[],financeInput:finance,productionSales,workingCapital,fixedAssets,finalRun,sensitivitySearches,shareholderDistribution,...(startingBalances?{startingBalances}:{}),...(economicAppraisal?{economicAppraisal}:{}),...(incrementalAnalysis.results.length?{incrementalAnalyses:incrementalAnalysis.results}:{})}
 }
