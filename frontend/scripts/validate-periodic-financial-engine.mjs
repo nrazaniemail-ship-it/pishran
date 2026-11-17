@@ -76,3 +76,19 @@ assert.equal(lossCarryModel.valid,true,lossCarryModel.warnings.join('; '))
 assert.deepEqual(lossCarryModel.rows.map(row=>row.tax),[0,0,0,0,30,75])
 assert.deepEqual(lossCarryModel.rows.map(row=>row.taxLossCarryForward),[200,280,260,130,0,0])
 console.log('PASS: periodic COMFAR loss carry-forward expires after the configured three fiscal years')
+
+const salesSchedulePeriods = foundation.buildProjectCalendarPeriods('2025-01-01','2025-12-31','annual',1)
+const salesScheduleModel = engine.calculateIntegratedPeriodicFinance({
+  periods:salesSchedulePeriods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[1150],annualNetSalesRevenue:[1000],annualGrossSalesRevenue:[1100],
+  annualSalesTax:[100],annualSubsidy:[150],annualVariableCost:[0],annualFixedCost:[0],
+  annualDepreciation:[0],annualFixedInvestment:[0],annualPreOperatingCost:[0],
+  annualMaintenanceCapex:[0],annualTaxRates:[0],annualEquityContributions:[0],
+  workingCapitalByPeriod:[0],loans:[],
+})
+assert.equal(salesScheduleModel.valid,true,salesScheduleModel.warnings.join('; '))
+assert.deepEqual(
+  [salesScheduleModel.rows[0].netSalesRevenue,salesScheduleModel.rows[0].grossSalesRevenue,salesScheduleModel.rows[0].salesTax,salesScheduleModel.rows[0].subsidy,salesScheduleModel.rows[0].revenue],
+  [1000,1100,100,150,1150],
+)
+console.log('PASS: periodic COMFAR sales schedule reconciles gross sales, sales tax, net sales and subsidies')
