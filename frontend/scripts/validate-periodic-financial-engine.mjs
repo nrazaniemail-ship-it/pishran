@@ -284,3 +284,38 @@ assert.deepEqual(engine.buildPeriodicThreeFinancialStatements(missingAutomaticFu
   'Three-statement builder must reject incomplete automatic funding schedules')
 console.log('PASS: COMFAR XI.N automatic construction equity and overdraft are integrated into cash flow, balance sheet and equity')
 console.log('PASS: malformed, discontinuous or incomplete automatic funding schedules are rejected')
+
+
+const fixedInvestmentBase = {
+  id:'timing-control-asset',description:'Timing control asset',assetClass:'machinery',
+  origin:'local',currencyCode:'IRR',costCentreId:'',
+  depreciation:{method:'linear-zero',startingAt:'2025',ratePercent:100,lengthYears:1,
+    lengthMonths:0,firstDepreciationMonths:12,scrapPercent:0},
+  depreciationBasis:'user-confirmed',
+  acquisitions:[{id:'timing-control-acquisition',period:'2025',quantity:1,unitPrice:100,
+    currencyCode:'IRR',exchangeRateToLocal:null,allocationBasis:'user-confirmed'}],
+  sales:[],
+}
+const validAcquisitionTiming=financialModel.buildComfarDepreciationAssetsFromFixedInvestmentItems(
+  [fixedInvestmentBase],2025,2,'annual')
+assert.equal(validAcquisitionTiming.investmentScheduleVerified,true)
+assert.deepEqual(validAcquisitionTiming.investmentSchedule,[100,0],
+  'A confirmed in-horizon acquisition must be allocated to its exact model year')
+const priorYearAcquisition=financialModel.buildComfarDepreciationAssetsFromFixedInvestmentItems(
+  [{...fixedInvestmentBase,acquisitions:[{...fixedInvestmentBase.acquisitions[0],period:'2024'}]}],
+  2025,2,'annual')
+assert.equal(priorYearAcquisition.investmentScheduleVerified,false,
+  'An acquisition before the model start must never be marked as a verified new-investment cash-flow schedule')
+const beyondHorizonAcquisition=financialModel.buildComfarDepreciationAssetsFromFixedInvestmentItems(
+  [{...fixedInvestmentBase,acquisitions:[{...fixedInvestmentBase.acquisitions[0],period:'2028'}]}],
+  2025,2,'annual')
+assert.equal(beyondHorizonAcquisition.investmentScheduleVerified,false,
+  'An acquisition beyond the model horizon must never be silently omitted from a verified schedule')
+const priorYearPreproduction=financialModel.buildComfarDepreciationAssetsFromFixedInvestmentItems(
+  [{...fixedInvestmentBase,id:'timing-control-preproduction',assetClass:'preproduction',
+    depreciation:{...fixedInvestmentBase.depreciation,method:'none',startingAt:''},
+    acquisitions:[{...fixedInvestmentBase.acquisitions[0],period:'2024'}]}],
+  2025,2,'annual')
+assert.equal(priorYearPreproduction.preOperatingScheduleVerified,false,
+  'Pre-production expenditure acquired before model start must not be marked as a verified in-period schedule')
+console.log('PASS: fixed-investment and pre-production timing cannot be verified when acquisitions fall outside the modeled horizon')
