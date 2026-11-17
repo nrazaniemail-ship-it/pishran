@@ -65,6 +65,9 @@ try {
  assert.deepEqual(tax.rates,[])
  const complete=forms.createBlankProjectModelFinancialFormDrafts()
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts(complete),[])
+ const balancedOpening={enabled:true,cash:10,inventory:20,workInProgress:0,finishedGoods:0,receivables:0,otherCurrentAssets:0,tradePayables:5,otherCurrentLiabilities:0,grossFixedAssets:100,accumulatedDepreciation:0,deferredPreOperatingAssets:0,shortTermDebt:10,longTermDebt:20,shareCapital:95,retainedEarnings:0}
+ assert.deepEqual(forms.validateOpeningBalanceSheetDraft(balancedOpening),[],'Trade payables must be included in liabilities, not subtracted from total assets')
+ assert.ok(forms.validateOpeningBalanceSheetDraft({...balancedOpening,shareCapital:94}).includes('opening-balance-sheet-does-not-balance'),'Opening balance sheet must reject a one-unit imbalance')
 
  const duplicateAssets={...complete,assets:[{...asset,id:'same'},{...asset,id:'same'}]}
  assert.ok(forms.validateProjectModelCrossReferences(duplicateAssets).includes('assets:duplicate-id'))
