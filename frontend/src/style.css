@@ -1589,3 +1589,20 @@ input,select,textarea{color:var(--text)}
 .ui-modern .modern-statusbar .status-warning{color:var(--modern-warning)}
 .ui-modern .inspector-status.status-warning{color:var(--modern-warning)}
 .ui-modern .inspector-status.status-warning span{background:var(--modern-warning)}
+
+
+/* Mobile and keyboard affordances for the modern workspace */
+.ui-modern :where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--modern-primary);outline-offset:2px}
+.ui-modern .modern-sidebar button{min-height:40px}
+@media(max-width:760px){
+  .ui-modern .modern-side-nav button,.ui-modern .modern-sidebar-bottom button{min-width:44px;min-height:44px}
+  .ui-modern .modern-sidebar{overflow-x:hidden}
+  .ui-modern .modern-statusbar{padding-inline:10px;font-variant-numeric:tabular-nums}
+  .ui-modern .modern-workspace-heading{gap:8px}
+  .ui-modern .modern-live-status{flex-wrap:wrap}
+  .ui-modern .modern-inspector{max-width:100%;overflow-wrap:anywhere}
+  .ui-modern .report-table-actions button{min-height:40px}
+}
+@media(prefers-reduced-motion:reduce){
+  .ui-modern *, .ui-modern *::before, .ui-modern *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
