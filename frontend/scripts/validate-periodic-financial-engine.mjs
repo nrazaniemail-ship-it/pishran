@@ -98,6 +98,28 @@ assert.ok(Math.abs(openingAssetDisposalStatements[1].cashFlowStatement.investing
 assert.ok(openingAssetDisposalStatements.every(row=>row.balanceSheet.reconciled&&
   Math.abs(row.movementChecks.netFixedAssets)<=0.01),
   'Opening asset disposal proceeds, disposal loss and fixed-asset derecognition must reconcile')
+const openingBalanceSheetCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,0],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  annualDepreciation:[0,0,0],periodDepreciationSchedule:[0,0,0],
+  annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
+  annualTaxRates:[0,0,0],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[50,40,0],openingWorkingCapital:50,openingCash:100,
+  loans:[],discountRatePercent:10
+})
+assert.equal(openingBalanceSheetCase.valid,true,openingBalanceSheetCase.warnings.join('; '))
+const openingBalanceSheetStatements=engine.buildPeriodicThreeFinancialStatements(openingBalanceSheetCase,{
+  cash:100,debt:200,netFixedAssets:700,netWorkingCapital:50,
+  paidInCapital:500,retainedEarnings:50,grants:100
+})
+assert.equal(openingBalanceSheetStatements.length,periods.length)
+assert.ok(openingBalanceSheetStatements.every(row=>row.balanceSheet.reconciled),
+  'Opening cash, net working capital, fixed assets, debt, paid-in capital, retained earnings and grants must balance without a plug')
+assert.equal(openingBalanceSheetStatements[0].openingBalances.grants,100)
+assert.equal(openingBalanceSheetStatements[0].balanceSheet.grants,100)
+assert.ok(openingBalanceSheetStatements.every(row=>Math.abs(row.movementChecks.grants)<=0.01))
+assert.deepEqual(openingBalanceSheetStatements.map(row=>row.balanceSheet.cash),[100,110,150],
+  'Opening cash and terminal working-capital recovery must roll forward through the statements')
 const loan=engine.calculatePeriodicLoanSchedule({
   annualRatePercent:10,drawdowns:[1000,0,0],repaymentMethod:'annuity',
   repaymentStartPeriod:2,gracePeriods:0,termPeriods:2,capitalizeInterest:false,
