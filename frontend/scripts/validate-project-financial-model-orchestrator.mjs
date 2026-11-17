@@ -356,7 +356,7 @@ assert.ok(fifoInventoryCostModel.finalRun.statements.every(row=>row.balanceSheet
 const combinedInventoryComponentDrafts={
  ...inventoryCostDrafts,
  workingCapital:[{id:'finished-goods',name:'Finished goods',category:'finished-goods',openingBalance:0,
-  minimumDaysCoverage:null,turnoverCoefficient:null,calculationMode:'value',activityBasis:'production',
+  minimumDaysCoverage:null,turnoverCoefficient:null,calculationMode:'value',activityBasis:null,
   valuationBasis:'user-defined',periodBalances:[{period:'1',amount:600},{period:'2',amount:320}]}],
 }
 const combinedInventoryFinance={...finance,finishedGoodsInventoryValueByPeriod:[100,100]}
