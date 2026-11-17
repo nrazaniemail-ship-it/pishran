@@ -394,13 +394,13 @@ export default function ProjectReportVisuals(props: Props) {
       <h4>{t('جزئیات فرم‌های فنی و هزینه‌ای پروژه','Project Technical & Cost Form Details',language)}</h4>
       {props.marketSummary&&<div className="fw-card"><h4>{t('خلاصه اطلاعات بازار','Market Information Summary',language)} </h4><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('شاخص','Indicator',language)}</th><th>{t('مقدار','Value',language)}</th><th>{t('واحد','Unit',language)}</th></tr></thead><tbody>
         {[
-          [t('تقاضای سالانه بازار','Annual Market Demand',language),fmtValue(props.marketSummary.demand,0),t('تن/سال','tonnes/year',language)],
-          [t('تولید داخلی','Domestic Production',language),fmtValue(props.marketSummary.domesticProduction,0),t('تن/سال','tonnes/year',language)],
-          [t('واردات','Imports',language),fmtValue(props.marketSummary.imports,0),t('تن/سال','tonnes/year',language)],
-          [t('صادرات','Exports',language),fmtValue(props.marketSummary.exports,0),t('تن/سال','tonnes/year',language)],
+          [t('تقاضای سالانه بازار','Annual Market Demand',language),fmtValue(props.marketSummary.demand,0),annualProductUnit],
+          [t('تولید داخلی','Domestic Production',language),fmtValue(props.marketSummary.domesticProduction,0),annualProductUnit],
+          [t('واردات','Imports',language),fmtValue(props.marketSummary.imports,0),annualProductUnit],
+          [t('صادرات','Exports',language),fmtValue(props.marketSummary.exports,0),annualProductUnit],
           [t('سهم هدف پروژه از بازار','Target Project Market Share',language),fmtValue(props.marketSummary.targetShare,2)+'%',t('درصد','percent',language)],
           [t('قیمت فروش داخلی','Domestic Selling Price',language),fmtValue(props.marketSummary.domesticPrice),project.currency+'/'+productUnit],
-          [t('قیمت فروش صادراتی','Export Selling Price',language),fmtValue(props.marketSummary.exportPrice),project.currency+'/تن'],
+          [t('قیمت فروش صادراتی','Export Selling Price',language),fmtValue(props.marketSummary.exportPrice),project.currency+'/'+productUnit],
           [t('سهم فروش داخلی','Domestic Sales Share',language),fmtValue(props.marketSummary.domesticShare,2)+'%',t('درصد','percent',language)],
           [t('رشد سالانه تقاضا','Annual Demand Growth',language),fmtValue(props.marketSummary.growth,2)+'%',t('درصد','percent',language)],
         ].map(([label,value,unit])=><tr key={String(label)}><td>{label}</td><td>{value}</td><td>{unit}</td></tr>)}
