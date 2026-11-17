@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import type { OneWaySensitivityAnalysis, SensitivityCell } from '../steel/financialModel'
 import type { PartnerFinanceResult } from './partnerFinance'
 import { aggregatePeriodicFinanceByFiscalYear, hasCompleteFiscalYearCoverage, type PeriodicProjectFinanceResult } from '../steel/periodicFinancialEngine'
@@ -79,18 +80,38 @@ const fmt = (value: number | null | undefined, language: 'fa'|'en', digits = 2) 
   value == null || !Number.isFinite(value) ? '—' : value.toLocaleString(language === 'en' ? 'en-US' : 'fa-IR', { maximumFractionDigits: digits, minimumFractionDigits: digits })
 
 function FormRowsTable({title,rows,language,kind='cost'}:{title:string;rows:ReportFormRow[];language:'fa'|'en';kind?:'technical'|'material'|'cost'}){
+  const [query,setQuery]=useState('')
+  const [sort,setSort]=useState<'source'|'name'|'quantity'|'total'>('source')
+  const [directionSort,setDirectionSort]=useState<'asc'|'desc'>('asc')
   if(!rows.length)return null
   const direction=(row:ReportFormRow)=>row.flowType==='output'||(row.flowType==null&&/(تولیدی|قابل فروش|باطله|ضایعات|نرمه و برگشتی|سرباره|پرت|برگشتی|گندله سالم|آهن اسفنجی سرد)/.test(row.name))
     ?t('خروجی / محصول','Output / Product',language):t('ورودی / مصرف','Input / Consumption',language)
-  return <div className="fw-card"><h4>{title}</h4><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
+  const visibleRows=[...rows].filter(row=>[row.name,row.unit,row.source,row.valueText??''].join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+    .sort((a,b)=>{const left=sort==='name'?a.name:sort==='quantity'?a.quantity:sort==='total'?a.quantity*a.unitPrice:a.source;const right=sort==='name'?b.name:sort==='quantity'?b.quantity:sort==='total'?b.quantity*b.unitPrice:b.source;const result=typeof left==='number'&&typeof right==='number'?left-right:String(left).localeCompare(String(right),language==='en'?'en':'fa');return directionSort==='asc'?result:-result})
+  const exportCsv=()=>{
+    const headers=[t('قلم / پارامتر','Item / Parameter',language),t('مقدار / مشخصه','Quantity / Value',language),t('واحد','Unit',language),t('قیمت واحد','Unit price',language),t('جمع','Total',language),t('منبع','Source',language),...(kind==='material'?[t('جهت جریان','Flow direction',language)]:[])]
+    const records=visibleRows.map(row=>[row.name,kind==='technical'?(row.valueText||(row.quantity!==0?String(row.quantity):'')):String(row.quantity),row.unit,kind==='technical'||row.unitPrice===0?'':String(row.unitPrice),kind==='technical'||row.unitPrice===0?'':String(row.quantity*row.unitPrice),row.source,...(kind==='material'?[direction(row)]:[])])
+    const quote=(value:unknown)=>'"'+String(value??'').replace(/"/g,'""')+'"'
+    const csv='\\uFEFF'+[headers,...records].map(record=>record.map(quote).join(',')).join('\\r\\n')
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'})
+    const url=URL.createObjectURL(blob)
+    const anchor=document.createElement('a');anchor.href=url;anchor.download=(title.trim().replace(/[^\\p{L}\\p{N}-]+/gu,'-')||'report')+'.csv';document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url)
+  }
+  return <div className="fw-card report-data-card"><div className="report-table-toolbar"><h4>{title}</h4><div className="report-table-actions">
+    <input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={t('جستجو در ردیف‌ها...','Filter rows...',language)} aria-label={t('جستجو در جدول','Search table',language)}/>
+    <select value={sort} onChange={event=>setSort(event.target.value as typeof sort)} aria-label={t('مرتب‌سازی جدول','Sort table',language)}>
+      <option value="source">{t('ترتیب منبع','Source order',language)}</option><option value="name">{t('نام قلم','Item name',language)}</option><option value="quantity">{t('مقدار','Quantity',language)}</option><option value="total">{t('جمع','Total',language)}</option>
+    </select>
+    <button type="button" className="secondary-button" onClick={()=>setDirectionSort(value=>value==='asc'?'desc':'asc')} aria-label={t('تغییر جهت مرتب‌سازی','Reverse sort direction',language)}>{directionSort==='asc'?'↑':'↓'}</button>
+    <button type="button" className="secondary-button report-export-button" onClick={exportCsv}>{t('خروجی Excel (CSV)','Export Excel (CSV)',language)}</button>
+  </div></div><div className="report-table-scroll" style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
     <th>{t('قلم / پارامتر','Item / Parameter',language)}</th><th>{t('مقدار / مشخصه','Quantity / Value',language)}</th><th>{t('واحد','Unit',language)}</th><th>{t('قیمت واحد','Unit price',language)}</th><th>{t('جمع','Total',language)}</th><th>{t('منبع','Source',language)}</th>{kind==='material'&&<th>{t('جهت جریان','Flow direction',language)}</th>}
-  </tr></thead><tbody>{rows.map(row=><tr key={row.id}>
+  </tr></thead><tbody>{visibleRows.map(row=><tr key={row.id}>
     <td>{row.name}</td><td>{kind==='technical'?(row.valueText|| (row.quantity!==0?fmt(row.quantity,language):'—')):fmt(row.quantity,language)}</td>
     <td>{row.unit||'—'}</td><td>{kind==='technical'||row.unitPrice===0?'—':fmt(row.unitPrice,language)}</td>
     <td>{kind==='technical'||row.unitPrice===0?'—':fmt(row.quantity*row.unitPrice,language)}</td><td>{row.source||'—'}</td>{kind==='material'&&<td>{direction(row)}</td>}
-  </tr>)}</tbody></table></div></div>
+  </tr>)}</tbody></table>{visibleRows.length===0&&<p className="fw-hint">{t('ردیفی با این عبارت پیدا نشد.','No rows match this search.',language)}</p>}</div><div className="report-table-footnote">{t('نمایش','Showing')} {fmt(visibleRows.length,language,0)} {t('از','of')} {fmt(rows.length,language,0)} {t('ردیف','rows')}</div></div>
 }
-
 function SensitivityChart({ analysis, language, currency }: { analysis: OneWaySensitivityAnalysis | null; language: 'fa'|'en'; currency: string }) {
   if (!analysis) return <p className="fw-hint">{t('در حال آماده‌سازی تحلیل حساسیت یک‌متغیره؛ مدل مالی یکپارچه باید یک بار محاسبه شود.','One-way sensitivity analysis is being prepared; the integrated financial model must complete one calculation.',language)}</p>
   const usable = analysis.factors.filter(f => f.available && f.lowNpv != null && f.highNpv != null)
