@@ -67,8 +67,9 @@ export function bindHelpDrivenFoundation(
     id:row.id,code:row.id,name:String(row.values.name??'').trim(),
     ...(typeof row.values.parentId==='string'&&row.values.parentId.trim()?{parentId:row.values.parentId.trim()}:{}),
     ...(typeof row.values.group==='string'&&row.values.group.trim()?{group:row.values.group.trim()}:{}),
-    ...(typeof row.values.level==='number'&&Number.isInteger(row.values.level)?{level:row.values.level}:{}),
-    ...(Array.isArray(row.values.productIds)?{productIds:row.values.productIds.filter((id):id is string=>typeof id==='string'&&id.trim().length>0)}:{}),
+    ...(typeof row.values.level==='string'&&row.values.level.trim()?{level:row.values.level.trim()}:{}),
+    ...(typeof row.values.productIds==='string'&&row.values.productIds.trim()
+      ?{productIds:row.values.productIds.split(/[;,\\n]/).map(id=>id.trim()).filter(Boolean)}:{}),
   }))}}
   const inflationRows=rows('inflation')
   if(inflationRows.length){
