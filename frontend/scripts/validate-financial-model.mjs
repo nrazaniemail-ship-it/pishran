@@ -63,3 +63,16 @@ const annualTaxHoliday = engine.calculateIntegratedFinance({
 assert.equal(annualTaxHoliday.years[1].tax,0,'First production year must be tax-exempt during the one-year tax holiday')
 assert.equal(annualTaxHoliday.years[2].tax,250,'Progressive tax calculation must resume after tax holiday')
 console.log('PASS: COMFAR progressive tax Table 22 and production tax holiday in annual financial model')
+
+const lossLots = []
+const annualLossResults = [
+  engine.applyAnnualTaxLossCarryForward(-200,lossLots,0,3,true),
+  engine.applyAnnualTaxLossCarryForward(-80,lossLots,1,3,true),
+  engine.applyAnnualTaxLossCarryForward(20,lossLots,2,3,true),
+  engine.applyAnnualTaxLossCarryForward(130,lossLots,3,3,true),
+  engine.applyAnnualTaxLossCarryForward(200,lossLots,4,3,true),
+  engine.applyAnnualTaxLossCarryForward(300,lossLots,5,3,true),
+]
+assert.deepEqual(annualLossResults.map(row=>row.taxableProfitAfterLoss),[0,0,0,0,120,300])
+assert.deepEqual(annualLossResults.map(row=>row.closingLossCarryForward),[200,280,260,130,0,0])
+console.log('PASS: COMFAR Reference Manual Table 23 FIFO loss carry-forward and three-year expiry')
