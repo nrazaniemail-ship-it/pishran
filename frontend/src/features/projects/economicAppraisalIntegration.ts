@@ -139,7 +139,23 @@ export function bindEconomicAppraisalConfiguration(
     if(Number.isFinite(referenceTimestamp)&&Number.isFinite(finalPeriodEnd)&&referenceTimestamp>finalPeriodEnd)
       issues.push('Economic reference date cannot be later than the final project period.')
   }
-  if(populatedEffects.length)issues.push('Economic effects are not yet valued. Foreign-loan transfers, indirect effects, employment and environmental effects require distinct period-specific shadow-price valuation rules before they can enter economic cash flow.')
+  for(const effect of populatedEffects){
+    const type=effect.values.type
+    const period=typeof effect.values.period==='string'?effect.values.period.trim():''
+    if(!period||resolvePeriod(period,finance)<0)
+      issues.push('Economic effect '+effect.id+' requires a valid project-calendar period before valuation.')
+    if(type==='foreign-loan'){
+      issues.push('Economic effect '+effect.id+' is a foreign-loan financing transfer. Loan principal and financing transfers must remain in the financial model and must not be counted as economic benefits or costs; any real resource cost requires a separately evidenced economic valuation.')
+    }else if(type==='indirect-effect'){
+      issues.push('Economic effect '+effect.id+' is an indirect effect. It cannot enter economic cash flow until its physical impact, counterfactual, affected period and applicable shadow price are explicitly evidenced.')
+    }else if(type==='employment'){
+      issues.push('Economic effect '+effect.id+' is employment. Headcount and shadow-wage factor alone are insufficient: a period-specific wage/cost base and a defensible counterfactual opportunity wage are required before calculating an economic employment benefit.')
+    }else if(type==='environmental'){
+      issues.push('Economic effect '+effect.id+' is environmental. A physical quantity, measurement unit, counterfactual and period-specific shadow damage/abatement price are required before valuation.')
+    }else{
+      issues.push('Economic effect '+effect.id+' has an unsupported effect type and cannot enter economic cash flow.')
+    }
+  }
   if(!assignedItems.length)issues.push('Economic appraisal requires at least one item assigned to the economic browser with a period-specific numeraire value.')
   const unsupportedFields=['financialValue','firstAppearancePrice','firstAppearanceQuantity','borderPrice','adjustmentFactor','adjustedMarketValue','fxExposure','taxesDutiesIncludedPercent','valueAddedIncludedPercent','exportablePercent','importablePercent','importSubstitutionPercent','transportAdjustedValue','transportForeignExposurePercent','otherAdjustedValue','otherForeignExposurePercent','consumerOrProducerPrice','subsidyNegativeTax']
   for(const item of assignedItems){
