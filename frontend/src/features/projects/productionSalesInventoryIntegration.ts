@@ -299,7 +299,8 @@ export function buildProductionSalesInventorySchedule(
         issues.push('Cost item '+cost.id+' period '+(i+1)+': '+(error instanceof Error?error.message:'invalid cost input'))
         continue
       }
-      // Direct and allocated indirect production costs enter inventory valuation; only consumed stock is expensed as COGS.\n      if (cost.classification==='direct') {
+      // Direct and allocated indirect production costs enter inventory valuation; only consumed stock is expensed as COGS.
+      if (cost.classification==='direct') {
         operating.directFixedCost+=fixed
         operating.directVariableCost+=variable
       } else {
