@@ -397,6 +397,16 @@ export function bindHelpDrivenFinancialDrafts(
       if(opening.length&&opening.some(value=>Math.abs(value-opening[0])>0.000001))
         issues.push('sales-programme:'+productId+': opening finished-goods quantities conflict between periods.')
       sales.openingFinishedGoodsQuantity=opening[0]??null
+      const openingValues=items.map(row=>num(row,'openingFinishedGoodsValue')).filter((value):value is number=>value!==null)
+      if(openingValues.length&&openingValues.some(value=>Math.abs(value-openingValues[0])>0.000001))
+        issues.push('sales-programme:'+productId+': opening finished-goods carrying values conflict between periods.')
+      sales.openingFinishedGoodsValue=openingValues[0]??null
+      const valuationMethods=items.map(row=>str(row,'inventoryValuationMethod')||str(row,'valuationMethod')).filter(Boolean)
+      if(valuationMethods.some(method=>method!=='fifo'&&method!=='weighted-average')||
+        (valuationMethods.length&&valuationMethods.some(method=>method!==valuationMethods[0])))
+        issues.push('sales-programme:'+productId+': inventory valuation method must be consistently FIFO or weighted-average.')
+      sales.inventoryValuationMethod=(valuationMethods[0]==='fifo'||valuationMethods[0]==='weighted-average')
+        ?valuationMethods[0]:null
       return sales
     })
     boundSections.push('sales-programme')
