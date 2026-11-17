@@ -680,7 +680,9 @@ export type PeriodicProjectFinanceInput = {
   annualEquityContributions: number[]
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
+  /** Closing net working capital excluding finished goods; finished-goods inventory is posted separately below. */
   workingCapitalByPeriod: number[]
+  /** Opening net working capital must include opening finished-goods carrying value. */
   openingWorkingCapital?: number
   openingTaxLoss?: number
   openingUnleveredTaxLoss?: number
