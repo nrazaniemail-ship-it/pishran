@@ -219,11 +219,12 @@ export function buildPeriodicLoanFacilityBinding(input:{
   if(!nonNegative(openingForeignBalance))return {valid:false,issues:['Opening foreign debt must be finite and non-negative.'],loan:null,localSchedule:null,fxTranslation:null,openingCarryingAmountLocal:0}
   const resolvedCurrency=currencyResolution.currency
   if(!resolvedCurrency) {
-    const schedule=calculatePeriodicLoanSchedule({...loanInput,openingBalance:0},periods,dayCountBasis)
+    loanInput={...loanInput,openingBalance:openingLocalBalance}
+    const schedule=calculatePeriodicLoanSchedule(loanInput,periods,dayCountBasis)
     if(!schedule.valid)return {valid:false,issues:schedule.issues,loan:null,localSchedule:null,fxTranslation:null,openingCarryingAmountLocal:0}
     return {
       valid:true,issues:[],loan:{id:loan.id,input:loanInput},localSchedule:null,fxTranslation:null,
-      openingCarryingAmountLocal:0,
+      openingCarryingAmountLocal:openingLocalBalance,
     }
   }
   const periodRates=periods.map(period=>resolveCurrencyRate(resolvedCurrency,period))
