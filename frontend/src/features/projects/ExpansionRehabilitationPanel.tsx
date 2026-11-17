@@ -51,6 +51,10 @@ const comfarTermsEn:Record<string,string>={
  'مدت استهلاک (سال)':'Length (years)',
  'درصد ارزش اسقاط':'Scrap (% of original value)',
  'تاریخ شروع استهلاک':'Starting at',
+ 'تاریخ واگذاری/فروش':'Disposal / Sale Date',
+ 'روش قیمت‌گذاری واگذاری':'Disposal Valuation Method',
+ 'مبلغ دریافتی واگذاری':'Disposal Proceeds',
+ 'نرخ تبدیل به ارز محلی':'Exchange Rate to Local Currency',
  'مرکز هزینه':'Cost Centre',
  'سهم جزء ارزی (%)':'Foreign Currency Component (%)',
  'مدت سررسید (سال)':'Maturity (years)',
@@ -109,6 +113,12 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   'unknown-starting-asset-cost-centre':'مرکز هزینه انتخاب‌شده در فونداسیون تعریف نشده است.',
   'invalid-starting-asset-date':'تاریخ‌ها باید به صورت YYYY-MM-DD وارد شوند.',
   'depreciation-before-commissioning':'تاریخ شروع استهلاک نمی‌تواند قبل از تاریخ بهره‌برداری باشد.',
+  'invalid-starting-asset-disposal-date':'تاریخ واگذاری باید به صورت YYYY-MM-DD باشد.',
+  'missing-starting-asset-disposal-date':'برای دارایی جایگزین‌شونده یا قابل فروش، تاریخ دقیق واگذاری لازم است.',
+  'starting-asset-disposal-before-project':'تاریخ واگذاری نمی‌تواند قبل از شروع پروژه باشد.',
+  'starting-asset-disposal-after-project':'تاریخ واگذاری باید داخل تقویم پروژه باشد.',
+  'invalid-starting-asset-disposal-proceeds':'مبلغ دریافتی واگذاری باید عددی نامنفی باشد.',
+  'invalid-starting-asset-disposal-exchange-rate':'برای مبلغ ارزی، نرخ تبدیل مثبت به ارز محلی لازم است.',
   'invalid-starting-asset-depreciation-length':'مدت استهلاک باید عدد صحیح نامنفی باشد.',
   'invalid-starting-asset-depreciation-months':'ماه‌های اضافه عمر استهلاک باید بین صفر تا ۱۱ باشد.',
   'invalid-starting-asset-first-months':'ماه‌های مشمول استهلاک در سال اول باید بین ۱ تا ۱۲ باشد.',
@@ -188,6 +198,14 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
    <label className="fw-field"><span>{t('تاریخ شروع استهلاک',comfarTermsEn['تاریخ شروع استهلاک'])}</span><input type="date" value={asset.depreciationStartDate??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,depreciationStartDate:e.target.value}:a)}))}/></label>
    <label className="fw-field"><span>{t('مرکز هزینه',comfarTermsEn['مرکز هزینه'])}</span><input value={asset.costCentre??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,costCentre:e.target.value}:a)}))}/></label>
    <label className="fw-field"><span>{t('وضعیت دارایی','Asset Status')}</span><select value={asset.status} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,status:e.target.value as Asset['status']}:a)}))}><option value="active">{t('فعال','Active')}</option><option value="replace">{t('جایگزین‌شونده','To Be Replaced')}</option><option value="idle">{t('بلااستفاده','Idle')}</option><option value="sell">{t('قابل فروش','For Sale')}</option></select></label>
+   {(asset.status==='replace'||asset.status==='sell')&&<>
+    <label className="fw-field"><span>{t('تاریخ واگذاری/فروش',comfarTermsEn['تاریخ واگذاری/فروش'])}</span><input type="date" value={asset.disposalDate??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,disposalDate:e.target.value}:a)}))}/></label>
+    <label className="fw-field"><span>{t('روش قیمت‌گذاری واگذاری',comfarTermsEn['روش قیمت‌گذاری واگذاری'])}</span><select value={asset.disposalPriceMode??'book-value'} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,disposalPriceMode:e.target.value as Asset['disposalPriceMode']}:a)}))}><option value="book-value">{t('به ارزش دفتری','At Net Book Value')}</option><option value="self-defined">{t('مبلغ تعیین‌شده','Self-defined Proceeds')}</option></select></label>
+    {asset.disposalPriceMode==='self-defined'&&<>
+     <label className="fw-field"><span>{t('مبلغ دریافتی واگذاری',comfarTermsEn['مبلغ دریافتی واگذاری'])}</span><input type="number" min="0" value={asset.disposalProceeds??0} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,disposalProceeds:Number(e.target.value)}:a)}))}/></label>
+     <label className="fw-field"><span>{t('نرخ تبدیل به ارز محلی',comfarTermsEn['نرخ تبدیل به ارز محلی'])}</span><input type="number" min="0.000001" step="0.000001" value={asset.disposalExchangeRateToLocal??1} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,disposalExchangeRateToLocal:Number(e.target.value)}:a)}))}/></label>
+    </>}
+   </>}
    <button className="secondary-button" onClick={()=>setState(s=>({...s,assets:s.assets.filter(a=>a.id!==asset.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
   </div>)}
   <button className="secondary-button" onClick={addAsset}><Plus size={14}/>{t('افزودن دارایی موجود','Add Existing Asset')}</button>
