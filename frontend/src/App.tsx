@@ -79,8 +79,9 @@ export default function App() {
 
   useEffect(() => {
     let alive = true
-    Promise.all([loadSettings(), purgeRemovedCaseProjects(), localStore.info()])
-      .then(([nextSettings, nextProjects, info]) => {
+    Promise.all([loadSettings(), purgeRemovedCaseProjects()])
+      .then(async ([nextSettings, nextProjects]) => {
+        const info = await localStore.info()
         if (!alive) return
         setSettings(nextSettings)
         applySettings(nextSettings)
@@ -133,6 +134,7 @@ export default function App() {
   }
 
   async function refreshAfterRestore() {
+    await purgeRemovedCaseProjects()
     setSettings(await loadSettings())
     setProjects(await listProjects())
     await refreshStorage()
