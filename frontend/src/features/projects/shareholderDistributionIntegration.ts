@@ -208,7 +208,6 @@ export function applyShareholderDistributions(
       issues.push('Capital refunds exceed cumulative paid-in capital in period '+row.period+'.')
     const preTerminalRetainedEarnings=retained+netIncome-totalDividend
     const preTerminalPaidInCapital=paidIn+row.equityContribution+row.equityWorkingCapitalContribution-scheduledCapitalRefund
-    const preTerminalCash=statement.cashFlowStatement.closingCash-totalDividend-scheduledCapitalRefund
     const terminalPercent=rows.reduce((value,item)=>Math.max(value,finite(item.values.netWorthDistribution)?item.values.netWorthDistribution:0),0)
     const netWorthBeforeTerminal=statement.balanceSheet.totalAssets-totalDividend-scheduledCapitalRefund-statement.balanceSheet.totalLiabilities
     const terminalNetWorthDistribution=i===finance.rows.length-1?Math.max(0,netWorthBeforeTerminal)*terminalPercent/100:0
