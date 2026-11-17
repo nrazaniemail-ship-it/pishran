@@ -67,10 +67,10 @@ const longCoveragePolicy={...depositPolicy,rawMaterialDays:540,annualRawMaterial
 near(engine.calculateOperatingCycleWorkingCapital(longCoveragePolicy,1).rawMaterials,540,1e-9,'Working-capital days coverage may exceed one year')
 
 const annualDepositModel=engine.calculateIntegratedFinance({
-  years:2,constructionYears:1,capacity:1,fullCapacityRevenue:100,
+  years:3,constructionYears:1,capacity:1,fullCapacityRevenue:100,
   fullCapacityVariableCashCost:30,fullCapacityFixedCashCost:10,annualDepreciation:0,
-  fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
-  utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,
+  fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0,0],preOperatingSchedule:[0,0,0],
+  utilization:[0,1,1],equityContributions:[0,0,0],loans:[],taxRate:0,costOfEquity:10,
   workingCapitalPercent:0,salesEscalationPercent:0,opexEscalationPercent:0,
   discountMode:'manual',manualDiscountRate:10,
   workingCapitalPolicy:depositPolicy,
