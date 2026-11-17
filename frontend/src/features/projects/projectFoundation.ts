@@ -405,6 +405,9 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
   items.forEach((item, index) => {
     const path = `fixedInvestmentItems[${index}]`
     if (!item.description.trim()) issue(path + '.description', 'missing-fixed-asset-description', 'Enter a description for each fixed investment item.')
+    if (!item.assetClass) issue(path + '.assetClass', 'missing-fixed-asset-class', 'Select a fixed investment asset class.')
+    if (!item.origin) issue(path + '.origin', 'missing-fixed-asset-origin', 'Select whether the fixed investment item is local or foreign.')
+    if (!item.depreciation.method) issue(path + '.depreciation.method', 'missing-depreciation-method', 'Select a depreciation method or explicitly select no depreciation.')
     if (!item.depreciationBasis || item.depreciationBasis === 'unresolved') warn(path + '.depreciationBasis', 'depreciation-basis-unresolved', 'Depreciation conditions are not supported by a source or confirmed by the user.')
     else if (item.depreciationBasis === 'source-conflict') warn(path + '.depreciationBasis', 'depreciation-basis-conflict', 'Source documents contain conflicting depreciation conditions; confirm the applicable rate or scrap value.')
     if (!item.currencyCode.trim() || !validCurrencyCodes.has(item.currencyCode.trim().toUpperCase()))
@@ -430,7 +433,7 @@ export function validateFixedInvestmentItems(items: FixedInvestmentItem[], found
       if (item.origin === 'foreign' && (!Number.isFinite(acquisition.exchangeRateToLocal) || (acquisition.exchangeRateToLocal ?? 0) <= 0))
         issue(acquisitionPath + '.exchangeRateToLocal', 'missing-asset-exchange-rate', 'Foreign-origin asset acquisitions require a positive exchange rate to local currency.')
     })
-    if (item.depreciation.method !== 'none') {
+    if (item.depreciation.method && item.depreciation.method !== 'none') {
       if (!item.depreciation.startingAt.trim()) issue(path + '.depreciation.startingAt', 'missing-depreciation-start', 'Define Starting at for depreciable assets.')
       if (!Number.isFinite(item.depreciation.lengthYears) || (item.depreciation.lengthYears ?? 0) < 0 || !Number.isInteger(item.depreciation.lengthMonths) || item.depreciation.lengthMonths < 0 || item.depreciation.lengthMonths > 11 || ((item.depreciation.lengthYears ?? 0) + item.depreciation.lengthMonths / 12) <= 0)
         issue(path + '.depreciation.length', 'invalid-depreciation-length', 'Depreciation Length must be greater than zero and months must be from 0 to 11.')
