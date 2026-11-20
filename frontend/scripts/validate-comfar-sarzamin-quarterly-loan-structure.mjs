@@ -22,9 +22,9 @@ const addMonths = (isoDate, months) => {
   target.setUTCDate(Math.min(day, lastDay))
   return target.toISOString().slice(0, 10)
 }
-const periods = Array.from({ length: 12 }, (_, index) => {
-  const startDate = addMonths('2024-03-20', index * 3)
-  const nextStart = addMonths('2024-03-20', (index + 1) * 3)
+const periods = Array.from({ length: 13 }, (_, index) => {
+  const startDate = addMonths('2023-12-20', index * 3)
+  const nextStart = addMonths('2023-12-20', (index + 1) * 3)
   const end = new Date(nextStart + 'T00:00:00.000Z')
   end.setUTCDate(end.getUTCDate() - 1)
   const endDate = end.toISOString().slice(0, 10)
@@ -37,12 +37,12 @@ const facilities = [
   { id: 'rial-loan', principal: 2_000_000 },
 ]
 const schedules = facilities.map(facility => {
-  const drawdowns = [facility.principal, ...Array(11).fill(0)]
+  const drawdowns = [facility.principal, ...Array(12).fill(0)]
   const result = engine.calculatePeriodicLoanSchedule({
     annualRatePercent: 23,
     drawdowns,
     repaymentMethod: 'annuity',
-    repaymentStartPeriod: 1,
+    repaymentStartPeriod: 2,
     gracePeriods: 0,
     termPeriods: 12,
     capitalizeInterest: false,
@@ -50,7 +50,7 @@ const schedules = facilities.map(facility => {
     periodsPerYear: 4,
   }, periods, 365)
   assert.equal(result.valid, true, facility.id + ': ' + result.issues.join('; '))
-  assert.equal(result.rows.length, 12)
+  assert.equal(result.rows.length, 13)
   assert.equal(result.rows.filter(row => row.principal > 0).length, 12,
     facility.id + ': repayment must start in the first quarter and span all 12 quarters')
   const principalRepaid = result.rows.reduce((sum, row) => sum + row.principal, 0)
@@ -63,7 +63,7 @@ const schedules = facilities.map(facility => {
 
 const aggregatePrincipal = schedules.reduce((sum, schedule) => sum + schedule.principal, 0)
 assert.equal(aggregatePrincipal, 5_000_000)
-for (let index = 0; index < 12; index++) {
+for (let index = 0; index < 13; index++) {
   const combinedClosing = schedules.reduce((sum, schedule) => sum + schedule.rows[index].closingBalance, 0)
   assert.ok(Number.isFinite(combinedClosing) && combinedClosing >= -0.01,
     'Combined facility balance must remain finite and non-negative in quarter ' + (index + 1))
