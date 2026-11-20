@@ -41,6 +41,7 @@ assert.equal(result.valid,true,result.warnings.join('; '))
 const row=result.rows[0]
 const statements=engine.buildPeriodicThreeFinancialStatements(result,{
  debt:reference.openingDebt,netFixedAssets:reference.openingNetFixedAssets,
+ netWorkingCapital:reference.workingCapitalOpening,
  paidInCapital:reference.openingPaidInCapital,retainedEarnings:reference.openingRetainedEarnings,
 })
 assert.equal(statements.length,1,'COMFAR year-6 linked financial statements must be generated')
