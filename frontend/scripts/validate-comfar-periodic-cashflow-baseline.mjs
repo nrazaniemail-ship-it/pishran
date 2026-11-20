@@ -48,6 +48,10 @@ assert.equal(statements.length,1,'COMFAR year-6 linked financial statements must
 const statement=statements[0]
 const close=(actual,expected,label,tolerance=0.02)=>assert.ok(Math.abs(actual-expected)<=tolerance,
  label+': expected '+expected+', received '+actual)
+close(statement.openingBalances.netWorkingCapital,reference.workingCapitalOpening,
+ 'COMFAR year-6 opening working capital')
+close(statement.movementChecks.netWorkingCapital,0,
+ 'COMFAR year-6 working-capital roll-forward')
 close(row.revenue,reference.revenue,'COMFAR year-6 sales')
 close(row.variableCost,reference.operatingCosts,'COMFAR year-6 operating/factory costs')
 close(row.fixedCost,reference.marketing,'COMFAR year-6 marketing')
