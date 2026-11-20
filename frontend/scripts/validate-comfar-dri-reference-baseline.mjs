@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import ts from 'typescript'
-process.on('uncaughtException',error=>{console.error('COMFAR DRI reference validation diagnostic:',error?.name,error?.message);console.error((error?.stack??'').split('\\n').slice(-8).join('\\n'));process.exitCode=1})
+process.on('uncaughtExceptionMonitor',error=>{console.error('COMFAR DRI reference validation diagnostic:',error?.name,error?.message);console.error((error?.stack??'').split('\\n').slice(-8).join('\\n'))})
 const transpile=source=>ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 const engineSource=transpile(await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts',import.meta.url),'utf8'))
 const engineUrl='data:text/javascript;base64,'+Buffer.from(engineSource).toString('base64')
