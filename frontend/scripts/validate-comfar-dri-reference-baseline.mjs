@@ -39,7 +39,7 @@ const productionCosts=[{
  nominalCapacity:1000000,fixedPercent:null,variablePercent:null,
  adjustments:[{period:'1',quantity:null,unitPrice:null,total:722161.98,fixedPercent:null,variablePercent:null}],
 }]
-const productSchedule=productModule.buildProductOperatingSchedule({sales:[sales],productionCosts},periods,1,'IRR')
+const productSchedule=productModule.buildProductOperatingSchedule({sales,productionCosts:[productionCosts]},periods,1,'IRR')
 assert.equal(productSchedule.valid,true,productSchedule.issues.join('; '))
 const close=(actual,expected,label,tolerance=0.02)=>assert.ok(Math.abs(actual-expected)<=tolerance,
   label+': expected '+expected+', received '+actual)
