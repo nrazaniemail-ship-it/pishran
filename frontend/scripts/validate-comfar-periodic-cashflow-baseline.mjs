@@ -39,6 +39,12 @@ const result=engine.calculateIntegratedPeriodicFinance({
 })
 assert.equal(result.valid,true,result.warnings.join('; '))
 const row=result.rows[0]
+const statements=engine.buildPeriodicThreeFinancialStatements(result,{
+ debt:reference.openingDebt,netFixedAssets:reference.openingNetFixedAssets,
+ paidInCapital:reference.openingPaidInCapital,retainedEarnings:reference.openingRetainedEarnings,
+})
+assert.equal(statements.length,1,'COMFAR year-6 linked financial statements must be generated')
+const statement=statements[0]
 const close=(actual,expected,label,tolerance=0.02)=>assert.ok(Math.abs(actual-expected)<=tolerance,
  label+': expected '+expected+', received '+actual)
 close(row.revenue,reference.revenue,'COMFAR year-6 sales')
@@ -49,19 +55,13 @@ close(row.interestExpense,reference.interest,'COMFAR year-6 financial costs')
 close(row.principal,reference.principal,'COMFAR year-6 loan repayment')
 close(row.changeInWorkingCapital,reference.workingCapitalClosing-reference.workingCapitalOpening,'COMFAR year-6 increase in current assets')
 close(row.tax,reference.tax,'COMFAR year-6 corporate tax')
-close(row.netIncome,reference.netIncome,'COMFAR year-6 net profit')
+close(statement.incomeStatement.netIncome,reference.netIncome,'COMFAR year-6 net profit')
 close(row.equityFreeCashFlow,reference.cashSurplus,'COMFAR year-6 cash surplus')
-const statements=engine.buildPeriodicThreeFinancialStatements(result,{
- debt:reference.openingDebt,netFixedAssets:reference.openingNetFixedAssets,
- paidInCapital:reference.openingPaidInCapital,retainedEarnings:reference.openingRetainedEarnings,
-})
-assert.equal(statements.length,1)
-const statement=statements[0]
 close(statement.cashFlowStatement.netChangeInCash,reference.cashSurplus,'COMFAR year-6 net cash change')
 close(statement.balanceSheet.debt,reference.closingDebt,'COMFAR year-6 closing debt')
 close(statement.balanceSheet.netFixedAssets,reference.closingNetFixedAssets,'COMFAR year-6 net fixed assets')
 close(statement.balanceSheet.cash,reference.closingCash,'COMFAR year-6 closing cash')
-close(statement.balanceSheet.currentAssets,reference.currentAssets,'COMFAR year-6 current assets')
+close(statement.balanceSheet.cash+statement.balanceSheet.netWorkingCapital,reference.currentAssets,'COMFAR year-6 current assets')
 close(statement.balanceSheet.totalAssets,reference.totalAssets,'COMFAR year-6 total assets')
 close(statement.balanceSheet.retainedEarnings,reference.closingRetainedEarnings,'COMFAR year-6 accumulated retained earnings')
 assert.equal(statement.balanceSheet.reconciled,true,'COMFAR year-6 balance sheet must reconcile')
