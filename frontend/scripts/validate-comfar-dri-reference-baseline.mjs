@@ -56,13 +56,15 @@ const result=engine.calculateIntegratedPeriodicFinance({
  workingCapitalByPeriod:[0,0,0],loans:[],taxLossCarryForwardEnabled:false,discountRatePercent:25,
 })
 assert.equal(result.valid,true,result.warnings.join('; '))
+const statements=engine.buildPeriodicThreeFinancialStatements(result)
+assert.equal(statements.length,periods.length,'Three-statement income statement rows must cover the DRI reference periods')
 result.rows.forEach((row,index)=>{
  close(row.revenue,reference.sales[index],reference.years[index]+' revenue')
  close(row.variableCost,reference.factoryCosts[index],reference.years[index]+' factory costs')
  close(row.fixedCost,reference.administrativeOverhead[index]+reference.marketing[index],reference.years[index]+' overhead and marketing')
  close(row.ebit,reference.taxableProfit[index],reference.years[index]+' taxable profit before tax')
  close(row.tax,reference.corporateTax[index],reference.years[index]+' corporate tax')
- close(row.netIncome,reference.netProfit[index],reference.years[index]+' net profit')
+ close(statements[index].incomeStatement.netIncome,reference.netProfit[index],reference.years[index]+' net profit')
 })
 const sensitivity=engine.calculatePeriodicSensitivityMatrix({
   periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
