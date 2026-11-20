@@ -38,9 +38,9 @@ assert.equal(result.loanScheduleOverrides['foreign-1'].length,3)
 assert.equal(result.foreignTranslations['foreign-1'].valid,true)
 assert.equal(result.foreignExchangeLossByPeriod.length,3)
 assert.ok(result.foreignExchangeLossByPeriod.some(value=>Math.abs(value)>0.001))
-assert.equal(result.loanScheduleOverrides['foreign-1'][0].drawdown,60,
+assert.ok(Math.abs(result.loanScheduleOverrides['foreign-1'][0].drawdown-60)<1e-9,
  'Foreign drawdowns must be translated using the explicit project-period FX rate')
-assert.equal(result.loanScheduleOverrides['foreign-1'][0].openingBalance,110,
+assert.ok(Math.abs(result.loanScheduleOverrides['foreign-1'][0].openingBalance-110)<1e-9,
  'Opening foreign debt must be translated using the explicit opening FX rate')
 const missingFx=adapter.buildProjectLoanDraftIntegration([foreignLoan],periods,365,'annual',{
  currencies:{...foundation.currencies,foreignCurrencies:[{...foundation.currencies.foreignCurrencies[0],exchangeRates:[{period:'1',rateToLocal:1.2}]}]}
