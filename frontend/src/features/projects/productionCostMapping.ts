@@ -53,12 +53,18 @@ export function mapProductionCostsToFinance(input: ProductionAnnualCostInput): P
     errors.push('هزینه متغیر پایه باید عددی معتبر و نامنفی باشد')
   if (!Number.isFinite(input.fullCapacityFixedCashCost) || input.fullCapacityFixedCashCost < 0)
     errors.push('هزینه ثابت پایه باید عددی معتبر و نامنفی باشد')
-  const variableEntries = Object.entries(input.mappedBaseCosts.variable) as [ProductionCostComponent, number][]
-  const fixedEntries = Object.entries(input.mappedBaseCosts.fixed) as [ProductionCostComponent, number][]
-  if (!input.mappedBaseCosts?.variable || !input.mappedBaseCosts?.fixed || [...variableEntries, ...fixedEntries].some(([, value]) => !Number.isFinite(value) || value < 0))
+  // Persisted projects can contain incomplete legacy objects despite the static type.
+  const mapping = input.mappedBaseCosts && typeof input.mappedBaseCosts === 'object' ? input.mappedBaseCosts : undefined
+  const variableSource = mapping?.variable && typeof mapping.variable === 'object' ? mapping.variable : undefined
+  const fixedSource = mapping?.fixed && typeof mapping.fixed === 'object' ? mapping.fixed : undefined
+  const variableEntries = variableSource ? Object.entries(variableSource) as [ProductionCostComponent, number][] : []
+  const fixedEntries = fixedSource ? Object.entries(fixedSource) as [ProductionCostComponent, number][] : []
+  if (!variableSource || !fixedSource || [...variableEntries, ...fixedEntries].some(([, value]) => !Number.isFinite(value) || value < 0))
     errors.push('مبالغ نگاشت هزینه پایه باید محدود و نامنفی باشند')
   const mappedVariableBaseCostTotal = variableEntries.reduce((sum, [, value]) => sum + value, 0)
   const mappedFixedBaseCostTotal = fixedEntries.reduce((sum, [, value]) => sum + value, 0)
+  if (!Number.isFinite(mappedVariableBaseCostTotal) || !Number.isFinite(mappedFixedBaseCostTotal))
+    errors.push('جمع اجزای نگاشت هزینه پایه از محدوده عددی معتبر خارج است')
   if (mappedVariableBaseCostTotal > input.fullCapacityVariableCashCost + 0.005)
     errors.push('جمع اجزای نگاشت متغیر از کل هزینه متغیر پایه بیشتر است')
   if (mappedFixedBaseCostTotal > input.fullCapacityFixedCashCost + 0.005)
