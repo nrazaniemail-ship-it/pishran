@@ -1850,7 +1850,7 @@ export function buildPeriodicThreeFinancialStatements(
     const closingRawMaterialsInventory = row.rawMaterialsInventory
     const closingWorkInProgressInventory = row.workInProgressInventory
     const closingFinishedGoodsInventory = row.finishedGoodsInventory
-    const closingOtherNetWorkingCapital = closingWorkingCapital - closingRawMaterialsInventory - closingWorkInProgressInventory - closingFinishedGoodsInventory - closingFinishedGoodsInventory
+    const closingOtherNetWorkingCapital = closingWorkingCapital - closingRawMaterialsInventory - closingWorkInProgressInventory - closingFinishedGoodsInventory
     const closingNetFixedAssets = netFixedAssets + row.fixedInvestment + row.maintenanceCapex -
       row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed
     const closingPreOperatingAssets = deferredPreOperatingAssets + row.preOperatingCost + row.capitalizedInterest + row.capitalizedFinancingFees
