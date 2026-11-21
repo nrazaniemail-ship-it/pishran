@@ -42,6 +42,11 @@ export type SalesProductFormDraft={
 }
 export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,unitOfMeasure:'',inventoryPolicy:null,finishedGoodsDaysCoverage:null,productionStartPeriod:null,productionEndPeriod:null,periods:[]}}
 
+export type SalesTaxInputCreditFormDraft={id:string;period:number|null;taxAmount:number|null;sourceReference:string;sourceVerified:boolean}
+export type SalesTaxSettlementFormDraft={period:number|null;amount:number|null;sourceReference:string}
+export type SalesTaxLedgerFormDraft={openingBalance:number|null;inputCredits:SalesTaxInputCreditFormDraft[];settlements:SalesTaxSettlementFormDraft[]}
+export function createBlankSalesTaxLedgerFormDraft():SalesTaxLedgerFormDraft{return{openingBalance:null,inputCredits:[],settlements:[]}}
+
 export type WorkingCapitalComponentFormDraft={
  id:string; name:string; category:'inventory'|'work-in-progress'|'finished-goods'|'receivables'|'cash'|'payables'|'other-current-asset'|'other-current-liability'|null
  minimumDaysCoverage:number|null; turnoverCoefficient:number|null; valuationBasis:'cost-of-production'|'cost-of-sales'|'sales-revenue'|'user-defined'|null
@@ -202,10 +207,11 @@ export type ProjectModelFinancialFormDrafts = {
  workingCapital: WorkingCapitalComponentFormDraft[]
  loans: LoanFacilityFormDraft[]
  tax: ProjectTaxFormDraft
+ salesTaxLedger: SalesTaxLedgerFormDraft
  economic: { discountRatePercent:number|null; adjustments:EconomicAdjustmentFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
+ return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),salesTaxLedger:createBlankSalesTaxLedgerFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{
@@ -299,6 +305,22 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
   if(item.minimumDaysCoverage!==null&&(!Number.isFinite(item.minimumDaysCoverage)||item.minimumDaysCoverage<=0))errors.push('working-capital-'+index+':invalid-days-coverage')
   if(item.turnoverCoefficient!==null&&(!Number.isFinite(item.turnoverCoefficient)||item.turnoverCoefficient<0))errors.push('working-capital-'+index+':invalid-turnover')
  }
+ const salesTax=value.salesTaxLedger??createBlankSalesTaxLedgerFormDraft()
+ const salesTaxCreditIds=new Set<string>()
+ for(const [index,item] of salesTax.inputCredits.entries()){
+  const id=item.id.trim().toLocaleLowerCase()
+  if(!id||salesTaxCreditIds.has(id))errors.push('sales-tax-credit-'+index+':duplicate-or-missing-id')
+  salesTaxCreditIds.add(id)
+  if(item.period===null||!Number.isInteger(item.period)||item.period<1||item.taxAmount===null||!Number.isFinite(item.taxAmount)||item.taxAmount<0)errors.push('sales-tax-credit-'+index+':invalid-period-or-amount')
+  if(!item.sourceReference.trim()||!item.sourceVerified)errors.push('sales-tax-credit-'+index+':verified-source-required')
+ }
+ const settlementPeriods=new Set<number>()
+ for(const [index,item] of salesTax.settlements.entries()){
+  if(item.period===null||!Number.isInteger(item.period)||item.period<1||settlementPeriods.has(item.period))errors.push('sales-tax-settlement-'+index+':invalid-or-duplicate-period')
+  if(item.period!==null)settlementPeriods.add(item.period)
+  if(item.amount===null||!Number.isFinite(item.amount)||item.amount<0||!item.sourceReference.trim())errors.push('sales-tax-settlement-'+index+':amount-and-source-required')
+ }
+ if(salesTax.openingBalance!==null&&!Number.isFinite(salesTax.openingBalance))errors.push('sales-tax-opening-balance:invalid')
  for(const [index,row] of value.tax.rates.entries())if(row.ratePercent!==null&&(!Number.isFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100))errors.push('tax-rate-'+index+':invalid-tax-rate')
  if(value.tax.lossCarryForwardYears!==null&&(!Number.isInteger(value.tax.lossCarryForwardYears)||value.tax.lossCarryForwardYears<0))errors.push('invalid-loss-carry-forward-years')
  return errors
