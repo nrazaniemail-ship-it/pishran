@@ -1,7 +1,7 @@
 import {
  createBlankFixedAssetFormDraft, createBlankProductionCostFormDraft,
  createBlankSalesProductFormDraft, createBlankWorkingCapitalComponentFormDraft,
- createBlankLoanFacilityFormDraft, createBlankCppCpsTraceItem, createBlankSalesTaxLedgerFormDraft, createBlankValueAddedPeriodFormDraft, createBlankValueAddedInputFormDraft, createBlankValueAddedInvestmentFormDraft, type ProjectModelFinancialFormDrafts,
+ createBlankLoanFacilityFormDraft, createBlankCppCpsTraceItem, createBlankSalesTaxLedgerFormDraft, createBlankValueAddedPeriodFormDraft, createBlankValueAddedInputFormDraft, createBlankValueAddedInvestmentFormDraft, createBlankCostCentreInventoryMovementFormDraft, type ProjectModelFinancialFormDrafts,
  type FixedAssetFormDraft, type ProductionCostFormDraft,
  type WorkingCapitalComponentFormDraft, type LoanFacilityFormDraft, type CostCentreFormDraft, type ValueAddedPeriodFormDraft, type ValueAddedInputFormDraft, type ValueAddedInvestmentFormDraft,
  validateProjectModelFinancialFormDrafts
@@ -328,6 +328,35 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
     <button type="button" className="secondary-button" onClick={()=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.filter(x=>x.id!==entry.id)})}>{t('حذف دوره مرجع','Remove benchmark')}</button>
    </div>)}
    <button type="button" className="secondary-button" onClick={()=>onChange({...value,inventoryReferenceBenchmarks:[...(value.inventoryReferenceBenchmarks??[]),{id:crypto.randomUUID(),period:1,sourceDocument:'',schedule:'',page:'',currency:'',amountScaleToModel:null,rawMaterials:null,workInProgress:null,finishedGoods:null,totalInventory:null,cpp:null,cps:null}]})}>{t('افزودن دوره مرجع','Add reference period')}</button>
+  </div>
+  <div className="fw-card">
+   <h4>{t('دفتر تفصیلی موجودی مراکز هزینه','Cost-centre inventory movement register')}</h4>
+   <p className="fw-hint">{t('برای هر مرحله موجودی، محصول، مرکز هزینه و دوره یک ردیف مستقل ثبت کنید. تمام مقادیر ابتدا خالی هستند؛ ثبت ردیف به‌تنهایی هیچ عددی را صفر یا تأییدشده نمی‌کند. تا زمان اتصال این دفتر به موتور سه‌مرحله‌ای موجودی، ورود داده در این بخش مانع تأیید گزارش مالی خواهد بود.','Enter a separate row for each inventory stage, product, cost centre and period. All amounts start blank; adding a row never implies zero or verified data. Until this register is posted into the three-stage inventory engine, entered rows block financial-report approval.')}</p>
+   {(value.costCentreInventoryMovements??[]).map((entry,index)=>{
+    const patch=(changes:Partial<typeof entry>)=>onChange({...value,costCentreInventoryMovements:(value.costCentreInventoryMovements??[]).map((row,i)=>i===index?{...row,...changes}:row)})
+    return <div className="fw-grid" key={entry.id}>
+     <label className="fw-field"><span>{t('مرحله موجودی','Inventory stage')}</span><select value={entry.inventoryStage??''} onChange={e=>patch({inventoryStage:(e.target.value||null) as typeof entry.inventoryStage})}><option value="">{t('انتخاب مرحله','Select stage')}</option><option value="raw-materials">{t('مواد اولیه','Raw materials')}</option><option value="work-in-progress">{t('کالای در جریان ساخت','Work in progress')}</option><option value="finished-goods">{t('محصول نهایی','Finished goods')}</option></select></label>
+     <TextField label={t('شناسه محصول','Product ID')} value={entry.productId} onChange={v=>patch({productId:v})}/>
+     <TextField label={t('مرکز هزینه','Cost centre')} value={entry.costCentreId} onChange={v=>patch({costCentreId:v})}/>
+     <NumberField label={t('دوره','Period')} value={entry.period} onChange={v=>patch({period:v})}/>
+     <NumberField label={t('مقدار اول دوره','Opening quantity')} value={entry.openingQuantity} onChange={v=>patch({openingQuantity:v})}/>
+     <NumberField label={t('ارزش اول دوره','Opening value')} value={entry.openingValue} onChange={v=>patch({openingValue:v})}/>
+     <NumberField label={t('مقدار ورودی/رسید','Receipts quantity')} value={entry.receiptsQuantity} onChange={v=>patch({receiptsQuantity:v})}/>
+     <NumberField label={t('ارزش ورودی/رسید','Receipts value')} value={entry.receiptsValue} onChange={v=>patch({receiptsValue:v})}/>
+     <NumberField label={t('مقدار تولید/تکمیل ورودی','Production quantity')} value={entry.productionQuantity} onChange={v=>patch({productionQuantity:v})}/>
+     <NumberField label={t('ارزش تولید/تکمیل ورودی','Production value')} value={entry.productionValue} onChange={v=>patch({productionValue:v})}/>
+     <NumberField label={t('مقدار مصرف/خروج','Consumption quantity')} value={entry.consumptionQuantity} onChange={v=>patch({consumptionQuantity:v})}/>
+     <NumberField label={t('ارزش مصرف/خروج','Consumption value')} value={entry.consumptionValue} onChange={v=>patch({consumptionValue:v})}/>
+     <NumberField label={t('مقدار ضایعات','Waste quantity')} value={entry.wasteQuantity} onChange={v=>patch({wasteQuantity:v})}/>
+     <NumberField label={t('ارزش ضایعات','Waste value')} value={entry.wasteValue} onChange={v=>patch({wasteValue:v})}/>
+     <NumberField label={t('مقدار پایان دوره','Closing quantity')} value={entry.closingQuantity} onChange={v=>patch({closingQuantity:v})}/>
+     <NumberField label={t('ارزش پایان دوره','Closing value')} value={entry.closingValue} onChange={v=>patch({closingValue:v})}/>
+     <TextField label={t('ارجاع منبع / سند / صفحه','Source reference / document / page')} value={entry.sourceReference} onChange={v=>patch({sourceReference:v})}/>
+     <label className="fw-field"><span>{t('وضعیت منبع','Source status')}</span><select value={entry.sourceVerified?'verified':'unverified'} onChange={e=>patch({sourceVerified:e.target.value==='verified'})}><option value="unverified">{t('تأییدنشده','Unverified')}</option><option value="verified">{t('تأییدشده','Verified')}</option></select></label>
+     <button type="button" className="secondary-button" onClick={()=>onChange({...value,costCentreInventoryMovements:(value.costCentreInventoryMovements??[]).filter(row=>row.id!==entry.id)})}>{t('حذف ردیف','Remove row')}</button>
+    </div>
+   })}
+   <button type="button" className="secondary-button" onClick={()=>onChange({...value,costCentreInventoryMovements:[...(value.costCentreInventoryMovements??[]),createBlankCostCentreInventoryMovementFormDraft(crypto.randomUUID())]})}>{t('افزودن ردیف موجودی مرکز هزینه','Add cost-centre inventory row')}</button>
   </div>
   <ProjectModelHelpCoveragePanel value={value.helpDriven} onChange={helpDriven=>onChange({...value,helpDriven})} language={language}/>
  </section>
