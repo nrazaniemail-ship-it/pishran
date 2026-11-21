@@ -102,5 +102,7 @@ assert.ok(panelSource.includes('buildSalesTaxLedger'))
 assert.ok(panelSource.includes('bindSalesTaxLedgerToWorkingCapital'))
 assert.ok(panelSource.includes('workingCapitalByPeriod:binding.closingWorkingCapitalByPeriod'))
 assert.ok(wizardSource.includes('salesTaxLedgerDraft={m.financialForms.salesTaxLedger}'))
+assert.ok(wizardSource.includes('sales-tax-ledger-not-valid'))
+assert.ok(wizardSource.includes('reportSalesTaxLedgerResult.rows.map(row=>'))
 
 console.log('Sales-tax ledger regression tests passed.')
