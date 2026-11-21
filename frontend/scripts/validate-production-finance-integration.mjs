@@ -15,6 +15,7 @@ const { buildProductionFinanceBridge } = await import(integrationUrl)
 const record = (overrides={}) => ({id:'r1',projectId:'p1',lineId:'l1',product:'coil',periodStart:'2026-01-01',periodEnd:'2026-01-31',plannedOutput:100,totalOutput:100,goodOutput:100,scrapOutput:0,matchedMaterialInput:100,matchedMaterialUnit:'t',materials:[{id:'m1',name:'billet',consumedQuantity:100,unit:'t',unitCost:2,currency:'USD'}],directLaborCost:10,energyCost:10,maintenanceCost:0,allocatedOverhead:0,currency:'USD',createdAt:'2026-01-31',updatedAt:'2026-01-31',salesQuantity:80,...overrides})
 const periods=[{index:1,startDate:'2026-01-01',endDate:'2026-01-31',days:31,partial:false},{index:2,startDate:'2026-02-01',endDate:'2026-02-28',days:28,partial:false}]
 let result=buildProductionFinanceBridge([record()], 'p1', periods, 'USD')
+console.log('Bridge diagnostic:', JSON.stringify(result))
 assert.equal(result.valid,true)
 assert.equal(result.periods[0].cpp,220)
 assert.equal(result.periods[0].cps,176)
