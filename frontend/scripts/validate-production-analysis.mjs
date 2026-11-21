@@ -33,7 +33,7 @@ assert.ok(analyzeProductionRecord({...base,totalOutput:1150,goodOutput:1100}).wa
 console.log('Production material, yield, plan achievement and unit-cost tests passed')
 
 const extended = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
-const { calculateFinishedGoodsPeriod } = await import('data:text/javascript;base64,' + Buffer.from(extended).toString('base64'))
+const { calculateFinishedGoodsPeriod, calculateFinishedGoodsPortfolio, summarizeFinishedGoodsPortfolio, calculateComfarProductionRequirement, calculateProductIncomeStatementLine } = await import('data:text/javascript;base64,' + Buffer.from(extended).toString('base64'))
 const fg = calculateFinishedGoodsPeriod({openingQuantity:100,openingValue:20000,currentGoodOutput:900,currentProductionCost:340000,salesQuantity:800})
 assert.equal(fg.cpp,340000); assert.equal(fg.availableQuantity,1000); assert.equal(fg.availableValue,360000)
 assert.equal(fg.weightedAverageUnitCost,360); assert.equal(fg.cps,288000); assert.equal(fg.closingQuantity,200); assert.equal(fg.closingInventoryValue,72000)
