@@ -125,6 +125,12 @@ const productStageMissingProduct=module.reconcileStageInventoryMovements(multiCe
  {period:2,rawMaterials:80,workInProgress:0,finishedGoods:0},
 ],2,0.01,[],productEngineRows)
 assert.equal(productStageMissingProduct.valid,false,'non-zero product balances cannot be omitted from the detailed stage ledger')
+const duplicateProductEngineRows=module.reconcileStageInventoryMovements(multiCentreRaw,[
+ {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
+ {period:2,rawMaterials:80,workInProgress:0,finishedGoods:0},
+],2,0.01,[],[...productEngineRows,{...productEngineRows[0]}])
+assert.equal(duplicateProductEngineRows.valid,false,'duplicate product-period engine balances must not be silently overwritten')
+assert.ok(duplicateProductEngineRows.issues.some(issue=>issue.includes('invalid or duplicate period/product key')))
 const balancedStageTransfers=[
  {...stageRow(1,'raw-materials','RM',10,100,0,0,0,0,0,0,5,50),costCentreId:'STORE-A',transfersOutQuantity:5,transfersOutValue:50},
  {...stageRow(1,'raw-materials','RM',0,0,0,0,0,0,0,0,5,50),costCentreId:'STORE-B',transfersInQuantity:5,transfersInValue:50},
