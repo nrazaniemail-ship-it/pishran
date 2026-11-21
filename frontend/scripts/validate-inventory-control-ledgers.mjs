@@ -125,6 +125,31 @@ const missingStagePeriod=module.reconcileStageInventoryMovements(stageMovements.
 ],2)
 assert.equal(missingStagePeriod.valid,false,'a stage ledger cannot be treated as complete when a period is missing')
 assert.ok(missingStagePeriod.issues.some(issue=>issue.includes('missing cost-centre inventory rows for period 2')))
+const stageTransferMovementRows=[
+ {...stageRow(1,'raw-materials','ORE',10,100,0,0,0,0,0,0,6,60),costCentreId:'ORE-STORE'},
+ {...stageRow(1,'work-in-progress','PELLET',0,0,0,0,0,0,0,0,4,40),costCentreId:'DRI-PLANT'},
+]
+const rawToWipTransfer={id:'ST-1',period:1,sourceStage:'raw-materials',destinationStage:'work-in-progress',
+ sourceProductId:'ORE',destinationProductId:'PELLET',sourceCostCentreId:'ORE-STORE',destinationCostCentreId:'DRI-PLANT',
+ quantity:4,sourceUnit:'tonne',destinationUnit:'tonne',conversionFactor:1,transferValue:40,
+ sourceReference:'material transfer note / 17',sourceVerified:true}
+const rawToWip=module.reconcileStageInventoryMovements(stageTransferMovementRows,[
+ {period:1,rawMaterials:60,workInProgress:40,finishedGoods:0},
+],1,0.01,[rawToWipTransfer])
+assert.equal(rawToWip.valid,true,rawToWip.issues.join('; '))
+assert.equal(rawToWip.rows.find(row=>row.inventoryStage==='raw-materials').ledgerClosingValue,60)
+assert.equal(rawToWip.rows.find(row=>row.inventoryStage==='work-in-progress').ledgerClosingValue,40)
+assert.equal(rawToWip.rows.reduce((sum,row)=>sum+row.ledgerClosingValue,0),100,
+ 'inter-stage transfer must move value between stages without increasing total inventory')
+const missingStageTransferEndpoint=module.reconcileStageInventoryMovements(stageTransferMovementRows.slice(1),[
+ {period:1,rawMaterials:60,workInProgress:40,finishedGoods:0},
+],1,0.01,[rawToWipTransfer])
+assert.equal(missingStageTransferEndpoint.valid,false,'both source and destination stage movement rows are required')
+assert.ok(missingStageTransferEndpoint.issues.some(issue=>issue.includes('no matching source-stage inventory movement row')))
+const sameStageTransfer=module.reconcileStageInventoryMovements(stageTransferMovementRows,[
+ {period:1,rawMaterials:60,workInProgress:40,finishedGoods:0},
+],1,0.01,[{...rawToWipTransfer,destinationStage:'raw-materials'}])
+assert.equal(sameStageTransfer.valid,false,'same-stage transfers must use the separate internal centre-transfer register')
 const stageValueMismatch=module.reconcileStageInventoryMovements(stageMovements.map(row=>row.period===2&&row.inventoryStage==='finished-goods'?{...row,closingValue:39}:row),[
  {period:1,rawMaterials:100,workInProgress:40,finishedGoods:60},
  {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
