@@ -84,14 +84,17 @@ export function reconcileInventoryReference(
  for(const b of benchmarks){
   if(seen.has(b.period))issues.push('Reference inventory benchmark has duplicate period '+b.period+'.')
   seen.add(b.period)
-  if(!b.sourceDocument.trim()||!b.schedule.trim()||!b.page.trim()||!b.currency.trim())issues.push('Reference benchmark period '+b.period+' requires source document, schedule, page and currency.')
-  if(expectedCurrency&&b.currency.trim().toUpperCase()!==expectedCurrency.trim().toUpperCase())issues.push('Reference benchmark period '+b.period+' currency '+b.currency+' does not match project currency '+expectedCurrency+'. Convert through an evidenced exchange-rate schedule before comparison.')
-  if(b.amountScaleToModel===null||!Number.isFinite(b.amountScaleToModel)||b.amountScaleToModel<=0)issues.push('Reference benchmark period '+b.period+' requires a positive explicit scale factor from report amount units to model amount units.')
+  const matchedFields:string[]=[],missingFields:string[]=[],variances:Record<string,number>={}
+  if(!b.sourceDocument.trim())missingFields.push('sourceDocument')
+  if(!b.schedule.trim())missingFields.push('schedule')
+  if(!b.page.trim())missingFields.push('page')
+  if(!b.currency.trim())missingFields.push('currency')
+  if(expectedCurrency&&b.currency.trim().toUpperCase()!==expectedCurrency.trim().toUpperCase()){missingFields.push('currencyConversion');issues.push('Reference benchmark period '+b.period+' currency '+b.currency+' does not match project currency '+expectedCurrency+'. Convert through an evidenced exchange-rate schedule before comparison.')}
+  if(b.amountScaleToModel===null||!Number.isFinite(b.amountScaleToModel)||b.amountScaleToModel<=0){missingFields.push('amountScaleToModel');issues.push('Reference benchmark period '+b.period+' requires a positive explicit scale factor from report amount units to model amount units.')}
   const m=modeled.find(x=>x.period===b.period)
   if(!m){issues.push('Reference benchmark period '+b.period+' has no matching model period.');continue}
   const scale=b.amountScaleToModel??Number.NaN
   const pairs=[['rawMaterials',b.rawMaterials,m.rawMaterials],['workInProgress',b.workInProgress,m.workInProgress],['finishedGoods',b.finishedGoods,m.finishedGoods],['totalInventory',b.totalInventory,m.totalInventory],['cpp',b.cpp,m.cpp],['cps',b.cps,m.cps]] as const
-  const matchedFields:string[]=[],missingFields:string[]=[],variances:Record<string,number>={}
   for(const [field,reference,actual] of pairs){
    if(reference===null||reference===undefined){missingFields.push(field);continue}
    if(!Number.isFinite(reference)||reference<0){issues.push('Reference benchmark '+field+' in period '+b.period+' must be a finite non-negative amount.');continue}
