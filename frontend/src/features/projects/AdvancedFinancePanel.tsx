@@ -360,6 +360,7 @@ export default function AdvancedFinancePanel(props: Props) {
       return periods.map((_,index)=>{
         if(index===periods.length-1)return 0
         if(hasExplicit)return workingCapitalDraftSchedule!.componentRows.filter(row=>row.category===category&&row.period===index+1).reduce((sum,row)=>sum+row.amount,0)
+        if(props.workingCapitalDrafts?.length)return 0
         return fallback[index]??0
       })
     }
