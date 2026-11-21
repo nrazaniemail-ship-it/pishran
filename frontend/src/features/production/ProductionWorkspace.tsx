@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Calculator, Save, Trash2 } from 'lucide-react'
-import { analyzeProductionRecord, type ProductionRecord } from './productionAnalysis'
+import { analyzeProductionRecord, calculateFinishedGoodsPeriod, type ProductionRecord } from './productionAnalysis'
 import { deleteProductionRecord, listProductionRecords, saveProductionRecord } from './productionRepository'
 
 type Props = { language?: 'fa' | 'en'; onBack: () => void }
@@ -50,6 +50,10 @@ export default function ProductionWorkspace({language='fa',onBack}:Props){
    <label className="production-field"><span>{t('نام ماده اصلی','Primary material')}</span><input value={record.materials[0]?.name??''} onChange={e=>updateMaterial('name',e.target.value)}/></label>
    <label className="production-field"><span>{t('مقدار مصرف (تن)','Consumed quantity (t)')}</span><input type="number" min="0" step="any" value={record.materials[0]?.consumedQuantity??0} onChange={e=>updateMaterial('consumedQuantity',e.target.value)}/></label>
    <label className="production-field"><span>{t('نرخ واحد','Unit cost')}</span><input type="number" min="0" step="any" value={record.materials[0]?.unitCost??0} onChange={e=>updateMaterial('unitCost',e.target.value)}/></label>
+  </div><h3>{t('فروش و موجودی محصول نهایی','Sales & Finished Goods Inventory')}</h3><div className="production-form-grid">
+   {field(t('موجودی اول دوره (تن)','Opening finished goods (t)'),'finishedGoodsOpeningQuantity',record.finishedGoodsOpeningQuantity??0)}
+   {field(t('ارزش موجودی اول دوره','Opening inventory value'),'finishedGoodsOpeningValue',record.finishedGoodsOpeningValue??0)}
+   {field(t('مقدار فروش دوره (تن)','Period sales (t)'),'salesQuantity',record.salesQuantity??0)}
   </div></section>
   <section className="production-card"><h2>{t('هزینه‌های تبدیل','Conversion Costs')}</h2><div className="production-form-grid">
    {field(t('نیروی انسانی مستقیم','Direct labor'),'directLaborCost',record.directLaborCost)}
@@ -63,7 +67,9 @@ export default function ProductionWorkspace({language='fa',onBack}:Props){
    {metric(t('نرخ کیفیت','Quality rate'),result.qualityRate)}
    {metric(t('نرخ ضایعات','Scrap rate'),result.scrapRate)}
   </div><div className="production-cost-lines"><p><span>{t('هزینه مواد','Material cost')}</span><b>{result.materialCost.toLocaleString()} {record.currency}</b></p><p><span>{t('هزینه تبدیل','Conversion cost')}</span><b>{result.conversionCost.toLocaleString()} {record.currency}</b></p><p><span>{t('کل بهای تولید','Total production cost')}</span><b>{result.totalProductionCost.toLocaleString()} {record.currency}</b></p><p><span>{t('بهای هر تن محصول سالم','Cost per good ton')}</span><b>{result.unitCostPerGoodOutput===null?'—':result.unitCostPerGoodOutput.toLocaleString()} {record.currency}</b></p></div>
-  {result.warnings.map(w=><p className="production-warning" key={w}>{w}</p>)}</section>}
+  {result.warnings.map(w=><p className="production-warning" key={w}>{w}</p>)}
+  {finishedGoods&&<div className="production-cost-lines"><p><span>{t('CPP ـ بهای تولید دوره','CPP — Current production cost')}</span><b>{finishedGoods.cpp.toLocaleString()} {record.currency}</b></p><p><span>{t('CPS ـ بهای کالای فروش‌رفته','CPS — Cost of products sold')}</span><b>{finishedGoods.cps.toLocaleString()} {record.currency}</b></p><p><span>{t('موجودی پایان محصول (تن)','Closing finished goods (t)')}</span><b>{finishedGoods.closingQuantity.toLocaleString()}</b></p><p><span>{t('ارزش موجودی پایان','Closing inventory value')}</span><b>{finishedGoods.closingInventoryValue.toLocaleString()} {record.currency}</b></p>{finishedGoods.warnings.map(w=><p className="production-warning" key={w}>{w}</p>)}</div>}
+  </section>}
   {error&&<p className="production-error">{error}</p>}{saved&&<p className="production-success">{t('رکورد با موفقیت ذخیره شد.','Record saved successfully.')}</p>}
   <button className="production-save" onClick={()=>void save()}><Save size={17}/>{t('ذخیره رکورد تولید','Save production record')}</button>
   {records.length>0&&<section className="production-card"><h2>{t('سوابق ثبت‌شده','Saved records')}</h2>{records.map(item=><div className="production-record" key={item.id}><span>{item.product||item.id} · {item.periodStart} — {item.periodEnd}</span><button onClick={async()=>{await deleteProductionRecord(item.id);await refresh()}} aria-label={t('حذف رکورد','Delete record')}><Trash2 size={16}/></button></div>)}</section>}
