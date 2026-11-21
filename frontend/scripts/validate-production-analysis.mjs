@@ -29,5 +29,5 @@ assert.equal(analyzeProductionRecord({...base,matchedMaterialInput:0}).yield,nul
 assert.equal(analyzeProductionRecord({...base,goodOutput:0}).unitCostPerGoodOutput,null)
 assert.ok(validateProductionRecord({...base,goodOutput:1000,scrapOutput:50}).length)
 assert.ok(validateProductionRecord({...base,materials:[{...base.materials[0],currency:'EUR'}]}).length)
-assert.ok(analyzeProductionRecord({...base,goodOutput:1100}).warnings.some(w=>w.includes('۱۰۰٪')))
+assert.ok(analyzeProductionRecord({...base,totalOutput:1150,goodOutput:1100}).warnings.some(w=>w.includes('۱۰۰٪')))
 console.log('Production material, yield, plan achievement and unit-cost tests passed')
