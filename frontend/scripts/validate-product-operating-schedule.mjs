@@ -17,7 +17,7 @@ const periods=[
  {index:2,startDate:'2025-04-01',endDate:'2025-06-30',days:91,partial:false},
 ]
 const base={
- sales:[{productId:'P1',inventoryPolicy:'manual',periods:[
+ sales:[{productId:'P1',unitOfMeasure:'kg',inventoryPolicy:'manual',periods:[
   {period:'1',salesQuantity:80,netUnitPrice:20,salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
    openingFinishedGoodsQuantity:10,openingFinishedGoodsValue:100,finishedGoodsClosingQuantity:30},
   {period:'2',salesQuantity:90,netUnitPrice:22,salesTaxPercent:0,subsidyPercent:5,subsidyAmount:null,
