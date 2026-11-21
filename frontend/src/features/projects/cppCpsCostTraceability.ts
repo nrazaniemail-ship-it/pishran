@@ -56,6 +56,8 @@ export type CppCpsTraceLedger = {
   knownIncrementalByCategory: Record<TraceCostCategory, number>
   knownIncrementalByCostCentre: Record<string, number>
   completeIncrementalByCostCentre: Record<string, number | null>
+  knownIncrementalByCostCentreAndPeriod: Record<string, number[]>
+  completeIncrementalByCostCentreAndPeriod: Record<string, (number | null)[]>
   knownIncrementalByCostCentreAndCategory: Record<string, Record<TraceCostCategory, number>>
   knownIncrementalByCostCentreByPeriod: Record<string, number[]>
   completeIncrementalByCostCentreByPeriod: Record<string, (number | null)[]>
@@ -138,6 +140,10 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
       unverifiedItemIds.push(item.id)
       const unverifiedCentre = item.costCentreId?.trim()
       if (unverifiedCentre && !unverifiedCostCentreIds.includes(unverifiedCentre)) unverifiedCostCentreIds.push(unverifiedCentre)
+      if (unverifiedCentre) {
+        hasUnverifiedByCostCentrePeriod[unverifiedCentre] ??= Array(Math.max(0, periodCount)).fill(false)
+        for (let period = 0; period < periodCount; period++) hasUnverifiedByCostCentrePeriod[unverifiedCentre][period] = true
+      }
       if (!unverifiedCentre) unallocatedUnverifiedItemIds.push(item.id)
       if (item.source.reliability !== 'unverified')
         issues.push(prefix + 'unverified-source-must-use-unverified-reliability')
@@ -199,6 +205,8 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
       knownIncrementalByCostCentre[centre] = (knownIncrementalByCostCentre[centre] ?? 0) + incremental
       knownIncrementalByCostCentreAndCategory[centre] ??= emptyCategoryTotals()
       knownIncrementalByCostCentreAndCategory[centre][item.category] += incremental
+      knownIncrementalByCostCentreAndPeriod[centre] ??= Array(Math.max(0, periodCount)).fill(0)
+      knownIncrementalByCostCentreAndPeriod[centre][period] += incremental
       knownIncrementalByCostCentreByPeriod[centre] ??= Array(periodCount).fill(0) as number[]
       knownIncrementalByCostCentreByPeriod[centre][period] += incremental
       knownFixedIncrementalByCostCentre[centre] = (knownFixedIncrementalByCostCentre[centre] ?? 0) + incremental * (item.fixedPercent ?? 0) / 100
