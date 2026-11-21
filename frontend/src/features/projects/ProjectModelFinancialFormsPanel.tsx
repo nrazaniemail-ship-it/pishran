@@ -1,9 +1,9 @@
 import {
  createBlankFixedAssetFormDraft, createBlankProductionCostFormDraft,
  createBlankSalesProductFormDraft, createBlankWorkingCapitalComponentFormDraft,
- createBlankLoanFacilityFormDraft, createBlankCppCpsTraceItem, createBlankSalesTaxLedgerFormDraft, type ProjectModelFinancialFormDrafts,
+ createBlankLoanFacilityFormDraft, createBlankCppCpsTraceItem, createBlankSalesTaxLedgerFormDraft, createBlankValueAddedPeriodFormDraft, createBlankValueAddedInputFormDraft, createBlankValueAddedInvestmentFormDraft, type ProjectModelFinancialFormDrafts,
  type FixedAssetFormDraft, type ProductionCostFormDraft,
- type WorkingCapitalComponentFormDraft, type LoanFacilityFormDraft, type CostCentreFormDraft,
+ type WorkingCapitalComponentFormDraft, type LoanFacilityFormDraft, type CostCentreFormDraft, type ValueAddedPeriodFormDraft, type ValueAddedInputFormDraft, type ValueAddedInvestmentFormDraft,
  validateProjectModelFinancialFormDrafts
 } from './projectModelFormDrafts'
 import { deriveQuantityPriceTotal, type CommonFinancialItemMetadata } from './projectModelSchema'
@@ -42,6 +42,11 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
  const patchWorking=(id:string,patch:Partial<WorkingCapitalComponentFormDraft>)=>onChange({...value,workingCapital:value.workingCapital.map(x=>x.id===id?{...x,...patch}:x)})
  const salesTaxLedger=value.salesTaxLedger??createBlankSalesTaxLedgerFormDraft()
  const patchSalesTaxLedger=(patch:Partial<typeof salesTaxLedger>)=>onChange({...value,salesTaxLedger:{...salesTaxLedger,...patch}})
+ const patchValueAddedPeriod=(period:number,patch:Partial<ValueAddedPeriodFormDraft>)=>{
+  const current=value.economic.valueAddedPeriods??[]
+  const existing=current.find(x=>x.period===period)??createBlankValueAddedPeriodFormDraft(period)
+  onChange({...value,economic:{...value.economic,valueAddedPeriods:[...current.filter(x=>x.period!==period),{...existing,...patch}]}})
+ }
  const patchLoan=(id:string,patch:Partial<LoanFacilityFormDraft>)=>onChange({...value,loans:value.loans.map(x=>x.id===id?{...x,...patch}:x)})
  const costCentres=value.costCentres??[]
  const patchCostCentre=(id:string,patch:Partial<CostCentreFormDraft>)=>onChange({...value,costCentres:costCentres.map(x=>x.id===id?{...x,...patch}:x)})
@@ -157,6 +162,53 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
     <button type="button" className="secondary-button" onClick={()=>onChange({...value,economic:{...value.economic,adjustments:value.economic.adjustments.filter((_,k)=>k!==j)}})}>{t('حذف قلم','Remove item')}</button>
    </div>)}
    <button type="button" className="secondary-button" onClick={()=>onChange({...value,economic:{...value.economic,adjustments:[...value.economic.adjustments,{id:crypto.randomUUID(),name:'',period:'',treatment:null,effectType:null,financialAmount:null,economicAmount:null}]}})}>{t('افزودن تعدیل اقتصادی','Add economic adjustment')}</button>
+   <h4>{t('دفتر ارزش افزوده مطابق COMFAR III','COMFAR III Value-Added Ledger')}</h4>
+   <p className="fw-hint">{t('فروش، مالیات خروجی و مالیات عملکرد از برنامه‌های مالی پیوند می‌شوند. نهاده‌های واسطه‌ای و سرمایه‌گذاری باید با سند و تفکیک محلی/خارجی ثبت شوند. دستمزد محلی/خارجی، پرداخت‌های خروجی، مالیات‌ها و نیروی کار نیز باید با منبع مستند شوند. ارقام این بخش با CPP/CPS و سرمایه‌گذاری دوره‌ای تطبیق داده می‌شوند.','Sales, output tax and corporate tax are linked from the financial schedules. Intermediate inputs and investment must be entered with source evidence and local/foreign origin. Domestic/foreign wages, repatriated payments, taxes and labour data also require evidence. Entries are reconciled to CPP/CPS and periodic investment.')}</p>
+   {projectPeriods.map((period,index)=>{
+    const periodNo=index+1
+    const draft=value.economic.valueAddedPeriods?.find(x=>x.period===periodNo)??createBlankValueAddedPeriodFormDraft(periodNo)
+    const patch=(changes:Partial<ValueAddedPeriodFormDraft>)=>patchValueAddedPeriod(periodNo,changes)
+    const patchIntermediate=(id:string,changes:Partial<ValueAddedInputFormDraft>)=>patch({intermediateInputs:draft.intermediateInputs.map(x=>x.id===id?{...x,...changes}:x)})
+    const patchInvestment=(id:string,changes:Partial<ValueAddedInvestmentFormDraft>)=>patch({investmentInputs:draft.investmentInputs.map(x=>x.id===id?{...x,...changes}:x)})
+    const inputFields=(item:ValueAddedInputFormDraft,kind:'intermediate'|'investment')=><div className="fw-validation" key={item.id} style={{marginTop:8,padding:8}}>
+     <div className="fw-grid">
+      <TextField label={t('شرح نهاده / قلم','Input / item description')} value={item.description} onChange={v=>kind==='intermediate'?patchIntermediate(item.id,{description:v}):patchInvestment(item.id,{description:v})}/>
+      <NumberField label={t('مبلغ مالی','Financial amount')} value={item.amount} onChange={v=>kind==='intermediate'?patchIntermediate(item.id,{amount:v}):patchInvestment(item.id,{amount:v})}/>
+      <label className="fw-field"><span>{t('منشأ بازار','Market origin')}</span><select value={item.marketOrigin??''} onChange={e=>kind==='intermediate'?patchIntermediate(item.id,{marketOrigin:(e.target.value||null) as ValueAddedInputFormDraft['marketOrigin']}):patchInvestment(item.id,{marketOrigin:(e.target.value||null) as ValueAddedInvestmentFormDraft['marketOrigin']})}><option value="">{t('انتخاب','Select')}</option><option value="local">{t('داخلی','Local')}</option><option value="foreign">{t('خارجی / وارداتی','Foreign / Imported')}</option></select></label>
+      <NumberField label={t('مالیات و عوارض مندرج در مبلغ (%)','Taxes/duties included (%)')} value={item.taxesDutiesIncludedPercent} unit="%" onChange={v=>kind==='intermediate'?patchIntermediate(item.id,{taxesDutiesIncludedPercent:v}):patchInvestment(item.id,{taxesDutiesIncludedPercent:v})}/>
+      {[0,1,2].map(round=><NumberField key={round} label={t('محتوای ارزش افزوده، مرحله '+(round+1)+' (%)','Value-added content, round '+(round+1)+' (%)')} value={item.valueAddedIncludedPercentages[round]} unit="%" onChange={v=>{const next=[...item.valueAddedIncludedPercentages] as [number|null,number|null,number|null];next[round]=v;kind==='intermediate'?patchIntermediate(item.id,{valueAddedIncludedPercentages:next}):patchInvestment(item.id,{valueAddedIncludedPercentages:next})}}/>)}
+      <TextField label={t('مرجع سند منبع','Source reference')} value={item.sourceReference} onChange={v=>kind==='intermediate'?patchIntermediate(item.id,{sourceReference:v,sourceVerified:false}):patchInvestment(item.id,{sourceReference:v,sourceVerified:false})}/>
+      <label className="fw-field"><span>{t('سند تأیید شده','Source verified')}</span><select value={item.sourceVerified?'yes':'no'} onChange={e=>kind==='intermediate'?patchIntermediate(item.id,{sourceVerified:e.target.value==='yes'}):patchInvestment(item.id,{sourceVerified:e.target.value==='yes'})}><option value="no">{t('خیر','No')}</option><option value="yes">{t('بله','Yes')}</option></select></label>
+      {kind==='investment'&&<label className="fw-field"><span>{t('نوع سرمایه‌گذاری','Investment type')}</span><select value={(item as ValueAddedInvestmentFormDraft).kind??''} onChange={e=>patchInvestment(item.id,{kind:(e.target.value||null) as ValueAddedInvestmentFormDraft['kind']})}><option value="">{t('انتخاب','Select')}</option><option value="fixed-investment">{t('سرمایه‌گذاری ثابت','Fixed investment')}</option><option value="pre-production-net-of-interest">{t('هزینه قبل از تولید خالص از بهره','Pre-production cost net of interest')}</option><option value="inventory-increase">{t('افزایش / کاهش موجودی','Inventory increase / decrease')}</option></select></label>}
+      <button type="button" className="secondary-button" onClick={()=>kind==='intermediate'?patch({intermediateInputs:draft.intermediateInputs.filter(x=>x.id!==item.id)}):patch({investmentInputs:draft.investmentInputs.filter(x=>x.id!==item.id)})}>{t('حذف قلم','Remove item')}</button>
+     </div>
+    </div>
+    return <div className="fw-validation" key={periodNo} style={{marginTop:12,padding:12}}>
+     <h5>{t('دوره ','Period ')}{periodNo} · {period.startDate} – {period.endDate}</h5>
+     <div className="fw-grid">
+      <NumberField label={t('سایر درآمدها','Other income')} value={draft.otherIncome} onChange={v=>patch({otherIncome:v})}/>
+      <NumberField label={t('دستمزد نیروی کار داخلی','Domestic wages')} value={draft.domesticWages} onChange={v=>patch({domesticWages:v})}/>
+      <NumberField label={t('دستمزد پرداختی به خارج','Repatriated wages')} value={draft.repatriatedWages} onChange={v=>patch({repatriatedWages:v})}/>
+      <NumberField label={t('سود سهام / سود پرداختی به خارج','Repatriated profit / dividends')} value={draft.repatriatedProfitDividends} onChange={v=>patch({repatriatedProfitDividends:v})}/>
+      <NumberField label={t('بهره پرداختی به خارج','Repatriated interest')} value={draft.repatriatedInterest} onChange={v=>patch({repatriatedInterest:v})}/>
+      <NumberField label={t('سایر پرداخت‌های خروجی','Other repatriated payments')} value={draft.repatriatedOther} onChange={v=>patch({repatriatedOther:v})}/>
+      <NumberField label={t('سود سهام و بهره داخلی','Domestic dividends and interest')} value={draft.domesticDividendsAndInterest} onChange={v=>patch({domesticDividendsAndInterest:v})}/>
+      <NumberField label={t('یارانه نهاده‌ها','Input subsidies')} value={draft.subsidiesOnInput} onChange={v=>patch({subsidiesOnInput:v})}/>
+      <NumberField label={t('یارانه سرمایه‌گذاری','Investment subsidies')} value={draft.subsidiesOnInvestment} onChange={v=>patch({subsidiesOnInvestment:v})}/>
+      <NumberField label={t('نیروی کار ماهر (نفر-دوره)','Skilled labour (person-periods)')} value={draft.skilledDomesticLabour} onChange={v=>patch({skilledDomesticLabour:v})}/>
+      <NumberField label={t('کل نیروی کار داخلی (نفر-دوره)','Total domestic labour (person-periods)')} value={draft.totalDomesticLabour} onChange={v=>patch({totalDomesticLabour:v})}/>
+      <NumberField label={t('خروج ارز خارجی (ارز مبنا)','Foreign-exchange outflow (numeraire)')} value={draft.foreignExchangeOutflow} onChange={v=>patch({foreignExchangeOutflow:v})}/>
+      <TextField label={t('مرجع اسناد دستمزد و پرداخت‌ها','Wage and payment source reference')} value={draft.sourceReference} onChange={v=>patch({sourceReference:v,sourceVerified:false})}/>
+      <label className="fw-field"><span>{t('تأیید اسناد دوره','Period sources verified')}</span><select value={draft.sourceVerified?'yes':'no'} onChange={e=>patch({sourceVerified:e.target.value==='yes'})}><option value="no">{t('خیر','No')}</option><option value="yes">{t('بله','Yes')}</option></select></label>
+     </div>
+     <h5>{t('مصرف واسطه‌ای؛ بدون دستمزد','Intermediate consumption; excluding wages')}</h5>
+     {draft.intermediateInputs.map(item=>inputFields(item,'intermediate'))}
+     <button type="button" className="secondary-button" onClick={()=>patch({intermediateInputs:[...draft.intermediateInputs,createBlankValueAddedInputFormDraft(crypto.randomUUID())]})}>{t('افزودن نهاده واسطه‌ای','Add intermediate input')}</button>
+     <h5>{t('سرمایه‌گذاری و تغییر موجودی','Investment and inventory change')}</h5>
+     {draft.investmentInputs.map(item=>inputFields(item,'investment'))}
+     <button type="button" className="secondary-button" onClick={()=>patch({investmentInputs:[...draft.investmentInputs,createBlankValueAddedInvestmentFormDraft(crypto.randomUUID())]})}>{t('افزودن قلم سرمایه‌گذاری','Add investment item')}</button>
+    </div>
+   })}
   </div>
 
   <div className="fw-card">
