@@ -287,24 +287,19 @@ export function buildProductOperatingSchedule(
         productionQuantity=salesQuantity+closingQuantity-openingQuantity
       }
       let expectedOpeningQuantity=previousClosingQuantity??Number.NaN
-      let expectedOpeningValue=previousClosingValue??Number.NaN
       if(index>0){
         for(const transfer of drafts.productionTransfers??[]){
           if(transfer.period!==index)continue
-          if(transfer.sourceProductId===sale.productId){
-            expectedOpeningQuantity-=transfer.quantity
-            expectedOpeningValue-=transfer.costAmount
-          }
-          if(transfer.destinationProductId===sale.productId){
-            expectedOpeningQuantity+=transfer.quantity*transfer.conversionFactor
-            expectedOpeningValue+=transfer.costAmount
-          }
+          if(transfer.sourceProductId===sale.productId)expectedOpeningQuantity-=transfer.quantity
+          if(transfer.destinationProductId===sale.productId)expectedOpeningQuantity+=transfer.quantity*transfer.conversionFactor
         }
       }
+      // Quantity can be checked before transfer valuation. Value cannot: an inbound
+      // transfer changes the recipient's weighted-average cost and revalues its
+      // entire closing stock, not merely the transferred amount.
       if(index>0&&sale.inventoryPolicy==='manual'&&
-        (Math.abs((source.openingFinishedGoodsQuantity as number)-expectedOpeningQuantity)>0.000001||
-         Math.abs((source.openingFinishedGoodsValue as number)-expectedOpeningValue)>0.01)){
-        issues.push('Product '+sale.productId+' opening inventory in period '+(index+1)+' must reconcile to the previous period closing inventory after inter-product transfers.')
+        Math.abs((source.openingFinishedGoodsQuantity as number)-expectedOpeningQuantity)>0.000001){
+        issues.push('Product '+sale.productId+' opening inventory quantity in period '+(index+1)+' must reconcile to the previous period closing quantity after inter-product transfers.')
         continue
       }
       if((source.salesTaxPercent??0)!==0) {
@@ -417,6 +412,10 @@ export function buildProductOperatingSchedule(
     for(let index=1;index<productRows.length;index++){
       const previous=productRows[index-1],current=productRows[index]
       current.openingInventoryQuantity=previous.closingInventoryQuantity
+      if(drafts.sales.find(item=>item.productId===productId)?.inventoryPolicy==='manual'&&
+         Math.abs(current.openingInventoryValue-previous.closingInventoryValue)>0.01){
+        issues.push('Product '+productId+' opening inventory value in period '+current.period+' must reconcile to the prior-period closing value after weighted-average transfer revaluation.')
+      }
       current.openingInventoryValue=previous.closingInventoryValue
       const availableQuantity=current.openingInventoryQuantity+current.productionQuantity
       const availableValue=current.openingInventoryValue+current.productionCost
