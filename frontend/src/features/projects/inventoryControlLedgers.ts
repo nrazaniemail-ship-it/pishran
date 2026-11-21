@@ -33,7 +33,7 @@ export function validateWasteLedger(entries:WasteLedgerEntry[],periodCount:numbe
 }
 
 export function validateProductionTransfers(entries:ProductionTransferEntry[],periodCount:number,tolerance=0.01):TransferLedgerResult{
- const issues:string[]=[],ids=new Set<string>(),qty:Record<string,number>={},value:Record<string,number>={}
+ const issues:string[]=[],ids=new Set<string>(),qty:Record<string,number>={},value:Record<string,number>={},unitByProduct:Record<string,string>={}
  let source=0,destination=0
  for(const e of entries){
   if(!e.id||ids.has(e.id))issues.push('Transfer entries require unique non-empty identifiers.')
@@ -44,6 +44,11 @@ export function validateProductionTransfers(entries:ProductionTransferEntry[],pe
   if(!finite(e.quantity)||!finite(e.costAmount)||!e.sourceUnit?.trim()||!e.destinationUnit?.trim()||!Number.isFinite(e.conversionFactor)||e.conversionFactor<=0)issues.push('Transfer '+e.id+' requires finite quantity and cost, explicit source and destination units, and a positive conversion factor.')
   if(e.sourceUnit?.trim()===e.destinationUnit?.trim()&&Math.abs(e.conversionFactor-1)>tolerance/100)issues.push('Transfer '+e.id+' uses identical units; its conversion factor must equal 1.')
   if(!e.sourceUnit?.trim()||!e.destinationUnit?.trim()||!Number.isFinite(e.conversionFactor)||e.conversionFactor<=0)continue
+  for(const [product,unit] of [[e.sourceProductId,e.sourceUnit],[e.destinationProductId,e.destinationUnit]] as const){
+   const known=unitByProduct[product]
+   if(known&&known!==unit)issues.push('Transfer '+e.id+' uses '+unit+' for product '+product+' but another transfer uses '+known+'. A product must have one base unit.')
+   unitByProduct[product]=unit
+  }
   const from=e.sourceProductId+'@'+e.sourceCostCentreId,to=e.destinationProductId+'@'+e.destinationCostCentreId
   qty[from]=(qty[from]??0)-e.quantity;qty[to]=(qty[to]??0)+e.quantity*e.conversionFactor
   value[from]=(value[from]??0)-e.costAmount;value[to]=(value[to]??0)+e.costAmount
