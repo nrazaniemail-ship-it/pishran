@@ -43,7 +43,7 @@ export type SalesProductFormDraft={
 export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,unitOfMeasure:'',inventoryPolicy:null,finishedGoodsDaysCoverage:null,productionStartPeriod:null,productionEndPeriod:null,periods:[]}}
 
 export type SalesTaxInputCreditFormDraft={id:string;period:number|null;taxAmount:number|null;sourceReference:string;sourceVerified:boolean}
-export type SalesTaxSettlementFormDraft={period:number|null;amount:number|null;sourceReference:string}
+export type SalesTaxSettlementFormDraft={period:number|null;amount:number|null;sourceReference:string;sourceVerified:boolean}
 export type SalesTaxLedgerFormDraft={openingBalance:number|null;inputCredits:SalesTaxInputCreditFormDraft[];settlements:SalesTaxSettlementFormDraft[]}
 export function createBlankSalesTaxLedgerFormDraft():SalesTaxLedgerFormDraft{return{openingBalance:null,inputCredits:[],settlements:[]}}
 
