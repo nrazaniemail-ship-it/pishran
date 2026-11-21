@@ -56,6 +56,11 @@ const comfarModel=comfarInventory.map(row=>({period:row.period,rawMaterials:0,wo
 const aggregateOnly=module.reconcileInventoryReference(comfarInventory,comfarModel,0.01,'میلیون ریال')
 assert.equal(aggregateOnly.valid,false,'Aggregate inventory alone must not falsely certify component inventory or CPP/CPS reconciliation')
 assert.equal(aggregateOnly.rows.length,15)
+const scaledReference=module.reconcileInventoryReference([
+ {...comfarInventory[0],amountScaleToModel:1000000},
+],[{...comfarModel[0],totalInventory:236787880000}],0.01,'IRR')
+assert.equal(scaledReference.rows[0].matchedFields.includes('totalInventory'),true,'million-IRR report values must scale explicitly into model rials')
+
 assert.ok(aggregateOnly.rows.every(row=>row.status==='incomplete'&&row.missingFields.includes('rawMaterials')&&row.missingFields.includes('cpp')))
 const changedTotal=module.reconcileInventoryReference([comfarInventory[0]],[{...comfarModel[0],totalInventory:236787.89}],0.000001,'IRR')
 assert.equal(changedTotal.rows[0].status,'mismatch','Aggregate inventory mismatch must remain visible even when component evidence is incomplete')
