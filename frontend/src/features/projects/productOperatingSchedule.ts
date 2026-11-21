@@ -20,6 +20,8 @@ export type ProductOperatingPeriodRow = {
   netSalesRevenue: number
   subsidyIncome: number
   salesTaxPercent: number
+  salesTaxSourceReference: string
+  salesTaxSourceVerified: boolean
   taxableSales: number
   outputSalesTax: number
   grossProfit: number
@@ -357,7 +359,8 @@ export function buildProductOperatingSchedule(
         openingInventoryValue:openingValue,salesQuantity,productionQuantity:Math.max(0,productionQuantity),
         closingInventoryQuantity:closingQuantity,closingInventoryValue,unitProductionCost,
         productionCost,weightedAverageUnitCost,costOfSales,netSalesRevenue,subsidyIncome,
-        salesTaxPercent,taxableSales:baseRevenue,outputSalesTax,
+        salesTaxPercent,salesTaxSourceReference:source.salesTaxSourceReference??'',salesTaxSourceVerified:source.salesTaxSourceVerified===true,
+        taxableSales:baseRevenue,outputSalesTax,
         grossProfit:netSalesRevenue-costOfSales,
         rawMaterialInventoryValue:flowRow?.closingRawMaterialValue??0,
         wipInventoryValue:flowRow?.closingWipValue??0,
