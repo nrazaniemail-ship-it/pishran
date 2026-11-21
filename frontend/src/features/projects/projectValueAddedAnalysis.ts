@@ -75,7 +75,6 @@ export type ValueAddedPeriodRow = {
   governmentShare: number
   otherValueAdded: number
   distributionDifference: number
-  absoluteEfficiencyRatio: number | null
   presentValueFactor: number
 }
 
@@ -143,10 +142,10 @@ export function adjustValueAddedInput(item: ValueAddedInputItem): ValueAddedInpu
   }
 }
 
-function validateInputItem(item: ValueAddedInputItem, expectedPeriod: number, label: string, issues: string[]): void {
+function validateInputItem(item: ValueAddedInputItem, expectedPeriod: number, label: string, issues: string[], allowNegativeAmount = false): void {
   if(!item.id.trim()||!item.description.trim())issues.push(label+' requires a stable ID and description.')
   if(item.period!==expectedPeriod)issues.push(label+' is assigned to an incorrect period.')
-  if(!finiteNonNegative(item.amount))issues.push(label+' amount must be finite and non-negative.')
+  if(!Number.isFinite(item.amount)||(!allowNegativeAmount&&item.amount<0))issues.push(label+(allowNegativeAmount?' amount must be finite.':' amount must be finite and non-negative.'))
   if(item.marketOrigin!=='local'&&item.marketOrigin!=='foreign')issues.push(label+' requires a local or foreign market origin.')
   if(!Number.isFinite(item.taxesDutiesIncludedPercent)||item.taxesDutiesIncludedPercent< -100||item.taxesDutiesIncludedPercent>100)
     issues.push(label+' indirect-tax percentage must be between -100% and 100%.')
@@ -195,7 +194,7 @@ export function buildComfarValueAddedAnalysis(periods: ValueAddedPeriodInput[]):
       ids.add(key)
     }
     for(const item of row.investmentInputs??[]){
-      validateInputItem(item,row.period,'Investment input '+item.id,issues)
+      validateInputItem(item,row.period,'Investment input '+item.id,issues,item.kind==='inventory-increase')
       if(!['fixed-investment','pre-production-net-of-interest','inventory-increase'].includes(item.kind))
         issues.push('Investment input '+item.id+' has an unsupported investment category.')
       const key=item.id.trim().toLocaleLowerCase()
@@ -239,8 +238,7 @@ export function buildComfarValueAddedAnalysis(periods: ValueAddedPeriodInput[]):
       period:row.period,grossOutput,intermediateInput,investment,grossDomesticValueAdded,
       netDomesticValueAdded,repatriatedPayments,netNationalValueAdded,domesticWages:row.domesticWages,
       domesticDividendsAndInterest:row.domesticDividendsAndInterest,governmentShare,otherValueAdded,
-      distributionDifference,absoluteEfficiencyRatio:safeRatio(netNationalValueAdded,row.domesticWages),
-      presentValueFactor:row.presentValueFactor,
+      distributionDifference,presentValueFactor:row.presentValueFactor,
     }
   })
   const sum=(key:keyof Pick<ValueAddedPeriodRow,'grossDomesticValueAdded'|'netDomesticValueAdded'|'repatriatedPayments'|'netNationalValueAdded'|'domesticWages'|'domesticDividendsAndInterest'|'governmentShare'|'otherValueAdded'>)=>
