@@ -165,11 +165,11 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   state.opening.cashSurplusLocal,state.opening.cashSurplusForeign,state.opening.payablesLocal,
   state.opening.payablesForeign,state.opening.otherLiabilitiesLocal,debt,accruedLoanInterest,
   openingPaidInCapital,state.opening.retainedEarnings,state.opening.accumulatedLosses,state.opening.grants])
- const openingBalanceReady=/^\\d{4}-\\d{2}-\\d{2}$/.test(state.baseDate)&&!!state.openingSourceReference.trim()&&state.openingSourceVerified&&assetIssues.length===0&&Math.abs(balanceDifference)<=0.01
+ const openingBalanceReady=/^\d{4}-\d{2}-\d{2}$/.test(state.baseDate)&&!!state.openingSourceReference.trim()&&state.openingSourceVerified&&assetIssues.length===0&&Math.abs(balanceDifference)<=0.01
  useEffect(()=>{if(loaded&&openingBalanceReady)onStartingAssetsChange?.(state.assets)},[loaded,openingBalanceReady,state.assets,onStartingAssetsChange])
  useEffect(()=>{if(loaded&&openingBalanceReady)onStartingBalancesChange?.(openingBalanceSummary)},[loaded,openingBalanceReady,onStartingBalancesChange,openingBalanceSummary])
  const scenarioIssues:string[]=[]
- if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(state.baseDate))scenarioIssues.push('تاریخ مبنای مانده افتتاحیه باید معتبر و پیش از نخستین دوره باشد. / A valid opening balance effective date before the first project period is required.')
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(state.baseDate))scenarioIssues.push('تاریخ مبنای مانده افتتاحیه باید معتبر و پیش از نخستین دوره باشد. / A valid opening balance effective date before the first project period is required.')
  if(!state.openingSourceReference.trim()||!state.openingSourceVerified)scenarioIssues.push('مرجع مستند و تأییدشده برای مانده‌های افتتاحیه لازم است. / Verified source evidence is required for opening balances.')
  if(assetIssues.length)scenarioIssues.push('دارایی‌های افتتاحیه باید بدون خطا باشند. / Opening fixed assets must pass validation.')
  if(Math.abs(balanceDifference)>0.01)scenarioIssues.push('تراز افتتاحیه باید بدون رقم ترازکننده به صفر برسد. / Opening balance sheet must reconcile without a balancing plug.')
