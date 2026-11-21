@@ -49,7 +49,7 @@ export function validateProductionTransfers(entries:ProductionTransferEntry[],pe
    if(known&&known!==unit)issues.push('Transfer '+e.id+' uses '+unit+' for product '+product+' but another transfer uses '+known+'. A product must have one base unit.')
    unitByProduct[product]=unit
   }
-  const from=e.sourceProductId+'@'+e.sourceCostCentreId,to=e.destinationProductId+'@'+e.destinationCostCentreId
+  const from=e.period+':'+e.sourceProductId+'@'+e.sourceCostCentreId,to=e.period+':'+e.destinationProductId+'@'+e.destinationCostCentreId
   qty[from]=(qty[from]??0)-e.quantity;qty[to]=(qty[to]??0)+e.quantity*e.conversionFactor
   value[from]=(value[from]??0)-e.costAmount;value[to]=(value[to]??0)+e.costAmount
   source+=e.costAmount;destination+=e.costAmount
