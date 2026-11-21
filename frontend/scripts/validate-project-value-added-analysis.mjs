@@ -86,7 +86,7 @@ assert.equal(result.totals.relativeEfficiency.totalLabour,1073.24/65)
 
 // COMFAR investment includes the increase in inventory; a stock decrease is a negative investment flow.
 const stockRelease = module.buildComfarValueAddedAnalysis([{
-  ...periods[1],period:1,investmentInputs:[{...inventoryIncrease,amount:-15,period:1}],
+  ...periods[1],period:1,otherValueAdded:435,investmentInputs:[{...inventoryIncrease,amount:-15,period:1}],
 }])
 assert.equal(stockRelease.valid,true,stockRelease.issues.join('; '))
 assert.equal(stockRelease.rows[0].investment.amountDeducted,-15)
