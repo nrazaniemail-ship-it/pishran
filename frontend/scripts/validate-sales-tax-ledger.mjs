@@ -80,7 +80,7 @@ assert.equal((wcBinding.closingWorkingCapitalByPeriod[1] - wcBinding.closingWork
 
 // A recoverable opening balance is an asset and therefore increases net working capital.
 const recoveryLedger = ledger.buildSalesTaxLedger(1, [], [], [
-  { period: 1, amount: 0, sourceReference: 'no-settlement' },
+  { period: 1, amount: 0, sourceReference: 'no-settlement', sourceVerified: true },
 ], -25)
 const recoveryBinding = ledger.bindSalesTaxLedgerToWorkingCapital([100], 40, recoveryLedger)
 assert.equal(recoveryBinding.valid, true)
