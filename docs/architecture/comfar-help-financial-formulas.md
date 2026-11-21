@@ -76,6 +76,8 @@ Variable cost is quantity per unit × period price × sales or production volume
 Sales and production are not assumed equal. In the default production interval, required finished-goods stock is sales quantity divided by the turnover coefficient. If sales are less than opening finished-goods inventory, production is zero and inventory is reduced by sales. Otherwise production equals sales plus required closing stock less opening stock. A user-defined production interval has additional cases and must be implemented separately before certification.
 
 ### Working capital
+The raw-template periodic engine now accepts signed net working-capital balances. A negative net balance is valid when current liabilities exceed current assets; the cash-flow movement is calculated as current closing net working capital less the previous closing balance, including a signed opening balance. Detailed component balances are connected only when every component has an explicit balance for every project period. The periodic balance sheet still reports net working capital as one net line; separate current-asset and current-liability presentation remains an integration item.
+
 
 The reference uses a 360-day year and period turnover c=(m×30)/Mdc, where m is period months and Mdc is minimum days coverage. Working-capital components do not all use the same basis: finished goods and receivables use cost of products sold (with the relevant operating/marketing cost basis); WIP and materials use cost of products produced and item-specific bases. Material weighted-average unit value uses standard and adjustment quantities/prices. Increases in current assets are cash outflows; decreases are releases. Increases in current liabilities are cash inflows.
 
@@ -120,7 +122,7 @@ The current change provides a comprehensive reference-mapped input catalogue, pe
 2. Implement all non-default product production-interval cases, all working-capital sub-item algorithms and their starting-stock interactions.
 3. Complete foreign-currency loan revaluation and currency translation across all schedules, opening-balance accounting and full residual-value calculation. The debt adjustment and automatic cash-deficit functions are primitives only.
 4. Complete full balance-sheet, net-income and financial-planning cash-flow generation, including every capitalized-interest/fee/depreciation/tax/dividend interaction.
-5. Complete the partial-year Sum of Years Digits depreciation schedule (the current depreciation helper deliberately rejects fractional-life/partial-first-year cases rather than emit an unverified schedule), full economic appraisal algorithms, sensitivity target search and parametric chart output.
+5. Complete full economic appraisal algorithms, sensitivity target search and parametric chart output. The COMFAR XI.H Sum of Years Digits equations for additional useful-life months and partial first depreciation years are now connected to the asset-level schedule and regression-tested; independent COMFAR output reconciliation remains required.
 6. Reconcile period by period against independently supplied COMFAR output files, using tolerances and traceable source pages.
 
 Therefore, the forms now cover the documented input domains, but the entire model must not be described as calculation-equivalent to COMFAR until these integrations and output reconciliations pass. The uploaded project output and spreadsheets remain excluded from the design baseline and are reserved for a later simulation stage.

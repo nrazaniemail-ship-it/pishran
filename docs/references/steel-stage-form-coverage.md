@@ -9,8 +9,8 @@ This document records the stage-specific input structure currently wired into th
 - Project creation asks for the project type first and a manually entered project name second. Non-steel industries use the same separate type/name pattern.
 - Steel/mining capacity is entered as numeric tonnes per year; energy and power capacity is numeric MW; other industries use a generic unit/year label.
 - The `سایر` project type intentionally remains empty and requires user-defined rows.
-- The hot-rolled coil template remains the only stage with the HRCR200 workbook-derived values preloaded.
-- Cold rolling retains the supplied report's CAPEX items and the known hot-coil feedstock row; unavailable energy and OPEX values remain zero and visibly require engineering completion.
+- No project-specific sample workbook values are preloaded into any stage; CAPEX, OPEX, production, market and financing amounts must be entered from the current project's own sources.
+- Cold-rolling forms contain only generic blank row definitions; no report-specific CAPEX, capacity, feedstock, staffing or financing assumptions are preloaded.
 
 ## Stage-specific form directories
 
@@ -23,8 +23,8 @@ This document records the stage-specific input structure currently wired into th
 | Steelmaking & casting | DRI, scrap, fluxes, alloys/carbon, electrodes, refractories, steel yield, slag | electricity, gas, oxygen, cooling water, argon/nitrogen, compressed air | EAF/IF, charging, LF/secondary metallurgy, gas cleaning, continuous caster, cutting/cooling, utilities | metallic charge, alloys, electrodes/refractories, utilities, labour, maintenance, lab/overhead |
 | Integrated DRI + slab | pellets, DRI, scrap, alloys, electrodes, slab and surplus DRI | DRI gas/power, steelmaking power, oxygen, water, industrial gases | DRI/reformer, EAF, LF, slab caster, gas cleaning, utilities, material handling | pellets, scrap/alloys, DRI energy, steelmaking utilities, electrodes/refractories, labour, maintenance |
 | Hot-rolled plate | slab, furnace fuel, rolls, cooling water, crop/scale, plate yield | furnace gas, rolling electricity, cooling water, oxygen/air | reheating, descaling, roughing/finishing stands, cooling table, shears, levelling, utilities | slab, fuel/power, rolls/consumables, labour, maintenance, packing/freight |
-| Hot-rolled coil | workbook-backed HRCR200 material, utility, CAPEX and OPEX rows | workbook-backed HRCR200 rows | workbook-backed HRCR200 rows | workbook-backed HRCR200 rows |
-| Cold rolling | hot-coil feed, pickling acid, rolling oil, coating chemicals, scrap/yield | electricity, annealing gas, water, compressed air/nitrogen | retained source-report CAPEX schedule | source labels retained; monetary/energy assumptions remain to be completed |
+| Hot-rolled coil | generic user-entered feedstock and yield rows | blank user-entered utility rows | generic CAPEX item labels; amounts blank | generic OPEX item labels; amounts blank |
+| Cold rolling | generic user-entered feedstock, chemicals and yield rows | blank user-entered utility rows | generic CAPEX item labels; amounts blank | generic OPEX item labels; amounts blank |
 | Rebar / angle / beam rolling | billet/bloom, furnace fuel, rolls, scrap/yield, product dimensions | gas, rolling electricity, cooling water, compressed air | reheating, stands, cutting, cooling, straightening, packing, utilities | billet, fuel/power, rolls/consumables, labour, maintenance, packing/freight |
 
 ## Direct-reduction source boundary

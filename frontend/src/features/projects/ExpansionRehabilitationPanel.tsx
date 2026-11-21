@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { calculateIncrementalEnterpriseAnalysis, calculateExistingLoanSchedule, type ExistingLoanRepaymentType, type EnterpriseScenarioPeriodInput } from '../steel/financialModel'
-import { validateStartingFixedAssetBalances, type StartingFixedAssetBalance, type ProjectFoundation } from './projectFoundation'
+import { calculateStartingFinancialBalanceSummary, validateStartingFixedAssetBalances, type StartingFixedAssetBalance, type StartingFinancialBalanceSummary, type ProjectFoundation, type OpeningCurrentAccounts } from './projectFoundation'
 
 type Asset = StartingFixedAssetBalance
 type ProductBalance = {id:string;productName:string;localValue:number;foreignValue:number}
@@ -51,6 +51,10 @@ const comfarTermsEn:Record<string,string>={
  'مدت استهلاک (سال)':'Length (years)',
  'درصد ارزش اسقاط':'Scrap (% of original value)',
  'تاریخ شروع استهلاک':'Starting at',
+ 'تاریخ واگذاری/فروش':'Disposal / Sale Date',
+ 'روش قیمت‌گذاری واگذاری':'Disposal Valuation Method',
+ 'مبلغ دریافتی واگذاری':'Disposal Proceeds',
+ 'نرخ تبدیل به ارز محلی':'Exchange Rate to Local Currency',
  'مرکز هزینه':'Cost Centre',
  'سهم جزء ارزی (%)':'Foreign Currency Component (%)',
  'مدت سررسید (سال)':'Maturity (years)',
@@ -79,8 +83,8 @@ const comfarTermsEn:Record<string,string>={
 const moneyKeys:[keyof Opening,string][]=[
  ['rawMaterialsLocal','موجودی مواد اولیه ـ ارز محلی'],['rawMaterialsForeign','موجودی مواد اولیه ـ جزء ارز خارجی'],['suppliesLocal','مواد و ملزومات ـ ارز محلی'],['suppliesForeign','مواد و ملزومات ـ جزء ارز خارجی'],['wipLocal','کالای در جریان ساخت ـ ارز محلی'],['wipForeign','کالای در جریان ساخت ـ جزء ارز خارجی'],['receivablesLocal','حساب‌های دریافتنی ـ ارز محلی'],['receivablesForeign','حساب‌های دریافتنی ـ جزء ارز خارجی'],['cashLocal','وجه نقد ـ ارز محلی'],['cashForeign','وجه نقد ـ جزء ارز خارجی'],['shortTermDepositsLocal','سپرده کوتاه‌مدت محلی'],['cashSurplusLocal','مازاد نقدی محلی'],['cashSurplusForeign','مازاد نقدی ارزی'],['payablesLocal','حساب‌های پرداختنی ـ ارز محلی'],['payablesForeign','حساب‌های پرداختنی ـ جزء ارز خارجی'],['otherAssetsLocal','سایر دارایی‌های جاری محلی'],['otherLiabilitiesLocal','سایر بدهی‌های جاری محلی'],['retainedEarnings','اندوخته و سود انباشته'],['accumulatedLosses','زیان انباشته'],['grants','یارانه‌ها و کمک‌های بلاعوض']
 ]
-type Props={projectId:string;currency:string;constructionYears:number;operatingYears:number;foundation:ProjectFoundation;language?:'fa'|'en'}
-export default function ExpansionRehabilitationPanel({projectId,currency,constructionYears,operatingYears,foundation,language='fa'}:Props){
+type Props={projectId:string;currency:string;constructionYears:number;operatingYears:number;foundation:ProjectFoundation;language?:'fa'|'en';onStartingAssetsChange?:(assets:StartingFixedAssetBalance[])=>void;onStartingBalancesChange?:(balances:StartingFinancialBalanceSummary)=>void}
+export default function ExpansionRehabilitationPanel({projectId,currency,constructionYears,operatingYears,foundation,language='fa',onStartingAssetsChange,onStartingBalancesChange}:Props){
  const en=language==='en', t=(fa:string,english:string)=>en?english:fa
  const horizon=Math.max(2,Math.min(30,Math.ceil(constructionYears)+Math.ceil(operatingYears)))
  const key='feasibility:expansion-rehabilitation:'+projectId
@@ -88,6 +92,7 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  const [loaded,setLoaded]=useState(false)
  useEffect(()=>{let active=true;localStore.get<State>(key).then(saved=>{if(active){if(saved){const defaults=initialState(horizon);setState({...defaults,...saved,opening:{...blankOpening,...saved.opening},workInProgress:saved.workInProgress??((saved.opening?.wipLocal||saved.opening?.wipForeign)?[{id:'legacy-wip',productName:'محصول/کالای در جریان ساخت ـ طبقه‌بندی‌نشده',localValue:saved.opening?.wipLocal??0,foreignValue:saved.opening?.wipForeign??0}]:[]),finishedProducts:saved.finishedProducts??((saved.opening?.finishedQuantity||saved.opening?.finishedUnitPrice)?[{id:'legacy-finished',productName:'محصول نهایی ـ طبقه‌بندی‌نشده',quantity:saved.opening?.finishedQuantity??0,unitPrice:saved.opening?.finishedUnitPrice??0,foreignSharePercent:saved.opening?.finishedForeignShare??0}]:[]),equityCapital:saved.equityCapital??((saved.opening?.paidInCapital??0)>0?[{id:'legacy-equity',partnerName:'سرمایه‌گذار موجود',capitalClass:'ordinary',origin:'local',paidIn:saved.opening?.paidInCapital??0,paidOut:0,preferredDividendPercent:0,profitExportPercent:0}]:[]),without:Array.from({length:horizon},(_,i)=>saved.without?.[i]??emptyPeriod()),with:Array.from({length:horizon},(_,i)=>saved.with?.[i]??emptyPeriod())})}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{active=false}},[key,horizon])
  useEffect(()=>{if(loaded)void localStore.set(key,state)},[loaded,key,state])
+ useEffect(()=>{if(loaded)onStartingAssetsChange?.(state.assets)},[loaded,state.assets,onStartingAssetsChange])
  const updateOpening=(field:keyof Opening,value:number)=>setState(s=>({...s,opening:{...s.opening,[field]:field==='finishedForeignShare'?Math.max(0,Math.min(100,value)):Math.max(0,value)}}))
  const updatePeriod=(scenario:'without'|'with',index:number,field:keyof EnterpriseScenarioPeriodInput,value:number)=>setState(s=>({...s,[scenario]:s[scenario].map((row,i)=>i===index?{...row,[field]:value}:row)}))
  const addAsset=()=>setState(s=>({...s,assets:[...s.assets,{id:'asset-'+Date.now(),name:'دارایی موجود',grossCost:0,accumulatedDepreciation:0,remainingLife:10,opportunityValue:0,residualValue:0,commissioningDate:'',depreciationMethod:'linear-scrap',depreciationRatePercent:10,depreciationLengthYears:10,depreciationLengthMonths:0,firstDepreciationMonths:12,salvagePercent:10,depreciationStartDate:'',costCentre:'',foreignSharePercent:0,status:'active'}]}))
@@ -102,10 +107,18 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   'missing-starting-asset-remaining-life':'برای دارایی فعالِ مستهلک‌شونده عمر مفید باقیمانده مثبت لازم است.',
   'invalid-starting-asset-opportunity-value':'ارزش فرصت باید عددی نامنفی باشد.',
   'invalid-starting-asset-residual-value':'ارزش اسقاط باید بین صفر و بهای ناخالص باشد.',
+  'invalid-starting-asset-salvage-percent':'درصد ارزش اسقاط باید بین صفر تا صد درصد باشد.',
+  'starting-asset-salvage-exceeds-net-book-value':'ارزش اسقاط از ارزش دفتری خالص افتتاحیه بیشتر است؛ بهای ناخالص، استهلاک انباشته یا درصد اسقاط را اصلاح کنید.',
   'invalid-starting-asset-foreign-share':'سهم جزء ارزی باید بین صفر تا صد درصد باشد.',
   'unknown-starting-asset-cost-centre':'مرکز هزینه انتخاب‌شده در فونداسیون تعریف نشده است.',
   'invalid-starting-asset-date':'تاریخ‌ها باید به صورت YYYY-MM-DD وارد شوند.',
   'depreciation-before-commissioning':'تاریخ شروع استهلاک نمی‌تواند قبل از تاریخ بهره‌برداری باشد.',
+  'invalid-starting-asset-disposal-date':'تاریخ واگذاری باید به صورت YYYY-MM-DD باشد.',
+  'missing-starting-asset-disposal-date':'برای دارایی جایگزین‌شونده یا قابل فروش، تاریخ دقیق واگذاری لازم است.',
+  'starting-asset-disposal-before-project':'تاریخ واگذاری نمی‌تواند قبل از شروع پروژه باشد.',
+  'starting-asset-disposal-after-project':'تاریخ واگذاری باید داخل تقویم پروژه باشد.',
+  'invalid-starting-asset-disposal-proceeds':'مبلغ دریافتی واگذاری باید عددی نامنفی باشد.',
+  'invalid-starting-asset-disposal-exchange-rate':'برای مبلغ ارزی، نرخ تبدیل مثبت به ارز محلی لازم است.',
   'invalid-starting-asset-depreciation-length':'مدت استهلاک باید عدد صحیح نامنفی باشد.',
   'invalid-starting-asset-depreciation-months':'ماه‌های اضافه عمر استهلاک باید بین صفر تا ۱۱ باشد.',
   'invalid-starting-asset-first-months':'ماه‌های مشمول استهلاک در سال اول باید بین ۱ تا ۱۲ باشد.',
@@ -124,6 +137,34 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
  const equity=state.equityCapital.reduce((sum,item)=>sum+item.paidIn-item.paidOut,0)+state.opening.retainedEarnings-state.opening.accumulatedLosses+state.opening.grants
  const totalAssets=currentAssets+fixedNet
  const balanceDifference=totalAssets-liabilities-equity
+ const openingPaidInCapital=state.equityCapital.reduce((sum,item)=>sum+item.paidIn-item.paidOut,0)
+ const openingBalanceSummary=useMemo(()=>calculateStartingFinancialBalanceSummary({
+  currentAssets,cashLocal:state.opening.cashLocal,cashForeign:state.opening.cashForeign,
+  shortTermDepositsLocal:state.opening.shortTermDepositsLocal,
+  cashSurplusLocal:state.opening.cashSurplusLocal,cashSurplusForeign:state.opening.cashSurplusForeign,
+  payablesLocal:state.opening.payablesLocal,payablesForeign:state.opening.payablesForeign,
+  otherLiabilitiesLocal:state.opening.otherLiabilitiesLocal,openingDebt:debt,
+  accruedInterest:accruedLoanInterest,paidInCapital:openingPaidInCapital,
+  retainedEarnings:state.opening.retainedEarnings,accumulatedLosses:state.opening.accumulatedLosses,
+  grants:state.opening.grants,
+  currentAccounts:{
+   rawMaterials:state.opening.rawMaterialsLocal+state.opening.rawMaterialsForeign,
+   factorySupplies:state.opening.suppliesLocal+state.opening.suppliesForeign,
+   workInProgress:wipTotal,finishedGoods:finished,
+   receivables:state.opening.receivablesLocal+state.opening.receivablesForeign,
+   cash:state.opening.cashLocal+state.opening.cashForeign,
+   shortTermDeposits:state.opening.shortTermDepositsLocal,
+   cashSurplus:state.opening.cashSurplusLocal+state.opening.cashSurplusForeign,
+   otherCurrentAssets:state.opening.otherAssetsLocal,
+   tradePayables:state.opening.payablesLocal+state.opening.payablesForeign,
+   otherCurrentLiabilities:state.opening.otherLiabilitiesLocal,
+   accruedInterest:accruedLoanInterest,
+  } satisfies OpeningCurrentAccounts,
+ }),[currentAssets,state.opening.cashLocal,state.opening.cashForeign,state.opening.shortTermDepositsLocal,
+  state.opening.cashSurplusLocal,state.opening.cashSurplusForeign,state.opening.payablesLocal,
+  state.opening.payablesForeign,state.opening.otherLiabilitiesLocal,debt,accruedLoanInterest,
+  openingPaidInCapital,state.opening.retainedEarnings,state.opening.accumulatedLosses,state.opening.grants])
+ useEffect(()=>{if(loaded)onStartingBalancesChange?.(openingBalanceSummary)},[loaded,onStartingBalancesChange,openingBalanceSummary])
  const result=useMemo(()=>calculateIncrementalEnterpriseAnalysis(state.without,state.with,state.discountRate/100),[state.without,state.with,state.discountRate])
  const inputFields=(scenario:'without'|'with',rows:EnterpriseScenarioPeriodInput[])=> <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('درآمد','Revenue')}</th><th>{t('هزینه نقدی','Cash OPEX')}</th><th>{t('مالیات','Tax')}</th><th>{t('CAPEX','CAPEX')}</th><th>{t('هزینه فرصت دارایی موجود','Existing Asset Opportunity Cost')}</th><th>{t('تغییر سرمایه در گردش','Δ Working Capital')}</th><th>{t('فروش دارایی','Asset Sale')}</th><th>{t('ارزش نهایی','Terminal Value')}</th></tr></thead><tbody>{rows.map((r,i)=><tr key={i}><th>{i+1}</th>{(['revenue','cashOperatingCosts','tax','capex','opportunityCost','changeInWorkingCapital','assetSaleProceeds','terminalValue'] as (keyof EnterpriseScenarioPeriodInput)[]).map(field=><td key={field}><input aria-label={String(field)+' '+(i+1)} style={{width:105,minWidth:85}} type="number" value={r[field]??0} onChange={e=>updatePeriod(scenario,i,field,Number(e.target.value))}/></td>)}</tr>)}</tbody></table></div>
  return <section className="fw-card" style={{marginTop:18}}>
@@ -173,7 +214,7 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   </div>
   <div className="fw-result">{t('ارزش موجودی محصول نهایی','Finished Product Inventory Value')}: <b>{fmt(finished)} {currency}</b> · {t('جمع دارایی‌های جاری در مانده‌های افتتاحیه','Total Current Assets in Starting Balances')}: <b>{fmt(currentAssets)} {currency}</b></div>
   <h4>{t('۲. مانده‌های افتتاحیه دارایی‌های ثابت','2. Starting Balances — Fixed Investment Items')}</h4>
-  <p className="fw-hint">{t('این دفتر دارایی‌های موجود در تاریخ مبنا را نگهداری می‌کند. بهای ناخالص، استهلاک انباشته، ارزش دفتری خالص، ارزش فرصت و عمر باقیمانده مستقل‌اند؛ اتصال کامل این دارایی‌ها به برنامه استهلاک افزایشی در مرحله بعد انجام می‌شود.','This register captures assets held at the opening balance date. Gross cost, accumulated depreciation, net book value, opportunity value and remaining useful life are kept separately; full linkage to the incremental depreciation schedule is a subsequent step.')}</p>
+  <p className="fw-hint">{t('این دفتر دارایی‌های موجود در تاریخ مبنا را نگهداری می‌کند. بهای ناخالص، استهلاک انباشته و عمر مفید باقیمانده در برنامه استهلاک دوره‌ای مدل مالی منظور می‌شوند؛ ارزش فرصت جداگانه برای تحلیل افزایشی نگهداری می‌شود.','This register captures assets held at the opening balance date. Gross cost, accumulated depreciation and remaining useful life feed the periodic depreciation schedule; opportunity value remains separate for incremental analysis.')}</p>
   {state.assets.map(asset=><div className="fw-grid" key={asset.id}>
    <label className="fw-field"><span>{t('شرح دارایی','Asset Description')}</span><input value={asset.name} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,name:e.target.value}:a)}))}/></label>
    {([['grossCost','بهای تمام‌شده'],['accumulatedDepreciation','استهلاک انباشته'],['remainingLife','عمر مفید باقیمانده'],['opportunityValue','ارزش فرصت / بازار'],['residualValue','ارزش اسقاط'],['foreignSharePercent','سهم جزء ارزی (%)']] as [keyof Asset,string][]).map(([field,label])=><label className="fw-field" key={field}><span>{t(label,comfarTermsEn[label]??label)}</span><input type="number" min="0" value={Number(asset[field]??0)} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,[field]:Number(e.target.value)}:a)}))}/></label>)}
@@ -185,6 +226,14 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
    <label className="fw-field"><span>{t('تاریخ شروع استهلاک',comfarTermsEn['تاریخ شروع استهلاک'])}</span><input type="date" value={asset.depreciationStartDate??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,depreciationStartDate:e.target.value}:a)}))}/></label>
    <label className="fw-field"><span>{t('مرکز هزینه',comfarTermsEn['مرکز هزینه'])}</span><input value={asset.costCentre??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,costCentre:e.target.value}:a)}))}/></label>
    <label className="fw-field"><span>{t('وضعیت دارایی','Asset Status')}</span><select value={asset.status} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,status:e.target.value as Asset['status']}:a)}))}><option value="active">{t('فعال','Active')}</option><option value="replace">{t('جایگزین‌شونده','To Be Replaced')}</option><option value="idle">{t('بلااستفاده','Idle')}</option><option value="sell">{t('قابل فروش','For Sale')}</option></select></label>
+   {(asset.status==='replace'||asset.status==='sell')&&<>
+    <label className="fw-field"><span>{t('تاریخ واگذاری/فروش',comfarTermsEn['تاریخ واگذاری/فروش'])}</span><input type="date" value={asset.disposalDate??''} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,disposalDate:e.target.value}:a)}))}/></label>
+    <label className="fw-field"><span>{t('روش قیمت‌گذاری واگذاری',comfarTermsEn['روش قیمت‌گذاری واگذاری'])}</span><select value={asset.disposalPriceMode??'book-value'} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,disposalPriceMode:e.target.value as Asset['disposalPriceMode']}:a)}))}><option value="book-value">{t('به ارزش دفتری','At Net Book Value')}</option><option value="self-defined">{t('مبلغ تعیین‌شده','Self-defined Proceeds')}</option></select></label>
+    {asset.disposalPriceMode==='self-defined'&&<>
+     <label className="fw-field"><span>{t('مبلغ دریافتی واگذاری',comfarTermsEn['مبلغ دریافتی واگذاری'])}</span><input type="number" min="0" value={asset.disposalProceeds??0} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,disposalProceeds:Number(e.target.value)}:a)}))}/></label>
+     <label className="fw-field"><span>{t('نرخ تبدیل به ارز محلی',comfarTermsEn['نرخ تبدیل به ارز محلی'])}</span><input type="number" min="0.000001" step="0.000001" value={asset.disposalExchangeRateToLocal??1} onChange={e=>setState(s=>({...s,assets:s.assets.map(a=>a.id===asset.id?{...a,disposalExchangeRateToLocal:Number(e.target.value)}:a)}))}/></label>
+    </>}
+   </>}
    <button className="secondary-button" onClick={()=>setState(s=>({...s,assets:s.assets.filter(a=>a.id!==asset.id)}))}><Trash2 size={14}/>{t('حذف','Remove')}</button>
   </div>)}
   <button className="secondary-button" onClick={addAsset}><Plus size={14}/>{t('افزودن دارایی موجود','Add Existing Asset')}</button>

@@ -5,6 +5,65 @@ export type ProjectCostCentre = { id: string; code: string; name: string; parent
 export type ProjectInflationIndex = { id: string; name: string; currencyCode: string; rates: { period: string; ratePercent: number }[] }
 export type ProjectTaxRate = { id: string; period: string; ratePercent: number }
 
+export type OpeningCurrentAccounts = {
+  rawMaterials: number
+  factorySupplies: number
+  workInProgress: number
+  finishedGoods: number
+  receivables: number
+  cash: number
+  shortTermDeposits: number
+  cashSurplus: number
+  otherCurrentAssets: number
+  tradePayables: number
+  otherCurrentLiabilities: number
+  accruedInterest: number
+}
+/** Detailed current-account balances are retained for opening reconciliation; the periodic balance sheet continues to post their net working-capital aggregate until each account has its own validated roll-forward. */
+export type StartingFinancialBalanceSummary = {
+  cash: number
+  netWorkingCapital: number
+  debt: number
+  paidInCapital: number
+  retainedEarnings: number
+  grants: number
+  currentAccounts?: OpeningCurrentAccounts
+}
+export type StartingFinancialBalanceInputs = {
+  currentAssets: number
+  cashLocal: number
+  cashForeign: number
+  shortTermDepositsLocal: number
+  cashSurplusLocal: number
+  cashSurplusForeign: number
+  payablesLocal: number
+  payablesForeign: number
+  otherLiabilitiesLocal: number
+  openingDebt: number
+  accruedInterest: number
+  paidInCapital: number
+  retainedEarnings: number
+  accumulatedLosses: number
+  grants: number
+  currentAccounts?: OpeningCurrentAccounts
+}
+
+/** Converts the detailed opening-balance register into the net balances used by the periodic statements. */
+export function calculateStartingFinancialBalanceSummary(input: StartingFinancialBalanceInputs): StartingFinancialBalanceSummary {
+  const cash = input.cashLocal + input.cashForeign + input.shortTermDepositsLocal +
+    input.cashSurplusLocal + input.cashSurplusForeign
+  const operatingPayables = input.payablesLocal + input.payablesForeign + input.otherLiabilitiesLocal
+  return {
+    cash,
+    netWorkingCapital: input.currentAssets - cash - operatingPayables,
+    debt: input.openingDebt + input.accruedInterest,
+    paidInCapital: input.paidInCapital,
+    retainedEarnings: input.retainedEarnings - input.accumulatedLosses,
+    grants: input.grants,
+    ...(input.currentAccounts ? { currentAccounts: { ...input.currentAccounts } } : {}),
+  }
+}
+
 export type ProjectFoundation = {
   schemaVersion: 1
   planning: {
@@ -267,6 +326,10 @@ export type StartingFixedAssetBalance = {
   firstDepreciationMonths?: number
   salvagePercent?: number
   depreciationStartDate?: string
+  disposalDate?: string
+  disposalPriceMode?: 'book-value' | 'self-defined'
+  disposalProceeds?: number
+  disposalExchangeRateToLocal?: number
   costCentre?: string
   foreignSharePercent?: number
   status: 'active' | 'replace' | 'idle' | 'sell'
@@ -310,7 +373,34 @@ export function validateStartingFixedAssetBalances(
       issue(path + '.dates', 'invalid-starting-asset-date', 'Commissioning date and depreciation start date must use YYYY-MM-DD.')
     if (asset.commissioningDate && asset.depreciationStartDate && asset.depreciationStartDate < asset.commissioningDate)
       issue(path + '.depreciationStartDate', 'depreciation-before-commissioning', 'Depreciation cannot start before the commissioning date.')
+    if (asset.disposalDate !== undefined && !validDate(asset.disposalDate))
+      issue(path + '.disposalDate', 'invalid-starting-asset-disposal-date', 'Disposal date must use YYYY-MM-DD.')
+    if ((asset.status === 'replace' || asset.status === 'sell') && !asset.disposalDate)
+      issue(path + '.disposalDate', 'missing-starting-asset-disposal-date', 'A planned replacement or sale requires an explicit disposal date.')
+    if (asset.disposalDate && foundation.planning.projectStartDate && asset.disposalDate < foundation.planning.projectStartDate)
+      issue(path + '.disposalDate', 'starting-asset-disposal-before-project', 'Opening asset disposal cannot precede the project start date.')
+    if (asset.disposalDate && foundation.planning.projectEndDate && asset.disposalDate > foundation.planning.projectEndDate)
+      issue(path + '.disposalDate', 'starting-asset-disposal-after-project', 'Opening asset disposal must fall within the project calendar.')
+    if (asset.disposalPriceMode === 'self-defined') {
+      if (!Number.isFinite(asset.disposalProceeds) || (asset.disposalProceeds ?? -1) < 0)
+        issue(path + '.disposalProceeds', 'invalid-starting-asset-disposal-proceeds', 'Self-defined disposal proceeds must be a finite non-negative amount.')
+      if (!Number.isFinite(asset.disposalExchangeRateToLocal) || (asset.disposalExchangeRateToLocal ?? 0) <= 0)
+        issue(path + '.disposalExchangeRateToLocal', 'invalid-starting-asset-disposal-exchange-rate', 'A positive exchange rate to local currency is required for self-defined proceeds.')
+    }
     const method = asset.depreciationMethod ?? 'linear-scrap'
+    if (asset.salvagePercent !== undefined &&
+        (!Number.isFinite(asset.salvagePercent) || asset.salvagePercent < 0 || asset.salvagePercent > 100))
+      issue(path + '.salvagePercent', 'invalid-starting-asset-salvage-percent', 'Scrap percentage must be between zero and 100 percent.')
+    const effectiveScrapPercent = asset.salvagePercent ??
+      (asset.grossCost > 0 ? (asset.residualValue ?? 0) / asset.grossCost * 100 : 0)
+    const netBookValue = Math.max(0, asset.grossCost - asset.accumulatedDepreciation)
+    if (method !== 'none' && method !== 'linear-zero' &&
+        Number.isFinite(effectiveScrapPercent) && effectiveScrapPercent >= 0 && effectiveScrapPercent <= 100 &&
+        asset.grossCost * effectiveScrapPercent / 100 > netBookValue + 0.01)
+      issue(path + '.salvagePercent', 'starting-asset-salvage-exceeds-net-book-value', 'Scrap value cannot exceed the opening net book value.')
+    if (method === 'accelerated' &&
+        (asset.depreciationRatePercent === undefined || asset.depreciationRatePercent === 100))
+      issue(path + '.depreciationRatePercent', 'invalid-starting-asset-depreciation-rate', 'Accelerated depreciation requires a rate greater than zero and below 100 percent.')
     if (method !== 'none') {
       if (asset.status === 'active' && asset.remainingLife <= 0)
         issue(path + '.remainingLife', 'missing-starting-asset-remaining-life', 'An active depreciable asset requires positive remaining useful life.')

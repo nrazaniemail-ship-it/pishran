@@ -21,9 +21,11 @@ const result = adapter.buildWorkingCapitalScheduleFromDrafts({
   ],
 }, periods, 50)
 assert.equal(result.valid, true, result.issues.join('; '))
-assert.deepEqual(result.closingWorkingCapital, [80, 100])
-assert.deepEqual(result.changeInWorkingCapital, [30, 20])
+assert.deepEqual(result.closingWorkingCapital, [80, 0])
+assert.deepEqual(result.changeInWorkingCapital, [30, -80])
 assert.equal(result.componentRows.length, 4)
+assert.equal(result.terminalRecoveryAmount, 100,
+  'Positive terminal net working capital must be released into final-period cash flow')
 
 const bound = adapter.bindWorkingCapitalDraftsToPeriodicFinance({
   periods, fiscalYearStartMonth: 1, dayCountBasis: 360, cashFlowTiming: 'period-end',
@@ -35,7 +37,8 @@ const bound = adapter.bindWorkingCapitalDraftsToPeriodicFinance({
   { id: 'pay', name: 'Payables', category: 'payables', minimumDaysCoverage: null, turnoverCoefficient: null, valuationBasis: 'user-defined', periodBalances: [{ period: '1', amount: 20 }, { period: '2', amount: 30 }] },
 ] }, 50)
 assert.equal(bound.valid, true, bound.issues.join('; '))
-assert.deepEqual(bound.financeInput.workingCapitalByPeriod, [80, 100])
+assert.deepEqual(bound.financeInput.workingCapitalByPeriod, [80, 0])
+assert.equal(bound.schedule.terminalRecoveryAmount, 100)
 assert.equal(bound.financeInput.openingWorkingCapital, 50)
 
 const missingBalance = adapter.buildWorkingCapitalScheduleFromDrafts({
@@ -64,5 +67,21 @@ const invalidCalendar = adapter.buildWorkingCapitalScheduleFromDrafts({ workingC
 ], 0)
 assert.equal(invalidCalendar.valid, false)
 assert.ok(invalidCalendar.issues.some(issue => issue.includes('dates and day count')))
+
+
+const negativeNetWorkingCapital = adapter.buildWorkingCapitalScheduleFromDrafts({
+  workingCapital: [
+    { id:'cash-assets', name:'Current assets', category:'cash', minimumDaysCoverage:null, turnoverCoefficient:null, valuationBasis:'user-defined',
+      periodBalances:[{period:'1',amount:20},{period:'2',amount:25}] },
+    { id:'trade-payables', name:'Trade payables', category:'payables', minimumDaysCoverage:null, turnoverCoefficient:null, valuationBasis:'user-defined',
+      periodBalances:[{period:'1',amount:50},{period:'2',amount:60}] },
+  ],
+}, periods, -10)
+assert.equal(negativeNetWorkingCapital.valid,true,negativeNetWorkingCapital.issues.join('; '))
+assert.deepEqual(negativeNetWorkingCapital.closingWorkingCapital,[-30,0])
+assert.deepEqual(negativeNetWorkingCapital.changeInWorkingCapital,[-20,30])
+assert.equal(negativeNetWorkingCapital.terminalRecoveryAmount,-35,
+  'Negative terminal net working capital must be settled as a final-period cash outflow')
+assert.equal(negativeNetWorkingCapital.openingWorkingCapital,-10)
 
 console.log('Working-capital draft integration validation passed.')

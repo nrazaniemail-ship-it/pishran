@@ -1,5 +1,6 @@
 import type { ProjectCalendarPeriod } from '../projects/projectFoundation'
 import type { FixedInvestmentItem, ProjectFoundation, ProjectPeriodFrequency } from '../projects/projectFoundation'
+import { calculateAssetDepreciationPeriod } from '../projects/projectModelFormulaRules'
 
 export type CapitalStructureInput = {
   equityWeight: number
@@ -28,11 +29,17 @@ export type WorkingCapitalPolicy = {
   cashDays: number
   payableDays: number
   annualRawMaterialCost: number
+  factorySuppliesDays?: number
+  annualFactorySuppliesCost?: number
+  utilitiesDays?: number
+  annualUtilitiesCost?: number
   energyDays?: number
   annualEnergyCost?: number
   sparePartsDays?: number
   annualSparePartsCost?: number
   annualFixedRawMaterialCost?: number
+  annualFixedFactorySuppliesCost?: number
+  annualFixedUtilitiesCost?: number
   annualPayablesCost?: number
   annualFixedPayablesCost?: number
   annualConversionCost: number
@@ -42,29 +49,40 @@ export type WorkingCapitalPolicy = {
   annualRevenue: number
   annualCashOperatingCost: number
   annualFixedCashOperatingCost?: number
+  shortTermDepositSharePercent?: number
+  shortTermDepositRatePercent?: number
 }
 
 export type WorkingCapitalBreakdown = {
   rawMaterials: number
+  factorySupplies?: number
+  utilities?: number
   energy?: number
   spareParts?: number
   workInProgress: number
   finishedGoods: number
   receivables: number
   minimumCash: number
+  shortTermDeposits?: number
   payables: number
   netWorkingCapital: number
 }
 
 export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPolicy, utilization: number, salesFactor = 1, opexFactor = 1): WorkingCapitalBreakdown {
-  const values = [policy.dayBasis, policy.rawMaterialDays, policy.energyDays ?? 0, policy.sparePartsDays ?? 0, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualEnergyCost ?? 0, policy.annualSparePartsCost ?? 0, policy.annualFixedRawMaterialCost ?? 0, policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, utilization, salesFactor, opexFactor]
-  if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1).some(value => value < 0) || policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100) return { rawMaterials: 0, energy: 0, spareParts: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 }
-  const day = (base: number, days: number, factor: number) => base * factor * Math.min(days, policy.dayBasis) / policy.dayBasis
+  const values = [policy.dayBasis, policy.rawMaterialDays, policy.factorySuppliesDays ?? 0, policy.utilitiesDays ?? 0, policy.energyDays ?? 0, policy.sparePartsDays ?? 0, policy.workInProgressDays, policy.workInProgressMaterialCompletionPercent, policy.workInProgressConversionCompletionPercent, policy.finishedGoodsDays, policy.receivableDays, policy.cashDays, policy.payableDays, policy.annualRawMaterialCost, policy.annualFactorySuppliesCost ?? 0, policy.annualUtilitiesCost ?? 0, policy.annualEnergyCost ?? 0, policy.annualSparePartsCost ?? 0, policy.annualFixedRawMaterialCost ?? 0, policy.annualFixedFactorySuppliesCost ?? 0, policy.annualFixedUtilitiesCost ?? 0, policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0, policy.annualConversionCost, policy.annualFixedConversionCost ?? 0, policy.annualFinishedGoodsCost, policy.annualFixedFinishedGoodsCost ?? 0, policy.annualRevenue, policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0, policy.shortTermDepositSharePercent ?? 0, policy.shortTermDepositRatePercent ?? 0, utilization, salesFactor, opexFactor]
+  if (!values.every(Number.isFinite) || policy.dayBasis <= 0 || values.slice(1).some(value => value < 0) || policy.workInProgressMaterialCompletionPercent > 100 || policy.workInProgressConversionCompletionPercent > 100 || (policy.shortTermDepositSharePercent ?? 0) > 100) return { rawMaterials: 0, factorySupplies: 0, utilities: 0, energy: 0, spareParts: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, shortTermDeposits: 0, payables: 0, netWorkingCapital: 0 }
+  const day = (base: number, days: number, factor: number) => base * factor * days / policy.dayBasis
   const activeFactor = utilization > 0 ? 1 : 0
   const fixedRawMaterials = Math.min(policy.annualRawMaterialCost, policy.annualFixedRawMaterialCost ?? 0)
   const variableRawMaterials = policy.annualRawMaterialCost - fixedRawMaterials
   const rawMaterials = day(variableRawMaterials, policy.rawMaterialDays, utilization * opexFactor)
     + day(fixedRawMaterials, policy.rawMaterialDays, activeFactor * opexFactor)
+  const fixedFactorySupplies = Math.min(policy.annualFactorySuppliesCost ?? 0, policy.annualFixedFactorySuppliesCost ?? 0)
+  const factorySupplies = day((policy.annualFactorySuppliesCost ?? 0) - fixedFactorySupplies, policy.factorySuppliesDays ?? 0, utilization * opexFactor)
+    + day(fixedFactorySupplies, policy.factorySuppliesDays ?? 0, activeFactor * opexFactor)
+  const fixedUtilities = Math.min(policy.annualUtilitiesCost ?? 0, policy.annualFixedUtilitiesCost ?? 0)
+  const utilities = day((policy.annualUtilitiesCost ?? 0) - fixedUtilities, policy.utilitiesDays ?? 0, utilization * opexFactor)
+    + day(fixedUtilities, policy.utilitiesDays ?? 0, activeFactor * opexFactor)
   const energy = day(policy.annualEnergyCost ?? 0, policy.energyDays ?? 0, utilization * opexFactor)
   const spareParts = day(policy.annualSparePartsCost ?? 0, policy.sparePartsDays ?? 0, utilization * opexFactor)
   const materialCompletion = policy.workInProgressMaterialCompletionPercent / 100
@@ -81,17 +99,36 @@ export function calculateOperatingCycleWorkingCapital(policy: WorkingCapitalPoli
   const fixedCash = Math.min(policy.annualCashOperatingCost, policy.annualFixedCashOperatingCost ?? 0)
   const minimumCash = day(policy.annualCashOperatingCost - fixedCash, policy.cashDays, utilization * opexFactor)
     + day(fixedCash, policy.cashDays, activeFactor * opexFactor)
+  const shortTermDeposits = minimumCash * (policy.shortTermDepositSharePercent ?? 0) / 100
   const fixedPayables = Math.min(policy.annualPayablesCost ?? policy.annualRawMaterialCost, policy.annualFixedPayablesCost ?? 0)
   const variablePayables = Math.max(0, (policy.annualPayablesCost ?? policy.annualRawMaterialCost) - fixedPayables)
   const payables = day(variablePayables, policy.payableDays, utilization * opexFactor)
     + day(fixedPayables, policy.payableDays, activeFactor * opexFactor)
-  return { rawMaterials, energy, spareParts, workInProgress, finishedGoods, receivables, minimumCash, payables, netWorkingCapital: rawMaterials + energy + spareParts + workInProgress + finishedGoods + receivables + minimumCash - payables }
+  return { rawMaterials, factorySupplies, utilities, energy, spareParts, workInProgress, finishedGoods, receivables, minimumCash, shortTermDeposits, payables, netWorkingCapital: rawMaterials + factorySupplies + utilities + energy + spareParts + workInProgress + finishedGoods + receivables + minimumCash - payables }
+}
+
+/** COMFAR VII.Q: turnover coefficient (Coto) = day basis / minimum days coverage (Mdc). */
+export function calculateWorkingCapitalTurnoverCoefficient(minimumDaysCoverage: number): number | null {
+  if (!Number.isFinite(minimumDaysCoverage) || minimumDaysCoverage <= 0) return null
+  return 360 / minimumDaysCoverage
+}
+
+/** COMFAR VII.Q inverse: minimum days coverage (Mdc) = 360 / Coto. */
+export function calculateWorkingCapitalDaysCoverageFromTurnover(turnoverCoefficient: number): number | null {
+  if (!Number.isFinite(turnoverCoefficient) || turnoverCoefficient <= 0) return null
+  return 360 / turnoverCoefficient
+}
+
+/** COMFAR XI.O: interest on short-term deposits = cash-in-hand × invested share × annual rate × months / 12. */
+export function calculateShortTermDepositInterest(cashInHand: number, investedSharePercent: number, annualRatePercent: number, periodMonths: number): number {
+  if (![cashInHand, investedSharePercent, annualRatePercent, periodMonths].every(Number.isFinite) || cashInHand < 0 || investedSharePercent < 0 || investedSharePercent > 100 || annualRatePercent < 0 || periodMonths < 0 || periodMonths > 12) return Number.NaN
+  return cashInHand * investedSharePercent / 100 * annualRatePercent / 100 * periodMonths / 12
 }
 
 export function calculateCashConversionCycleDays(policy: Pick<WorkingCapitalPolicy, 'dayBasis' | 'rawMaterialDays' | 'workInProgressDays' | 'finishedGoodsDays' | 'receivableDays' | 'payableDays'>) {
   const values = [policy.rawMaterialDays, policy.workInProgressDays, policy.finishedGoodsDays, policy.receivableDays, policy.payableDays]
   if (!Number.isFinite(policy.dayBasis) || policy.dayBasis <= 0 || !values.every(Number.isFinite) || values.some(value => value < 0)) return Number.NaN
-  const [raw, wip, finished, receivables, payables] = values.map(value => Math.min(value, policy.dayBasis))
+  const [raw, wip, finished, receivables, payables] = values
   return raw + wip + finished + receivables - payables
 }
 
@@ -137,7 +174,7 @@ export function calculateWorkingCapital(items: WorkingCapitalItem[], ramp = 1, d
   if (!Number.isFinite(ramp) || ramp < 0 || !Number.isFinite(dayBasis) || dayBasis <= 0) return 0
   return items.reduce((total, item) => {
     if (!finiteNonNegative(item.annualBase) || !finiteNonNegative(item.days)) return total
-    const amount = item.annualBase * Math.min(item.days, dayBasis) / dayBasis * ramp
+    const amount = item.annualBase * item.days / dayBasis * ramp
     return total + (item.classification === 'liability' ? -amount : amount)
   }, 0)
 }
@@ -363,6 +400,64 @@ export type IntegratedLoanYear = {
   accruedInterestBalance?: number
 }
 
+export type BreakEvenAnalysisResult = {
+  salesRevenue: number
+  salesVolume: number
+  variableCosts: number
+  fixedCostsExcludingFinance: number
+  financialCosts: number
+  variableMargin: number
+  variableMarginRatioPercent: number | null
+  breakEvenSalesValueIncludingFinance: number | null
+  breakEvenSalesValueExcludingFinance: number | null
+  breakEvenRatioIncludingFinancePercent: number | null
+  breakEvenRatioExcludingFinancePercent: number | null
+  breakEvenSalesVolumeIncludingFinance: number | null
+  breakEvenSalesVolumeExcludingFinance: number | null
+  breakEvenSalesPriceAtConstantVolume: number | null
+  breakEvenPriceRatioPercent: number | null
+  fixedCostCoverageIncludingFinance: number | null
+  fixedCostCoverageExcludingFinance: number | null
+}
+
+/** Aggregate project break-even using COMFAR X break-even schedule relationships. */
+export function calculateBreakEvenAnalysis(input: {
+  salesRevenue: number
+  salesVolume: number
+  variableCosts: number
+  fixedCosts: number
+  financialCosts?: number
+}): BreakEvenAnalysisResult {
+  const salesRevenue = Math.max(0, input.salesRevenue)
+  const salesVolume = Math.max(0, input.salesVolume)
+  const variableCosts = Math.max(0, input.variableCosts)
+  const fixedCostsExcludingFinance = Math.max(0, input.fixedCosts)
+  const financialCosts = Math.max(0, input.financialCosts ?? 0)
+  const variableMargin = salesRevenue - variableCosts
+  const variableMarginRatio = salesRevenue > 0 ? variableMargin / salesRevenue : null
+  const validMargin = variableMarginRatio !== null && variableMarginRatio > 0
+  const breakEvenSalesValueIncludingFinance = validMargin ? (fixedCostsExcludingFinance + financialCosts) / variableMarginRatio! : null
+  const breakEvenSalesValueExcludingFinance = validMargin ? fixedCostsExcludingFinance / variableMarginRatio! : null
+  const breakEvenRatioIncludingFinance = breakEvenSalesValueIncludingFinance !== null && salesRevenue > 0 ? breakEvenSalesValueIncludingFinance / salesRevenue * 100 : null
+  const breakEvenRatioExcludingFinance = breakEvenSalesValueExcludingFinance !== null && salesRevenue > 0 ? breakEvenSalesValueExcludingFinance / salesRevenue * 100 : null
+  const averageUnitPrice = salesVolume > 0 ? salesRevenue / salesVolume : null
+  const breakEvenSalesVolumeIncludingFinance = breakEvenSalesValueIncludingFinance !== null && averageUnitPrice !== null && averageUnitPrice > 0 ? breakEvenSalesValueIncludingFinance / averageUnitPrice : null
+  const breakEvenSalesVolumeExcludingFinance = breakEvenSalesValueExcludingFinance !== null && averageUnitPrice !== null && averageUnitPrice > 0 ? breakEvenSalesValueExcludingFinance / averageUnitPrice : null
+  const breakEvenSalesPriceAtConstantVolume = salesVolume > 0 ? (fixedCostsExcludingFinance + financialCosts + variableCosts) / salesVolume : null
+  const breakEvenPriceRatioPercent = breakEvenSalesPriceAtConstantVolume !== null && averageUnitPrice !== null && averageUnitPrice > 0 ? breakEvenSalesPriceAtConstantVolume / averageUnitPrice * 100 : null
+  return {
+    salesRevenue,salesVolume,variableCosts,fixedCostsExcludingFinance,financialCosts,variableMargin,
+    variableMarginRatioPercent:variableMarginRatio===null?null:variableMarginRatio*100,
+    breakEvenSalesValueIncludingFinance,breakEvenSalesValueExcludingFinance,
+    breakEvenRatioIncludingFinancePercent:breakEvenRatioIncludingFinance,
+    breakEvenRatioExcludingFinancePercent:breakEvenRatioExcludingFinance,
+    breakEvenSalesVolumeIncludingFinance,breakEvenSalesVolumeExcludingFinance,
+    breakEvenSalesPriceAtConstantVolume,breakEvenPriceRatioPercent,
+    fixedCostCoverageIncludingFinance:fixedCostsExcludingFinance+financialCosts>0?variableMargin/(fixedCostsExcludingFinance+financialCosts):null,
+    fixedCostCoverageExcludingFinance:fixedCostsExcludingFinance>0?variableMargin/fixedCostsExcludingFinance:null,
+  }
+}
+
 export type IntegratedFinanceYear = {
   year: number
   utilization: number
@@ -372,6 +467,8 @@ export type IntegratedFinanceYear = {
   fixedCashCost: number
   depreciation: number
   ebit: number
+  shortTermDepositInterest: number
+  breakEven: BreakEvenAnalysisResult
   interest: number
   taxableProfit: number
   taxLossCarryForward: number
@@ -413,6 +510,8 @@ export type IntegratedFinanceResult = {
   equityWeight: number
   debtWeight: number
   npvProject: number | null
+  presentValueInvestment: number | null
+  npvrProject: number | null
   irrProject: number | null
   npvEquity: number | null
   irrEquity: number | null
@@ -510,6 +609,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   let simplePayback: number | null = null
   let discountedPayback: number | null = null
   const annualRows: IntegratedFinanceYear[] = []
+  let invalidShortTermDepositAssumptions = false
 
   for (let index = 0; index < years; index++) {
     const year = index + 1
@@ -548,26 +648,29 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const salvageProceeds = year === years ? Math.max(0, input.salvageValue || 0) : 0
     const salvageBookValueDisposed = year === years ? Math.max(0, Number(input.salvageBookValue) || 0) : 0
     const salvageGainLoss = salvageProceeds - salvageBookValueDisposed
+    const rawShortTermDepositInterest = input.workingCapitalPolicy ? calculateShortTermDepositInterest(workingCapitalBreakdown.minimumCash, input.workingCapitalPolicy.shortTermDepositSharePercent ?? 0, input.workingCapitalPolicy.shortTermDepositRatePercent ?? 0, 12) : 0
+    if (!Number.isFinite(rawShortTermDepositInterest)) invalidShortTermDepositAssumptions = true
+    const shortTermDepositInterest = Number.isFinite(rawShortTermDepositInterest) ? rawShortTermDepositInterest : 0
     const ebit = revenue - variableCashCost - fixedCashCost - depreciation + assetSaleOtherIncomeLoss + salvageGainLoss
 
     const effectiveTaxRate = Math.max(0, Math.min(100, Number(input.taxRateSchedule?.[index] ?? input.taxRate)))
-    const taxableProfit = ebit - interest - taxLoss
+    const taxableProfit = ebit + shortTermDepositInterest - interest - taxLoss
     const tax = Math.max(0, taxableProfit) * effectiveTaxRate / 100
     taxLoss = taxableProfit < 0 ? -taxableProfit : Math.max(0, taxLoss - (ebit - interest))
     const taxLossCarryForward = taxLoss
 
-    const unleveredTaxableProfit = ebit - unleveredTaxLoss
+    const unleveredTaxableProfit = ebit + shortTermDepositInterest - unleveredTaxLoss
     const unleveredTax = Math.max(0, unleveredTaxableProfit) * effectiveTaxRate / 100
     unleveredTaxLoss = unleveredTaxableProfit < 0 ? -unleveredTaxableProfit : Math.max(0, unleveredTaxLoss - ebit)
 
     const terminalValue = salvageProceeds + assetSaleProceeds
     const equityContribution = Math.max(0, Number(input.equityContributions[index]) || 0)
-    const projectFreeCashFlow = ebit - assetSaleOtherIncomeLoss - salvageGainLoss - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
-    const equityFreeCashFlow = -equityContribution + revenue - variableCashCost - fixedCashCost - tax - interest - principal - maintenanceCapex - changeInWorkingCapital + terminalValue
+    const projectFreeCashFlow = ebit + shortTermDepositInterest - assetSaleOtherIncomeLoss - salvageGainLoss - unleveredTax + depreciation - fixedInvestment - preOperatingCost - maintenanceCapex - changeInWorkingCapital + terminalValue
+    const equityFreeCashFlow = -equityContribution + revenue + shortTermDepositInterest - variableCashCost - fixedCashCost - tax - interest - principal - maintenanceCapex - changeInWorkingCapital + terminalValue
     const debtService = principal + interest
-    const cfads = revenue - variableCashCost - fixedCashCost - tax - maintenanceCapex - changeInWorkingCapital
+    const cfads = revenue + shortTermDepositInterest - variableCashCost - fixedCashCost - tax - maintenanceCapex - changeInWorkingCapital
     const dscr = debtService > 0 ? cfads / debtService : null
-    const cashBalance = priorCash + equityContribution + debtDrawdown + revenue - variableCashCost - fixedCashCost -
+    const cashBalance = priorCash + equityContribution + debtDrawdown + revenue + shortTermDepositInterest - variableCashCost - fixedCashCost -
       fixedInvestment - preOperatingCost - maintenanceCapex - tax - interest - principal - changeInWorkingCapital + terminalValue
     priorCash = cashBalance
 
@@ -579,7 +682,8 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     }
 
     annualRows.push({
-      year, utilization, production: Math.max(0, input.capacity) * utilization, revenue,
+      year, utilization, production: Math.max(0, input.capacity) * utilization, revenue, shortTermDepositInterest,
+      breakEven: calculateBreakEvenAnalysis({salesRevenue:revenue,salesVolume:Math.max(0,input.capacity)*utilization,variableCosts:variableCashCost,fixedCosts:fixedCashCost+depreciation,financialCosts:interest}),
       variableCashCost, fixedCashCost, depreciation, ebit, interest, taxableProfit, taxLossCarryForward, tax, principal, debtDrawdown,
       equityContribution, fixedInvestment, preOperatingCost, maintenanceCapex, capitalizedInterest, workingCapital, closingWorkingCapital, workingCapitalBreakdown: statementWorkingCapitalBreakdown, salvageProceeds, salvageBookValueDisposed, salvageGainLoss, assetSaleProceeds, assetReturnOfCapital, assetSaleOtherIncomeLoss, assetBookValueDisposed, terminalValue, changeInWorkingCapital,
       projectFreeCashFlow, equityFreeCashFlow, cashBalance, debtBalance, debtService, cfads, dscr,
@@ -589,6 +693,9 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   const projectFlows = annualRows.map(row => row.projectFreeCashFlow)
   const equityFlows = annualRows.map(row => row.equityFreeCashFlow)
   const npvProject = discountRate === null ? null : calculateNpv(projectFlows, discountRate)
+  const investmentFlows = annualRows.map(row => row.fixedInvestment + row.preOperatingCost + Math.max(0, row.changeInWorkingCapital))
+  const presentValueInvestment = discountRate === null ? null : calculateNpv(investmentFlows, discountRate)
+  const npvrProject = npvProject !== null && presentValueInvestment !== null && presentValueInvestment > 0 ? npvProject / presentValueInvestment : null
   const irrProject = calculateIrr(projectFlows)
   const npvEquity = calculateNpv(equityFlows, Math.max(0, input.costOfEquity) / 100)
   const irrEquity = calculateIrr(equityFlows)
@@ -597,6 +704,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   const peakWorkingCapital = Math.max(0, ...annualRows.map(row => row.workingCapital))
   const fundingGap = totalInvestment + peakWorkingCapital - totalFunding
   const warnings: string[] = []
+  if (invalidShortTermDepositAssumptions) warnings.push('Short-term deposit share must be 0–100% and the annual interest rate must be finite and non-negative.')
   if (input.assetSaleSchedule?.some(row => ![row.saleProceeds,row.returnOfCapital,row.otherIncomeLoss,row.bookValueDisposed].every(Number.isFinite) || row.saleProceeds < 0 || row.returnOfCapital < 0 || row.bookValueDisposed < 0 || Math.abs(row.saleProceeds-row.returnOfCapital-row.otherIncomeLoss)>0.01)) warnings.push('برنامه فروش دارایی باید عواید فروش را با Return of capital و Other income/loss تطبیق دهد و ارزش‌ها معتبر باشند.')
   if (totalFunding <= 0) warnings.push('ساختار تأمین مالی ثبت نشده است؛ WACC محاسبه نمی‌شود.')
   if (totalEquityContribution <= 0 && totalDebtDrawdown > 0) warnings.push('آورده نقدی سهامدار ثبت نشده است؛ وزن حقوق صاحبان سهام صفر است.')
@@ -624,7 +732,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   if (input.loans.some(loan => loan.repaymentStartYear + loan.graceYears + loan.termYears - 1 > years)) warnings.push('بخشی از بازپرداخت وام‌ها خارج از افق زمانی مدل قرار می‌گیرد.')
   return {
     years: annualRows, loanSchedules, wacc, discountRate, weightedCostOfDebt, equityWeight, debtWeight,
-    npvProject, irrProject, npvEquity, irrEquity, mirrProject, mirrEquity, simplePayback, discountedPayback,
+    npvProject, presentValueInvestment, npvrProject, irrProject, npvEquity, irrEquity, mirrProject, mirrEquity, simplePayback, discountedPayback,
     peakWorkingCapital, totalDebtDrawdown, totalEquityContribution, totalFunding, totalInvestment, fundingGap, warnings,
   }
 }
@@ -786,9 +894,10 @@ export function calculateComfarAssetDepreciationSchedule(
       && Number.isInteger(months) && months >= 0 && months <= 11
       && (asset.method === 'none' || length > 0) && Number.isInteger(firstMonths) && firstMonths >= 1 && firstMonths <= 12
       && startPeriod !== null
+      && (asset.method !== 'sum-of-years-digits' || (Number.isInteger(asset.lengthYears) && firstMonths <= Math.round(length * 12)))
       && (asset.method === 'none'
         || (asset.method === 'sum-of-years-digits'
-          ? months === 0 && firstMonths === 12
+          ? true
           : Number.isFinite(asset.ratePercent) && (asset.ratePercent ?? 0) > 0 && (asset.ratePercent ?? 0) <= 100))
       && (asset.method !== 'accelerated' || (asset.ratePercent ?? 0) < 100)
     if (!valid) {
@@ -850,14 +959,31 @@ export function calculateComfarAssetDepreciationSchedule(
         bookValue = Math.max(salvage, bookValue - depreciation)
       }
     } else if (asset.method === 'sum-of-years-digits') {
-      const years = asset.lengthYears
-      const divisor = years * (years + 1) / 2
-      for (let age = 1; age <= years; age += 1) {
-        const amount = (years - age + 1) / divisor * (asset.initialBookValue - salvage)
-        const depreciation = Math.min(Math.max(0, bookValue - salvage), amount)
+      // Use the same XI.H intermediate-depreciation equations as the shared
+      // formula rules, including additional useful-life months and a partial
+      // first depreciation year. Each reporting period is evaluated against
+      // the complete asset-life schedule; period boundaries do not reset SYD.
+      const usefulLifeMonths = Math.round(length * 12)
+      let elapsedMonths = 0
+      for (let age = 1; age <= maxAge && elapsedMonths < usefulLifeMonths; age += 1) {
+        const periodMonths = age === 1
+          ? Math.min(m1, usefulLifeMonths)
+          : Math.min(12, usefulLifeMonths - elapsedMonths)
+        const result = calculateAssetDepreciationPeriod({
+          method: 'sum-of-years-digits',
+          acquisitionCost: asset.initialBookValue,
+          salvageValue: salvage,
+          usefulLifeMonths,
+          monthsElapsed: elapsedMonths,
+          periodMonths,
+          openingBookValue: bookValue,
+          firstDepreciationYearMonths: m1,
+        })
+        const depreciation = Math.min(Math.max(0, bookValue - salvage), Math.max(0, result.charge))
         const period = startPeriod! + age - 1
         depreciationByPeriod.set(period, { amount: depreciation, method: asset.method })
         bookValue = Math.max(salvage, bookValue - depreciation)
+        elapsedMonths += periodMonths
       }
     }
 
@@ -1098,7 +1224,7 @@ export function calculateComfarCalendarAssetLifecycle(
     const saleProceeds=sale.priceMode==='book-value'?bookValueAtSale:(sale.selfDefinedPrice??0)*(sale.exchangeRateToLocal??1)
     if (!Number.isFinite(saleProceeds)||saleProceeds<0) { warnings.push(asset.name+': sale proceeds must be non-negative.'); continue }
     const result:ComfarAssetSaleResult={id:sale.id,assetId:sale.assetId,period:periodIndex+1,bookValueAtSale,saleProceeds,
-      returnOfCapital:Math.min(saleProceeds,bookValueAtSale),
+      returnOfCapital:bookValueAtSale,
       extraordinaryIncome:Math.max(0,saleProceeds-bookValueAtSale),
       extraordinaryLoss:Math.max(0,bookValueAtSale-saleProceeds),
       otherIncomeLoss:saleProceeds-bookValueAtSale}
@@ -1203,7 +1329,7 @@ export function calculateComfarAssetLifecycle(
       period: sale.period,
       bookValueAtSale,
       saleProceeds,
-      returnOfCapital: Math.min(saleProceeds, bookValueAtSale),
+      returnOfCapital: bookValueAtSale,
       extraordinaryIncome,
       extraordinaryLoss,
       otherIncomeLoss: extraordinaryIncome - extraordinaryLoss,
@@ -1304,6 +1430,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     const starting = parsePeriod(item.depreciation.startingAt)
     if (method !== 'none' && !starting) {
       warnings.push(`${item.description || item.id}: تاریخ Starting at باید به‌صورت سال یا YYYY-MM-DD وارد شود.`)
+      if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+      else investmentScheduleVerified = false
       continue
     }
     const startingAtPeriod = starting ? Math.max(1, starting.year - projectStartYear + 1) : 1
@@ -1318,14 +1446,23 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       const acquired = parsePeriod(acquisition.period)
       if (!acquired) {
         warnings.push(`${item.description || item.id}: تاریخ/دوره تحصیل «${acquisition.period}» قابل تشخیص نیست.`)
+        if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+        else investmentScheduleVerified = false
         continue
       }
       if (acquired.year < projectStartYear) {
         warnings.push(`${item.description || item.id}: تحصیل قبل از شروع مدل باید از دفتر Starting Balances با بهای ناخالص و استهلاک انباشته وارد شود؛ این نوبت از محاسبه جدید کنار گذاشته شد.`)
+        if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+        else investmentScheduleVerified = false
         continue
       }
       const acquisitionPeriod = acquired.year - projectStartYear + 1
-      if (acquisitionPeriod > periodCount) continue
+      if (acquisitionPeriod > periodCount) {
+        warnings.push(`${item.description || item.id}: دوره تحصیل خارج از افق مدل است؛ برنامه سرمایه‌گذاری دوره‌ای قابل تأیید نیست.`)
+        if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+        else investmentScheduleVerified = false
+        continue
+      }
       const exchangeRate = item.origin === 'foreign' ? (acquisition.exchangeRateToLocal ?? 0) : 1
       const originalValue = acquisition.quantity * acquisition.unitPrice * exchangeRate
       if (acquisitionPeriod >= 1 && acquisitionPeriod <= investmentSchedule.length) {
@@ -1334,6 +1471,8 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
       }
       if (!Number.isFinite(originalValue) || originalValue < 0) {
         warnings.push(`${item.description || item.id}: بهای تحصیل پس از تبدیل به ارز محلی معتبر نیست.`)
+        if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
+        else investmentScheduleVerified = false
         continue
       }
       const assetId = `${item.id}:${acquisition.id}`
@@ -1453,9 +1592,9 @@ export type FinancialStatementYear = {
   year: number
   openingBalances: { cash: number; debt: number; netFixedAssets: number; workingCapitalAssets: number; preOperatingAssets: number; paidInCapital: number; retainedEarnings: number }
   movementChecks: { cash: number; debt: number; netFixedAssets: number; workingCapital: number; preOperatingAssets: number; paidInCapital: number; retainedEarnings: number }
-  incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; otherIncomeLoss: number; ebit: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
+  incomeStatement: { revenue: number; cashOperatingCosts: number; ebitda: number; depreciation: number; otherIncomeLoss: number; ebit: number; shortTermDepositInterest: number; interest: number; profitBeforeTax: number; tax: number; taxLossCarryForward: number; netIncome: number }
   cashFlowStatement: { operatingCashFlow: number; investingCashFlow: number; financingCashFlow: number; netChangeInCash: number; closingCash: number }
-  balanceSheet: { cash: number; workingCapitalAssets: number; netFixedAssets: number; deferredPreOperatingAssets: number; totalAssets: number; tradePayables: number; debt: number; totalLiabilities: number; paidInCapital: number; retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number; balanceDifference: number; reconciled: boolean }
+  balanceSheet: { cash: number; cashInHand: number; shortTermDeposits: number; workingCapitalAssets: number; netFixedAssets: number; deferredPreOperatingAssets: number; totalAssets: number; tradePayables: number; debt: number; totalLiabilities: number; paidInCapital: number; retainedEarnings: number; totalEquity: number; totalLiabilitiesAndEquity: number; balanceDifference: number; reconciled: boolean }
 }
 
 /** Builds linked annual P&L, cash flow and balance sheet; never forces the balance sheet to balance with a plug. */
@@ -1478,7 +1617,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     const ebitda = row.revenue - cashOperatingCosts
     const otherIncomeLoss = (row.assetSaleOtherIncomeLoss ?? 0) + (row.salvageGainLoss ?? 0)
     const ebit = ebitda - row.depreciation + otherIncomeLoss
-    const profitBeforeTax = ebit - row.interest
+    const profitBeforeTax = ebit + row.shortTermDepositInterest - row.interest
     const netIncome = profitBeforeTax - row.tax
     retainedEarnings += netIncome
     paidInCapital += row.equityContribution
@@ -1486,10 +1625,12 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
     cumulativePreOperatingAssets += row.preOperatingCost + row.capitalizedInterest
     accumulatedDepreciation += row.depreciation
     cumulativeBookValueDisposed += (row.assetBookValueDisposed ?? 0) + (row.salvageBookValueDisposed ?? 0)
-    const currentAssets = row.workingCapitalBreakdown.rawMaterials + (row.workingCapitalBreakdown.energy ?? 0) +
+    const currentAssets = row.workingCapitalBreakdown.rawMaterials + (row.workingCapitalBreakdown.factorySupplies ?? 0) + (row.workingCapitalBreakdown.utilities ?? 0) + (row.workingCapitalBreakdown.energy ?? 0) +
       (row.workingCapitalBreakdown.spareParts ?? 0) + row.workingCapitalBreakdown.workInProgress +
       row.workingCapitalBreakdown.finishedGoods + row.workingCapitalBreakdown.receivables +
       row.workingCapitalBreakdown.minimumCash
+    const shortTermDeposits = row.workingCapitalBreakdown.shortTermDeposits ?? 0
+    const cashInHand = Math.max(0, row.workingCapitalBreakdown.minimumCash - shortTermDeposits)
     const tradePayables = row.workingCapitalBreakdown.payables
     const netWorkingCapital = currentAssets - tradePayables
     const netFixedAssets = cumulativeGrossFixedAssets - accumulatedDepreciation - cumulativeBookValueDisposed
@@ -1527,7 +1668,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
       movementChecks,
       incomeStatement: {
         revenue: row.revenue, cashOperatingCosts, ebitda, depreciation: row.depreciation,
-        otherIncomeLoss, ebit, interest: row.interest, profitBeforeTax, tax: row.tax,
+        otherIncomeLoss, ebit, shortTermDepositInterest: row.shortTermDepositInterest, interest: row.interest, profitBeforeTax, tax: row.tax,
         taxLossCarryForward: row.taxLossCarryForward, netIncome,
       },
       cashFlowStatement: {
@@ -1535,7 +1676,7 @@ export function buildThreeFinancialStatements(years: IntegratedFinanceYear[], to
         closingCash: row.cashBalance,
       },
       balanceSheet: {
-        cash: row.cashBalance, workingCapitalAssets: currentAssets, netFixedAssets,
+        cash: row.cashBalance, cashInHand, shortTermDeposits, workingCapitalAssets: currentAssets, netFixedAssets,
         deferredPreOperatingAssets, totalAssets, tradePayables, debt: row.debtBalance,
         totalLiabilities, paidInCapital, retainedEarnings, totalEquity,
         totalLiabilitiesAndEquity, balanceDifference,
@@ -1565,6 +1706,8 @@ export function calculateSensitivityMatrix(input: IntegratedFinanceInput, priceC
       workingCapitalPolicy: input.workingCapitalPolicy ? {
         ...input.workingCapitalPolicy,
         annualRawMaterialCost: input.workingCapitalPolicy.annualRawMaterialCost * (1 + volumeChangePercent / 100),
+        annualFactorySuppliesCost: (input.workingCapitalPolicy.annualFactorySuppliesCost ?? 0) * (1 + volumeChangePercent / 100),
+        annualUtilitiesCost: (input.workingCapitalPolicy.annualUtilitiesCost ?? 0) * (1 + volumeChangePercent / 100),
         annualEnergyCost: (input.workingCapitalPolicy.annualEnergyCost ?? 0) * (1 + volumeChangePercent / 100),
         annualSparePartsCost: (input.workingCapitalPolicy.annualSparePartsCost ?? 0) * (1 + volumeChangePercent / 100),
         annualPayablesCost: (input.workingCapitalPolicy.annualPayablesCost ?? input.workingCapitalPolicy.annualRawMaterialCost) * (1 + volumeChangePercent / 100),
@@ -1593,6 +1736,8 @@ export function calculateFinancialScenarios(input: IntegratedFinanceInput) {
       workingCapitalPolicy: input.workingCapitalPolicy ? {
         ...input.workingCapitalPolicy,
         annualRawMaterialCost: input.workingCapitalPolicy.annualRawMaterialCost * variableCost * volume,
+        annualFactorySuppliesCost: (input.workingCapitalPolicy.annualFactorySuppliesCost ?? 0) * variableCost * volume,
+        annualUtilitiesCost: (input.workingCapitalPolicy.annualUtilitiesCost ?? 0) * variableCost * volume,
         annualEnergyCost: (input.workingCapitalPolicy.annualEnergyCost ?? 0) * variableCost * volume,
         annualSparePartsCost: (input.workingCapitalPolicy.annualSparePartsCost ?? 0) * variableCost * volume,
         annualPayablesCost: (input.workingCapitalPolicy.annualPayablesCost ?? input.workingCapitalPolicy.annualRawMaterialCost) * variableCost * volume,
@@ -1924,6 +2069,10 @@ export function calculateOneWaySensitivity(
     return {
       ...policy,
       annualRawMaterialCost: policy.annualRawMaterialCost * factor,
+      annualFactorySuppliesCost: (policy.annualFactorySuppliesCost ?? 0) * factor,
+      annualUtilitiesCost: (policy.annualUtilitiesCost ?? 0) * factor,
+      annualFixedFactorySuppliesCost: policy.annualFixedFactorySuppliesCost === undefined ? undefined : policy.annualFixedFactorySuppliesCost * factor,
+      annualFixedUtilitiesCost: policy.annualFixedUtilitiesCost === undefined ? undefined : policy.annualFixedUtilitiesCost * factor,
       annualEnergyCost: (policy.annualEnergyCost ?? 0) * factor,
       annualSparePartsCost: (policy.annualSparePartsCost ?? 0) * factor,
       annualFixedRawMaterialCost: policy.annualFixedRawMaterialCost === undefined ? undefined : policy.annualFixedRawMaterialCost * factor,

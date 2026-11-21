@@ -31,9 +31,13 @@ export function createBlankProductionCostFormDraft(id=''):ProductionCostFormDraf
 
 export type SalesProductFormDraft={
  productId:string
- periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;finishedGoodsClosingQuantity:number|null}[]
+ inventoryPolicy:'manual'|'comfar-days-coverage'|null
+ finishedGoodsDaysCoverage:number|null
+ productionStartPeriod:number|null
+ productionEndPeriod:number|null
+ periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;openingFinishedGoodsQuantity:number|null;openingFinishedGoodsValue:number|null;finishedGoodsClosingQuantity:number|null}[]
 }
-export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,periods:[]}}
+export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,inventoryPolicy:null,finishedGoodsDaysCoverage:null,productionStartPeriod:null,productionEndPeriod:null,periods:[]}}
 
 export type WorkingCapitalComponentFormDraft={
  id:string; name:string; category:'inventory'|'work-in-progress'|'finished-goods'|'receivables'|'cash'|'payables'|'other-current-asset'|'other-current-liability'|null
@@ -59,6 +63,7 @@ export function resolveLoanFeeBasis(type:LoanFeeType):LoanFeeBasis{
 }
 export type LoanFacilityFormDraft={
  id:string; name:string; currencyCode:string|null; marketOrigin:'local'|'foreign'|null
+ annualRatePercent:number|null; openingBalance:number|null; openingExchangeRateToLocal:number|null; gracePeriods:number|null; interestConvention:'comfar-months-plus-360'|'actual-360'|'actual-365'|null
  loanType:'annuity'|'constant-principal'|'profile'|null
  repaymentInterval:'annual'|'semiannual'|'quarterly'|'monthly'|null
  firstRepaymentDate:string; numberOfRepayments:number|null
@@ -70,7 +75,7 @@ export type LoanFacilityFormDraft={
  fees:{id:string;type:LoanFeeType|null;ratePercent:number|null;currencyCode:string|null}[]
 }
 export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{return{
- id,name:'',currencyCode:null,marketOrigin:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',numberOfRepayments:null,
+ id,name:'',currencyCode:null,marketOrigin:null,annualRatePercent:null,openingBalance:null,openingExchangeRateToLocal:null,gracePeriods:null,interestConvention:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',numberOfRepayments:null,
  disbursements:[],profileMovements:[],interestRateChanges:[],interestPaymentMonth:null,
  capitalizedInterestPercent:null,capitalizeUntilDate:'',fees:[]
 }}
@@ -78,11 +83,11 @@ export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{re
 export type ProjectTaxFormDraft={
  system:'corporate'|'none'|'custom'|null
  rates:{period:string;ratePercent:number|null}[]
- allowances:{id:string;name:string;periodAmounts:{period:string;amount:number|null}[]}[]
- lossCarryForward:boolean|null;lossCarryForwardYears:number|null
+ allowances:{id:string;name:string;treatment:'deduction'|'credit'|null;periodAmounts:{period:string;amount:number|null}[]}[]
+ lossCarryForward:boolean|null;lossCarryForwardYears:number|null;openingLossVintages:{amount:number|null;originFiscalYearIndex:number|null}[]
 }
 export function createBlankProjectTaxFormDraft():ProjectTaxFormDraft{return{
- system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null
+ system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null,openingLossVintages:[]
 }}
 
 export function deriveFixedVariableSplit(fixedPercent:number|null,variablePercent:number|null):{fixedPercent:number|null;variablePercent:number|null}{
@@ -135,6 +140,7 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
 }
 
 
+export type EconomicAdjustmentFormDraft = { id:string; name:string; period:string; treatment:'benefit'|'cost'|null; effectType:'general'|'foreign-exchange'|'employment'|null; financialAmount:number|null; economicAmount:number|null }
 export type ProjectModelFinancialFormDrafts = {
  helpDriven: HelpDrivenProjectForms
  assets: FixedAssetFormDraft[]
@@ -143,9 +149,10 @@ export type ProjectModelFinancialFormDrafts = {
  workingCapital: WorkingCapitalComponentFormDraft[]
  loans: LoanFacilityFormDraft[]
  tax: ProjectTaxFormDraft
+ economic: { discountRatePercent:number|null; adjustments:EconomicAdjustmentFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft()}
+ return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{
@@ -164,10 +171,54 @@ export function listUnintegratedFinancialDraftInputs(value:ProjectModelFinancial
   if(section.id==='project-identification'&&descriptiveProjectFields.has(field.key))continue
   if(hasEnteredValue(row.values?.[field.key]))issues.push(section.id+'.'+row.id+'.'+field.key)
  }
- const collections:[string,unknown[]][]=[['financialForms.assets',value.assets],['financialForms.productionCosts',value.productionCosts],['financialForms.sales',value.sales],['financialForms.workingCapital',value.workingCapital],['financialForms.loans',value.loans]]
+ const collections:[string,unknown[]][]=[['financialForms.assets',value.assets]]
+ // Working-capital component balances are bound to the periodic finance engine; do not block reports for these integrated rows.
  for(const [label,rows] of collections)for(const [index,row] of (rows??[]).entries())if(hasEnteredValue(row))issues.push(label+'.'+index)
- if(value.tax&&(value.tax.system!==null||value.tax.lossCarryForward!==null||value.tax.lossCarryForwardYears!==null||value.tax.rates.length||value.tax.allowances.length))issues.push('financialForms.tax')
+ // Tax form fields are bound to the period engine; schedule validity is checked by the periodic result gate.
  return issues
+}
+
+
+/** Convert internal integration-blocker paths into readable bilingual report messages. */
+export function describeUnintegratedFinancialDraftInput(path:string,language:'fa'|'en'='fa'):string {
+ const en=language==='en'
+ const collection=/^financialForms\.(assets|productionCosts|sales|loans)\.(\d+)$/.exec(path)
+ if(collection){
+  const labels:Record<string,[string,string]> = {
+   assets:['دارایی ثابت','Fixed asset'],
+   productionCosts:['قلم هزینه تولید','Production-cost item'],
+   sales:['برنامه فروش محصول','Product sales programme'],
+   loans:['تسهیلات مالی','Loan facility'],
+  }
+  const label=labels[collection[1]]??['ورودی مالی','Financial input']
+  return (en?label[1]:label[0])+' '+(Number(collection[2])+1)+' — '+(en?'not yet connected and validated in the calculation engine':'هنوز به موتور محاسبات متصل و اعتبارسنجی نشده است')
+ }
+ if(path==='financialForms.tax')return en?'Tax assumptions are not yet integrated and validated':'مفروضات مالیاتی هنوز به موتور محاسبات متصل و اعتبارسنجی نشده‌اند'
+ if(path.startsWith('financialForms.economic:')){
+  const messages:Record<string,[string,string]> = {
+   'foreign-exchange-effect-required':['برای اثر ارز خارجی، تعدیل اقتصادی با طبقه ارز خارجی ثبت کنید','Add at least one foreign-exchange economic adjustment'],
+   'employment-effect-required':['برای اثر اشتغال، تعدیل اقتصادی اشتغال ثبت کنید','Add at least one employment economic adjustment'],
+   'value-added-analysis-not-integrated':['گزارش ارزش افزوده هنوز به تفکیک مصرف واسطه‌ای و عوامل تولید متصل نشده است','Value-added reporting is not yet connected to intermediate consumption and factor inputs'],
+   'cost-centre-analysis-not-integrated':['گزارش مراکز هزینه هنوز به دفتر هزینه تفصیلی متصل نشده است','Cost-centre reporting is not yet connected to the detailed cost ledger'],
+   'cost-allocation-not-integrated':['تخصیص هزینه هنوز به مبانی و محرک‌های هزینه متصل نشده است','Cost allocation is not yet connected to cost drivers and allocation bases'],
+   'economic-analysis-not-valid':['نرخ تنزیل یا تعدیلات قیمت سایه‌ای اقتصادی ناقص یا نامعتبر است','Economic discount rate or shadow-price adjustments are incomplete or invalid'],
+  }
+  const code=path.split(':')[1]??''
+  const message=messages[code]
+  if(message)return en?message[1]:message[0]
+ }
+ const help=/^([a-z0-9-]+)\.([^.]+)\.([^.]+)$/.exec(path)
+ if(help){
+  const sections:Record<string,[string,string]> = {
+   'production-costs':['هزینه‌های تولید','Production costs'],
+   'sales-programme':['برنامه فروش','Sales programme'],
+   'project-identification':['مشخصات پروژه','Project identification'],
+  }
+  const section=sections[help[1]]
+  return (section?(en?section[1]:section[0]):help[1])+' · '+help[2]+' · '+help[3]+' — '+(en?'requires calculation-engine integration and validation':'نیازمند اتصال به موتور محاسبات و اعتبارسنجی است')
+ }
+ if(path.startsWith('financialForms.workingCapital:'))return en?'Working-capital schedule is invalid or incomplete':'برنامه سرمایه در گردش ناقص یا نامعتبر است'
+ return path
 }
 
 export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinancialFormDrafts):string[] {

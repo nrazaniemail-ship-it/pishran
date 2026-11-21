@@ -17,6 +17,8 @@ export type WorkingCapitalDraftSchedule = {
   closingWorkingCapital: number[]
   changeInWorkingCapital: number[]
   openingWorkingCapital: number
+  /** Signed net working-capital balance released or settled in the terminal project period. */
+  terminalRecoveryAmount: number
 }
 
 /**
@@ -34,8 +36,8 @@ export function buildWorkingCapitalScheduleFromDrafts(
   const issues: string[] = []
   const count = periods.length
   if (!count) issues.push('At least one financial period is required.')
-  if (!Number.isFinite(openingWorkingCapital) || openingWorkingCapital < 0)
-    issues.push('Opening working capital must be an explicit finite non-negative amount.')
+  if (!Number.isFinite(openingWorkingCapital))
+    issues.push('Opening net working capital must be an explicit finite amount; negative balances are permitted when current liabilities exceed current assets.')
 
   const validDate = (value: string) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
@@ -134,16 +136,21 @@ export function buildWorkingCapitalScheduleFromDrafts(
     closingWorkingCapital: [],
     changeInWorkingCapital: [],
     openingWorkingCapital,
+    terminalRecoveryAmount: 0,
   }
-  const changeInWorkingCapital = totals.map((closing, index) =>
-    closing - (index === 0 ? openingWorkingCapital : totals[index - 1]))
+  const closingWorkingCapital = [...totals]
+  const terminalRecoveryAmount = count ? closingWorkingCapital[count - 1] : 0
+  if (count) closingWorkingCapital[count - 1] = 0
+  const changeInWorkingCapital = closingWorkingCapital.map((closing, index) =>
+    closing - (index === 0 ? openingWorkingCapital : closingWorkingCapital[index - 1]))
   return {
     valid: true,
     issues: [],
     componentRows: rows,
-    closingWorkingCapital: totals,
+    closingWorkingCapital,
     changeInWorkingCapital,
     openingWorkingCapital,
+    terminalRecoveryAmount,
   }
 }
 
