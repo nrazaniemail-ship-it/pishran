@@ -367,7 +367,12 @@ export function buildProductOperatingSchedule(
     const alreadyTransferred=transferredOutByProductPeriod.get(sourceKey)??0
     if(transfer.costAmount>(sourceCostByProductPeriod.get(sourceKey) as number)-alreadyTransferred+0.01){issues.push('Transfer '+transfer.id+' exceeds the remaining source product current-period production cost available for reclassification.');continue}
     transferredOutByProductPeriod.set(sourceKey,alreadyTransferred+transfer.costAmount)
-    if(destination.productionQuantity<=0&&transfer.costAmount>0){issues.push('Transfer '+transfer.id+' cannot post value to a destination product with no production in the period.');continue}
+    const destinationQuantity=transfer.quantity*transfer.conversionFactor
+    if(source.closingInventoryQuantity+0.01<transfer.quantity){issues.push('Transfer '+transfer.id+' exceeds the source product finished-goods quantity available for transfer.');continue}
+    source.closingInventoryQuantity-=transfer.quantity
+    destination.productionQuantity+=destinationQuantity
+    destination.completedUnits+=destinationQuantity
+    destination.closingInventoryQuantity+=destinationQuantity
     source.productionCost-=transfer.costAmount
     destination.productionCost+=transfer.costAmount
     for(const row of [source,destination]){
