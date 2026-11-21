@@ -179,7 +179,7 @@ export function validateCostCentreFormDraft(value:CostCentreFormDraft):string[] 
   if(!value.manualDriverUnit.trim())errors.push('manual-cost-centre-driver-unit-required')
   const keys=new Set<string>()
   for(const row of value.driverRows){
-   const key=row.period+':'+row.productId
+   const key=row.period+':'+row.productId.trim().toLocaleLowerCase()
    if(!Number.isInteger(row.period)||row.period<1||!row.productId.trim()||row.amount===null||!Number.isFinite(row.amount)||row.amount<0)errors.push('invalid-manual-cost-centre-driver')
    if(keys.has(key))errors.push('duplicate-manual-cost-centre-driver')
    keys.add(key)
@@ -280,8 +280,9 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
  const centreIds=new Set<string>()
  centres.forEach((centre,index)=>{
   validateCostCentreFormDraft(centre).forEach(error=>errors.push('cost-centre-'+index+':'+error))
-  if(centreIds.has(centre.id))errors.push('cost-centre-'+index+':duplicate-cost-centre-id')
-  centreIds.add(centre.id)
+  const normalizedCentreId=centre.id.trim().toLocaleLowerCase()
+  if(centreIds.has(normalizedCentreId))errors.push('cost-centre-'+index+':duplicate-cost-centre-id')
+  centreIds.add(normalizedCentreId)
  })
  for(const item of value.cppCpsTraceItems??[])if(item.source.status==='verified'){
   const centre=centres.find(candidate=>candidate.id===item.costCentreId)
