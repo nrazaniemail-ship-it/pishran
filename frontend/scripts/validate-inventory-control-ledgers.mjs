@@ -40,7 +40,7 @@ const reference=module.reconcileInventoryReference([
 assert.equal(reference.valid,true,reference.issues.join('; '))
 assert.equal(reference.rows[0].status,'matched')
 const incompleteReference=module.reconcileInventoryReference([
- {id:'R2',period:1,sourceDocument:'COMFAR III report.pdf',schedule:'Working capital requirements',page:'246',currency:'IRR',rawMaterials:100,workInProgress:null,finishedGoods:150,totalInventory:null,cpp:null,cps:null},
+ {id:'R2',period:1,sourceDocument:'COMFAR III report.pdf',schedule:'Working capital requirements',page:'246',currency:'IRR',amountScaleToModel:1,rawMaterials:100,workInProgress:null,finishedGoods:150,totalInventory:null,cpp:null,cps:null},
 ], [{period:1,rawMaterials:100,workInProgress:50,finishedGoods:150,totalInventory:300,cpp:500,cps:450}],0.01,'IRR')
 assert.equal(incompleteReference.valid,false)
 assert.equal(incompleteReference.rows[0].status,'incomplete')
@@ -53,7 +53,7 @@ const comfarInventory=[
  [15,320973.15,35],[16,320973.15,35],[17,320973.15,35],
 ].map(([period,totalInventory,page])=>({id:'SARZAMIN-'+period,period,sourceDocument:'COMFAR III - 001 - جدول خلاصه عملکرد پروژه.pdf',schedule:'سرمایه در گردش خالص مورد نیاز - کل / کل موجودی کالا',page:String(page),currency:'IRR',amountScaleToModel:1,rawMaterials:null,workInProgress:null,finishedGoods:null,totalInventory,cpp:null,cps:null}))
 const comfarModel=comfarInventory.map(row=>({period:row.period,rawMaterials:0,workInProgress:0,finishedGoods:0,totalInventory:row.totalInventory,cpp:0,cps:0}))
-const aggregateOnly=module.reconcileInventoryReference(comfarInventory,comfarModel,0.01,'میلیون ریال')
+const aggregateOnly=module.reconcileInventoryReference(comfarInventory,comfarModel,0.01,'IRR')
 assert.equal(aggregateOnly.valid,false,'Aggregate inventory alone must not falsely certify component inventory or CPP/CPS reconciliation')
 assert.equal(aggregateOnly.rows.length,15)
 const scaledReference=module.reconcileInventoryReference([
