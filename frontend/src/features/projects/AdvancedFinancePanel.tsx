@@ -387,6 +387,12 @@ export default function AdvancedFinancePanel(props: Props) {
         })
       }
     }
+    const finishedGoodsInventoryByPeriod=productOperatingSchedule?.valid?periods.map((_,index)=>productOperatingSchedule.rows.filter(row=>row.period===index+1).reduce((sum,row)=>sum+row.closingInventoryValue,0)):undefined
+    const explicitFinishedGoods=workingCapitalDraftSchedule?.componentRows.some(row=>row.category==='finished-goods')??false
+    if(explicitFinishedGoods&&finishedGoodsInventoryByPeriod){
+      const mismatch=periods.some((_,index)=>Math.abs(workingCapitalDraftSchedule!.componentRows.filter(row=>row.category==='finished-goods'&&row.period===index+1).reduce((sum,row)=>sum+row.amount,0)-finishedGoodsInventoryByPeriod[index])>0.01)
+      if(mismatch)periodicWorkingCapitalByPeriod=Array(periods.length).fill(Number.NaN)
+    }
     const periodicInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,constructionPeriodCount:periods.filter(period=>fiscalYearIndexForPeriod(period,periods,fiscalMonth)<construction).length,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
@@ -469,10 +475,11 @@ export default function AdvancedFinancePanel(props: Props) {
     netWorkingCapital:props.openingWorkingCapitalBalance??0,
     rawMaterialsInventory:props.openingCurrentAccounts?.rawMaterials??0,
     workInProgressInventory:props.openingCurrentAccounts?.workInProgress??0,
+    finishedGoodsInventory:props.openingCurrentAccounts?.finishedGoods??0,
     paidInCapital:props.openingPaidInCapital??0,
     retainedEarnings:props.openingRetainedEarnings??0,grants:props.openingGrants??0,
   }):[],[periodicFinanceResult,props.openingCashBalance,props.openingDebtBalance,props.openingFixedAssetsNetBookValue,
-    props.openingWorkingCapitalBalance,props.openingCurrentAccounts?.rawMaterials,props.openingCurrentAccounts?.workInProgress,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants])
+    props.openingWorkingCapitalBalance,props.openingCurrentAccounts?.rawMaterials,props.openingCurrentAccounts?.workInProgress,props.openingCurrentAccounts?.finishedGoods,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants])
   const scheduledOpeningDebt=useMemo(()=>periodicFinanceResult?.valid
     ?Object.values(periodicFinanceResult.loanSchedules??{}).reduce((sum,schedule)=>sum+(schedule[0]?.openingBalance??0),0)
     :0,[periodicFinanceResult])
