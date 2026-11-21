@@ -16,14 +16,25 @@ const transfers=module.validateProductionTransfers([
  {id:'T1',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'MELT',destinationCostCentreId:'CAST',quantity:50,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:500},
 ],1)
 assert.equal(transfers.valid,true,transfers.issues.join('; '))
-assert.equal(transfers.netQuantityByProductCentre['P1@MELT'],-50)
-assert.equal(transfers.netQuantityByProductCentre['P2@CAST'],50)
+assert.equal(transfers.netQuantityByProductCentre['1:P1@MELT'],-50)
+assert.equal(transfers.netQuantityByProductCentre['1:P2@CAST'],50)
 const converted=module.validateProductionTransfers([
  {id:'T2',period:1,sourceProductId:'COIL',destinationProductId:'SHEET',sourceCostCentreId:'ROLL',destinationCostCentreId:'FINISH',quantity:1000,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0.001,costAmount:250000},
 ],1)
 assert.equal(converted.valid,true,converted.issues.join('; '))
-assert.equal(converted.netQuantityByProductCentre['COIL@ROLL'],-1000)
-assert.equal(converted.netQuantityByProductCentre['SHEET@FINISH'],1)
+assert.equal(converted.netQuantityByProductCentre['1:COIL@ROLL'],-1000)
+assert.equal(converted.netQuantityByProductCentre['1:SHEET@FINISH'],1)
+const periodSeparated=module.validateProductionTransfers([
+ {id:'T3',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+ {id:'T4',period:2,sourceProductId:'P2',destinationProductId:'P1',sourceCostCentreId:'B',destinationCostCentreId:'A',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+],2)
+assert.equal(periodSeparated.valid,true,periodSeparated.issues.join('; '))
+assert.equal(periodSeparated.netQuantityByProductCentre['1:P1@A'],-10)
+assert.equal(periodSeparated.netQuantityByProductCentre['2:P1@A'],10)
+assert.equal(periodSeparated.netValueByProductCentre['1:P1@A'],-100)
+assert.equal(periodSeparated.netValueByProductCentre['2:P1@A'],100)
+assert.equal(Object.keys(periodSeparated.netQuantityByProductCentre).length,4,
+ 'opposite transfers in different periods must not net against each other')
 assert.equal(module.validateProductionTransfers([{id:'bad-factor',period:1,sourceProductId:'A',destinationProductId:'B',sourceCostCentreId:'X',destinationCostCentreId:'Y',quantity:1,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0,costAmount:1}],1).valid,false)
 
 assert.equal(transfers.totalSourceValue,transfers.totalDestinationValue)
