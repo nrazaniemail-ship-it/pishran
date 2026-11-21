@@ -89,7 +89,8 @@ export function reconcileInventoryReference(
   if(!b.schedule.trim())missingFields.push('schedule')
   if(!b.page.trim())missingFields.push('page')
   if(!b.currency.trim())missingFields.push('currency')
-  if(expectedCurrency&&b.currency.trim().toUpperCase()!==expectedCurrency.trim().toUpperCase()){missingFields.push('currencyConversion');issues.push('Reference benchmark period '+b.period+' currency '+b.currency+' does not match project currency '+expectedCurrency+'. Convert through an evidenced exchange-rate schedule before comparison.')}
+  const currencyMatches=!expectedCurrency||b.currency.trim().toUpperCase()===expectedCurrency.trim().toUpperCase()
+  if(!currencyMatches){missingFields.push('currencyConversion');issues.push('Reference benchmark period '+b.period+' currency '+b.currency+' does not match project currency '+expectedCurrency+'. Convert through an evidenced exchange-rate schedule before comparison.')}
   if(b.amountScaleToModel===null||!Number.isFinite(b.amountScaleToModel)||b.amountScaleToModel<=0){missingFields.push('amountScaleToModel');issues.push('Reference benchmark period '+b.period+' requires a positive explicit scale factor from report amount units to model amount units.')}
   const m=modeled.find(x=>x.period===b.period)
   if(!m){issues.push('Reference benchmark period '+b.period+' has no matching model period.');continue}
@@ -98,11 +99,12 @@ export function reconcileInventoryReference(
   for(const [field,reference,actual] of pairs){
    if(reference===null||reference===undefined){missingFields.push(field);continue}
    if(!Number.isFinite(reference)||reference<0){issues.push('Reference benchmark '+field+' in period '+b.period+' must be a finite non-negative amount.');continue}
+   if(!Number.isFinite(scale)||!currencyMatches)continue
    const scaledReference=reference*scale
    const variance=actual-scaledReference;variances[field]=variance
    if(Number.isFinite(scale)&&near(actual,scaledReference,tolerance/100))matchedFields.push(field)
   }
-  const hasMismatch=pairs.some(([field,reference,actual])=>reference!==null&&reference!==undefined&&Number.isFinite(reference)&&Number.isFinite(scale)&&!near(actual,reference*scale,tolerance/100))
+  const hasMismatch=pairs.some(([field,reference,actual])=>reference!==null&&reference!==undefined&&Number.isFinite(reference)&&Number.isFinite(scale)&&currencyMatches&&!near(actual,reference*scale,tolerance/100))
   const status:InventoryReferenceComparisonRow['status']=hasMismatch?'mismatch':missingFields.length?'incomplete':'matched'
   if(b.rawMaterials!==null&&b.workInProgress!==null&&b.finishedGoods!==null&&b.totalInventory!==null&&!near(b.rawMaterials+b.workInProgress+b.finishedGoods,b.totalInventory,tolerance/100))issues.push('Reference benchmark period '+b.period+' total inventory does not equal raw materials + WIP + finished goods.')
   if(status==='mismatch')issues.push('Reference benchmark period '+b.period+' differs from model values.')
