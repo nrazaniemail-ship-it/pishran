@@ -187,6 +187,7 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
      <h5>{t('دوره ','Period ')}{periodNo} · {period.startDate} – {period.endDate}</h5>
      <div className="fw-grid">
       <NumberField label={t('سایر درآمدها','Other income')} value={draft.otherIncome} onChange={v=>patch({otherIncome:v})}/>
+      <NumberField label={t('سایر ارزش افزوده / مازاد عملیاتی','Other value added / operating surplus')} value={draft.otherValueAdded} onChange={v=>patch({otherValueAdded:v})}/>
       <NumberField label={t('دستمزد نیروی کار داخلی','Domestic wages')} value={draft.domesticWages} onChange={v=>patch({domesticWages:v})}/>
       <NumberField label={t('دستمزد پرداختی به خارج','Repatriated wages')} value={draft.repatriatedWages} onChange={v=>patch({repatriatedWages:v})}/>
       <NumberField label={t('سود سهام / سود پرداختی به خارج','Repatriated profit / dividends')} value={draft.repatriatedProfitDividends} onChange={v=>patch({repatriatedProfitDividends:v})}/>
