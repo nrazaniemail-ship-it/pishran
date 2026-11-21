@@ -8,7 +8,7 @@ const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-7, 'Expected '+b+', got '+a)
 const input={
  openingRawMaterialQuantity:100,openingRawMaterialValue:1000,
  rawMaterialPurchasesQuantity:[100,50],rawMaterialPurchasesValue:[1200,650],
- rawMaterialConsumptionQuantity:[120,80],
+ rawMaterialConsumptionQuantity:[120,80],rawMaterialWasteQuantity:[0,0],
  openingWipQuantity:0,openingWipMaterialValue:0,openingWipConversionValue:0,
  unitsStarted:[120,80],unitsCompleted:[100,100],closingWipQuantity:[20,0],
  materialCompletionPercent:[100,100],conversionCompletionPercent:[50,100],
@@ -42,6 +42,10 @@ close(p2.wipValueVariance,0)
 close(result.totalPurchasesValue,1850)
 close(result.totalMaterialConsumptionValue,p1.consumptionValue+p2.consumptionValue)
 assert.equal(mod.buildInventoryFlowSchedule({...input,rawMaterialConsumptionQuantity:[201,80]}).valid,false)
+assert.equal(mod.buildInventoryFlowSchedule(({rawMaterialWasteQuantity:undefined,...input})).valid,false,
+ 'Missing normal-waste quantities must block inventory valuation rather than default to zero')
+assert.equal(mod.buildInventoryFlowSchedule({...input,rawMaterialWasteQuantity:[0]}).valid,false,
+ 'Normal-waste quantities must cover every project period')
 assert.equal(mod.buildInventoryFlowSchedule({...input,closingWipQuantity:[21,0]}).valid,false)
 assert.equal(mod.buildInventoryFlowSchedule({...input,conversionCompletionPercent:[101,100]}).valid,false)
 assert.equal(mod.buildInventoryFlowSchedule({...input,rawMaterialPurchasesValue:[null,650]}).valid,false)
