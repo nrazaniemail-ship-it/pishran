@@ -122,6 +122,8 @@ assert.equal(p2.productionCost,1100,'transferred CPP is posted to destination wi
 assert.equal(controlled.periodAbnormalWasteExpense[0],20,'abnormal waste is separated from inventory cost')
 assert.equal(controlled.periodNormalWasteAbsorbed[0],50,'normal waste is disclosed as absorbed production cost')
 assert.equal(p1.productionCost+p2.productionCost,2050,'inter-product transfer must preserve total CPP')
+assert.equal(p1.closingInventoryQuantity,20,'source finished-goods quantity is reduced by transferred source units')
+assert.equal(p2.closingInventoryQuantity,40,'destination finished-goods quantity receives converted transfer units')
 const duplicateWaste=module.buildProductOperatingSchedule({
  ...controlledDraft,
  sales:[{...controlledDraft.sales[0],periods:controlledDraft.sales[0].periods.map((row,index)=>index===0?{...row,rawMaterialWasteQuantity:2}:row)},controlledDraft.sales[1]]
