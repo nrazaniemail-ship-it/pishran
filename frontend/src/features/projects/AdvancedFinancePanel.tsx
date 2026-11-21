@@ -10,7 +10,8 @@ import { buildProductOperatingSchedule } from './productOperatingSchedule'
 import { reconcileInventoryThreeWay, reconcileInventoryReference } from './inventoryControlLedgers'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
 import { bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
-import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft } from './projectModelFormDrafts'
+import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft, SalesTaxLedgerFormDraft } from './projectModelFormDrafts'
+import { buildSalesTaxLedger, type SalesTaxInputCreditEntry, type SalesTaxOutputEntry, type SalesTaxSettlementEntry, type SalesTaxLedgerResult } from './salesTaxLedger'
 import { buildProjectTaxDraftSchedule } from './projectTaxDraftIntegration'
 import { buildProjectLoanDraftIntegration } from './projectLoanDraftIntegration'
 import type { LoanFacilityFormDraft } from './projectModelFormDrafts'
@@ -75,6 +76,7 @@ type Props = {
   onCppCpsTraceLedger?: (ledger: CppCpsTraceLedger) => void
   onEditFinancialForms?: () => void
   taxDraft?: ProjectTaxFormDraft
+  salesTaxLedgerDraft?: SalesTaxLedgerFormDraft
   loanDrafts?: LoanFacilityFormDraft[]
   projectFoundation?: ProjectFoundation
   initialWorkingCapitalEquityContribution?: number
@@ -312,6 +314,30 @@ export default function AdvancedFinancePanel(props: Props) {
     return cppCpsScheduleBinding.schedule
   },[JSON.stringify(props.cppCpsTraceItems??[]),baseProductOperatingSchedule,cppCpsScheduleBinding])
   const projectTaxSchedule=useMemo(()=>props.taxDraft?buildProjectTaxDraftSchedule(props.taxDraft,projectPeriods,props.fiscalYearStartMonth??1):null,[JSON.stringify(props.taxDraft??null),JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
+  const salesTaxLedgerActive=Boolean(
+    baseProductOperatingSchedule?.rows.some(row=>row.salesTaxPercent>0)||
+    (props.salesTaxLedgerDraft?.inputCredits?.length??0)>0||
+    (props.salesTaxLedgerDraft?.settlements?.length??0)>0||
+    props.salesTaxLedgerDraft?.openingBalance!=null
+  )
+  const salesTaxLedgerResult=useMemo<SalesTaxLedgerResult|null>(()=>{
+    if(!salesTaxLedgerActive)return null
+    if(!baseProductOperatingSchedule?.valid)return {valid:false,issues:baseProductOperatingSchedule?.issues??['A valid product sales schedule is required for sales-tax posting.'],rows:[],totalOutputTax:0,totalRecoverableInputTax:0,totalSettlements:0,closingBalance:Number.NaN}
+    const draft=props.salesTaxLedgerDraft
+    if(draft?.openingBalance==null)return {valid:false,issues:['An explicit opening sales-tax payable / recoverable balance is required.'],rows:[],totalOutputTax:0,totalRecoverableInputTax:0,totalSettlements:0,closingBalance:Number.NaN}
+    const outputEntries:SalesTaxOutputEntry[]=baseProductOperatingSchedule.rows
+      .filter(row=>row.salesTaxPercent>0)
+      .map(row=>({productId:row.productId,period:row.period,taxableSales:row.taxableSales,ratePercent:row.salesTaxPercent}))
+    const inputCredits:SalesTaxInputCreditEntry[]=(draft.inputCredits??[]).map(row=>({
+      id:row.id,period:row.period??Number.NaN,taxAmount:row.taxAmount??Number.NaN,
+      sourceReference:row.sourceReference,sourceVerified:row.sourceVerified,
+    }))
+    const settlements:SalesTaxSettlementEntry[]=(draft.settlements??[]).map(row=>({
+      period:row.period??Number.NaN,amount:row.amount??Number.NaN,sourceReference:row.sourceReference,
+    }))
+    return buildSalesTaxLedger(projectPeriods.length,outputEntries,inputCredits,settlements,draft.openingBalance)
+  },[salesTaxLedgerActive,baseProductOperatingSchedule,JSON.stringify(props.salesTaxLedgerDraft??null),JSON.stringify(projectPeriods)])
+
   const loanDraftIntegration=useMemo(()=>props.loanDrafts?.length&&props.projectFoundation&&props.dayCountBasis!==null&&props.dayCountBasis!==undefined
     ?buildProjectLoanDraftIntegration(props.loanDrafts,projectPeriods,props.dayCountBasis,props.periodFrequency??'unspecified',props.projectFoundation)
     :null,[JSON.stringify(props.loanDrafts??[]),JSON.stringify(projectPeriods),props.dayCountBasis,props.periodFrequency,JSON.stringify(props.projectFoundation??null)])
@@ -423,10 +449,26 @@ export default function AdvancedFinancePanel(props: Props) {
       return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
     }
     const bindFinishedGoods=(financeInput:PeriodicProjectFinanceInput):PeriodicProjectFinanceInput|null=>{
-      if(!productOperatingSchedule?.valid)return financeInput
-      const hasExplicitFinishedGoods=props.workingCapitalDrafts?.some(item=>item.category==='finished-goods')??false
-      const binding=bindFinishedGoodsInventoryToWorkingCapital(financeInput.workingCapitalByPeriod??[],productOperatingSchedule,hasExplicitFinishedGoods)
-      return binding.valid?{...financeInput,workingCapitalByPeriod:binding.closingWorkingCapitalByPeriod}:null
+      let boundInput=financeInput
+      if(productOperatingSchedule?.valid){
+        const hasExplicitFinishedGoods=props.workingCapitalDrafts?.some(item=>item.category==='finished-goods')??false
+        const binding=bindFinishedGoodsInventoryToWorkingCapital(financeInput.workingCapitalByPeriod??[],productOperatingSchedule,hasExplicitFinishedGoods)
+        if(!binding.valid)return null
+        boundInput={...financeInput,workingCapitalByPeriod:binding.closingWorkingCapitalByPeriod}
+      }
+      if(salesTaxLedgerActive&&!salesTaxLedgerResult?.valid)return null
+      if(salesTaxLedgerResult?.valid){
+        const vatClosingBalances=salesTaxLedgerResult.rows.map(row=>row.closingBalance)
+        if(vatClosingBalances.length!==periods.length)return null
+        // Positive tax balances are current liabilities; negative balances are recoverable current assets.
+        // Their movement is included once in net working capital, so cash settlement is not deducted again.
+        boundInput={
+          ...boundInput,
+          workingCapitalByPeriod:boundInput.workingCapitalByPeriod.map((amount,index)=>amount-vatClosingBalances[index]),
+          openingWorkingCapital:(boundInput.openingWorkingCapital??0)-salesTaxLedgerResult.rows[0].openingBalance,
+        }
+      }
+      return boundInput
     }
     if(props.workingCapitalDrafts?.length){
       const binding=bindWorkingCapitalDraftsToPeriodicFinance(
@@ -449,7 +491,7 @@ export default function AdvancedFinancePanel(props: Props) {
       return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
     }
     return {result:calculateIntegratedPeriodicFinance(withFinishedGoods),input:withFinishedGoods}
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),JSON.stringify(props.cppCpsTraceItems??[]),productOperatingSchedule,projectTaxSchedule,loanDraftIntegration,props.openingWorkingCapitalBalance,props.openingCashBalance])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),JSON.stringify(props.cppCpsTraceItems??[]),productOperatingSchedule,projectTaxSchedule,loanDraftIntegration,salesTaxLedgerActive,salesTaxLedgerResult,props.openingWorkingCapitalBalance,props.openingCashBalance,JSON.stringify(props.salesTaxLedgerDraft??null)])
   const periodicFinanceResult=periodicFinanceBundle?.result??null
   const periodicFinanceInput=periodicFinanceBundle?.input??null
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
@@ -527,8 +569,8 @@ export default function AdvancedFinancePanel(props: Props) {
       Math.abs(cashTotal-(props.openingCashBalance??0))<=0.01
     return {valid,assetTotal,liabilityTotal,netWorkingCapital,cashTotal}
   },[props.openingCurrentAccounts,props.openingWorkingCapitalBalance,props.openingCashBalance])
-  const sensitivity=useMemo(()=>periodicFinanceInput?calculatePeriodicSensitivityMatrix(periodicFinanceInput,[-20,-10,0,10,20],[-20,-10,0,10,20]):[],[periodicFinanceInput])
-  const scenarios=useMemo(()=>periodicFinanceInput&&periodicFinanceResult?.valid?calculatePeriodicFinancialScenarios(periodicFinanceInput):null,[periodicFinanceInput,periodicFinanceResult?.valid])
+  const sensitivity=useMemo(()=>periodicFinanceInput&&!salesTaxLedgerActive?calculatePeriodicSensitivityMatrix(periodicFinanceInput,[-20,-10,0,10,20],[-20,-10,0,10,20]):[],[periodicFinanceInput,salesTaxLedgerActive])
+  const scenarios=useMemo(()=>periodicFinanceInput&&periodicFinanceResult?.valid&&!salesTaxLedgerActive?calculatePeriodicFinancialScenarios(periodicFinanceInput):null,[periodicFinanceInput,periodicFinanceResult?.valid,salesTaxLedgerActive])
   useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
   const updateAsset=(id:string,patch:Partial<Asset>)=>setState(s=>({...s,assets:s.assets.map(a=>a.id===id?{...a,...patch}:a)}))
   const updateDay=(key:keyof SavedState['workingCapitalDays'],value:number)=>setState(s=>({...s,workingCapitalDays:{...s.workingCapitalDays,[key]:Math.max(0,value)}}))
