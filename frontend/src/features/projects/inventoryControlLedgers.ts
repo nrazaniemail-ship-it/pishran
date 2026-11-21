@@ -7,7 +7,7 @@ export type InventoryReconciliationPeriod={
  balanceSheet:{rawMaterials:number;workInProgress:number;finishedGoods:number;otherCurrentAssets:number;currentLiabilities:number;netWorkingCapital:number}
  cppCps:{rawMaterials:number;workInProgress:number;finishedGoods:number;totalInventory:number}
 }
-export type InventoryReferenceBenchmarkEntry={id:string;period:number;sourceDocument:string;schedule:string;page:string;currency:string;rawMaterials:number|null;workInProgress:number|null;finishedGoods:number|null;totalInventory:number|null;cpp:number|null;cps:number|null}
+export type InventoryReferenceBenchmarkEntry={id:string;period:number;sourceDocument:string;schedule:string;page:string;currency:string;amountScaleToModel:number|null;rawMaterials:number|null;workInProgress:number|null;finishedGoods:number|null;totalInventory:number|null;cpp:number|null;cps:number|null}
 export type InventoryReferenceComparisonRow={period:number;matchedFields:string[];missingFields:string[];variances:Record<string,number>;status:'matched'|'mismatch'|'incomplete'}
 export type InventoryReferenceComparisonResult={valid:boolean;rows:InventoryReferenceComparisonRow[];issues:string[]}
 export type WasteLedgerResult={valid:boolean;issues:string[];normalWasteAbsorbedByPeriod:number[];abnormalWasteExpenseByPeriod:number[];totalNormalWaste:number;totalAbnormalWaste:number}
@@ -86,17 +86,20 @@ export function reconcileInventoryReference(
   seen.add(b.period)
   if(!b.sourceDocument.trim()||!b.schedule.trim()||!b.page.trim()||!b.currency.trim())issues.push('Reference benchmark period '+b.period+' requires source document, schedule, page and currency.')
   if(expectedCurrency&&b.currency.trim().toUpperCase()!==expectedCurrency.trim().toUpperCase())issues.push('Reference benchmark period '+b.period+' currency '+b.currency+' does not match project currency '+expectedCurrency+'. Convert through an evidenced exchange-rate schedule before comparison.')
+  if(b.amountScaleToModel===null||!Number.isFinite(b.amountScaleToModel)||b.amountScaleToModel<=0)issues.push('Reference benchmark period '+b.period+' requires a positive explicit scale factor from report amount units to model amount units.')
   const m=modeled.find(x=>x.period===b.period)
   if(!m){issues.push('Reference benchmark period '+b.period+' has no matching model period.');continue}
+  const scale=b.amountScaleToModel??Number.NaN
   const pairs=[['rawMaterials',b.rawMaterials,m.rawMaterials],['workInProgress',b.workInProgress,m.workInProgress],['finishedGoods',b.finishedGoods,m.finishedGoods],['totalInventory',b.totalInventory,m.totalInventory],['cpp',b.cpp,m.cpp],['cps',b.cps,m.cps]] as const
   const matchedFields:string[]=[],missingFields:string[]=[],variances:Record<string,number>={}
   for(const [field,reference,actual] of pairs){
    if(reference===null||reference===undefined){missingFields.push(field);continue}
    if(!Number.isFinite(reference)||reference<0){issues.push('Reference benchmark '+field+' in period '+b.period+' must be a finite non-negative amount.');continue}
-   const variance=actual-reference;variances[field]=variance
-   if(near(actual,reference,tolerance/100))matchedFields.push(field)
+   const scaledReference=reference*scale
+   const variance=actual-scaledReference;variances[field]=variance
+   if(Number.isFinite(scale)&&near(actual,scaledReference,tolerance/100))matchedFields.push(field)
   }
-  const hasMismatch=pairs.some(([field,reference,actual])=>reference!==null&&reference!==undefined&&Number.isFinite(reference)&&!near(actual,reference,tolerance/100))
+  const hasMismatch=pairs.some(([field,reference,actual])=>reference!==null&&reference!==undefined&&Number.isFinite(reference)&&Number.isFinite(scale)&&!near(actual,reference*scale,tolerance/100))
   const status:InventoryReferenceComparisonRow['status']=hasMismatch?'mismatch':missingFields.length?'incomplete':'matched'
   if(b.rawMaterials!==null&&b.workInProgress!==null&&b.finishedGoods!==null&&b.totalInventory!==null&&!near(b.rawMaterials+b.workInProgress+b.finishedGoods,b.totalInventory,tolerance/100))issues.push('Reference benchmark period '+b.period+' total inventory does not equal raw materials + WIP + finished goods.')
   if(status==='mismatch')issues.push('Reference benchmark period '+b.period+' differs from model values.')
