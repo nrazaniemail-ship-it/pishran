@@ -142,6 +142,16 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
 
 
 export type EconomicAdjustmentFormDraft = { id:string; name:string; period:string; treatment:'benefit'|'cost'|null; effectType:'general'|'foreign-exchange'|'employment'|null; financialAmount:number|null; economicAmount:number|null }
+export function createBlankCppCpsTraceItem(id:string,periodCount:number):CppCpsTraceItem {
+ return {
+  id,label:'',category:'materials',basis:null,behaviour:null,fixedPercent:null,variablePercent:null,
+  productId:null,allocationMethod:'not-allocated',baseCostCoverage:'unverified',
+  periodAmounts:Array.from({length:periodCount},()=>null),
+  baseCoveredAmounts:Array.from({length:periodCount},()=>null),
+  source:{status:'unverified',reference:'',description:'',reliability:'unverified'}
+ }
+}
+
 export type ProjectModelFinancialFormDrafts = {
  cppCpsTraceItems: CppCpsTraceItem[]
  helpDriven: HelpDrivenProjectForms
