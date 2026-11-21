@@ -223,7 +223,7 @@ export function reconcileStageInventoryMovements(
   const hasAnyValue=[row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
    row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,row.transfersOutQuantity,row.transfersOutValue,
    row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,row.wasteQuantity,row.wasteValue,
-   row.closingQuantity,row.closingValue,row.sourceReference,row.sourceVerified===true].some(value=>value!==null&&value!==undefined&&value!=='')
+   row.closingQuantity,row.closingValue,row.sourceReference,row.sourceVerified===true?true:null].some(value=>value!==null&&value!==undefined&&value!=='')
   if(!hasAnyValue)continue
   if(row.period===null||!Number.isInteger(row.period)||row.period<1||row.period>periodCount||
      !row.inventoryStage||!row.productId.trim()||!row.costCentreId.trim())
@@ -248,7 +248,7 @@ export function reconcileStageInventoryMovements(
  for(const transfer of stageTransfers){
   const hasAnyValue=[transfer.id,transfer.period,transfer.sourceStage,transfer.destinationStage,transfer.sourceProductId,transfer.destinationProductId,
    transfer.sourceCostCentreId,transfer.destinationCostCentreId,transfer.quantity,transfer.sourceUnit,transfer.destinationUnit,
-   transfer.conversionFactor,transfer.transferValue,transfer.sourceReference,transfer.sourceVerified===true].some(value=>value!==null&&value!==undefined&&value!=='')
+   transfer.conversionFactor,transfer.transferValue,transfer.sourceReference,transfer.sourceVerified===true?true:null].some(value=>value!==null&&value!==undefined&&value!=='')
   if(!hasAnyValue)continue
   const id=transfer.id.trim()
   if(!id||transferIds.has(id))issues.push('Inter-stage transfers require unique non-empty identifiers.')
