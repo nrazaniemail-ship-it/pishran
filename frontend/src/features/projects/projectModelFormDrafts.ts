@@ -201,7 +201,7 @@ export type ValueAddedInputFormDraft={
 }
 export type ValueAddedInvestmentFormDraft=ValueAddedInputFormDraft&{kind:'fixed-investment'|'pre-production-net-of-interest'|'inventory-increase'|null}
 export type ValueAddedPeriodFormDraft={
- period:number;otherIncome:number|null;subsidiesOnInput:number|null;subsidiesOnInvestment:number|null
+ period:number;otherIncome:number|null;otherValueAdded:number|null;subsidiesOnInput:number|null;subsidiesOnInvestment:number|null
  repatriatedWages:number|null;repatriatedProfitDividends:number|null;repatriatedInterest:number|null;repatriatedOther:number|null
  domesticWages:number|null;domesticDividendsAndInterest:number|null
  skilledDomesticLabour:number|null;totalDomesticLabour:number|null;foreignExchangeOutflow:number|null
@@ -216,7 +216,7 @@ export function createBlankValueAddedInvestmentFormDraft(id:string):ValueAddedIn
  return{...createBlankValueAddedInputFormDraft(id),kind:null}
 }
 export function createBlankValueAddedPeriodFormDraft(period:number):ValueAddedPeriodFormDraft{
- return{period,otherIncome:null,subsidiesOnInput:null,subsidiesOnInvestment:null,
+ return{period,otherIncome:null,otherValueAdded:null,subsidiesOnInput:null,subsidiesOnInvestment:null,
   repatriatedWages:null,repatriatedProfitDividends:null,repatriatedInterest:null,repatriatedOther:null,
   domesticWages:null,domesticDividendsAndInterest:null,skilledDomesticLabour:null,totalDomesticLabour:null,
   foreignExchangeOutflow:null,sourceReference:'',sourceVerified:false,intermediateInputs:[],investmentInputs:[]}
@@ -355,8 +355,8 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
   if(!Number.isInteger(row.period)||row.period<1||valueAddedPeriodNumbers.has(row.period))errors.push('value-added-period-'+index+':invalid-or-duplicate-period')
   valueAddedPeriodNumbers.add(row.period)
   const periodValues=[row.otherIncome,row.subsidiesOnInput,row.subsidiesOnInvestment,row.repatriatedWages,row.repatriatedProfitDividends,row.repatriatedInterest,row.repatriatedOther,row.domesticWages,row.domesticDividendsAndInterest,row.skilledDomesticLabour,row.totalDomesticLabour,row.foreignExchangeOutflow]
-  if(periodValues.some(amount=>amount!==null&&(!Number.isFinite(amount)||amount<0)))errors.push('value-added-period-'+index+':invalid-period-amount')
-  if(hasEnteredValue(periodValues)&&(!row.sourceReference.trim()||!row.sourceVerified))errors.push('value-added-period-'+index+':verified-period-source-required')
+  if(periodValues.some(amount=>amount!==null&&(!Number.isFinite(amount)||amount<0))||row.otherValueAdded!==null&&!Number.isFinite(row.otherValueAdded))errors.push('value-added-period-'+index+':invalid-period-amount')
+  if(hasEnteredValue([...periodValues,row.otherValueAdded])&&(!row.sourceReference.trim()||!row.sourceVerified))errors.push('value-added-period-'+index+':verified-period-source-required')
   const itemIds=new Set<string>()
   for(const [itemIndex,item] of row.intermediateInputs.entries()){
    const id=item.id.trim().toLocaleLowerCase()
