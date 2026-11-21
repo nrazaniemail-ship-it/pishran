@@ -84,7 +84,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
         issues.push('Cost item ' + key + ' would allocate CPP to a product with no production.')
         continue
       }
-      const rowKey = entry.row.productId + ':' + entry.row.period
+      const rowKey = entry.row.productId + ':' + entry.row.period + ':' + trace.category
       allocations.set(rowKey, (allocations.get(rowKey) ?? 0) + amount * entry.weight / denominator)
     }
   }
@@ -101,8 +101,36 @@ export function bindCppCpsTraceLedgerToProductSchedule(
     }
     const openingInventoryValue = previous && previous.period === row.period - 1
       ? previous.value : row.openingInventoryValue
-    const addedCpp = allocations.get(row.productId + ':' + row.period) ?? 0
-    const productionCost = row.productionCost + addedCpp
+    const materialCpp = allocations.get(row.productId + ':' + row.period + ':materials') ?? 0
+    const conversionCpp = (allocations.get(row.productId + ':' + row.period + ':labour') ?? 0) +
+      (allocations.get(row.productId + ':' + row.period + ':energy') ?? 0) +
+      (allocations.get(row.productId + ':' + row.period + ':maintenance') ?? 0) +
+      (allocations.get(row.productId + ':' + row.period + ':overhead') ?? 0)
+    let completedCpp = materialCpp + conversionCpp
+    let wipCpp = 0
+    if (row.hasInventoryFlow && (materialCpp > 0 || conversionCpp > 0)) {
+      if ((materialCpp > 0 && (!Number.isFinite(row.materialEquivalentUnits) || row.materialEquivalentUnits <= 0)) ||
+          (conversionCpp > 0 && (!Number.isFinite(row.conversionEquivalentUnits) || row.conversionEquivalentUnits <= 0))) {
+        issues.push('Product ' + row.productId + ' period ' + row.period + ' has incremental CPP but no valid equivalent units for WIP allocation.')
+        continue
+      }
+      const materialRate = row.materialEquivalentUnits > 0 ? materialCpp / row.materialEquivalentUnits : 0
+      const conversionRate = row.conversionEquivalentUnits > 0 ? conversionCpp / row.conversionEquivalentUnits : 0
+      const completedMaterialCpp = row.completedUnits * materialRate
+      const completedConversionCpp = row.completedUnits * conversionRate
+      const closingWipMaterialCpp = Math.max(0, row.materialEquivalentUnits - row.completedUnits) * materialRate
+      const closingWipConversionCpp = Math.max(0, row.conversionEquivalentUnits - row.completedUnits) * conversionRate
+      completedCpp = completedMaterialCpp + completedConversionCpp
+      wipCpp = closingWipMaterialCpp + closingWipConversionCpp
+      const allocatedTotal = completedCpp + wipCpp
+      const sourceTotal = materialCpp + conversionCpp
+      if (Math.abs(allocatedTotal - sourceTotal) > 1e-7 * Math.max(1, sourceTotal)) {
+        issues.push('Product ' + row.productId + ' period ' + row.period + ' incremental CPP does not reconcile between completed output and closing WIP.')
+        continue
+      }
+    }
+    const productionCost = row.productionCost + completedCpp
+    const wipInventoryValue = row.wipInventoryValue + wipCpp
     const unitProductionCost = row.productionQuantity > 0
       ? productionCost / row.productionQuantity
       : row.unitProductionCost
@@ -113,7 +141,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
     const closingInventoryValue = row.closingInventoryQuantity * weightedAverageUnitCost
     const revisedRow = {
       ...row, openingInventoryValue, productionCost, unitProductionCost, weightedAverageUnitCost,
-      costOfSales, closingInventoryValue, grossProfit: row.netSalesRevenue - costOfSales,
+      wipInventoryValue, costOfSales, closingInventoryValue, grossProfit: row.netSalesRevenue - costOfSales,
     }
     rows.push(revisedRow)
     closingByProduct.set(row.productId, {
@@ -122,9 +150,11 @@ export function bindCppCpsTraceLedgerToProductSchedule(
   }
   if (issues.length) return { valid: false, issues, schedule: null, incrementalCppByPeriod: [] }
   const periodCostOfSales = Array(periodCount).fill(0) as number[]
+  const periodWipInventoryValue = Array(periodCount).fill(0) as number[]
   let totalClosingInventoryValue = 0
   for (const row of rows) {
     periodCostOfSales[row.period - 1] += row.costOfSales
+    periodWipInventoryValue[row.period - 1] += row.wipInventoryValue
     totalClosingInventoryValue += row.closingInventoryValue
   }
   const fiscalYearCount = periodFiscalYearIndexes.length
@@ -135,7 +165,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
   })
   return {
     valid: true, issues: [],
-    schedule: { ...schedule, rows, periodCostOfSales, annualCostOfSales, totalClosingInventoryValue },
+    schedule: { ...schedule, rows, periodCostOfSales, periodWipInventoryValue, annualCostOfSales, totalClosingInventoryValue },
     incrementalCppByPeriod: [...incrementalCppByPeriod],
   }
 }
