@@ -222,6 +222,40 @@ export function createBlankValueAddedPeriodFormDraft(period:number):ValueAddedPe
   foreignExchangeOutflow:null,sourceReference:'',sourceVerified:false,intermediateInputs:[],investmentInputs:[]}
 }
 
+export type CostCentreInventoryMovementFormDraft = {
+ id:string
+ period:number|null
+ inventoryStage:'raw-materials'|'work-in-progress'|'finished-goods'|null
+ productId:string
+ costCentreId:string
+ openingQuantity:number|null
+ openingValue:number|null
+ receiptsQuantity:number|null
+ receiptsValue:number|null
+ productionQuantity:number|null
+ productionValue:number|null
+ consumptionQuantity:number|null
+ consumptionValue:number|null
+ wasteQuantity:number|null
+ wasteValue:number|null
+ closingQuantity:number|null
+ closingValue:number|null
+ sourceReference:string
+ sourceVerified:boolean
+}
+export function createBlankCostCentreInventoryMovementFormDraft(id=''):CostCentreInventoryMovementFormDraft {
+ return {id,period:null,inventoryStage:null,productId:'',costCentreId:'',
+  openingQuantity:null,openingValue:null,receiptsQuantity:null,receiptsValue:null,
+  productionQuantity:null,productionValue:null,consumptionQuantity:null,consumptionValue:null,
+  wasteQuantity:null,wasteValue:null,closingQuantity:null,closingValue:null,
+  sourceReference:'',sourceVerified:false}
+}
+const costCentreInventoryMovementHasData=(row:CostCentreInventoryMovementFormDraft):boolean =>
+ [row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
+  row.receiptsQuantity,row.receiptsValue,row.productionQuantity,row.productionValue,row.consumptionQuantity,
+  row.consumptionValue,row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue,row.sourceReference]
+  .some(value=>value!==null&&value!==undefined&&value!=='')
+
 export type ProjectModelFinancialFormDrafts = {
  cppCpsTraceItems: CppCpsTraceItem[]
  costCentres: CostCentreFormDraft[]
@@ -239,7 +273,7 @@ export type ProjectModelFinancialFormDrafts = {
  economic: { discountRatePercent:number|null; discountRateSourceReference:string; discountRateSourceVerified:boolean; adjustments:EconomicAdjustmentFormDraft[]; valueAddedPeriods:ValueAddedPeriodFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),salesTaxLedger:createBlankSalesTaxLedgerFormDraft(),economic:{discountRatePercent:null,discountRateSourceReference:'',discountRateSourceVerified:false,adjustments:[],valueAddedPeriods:[]}}
+ return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],costCentreInventoryMovements:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),salesTaxLedger:createBlankSalesTaxLedgerFormDraft(),economic:{discountRatePercent:null,discountRateSourceReference:'',discountRateSourceVerified:false,adjustments:[],valueAddedPeriods:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{
@@ -261,6 +295,8 @@ export function listUnintegratedFinancialDraftInputs(value:ProjectModelFinancial
  const collections:[string,unknown[]][]=[['financialForms.assets',value.assets]]
  // Working-capital component balances are bound to the periodic finance engine; do not block reports for these integrated rows.
  for(const [label,rows] of collections)for(const [index,row] of (rows??[]).entries())if(hasEnteredValue(row))issues.push(label+'.'+index)
+ // Cost-centre inventory movements are persisted but not yet posted into the three-stage inventory engine.
+ for(const [index,row] of (value.costCentreInventoryMovements??[]).entries())if(costCentreInventoryMovementHasData(row))issues.push('financialForms.costCentreInventoryMovements.'+index)
  // Tax form fields are bound to the period engine; schedule validity is checked by the periodic result gate.
  return issues
 }
@@ -325,6 +361,15 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
   if(!centre)errors.push('cpp-cps-item-'+item.id+':unknown-cost-centre')
   else if(item.allocationMethod==='cost-centre-driver'&&!centre.allocationBasis)errors.push('cpp-cps-item-'+item.id+':cost-centre-allocation-basis-required')
   else if(item.allocationMethod==='cost-centre-driver'&&centre.allocationBasis==='manual'&&!centre.driverRows.length)errors.push('cpp-cps-item-'+item.id+':manual-cost-centre-drivers-required')
+ }
+ for(const [index,row] of (value.costCentreInventoryMovements??[]).entries()){
+  if(!costCentreInventoryMovementHasData(row))continue
+  const values=[row.openingQuantity,row.openingValue,row.receiptsQuantity,row.receiptsValue,row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue]
+  if(!Number.isInteger(row.period)||row.period===null||row.period<1)errors.push('cost-centre-inventory-'+index+':invalid-period')
+  if(!row.inventoryStage)errors.push('cost-centre-inventory-'+index+':inventory-stage-required')
+  if(!row.productId.trim()||!row.costCentreId.trim())errors.push('cost-centre-inventory-'+index+':product-and-cost-centre-required')
+  if(values.some(amount=>amount===null||!Number.isFinite(amount)||amount<0))errors.push('cost-centre-inventory-'+index+':all-quantities-and-values-required')
+  if(!row.sourceReference.trim()||!row.sourceVerified)errors.push('cost-centre-inventory-'+index+':verified-source-required')
  }
  errors.push(...validateHelpDrivenProjectForms(value.helpDriven ?? createBlankHelpDrivenProjectForms()))
  value.assets.forEach((item,index)=>validateFixedAssetFormDraft(item).forEach(error=>errors.push('asset-'+index+':'+error)))
