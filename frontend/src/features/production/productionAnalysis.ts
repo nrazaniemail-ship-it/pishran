@@ -86,3 +86,41 @@ export function analyzeProductionRecord(record: ProductionRecord): ProductionAna
     materialCostByItem, warnings
   }
 }
+
+
+export type FinishedGoodsPeriodInput = {
+  openingQuantity: number
+  openingValue: number
+  currentGoodOutput: number
+  currentProductionCost: number
+  salesQuantity: number
+}
+
+export type FinishedGoodsPeriodResult = {
+  cpp: number
+  currentUnitProductionCost: number | null
+  availableQuantity: number
+  availableValue: number
+  weightedAverageUnitCost: number | null
+  cps: number
+  closingQuantity: number
+  closingInventoryValue: number
+  warnings: string[]
+}
+
+/** Periodic finished-goods roll-forward using an explicitly selected weighted-average policy. */
+export function calculateFinishedGoodsPeriod(input: FinishedGoodsPeriodInput): FinishedGoodsPeriodResult {
+  const values = [input.openingQuantity, input.openingValue, input.currentGoodOutput, input.currentProductionCost, input.salesQuantity]
+  if (!values.every(finiteNonNegative)) throw new Error('مقادیر موجودی محصول، تولید، فروش و بهای تولید باید محدود و نامنفی باشند')
+  if (input.openingQuantity === 0 && input.openingValue > 1e-9) throw new Error('ارزش موجودی اول دوره بدون مقدار موجودی قابل قبول نیست')
+  if (input.currentGoodOutput === 0 && input.currentProductionCost > 1e-9) throw new Error('بهای تولید دوره بدون محصول سالم قابل تخصیص نیست')
+  const availableQuantity = input.openingQuantity + input.currentGoodOutput
+  const availableValue = input.openingValue + input.currentProductionCost
+  const weightedAverageUnitCost = availableQuantity > 0 ? availableValue / availableQuantity : null
+  const warnings: string[] = []
+  if (input.salesQuantity > availableQuantity + 1e-9) warnings.push('مقدار فروش از موجودی قابل فروش بیشتر است؛ کسری محصول نهایی وجود دارد.')
+  const cps = weightedAverageUnitCost === null ? 0 : input.salesQuantity * weightedAverageUnitCost
+  const closingQuantity = availableQuantity - input.salesQuantity
+  const closingInventoryValue = weightedAverageUnitCost === null ? 0 : closingQuantity * weightedAverageUnitCost
+  return { cpp: input.currentProductionCost, currentUnitProductionCost: input.currentGoodOutput > 0 ? input.currentProductionCost / input.currentGoodOutput : null, availableQuantity, availableValue, weightedAverageUnitCost, cps, closingQuantity, closingInventoryValue, warnings }
+}
