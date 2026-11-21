@@ -59,8 +59,10 @@ assert.ok(unsupportedIndirect.issues.some(issue=>issue.includes('not spread by a
 const vat=module.buildProductOperatingSchedule({
  ...base,sales:[{...base.sales[0],periods:[{...base.sales[0].periods[0],salesTaxPercent:9},base.sales[0].periods[1]]}]
 },periods,1,'IRR')
-assert.equal(vat.valid,false)
-assert.ok(vat.issues.some(issue=>issue.includes('sales tax/VAT')))
+assert.equal(vat.valid,true,vat.issues.join('; '))
+assert.deepEqual(vat.periodOutputSalesTax,[144,0])
+assert.equal(vat.rows.find(row=>row.period===1)?.taxableSales,1600)
+assert.equal(vat.rows.find(row=>row.period===1)?.netSalesRevenue,1600)
 const negativeProduction=module.buildProductOperatingSchedule({
  ...base,sales:[{...base.sales[0],periods:[{...base.sales[0].periods[0],salesQuantity:5,finishedGoodsClosingQuantity:0,openingFinishedGoodsQuantity:10},base.sales[0].periods[1]]}]
 },periods,1,'IRR')
