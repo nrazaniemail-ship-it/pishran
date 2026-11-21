@@ -7,8 +7,10 @@ const engineSource=await readFile(new URL('../src/features/steel/periodicFinanci
 const engineUrl='data:text/javascript;base64,'+Buffer.from(transpile(engineSource)).toString('base64')
 const flowSource=await readFile(new URL('../src/features/projects/inventoryProductionFlow.ts',import.meta.url),'utf8')
 const flowUrl='data:text/javascript;base64,'+Buffer.from(transpile(flowSource)).toString('base64')
+const controlSource=transpile(await readFile(new URL('../src/features/projects/inventoryControlLedgers.ts',import.meta.url),'utf8'))
+const controlUrl='data:text/javascript;base64,'+Buffer.from(controlSource).toString('base64')
 const source=await readFile(new URL('../src/features/projects/productOperatingSchedule.ts',import.meta.url),'utf8')
-const output=transpile(source).replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl)).replace("'./inventoryProductionFlow'",JSON.stringify(flowUrl))
+const output=transpile(source).replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl)).replace("'./inventoryProductionFlow'",JSON.stringify(flowUrl)).replace("'./inventoryControlLedgers'",JSON.stringify(controlUrl))
 const module=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
 const periods=[
  {index:1,startDate:'2025-01-01',endDate:'2025-03-31',days:90,partial:false},
