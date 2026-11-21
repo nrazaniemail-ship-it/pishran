@@ -458,7 +458,7 @@ export default function AdvancedFinancePanel(props: Props) {
     paidInCapital:props.openingPaidInCapital??0,
     retainedEarnings:props.openingRetainedEarnings??0,grants:props.openingGrants??0,
   }):[],[periodicFinanceResult,props.openingCashBalance,props.openingDebtBalance,props.openingFixedAssetsNetBookValue,
-    props.openingWorkingCapitalBalance,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants])
+    props.openingWorkingCapitalBalance,props.openingCurrentAccounts?.rawMaterials,props.openingCurrentAccounts?.workInProgress,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants])
   const scheduledOpeningDebt=useMemo(()=>periodicFinanceResult?.valid
     ?Object.values(periodicFinanceResult.loanSchedules??{}).reduce((sum,schedule)=>sum+(schedule[0]?.openingBalance??0),0)
     :0,[periodicFinanceResult])
