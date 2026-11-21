@@ -147,7 +147,7 @@ export type EconomicAdjustmentFormDraft = { id:string; name:string; period:strin
 export function createBlankCppCpsTraceItem(id:string,periodCount:number):CppCpsTraceItem {
  return {
   id,label:'',category:'materials',basis:null,behaviour:null,fixedPercent:null,variablePercent:null,
-  productId:null,allocationMethod:'not-allocated',baseCostCoverage:'unverified',
+  productId:null,costCentreId:null,allocationMethod:'not-allocated',baseCostCoverage:'unverified',
   periodAmounts:Array.from({length:periodCount},()=>null),
   baseCoveredAmounts:Array.from({length:periodCount},()=>null),
   source:{status:'unverified',reference:'',description:'',reliability:'unverified'}
