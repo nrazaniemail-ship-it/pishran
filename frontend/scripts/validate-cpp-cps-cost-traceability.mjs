@@ -76,6 +76,15 @@ const missingSource = ledgerModule.buildCppCpsTraceLedger([{
 assert.equal(missingSource.valid, false)
 assert.ok(missingSource.issues.some(issue => issue.includes('verified-source-requires-reference')))
 
+const unknownCentreEvidence = ledgerModule.buildCppCpsTraceLedger([
+  items[0], { ...items[4], costCentreId: null },
+], 2)
+assert.equal(unknownCentreEvidence.valid, true)
+assert.equal(unknownCentreEvidence.complete, false)
+assert.deepEqual(unknownCentreEvidence.unallocatedUnverifiedItemIds, ['overhead'])
+assert.deepEqual(unknownCentreEvidence.completeIncrementalByCostCentre, { 'CC-PROD': null },
+  'Unverified cost with no centre must prevent any centre total from being labelled complete')
+
 const missingCostCentre = ledgerModule.buildCppCpsTraceLedger([{
   ...items[0], costCentreId: null,
 }], 2)
