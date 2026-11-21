@@ -207,7 +207,7 @@ export function buildComfarValueAddedAnalysis(periods: ValueAddedPeriodInput[]):
   const rows:ValueAddedPeriodRow[]=periods.map(row=>{
     const intermediateItems=row.intermediateInputs.map(adjustValueAddedInput)
     const investmentItems=row.investmentInputs.map(adjustValueAddedInput)
-    const sum=(items:ValueAddedInputAdjustment,key:'financialAmount'|'indirectTaxIncluded'|'valueAddedIncluded'|'amountDeducted'|'localContent'|'foreignContent')=>
+    const sum=(items:ValueAddedInputAdjustment[],key:'financialAmount'|'indirectTaxIncluded'|'valueAddedIncluded'|'amountDeducted'|'localContent'|'foreignContent')=>
       items.reduce((total,item)=>total+item[key],0)
     const intermediateInput:ValueAddedInputAdjustment={
       financialAmount:sum(intermediateItems,'financialAmount'),
