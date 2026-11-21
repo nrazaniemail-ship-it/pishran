@@ -7,9 +7,14 @@ export type ProductionFinancePeriod = {
   endDate: string
   cpp: number
   cps: number
+  materialCost: number
+  directLaborCost: number
+  energyCost: number
+  maintenanceCost: number
+  allocatedOverhead: number
   closingFinishedGoodsValue: number
   closingFinishedGoodsQuantity: number
-  products: Array<{ product: string; currency: string; cpp: number; cps: number; openingInventoryValue: number; closingInventoryValue: number; closingQuantity: number }>
+  products: Array<{ product: string; currency: string; cpp: number; cps: number; materialCost: number; directLaborCost: number; energyCost: number; maintenanceCost: number; allocatedOverhead: number; openingInventoryValue: number; closingInventoryValue: number; closingQuantity: number }>
 }
 export type ProductionFinanceBridge = {
   valid: boolean
@@ -84,6 +89,7 @@ export function buildProductionFinanceBridge(
 
   const rows: ProductionFinancePeriod[] = sortedPeriods.map((period, periodIndex) => ({
     periodIndex, startDate: period.startDate, endDate: period.endDate, cpp: 0, cps: 0,
+    materialCost: 0, directLaborCost: 0, energyCost: 0, maintenanceCost: 0, allocatedOverhead: 0,
     closingFinishedGoodsValue: 0, closingFinishedGoodsQuantity: 0, products: [],
   }))
   for (const [product, entries] of productRecords) {
@@ -117,9 +123,19 @@ export function buildProductionFinanceBridge(
       const cps = salesQuantity * averageCost
       const closingQuantity = availableQuantity - salesQuantity
       const closingValue = closingQuantity * averageCost
+      const materialCost = current.reduce((sum, entry) => sum + analyzeProductionRecord(entry.record).materialCost, 0)
+      const directLaborCost = current.reduce((sum, entry) => sum + entry.record.directLaborCost, 0)
+      const energyCost = current.reduce((sum, entry) => sum + entry.record.energyCost, 0)
+      const maintenanceCost = current.reduce((sum, entry) => sum + entry.record.maintenanceCost, 0)
+      const allocatedOverhead = current.reduce((sum, entry) => sum + entry.record.allocatedOverhead, 0)
       rows[periodIndex].cpp += cpp
       rows[periodIndex].cps += cps
-      rows[periodIndex].products.push({ product, currency, cpp, cps, openingInventoryValue: openingValue, closingInventoryValue: closingValue, closingQuantity })
+      rows[periodIndex].materialCost += materialCost
+      rows[periodIndex].directLaborCost += directLaborCost
+      rows[periodIndex].energyCost += energyCost
+      rows[periodIndex].maintenanceCost += maintenanceCost
+      rows[periodIndex].allocatedOverhead += allocatedOverhead
+      rows[periodIndex].products.push({ product, currency, cpp, cps, materialCost, directLaborCost, energyCost, maintenanceCost, allocatedOverhead, openingInventoryValue: openingValue, closingInventoryValue: closingValue, closingQuantity })
       openingQuantity = closingQuantity
       openingValue = closingValue
       cursor++
