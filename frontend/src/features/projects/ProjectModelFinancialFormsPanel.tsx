@@ -351,6 +351,8 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
      <NumberField label={t('ارزش تولید/تکمیل ورودی','Production value')} value={entry.productionValue} onChange={v=>patch({productionValue:v})}/>
      <NumberField label={t('مقدار مصرف/خروج','Consumption quantity')} value={entry.consumptionQuantity} onChange={v=>patch({consumptionQuantity:v})}/>
      <NumberField label={t('ارزش مصرف/خروج','Consumption value')} value={entry.consumptionValue} onChange={v=>patch({consumptionValue:v})}/>
+     <NumberField label={t('مقدار فروش محصول نهایی','Finished-goods sales quantity')} value={entry.salesQuantity} onChange={v=>patch({salesQuantity:v})}/>
+     <NumberField label={t('بهای تمام‌شده کالای فروش‌رفته','Cost of goods sold')} value={entry.salesCostValue} onChange={v=>patch({salesCostValue:v})}/>
      <NumberField label={t('مقدار ضایعات','Waste quantity')} value={entry.wasteQuantity} onChange={v=>patch({wasteQuantity:v})}/>
      <NumberField label={t('ارزش ضایعات','Waste value')} value={entry.wasteValue} onChange={v=>patch({wasteValue:v})}/>
      <NumberField label={t('مقدار پایان دوره','Closing quantity')} value={entry.closingQuantity} onChange={v=>patch({closingQuantity:v})}/>
