@@ -104,8 +104,11 @@ The saved cost-centre movement rows are now passed into the financial panel. Whe
 - Each populated stage must have at least one row in every model period.
 - Every row must have an explicit verified source reference and complete non-negative quantity/value fields.
 - Product/cost-centre roll-forward is checked independently inside each stage, including period opening-to-closing carry-forward. Internal transfer-in and transfer-out quantities and values are captured separately and must balance within each stage and period; these transfers relocate inventory and do not increase total stage value.
-- The sum of stage closing values by period is compared with the corresponding periodic finance-engine inventory balance (raw materials, work in progress, or finished goods).
+- The sum of stage closing values by period is compared with the corresponding periodic finance-engine inventory balance (raw materials, work in progress, or finished goods). When the product operating schedule is valid, each stage is also reconciled by product and period against that product's raw-material, WIP and finished-goods closing values; matching stage totals cannot conceal balances assigned to the wrong product.
 - A mismatch, missing stage-period, invalid movement, or unverified source makes this cross-check fail visibly.
+
+
+Regression coverage proves that two products whose stage totals match but whose individual balances are swapped fail the product-level reconciliation, and that omitting a product with a non-zero engine balance is rejected.
 
 A stage with no subledger rows is accepted only when the finance engine reports zero closing inventory for that stage in every period. A non-zero engine balance with no stage/cost-centre movement rows is a visible reconciliation failure; it is never silently omitted.
 
