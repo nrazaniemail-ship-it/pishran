@@ -133,6 +133,18 @@ const rawToWipTransfer={id:'ST-1',period:1,sourceStage:'raw-materials',destinati
  sourceProductId:'ORE',destinationProductId:'PELLET',sourceCostCentreId:'ORE-STORE',destinationCostCentreId:'DRI-PLANT',
  quantity:4,sourceUnit:'tonne',destinationUnit:'kg',conversionFactor:1000,transferValue:40,
  sourceReference:'material transfer note / 17',sourceVerified:true}
+const blankStageTransferDraft=module.reconcileStageInventoryMovements([],[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:0},
+],1,0.01,[{id:'',period:null,sourceStage:null,destinationStage:null,sourceProductId:'',destinationProductId:'',
+ sourceCostCentreId:'',destinationCostCentreId:'',quantity:null,sourceUnit:'',destinationUnit:'',conversionFactor:null,
+ transferValue:null,sourceReference:'',sourceVerified:false}])
+assert.equal(blankStageTransferDraft.valid,true,'an untouched blank transfer form row must not create a false validation failure')
+const transferWithoutMovements=module.reconcileStageInventoryMovements([],[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:0},
+],1,0.01,[rawToWipTransfer])
+assert.equal(transferWithoutMovements.valid,false,'an entered inter-stage transfer must be checked even if no movement rows exist')
+assert.ok(transferWithoutMovements.issues.some(issue=>issue.includes('no matching source-stage inventory movement row')))
+assert.ok(transferWithoutMovements.issues.some(issue=>issue.includes('no matching destination-stage inventory movement row')))
 const rawToWip=module.reconcileStageInventoryMovements(stageTransferMovementRows,[
  {period:1,rawMaterials:60,workInProgress:40,finishedGoods:0},
 ],1,0.01,[rawToWipTransfer])
