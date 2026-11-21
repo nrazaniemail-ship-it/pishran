@@ -324,6 +324,8 @@ export default function AdvancedFinancePanel(props: Props) {
     if(!salesTaxLedgerActive)return null
     if(!baseProductOperatingSchedule?.valid)return {valid:false,issues:baseProductOperatingSchedule?.issues??['A valid product sales schedule is required for sales-tax posting.'],rows:[],totalOutputTax:0,totalRecoverableInputTax:0,totalSettlements:0,closingBalance:Number.NaN}
     const draft=props.salesTaxLedgerDraft
+    const separatelyEnteredVat=props.workingCapitalDrafts?.some(item=>/\bvat\b|sales\s*tax|مالیات\s*فروش|ارزش\s*افزوده/i.test(item.name))??false
+    if(separatelyEnteredVat)return {valid:false,issues:['Sales-tax payable / recoverable balances must not also be entered as working-capital components; they are posted from this ledger.'],rows:[],totalOutputTax:0,totalRecoverableInputTax:0,totalSettlements:0,closingBalance:Number.NaN}
     if(draft?.openingBalance==null)return {valid:false,issues:['An explicit opening sales-tax payable / recoverable balance is required.'],rows:[],totalOutputTax:0,totalRecoverableInputTax:0,totalSettlements:0,closingBalance:Number.NaN}
     const outputEntries:SalesTaxOutputEntry[]=baseProductOperatingSchedule.rows
       .filter(row=>row.salesTaxPercent>0)
