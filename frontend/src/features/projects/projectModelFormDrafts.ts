@@ -349,6 +349,35 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
   if(item.amount===null||!Number.isFinite(item.amount)||item.amount<0||!item.sourceReference.trim())errors.push('sales-tax-settlement-'+index+':amount-and-source-required')
  }
  if(salesTax.openingBalance!==null&&!Number.isFinite(salesTax.openingBalance))errors.push('sales-tax-opening-balance:invalid')
+ const valueAddedPeriods=value.economic?.valueAddedPeriods??[]
+ const valueAddedPeriodNumbers=new Set<number>()
+ for(const [index,row] of valueAddedPeriods.entries()){
+  if(!Number.isInteger(row.period)||row.period<1||valueAddedPeriodNumbers.has(row.period))errors.push('value-added-period-'+index+':invalid-or-duplicate-period')
+  valueAddedPeriodNumbers.add(row.period)
+  const periodValues=[row.otherIncome,row.subsidiesOnInput,row.subsidiesOnInvestment,row.repatriatedWages,row.repatriatedProfitDividends,row.repatriatedInterest,row.repatriatedOther,row.domesticWages,row.domesticDividendsAndInterest,row.skilledDomesticLabour,row.totalDomesticLabour,row.foreignExchangeOutflow]
+  if(periodValues.some(amount=>amount!==null&&(!Number.isFinite(amount)||amount<0)))errors.push('value-added-period-'+index+':invalid-period-amount')
+  if(hasEnteredValue(periodValues)&&(!row.sourceReference.trim()||!row.sourceVerified))errors.push('value-added-period-'+index+':verified-period-source-required')
+  const itemIds=new Set<string>()
+  for(const [itemIndex,item] of row.intermediateInputs.entries()){
+   const id=item.id.trim().toLocaleLowerCase()
+   if(!id||itemIds.has(id))errors.push('value-added-intermediate-'+index+'-'+itemIndex+':duplicate-or-missing-id')
+   itemIds.add(id)
+   if(!item.description.trim()||item.amount===null||!Number.isFinite(item.amount)||item.amount<0||!item.marketOrigin||
+    item.taxesDutiesIncludedPercent===null||!Number.isFinite(item.taxesDutiesIncludedPercent)||item.taxesDutiesIncludedPercent< -100||item.taxesDutiesIncludedPercent>100||
+    item.valueAddedIncludedPercentages.some(percent=>percent===null||!Number.isFinite(percent)||percent<0||percent>100)||
+    !item.sourceReference.trim()||!item.sourceVerified)errors.push('value-added-intermediate-'+index+'-'+itemIndex+':incomplete-or-unverified-input')
+  }
+  for(const [itemIndex,item] of row.investmentInputs.entries()){
+   const id=item.id.trim().toLocaleLowerCase()
+   if(!id||itemIds.has(id))errors.push('value-added-investment-'+index+'-'+itemIndex+':duplicate-or-missing-id')
+   itemIds.add(id)
+   const amountInvalid=item.amount===null||!Number.isFinite(item.amount)||(item.kind!=='inventory-increase'&&item.amount<0)
+   if(!item.description.trim()||amountInvalid||!item.marketOrigin||!item.kind||
+    item.taxesDutiesIncludedPercent===null||!Number.isFinite(item.taxesDutiesIncludedPercent)||item.taxesDutiesIncludedPercent< -100||item.taxesDutiesIncludedPercent>100||
+    item.valueAddedIncludedPercentages.some(percent=>percent===null||!Number.isFinite(percent)||percent<0||percent>100)||
+    !item.sourceReference.trim()||!item.sourceVerified)errors.push('value-added-investment-'+index+'-'+itemIndex+':incomplete-or-unverified-input')
+  }
+ }
  for(const [index,row] of value.tax.rates.entries())if(row.ratePercent!==null&&(!Number.isFinite(row.ratePercent)||row.ratePercent<0||row.ratePercent>100))errors.push('tax-rate-'+index+':invalid-tax-rate')
  if(value.tax.lossCarryForwardYears!==null&&(!Number.isInteger(value.tax.lossCarryForwardYears)||value.tax.lossCarryForwardYears<0))errors.push('invalid-loss-carry-forward-years')
  return errors
