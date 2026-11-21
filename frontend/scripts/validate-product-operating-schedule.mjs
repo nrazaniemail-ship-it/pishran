@@ -149,6 +149,27 @@ const excessiveTransfer=module.buildProductOperatingSchedule({
 },periods,1,'IRR')
 assert.equal(excessiveTransfer.valid,false,'transfer value cannot exceed source-period production cost')
 
+const openingStockTransferDraft={
+ ...controlledDraft,
+ sales:controlledDraft.sales.map((sale,index)=>({...sale,periods:sale.periods.map((row,periodIndex)=>
+  index===0&&periodIndex===1?{...row,salesQuantity:10,finishedGoodsClosingQuantity:10}:row
+ )})),
+ productionTransfers:[
+  ...controlledDraft.productionTransfers,
+  {id:'TR-2',period:2,sourceProductId:'P1',destinationProductId:'P2',
+   sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:5,
+   sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,
+   costAmount:(1150*20/110)/20*5},
+ ],
+}
+const openingStockTransfer=module.buildProductOperatingSchedule(openingStockTransferDraft,periods,1,'IRR')
+assert.equal(openingStockTransfer.valid,true,openingStockTransfer.issues.join('; '))
+assert.equal(openingStockTransfer.rows.find(row=>row.productId==='P1'&&row.period===2).closingInventoryQuantity,5,
+ 'a transfer funded by opening finished-goods stock must reduce the source closing quantity')
+assert.ok(Math.abs(openingStockTransfer.rows.find(row=>row.productId==='P2'&&row.period===2).productionCost-
+ (700+(1150*20/110)/20*5))<1e-8,
+ 'opening-stock transfer value must be reclassified into the destination CPP without creating group cost')
+
 console.log('Product-by-product production, weighted-average inventory, COGS and sales validation passed.')
 
 const flowProduct={
