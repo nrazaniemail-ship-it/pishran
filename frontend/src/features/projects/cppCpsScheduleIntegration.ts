@@ -90,22 +90,37 @@ export function bindCppCpsTraceLedgerToProductSchedule(
   }
   if (issues.length) return { valid: false, issues, schedule: null, incrementalCppByPeriod: [] }
 
-  const rows = schedule.rows.map(row => {
+  const closingByProduct = new Map<string, { quantity: number; value: number; period: number }>()
+  const rows: ProductOperatingPeriodRow[] = []
+  for (const row of schedule.rows) {
+    const previous = closingByProduct.get(row.productId)
+    if (previous && previous.period === row.period - 1 &&
+        Math.abs(previous.quantity - row.openingInventoryQuantity) > 0.000001) {
+      issues.push('Product ' + row.productId + ' opening quantity does not reconcile to prior-period closing stock.')
+      continue
+    }
+    const openingInventoryValue = previous && previous.period === row.period - 1
+      ? previous.value : row.openingInventoryValue
     const addedCpp = allocations.get(row.productId + ':' + row.period) ?? 0
     const productionCost = row.productionCost + addedCpp
     const unitProductionCost = row.productionQuantity > 0
       ? productionCost / row.productionQuantity
       : row.unitProductionCost
     const availableQuantity = row.openingInventoryQuantity + row.productionQuantity
-    const availableValue = row.openingInventoryValue + productionCost
+    const availableValue = openingInventoryValue + productionCost
     const weightedAverageUnitCost = availableQuantity > 0 ? availableValue / availableQuantity : 0
     const costOfSales = row.salesQuantity * weightedAverageUnitCost
     const closingInventoryValue = row.closingInventoryQuantity * weightedAverageUnitCost
-    return {
-      ...row, productionCost, unitProductionCost, weightedAverageUnitCost,
+    const revisedRow = {
+      ...row, openingInventoryValue, productionCost, unitProductionCost, weightedAverageUnitCost,
       costOfSales, closingInventoryValue, grossProfit: row.netSalesRevenue - costOfSales,
     }
-  })
+    rows.push(revisedRow)
+    closingByProduct.set(row.productId, {
+      quantity: row.closingInventoryQuantity, value: closingInventoryValue, period: row.period,
+    })
+  }
+  if (issues.length) return { valid: false, issues, schedule: null, incrementalCppByPeriod: [] }
   const periodCostOfSales = Array(periodCount).fill(0) as number[]
   let totalClosingInventoryValue = 0
   for (const row of rows) {
