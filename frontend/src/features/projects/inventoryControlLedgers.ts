@@ -159,6 +159,103 @@ export function reconcileCostCentreInventory(
  return {valid:!issues.length,issues,rows:issues.length?[]:rows}
 }
 
+export type StageInventoryMovementDraft={
+ period:number|null
+ inventoryStage:'raw-materials'|'work-in-progress'|'finished-goods'|null
+ productId:string
+ costCentreId:string
+ openingQuantity:number|null
+ openingValue:number|null
+ receiptsQuantity:number|null
+ receiptsValue:number|null
+ productionQuantity:number|null
+ productionValue:number|null
+ consumptionQuantity:number|null
+ consumptionValue:number|null
+ wasteQuantity:number|null
+ wasteValue:number|null
+ closingQuantity:number|null
+ closingValue:number|null
+ sourceReference:string
+ sourceVerified:boolean
+}
+export type StageInventoryReconciliationResult={
+ valid:boolean
+ issues:string[]
+ rows:{period:number;inventoryStage:'raw-materials'|'work-in-progress'|'finished-goods';ledgerClosingValue:number;engineClosingValue:number;variance:number;movementCount:number}[]
+}
+/**
+ * Cross-checks stage-specific cost-centre closing balances against the existing
+ * inventory values produced by the finance engine. It is a validation bridge,
+ * not a posting routine: values are never added to CPP/CPS or working capital.
+ */
+export function reconcileStageInventoryMovements(
+ movements:StageInventoryMovementDraft[],
+ expectedByPeriod:{period:number;rawMaterials:number;workInProgress:number;finishedGoods:number}[],
+ periodCount:number,
+ tolerance=0.01
+):StageInventoryReconciliationResult{
+ const issues:string[]=[]
+ const stages=['raw-materials','work-in-progress','finished-goods'] as const
+ if(!Number.isInteger(periodCount)||periodCount<1)issues.push('Stage inventory reconciliation requires a positive period count.')
+ if(!Number.isFinite(tolerance)||tolerance<0)issues.push('Stage inventory tolerance must be finite and non-negative.')
+ const expected=new Map<number,{rawMaterials:number;workInProgress:number;finishedGoods:number}>()
+ for(const row of expectedByPeriod){
+  if(!Number.isInteger(row.period)||row.period<1||row.period>periodCount||expected.has(row.period))
+   issues.push('Stage inventory engine values contain an invalid or duplicate period.')
+  if([row.rawMaterials,row.workInProgress,row.finishedGoods].some(value=>!finite(value)))
+   issues.push('Stage inventory engine values must be finite and non-negative.')
+  expected.set(row.period,{rawMaterials:row.rawMaterials,workInProgress:row.workInProgress,finishedGoods:row.finishedGoods})
+ }
+ const rows:StageInventoryReconciliationResult['rows']=[]
+ for(const stage of stages){
+  const stageRows=movements.filter(row=>row.inventoryStage===stage)
+  if(!stageRows.length)continue
+  const byPeriod=new Map<number,StageInventoryMovementDraft[]>()
+  for(const row of stageRows){
+   if(row.period===null||!Number.isInteger(row.period)||row.period<1||row.period>periodCount){
+    issues.push('Stage '+stage+' contains a movement with an invalid period.')
+    continue
+   }
+   if(!row.sourceReference.trim()||!row.sourceVerified)
+    issues.push('Stage '+stage+' period '+row.period+' requires a verified source reference.')
+   const current=byPeriod.get(row.period)??[]
+   current.push(row);byPeriod.set(row.period,current)
+  }
+  for(let period=1;period<=periodCount;period++){
+   const periodRows=byPeriod.get(period)??[]
+   if(!periodRows.length){
+    issues.push('Stage '+stage+' is missing cost-centre inventory rows for period '+period+'.')
+    continue
+   }
+   const mapped:CostCentreInventoryMovement[]=periodRows.map(row=>({
+    period:row.period as number,productId:row.productId,costCentreId:row.costCentreId,
+    openingQuantity:row.openingQuantity as number,openingValue:row.openingValue as number,
+    receiptsQuantity:row.receiptsQuantity as number,receiptsValue:row.receiptsValue as number,
+    productionQuantity:row.productionQuantity as number,productionValue:row.productionValue as number,
+    consumptionQuantity:row.consumptionQuantity as number,consumptionValue:row.consumptionValue as number,
+    wasteQuantity:row.wasteQuantity as number,wasteValue:row.wasteValue as number,
+    closingQuantity:row.closingQuantity as number,closingValue:row.closingValue as number,
+   }))
+   const centreCheck=reconcileCostCentreInventory(mapped,[],periodCount,tolerance)
+   issues.push(...centreCheck.issues.map(issue=>'Stage '+stage+': '+issue))
+   const ledgerClosingValue=periodRows.reduce((sum,row)=>sum+(row.closingValue??0),0)
+   const expectedRow=expected.get(period)
+   if(!expectedRow){
+    issues.push('Stage '+stage+' has no corresponding finance-engine inventory value for period '+period+'.')
+    continue
+   }
+   const field=stage==='raw-materials'?'rawMaterials':stage==='work-in-progress'?'workInProgress':'finishedGoods'
+   const engineClosingValue=expectedRow[field]
+   const variance=ledgerClosingValue-engineClosingValue
+   if(!near(ledgerClosingValue,engineClosingValue,tolerance/100))
+    issues.push('Stage '+stage+' closing inventory does not match finance engine in period '+period+'.')
+   rows.push({period,inventoryStage:stage,ledgerClosingValue,engineClosingValue,variance,movementCount:periodRows.length})
+  }
+ }
+ return {valid:issues.length===0,issues,rows:issues.length?[]:rows}
+}
+
 export function reconcileInventoryThreeWay(periods:InventoryReconciliationPeriod[],tolerance=0.01):InventoryReconciliationResult{
  const issues:string[]=[],seen=new Set<number>()
  if(!Number.isFinite(tolerance)||tolerance<0)issues.push('Inventory reconciliation tolerance must be a finite non-negative percentage.')
