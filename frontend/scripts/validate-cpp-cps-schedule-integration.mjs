@@ -177,6 +177,8 @@ const wizard = await readFile(new URL('../src/features/projects/FeasibilityWizar
 assert.ok(advancedPanel.includes('buildCppCpsTraceLedger(props.cppCpsTraceItems'))
 assert.ok(advancedPanel.includes('props.productFinancialDrafts?.costCentres??[]'))
 assert.ok(advancedPanel.includes('knownIncrementalByCostCentreAndCategory'))
+assert.ok(advancedPanel.includes('manualDriverName'))
+assert.ok(advancedPanel.includes('Driver and unit'))
 assert.ok(advancedPanel.includes('Complete total'))
 assert.ok(advancedPanel.includes('bindCppCpsTraceLedgerToProductSchedule'))
 assert.ok(advancedPanel.includes('bindFinishedGoodsInventoryToWorkingCapital'))
