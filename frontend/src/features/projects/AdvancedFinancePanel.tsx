@@ -380,9 +380,11 @@ export default function AdvancedFinancePanel(props: Props) {
           Math.abs((workInProgressInventoryByPeriod[index]??Number.NaN)-(productOperatingSchedule.periodWipInventoryValue[index]??Number.NaN))>0.01)
         if(mismatches)periodicWorkingCapitalByPeriod=Array(periods.length).fill(Number.NaN)
       }else{
-        periodicWorkingCapitalByPeriod=periodicWorkingCapitalByPeriod.map((balance,index)=>
-          balance+(productOperatingSchedule.periodRawMaterialInventoryValue[index]??0)+(productOperatingSchedule.periodWipInventoryValue[index]??0)-
-          (workingCapitalBreakdownByPeriod[index]?.rawMaterials??0)-(workingCapitalBreakdownByPeriod[index]?.workInProgress??0))
+        periodicWorkingCapitalByPeriod=periodicWorkingCapitalByPeriod.map((balance,index)=>{
+          const actualInventory=(productOperatingSchedule.periodRawMaterialInventoryValue[index]??0)+(productOperatingSchedule.periodWipInventoryValue[index]??0)
+          if(index===periods.length-1)return actualInventory
+          return balance+actualInventory-(workingCapitalBreakdownByPeriod[index]?.rawMaterials??0)-(workingCapitalBreakdownByPeriod[index]?.workInProgress??0)
+        })
       }
     }
     const periodicInput:PeriodicProjectFinanceInput={
