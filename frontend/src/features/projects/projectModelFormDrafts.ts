@@ -3,6 +3,8 @@
  * Every quantitative field is null until explicitly supplied by the analyst.
  */
 import type { CommonFinancialItemMetadata } from './projectModelSchema'
+import type { CppCpsTraceItem } from './cppCpsCostTraceability'
+import type { WasteLedgerEntry, ProductionTransferEntry, InventoryReferenceBenchmarkEntry } from './inventoryControlLedgers'
 import { HELP_FORM_SECTIONS, createBlankHelpDrivenProjectForms, validateHelpDrivenProjectForms, type HelpDrivenProjectForms } from './projectModelHelpForms'
 const createBlankCommonFinancialItemMetadata=():CommonFinancialItemMetadata=>({description:'',currencyCode:null,marketOrigin:null,escalationPercent:null,remarks:'',costCentreId:null})
 
@@ -31,13 +33,14 @@ export function createBlankProductionCostFormDraft(id=''):ProductionCostFormDraf
 
 export type SalesProductFormDraft={
  productId:string
+ unitOfMeasure?:string
  inventoryPolicy:'manual'|'comfar-days-coverage'|null
  finishedGoodsDaysCoverage:number|null
  productionStartPeriod:number|null
  productionEndPeriod:number|null
- periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;openingFinishedGoodsQuantity:number|null;openingFinishedGoodsValue:number|null;finishedGoodsClosingQuantity:number|null}[]
+ periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;openingFinishedGoodsQuantity:number|null;openingFinishedGoodsValue:number|null;finishedGoodsClosingQuantity:number|null;rawMaterialPurchasesQuantity:number|null;rawMaterialPurchasesValue:number|null;rawMaterialConsumptionQuantity:number|null;rawMaterialWasteQuantity:number|null;unitsStarted:number|null;unitsCompleted:number|null;closingWipQuantity:number|null;materialCompletionPercent:number|null;conversionCompletionPercent:number|null;conversionCost:number|null;openingRawMaterialQuantity:number|null;openingRawMaterialValue:number|null;openingWipQuantity:number|null;openingWipMaterialValue:number|null;openingWipConversionValue:number|null}[]
 }
-export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,inventoryPolicy:null,finishedGoodsDaysCoverage:null,productionStartPeriod:null,productionEndPeriod:null,periods:[]}}
+export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,unitOfMeasure:'',inventoryPolicy:null,finishedGoodsDaysCoverage:null,productionStartPeriod:null,productionEndPeriod:null,periods:[]}}
 
 export type WorkingCapitalComponentFormDraft={
  id:string; name:string; category:'inventory'|'work-in-progress'|'finished-goods'|'receivables'|'cash'|'payables'|'other-current-asset'|'other-current-liability'|null
@@ -141,7 +144,21 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
 
 
 export type EconomicAdjustmentFormDraft = { id:string; name:string; period:string; treatment:'benefit'|'cost'|null; effectType:'general'|'foreign-exchange'|'employment'|null; financialAmount:number|null; economicAmount:number|null }
+export function createBlankCppCpsTraceItem(id:string,periodCount:number):CppCpsTraceItem {
+ return {
+  id,label:'',category:'materials',basis:null,behaviour:null,fixedPercent:null,variablePercent:null,
+  productId:null,allocationMethod:'not-allocated',baseCostCoverage:'unverified',
+  periodAmounts:Array.from({length:periodCount},()=>null),
+  baseCoveredAmounts:Array.from({length:periodCount},()=>null),
+  source:{status:'unverified',reference:'',description:'',reliability:'unverified'}
+ }
+}
+
 export type ProjectModelFinancialFormDrafts = {
+ cppCpsTraceItems: CppCpsTraceItem[]
+ wasteLedgerEntries: WasteLedgerEntry[]
+ productionTransfers: ProductionTransferEntry[]
+ inventoryReferenceBenchmarks: InventoryReferenceBenchmarkEntry[]
  helpDriven: HelpDrivenProjectForms
  assets: FixedAssetFormDraft[]
  productionCosts: ProductionCostFormDraft[]
@@ -152,7 +169,7 @@ export type ProjectModelFinancialFormDrafts = {
  economic: { discountRatePercent:number|null; adjustments:EconomicAdjustmentFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
+ return {cppCpsTraceItems:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{

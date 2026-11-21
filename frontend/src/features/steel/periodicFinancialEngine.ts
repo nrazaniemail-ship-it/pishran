@@ -674,6 +674,10 @@ export type PeriodicProjectFinanceInput = {
   /** Shareholder funding for working capital; any amount above the period increase remains as cash funding buffer. */
   annualEquityWorkingCapitalContributions?: number[]
   workingCapitalByPeriod: number[]
+  /** Gross inventory sub-ledgers included within net working capital; disclosure only, never added twice. */
+  rawMaterialsInventoryByPeriod?: number[]
+  workInProgressInventoryByPeriod?: number[]
+  finishedGoodsInventoryByPeriod?: number[]
   cashInHandByPeriod?: number[]
   shortTermDepositsByPeriod?: number[]
   openingWorkingCapital?: number
@@ -755,6 +759,9 @@ export type PeriodicProjectFinanceRow = {
   preOperatingCost: number
   maintenanceCapex: number
   closingWorkingCapital: number
+  rawMaterialsInventory: number
+  workInProgressInventory: number
+  finishedGoodsInventory: number
   cashInHand: number
   shortTermDeposits: number
   changeInWorkingCapital: number
@@ -993,6 +1000,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       (input.annualShortTermDepositInterest?.some(value => value < 0) ?? false) ||
       !Array.isArray(input.workingCapitalByPeriod) || input.workingCapitalByPeriod.length !== periods.length ||
       input.workingCapitalByPeriod.some(value => !validFinite(value)) ||
+      (input.rawMaterialsInventoryByPeriod != null && (input.rawMaterialsInventoryByPeriod.length !== periods.length || input.rawMaterialsInventoryByPeriod.some(value => !validFinite(value) || value < 0))) ||
+      (input.workInProgressInventoryByPeriod != null && (input.workInProgressInventoryByPeriod.length !== periods.length || input.workInProgressInventoryByPeriod.some(value => !validFinite(value) || value < 0))) ||
+      (input.finishedGoodsInventoryByPeriod != null && (input.finishedGoodsInventoryByPeriod.length !== periods.length || input.finishedGoodsInventoryByPeriod.some(value => !validFinite(value) || value < 0))) ||
       (input.cashInHandByPeriod != null && (input.cashInHandByPeriod.length !== periods.length || input.cashInHandByPeriod.some(value => !validFinite(value) || value < 0))) ||
       (input.shortTermDepositsByPeriod != null && (input.shortTermDepositsByPeriod.length !== periods.length || input.shortTermDepositsByPeriod.some(value => !validFinite(value) || value < 0))) ||
       input.loans.some(loan => !loan.id || !loan.input) ||
@@ -1266,7 +1276,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       capitalizedInterest,capitalizedFinancingFees,foreignExchangeLoss,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],taxableDeduction,taxCredit,taxBeforeCredits:periodTaxWithExpiry.tax,
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
-      closingWorkingCapital,cashInHand:input.cashInHandByPeriod?.[index]??0,shortTermDeposits:input.shortTermDepositsByPeriod?.[index]??0,
+      closingWorkingCapital,rawMaterialsInventory:input.rawMaterialsInventoryByPeriod?.[index]??0,workInProgressInventory:input.workInProgressInventoryByPeriod?.[index]??0,finishedGoodsInventory:input.finishedGoodsInventoryByPeriod?.[index]??0,
+      cashInHand:input.cashInHandByPeriod?.[index]??0,shortTermDeposits:input.shortTermDepositsByPeriod?.[index]??0,
       changeInWorkingCapital,equityContribution:equityContribution[index],
       equityWorkingCapitalContribution:equityWorkingCapitalContributionAmount,
       salvageValue:terminalSalvage,salvageBookValueDisposed,salvageGainLoss,cfads,dscr,dscrCovenantStatus,projectFreeCashFlow,equityFreeCashFlow,
@@ -1618,6 +1629,9 @@ export type PeriodicStatementOpeningBalances = {
   debt?: number
   netFixedAssets?: number
   netWorkingCapital?: number
+  rawMaterialsInventory?: number
+  workInProgressInventory?: number
+  finishedGoodsInventory?: number
   deferredPreOperatingAssets?: number
   paidInCapital?: number
   retainedEarnings?: number
@@ -1640,7 +1654,7 @@ export type PeriodicFinancialStatement = {
     netChangeInCash: number; closingCash: number
   }
   balanceSheet: {
-    cash: number; cashInHand: number; shortTermDeposits: number; netWorkingCapital: number; netFixedAssets: number; deferredPreOperatingAssets: number
+    cash: number; cashInHand: number; shortTermDeposits: number; netWorkingCapital: number; rawMaterialsInventory: number; workInProgressInventory: number; finishedGoodsInventory: number; otherNetWorkingCapital: number; netFixedAssets: number; deferredPreOperatingAssets: number
     automaticOverdraft: number
     totalAssets: number; debt: number; totalLiabilities: number; paidInCapital: number
     retainedEarnings: number; grants: number; totalEquity: number; totalLiabilitiesAndEquity: number
@@ -1694,6 +1708,9 @@ function scalePeriodicOperatingInput(
     annualPreOperatingCost:input.annualPreOperatingCost.map(value=>value*capexFactor),
     annualMaintenanceCapex:input.annualMaintenanceCapex.map(value=>value*capexFactor),
     workingCapitalByPeriod:scale(input.workingCapitalByPeriod,volumeFactor)??[],
+    rawMaterialsInventoryByPeriod:scale(input.rawMaterialsInventoryByPeriod,volumeFactor),
+    workInProgressInventoryByPeriod:scale(input.workInProgressInventoryByPeriod,volumeFactor),
+    finishedGoodsInventoryByPeriod:scale(input.finishedGoodsInventoryByPeriod,volumeFactor),
     cashInHandByPeriod:scale(input.cashInHandByPeriod,volumeFactor),
     shortTermDepositsByPeriod:scale(input.shortTermDepositsByPeriod,volumeFactor),
     annualEquityWorkingCapitalContributions:scale(input.annualEquityWorkingCapitalContributions,volumeFactor),
@@ -1737,7 +1754,8 @@ export function buildPeriodicThreeFinancialStatements(
   if (!result.valid || !Number.isFinite(tolerance) || tolerance < 0) return []
   const balances: Required<PeriodicStatementOpeningBalances> = {
     cash: opening.cash ?? result.openingCash ?? 0, debt: opening.debt ?? 0, netFixedAssets: opening.netFixedAssets ?? 0,
-    netWorkingCapital: opening.netWorkingCapital ?? 0, deferredPreOperatingAssets: opening.deferredPreOperatingAssets ?? 0,
+    netWorkingCapital: opening.netWorkingCapital ?? 0, rawMaterialsInventory: opening.rawMaterialsInventory ?? 0,
+    workInProgressInventory: opening.workInProgressInventory ?? 0, finishedGoodsInventory: opening.finishedGoodsInventory ?? 0, deferredPreOperatingAssets: opening.deferredPreOperatingAssets ?? 0,
     paidInCapital: opening.paidInCapital ?? 0, retainedEarnings: opening.retainedEarnings ?? 0,
     grants: opening.grants ?? 0,
   }
@@ -1774,7 +1792,8 @@ export function buildPeriodicThreeFinancialStatements(
   // carried forward as an unmodelled legacy liability.
   const unmodelledOpeningDebt = balances.debt - scheduledOpeningDebt
   let cash = balances.cash, debt = balances.debt, netFixedAssets = balances.netFixedAssets
-  let netWorkingCapital = balances.netWorkingCapital, deferredPreOperatingAssets = balances.deferredPreOperatingAssets
+  let netWorkingCapital = balances.netWorkingCapital, rawMaterialsInventory = balances.rawMaterialsInventory,
+    workInProgressInventory = balances.workInProgressInventory, finishedGoodsInventory = balances.finishedGoodsInventory, deferredPreOperatingAssets = balances.deferredPreOperatingAssets
   let paidInCapital = balances.paidInCapital, retainedEarnings = balances.retainedEarnings, grants = balances.grants
   let automaticFundingCashBalance = 0
   let automaticOverdraftBalance = 0
@@ -1811,7 +1830,7 @@ export function buildPeriodicThreeFinancialStatements(
       row.principal + foreignExchangeLoss + automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
     if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance +
         automaticFunding.automaticOverdraftBalance)) > tolerance) return []
-    const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, deferredPreOperatingAssets, paidInCapital, retainedEarnings, grants }
+    const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, rawMaterialsInventory, workInProgressInventory, finishedGoodsInventory, deferredPreOperatingAssets, paidInCapital, retainedEarnings, grants }
     const cashOperatingCosts = row.variableCost + row.fixedCost
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
     const ebitda = row.revenue - cashOperatingCosts
@@ -1828,6 +1847,10 @@ export function buildPeriodicThreeFinancialStatements(
     const netChangeInCash = operatingCashFlow + investingCashFlow + financingCashFlow
     const closingCash = cash + netChangeInCash
     const closingWorkingCapital = row.closingWorkingCapital
+    const closingRawMaterialsInventory = row.rawMaterialsInventory
+    const closingWorkInProgressInventory = row.workInProgressInventory
+    const closingFinishedGoodsInventory = row.finishedGoodsInventory
+    const closingOtherNetWorkingCapital = closingWorkingCapital - closingRawMaterialsInventory - closingWorkInProgressInventory - closingFinishedGoodsInventory
     const closingNetFixedAssets = netFixedAssets + row.fixedInvestment + row.maintenanceCapex -
       row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed
     const closingPreOperatingAssets = deferredPreOperatingAssets + row.preOperatingCost + row.capitalizedInterest + row.capitalizedFinancingFees
@@ -1835,7 +1858,8 @@ export function buildPeriodicThreeFinancialStatements(
       row.equityWorkingCapitalContribution + automaticFunding.automaticEquity
     const closingRetainedEarnings = retainedEarnings + netIncome
     const closingGrants = grants
-    const totalAssets = closingCash + closingWorkingCapital + closingNetFixedAssets + closingPreOperatingAssets
+    // Gross inventory accounts are split out of net working capital; the residual keeps totals unchanged.
+    const totalAssets = closingCash + closingRawMaterialsInventory + closingWorkInProgressInventory + closingFinishedGoodsInventory + closingOtherNetWorkingCapital + closingNetFixedAssets + closingPreOperatingAssets
     const totalLiabilities = closingDebt
     const totalEquity = closingPaidInCapital + closingRetainedEarnings + closingGrants
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity
@@ -1868,7 +1892,8 @@ export function buildPeriodicThreeFinancialStatements(
         automaticOverdraftDrawdown: automaticFunding.automaticOverdraftDrawdown,
         automaticOverdraftRepayment: automaticFunding.automaticOverdraftRepayment,
         netChangeInCash, closingCash },
-      balanceSheet: { cash: closingCash, cashInHand: row.cashInHand, shortTermDeposits: row.shortTermDeposits, netWorkingCapital: closingWorkingCapital, netFixedAssets: closingNetFixedAssets,
+      balanceSheet: { cash: closingCash, cashInHand: row.cashInHand, shortTermDeposits: row.shortTermDeposits, netWorkingCapital: closingWorkingCapital,
+        rawMaterialsInventory: closingRawMaterialsInventory, workInProgressInventory: closingWorkInProgressInventory, finishedGoodsInventory: closingFinishedGoodsInventory, otherNetWorkingCapital: closingOtherNetWorkingCapital, netFixedAssets: closingNetFixedAssets,
         deferredPreOperatingAssets: closingPreOperatingAssets, automaticOverdraft: automaticFunding.automaticOverdraftBalance,
         totalAssets, debt: closingDebt, totalLiabilities,
         paidInCapital: closingPaidInCapital, retainedEarnings: closingRetainedEarnings, grants: closingGrants, totalEquity,
@@ -1877,7 +1902,8 @@ export function buildPeriodicThreeFinancialStatements(
       movementChecks,
     })
     cash = closingCash; debt = closingDebt; netFixedAssets = closingNetFixedAssets
-    netWorkingCapital = closingWorkingCapital; deferredPreOperatingAssets = closingPreOperatingAssets
+    netWorkingCapital = closingWorkingCapital; rawMaterialsInventory = closingRawMaterialsInventory;
+    workInProgressInventory = closingWorkInProgressInventory; finishedGoodsInventory = closingFinishedGoodsInventory; deferredPreOperatingAssets = closingPreOperatingAssets
     paidInCapital = closingPaidInCapital; retainedEarnings = closingRetainedEarnings
   }
   return statements
