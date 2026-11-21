@@ -2,12 +2,12 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 
-const source = await readFile(new URL('../src/features/projects/cppCpsCostTraceability.ts', import.meta.url), 'utf8')
-const output = ts.transpileModule(source, {
+const sourceText = await readFile(new URL('../src/features/projects/cppCpsCostTraceability.ts', import.meta.url), 'utf8')
+const output = ts.transpileModule(sourceText, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
 }).outputText
 const ledgerModule = await import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
-const source = (reference, reliability = 'primary-document') => ({
+const makeSource = (reference, reliability = 'primary-document') => ({
   status: 'verified', reference, description: 'Documented cost evidence', reliability,
 })
 const base = {
@@ -15,7 +15,7 @@ const base = {
   behaviour: 'mixed', fixedPercent: 20, variablePercent: 80,
   productId: null, allocationMethod: 'production-quantity',
   baseCostCoverage: 'excluded', periodAmounts: [100, 120],
-  baseCoveredAmounts: [0, 0], source: source('invoice-register-01'),
+  baseCoveredAmounts: [0, 0], source: makeSource('invoice-register-01'),
 }
 const items = [
   { ...base, id: 'materials', periodAmounts: [100, 120] },
