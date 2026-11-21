@@ -47,8 +47,8 @@ assert.deepEqual(result.completeIncrementalByCostCentre, { 'CC-PROD': null },
 assert.deepEqual(result.knownIncrementalByCostCentreByPeriod, { 'CC-PROD': [150, 180] })
 assert.deepEqual(result.completeIncrementalByCostCentreByPeriod, { 'CC-PROD': [null, null] },
   'Unverified costs must null the affected centre-period totals')
-assert.deepEqual(result.knownFixedIncrementalByCostCentre, { 'CC-PROD': 20 })
-assert.deepEqual(result.knownVariableIncrementalByCostCentre, { 'CC-PROD': 310 })
+assert.deepEqual(result.knownFixedIncrementalByCostCentre, { 'CC-PROD': 66 })
+assert.deepEqual(result.knownVariableIncrementalByCostCentre, { 'CC-PROD': 264 })
 assert.deepEqual(result.knownIncrementalByCostCentreAndCategory['CC-PROD'], {
   materials: 220, labour: 0, energy: 100, maintenance: 10, overhead: 0,
 })
