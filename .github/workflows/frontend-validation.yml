@@ -37,5 +37,9 @@ jobs:
         run: npm run test:foundation
       - name: TypeScript and production build
         run: npm run build
+      - name: Install Chromium for native IndexedDB browser test
+        run: npx playwright install --with-deps chromium
+      - name: Native browser IndexedDB regression test
+        run: npm run test:indexeddb:browser
       - name: Financial model regression tests
         run: npm run test:financial
