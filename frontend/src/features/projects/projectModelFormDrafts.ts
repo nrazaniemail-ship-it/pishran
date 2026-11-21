@@ -154,8 +154,26 @@ export function createBlankCppCpsTraceItem(id:string,periodCount:number):CppCpsT
  }
 }
 
+export type CostCentreFormDraft = {
+ id:string
+ name:string
+ type:'production'|'service'|'administration'|'sales'|'other'|null
+ description:string
+}
+export function createBlankCostCentreFormDraft(id=''):CostCentreFormDraft {
+ return {id,name:'',type:null,description:''}
+}
+export function validateCostCentreFormDraft(value:CostCentreFormDraft):string[] {
+ const errors:string[]=[]
+ if(!value.id.trim())errors.push('cost-centre-id-required')
+ if(!value.name.trim())errors.push('cost-centre-name-required')
+ if(!value.type)errors.push('cost-centre-type-required')
+ return errors
+}
+
 export type ProjectModelFinancialFormDrafts = {
  cppCpsTraceItems: CppCpsTraceItem[]
+ costCentres: CostCentreFormDraft[]
  wasteLedgerEntries: WasteLedgerEntry[]
  productionTransfers: ProductionTransferEntry[]
  inventoryReferenceBenchmarks: InventoryReferenceBenchmarkEntry[]
@@ -169,7 +187,7 @@ export type ProjectModelFinancialFormDrafts = {
  economic: { discountRatePercent:number|null; adjustments:EconomicAdjustmentFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {cppCpsTraceItems:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
+ return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{
@@ -240,6 +258,14 @@ export function describeUnintegratedFinancialDraftInput(path:string,language:'fa
 
 export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinancialFormDrafts):string[] {
  const errors:string[]=[]
+ const centres=value.costCentres??[]
+ const centreIds=new Set<string>()
+ centres.forEach((centre,index)=>{
+  validateCostCentreFormDraft(centre).forEach(error=>errors.push('cost-centre-'+index+':'+error))
+  if(centreIds.has(centre.id))errors.push('cost-centre-'+index+':duplicate-cost-centre-id')
+  centreIds.add(centre.id)
+ })
+ for(const item of value.cppCpsTraceItems??[])if(item.source.status==='verified'&&(!item.costCentreId||!centreIds.has(item.costCentreId)))errors.push('cpp-cps-item-'+item.id+':unknown-cost-centre')
  errors.push(...validateHelpDrivenProjectForms(value.helpDriven ?? createBlankHelpDrivenProjectForms()))
  value.assets.forEach((item,index)=>validateFixedAssetFormDraft(item).forEach(error=>errors.push('asset-'+index+':'+error)))
  value.productionCosts.forEach((item,index)=>validateProductionCostFormDraft(item).forEach(error=>errors.push('production-cost-'+index+':'+error)))
