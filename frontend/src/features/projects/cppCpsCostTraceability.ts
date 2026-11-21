@@ -59,8 +59,6 @@ export type CppCpsTraceLedger = {
   knownIncrementalByCostCentreAndPeriod: Record<string, number[]>
   completeIncrementalByCostCentreAndPeriod: Record<string, (number | null)[]>
   knownIncrementalByCostCentreAndCategory: Record<string, Record<TraceCostCategory, number>>
-  knownIncrementalByCostCentreByPeriod: Record<string, number[]>
-  completeIncrementalByCostCentreByPeriod: Record<string, (number | null)[]>
   knownFixedIncrementalByCostCentre: Record<string, number>
   knownVariableIncrementalByCostCentre: Record<string, number>
   unverifiedCostCentreIds: string[]
@@ -90,9 +88,9 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
   const knownIncrementalByCategory = emptyCategoryTotals()
   const knownIncrementalByCostCentre: Record<string, number> = {}
   const knownIncrementalByCostCentreAndCategory: Record<string, Record<TraceCostCategory, number>> = {}
-  const knownIncrementalByCostCentreByPeriod: Record<string, number[]> = {}
   const knownFixedIncrementalByCostCentre: Record<string, number> = {}
   const knownVariableIncrementalByCostCentre: Record<string, number> = {}
+  const hasUnverifiedByCostCentrePeriod: Record<string, boolean[]> = {}
   const unverifiedCostCentreIds: string[] = []
   const unallocatedUnverifiedItemIds: string[] = []
   const unverifiedItemIds: string[] = []
@@ -207,8 +205,6 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
       knownIncrementalByCostCentreAndCategory[centre][item.category] += incremental
       knownIncrementalByCostCentreAndPeriod[centre] ??= Array(Math.max(0, periodCount)).fill(0)
       knownIncrementalByCostCentreAndPeriod[centre][period] += incremental
-      knownIncrementalByCostCentreByPeriod[centre] ??= Array(periodCount).fill(0) as number[]
-      knownIncrementalByCostCentreByPeriod[centre][period] += incremental
       knownFixedIncrementalByCostCentre[centre] = (knownFixedIncrementalByCostCentre[centre] ?? 0) + incremental * (item.fixedPercent ?? 0) / 100
       knownVariableIncrementalByCostCentre[centre] = (knownVariableIncrementalByCostCentre[centre] ?? 0) + incremental * (item.variablePercent ?? 0) / 100
       rows.push({
@@ -225,16 +221,18 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
 
   const complete = unverifiedItemIds.length === 0
   const completeIncrementalByCostCentre: Record<string, number | null> = { ...knownIncrementalByCostCentre }
-  const completeIncrementalByCostCentreByPeriod: Record<string, (number | null)[]> = Object.fromEntries(
-    Object.entries(knownIncrementalByCostCentreByPeriod).map(([centre, values]) => [centre, values.map(value => value)]),
+  const completeIncrementalByCostCentreAndPeriod: Record<string, (number | null)[]> = Object.fromEntries(
+    Object.entries(knownIncrementalByCostCentreAndPeriod).map(([centre, values]) => [
+      centre, values.map((value, period) => hasUnverifiedByCostCentrePeriod[centre]?.[period] ? null : value),
+    ]),
   )
   for (const centre of unverifiedCostCentreIds) {
     completeIncrementalByCostCentre[centre] = null
-    completeIncrementalByCostCentreByPeriod[centre] = Array(periodCount).fill(null)
+    completeIncrementalByCostCentreAndPeriod[centre] = Array(periodCount).fill(null)
   }
   if (unallocatedUnverifiedItemIds.length) {
     for (const centre of Object.keys(completeIncrementalByCostCentre)) completeIncrementalByCostCentre[centre] = null
-    for (const centre of Object.keys(completeIncrementalByCostCentreByPeriod)) completeIncrementalByCostCentreByPeriod[centre] = Array(periodCount).fill(null)
+    for (const centre of Object.keys(completeIncrementalByCostCentreAndPeriod)) completeIncrementalByCostCentreAndPeriod[centre] = Array(periodCount).fill(null)
   }
   const valid = issues.length === 0
   return {
@@ -245,7 +243,7 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
       : [],
     knownIncrementalByCategory, knownIncrementalByCostCentre,
     completeIncrementalByCostCentre, knownIncrementalByCostCentreAndCategory,
-    knownIncrementalByCostCentreByPeriod, completeIncrementalByCostCentreByPeriod,
+    completeIncrementalByCostCentreAndPeriod,
     knownFixedIncrementalByCostCentre, knownVariableIncrementalByCostCentre,
     unverifiedCostCentreIds, unallocatedUnverifiedItemIds, unverifiedItemIds,
     readyForCppPosting: valid && complete,
