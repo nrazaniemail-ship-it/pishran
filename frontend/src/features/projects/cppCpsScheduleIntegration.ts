@@ -139,3 +139,46 @@ export function bindCppCpsTraceLedgerToProductSchedule(
     incrementalCppByPeriod: [...incrementalCppByPeriod],
   }
 }
+
+export type FinishedGoodsWorkingCapitalBinding = {
+  valid: boolean
+  issues: string[]
+  closingWorkingCapitalByPeriod: number[]
+  inventoryAddedByPeriod: number[]
+}
+
+/**
+ * Add finished-goods closing values to net working capital only when the user
+ * has not already entered a dedicated finished-goods component. This avoids
+ * double counting and deliberately retains terminal stock as an asset.
+ */
+export function bindFinishedGoodsInventoryToWorkingCapital(
+  closingWorkingCapitalByPeriod: number[],
+  schedule: ProductOperatingSchedule | null,
+  hasExplicitFinishedGoodsComponent: boolean,
+): FinishedGoodsWorkingCapitalBinding {
+  const issues: string[] = []
+  if (!Array.isArray(closingWorkingCapitalByPeriod) ||
+      closingWorkingCapitalByPeriod.some(value => !Number.isFinite(value)))
+    issues.push('A finite working-capital closing balance is required for every project period.')
+  if (schedule && (!schedule.valid || schedule.periodRevenue.length !== closingWorkingCapitalByPeriod.length))
+    issues.push('A valid product operating schedule matching the working-capital period count is required.')
+  if (issues.length) return { valid: false, issues, closingWorkingCapitalByPeriod: [], inventoryAddedByPeriod: [] }
+
+  const result = [...closingWorkingCapitalByPeriod]
+  const inventoryAddedByPeriod = Array(result.length).fill(0) as number[]
+  if (schedule && !hasExplicitFinishedGoodsComponent) {
+    for (const row of schedule.rows) {
+      const index = row.period - 1
+      if (!Number.isInteger(row.period) || index < 0 || index >= result.length ||
+          !Number.isFinite(row.closingInventoryValue) || row.closingInventoryValue < 0) {
+        issues.push('Invalid finished-goods closing value or period in product ' + row.productId + '.')
+        continue
+      }
+      result[index] += row.closingInventoryValue
+      inventoryAddedByPeriod[index] += row.closingInventoryValue
+    }
+  }
+  if (issues.length) return { valid: false, issues, closingWorkingCapitalByPeriod: [], inventoryAddedByPeriod: [] }
+  return { valid: true, issues: [], closingWorkingCapitalByPeriod: result, inventoryAddedByPeriod }
+}
