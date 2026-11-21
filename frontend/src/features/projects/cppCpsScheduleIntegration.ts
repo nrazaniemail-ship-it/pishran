@@ -1,5 +1,6 @@
 import type { ProductOperatingSchedule, ProductOperatingPeriodRow } from './productOperatingSchedule'
 import type { CppCpsTraceLedger, CppCpsTracePeriodRow } from './cppCpsCostTraceability'
+import type { CostCentreFormDraft } from './projectModelFormDrafts'
 
 export type CppCpsProductScheduleBinding = {
   valid: boolean
@@ -18,6 +19,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
   schedule: ProductOperatingSchedule,
   ledger: CppCpsTraceLedger,
   periodFiscalYearIndexes: number[],
+  costCentres: CostCentreFormDraft[] = [],
 ): CppCpsProductScheduleBinding {
   const issues: string[] = []
   const periodCount = schedule.periodRevenue.length
@@ -69,6 +71,33 @@ export function bindCppCpsTraceLedgerToProductSchedule(
       weights = periodRows.map(row => ({ row, weight: row.productionQuantity }))
     } else if (trace.allocationMethod === 'revenue') {
       weights = periodRows.map(row => ({ row, weight: row.netSalesRevenue }))
+    } else if (trace.allocationMethod === 'cost-centre-driver') {
+      const centre = costCentres.find(item => item.id === trace.costCentreId)
+      if (!centre?.allocationBasis) {
+        issues.push('Cost item ' + key + ' requires a defined cost-centre allocation basis.')
+        continue
+      }
+      if (centre.allocationBasis === 'production-quantity') {
+        weights = periodRows.map(row => ({ row, weight: row.productionQuantity }))
+      } else if (centre.allocationBasis === 'sales-revenue') {
+        weights = periodRows.map(row => ({ row, weight: row.netSalesRevenue }))
+      } else {
+        const driverRows = centre.driverRows.filter(driver => driver.period === trace.period)
+        const unexpected = driverRows.filter(driver => !periodRows.some(row => row.productId === driver.productId))
+        if (unexpected.length) {
+          issues.push('Cost centre ' + centre.id + ' has manual driver rows for products outside period ' + trace.period + '.')
+          continue
+        }
+        const missing = periodRows.filter(row => !driverRows.some(driver => driver.productId === row.productId))
+        if (missing.length || driverRows.some(driver => driver.amount === null || !Number.isFinite(driver.amount) || driver.amount < 0)) {
+          issues.push('Cost centre ' + centre.id + ' requires a valid manual driver amount for every product in period ' + trace.period + '.')
+          continue
+        }
+        weights = periodRows.map(row => ({
+          row,
+          weight: driverRows.find(driver => driver.productId === row.productId)!.amount as number,
+        }))
+      }
     } else {
       issues.push('Cost item ' + key + ' has a positive uncovered amount but no allocation method.')
       continue
