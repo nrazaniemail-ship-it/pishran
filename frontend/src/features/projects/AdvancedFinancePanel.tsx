@@ -8,7 +8,7 @@ import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem } from './cppCpsCostTraceability'
-import { bindCppCpsTraceLedgerToProductSchedule } from './cppCpsScheduleIntegration'
+import { bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
 import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft } from './projectModelFormDrafts'
 import { buildProjectTaxDraftSchedule } from './projectTaxDraftIntegration'
 import { buildProjectLoanDraftIntegration } from './projectLoanDraftIntegration'
@@ -354,10 +354,6 @@ export default function AdvancedFinancePanel(props: Props) {
     const shortTermDepositsByPeriod=workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:row.shortTermDeposits??0)
     const periodicWorkingCapitalByPeriod=workingCapitalDraftSchedule?.valid?[...workingCapitalDraftSchedule.closingWorkingCapital]:[...estimatedWorkingCapitalByPeriod]
     if(periodicWorkingCapitalByPeriod.length) periodicWorkingCapitalByPeriod[periodicWorkingCapitalByPeriod.length-1]=0
-    const explicitFinishedGoodsWorkingCapital=props.workingCapitalDrafts?.some(item=>item.category==='finished-goods')??false
-    if(productOperatingSchedule?.valid&&!explicitFinishedGoodsWorkingCapital){
-      for(const row of productOperatingSchedule.rows)periodicWorkingCapitalByPeriod[row.period-1]+=(row.closingInventoryValue??0)
-    }
     const periodicInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,constructionPeriodCount:periods.filter(period=>fiscalYearIndexForPeriod(period,periods,fiscalMonth)<construction).length,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
@@ -384,6 +380,12 @@ export default function AdvancedFinancePanel(props: Props) {
       const invalidInput={...periodicInput,annualTaxRates:Array(years).fill(Number.NaN)}
       return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
     }
+    const bindFinishedGoods=(financeInput:PeriodicProjectFinanceInput):PeriodicProjectFinanceInput|null=>{
+      if(!productOperatingSchedule?.valid)return financeInput
+      const hasExplicitFinishedGoods=props.workingCapitalDrafts?.some(item=>item.category==='finished-goods')??false
+      const binding=bindFinishedGoodsInventoryToWorkingCapital(financeInput.workingCapitalByPeriod??[],productOperatingSchedule,hasExplicitFinishedGoods)
+      return binding.valid?{...financeInput,workingCapitalByPeriod:binding.closingWorkingCapitalByPeriod}:null
+    }
     if(props.workingCapitalDrafts?.length){
       const binding=bindWorkingCapitalDraftsToPeriodicFinance(
         periodicInput,{workingCapital:props.workingCapitalDrafts??[]},props.openingWorkingCapitalBalance??0
@@ -392,9 +394,19 @@ export default function AdvancedFinancePanel(props: Props) {
         const invalidInput={...periodicInput,workingCapitalByPeriod:Array(periods.length).fill(Number.NaN)}
         return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
       }
-      return {result:calculateIntegratedPeriodicFinance(binding.financeInput),input:binding.financeInput}
+      const withFinishedGoods=bindFinishedGoods(binding.financeInput)
+      if(!withFinishedGoods){
+        const invalidInput={...binding.financeInput,workingCapitalByPeriod:Array(periods.length).fill(Number.NaN)}
+        return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
+      }
+      return {result:calculateIntegratedPeriodicFinance(withFinishedGoods),input:withFinishedGoods}
     }
-    return {result:calculateIntegratedPeriodicFinance(periodicInput),input:periodicInput}
+    const withFinishedGoods=bindFinishedGoods(periodicInput)
+    if(!withFinishedGoods){
+      const invalidInput={...periodicInput,workingCapitalByPeriod:Array(periods.length).fill(Number.NaN)}
+      return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
+    }
+    return {result:calculateIntegratedPeriodicFinance(withFinishedGoods),input:withFinishedGoods}
   },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),JSON.stringify(props.cppCpsTraceItems??[]),productOperatingSchedule,projectTaxSchedule,loanDraftIntegration,props.openingWorkingCapitalBalance,props.openingCashBalance])
   const periodicFinanceResult=periodicFinanceBundle?.result??null
   const periodicFinanceInput=periodicFinanceBundle?.input??null
