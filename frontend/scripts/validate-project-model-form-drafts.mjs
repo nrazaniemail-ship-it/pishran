@@ -55,6 +55,22 @@ try {
  const complete=forms.createBlankProjectModelFinancialFormDrafts()
  assert.deepEqual(complete.costCentres,[])
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts(complete),[])
+ const blankMovement=forms.createBlankCostCentreInventoryMovementFormDraft('movement-1')
+ assert.equal(blankMovement.openingQuantity,null,'new inventory rows must keep unknown quantities blank')
+ assert.equal(blankMovement.closingValue,null,'new inventory rows must keep unknown values blank')
+ assert.equal(blankMovement.sourceVerified,false)
+ assert.deepEqual(complete.costCentreInventoryMovements,[])
+ assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[blankMovement]}),[])
+ const partialMovement={...blankMovement,period:1,inventoryStage:'raw-materials',productId:'RM-1',costCentreId:'STORE-A',openingQuantity:0}
+ const partialMovementDraft={...complete,costCentreInventoryMovements:[partialMovement]}
+ assert.ok(forms.validateProjectModelFinancialFormDrafts(partialMovementDraft).includes('cost-centre-inventory-0:all-quantities-and-values-required'))
+ assert.ok(forms.listUnintegratedFinancialDraftInputs(partialMovementDraft).includes('financialForms.costCentreInventoryMovements.0'),
+  'entered inventory rows must remain report blockers until posted into the financial engine')
+ const verifiedMovement={...partialMovement,openingValue:0,receiptsQuantity:10,receiptsValue:100,productionQuantity:0,productionValue:0,consumptionQuantity:4,consumptionValue:40,wasteQuantity:0,wasteValue:0,closingQuantity:6,closingValue:60,sourceReference:'inventory card / page 2',sourceVerified:true}
+ assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[verifiedMovement]}),[])
+ const duplicateMovement={...verifiedMovement,id:'movement-2'}
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[verifiedMovement,duplicateMovement]}).includes('cost-centre-inventory-1:duplicate-movement-key'))
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[{...verifiedMovement,sourceVerified:false}]}).includes('cost-centre-inventory-0:verified-source-required'))
  const blankCentre=forms.createBlankCostCentreFormDraft('CC-1')
  assert.ok(forms.validateCostCentreFormDraft(blankCentre).includes('cost-centre-name-required'))
  const validCentre={...blankCentre,name:'Rolling mill',type:'production'}
