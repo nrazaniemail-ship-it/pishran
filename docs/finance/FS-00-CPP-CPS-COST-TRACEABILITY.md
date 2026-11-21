@@ -109,7 +109,7 @@ The saved cost-centre movement rows are now passed into the financial panel. Whe
 
 A stage with no subledger rows is accepted only when the finance engine reports zero closing inventory for that stage in every period. A non-zero engine balance with no stage/cost-centre movement rows is a visible reconciliation failure; it is never silently omitted.
 
-This is a **cross-check only**. It does not add the ledger closing value to inventory, CPP/CPS, or working capital a second time. The entered rows remain unintegrated report blockers until stage-specific receipts, issues, WIP conversion, finished-goods completion and inter-stage transfer posting are connected to the underlying accounting schedules. In particular, production quantity/value is not treated as a raw-material receipt without an explicit stage transition record.
+Inter-stage transfer drafts are now also sent through the reconciliation gate even when no cost-centre movement rows have yet been entered. A completely untouched blank transfer row is ignored, but any partially or fully entered transfer must resolve to both a source-stage and destination-stage movement row; otherwise the reconciliation fails visibly. This is a **cross-check only**. It does not add the ledger closing value to inventory, CPP/CPS, or working capital a second time. The entered rows remain unintegrated report blockers until stage-specific receipts, issues, WIP conversion, finished-goods completion and inter-stage transfer posting are connected to the underlying accounting schedules. In particular, production quantity/value is not treated as a raw-material receipt without an explicit stage transition record.
 
 ## Inter-stage inventory transfers
 
