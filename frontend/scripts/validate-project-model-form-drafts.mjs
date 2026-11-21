@@ -59,7 +59,8 @@ try {
  assert.ok(forms.validateCostCentreFormDraft(blankCentre).includes('cost-centre-name-required'))
  const validCentre={...blankCentre,name:'Rolling mill',type:'production'}
  assert.deepEqual(forms.validateCostCentreFormDraft(validCentre),[])
- const manualCentre={...validCentre,allocationBasis:'manual',driverRows:[{period:1,productId:'P1',amount:1}]}
+ const manualCentre={...validCentre,allocationBasis:'manual',manualDriverName:'Machine hours',manualDriverUnit:'h',driverRows:[{period:1,productId:'P1',amount:1}]}
+ assert.ok(forms.validateCostCentreFormDraft({...manualCentre,manualDriverName:''}).includes('manual-cost-centre-driver-name-required'))
  assert.deepEqual(forms.validateCostCentreFormDraft(manualCentre),[])
  assert.ok(forms.validateCostCentreFormDraft({...manualCentre,driverRows:[{period:1,productId:'',amount:null}]}).includes('invalid-manual-cost-centre-driver'))
  const trace=forms.createBlankCppCpsTraceItem('trace-1',1)
