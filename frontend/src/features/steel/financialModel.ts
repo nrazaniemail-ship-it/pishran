@@ -1584,6 +1584,10 @@ export function calculateSensitivityMatrix(input: IntegratedFinanceInput, priceC
       fullCapacityRevenue: input.fullCapacityRevenue * (1 + priceChangePercent / 100) * (1 + volumeChangePercent / 100),
       capacity: input.capacity * (1 + volumeChangePercent / 100),
       fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * (1 + volumeChangePercent / 100),
+      costOfProductsSoldByYear: input.costOfProductsSoldByYear?.map(value => value * (1 + volumeChangePercent / 100)),
+      otherVariableCashCostByYear: input.otherVariableCashCostByYear?.map(value => value * (1 + volumeChangePercent / 100)),
+      otherFixedCashCostByYear: input.otherFixedCashCostByYear,
+      finishedGoodsInventoryValueByYear: input.finishedGoodsInventoryValueByYear?.map(value => value * (1 + volumeChangePercent / 100)),
       workingCapitalPolicy: input.workingCapitalPolicy ? {
         ...input.workingCapitalPolicy,
         annualRawMaterialCost: input.workingCapitalPolicy.annualRawMaterialCost * (1 + volumeChangePercent / 100),
@@ -1609,6 +1613,10 @@ export function calculateFinancialScenarios(input: IntegratedFinanceInput) {
       capacity: input.capacity * volume,
       fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * variableCost * volume,
       fullCapacityFixedCashCost: input.fullCapacityFixedCashCost * fixedCost,
+      costOfProductsSoldByYear: input.costOfProductsSoldByYear?.map(value => value * variableCost * volume),
+      otherVariableCashCostByYear: input.otherVariableCashCostByYear?.map(value => value * variableCost * volume),
+      otherFixedCashCostByYear: input.otherFixedCashCostByYear?.map(value => value * fixedCost),
+      finishedGoodsInventoryValueByYear: input.finishedGoodsInventoryValueByYear?.map(value => value * volume),
       fixedInvestment: input.fixedInvestment * capex,
       fixedInvestmentSchedule: input.fixedInvestmentSchedule.map(value => value * capex),
       depreciationSchedule: input.depreciationSchedule?.map(value => value * capex),
@@ -1973,13 +1981,19 @@ export function calculateOneWaySensitivity(
     } else if (id === 'operating-cost') {
       scenario.fullCapacityVariableCashCost = input.fullCapacityVariableCashCost * factor
       scenario.fullCapacityFixedCashCost = input.fullCapacityFixedCashCost * factor
+      scenario.costOfProductsSoldByYear = input.costOfProductsSoldByYear?.map(value => value * factor)
+      scenario.otherVariableCashCostByYear = input.otherVariableCashCostByYear?.map(value => value * factor)
+      scenario.otherFixedCashCostByYear = input.otherFixedCashCostByYear?.map(value => value * factor)
       scenario.maintenanceCapexSchedule = input.maintenanceCapexSchedule?.map(value => value * factor)
       scenario.workingCapitalPolicy = scalePolicy(factor)
     } else {
       const energyCost = input.workingCapitalPolicy?.annualEnergyCost ?? 0
       const variableBase = input.fullCapacityVariableCashCost
       const energyShare = variableBase > 0 ? Math.max(0, Math.min(1, energyCost / variableBase)) : 0
-      scenario.fullCapacityVariableCashCost = variableBase * (1 + (factor - 1) * energyShare)
+      const energyFactor = 1 + (factor - 1) * energyShare
+      scenario.fullCapacityVariableCashCost = variableBase * energyFactor
+      scenario.costOfProductsSoldByYear = input.costOfProductsSoldByYear?.map(value => value * energyFactor)
+      scenario.otherVariableCashCostByYear = input.otherVariableCashCostByYear?.map(value => value * energyFactor)
       scenario.workingCapitalPolicy = scalePolicy(factor, true)
     }
     return calculateIntegratedFinance(scenario)
