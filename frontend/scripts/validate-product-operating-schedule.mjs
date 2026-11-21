@@ -103,7 +103,7 @@ assert.ok(noLiquidation.issues.some(issue=>issue.includes('unsold finished goods
 
 const controlledDraft={
  ...base,
- sales:[{...base.sales[0],periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsValue:1150*30/110}:row)},{...base.sales[0],productId:'P2',periods:base.sales[0].periods.map(row=>({...row}))}],
+ sales:[{...base.sales[0],unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsValue:1150*30/110}:row)},{...base.sales[0],productId:'P2',unitOfMeasure:'kg',periods:base.sales[0].periods.map(row=>({...row}))}],
  productionCosts:[...base.productionCosts,{...base.productionCosts[0],id:'cost-p2',productId:'P2'}],
  wasteLedgerEntries:[
   {id:'WN-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:5,unitCost:10,amount:50},
@@ -124,6 +124,12 @@ assert.equal(controlled.periodNormalWasteAbsorbed[0],50,'normal waste is disclos
 assert.equal(p1.productionCost+p2.productionCost,2050,'inter-product transfer must preserve total CPP')
 assert.equal(p1.closingInventoryQuantity,20,'source finished-goods quantity is reduced by transferred source units')
 assert.equal(p2.closingInventoryQuantity,40,'destination finished-goods quantity receives converted transfer units')
+const convertedDraft={...controlledDraft,sales:controlledDraft.sales.map((sale,index)=>({...sale,unitOfMeasure:index===0?'kg':'tonne'})),productionTransfers:[{...controlledDraft.productionTransfers[0],quantity:10,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0.001,costAmount:100}]}
+const convertedSchedule=module.buildProductOperatingSchedule(convertedDraft,periods,1,'IRR')
+assert.equal(convertedSchedule.valid,true,convertedSchedule.issues.join('; '))
+assert.equal(convertedSchedule.rows.find(row=>row.productId==='P1'&&row.period===1).closingInventoryQuantity,20)
+assert.ok(Math.abs(convertedSchedule.rows.find(row=>row.productId==='P2'&&row.period===1).closingInventoryQuantity-30.01)<1e-8)
+
 const duplicateWaste=module.buildProductOperatingSchedule({
  ...controlledDraft,
  sales:[{...controlledDraft.sales[0],periods:controlledDraft.sales[0].periods.map((row,index)=>index===0?{...row,rawMaterialWasteQuantity:2}:row)},controlledDraft.sales[1]]
