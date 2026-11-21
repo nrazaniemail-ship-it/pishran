@@ -7,7 +7,7 @@ import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConv
 import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
-import { reconcileInventoryThreeWay } from './inventoryControlLedgers'
+import { reconcileInventoryThreeWay, reconcileInventoryReference } from './inventoryControlLedgers'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem } from './cppCpsCostTraceability'
 import { bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
 import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft } from './projectModelFormDrafts'
@@ -70,7 +70,7 @@ type Props = {
   openingGrants?: number
   openingCurrentAccounts?: OpeningCurrentAccounts
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
-  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers'>>
+  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers' | 'inventoryReferenceBenchmarks'>>
   cppCpsTraceItems?: CppCpsTraceItem[]
   onEditFinancialForms?: () => void
   taxDraft?: ProjectTaxFormDraft
@@ -497,6 +497,16 @@ export default function AdvancedFinancePanel(props: Props) {
       }
     }))
   },[periodicFinanceResult,productOperatingSchedule,periodicStatements])
+  const inventoryReferenceReconciliation=useMemo(()=>{
+    const benchmarks=props.productFinancialDrafts?.inventoryReferenceBenchmarks??[]
+    if(!benchmarks.length||!periodicFinanceResult?.valid||!productOperatingSchedule?.valid)return null
+    return reconcileInventoryReference(benchmarks,periodicFinanceResult.rows.map(row=>{
+      const productRows=productOperatingSchedule.rows.filter(item=>item.period===row.period)
+      const raw=row.rawMaterialsInventory,wip=row.workInProgressInventory,finished=row.finishedGoodsInventory
+      return {period:row.period,rawMaterials:raw,workInProgress:wip,finishedGoods:finished,totalInventory:raw+wip+finished,
+        cpp:productRows.reduce((sum,item)=>sum+item.productionCost,0),cps:productOperatingSchedule.periodCostOfSales[row.period-1]??0}
+    }),0.01,props.currency)
+  },[props.productFinancialDrafts?.inventoryReferenceBenchmarks,props.currency,periodicFinanceResult,productOperatingSchedule])
   const scheduledOpeningDebt=useMemo(()=>periodicFinanceResult?.valid
     ?Object.values(periodicFinanceResult.loanSchedules??{}).reduce((sum,schedule)=>sum+(schedule[0]?.openingBalance??0),0)
     :0,[periodicFinanceResult])
@@ -820,6 +830,12 @@ export default function AdvancedFinancePanel(props: Props) {
         <p>{t('دوره‌های منطبق: ','Reconciled periods: ')}{inventoryThreeWayReconciliation.rows.filter(row=>Math.abs(row.inventoryVariance)<=0.01&&Math.abs(row.cppCpsVariance)<=0.01&&Math.abs(row.workingCapitalVariance)<=0.01).length} / {inventoryThreeWayReconciliation.rows.length}</p>
         {!inventoryThreeWayReconciliation.valid&&inventoryThreeWayReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
         <p>{t('این کنترل، تطبیق داخلی داده‌های ثبت‌شده را نشان می‌دهد؛ تا زمان ورود ارقام تفکیکی مستقل از گزارش مرجع، تطبیق تاریخی با COMFAR تأییدشده محسوب نمی‌شود.','This checks internal model consistency. Historical COMFAR reconciliation remains unverified until independent detailed reference figures are entered.')}</p>
+      </div>}
+      {inventoryReferenceReconciliation&&<div className={inventoryReferenceReconciliation.valid?'fw-result':'fw-validation'} role={inventoryReferenceReconciliation.valid?'status':'alert'}>
+        <b>{t('تطبیق تاریخی با خروجی مرجع','Historical reconciliation against reference output')}</b>
+        <p>{t('دوره‌های کاملاً منطبق: ','Fully matched periods: ')}{inventoryReferenceReconciliation.rows.filter(row=>row.status==='matched').length} / {inventoryReferenceReconciliation.rows.length}</p>
+        {inventoryReferenceReconciliation.rows.map(row=><p key={row.period}>{t('دوره ','Period ')}{row.period}: {row.status==='matched'?t('منطبق','Matched'):row.status==='mismatch'?t('دارای اختلاف','Mismatch'):t('ناقص؛ داده مرجع کافی نیست','Incomplete; insufficient reference evidence')} · {t('اقلام فاقد شاهد: ','Missing evidence: ')}{row.missingFields.join(', ')||t('هیچ','None')}</p>)}
+        {inventoryReferenceReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
       </div>}
       {periodicUnreconciledStatements.length>0&&<div className="fw-validation" role="alert">
         <b>{t('هشدار: صورت‌های مالی دوره‌ای هنوز کاملاً تطبیق ندارند.','Warning: periodic financial statements are not fully reconciled.')}</b>
