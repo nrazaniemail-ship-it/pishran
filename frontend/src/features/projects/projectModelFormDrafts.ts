@@ -154,20 +154,34 @@ export function createBlankCppCpsTraceItem(id:string,periodCount:number):CppCpsT
  }
 }
 
+export type CostCentreAllocationBasis = 'production-quantity'|'sales-revenue'|'manual'
+export type CostCentreDriverRow = { period:number; productId:string; amount:number|null }
 export type CostCentreFormDraft = {
  id:string
  name:string
  type:'production'|'service'|'administration'|'sales'|'other'|null
  description:string
+ allocationBasis:CostCentreAllocationBasis|null
+ driverRows:CostCentreDriverRow[]
 }
 export function createBlankCostCentreFormDraft(id=''):CostCentreFormDraft {
- return {id,name:'',type:null,description:''}
+ return {id,name:'',type:null,description:'',allocationBasis:null,driverRows:[]}
 }
 export function validateCostCentreFormDraft(value:CostCentreFormDraft):string[] {
  const errors:string[]=[]
  if(!value.id.trim())errors.push('cost-centre-id-required')
  if(!value.name.trim())errors.push('cost-centre-name-required')
  if(!value.type)errors.push('cost-centre-type-required')
+ if(value.allocationBasis==='manual'){
+  const keys=new Set<string>()
+  for(const row of value.driverRows){
+   const key=row.period+':'+row.productId
+   if(!Number.isInteger(row.period)||row.period<1||!row.productId.trim()||row.amount===null||!Number.isFinite(row.amount)||row.amount<0)errors.push('invalid-manual-cost-centre-driver')
+   if(keys.has(key))errors.push('duplicate-manual-cost-centre-driver')
+   keys.add(key)
+  }
+ }
+ if(value.allocationBasis!=='manual'&&value.driverRows.length)errors.push('manual-drivers-only-allowed-for-manual-basis')
  return errors
 }
 
@@ -265,7 +279,12 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
   if(centreIds.has(centre.id))errors.push('cost-centre-'+index+':duplicate-cost-centre-id')
   centreIds.add(centre.id)
  })
- for(const item of value.cppCpsTraceItems??[])if(item.source.status==='verified'&&(!item.costCentreId||!centreIds.has(item.costCentreId)))errors.push('cpp-cps-item-'+item.id+':unknown-cost-centre')
+ for(const item of value.cppCpsTraceItems??[])if(item.source.status==='verified'){
+  const centre=centres.find(candidate=>candidate.id===item.costCentreId)
+  if(!centre)errors.push('cpp-cps-item-'+item.id+':unknown-cost-centre')
+  else if(item.allocationMethod==='cost-centre-driver'&&!centre.allocationBasis)errors.push('cpp-cps-item-'+item.id+':cost-centre-allocation-basis-required')
+  else if(item.allocationMethod==='cost-centre-driver'&&centre.allocationBasis==='manual'&&!centre.driverRows.length)errors.push('cpp-cps-item-'+item.id+':manual-cost-centre-drivers-required')
+ }
  errors.push(...validateHelpDrivenProjectForms(value.helpDriven ?? createBlankHelpDrivenProjectForms()))
  value.assets.forEach((item,index)=>validateFixedAssetFormDraft(item).forEach(error=>errors.push('asset-'+index+':'+error)))
  value.productionCosts.forEach((item,index)=>validateProductionCostFormDraft(item).forEach(error=>errors.push('production-cost-'+index+':'+error)))
