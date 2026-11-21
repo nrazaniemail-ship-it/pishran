@@ -169,13 +169,13 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
    <h4>{t('دفتر ضایعات تولید','Production waste ledger')}</h4>
    <p className="fw-hint">{t('ضایعات عادی در بهای تولید جذب می‌شود؛ ضایعات غیرعادی باید جداگانه به‌عنوان هزینه دوره گزارش شود.','Normal waste is absorbed into production cost; abnormal waste is separately expensed.')}</p>
    {(value.wasteLedgerEntries??[]).map((entry,index)=><div className="fw-grid" key={entry.id}>
-    <TextField label={t('شناسه محصول','Product ID')} value={entry.productId} onChange={v=>onChange({...value,wasteLedgerEntries:value.wasteLedgerEntries.map((x,i)=>i===index?{...x,productId:v}:x)})}/>
-    <TextField label={t('مرکز هزینه','Cost centre')} value={entry.costCentreId} onChange={v=>onChange({...value,wasteLedgerEntries:value.wasteLedgerEntries.map((x,i)=>i===index?{...x,costCentreId:v}:x)})}/>
-    <NumberField label={t('دوره','Period')} value={entry.period} onChange={v=>onChange({...value,wasteLedgerEntries:value.wasteLedgerEntries.map((x,i)=>i===index?{...x,period:v??0}:x)})}/>
-    <label className="fw-field"><span>{t('طبقه ضایعات','Waste classification')}</span><select value={entry.classification} onChange={e=>onChange({...value,wasteLedgerEntries:value.wasteLedgerEntries.map((x,i)=>i===index?{...x,classification:e.target.value as typeof x.classification}:x)})}><option value="normal">{t('عادی','Normal')}</option><option value="abnormal">{t('غیرعادی','Abnormal')}</option></select></label>
-    <NumberField label={t('مقدار','Quantity')} value={entry.quantity} onChange={v=>onChange({...value,wasteLedgerEntries:value.wasteLedgerEntries.map((x,i)=>i===index?{...x,quantity:v??0}:x)})}/>
-    <NumberField label={t('بهای واحد','Unit cost')} value={entry.unitCost} onChange={v=>onChange({...value,wasteLedgerEntries:value.wasteLedgerEntries.map((x,i)=>i===index?{...x,unitCost:v??0,amount:(v??0)*x.quantity}:x)})}/>
-    <NumberField label={t('ارزش ضایعات','Waste value')} value={entry.amount} onChange={v=>onChange({...value,wasteLedgerEntries:value.wasteLedgerEntries.map((x,i)=>i===index?{...x,amount:v??0}:x)})}/>
+    <TextField label={t('شناسه محصول','Product ID')} value={entry.productId} onChange={v=>onChange({...value,wasteLedgerEntries:(value.wasteLedgerEntries??[]).map((x,i)=>i===index?{...x,productId:v}:x)})}/>
+    <TextField label={t('مرکز هزینه','Cost centre')} value={entry.costCentreId} onChange={v=>onChange({...value,wasteLedgerEntries:(value.wasteLedgerEntries??[]).map((x,i)=>i===index?{...x,costCentreId:v}:x)})}/>
+    <NumberField label={t('دوره','Period')} value={entry.period} onChange={v=>onChange({...value,wasteLedgerEntries:(value.wasteLedgerEntries??[]).map((x,i)=>i===index?{...x,period:v??0}:x)})}/>
+    <label className="fw-field"><span>{t('طبقه ضایعات','Waste classification')}</span><select value={entry.classification} onChange={e=>onChange({...value,wasteLedgerEntries:(value.wasteLedgerEntries??[]).map((x,i)=>i===index?{...x,classification:e.target.value as typeof x.classification}:x)})}><option value="normal">{t('عادی','Normal')}</option><option value="abnormal">{t('غیرعادی','Abnormal')}</option></select></label>
+    <NumberField label={t('مقدار','Quantity')} value={entry.quantity} onChange={v=>onChange({...value,wasteLedgerEntries:(value.wasteLedgerEntries??[]).map((x,i)=>i===index?{...x,quantity:v??0}:x)})}/>
+    <NumberField label={t('بهای واحد','Unit cost')} value={entry.unitCost} onChange={v=>onChange({...value,wasteLedgerEntries:(value.wasteLedgerEntries??[]).map((x,i)=>i===index?{...x,unitCost:v??0,amount:(v??0)*x.quantity}:x)})}/>
+    <NumberField label={t('ارزش ضایعات','Waste value')} value={entry.amount} onChange={v=>onChange({...value,wasteLedgerEntries:(value.wasteLedgerEntries??[]).map((x,i)=>i===index?{...x,amount:v??0}:x)})}/>
     <button type="button" className="secondary-button" onClick={()=>onChange({...value,wasteLedgerEntries:value.wasteLedgerEntries.filter(x=>x.id!==entry.id)})}>{t('حذف','Remove')}</button>
    </div>)}
    <button type="button" className="secondary-button" onClick={()=>onChange({...value,wasteLedgerEntries:[...(value.wasteLedgerEntries??[]),{id:crypto.randomUUID(),period:1,productId:'',costCentreId:'',classification:'normal',quantity:0,unitCost:0,amount:0}]})}>{t('افزودن ضایعات','Add waste entry')}</button>
@@ -183,13 +183,13 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
   <div className="fw-card">
    <h4>{t('دفتر انتقال بین محصولات و مراکز تولید','Inter-product and cost-centre transfer ledger')}</h4>
    {(value.productionTransfers??[]).map((entry,index)=><div className="fw-grid" key={entry.id}>
-    <TextField label={t('محصول مبدأ','Source product')} value={entry.sourceProductId} onChange={v=>onChange({...value,productionTransfers:value.productionTransfers.map((x,i)=>i===index?{...x,sourceProductId:v}:x)})}/>
-    <TextField label={t('مرکز هزینه مبدأ','Source cost centre')} value={entry.sourceCostCentreId} onChange={v=>onChange({...value,productionTransfers:value.productionTransfers.map((x,i)=>i===index?{...x,sourceCostCentreId:v}:x)})}/>
-    <TextField label={t('محصول مقصد','Destination product')} value={entry.destinationProductId} onChange={v=>onChange({...value,productionTransfers:value.productionTransfers.map((x,i)=>i===index?{...x,destinationProductId:v}:x)})}/>
-    <TextField label={t('مرکز هزینه مقصد','Destination cost centre')} value={entry.destinationCostCentreId} onChange={v=>onChange({...value,productionTransfers:value.productionTransfers.map((x,i)=>i===index?{...x,destinationCostCentreId:v}:x)})}/>
-    <NumberField label={t('دوره','Period')} value={entry.period} onChange={v=>onChange({...value,productionTransfers:value.productionTransfers.map((x,i)=>i===index?{...x,period:v??0}:x)})}/>
-    <NumberField label={t('مقدار انتقال','Transferred quantity')} value={entry.quantity} onChange={v=>onChange({...value,productionTransfers:value.productionTransfers.map((x,i)=>i===index?{...x,quantity:v??0}:x)})}/>
-    <NumberField label={t('ارزش انتقال','Transfer value')} value={entry.costAmount} onChange={v=>onChange({...value,productionTransfers:value.productionTransfers.map((x,i)=>i===index?{...x,costAmount:v??0}:x)})}/>
+    <TextField label={t('محصول مبدأ','Source product')} value={entry.sourceProductId} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,sourceProductId:v}:x)})}/>
+    <TextField label={t('مرکز هزینه مبدأ','Source cost centre')} value={entry.sourceCostCentreId} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,sourceCostCentreId:v}:x)})}/>
+    <TextField label={t('محصول مقصد','Destination product')} value={entry.destinationProductId} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,destinationProductId:v}:x)})}/>
+    <TextField label={t('مرکز هزینه مقصد','Destination cost centre')} value={entry.destinationCostCentreId} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,destinationCostCentreId:v}:x)})}/>
+    <NumberField label={t('دوره','Period')} value={entry.period} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,period:v??0}:x)})}/>
+    <NumberField label={t('مقدار انتقال','Transferred quantity')} value={entry.quantity} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,quantity:v??0}:x)})}/>
+    <NumberField label={t('ارزش انتقال','Transfer value')} value={entry.costAmount} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,costAmount:v??0}:x)})}/>
     <button type="button" className="secondary-button" onClick={()=>onChange({...value,productionTransfers:value.productionTransfers.filter(x=>x.id!==entry.id)})}>{t('حذف','Remove')}</button>
    </div>)}
    <button type="button" className="secondary-button" onClick={()=>onChange({...value,productionTransfers:[...(value.productionTransfers??[]),{id:crypto.randomUUID(),period:1,sourceProductId:'',destinationProductId:'',sourceCostCentreId:'',destinationCostCentreId:'',quantity:0,costAmount:0}]})}>{t('افزودن انتقال','Add transfer')}</button>
