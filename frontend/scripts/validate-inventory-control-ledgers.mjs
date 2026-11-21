@@ -89,6 +89,20 @@ const stageReconciled=module.reconcileStageInventoryMovements(stageMovements,[
 assert.equal(stageReconciled.valid,true,stageReconciled.issues.join('; '))
 assert.equal(stageReconciled.rows.length,6)
 assert.equal(stageReconciled.rows.find(row=>row.period===2&&row.inventoryStage==='work-in-progress').variance,0)
+const multiCentreRaw=[
+ {...stageRow(1,'raw-materials','RM-A',0,0,3,30,0,0,0,0,3,30),costCentreId:'STORE-A'},
+ {...stageRow(1,'raw-materials','RM-B',0,0,7,70,0,0,0,0,7,70),costCentreId:'STORE-B'},
+ {...stageRow(2,'raw-materials','RM-A',3,30,0,0,0,0,1,10,2,20),costCentreId:'STORE-A'},
+ {...stageRow(2,'raw-materials','RM-B',7,70,0,0,0,0,1,10,6,60),costCentreId:'STORE-B'},
+]
+const multiCentreStage=module.reconcileStageInventoryMovements(multiCentreRaw,[
+ {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
+ {period:2,rawMaterials:80,workInProgress:0,finishedGoods:0},
+],2)
+assert.equal(multiCentreStage.valid,true,multiCentreStage.issues.join('; '))
+assert.equal(multiCentreStage.rows.find(row=>row.period===1).ledgerClosingValue,100,
+ 'stage totals must aggregate distinct cost centres without duplicating inventory')
+assert.equal(multiCentreStage.rows.find(row=>row.period===2).ledgerClosingValue,80)
 const missingStagePeriod=module.reconcileStageInventoryMovements(stageMovements.filter(row=>!(row.period===2&&row.inventoryStage==='raw-materials')),[
  {period:1,rawMaterials:100,workInProgress:40,finishedGoods:60},
  {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
