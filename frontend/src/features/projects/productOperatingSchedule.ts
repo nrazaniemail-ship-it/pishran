@@ -38,6 +38,8 @@ export type ProductOperatingSchedule = {
   totalClosingInventoryValue: number
   periodRawMaterialInventoryValue: number[]
   periodWipInventoryValue: number[]
+  periodAbnormalWasteExpense: number[]
+  periodNormalWasteAbsorbed: number[]
   hasInventoryFlow: boolean
 }
 
@@ -68,7 +70,7 @@ export function buildProductOperatingSchedule(
   const empty = (): ProductOperatingSchedule => ({
     valid:false,issues,rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],
     annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,
-    totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],hasInventoryFlow:false,
+    totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],periodAbnormalWasteExpense:[],periodNormalWasteAbsorbed:[],hasInventoryFlow:false,
   })
   if (!count) issues.push('At least one project period is required.')
   if (!Number.isInteger(fiscalYearStartMonth)||fiscalYearStartMonth<1||fiscalYearStartMonth>12)
@@ -84,6 +86,18 @@ export function buildProductOperatingSchedule(
       drafts.sales.some(item=>!item.productId.trim()))
     issues.push('Product identifiers must be present and unique.')
 
+  const periodAbnormalWasteExpense=Array(count).fill(0) as number[]
+  const periodNormalWasteAbsorbed=Array(count).fill(0) as number[]
+  for(const entry of drafts.wasteLedgerEntries??[]){
+    const index=entry.period-1
+    if(entry.classification==='normal'){
+      const sale=drafts.sales.find(item=>item.productId===entry.productId)
+      const periodRow=sale?.periods.find(row=>row.period===String(entry.period)||row.period===String(periods[index]?.index)||row.period===periods[index]?.startDate||row.period===periods[index]?.endDate)
+      if(periodRow?.rawMaterialWasteQuantity!=null&&periodRow.rawMaterialWasteQuantity>0)
+        issues.push('Normal waste '+entry.id+' is already represented in the production-flow waste quantity; duplicate absorption is blocked.')
+      periodNormalWasteAbsorbed[index]+=entry.amount
+    }else if(entry.classification==='abnormal')periodAbnormalWasteExpense[index]+=entry.amount
+  }
   const unitCostByProduct = new Map<string,number>()
   const periodAdjustmentByProduct = new Map<string,Map<number,number>>()
   for (const cost of drafts.productionCosts) {
@@ -293,7 +307,8 @@ export function buildProductOperatingSchedule(
         continue
       }
       const baseUnitProductionCost=unitCostByProduct.get(sale.productId) as number
-      const periodAdjustment=periodAdjustmentByProduct.get(sale.productId)?.get(index)??0
+      const periodAdjustment=(periodAdjustmentByProduct.get(sale.productId)?.get(index)??0)+
+        (drafts.wasteLedgerEntries??[]).filter(entry=>entry.classification==='normal'&&entry.productId===sale.productId&&entry.period===index+1).reduce((sum,entry)=>sum+entry.amount,0)
       if(periodAdjustment>0&&productionQuantity<=0){issues.push('Product '+sale.productId+' has period production costs but no production quantity in period '+(index+1)+'.');continue}
       if(productionQuantity>0&&baseUnitProductionCost===0&&!periodAdjustmentByProduct.get(sale.productId)?.has(index)){
         issues.push('Product '+sale.productId+' has no production-cost amount for period '+(index+1)+'.');continue
@@ -339,6 +354,30 @@ export function buildProductOperatingSchedule(
     }
   }
   if(issues.length)return empty()
+  // Reclassify transferred CPP from the source product/cost centre to the destination.
+  // Quantity is retained as an audit/control quantity; value is the posted accounting amount.
+  for(const transfer of drafts.productionTransfers??[]){
+    const source=rows.find(row=>row.productId===transfer.sourceProductId&&row.period===transfer.period)
+    const destination=rows.find(row=>row.productId===transfer.destinationProductId&&row.period===transfer.period)
+    if(!source||!destination){issues.push('Transfer '+transfer.id+' requires source and destination product rows in the same period.');continue}
+    if(transfer.costAmount>source.productionCost+0.01){issues.push('Transfer '+transfer.id+' exceeds the source product current-period production cost available for reclassification.');continue}
+    if(destination.productionQuantity<=0&&transfer.costAmount>0){issues.push('Transfer '+transfer.id+' cannot post value to a destination product with no production in the period.');continue}
+    source.productionCost-=transfer.costAmount
+    destination.productionCost+=transfer.costAmount
+    for(const row of [source,destination]){
+      row.unitProductionCost=row.productionQuantity>0?row.productionCost/row.productionQuantity:row.unitProductionCost
+      const availableQty=row.openingInventoryQuantity+row.productionQuantity
+      const availableValue=row.openingInventoryValue+row.productionCost
+      row.weightedAverageUnitCost=availableQty>0?availableValue/availableQty:0
+      row.costOfSales=row.salesQuantity*row.weightedAverageUnitCost
+      row.closingInventoryValue=row.closingInventoryQuantity*row.weightedAverageUnitCost
+      row.grossProfit=row.netSalesRevenue-row.costOfSales
+    }
+  }
+  if(issues.length)return empty()
+  periodCostOfSales.fill(0)
+  totalClosingInventoryValue=0
+  for(const row of rows){periodCostOfSales[row.period-1]+=row.costOfSales;totalClosingInventoryValue+=row.closingInventoryValue}
   const fiscalYearCount=Math.max(...periods.map(period=>fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)))+1
   const annualRevenue=Array(fiscalYearCount).fill(0) as number[]
   const annualCostOfSales=Array(fiscalYearCount).fill(0) as number[]
@@ -349,7 +388,7 @@ export function buildProductOperatingSchedule(
   })
   if(issues.length)return empty()
   return {valid:true,issues:[],rows,periodRevenue,periodCostOfSales,periodSubsidyIncome,annualRevenue,annualCostOfSales,
-    totalProductionQuantity,totalSalesQuantity,totalClosingInventoryValue,periodRawMaterialInventoryValue,periodWipInventoryValue,hasInventoryFlow:rows.some(row=>row.rawMaterialInventoryValue>0||row.wipInventoryValue>0)||salesHaveInventoryFlow(drafts.sales)}
+    totalProductionQuantity,totalSalesQuantity,totalClosingInventoryValue,periodRawMaterialInventoryValue,periodWipInventoryValue,periodAbnormalWasteExpense,periodNormalWasteAbsorbed,hasInventoryFlow:rows.some(row=>row.rawMaterialInventoryValue>0||row.wipInventoryValue>0)||salesHaveInventoryFlow(drafts.sales)}
 }
 
 function salesHaveInventoryFlow(sales:SalesProductFormDraft[]):boolean{return sales.some(sale=>sale.periods.some(row=>row.rawMaterialPurchasesQuantity!=null||row.rawMaterialPurchasesValue!=null||row.rawMaterialConsumptionQuantity!=null||row.rawMaterialWasteQuantity!=null||row.unitsStarted!=null||row.unitsCompleted!=null||row.closingWipQuantity!=null||row.conversionCost!=null))}
