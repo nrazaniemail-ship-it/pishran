@@ -7,6 +7,7 @@ import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConv
 import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
+import { reconcileInventoryThreeWay } from './inventoryControlLedgers'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem } from './cppCpsCostTraceability'
 import { bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
 import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft } from './projectModelFormDrafts'
@@ -480,6 +481,22 @@ export default function AdvancedFinancePanel(props: Props) {
     retainedEarnings:props.openingRetainedEarnings??0,grants:props.openingGrants??0,
   }):[],[periodicFinanceResult,props.openingCashBalance,props.openingDebtBalance,props.openingFixedAssetsNetBookValue,
     props.openingWorkingCapitalBalance,props.openingCurrentAccounts?.rawMaterials,props.openingCurrentAccounts?.workInProgress,props.openingCurrentAccounts?.finishedGoods,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants])
+  const inventoryThreeWayReconciliation=useMemo(()=>{
+    if(!periodicFinanceResult?.valid||!productOperatingSchedule?.valid||periodicStatements.length!==periodicFinanceResult.rows.length)return null
+    return reconcileInventoryThreeWay(periodicFinanceResult.rows.map((row,index)=>{
+      const statement=periodicStatements[index]
+      const finishedGoods=productOperatingSchedule.rows.filter(item=>item.period===row.period).reduce((sum,item)=>sum+item.closingInventoryValue,0)
+      const raw=productOperatingSchedule.periodRawMaterialInventoryValue[index]??0
+      const wip=productOperatingSchedule.periodWipInventoryValue[index]??0
+      const inventory=raw+wip+finishedGoods
+      return {
+        period:row.period,
+        model:{rawMaterials:row.rawMaterialsInventory,workInProgress:row.workInProgressInventory,finishedGoods:row.finishedGoodsInventory,otherCurrentAssets:row.closingWorkingCapital-inventory,currentLiabilities:0,netWorkingCapital:row.closingWorkingCapital},
+        balanceSheet:{rawMaterials:statement.balanceSheet.rawMaterialsInventory,workInProgress:statement.balanceSheet.workInProgressInventory,finishedGoods:statement.balanceSheet.finishedGoodsInventory,otherCurrentAssets:statement.balanceSheet.otherNetWorkingCapital,currentLiabilities:0,netWorkingCapital:statement.balanceSheet.netWorkingCapital},
+        cppCps:{rawMaterials:raw,workInProgress:wip,finishedGoods,totalInventory:inventory},
+      }
+    }))
+  },[periodicFinanceResult,productOperatingSchedule,periodicStatements])
   const scheduledOpeningDebt=useMemo(()=>periodicFinanceResult?.valid
     ?Object.values(periodicFinanceResult.loanSchedules??{}).reduce((sum,schedule)=>sum+(schedule[0]?.openingBalance??0),0)
     :0,[periodicFinanceResult])
@@ -798,6 +815,12 @@ export default function AdvancedFinancePanel(props: Props) {
         <p>{t('مواد اولیه','Raw materials')}: {rawMaterialInventoryStatus==='automatic'?t('خودکار بر مبنای بهای مصرف و روز پوشش','Automatic: annual consumption cost × coverage days'):rawMaterialInventoryStatus==='manual'?t('بر اساس مانده‌های دوره‌ای ثبت‌شده','From entered period balances'):rawMaterialInventoryStatus==='not-configured'?t('روز پوشش صفر است؛ موجودی در مدل منظور نشده','Zero coverage days; no stock modeled'):t('مبنای هزینه وارد نشده؛ ارزش قابل تأیید نیست','Cost basis missing; valuation is unverified')}</p>
         <p>{t('کالای در جریان ساخت','Work in progress')}: {workInProgressInventoryStatus==='automatic'?t('خودکار با تفکیک درصد تکمیل مواد و تبدیل','Automatic: separate material and conversion completion'):workInProgressInventoryStatus==='manual'?t('بر اساس مانده‌های دوره‌ای ثبت‌شده','From entered period balances'):workInProgressInventoryStatus==='not-configured'?t('روز پوشش صفر است؛ WIP در مدل منظور نشده','Zero coverage days; no WIP modeled'):t('مبنای هزینه یا درصد تکمیل ناقص است؛ ارزش قابل تأیید نیست','Cost or completion basis is incomplete; valuation is unverified')}</p>
       </div>
+      {inventoryThreeWayReconciliation&&<div className={inventoryThreeWayReconciliation.valid?'fw-result':'fw-validation'} role={inventoryThreeWayReconciliation.valid?'status':'alert'}>
+        <b>{t('تطبیق سه‌طرفه موجودی: دفتر تولید، ترازنامه و CPP/CPS','Three-way inventory reconciliation: production ledger, balance sheet and CPP/CPS')}</b>
+        <p>{t('دوره‌های منطبق: ','Reconciled periods: ')}{inventoryThreeWayReconciliation.rows.filter(row=>Math.abs(row.inventoryVariance)<=0.01&&Math.abs(row.cppCpsVariance)<=0.01&&Math.abs(row.workingCapitalVariance)<=0.01).length} / {inventoryThreeWayReconciliation.rows.length}</p>
+        {!inventoryThreeWayReconciliation.valid&&inventoryThreeWayReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
+        <p>{t('این کنترل، تطبیق داخلی داده‌های ثبت‌شده را نشان می‌دهد؛ تا زمان ورود ارقام تفکیکی مستقل از گزارش مرجع، تطبیق تاریخی با COMFAR تأییدشده محسوب نمی‌شود.','This checks internal model consistency. Historical COMFAR reconciliation remains unverified until independent detailed reference figures are entered.')}</p>
+      </div>}
       {periodicUnreconciledStatements.length>0&&<div className="fw-validation" role="alert">
         <b>{t('هشدار: صورت‌های مالی دوره‌ای هنوز کاملاً تطبیق ندارند.','Warning: periodic financial statements are not fully reconciled.')}</b>
         <p>{t('تعداد دوره‌های دارای اختلاف: ','Periods with differences: ')}{periodicUnreconciledStatements.length} / {periodicStatements.length} · {t('بیشترین قدرمطلق اختلاف تراز: ','Maximum absolute balance difference: ')}{money(maximumPeriodicBalanceDifference)} {props.currency}</p>
