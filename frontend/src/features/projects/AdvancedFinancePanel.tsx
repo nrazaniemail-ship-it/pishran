@@ -11,7 +11,7 @@ import { reconcileInventoryThreeWay, reconcileInventoryReference } from './inven
 import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
 import { bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
 import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft, SalesTaxLedgerFormDraft } from './projectModelFormDrafts'
-import { buildSalesTaxLedger, type SalesTaxInputCreditEntry, type SalesTaxOutputEntry, type SalesTaxSettlementEntry, type SalesTaxLedgerResult } from './salesTaxLedger'
+import { buildSalesTaxLedger, bindSalesTaxLedgerToWorkingCapital, type SalesTaxInputCreditEntry, type SalesTaxOutputEntry, type SalesTaxSettlementEntry, type SalesTaxLedgerResult } from './salesTaxLedger'
 import { buildProjectTaxDraftSchedule } from './projectTaxDraftIntegration'
 import { buildProjectLoanDraftIntegration } from './projectLoanDraftIntegration'
 import type { LoanFacilityFormDraft } from './projectModelFormDrafts'
@@ -458,15 +458,12 @@ export default function AdvancedFinancePanel(props: Props) {
       }
       if(salesTaxLedgerActive&&!salesTaxLedgerResult?.valid)return null
       if(salesTaxLedgerResult?.valid){
-        const vatClosingBalances=salesTaxLedgerResult.rows.map(row=>row.closingBalance)
-        if(vatClosingBalances.length!==periods.length)return null
-        // Positive tax balances are current liabilities; negative balances are recoverable current assets.
-        // Their movement is included once in net working capital, so cash settlement is not deducted again.
-        boundInput={
-          ...boundInput,
-          workingCapitalByPeriod:boundInput.workingCapitalByPeriod.map((amount,index)=>amount-vatClosingBalances[index]),
-          openingWorkingCapital:(boundInput.openingWorkingCapital??0)-salesTaxLedgerResult.rows[0].openingBalance,
-        }
+        const binding=bindSalesTaxLedgerToWorkingCapital(
+          boundInput.workingCapitalByPeriod,boundInput.openingWorkingCapital??0,salesTaxLedgerResult)
+        if(!binding.valid)return null
+        // Tax settlements are reflected through the change in the net tax balance, not deducted twice.
+        boundInput={...boundInput,workingCapitalByPeriod:binding.closingWorkingCapitalByPeriod,
+          openingWorkingCapital:binding.openingWorkingCapital}
       }
       return boundInput
     }
