@@ -362,12 +362,18 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
   else if(item.allocationMethod==='cost-centre-driver'&&!centre.allocationBasis)errors.push('cpp-cps-item-'+item.id+':cost-centre-allocation-basis-required')
   else if(item.allocationMethod==='cost-centre-driver'&&centre.allocationBasis==='manual'&&!centre.driverRows.length)errors.push('cpp-cps-item-'+item.id+':manual-cost-centre-drivers-required')
  }
+ const inventoryMovementKeys=new Set<string>()
  for(const [index,row] of (value.costCentreInventoryMovements??[]).entries()){
   if(!costCentreInventoryMovementHasData(row))continue
   const values=[row.openingQuantity,row.openingValue,row.receiptsQuantity,row.receiptsValue,row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue]
   if(!Number.isInteger(row.period)||row.period===null||row.period<1)errors.push('cost-centre-inventory-'+index+':invalid-period')
   if(!row.inventoryStage)errors.push('cost-centre-inventory-'+index+':inventory-stage-required')
   if(!row.productId.trim()||!row.costCentreId.trim())errors.push('cost-centre-inventory-'+index+':product-and-cost-centre-required')
+  if(row.period!==null&&row.inventoryStage&&row.productId.trim()&&row.costCentreId.trim()){
+   const key=[row.period,row.inventoryStage,row.productId.trim().toLocaleLowerCase(),row.costCentreId.trim().toLocaleLowerCase()].join(':')
+   if(inventoryMovementKeys.has(key))errors.push('cost-centre-inventory-'+index+':duplicate-movement-key')
+   inventoryMovementKeys.add(key)
+  }
   if(values.some(amount=>amount===null||!Number.isFinite(amount)||amount<0))errors.push('cost-centre-inventory-'+index+':all-quantities-and-values-required')
   if(!row.sourceReference.trim()||!row.sourceVerified)errors.push('cost-centre-inventory-'+index+':verified-source-required')
  }
