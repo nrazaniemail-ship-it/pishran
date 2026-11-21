@@ -114,5 +114,13 @@ assert.equal(mapProductionCostsToFinance({
  cpp:[220],cps:[176],hasProductionRecords:[true],utilization:[1],opexFactors:[1],
  fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,mappedBaseCosts:{variable:{materials:-1,directLabor:0,energy:0,maintenance:0,overhead:0},fixed:{materials:0,directLabor:0,energy:0,maintenance:0,overhead:0}}
 }).valid,false)
+assert.equal(mapProductionCostsToFinance({
+ cpp:[220],cps:[176],hasProductionRecords:[true],utilization:[1],opexFactors:[1],
+ fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,mappedBaseCosts:undefined
+}).valid,false)
+assert.equal(mapProductionCostsToFinance({
+ cpp:[220],cps:[176],hasProductionRecords:[true],utilization:[1],opexFactors:[1],
+ fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,mappedBaseCosts:{variable:{materials:Number.MAX_VALUE,directLabor:Number.MAX_VALUE,energy:0,maintenance:0,overhead:0},fixed:{materials:0,directLabor:0,energy:0,maintenance:0,overhead:0}}
+}).valid,false)
 
 console.log('Production-finance tests passed: project scope, period mapping, overlap, currency, inventory roll-forward, sales, CPP/CPS, baseline component replacement and no-double-counting.')
