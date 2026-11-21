@@ -70,7 +70,7 @@ type Props = {
   openingGrants?: number
   openingCurrentAccounts?: OpeningCurrentAccounts
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
-  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers' | 'inventoryReferenceBenchmarks'>>
+  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers' | 'inventoryReferenceBenchmarks' | 'costCentres'>>
   cppCpsTraceItems?: CppCpsTraceItem[]
   onEditFinancialForms?: () => void
   taxDraft?: ProjectTaxFormDraft
