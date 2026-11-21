@@ -91,4 +91,26 @@ const noDriver = integrationModule.bindCppCpsTraceLedgerToProductSchedule(noDriv
 assert.equal(noDriver.valid, false)
 assert.ok(noDriver.issues.some(issue => issue.includes('driver totals zero')))
 
-console.log('CPP/CPS posting, weighted-average inventory, cost of sales and no-double-count integration passed.')
+// Finished-goods stock enters net working capital exactly once and terminal stock is retained.
+const wcWithoutManualFg = integrationModule.bindFinishedGoodsInventoryToWorkingCapital([0, 0], bound.schedule, false)
+assert.equal(wcWithoutManualFg.valid, true)
+close(wcWithoutManualFg.closingWorkingCapitalByPeriod[0], p1.closingInventoryValue)
+close(wcWithoutManualFg.closingWorkingCapitalByPeriod[1], p2.closingInventoryValue)
+const wcWithManualFg = integrationModule.bindFinishedGoodsInventoryToWorkingCapital([25, 15], bound.schedule, true)
+assert.equal(wcWithManualFg.valid, true)
+assert.deepEqual(wcWithManualFg.closingWorkingCapitalByPeriod, [25, 15],
+  'Explicit finished-goods working capital must not be double counted')
+
+// Guard the actual UI-to-engine wiring, not just the standalone calculation helpers.
+const advancedPanel = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+const financialForms = await readFile(new URL('../src/features/projects/ProjectModelFinancialFormsPanel.tsx', import.meta.url), 'utf8')
+const wizard = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+assert.ok(advancedPanel.includes('buildCppCpsTraceLedger(props.cppCpsTraceItems'))
+assert.ok(advancedPanel.includes('bindCppCpsTraceLedgerToProductSchedule'))
+assert.ok(advancedPanel.includes('bindFinishedGoodsInventoryToWorkingCapital'))
+assert.ok(advancedPanel.includes('annualVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.annualCostOfSales'))
+assert.ok(financialForms.includes('Source reference'))
+assert.ok(financialForms.includes('baseCoveredAmounts'))
+assert.ok(wizard.includes('cppCpsTraceItems={m.financialForms.cppCpsTraceItems??[]}'))
+assert.ok(wizard.includes("onClick={()=>setStep('profile')}"))
+console.log('CPP/CPS finance integration, working-capital reconciliation, source gating and report actions passed.')
