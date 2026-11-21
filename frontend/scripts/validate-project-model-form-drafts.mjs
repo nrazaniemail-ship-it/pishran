@@ -91,6 +91,8 @@ try {
  assert.ok(forms.listUnintegratedFinancialDraftInputs({...complete,inventoryStageTransfers:[validStageTransfer]}).includes('financialForms.inventoryStageTransfers.0'))
  assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,inventoryStageTransfers:[{...validStageTransfer,destinationStage:'raw-materials'}]}).includes('inventory-stage-transfer-0:distinct-source-and-destination-stages-required'))
  assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,inventoryStageTransfers:[{...validStageTransfer,sourceVerified:false}]}).includes('inventory-stage-transfer-0:verified-source-required'))
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,inventoryStageTransfers:[{...validStageTransfer,quantity:0}]}).includes('inventory-stage-transfer-0:invalid-quantity-conversion-or-value'))
+
 
  const blankCentre=forms.createBlankCostCentreFormDraft('CC-1')
  assert.ok(forms.validateCostCentreFormDraft(blankCentre).includes('cost-centre-name-required'))
