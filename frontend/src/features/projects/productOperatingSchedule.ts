@@ -173,7 +173,7 @@ export function buildProductOperatingSchedule(
       if(mapped.has(matches[0])) { issues.push('Product '+sale.productId+' has duplicate data for period '+(matches[0]+1)+'.'); continue }
       mapped.set(matches[0],row)
     }
-    const flowKeys=['rawMaterialPurchasesQuantity','rawMaterialPurchasesValue','rawMaterialConsumptionQuantity','unitsStarted','unitsCompleted','closingWipQuantity','materialCompletionPercent','conversionCompletionPercent','conversionCost'] as const
+    const flowKeys=['rawMaterialPurchasesQuantity','rawMaterialPurchasesValue','rawMaterialConsumptionQuantity','rawMaterialWasteQuantity','unitsStarted','unitsCompleted','closingWipQuantity','materialCompletionPercent','conversionCompletionPercent','conversionCost'] as const
     const flowEntered=sale.periods.some(row=>flowKeys.some(key=>row[key]!==null&&row[key]!==undefined))
     let inventoryFlow:ReturnType<typeof buildInventoryFlowSchedule>|null=null
     if(flowEntered){
@@ -193,6 +193,7 @@ export function buildProductOperatingSchedule(
         rawMaterialPurchasesQuantity:flowRows.map(row=>row!.rawMaterialPurchasesQuantity as number),
         rawMaterialPurchasesValue:flowRows.map(row=>row!.rawMaterialPurchasesValue as number),
         rawMaterialConsumptionQuantity:flowRows.map(row=>row!.rawMaterialConsumptionQuantity as number),
+        rawMaterialWasteQuantity:flowRows.map(row=>row!.rawMaterialWasteQuantity as number),
         openingWipQuantity:first.openingWipQuantity as number,
         openingWipMaterialValue:first.openingWipMaterialValue as number,
         openingWipConversionValue:first.openingWipConversionValue as number,
@@ -345,4 +346,4 @@ export function buildProductOperatingSchedule(
     totalProductionQuantity,totalSalesQuantity,totalClosingInventoryValue,periodRawMaterialInventoryValue,periodWipInventoryValue,hasInventoryFlow:rows.some(row=>row.rawMaterialInventoryValue>0||row.wipInventoryValue>0)||salesHaveInventoryFlow(drafts.sales)}
 }
 
-function salesHaveInventoryFlow(sales:SalesProductFormDraft[]):boolean{return sales.some(sale=>sale.periods.some(row=>row.rawMaterialPurchasesQuantity!=null||row.rawMaterialPurchasesValue!=null||row.rawMaterialConsumptionQuantity!=null||row.unitsStarted!=null||row.unitsCompleted!=null||row.closingWipQuantity!=null||row.conversionCost!=null))}
+function salesHaveInventoryFlow(sales:SalesProductFormDraft[]):boolean{return sales.some(sale=>sale.periods.some(row=>row.rawMaterialPurchasesQuantity!=null||row.rawMaterialPurchasesValue!=null||row.rawMaterialConsumptionQuantity!=null||row.rawMaterialWasteQuantity!=null||row.unitsStarted!=null||row.unitsCompleted!=null||row.closingWipQuantity!=null||row.conversionCost!=null))}
