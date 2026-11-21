@@ -384,11 +384,11 @@ export function buildProductOperatingSchedule(
     const sourceKey=transfer.sourceProductId+':'+transfer.period
     if(!sourceCostByProductPeriod.has(sourceKey))sourceCostByProductPeriod.set(sourceKey,source.productionCost)
     const alreadyTransferred=transferredOutByProductPeriod.get(sourceKey)??0
-    if(transfer.costAmount>(sourceCostByProductPeriod.get(sourceKey) as number)-alreadyTransferred+0.01){issues.push('Transfer '+transfer.id+' exceeds the remaining source product current-period production cost available for reclassification.');continue}
     const destinationQuantity=transfer.quantity*transfer.conversionFactor
     if(source.closingInventoryQuantity+0.01<transfer.quantity){issues.push('Transfer '+transfer.id+' exceeds the source product finished-goods quantity available for transfer.');continue}
     const sourceAvailableQuantity=source.openingInventoryQuantity+source.productionQuantity
     const sourceAvailableValue=source.openingInventoryValue+(sourceCostByProductPeriod.get(sourceKey) as number)
+    if(transfer.costAmount>sourceAvailableValue-alreadyTransferred+0.01){issues.push('Transfer '+transfer.id+' exceeds the remaining source product inventory value available for reclassification.');continue}
     const sourceWeightedAverage=sourceAvailableQuantity>0?sourceAvailableValue/sourceAvailableQuantity:0
     const expectedTransferValue=transfer.quantity*sourceWeightedAverage
     if(Math.abs(transfer.costAmount-expectedTransferValue)>0.01*Math.max(1,Math.abs(expectedTransferValue))){issues.push('Transfer '+transfer.id+' cost must equal transferred source quantity multiplied by the source weighted-average inventory cost.');continue}
