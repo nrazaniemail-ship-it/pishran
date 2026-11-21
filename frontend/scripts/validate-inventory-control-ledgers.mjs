@@ -18,6 +18,14 @@ const transfers=module.validateProductionTransfers([
 assert.equal(transfers.valid,true,transfers.issues.join('; '))
 assert.equal(transfers.netQuantityByProductCentre['P1@MELT'],-50)
 assert.equal(transfers.netQuantityByProductCentre['P2@CAST'],50)
+const converted=module.validateProductionTransfers([
+ {id:'T2',period:1,sourceProductId:'COIL',destinationProductId:'SHEET',sourceCostCentreId:'ROLL',destinationCostCentreId:'FINISH',quantity:1000,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0.001,costAmount:250000},
+],1)
+assert.equal(converted.valid,true,converted.issues.join('; '))
+assert.equal(converted.netQuantityByProductCentre['COIL@ROLL'],-1000)
+assert.equal(converted.netQuantityByProductCentre['SHEET@FINISH'],1)
+assert.equal(module.validateProductionTransfers([{id:'bad-factor',period:1,sourceProductId:'A',destinationProductId:'B',sourceCostCentreId:'X',destinationCostCentreId:'Y',quantity:1,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0,costAmount:1}],1).valid,false)
+
 assert.equal(transfers.totalSourceValue,transfers.totalDestinationValue)
 assert.equal(module.validateProductionTransfers([{id:'T1',period:1,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'A',destinationCostCentreId:'A',quantity:1,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:1},{id:'T1',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:1,costAmount:1}],1).valid,false)
 const p={period:1,model:{rawMaterials:100,workInProgress:50,finishedGoods:150,otherCurrentAssets:40,currentLiabilities:60,netWorkingCapital:280},balanceSheet:{rawMaterials:100,workInProgress:50,finishedGoods:150,otherCurrentAssets:40,currentLiabilities:60,netWorkingCapital:280},cppCps:{rawMaterials:100,workInProgress:50,finishedGoods:150,totalInventory:300}}
