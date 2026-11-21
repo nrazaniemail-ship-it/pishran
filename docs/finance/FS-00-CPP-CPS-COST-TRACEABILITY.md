@@ -84,3 +84,15 @@ The following CRC200 entries are intentionally **not populated** until supportin
 ## Verification scope and known limits
 
 The automated regression scripts cover ledger validation, null preservation, base-coverage arithmetic, allocation, CPP/CPS schedule integration, inventory flow and reconciliation, and sales-tax working-capital binding. A green build/test run proves those code paths pass their internal tests on the tested commit. It does not establish that CRC200 inputs are factually correct or that all reported periods match COMFAR. External parity still requires source-backed, same-currency, same-period reference values; aggregate COMFAR inventory cannot validate a detailed raw-material/WIP/finished-goods split when the reference does not publish that split.
+
+## Cost-centre inventory movement form (FS-00 implementation boundary)
+
+The project financial-form draft now persists a separate `costCentreInventoryMovements` collection. Each row is stage-specific (`raw-materials`, `work-in-progress`, or `finished-goods`) and identifies period, product and cost centre. It captures opening quantity/value, receipts, production/completion, consumption/issues, waste and closing quantity/value, plus a source reference and explicit verification flag.
+
+- New rows initialize all quantities and values as `null`; the form never converts unknown amounts into zero.
+- A row with entered data must contain all twelve finite non-negative amount fields, a valid period, product and cost-centre identifiers, a stage, and a verified source reference before the form validator accepts it.
+- Duplicate period/stage/product/cost-centre keys are rejected.
+- Partially entered rows and completed rows remain listed as unintegrated report blockers. This is deliberate: the current stage adds persistence, bilingual data entry and input validation only; it does **not** yet post the three inventory stages into the raw-material/WIP/finished-goods accounting engine or the balance sheet / working-capital schedules.
+- The existing cost-centre roll-forward calculation contract still handles product/cost-centre movements and transfers, but it must not be reused indiscriminately for raw materials and WIP. The next integration step must define stage-specific posting semantics and reconcile inter-stage transfers without duplicating inventory value or CPP/CPS.
+
+This boundary prevents an entered register from being mistaken for an integrated and tested financial calculation.
