@@ -133,7 +133,7 @@ assert.equal(p2.closingInventoryQuantity,40,'destination finished-goods quantity
 const wrongTransferCost=module.buildProductOperatingSchedule({...controlledDraft,productionTransfers:[{...controlledDraft.productionTransfers[0],costAmount:100}]},periods,1,'IRR')
 assert.equal(wrongTransferCost.valid,false,'transfer value must reconcile to source weighted-average cost times transferred quantity')
 
-const convertedDraft={...controlledDraft,sales:controlledDraft.sales.map((sale,index)=>({...sale,unitOfMeasure:index===0?'kg':'tonne',periods:sale.periods.map((row,periodIndex)=>periodIndex===1&&index===1?{...row,openingFinishedGoodsQuantity:30.01,openingFinishedGoodsValue:300+1150*10/110}:row)})),productionTransfers:[{...controlledDraft.productionTransfers[0],quantity:10,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0.001,costAmount:1150*10/110}]}
+const convertedDraft={...controlledDraft,sales:controlledDraft.sales.map((sale,index)=>({...sale,unitOfMeasure:index===0?'kg':'tonne',periods:sale.periods.map((row,periodIndex)=>periodIndex===1&&index===1?{...row,openingFinishedGoodsQuantity:30.01,openingFinishedGoodsValue:30.01*(100+1000+1150*10/110)/(10+100+0.01)}:row)})),productionTransfers:[{...controlledDraft.productionTransfers[0],quantity:10,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0.001,costAmount:1150*10/110}]}
 const convertedSchedule=module.buildProductOperatingSchedule(convertedDraft,periods,1,'IRR')
 assert.equal(convertedSchedule.valid,true,convertedSchedule.issues.join('; '))
 assert.equal(convertedSchedule.rows.find(row=>row.productId==='P1'&&row.period===1).closingInventoryQuantity,20)
