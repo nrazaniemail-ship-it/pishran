@@ -9,6 +9,7 @@ export type InventoryFlowInput = {
   rawMaterialPurchasesQuantity: number[]
   rawMaterialPurchasesValue: number[]
   rawMaterialConsumptionQuantity: number[]
+  rawMaterialWasteQuantity?: number[]
   openingWipQuantity: number
   openingWipMaterialValue: number
   openingWipConversionValue: number
@@ -26,6 +27,8 @@ export type InventoryFlowPeriod = {
   openingRawMaterialValue: number
   purchasesQuantity: number
   consumptionQuantity: number
+  normalWasteQuantity: number
+  normalWasteValue: number
   closingRawMaterialQuantity: number
   weightedAverageRawMaterialUnitCost: number
   purchasesValue: number
@@ -108,7 +111,7 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
   for (let i = 0; i < count; i++) {
     const values = [
       input.rawMaterialPurchasesQuantity[i], input.rawMaterialPurchasesValue[i],
-      input.rawMaterialConsumptionQuantity[i], input.unitsStarted[i], input.unitsCompleted[i],
+      input.rawMaterialConsumptionQuantity[i], input.rawMaterialWasteQuantity?.[i] ?? 0, input.unitsStarted[i], input.unitsCompleted[i],
       input.closingWipQuantity[i], input.materialCompletionPercent[i],
       input.conversionCompletionPercent[i], input.conversionCost[i],
     ]
@@ -116,24 +119,25 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
       issues.push('Period ' + (i + 1) + ' contains missing, negative or non-finite inventory-flow data.')
       continue
     }
-    const [purchasesQty,purchasesValue,consumptionQty,started,completed,closingWip,
+    const [purchasesQty,purchasesValue,consumptionQty,wasteQty,started,completed,closingWip,
       materialPct,conversionPct,conversionCost] = values as number[]
     if (materialPct > 100 || conversionPct > 100)
       issues.push('Period ' + (i + 1) + ' WIP completion percentages must be between 0 and 100.')
     const availableRawQty = rawQty + purchasesQty
     const availableRawValue = rawValue + purchasesValue
-    if (consumptionQty > availableRawQty + 1e-7)
-      issues.push('Period ' + (i + 1) + ' raw-material consumption exceeds available stock.')
+    if (consumptionQty + wasteQty > availableRawQty + 1e-7)
+      issues.push('Period ' + (i + 1) + ' raw-material consumption plus normal waste exceeds available stock.')
     const materialUnitCost = availableRawQty > 0 ? availableRawValue / availableRawQty : 0
     const consumptionValue = consumptionQty * materialUnitCost
-    const closingRawQty = availableRawQty - consumptionQty
-    const closingRawValue = availableRawValue - consumptionValue
+    const normalWasteValue = wasteQty * materialUnitCost
+    const closingRawQty = availableRawQty - consumptionQty - wasteQty
+    const closingRawValue = availableRawValue - consumptionValue - normalWasteValue
     const quantityVariance = rawQty + purchasesQty - consumptionQty - closingRawQty
     const wipQuantityVariance = wipQty + started - completed - closingWip
     if (!closeEnough(wipQty + started, completed + closingWip))
       issues.push('Period ' + (i + 1) + ' WIP quantity roll-forward does not reconcile.')
 
-    const materialPool = wipMaterialValue + consumptionValue
+    const materialPool = wipMaterialValue + consumptionValue + normalWasteValue
     const conversionPool = wipConversionValue + conversionCost
     const materialEquivalentUnits = completed + closingWip * materialPct / 100
     const conversionEquivalentUnits = completed + closingWip * conversionPct / 100
@@ -151,7 +155,7 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
     const wipValueVariance = materialPool + conversionPool - completedMaterial - completedConversion - closingWipValue
     rows.push({
       period:i+1, openingRawMaterialQuantity:rawQty, openingRawMaterialValue:rawValue, purchasesQuantity:purchasesQty,
-      consumptionQuantity:consumptionQty, closingRawMaterialQuantity:closingRawQty,
+      consumptionQuantity:consumptionQty, normalWasteQuantity:wasteQty, normalWasteValue, closingRawMaterialQuantity:closingRawQty,
       weightedAverageRawMaterialUnitCost:materialUnitCost, purchasesValue,
       consumptionValue, closingRawMaterialValue:closingRawValue,
       openingWipQuantity:wipQty, openingWipMaterialValue:wipMaterialValue,
