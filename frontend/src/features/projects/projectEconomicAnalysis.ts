@@ -35,7 +35,7 @@ export function buildProjectEconomicAnalysis(
   const issues:string[]=[]
   const empty=():ProjectEconomicAnalysisResult=>({
     valid:false,issues,rows:[],economicCashFlows:[],economicNpv:null,economicIrr:null,
-    totalTaxTransferRemoved:0,totalSubsidyTransferRemoved:0,totalForeignExchangeAdjustment:0,
+    totalTaxTransferRemoved:0,totalIndirectTaxTransferRemoved:0,totalSubsidyTransferRemoved:0,totalForeignExchangeAdjustment:0,
     totalEmploymentAdjustment:0,totalGeneralAdjustment:0,
   })
   if(!finance.valid)issues.push('A valid periodic financial model is required for economic appraisal.')
