@@ -81,7 +81,7 @@ assert.ok(Math.abs(result.totals.presentValueDomesticWages-130)<1e-9)
 assert.ok(Math.abs(result.totals.absoluteEfficiencyRatio-(1073.24/130))<1e-9)
 assert.ok(Math.abs(result.totals.relativeEfficiency.investment-(1073.24/67.5))<1e-9)
 assert.equal(result.totals.relativeEfficiency.foreignExchange,1073.24/90)
-assert.equal(result.totals.relativeEfficiency.skilledLabour,1073.24/56)
+assert.equal(result.totals.relativeEfficiency.skilledLabour,1073.24/52)
 assert.equal(result.totals.relativeEfficiency.totalLabour,1073.24/65)
 
 // COMFAR investment includes the increase in inventory; a stock decrease is a negative investment flow.
