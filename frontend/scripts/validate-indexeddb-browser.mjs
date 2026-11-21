@@ -51,7 +51,7 @@ try {
   assert.ok(result.exported.records.some(record => record.key === 'browser-test:one'))
   assert.equal(result.replaced, 1)
   assert.deepEqual(result.afterReplace, [{ key: 'browser-test:restored', value: { value: 3 } }])
-  assert.equal(result.removed, null)
+  assert.equal(result.removed, undefined)
   assert.equal(result.final.backend, 'IndexedDB')
   console.log('PASS: native browser IndexedDB open, CRUD, list, export and atomic replaceAll')
 } finally {
