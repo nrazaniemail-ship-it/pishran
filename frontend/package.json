@@ -12,7 +12,12 @@
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "ios:add": "cap add ios",
     "ios:sync": "npm run build && cap sync ios",
-    "test:financial": "node scripts/validate-financial-model.mjs && node scripts/validate-method-directory.mjs && node scripts/validate-periodic-financial-engine.mjs && node scripts/validate-project-model-schema.mjs && node scripts/validate-project-model-form-drafts.mjs && node scripts/validate-project-model-formulas.mjs && node scripts/validate-project-model-help-forms.mjs && node scripts/validate-project-model-help-formulas.mjs && node scripts/validate-foreign-currency-translation.mjs && node scripts/validate-working-capital-draft-integration.mjs && node scripts/validate-periodic-sensitivity.mjs"
+    "test:foundation": "node scripts/validate-local-first-foundation.mjs",
+    "test:financial": "node scripts/validate-financial-model.mjs && node scripts/validate-method-directory.mjs && node scripts/validate-periodic-financial-engine.mjs && node scripts/validate-project-model-schema.mjs && node scripts/validate-project-model-form-drafts.mjs && node scripts/validate-project-model-formulas.mjs && node scripts/validate-project-model-help-forms.mjs && node scripts/validate-project-model-help-formulas.mjs && node scripts/validate-foreign-currency-translation.mjs && node scripts/validate-working-capital-draft-integration.mjs && node scripts/validate-periodic-sensitivity.mjs && npm run test:production && npm run test:production-finance && npm run test:inventory",
+    "test:indexeddb:browser": "node scripts/validate-indexeddb-browser.mjs",
+    "test:production": "node scripts/validate-production-analysis.mjs",
+    "test:production-finance": "node scripts/validate-production-finance-integration.mjs",
+    "test:inventory": "node scripts/validate-inventory-accounting.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
@@ -37,6 +42,10 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@capacitor/cli": "^7.4.3",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "playwright": "^1.56.1"
+  },
+  "overrides": {
+    "rollup": "4.68.7"
   }
 }

@@ -324,6 +324,12 @@ export type IntegratedFinanceInput = {
   fullCapacityRevenue: number
   fullCapacityVariableCashCost: number
   fullCapacityFixedCashCost: number
+  /** When supplied, replaces fullCapacityVariableCashCost with explicit cost-of-sales plus other variable cash costs by project year. */
+  costOfProductsSoldByYear?: number[]
+  otherVariableCashCostByYear?: number[]
+  otherFixedCashCostByYear?: number[]
+  /** Exact closing finished-goods asset values by project year; overrides the policy-derived finished-goods balance. */
+  finishedGoodsInventoryValueByYear?: number[]
   annualDepreciation: number
   depreciationSchedule?: number[]
   maintenanceCapexSchedule?: number[]
@@ -474,6 +480,14 @@ function integratedLoanSchedule(loan: IntegratedLoanInput, years: number, constr
 export function calculateIntegratedFinance(input: IntegratedFinanceInput): IntegratedFinanceResult {
   const years = Math.max(1, Math.min(60, Math.floor(input.years || 20)))
   const constructionYears = Math.max(1, Math.min(years, Math.floor(input.constructionYears || 4)))
+  const validateAnnualVector = (values: number[] | undefined, label: string) => {
+    if (values && (values.length !== years || !values.every(value => Number.isFinite(value) && value >= 0))) throw new Error(label + ' must contain one finite non-negative value per project year')
+  }
+  validateAnnualVector(input.costOfProductsSoldByYear, 'Cost of products sold')
+  validateAnnualVector(input.otherVariableCashCostByYear, 'Other variable cash costs')
+  validateAnnualVector(input.otherFixedCashCostByYear, 'Other fixed cash costs')
+  validateAnnualVector(input.finishedGoodsInventoryValueByYear, 'Finished-goods inventory')
+  if (input.costOfProductsSoldByYear && !input.otherVariableCashCostByYear) throw new Error('Other variable cash costs must be supplied separately when cost of products sold is bound')
   const loanSchedules: Record<string, IntegratedLoanYear[]> = {}
   input.loans.forEach(loan => { loanSchedules[loan.id] = integratedLoanSchedule(loan, years, constructionYears) })
 
@@ -518,15 +532,23 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const salesFactor = Math.pow(1 + Math.max(-99, input.salesEscalationPercent) / 100, operatingYear)
     const opexFactor = Math.pow(1 + Math.max(-99, input.opexEscalationPercent) / 100, operatingYear)
     const revenue = Math.max(0, input.fullCapacityRevenue) * utilization * salesFactor
-    const variableCashCost = Math.max(0, input.fullCapacityVariableCashCost) * utilization * opexFactor
-    const fixedCashCost = year > constructionYears && utilization > 0 ? Math.max(0, input.fullCapacityFixedCashCost) * opexFactor : 0
+    const variableCashCost = input.costOfProductsSoldByYear
+      ? input.costOfProductsSoldByYear[index] + (input.otherVariableCashCostByYear?.[index] ?? 0)
+      : Math.max(0, input.fullCapacityVariableCashCost) * utilization * opexFactor
+    const fixedCashCost = year > constructionYears && utilization > 0
+      ? (input.otherFixedCashCostByYear ? input.otherFixedCashCostByYear[index] : Math.max(0, input.fullCapacityFixedCashCost) * opexFactor)
+      : 0
     const depreciation = year > constructionYears && utilization > 0 ? Math.max(0, Number(input.depreciationSchedule?.[index] ?? input.annualDepreciation)) : 0
     const maintenanceCapex = Math.max(0, Number(input.maintenanceCapexSchedule?.[index]) || 0)
     const fixedInvestment = Math.max(0, Number(input.fixedInvestmentSchedule[index]) || 0)
     const preOperatingCost = Math.max(0, Number(input.preOperatingSchedule[index]) || 0)
-    const workingCapitalBreakdown: WorkingCapitalBreakdown = input.workingCapitalPolicy
+    const baseWorkingCapitalBreakdown: WorkingCapitalBreakdown = input.workingCapitalPolicy
       ? (year > constructionYears && utilization > 0 ? calculateOperatingCycleWorkingCapital(input.workingCapitalPolicy, utilization, salesFactor, opexFactor) : { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: 0, payables: 0, netWorkingCapital: 0 })
       : (() => { const amount = year > constructionYears ? (variableCashCost + fixedCashCost) * Math.max(0, input.workingCapitalPercent) / 100 : 0; return { rawMaterials: 0, workInProgress: 0, finishedGoods: 0, receivables: 0, minimumCash: amount, payables: 0, netWorkingCapital: amount } })()
+    const exactFinishedGoodsValue = input.finishedGoodsInventoryValueByYear?.[index]
+    const workingCapitalBreakdown: WorkingCapitalBreakdown = exactFinishedGoodsValue === undefined
+      ? baseWorkingCapitalBreakdown
+      : { ...baseWorkingCapitalBreakdown, finishedGoods: exactFinishedGoodsValue, netWorkingCapital: baseWorkingCapitalBreakdown.netWorkingCapital - baseWorkingCapitalBreakdown.finishedGoods + exactFinishedGoodsValue }
     const calculatedWorkingCapital = workingCapitalBreakdown.netWorkingCapital
     const workingCapital = calculatedWorkingCapital
     const closingWorkingCapital = year === years ? 0 : calculatedWorkingCapital
@@ -1562,6 +1584,10 @@ export function calculateSensitivityMatrix(input: IntegratedFinanceInput, priceC
       fullCapacityRevenue: input.fullCapacityRevenue * (1 + priceChangePercent / 100) * (1 + volumeChangePercent / 100),
       capacity: input.capacity * (1 + volumeChangePercent / 100),
       fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * (1 + volumeChangePercent / 100),
+      costOfProductsSoldByYear: input.costOfProductsSoldByYear?.map(value => value * (1 + volumeChangePercent / 100)),
+      otherVariableCashCostByYear: input.otherVariableCashCostByYear?.map(value => value * (1 + volumeChangePercent / 100)),
+      otherFixedCashCostByYear: input.otherFixedCashCostByYear,
+      finishedGoodsInventoryValueByYear: input.finishedGoodsInventoryValueByYear?.map(value => value * (1 + volumeChangePercent / 100)),
       workingCapitalPolicy: input.workingCapitalPolicy ? {
         ...input.workingCapitalPolicy,
         annualRawMaterialCost: input.workingCapitalPolicy.annualRawMaterialCost * (1 + volumeChangePercent / 100),
@@ -1587,6 +1613,10 @@ export function calculateFinancialScenarios(input: IntegratedFinanceInput) {
       capacity: input.capacity * volume,
       fullCapacityVariableCashCost: input.fullCapacityVariableCashCost * variableCost * volume,
       fullCapacityFixedCashCost: input.fullCapacityFixedCashCost * fixedCost,
+      costOfProductsSoldByYear: input.costOfProductsSoldByYear?.map(value => value * variableCost * volume),
+      otherVariableCashCostByYear: input.otherVariableCashCostByYear?.map(value => value * variableCost * volume),
+      otherFixedCashCostByYear: input.otherFixedCashCostByYear?.map(value => value * fixedCost),
+      finishedGoodsInventoryValueByYear: input.finishedGoodsInventoryValueByYear?.map(value => value * volume),
       fixedInvestment: input.fixedInvestment * capex,
       fixedInvestmentSchedule: input.fixedInvestmentSchedule.map(value => value * capex),
       depreciationSchedule: input.depreciationSchedule?.map(value => value * capex),
@@ -1951,13 +1981,19 @@ export function calculateOneWaySensitivity(
     } else if (id === 'operating-cost') {
       scenario.fullCapacityVariableCashCost = input.fullCapacityVariableCashCost * factor
       scenario.fullCapacityFixedCashCost = input.fullCapacityFixedCashCost * factor
+      scenario.costOfProductsSoldByYear = input.costOfProductsSoldByYear?.map(value => value * factor)
+      scenario.otherVariableCashCostByYear = input.otherVariableCashCostByYear?.map(value => value * factor)
+      scenario.otherFixedCashCostByYear = input.otherFixedCashCostByYear?.map(value => value * factor)
       scenario.maintenanceCapexSchedule = input.maintenanceCapexSchedule?.map(value => value * factor)
       scenario.workingCapitalPolicy = scalePolicy(factor)
     } else {
       const energyCost = input.workingCapitalPolicy?.annualEnergyCost ?? 0
       const variableBase = input.fullCapacityVariableCashCost
       const energyShare = variableBase > 0 ? Math.max(0, Math.min(1, energyCost / variableBase)) : 0
-      scenario.fullCapacityVariableCashCost = variableBase * (1 + (factor - 1) * energyShare)
+      const energyFactor = 1 + (factor - 1) * energyShare
+      scenario.fullCapacityVariableCashCost = variableBase * energyFactor
+      scenario.costOfProductsSoldByYear = input.costOfProductsSoldByYear?.map(value => value * energyFactor)
+      scenario.otherVariableCashCostByYear = input.otherVariableCashCostByYear?.map(value => value * energyFactor)
       scenario.workingCapitalPolicy = scalePolicy(factor, true)
     }
     return calculateIntegratedFinance(scenario)

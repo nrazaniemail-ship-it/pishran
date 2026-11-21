@@ -37,3 +37,18 @@ const validAsset={id:'asset-1',name:'Test asset',grossCost:1000,accumulatedDepre
 assert.equal(foundation.validateStartingFixedAssetBalances([validAsset],blank).length,0)
 assert.ok(foundation.validateStartingFixedAssetBalances([{...validAsset,commissioningDate:'2023-02-29'}],blank).some(x=>x.code==='invalid-starting-asset-date'))
 console.log('PASS: generic financial calculations, project calendar and opening-asset validation')
+
+const integratedWithCps = engine.calculateIntegratedFinance({
+ years:3, constructionYears:1, capacity:1000, fullCapacityRevenue:1000, fullCapacityVariableCashCost:0, fullCapacityFixedCashCost:0,
+ annualDepreciation:0, fixedInvestment:1000, preOperatingCost:0, fixedInvestmentSchedule:[1000,0,0], preOperatingSchedule:[0,0,0],
+ utilization:[0,1,1], equityContributions:[1000,0,0], loans:[], taxRate:0, costOfEquity:10, workingCapitalPercent:0,
+ salesEscalationPercent:0, opexEscalationPercent:0, discountMode:'manual', manualDiscountRate:10,
+ costOfProductsSoldByYear:[0,500,600], otherVariableCashCostByYear:[0,50,50], finishedGoodsInventoryValueByYear:[0,100,120]
+})
+near(integratedWithCps.years[1].variableCashCost,550,1e-9,'CPS plus other variable cash cost enters finance engine')
+near(integratedWithCps.years[1].ebit,450,1e-9,'CPS affects EBIT')
+near(integratedWithCps.years[1].workingCapitalBreakdown.finishedGoods,100,1e-9,'Finished goods asset enters working capital')
+near(integratedWithCps.years[1].changeInWorkingCapital,100,1e-9,'Finished goods inventory movement enters cash flow')
+assert.throws(()=>engine.calculateIntegratedFinance({
+ years:2,constructionYears:1,capacity:1,fullCapacityRevenue:0,fullCapacityVariableCashCost:0,fullCapacityFixedCashCost:0,annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:0,workingCapitalPercent:0,salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:0,costOfProductsSoldByYear:[0,1]
+}),/Other variable cash costs must be supplied/)
