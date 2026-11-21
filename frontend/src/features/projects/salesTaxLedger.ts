@@ -39,6 +39,37 @@ export type SalesTaxLedgerResult = {
   closingBalance: number
 }
 
+export type SalesTaxWorkingCapitalBinding = {
+  valid: boolean
+  issues: string[]
+  openingWorkingCapital: number
+  closingWorkingCapitalByPeriod: number[]
+}
+
+/** Include tax payable as an operating liability and recoverable tax as a current asset exactly once. */
+export function bindSalesTaxLedgerToWorkingCapital(
+  workingCapitalByPeriod: number[],
+  openingWorkingCapital: number,
+  ledger: SalesTaxLedgerResult,
+): SalesTaxWorkingCapitalBinding {
+  const issues: string[] = []
+  if (!ledger.valid) issues.push('A valid sales-tax ledger is required before working-capital posting.')
+  if (!Number.isFinite(openingWorkingCapital)) issues.push('Opening net working capital must be finite.')
+  if (!Array.isArray(workingCapitalByPeriod) || workingCapitalByPeriod.length !== ledger.rows.length ||
+      workingCapitalByPeriod.some(value => !Number.isFinite(value))) {
+    issues.push('Working-capital balances must align with every sales-tax ledger period.')
+  }
+  if (issues.length) return { valid:false, issues, openingWorkingCapital:Number.NaN, closingWorkingCapitalByPeriod:[] }
+  const openingTaxBalance = ledger.rows[0]?.openingBalance ?? 0
+  return {
+    valid:true,
+    issues:[],
+    openingWorkingCapital:openingWorkingCapital-openingTaxBalance,
+    // Positive tax balance is payable (liability); negative is recoverable (asset).
+    closingWorkingCapitalByPeriod:workingCapitalByPeriod.map((amount,index)=>amount-ledger.rows[index].closingBalance),
+  }
+}
+
 /**
  * Separate indirect-tax control account. Positive balances are payable to the
  * tax authority; negative balances are recoverable credits. Sales are tax-exclusive.
