@@ -181,6 +181,24 @@ assert.equal(rawToWip.rows.find(row=>row.inventoryStage==='raw-materials').ledge
 assert.equal(rawToWip.rows.find(row=>row.inventoryStage==='work-in-progress').ledgerClosingValue,40)
 assert.equal(rawToWip.rows.reduce((sum,row)=>sum+row.ledgerClosingValue,0),100,
  'inter-stage transfer must move value between stages without increasing total inventory')
+const threeStageMovementRows=[
+ {...stageRow(1,'raw-materials','ORE',10,100,0,0,0,0,0,0,6,60),costCentreId:'ORE-STORE'},
+ {...stageRow(1,'work-in-progress','PELLET',0,0,0,0,0,0,0,0,0,0),costCentreId:'DRI-PLANT'},
+ {...stageRow(1,'finished-goods','SLAB',0,0,0,0,0,0,0,0,4,40),costCentreId:'CASTING'},
+]
+const wipToFinishedTransfer={id:'ST-2',period:1,sourceStage:'work-in-progress',destinationStage:'finished-goods',
+ sourceProductId:'PELLET',destinationProductId:'SLAB',sourceCostCentreId:'DRI-PLANT',destinationCostCentreId:'CASTING',
+ quantity:4000,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0.001,transferValue:40,
+ sourceReference:'casting transfer note / 18',sourceVerified:true}
+const completeThreeStageChain=module.reconcileStageInventoryMovements(threeStageMovementRows,[
+ {period:1,rawMaterials:60,workInProgress:0,finishedGoods:40},
+],1,0.01,[rawToWipTransfer,wipToFinishedTransfer])
+assert.equal(completeThreeStageChain.valid,true,completeThreeStageChain.issues.join('; '))
+assert.equal(completeThreeStageChain.rows.find(row=>row.inventoryStage==='raw-materials').ledgerClosingValue,60)
+assert.equal(completeThreeStageChain.rows.find(row=>row.inventoryStage==='work-in-progress').ledgerClosingValue,0)
+assert.equal(completeThreeStageChain.rows.find(row=>row.inventoryStage==='finished-goods').ledgerClosingValue,40)
+assert.equal(completeThreeStageChain.rows.reduce((sum,row)=>sum+row.ledgerClosingValue,0),100,
+ 'raw-materials -> WIP -> finished-goods chain must preserve total inventory value')
 const incompleteTransferMovement=module.reconcileStageInventoryMovements([
  {...stageTransferMovementRows[0],receiptsQuantity:null,receiptsValue:null},
  stageTransferMovementRows[1],
