@@ -3,6 +3,7 @@ import type { ProjectCalendarPeriod } from './projectFoundation'
 
 export type ProductionFinancePeriod = {
   periodIndex: number
+  recordCount: number
   startDate: string
   endDate: string
   cpp: number
@@ -88,7 +89,7 @@ export function buildProductionFinanceBridge(
   if (errors.length) return empty()
 
   const rows: ProductionFinancePeriod[] = sortedPeriods.map((period, periodIndex) => ({
-    periodIndex, startDate: period.startDate, endDate: period.endDate, cpp: 0, cps: 0,
+    periodIndex, recordCount: 0, startDate: period.startDate, endDate: period.endDate, cpp: 0, cps: 0,
     materialCost: 0, directLaborCost: 0, energyCost: 0, maintenanceCost: 0, allocatedOverhead: 0,
     closingFinishedGoodsValue: 0, closingFinishedGoodsQuantity: 0, products: [],
   }))
@@ -113,6 +114,7 @@ export function buildProductionFinanceBridge(
           errors.push(`محصول ${product}: موجودی اول دوره ${periodIndex + 1} با موجودی پایان دوره قبل تطبیق ندارد`)
         else { openingQuantity = suppliedQuantity; openingValue = suppliedValue }
       }
+      rows[periodIndex].recordCount += current.length
       const goodOutput = current.reduce((sum, entry) => sum + entry.record.goodOutput, 0)
       const cpp = current.reduce((sum, entry) => sum + analyzeProductionRecord(entry.record).totalProductionCost, 0)
       const salesQuantity = current.reduce((sum, entry) => sum + (entry.record.salesQuantity ?? 0), 0)
