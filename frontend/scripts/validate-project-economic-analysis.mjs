@@ -22,10 +22,10 @@ const result=finance.calculateIntegratedPeriodicFinance({
 assert.equal(result.valid,true,result.warnings.join('; '))
 assert.deepEqual(result.rows.map(row=>row.subsidyIncome),[5,0])
 const adjustments=[
- {id:'fx',name:'Imported equipment FX shadow adjustment',period:'1',treatment:'cost',effectType:'foreign-exchange',financialAmount:10,economicAmount:8},
- {id:'jobs',name:'Employment shadow benefit',period:'2',treatment:'benefit',effectType:'employment',financialAmount:0,economicAmount:5},
+ {id:'fx',name:'Imported equipment FX shadow adjustment',period:'1',treatment:'cost',effectType:'foreign-exchange',financialAmount:10,economicAmount:8,sourceReference:'shadow-price-study-page-12',sourceVerified:true},
+ {id:'jobs',name:'Employment shadow benefit',period:'2',treatment:'benefit',effectType:'employment',financialAmount:0,economicAmount:5,sourceReference:'employment-study-page-8',sourceVerified:true},
 ]
-const report=module.buildProjectEconomicAnalysis(result,periods,adjustments,10,365,'period-end',undefined,'actual-days',1)
+const report=module.buildProjectEconomicAnalysis(result,periods,adjustments,10,365,'period-end',undefined,'actual-days',1,null,false,'economic-discount-rate-study',true)
 assert.equal(report.valid,true,report.issues.join('; '))
 assert.deepEqual(report.rows.map(row=>row.taxTransferRemoved),result.rows.map(row=>row.unleveredTax))
 assert.deepEqual(report.rows.map(row=>row.subsidyTransferRemoved),[5,0])
@@ -43,23 +43,29 @@ const salesTaxLedger={
  ],
 }
 const economicWithIndirectTax=module.buildProjectEconomicAnalysis(
- result,periods,adjustments,10,365,'period-end',undefined,'actual-days',1,salesTaxLedger,true)
+ result,periods,adjustments,10,365,'period-end',undefined,'actual-days',1,salesTaxLedger,true,'economic-discount-rate-study',true)
 assert.equal(economicWithIndirectTax.valid,true,economicWithIndirectTax.issues.join('; '))
 assert.deepEqual(economicWithIndirectTax.rows.map(row=>row.indirectTaxTransferRemoved),[-50,30])
 assert.deepEqual(economicWithIndirectTax.economicCashFlows,[17,105])
 assert.equal(economicWithIndirectTax.totalIndirectTaxTransferRemoved,-20)
 
 const invalidIndirectTax=module.buildProjectEconomicAnalysis(
- result,periods,adjustments,10,365,'period-end',undefined,'actual-days',1,{...salesTaxLedger,valid:false},true)
+ result,periods,adjustments,10,365,'period-end',undefined,'actual-days',1,{...salesTaxLedger,valid:false},true,'economic-discount-rate-study',true)
 assert.equal(invalidIndirectTax.valid,false)
 assert.ok(invalidIndirectTax.issues.some(issue=>issue.includes('indirect sales-tax ledger')))
 
-const missingDiscount=module.buildProjectEconomicAnalysis(result,periods,adjustments,null,365,'period-end',undefined,'actual-days',1)
+const missingDiscount=module.buildProjectEconomicAnalysis(result,periods,adjustments,null,365,'period-end',undefined,'actual-days',1,null,false,'economic-discount-rate-study',true)
 assert.equal(missingDiscount.valid,false)
-const invalidAmount=module.buildProjectEconomicAnalysis(result,periods,[{...adjustments[0],economicAmount:-1}],10,365,'period-end',undefined,'actual-days',1)
+const invalidAmount=module.buildProjectEconomicAnalysis(result,periods,[{...adjustments[0],economicAmount:-1}],10,365,'period-end',undefined,'actual-days',1,null,false,'economic-discount-rate-study',true)
 assert.equal(invalidAmount.valid,false)
-const unknownPeriod=module.buildProjectEconomicAnalysis(result,periods,[{...adjustments[0],period:'2035'}],10,365,'period-end',undefined,'actual-days',1)
+const unknownPeriod=module.buildProjectEconomicAnalysis(result,periods,[{...adjustments[0],period:'2035'}],10,365,'period-end',undefined,'actual-days',1,null,false,'economic-discount-rate-study',true)
 assert.equal(unknownPeriod.valid,false)
+const missingAdjustmentSource=module.buildProjectEconomicAnalysis(result,periods,[{...adjustments[0],sourceVerified:false}],10,365,'period-end',undefined,'actual-days',1,null,false,'economic-discount-rate-study',true)
+assert.equal(missingAdjustmentSource.valid,false)
+assert.ok(missingAdjustmentSource.issues.some(issue=>issue.includes('verified shadow-price source')))
+const missingDiscountSource=module.buildProjectEconomicAnalysis(result,periods,adjustments,10,365,'period-end',undefined,'actual-days',1,null,false,'',false)
+assert.equal(missingDiscountSource.valid,false)
+assert.ok(missingDiscountSource.issues.some(issue=>issue.includes('discount rate requires an independently verified source')))
 const panelSource=await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx',import.meta.url),'utf8')
 const wizardSource=await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx',import.meta.url),'utf8')
 assert.ok(panelSource.includes('onSalesTaxLedgerResult?.(salesTaxLedgerResult)'))
