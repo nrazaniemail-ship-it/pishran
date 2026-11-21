@@ -1,15 +1,17 @@
 import type { ProjectCalendarPeriod, ProjectDiscountConvention } from './projectFoundation'
 import type { EconomicAdjustmentFormDraft } from './projectModelFormDrafts'
+import type { SalesTaxLedgerResult } from './salesTaxLedger'
 import { calculatePeriodicIrr, calculatePeriodicNpv, type PeriodicProjectFinanceResult, type PeriodCashFlowTiming } from '../steel/periodicFinancialEngine'
 
 export type ProjectEconomicAnalysisResult = {
   valid:boolean
   issues:string[]
-  rows:{period:number;financialProjectCashFlow:number;taxTransferRemoved:number;subsidyTransferRemoved:number;economicAdjustment:number;economicCashFlow:number}[]
+  rows:{period:number;financialProjectCashFlow:number;taxTransferRemoved:number;indirectTaxTransferRemoved:number;subsidyTransferRemoved:number;economicAdjustment:number;economicCashFlow:number}[]
   economicCashFlows:number[]
   economicNpv:number|null
   economicIrr:number|null
   totalTaxTransferRemoved:number
+  totalIndirectTaxTransferRemoved:number
   totalSubsidyTransferRemoved:number
   totalForeignExchangeAdjustment:number
   totalEmploymentAdjustment:number
@@ -27,6 +29,8 @@ export function buildProjectEconomicAnalysis(
   valuationDate:string|undefined,
   discountConvention:ProjectDiscountConvention,
   periodsPerYear:1|2|4|12,
+  salesTaxLedger:SalesTaxLedgerResult|null=null,
+  salesTaxLedgerActive=false,
 ):ProjectEconomicAnalysisResult {
   const issues:string[]=[]
   const empty=():ProjectEconomicAnalysisResult=>({
@@ -35,6 +39,8 @@ export function buildProjectEconomicAnalysis(
     totalEmploymentAdjustment:0,totalGeneralAdjustment:0,
   })
   if(!finance.valid)issues.push('A valid periodic financial model is required for economic appraisal.')
+  if(salesTaxLedgerActive&&(!salesTaxLedger?.valid||salesTaxLedger.rows.length!==periods.length))
+    issues.push('A valid period-aligned indirect sales-tax ledger is required to remove tax transfers from economic cash flow.')
   if(periods.length!==finance.rows.length||!periods.length)issues.push('Economic appraisal requires one financial result for every project period.')
   if(discountRatePercent===null||!Number.isFinite(discountRatePercent)||discountRatePercent<=-100)
     issues.push('Enter an explicit economic discount rate greater than -100%.')
@@ -70,11 +76,16 @@ export function buildProjectEconomicAnalysis(
   if(issues.length)return empty()
   const rows=finance.rows.map((row,index)=>{
     const taxTransferRemoved=row.unleveredTax
+    const taxBalanceChange=salesTaxLedgerActive
+      ?salesTaxLedger!.rows[index].closingBalance-salesTaxLedger!.rows[index].openingBalance:0
+    // The financial NWC cash flow includes the movement in VAT payable/receivable.
+    // Remove that transfer from economic cash flow; settlements are already reflected in the balance movement.
+    const indirectTaxTransferRemoved=-taxBalanceChange
     const subsidyTransferRemoved=row.subsidyIncome??0
     const economicAdjustment=adjustmentByPeriod[index]
-    const economicCashFlow=row.projectFreeCashFlow+taxTransferRemoved-subsidyTransferRemoved+economicAdjustment
+    const economicCashFlow=row.projectFreeCashFlow+taxTransferRemoved+indirectTaxTransferRemoved-subsidyTransferRemoved+economicAdjustment
     return {period:index+1,financialProjectCashFlow:row.projectFreeCashFlow,taxTransferRemoved,
-      subsidyTransferRemoved,economicAdjustment,economicCashFlow}
+      indirectTaxTransferRemoved,subsidyTransferRemoved,economicAdjustment,economicCashFlow}
   })
   const economicCashFlows=rows.map(row=>row.economicCashFlow)
   const economicNpv=calculatePeriodicNpv(economicCashFlows,periods,discountRatePercent as number,
@@ -84,6 +95,7 @@ export function buildProjectEconomicAnalysis(
   if(issues.length)return empty()
   return {valid:true,issues:[],rows,economicCashFlows,economicNpv,economicIrr,
     totalTaxTransferRemoved:rows.reduce((sum,row)=>sum+row.taxTransferRemoved,0),
+    totalIndirectTaxTransferRemoved:rows.reduce((sum,row)=>sum+row.indirectTaxTransferRemoved,0),
     totalSubsidyTransferRemoved:rows.reduce((sum,row)=>sum+row.subsidyTransferRemoved,0),
     totalForeignExchangeAdjustment,totalEmploymentAdjustment,totalGeneralAdjustment}
 }
