@@ -13,7 +13,7 @@ const makeSource = (reference, reliability = 'primary-document') => ({
 const base = {
   label: 'Materials cost', category: 'materials', basis: 'period-total',
   behaviour: 'mixed', fixedPercent: 20, variablePercent: 80,
-  productId: null, allocationMethod: 'production-quantity',
+  productId: null, costCentreId: 'CC-PROD', allocationMethod: 'production-quantity',
   baseCostCoverage: 'excluded', periodAmounts: [100, 120],
   baseCoveredAmounts: [0, 0], source: makeSource('invoice-register-01'),
 }
@@ -41,6 +41,12 @@ assert.equal(result.readyForCppPosting, false, 'Incomplete evidence must block f
 assert.deepEqual(result.unverifiedItemIds, ['overhead'])
 assert.deepEqual(result.knownIncrementalByPeriod, [150, 180])
 assert.deepEqual(result.completeIncrementalByPeriod, [null, null])
+assert.deepEqual(result.knownIncrementalByCostCentre, { 'CC-PROD': 330 })
+assert.deepEqual(result.completeIncrementalByCostCentre, { 'CC-PROD': null },
+  'A centre containing unverified costs must not expose a complete total')
+assert.deepEqual(result.knownIncrementalByCostCentreAndCategory['CC-PROD'], {
+  materials: 220, labour: 0, energy: 100, maintenance: 10, overhead: 0,
+})
 assert.deepEqual(result.knownIncrementalByCategory, {
   materials: 220, labour: 0, energy: 100, maintenance: 10, overhead: 0,
 })
@@ -69,6 +75,12 @@ const missingSource = ledgerModule.buildCppCpsTraceLedger([{
 }], 2)
 assert.equal(missingSource.valid, false)
 assert.ok(missingSource.issues.some(issue => issue.includes('verified-source-requires-reference')))
+
+const missingCostCentre = ledgerModule.buildCppCpsTraceLedger([{
+  ...items[0], costCentreId: null,
+}], 2)
+assert.equal(missingCostCentre.valid, false)
+assert.ok(missingCostCentre.issues.some(issue => issue.includes('cost-centre-id-required-for-verified-cost')))
 
 const invalidCoverage = ledgerModule.buildCppCpsTraceLedger([{
   ...items[2], baseCoveredAmounts: [81, 40],
