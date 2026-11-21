@@ -198,7 +198,8 @@ export default function App() {
             <button type="button" className="honeycomb-cell honeycomb-core" onClick={() => setPage('project-wizard')} aria-label={isEn ? "Start feasibility study" : "شروع امکان‌سنجی پروژه"}><Gauge/><span>{isEn ? 'Feasibility Study' : 'امکان‌سنجی فنی، اقتصادی و مالی'}</span><small>{isEn ? 'Pishran core' : 'هسته ثابت پیشران'}</small></button>
           </div>
           <p className="honeycomb-hint">{isEn ? 'Feasibility is the active core; enterprise modules are introduced in phases.' : 'امکان‌سنجی هسته فعال پیشران است؛ ماژول‌های بنگاه به‌صورت مرحله‌ای توسعه می‌یابند.'}</p>
-        </div>      </section>
+        </div>
+      </section>
 
       <section className="section-head"><div><h2>{isEn ? "Investment Control Center" : "مرکز کنترل سرمایه‌گذاری"}</h2></div><span className="muted">{isEn ? 'Version 1.0.1' : 'نسخه ۱.۰.۱'}</span></section>
       <section className="kpis">
