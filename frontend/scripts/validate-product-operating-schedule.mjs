@@ -174,10 +174,9 @@ assert.ok(Math.abs(openingStockTransfer.rows.find(row=>row.productId==='P2'&&row
 // the intermediate weighted-average cost through each transfer without losing stock.
 const chainedBase={
  ...controlledDraft,
- sales:[
-  ...controlledDraft.sales,
-  {...controlledDraft.sales[1],productId:'P3',periods:controlledDraft.sales[1].periods.map(row=>({...row}))},
- ],
+ sales:controlledDraft.sales.map(sale=>({...sale,periods:sale.periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:30,openingFinishedGoodsValue:300}:row)})).concat([
+  {...controlledDraft.sales[1],productId:'P3',periods:controlledDraft.sales[1].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:30,openingFinishedGoodsValue:300}:({...row}))},
+ ]),
  productionCosts:[...controlledDraft.productionCosts,{...controlledDraft.productionCosts[1],id:'cost-p3',productId:'P3'}],
  productionTransfers:[],
 }
