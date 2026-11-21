@@ -75,7 +75,7 @@ assert.equal(recoveryBinding.valid, true)
 assert.equal(recoveryBinding.openingWorkingCapital, 65)
 assert.deepEqual(recoveryBinding.closingWorkingCapitalByPeriod, [125])
 
-const invalidBinding = ledger.bindSalesTaxLedgerToWorkingCapital([1, 2], 0, result)
+const invalidBinding = ledger.bindSalesTaxLedgerToWorkingCapital([1], 0, result)
 assert.equal(invalidBinding.valid, false)
 assert.ok(invalidBinding.issues.some(issue => issue.includes('align with every sales-tax ledger period')))
 
