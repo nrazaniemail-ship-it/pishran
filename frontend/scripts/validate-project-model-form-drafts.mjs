@@ -53,7 +53,17 @@ try {
  assert.equal(tax.system,null)
  assert.deepEqual(tax.rates,[])
  const complete=forms.createBlankProjectModelFinancialFormDrafts()
+ assert.deepEqual(complete.costCentres,[])
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts(complete),[])
+ const blankCentre=forms.createBlankCostCentreFormDraft('CC-1')
+ assert.ok(forms.validateCostCentreFormDraft(blankCentre).includes('cost-centre-name-required'))
+ const validCentre={...blankCentre,name:'Rolling mill',type:'production'}
+ assert.deepEqual(forms.validateCostCentreFormDraft(validCentre),[])
+ const trace=forms.createBlankCppCpsTraceItem('trace-1',1)
+ Object.assign(trace,{label:'Power',basis:'period-total',behaviour:'variable',fixedPercent:0,variablePercent:100,costCentreId:'CC-1',allocationMethod:'production-quantity',baseCostCoverage:'excluded',periodAmounts:[100],baseCoveredAmounts:[0],source:{status:'verified',reference:'invoice-1',description:'Power invoice',reliability:'primary-document'}})
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,cppCpsTraceItems:[trace]}).includes('cpp-cps-item-trace-1:unknown-cost-centre'))
+ assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentres:[validCentre],cppCpsTraceItems:[trace]}),[])
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentres:[validCentre,{...validCentre,name:'Duplicate'}]}).includes('cost-centre-1:duplicate-cost-centre-id'))
 
  const auditDraft=forms.createBlankProjectModelFinancialFormDrafts()
  assert.deepEqual(forms.listUnintegratedFinancialDraftInputs(auditDraft),[])
