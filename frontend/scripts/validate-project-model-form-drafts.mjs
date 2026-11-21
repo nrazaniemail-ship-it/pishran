@@ -66,6 +66,8 @@ try {
  assert.equal(blankMovement.sourceVerified,false)
  assert.equal(blankMovement.transfersInQuantity,null,'internal transfer quantities must remain unknown until explicitly entered')
  assert.equal(blankMovement.transfersOutValue,null,'internal transfer values must not default to zero')
+ assert.equal(blankMovement.salesQuantity,null,'finished-goods sales quantity must remain unknown until explicitly entered')
+ assert.equal(blankMovement.salesCostValue,null,'finished-goods cost of sales must remain unknown until explicitly entered')
 
  assert.deepEqual(complete.costCentreInventoryMovements,[])
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[blankMovement]}),[])
@@ -74,8 +76,11 @@ try {
  assert.ok(forms.validateProjectModelFinancialFormDrafts(partialMovementDraft).includes('cost-centre-inventory-0:all-quantities-and-values-required'))
  assert.ok(forms.listUnintegratedFinancialDraftInputs(partialMovementDraft).includes('financialForms.costCentreInventoryMovements.0'),
   'entered inventory rows must remain report blockers until posted into the financial engine')
- const verifiedMovement={...partialMovement,openingValue:0,receiptsQuantity:10,receiptsValue:100,transfersInQuantity:0,transfersInValue:0,transfersOutQuantity:0,transfersOutValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:4,consumptionValue:40,wasteQuantity:0,wasteValue:0,closingQuantity:6,closingValue:60,sourceReference:'inventory card / page 2',sourceVerified:true}
+ const verifiedMovement={...partialMovement,openingValue:0,receiptsQuantity:10,receiptsValue:100,transfersInQuantity:0,transfersInValue:0,transfersOutQuantity:0,transfersOutValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:4,consumptionValue:40,salesQuantity:0,salesCostValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:6,closingValue:60,sourceReference:'inventory card / page 2',sourceVerified:true}
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[verifiedMovement]}),[])
+ const missingSalesEvidence={...verifiedMovement,salesQuantity:undefined,salesCostValue:undefined}
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[missingSalesEvidence]}).includes('cost-centre-inventory-0:all-quantities-and-values-required'),
+  'finished-goods sales and COGS must not default to zero')
  const missingTransferEvidence={...verifiedMovement,transfersInQuantity:undefined,transfersInValue:undefined,transfersOutQuantity:undefined,transfersOutValue:undefined}
  assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[missingTransferEvidence]}).includes('cost-centre-inventory-0:all-quantities-and-values-required'),
   'legacy or incomplete rows must not silently interpret missing internal transfer fields as zero')
