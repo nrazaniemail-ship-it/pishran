@@ -155,7 +155,6 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
      </div>)}
      <button type="button" className="secondary-button" onClick={()=>patchCostCentre(centre.id,{driverRows:[...centre.driverRows,{period:1,productId:'',amount:null}]})}>{t('افزودن محرک دوره/محصول','Add period/product driver')}</button>
     </div>}
-    </div>
     <button type="button" className="secondary-button" onClick={()=>onChange({...value,costCentres:costCentres.filter(x=>x.id!==centre.id)})}>{t('حذف مرکز هزینه','Remove cost centre')}</button>
    </div>)}
    <button type="button" className="secondary-button" onClick={addCostCentre}>{t('افزودن مرکز هزینه','Add cost centre')}</button>
