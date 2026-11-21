@@ -156,26 +156,28 @@ const inventoryBalanceSheetCase=engine.calculateIntegratedPeriodicFinance({
   annualRevenue:[0,0,0],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
   annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
   annualMaintenanceCapex:[0,0,0],annualTaxRates:[0,0,0],annualEquityContributions:[0,0,0],
-  workingCapitalByPeriod:[140,170,0],
+  workingCapitalByPeriod:[140,200,0],
   rawMaterialsInventoryByPeriod:[100,120,0],
   workInProgressInventoryByPeriod:[40,50,0],
+  finishedGoodsInventoryByPeriod:[0,30,0],
   openingWorkingCapital:110,openingCash:0,loans:[],discountRatePercent:10
 })
 assert.equal(inventoryBalanceSheetCase.valid,true,inventoryBalanceSheetCase.warnings.join('; '))
 const inventoryStatements=engine.buildPeriodicThreeFinancialStatements(inventoryBalanceSheetCase,{
   cash:0,debt:0,netFixedAssets:0,netWorkingCapital:110,
-  rawMaterialsInventory:80,workInProgressInventory:30,paidInCapital:110
+  rawMaterialsInventory:80,workInProgressInventory:30,finishedGoodsInventory:0,paidInCapital:110
 })
 assert.equal(inventoryStatements.length,periods.length)
 assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.rawMaterialsInventory),[100,120,0])
 assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.workInProgressInventory),[40,50,0])
+assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.finishedGoodsInventory),[0,30,0])
 assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.otherNetWorkingCapital),[0,0,0])
 assert.ok(inventoryStatements.every(row=>
   Math.abs(row.balanceSheet.totalAssets-(row.balanceSheet.cash+row.balanceSheet.netWorkingCapital))<0.01),
   'Gross raw-material and WIP sub-ledgers must not be added a second time on top of net working capital')
 assert.ok(inventoryStatements.every(row=>
   Math.abs(row.balanceSheet.rawMaterialsInventory+row.balanceSheet.workInProgressInventory+
-    row.balanceSheet.otherNetWorkingCapital-row.balanceSheet.netWorkingCapital)<0.01),
+    row.balanceSheet.finishedGoodsInventory+row.balanceSheet.otherNetWorkingCapital-row.balanceSheet.netWorkingCapital)<0.01),
   'Gross inventory accounts plus residual other net current accounts must exactly equal net working capital')
 assert.ok(inventoryStatements.every(row=>row.balanceSheet.reconciled&&
   Math.abs(row.movementChecks.netWorkingCapital)<=0.01),
@@ -186,10 +188,10 @@ const invalidInventoryDetail=engine.calculateIntegratedPeriodicFinance({
   annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
   annualMaintenanceCapex:[0,0,0],annualTaxRates:[0,0,0],annualEquityContributions:[0,0,0],
   workingCapitalByPeriod:[0,0,0],rawMaterialsInventoryByPeriod:[0,-1,0],
-  workInProgressInventoryByPeriod:[0,0,0],loans:[]
+  workInProgressInventoryByPeriod:[0,0,0],finishedGoodsInventoryByPeriod:[0,-1,0],loans:[]
 })
 assert.equal(invalidInventoryDetail.valid,false,
-  'Negative raw-material inventory values must be rejected instead of entering the balance sheet')
+  'Negative raw-material or finished-goods inventory values must be rejected instead of entering the balance sheet')
 console.log('PASS: raw-material and WIP inventory sub-ledgers reconcile within net working capital without double counting')
 
 const loan=engine.calculatePeriodicLoanSchedule({
