@@ -60,6 +60,15 @@ Raw-material closing stock, WIP, and finished-goods stock are current-asset comp
 
 Inventory control compares, by period, the project model, balance sheet, and CPP/CPS inventory totals. The raw-material, WIP, and finished-goods detail must reconcile to the reported total inventory. Transfer-ledger quantity and value deltas are keyed by period, product, and cost centre (`period:product@costCentre`), so opposite movements in different periods cannot cancel each other in the audit totals. Transfers between products/cost centres preserve total group cost and must balance at source and destination. The current transfer ledger is a movement register, not a full cost-centre stock subledger: source-centre availability against its own opening stock, receipts, issues, and closing balance remains unverified until those centre-level stock movements are entered and reconciled separately.
 
+The calculation layer now exposes a cost-centre inventory roll-forward validator. For each explicit period/product/cost-centre row it requires opening quantity/value, receipts, production, consumption, waste, and closing quantity/value. It applies the signed transfer register to the location balance and tests:
+
+- Closing quantity = opening quantity + receipts + production + transfer-in − transfer-out − consumption − waste.
+- Closing value = opening value + receipts value + production value + transfer-in value − transfer-out value − consumption value − waste value.
+- Each next-period opening quantity/value must equal the prior period's closing quantity/value when consecutive rows are supplied.
+- Every transfer endpoint must have a matching centre movement row; transfer-only or incomplete rows cannot silently pass.
+
+This validator is an explicit calculation contract with regression coverage; it is not yet a user-facing input form or an automatic feed from the production/CPP-CPS schedules. Raw-material, WIP, and finished-goods stage-specific centre subledgers and their UI bindings remain separate follow-on work.
+
 ## Evidence and completion gates
 
 A source is verified only when its reference, description, and reliability classification are populated and the item is explicitly marked verified. A source change that removes verification resets its amount/coverage evidence. The final CPP/CPS posting gate requires a valid and complete source ledger, aligned project periods, a valid product operating schedule, and a valid allocation driver wherever allocation is needed.
