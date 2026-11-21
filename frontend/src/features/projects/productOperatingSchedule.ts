@@ -356,11 +356,15 @@ export function buildProductOperatingSchedule(
   if(issues.length)return empty()
   // Reclassify transferred CPP from the source product/cost centre to the destination.
   // Quantity is retained as an audit/control quantity; value is the posted accounting amount.
+  const transferredOutByProductPeriod=new Map<string,number>()
   for(const transfer of drafts.productionTransfers??[]){
     const source=rows.find(row=>row.productId===transfer.sourceProductId&&row.period===transfer.period)
     const destination=rows.find(row=>row.productId===transfer.destinationProductId&&row.period===transfer.period)
     if(!source||!destination){issues.push('Transfer '+transfer.id+' requires source and destination product rows in the same period.');continue}
-    if(transfer.costAmount>source.productionCost+0.01){issues.push('Transfer '+transfer.id+' exceeds the source product current-period production cost available for reclassification.');continue}
+    const sourceKey=transfer.sourceProductId+':'+transfer.period
+    const alreadyTransferred=transferredOutByProductPeriod.get(sourceKey)??0
+    if(transfer.costAmount>source.productionCost-alreadyTransferred+0.01){issues.push('Transfer '+transfer.id+' exceeds the remaining source product current-period production cost available for reclassification.');continue}
+    transferredOutByProductPeriod.set(sourceKey,alreadyTransferred+transfer.costAmount)
     if(destination.productionQuantity<=0&&transfer.costAmount>0){issues.push('Transfer '+transfer.id+' cannot post value to a destination product with no production in the period.');continue}
     source.productionCost-=transfer.costAmount
     destination.productionCost+=transfer.costAmount
