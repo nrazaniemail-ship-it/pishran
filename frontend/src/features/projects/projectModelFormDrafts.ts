@@ -260,6 +260,33 @@ const costCentreInventoryMovementHasData=(row:CostCentreInventoryMovementFormDra
   row.consumptionValue,row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue,row.sourceReference]
   .some(value=>value!==null&&value!==undefined&&value!=='')
 
+export type InventoryStageTransferFormDraft={
+ id:string
+ period:number|null
+ sourceStage:'raw-materials'|'work-in-progress'|'finished-goods'|null
+ destinationStage:'raw-materials'|'work-in-progress'|'finished-goods'|null
+ sourceProductId:string
+ destinationProductId:string
+ sourceCostCentreId:string
+ destinationCostCentreId:string
+ quantity:number|null
+ sourceUnit:string
+ destinationUnit:string
+ conversionFactor:number|null
+ transferValue:number|null
+ sourceReference:string
+ sourceVerified:boolean
+}
+export function createBlankInventoryStageTransferFormDraft(id=''):InventoryStageTransferFormDraft{
+ return {id,period:null,sourceStage:null,destinationStage:null,sourceProductId:'',destinationProductId:'',
+  sourceCostCentreId:'',destinationCostCentreId:'',quantity:null,sourceUnit:'',destinationUnit:'',
+  conversionFactor:null,transferValue:null,sourceReference:'',sourceVerified:false}
+}
+const inventoryStageTransferHasData=(row:InventoryStageTransferFormDraft):boolean=>
+ [row.period,row.sourceStage,row.destinationStage,row.sourceProductId,row.destinationProductId,row.sourceCostCentreId,
+  row.destinationCostCentreId,row.quantity,row.sourceUnit,row.destinationUnit,row.conversionFactor,row.transferValue,row.sourceReference]
+  .some(value=>value!==null&&value!==undefined&&value!=='')
+
 export type ProjectModelFinancialFormDrafts = {
  cppCpsTraceItems: CppCpsTraceItem[]
  costCentres: CostCentreFormDraft[]
@@ -278,7 +305,7 @@ export type ProjectModelFinancialFormDrafts = {
  economic: { discountRatePercent:number|null; discountRateSourceReference:string; discountRateSourceVerified:boolean; adjustments:EconomicAdjustmentFormDraft[]; valueAddedPeriods:ValueAddedPeriodFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],costCentreInventoryMovements:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),salesTaxLedger:createBlankSalesTaxLedgerFormDraft(),economic:{discountRatePercent:null,discountRateSourceReference:'',discountRateSourceVerified:false,adjustments:[],valueAddedPeriods:[]}}
+ return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],costCentreInventoryMovements:[],inventoryStageTransfers:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),salesTaxLedger:createBlankSalesTaxLedgerFormDraft(),economic:{discountRatePercent:null,discountRateSourceReference:'',discountRateSourceVerified:false,adjustments:[],valueAddedPeriods:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{
@@ -302,6 +329,8 @@ export function listUnintegratedFinancialDraftInputs(value:ProjectModelFinancial
  for(const [label,rows] of collections)for(const [index,row] of (rows??[]).entries())if(hasEnteredValue(row))issues.push(label+'.'+index)
  // Cost-centre inventory movements are persisted but not yet posted into the three-stage inventory engine.
  for(const [index,row] of (value.costCentreInventoryMovements??[]).entries())if(costCentreInventoryMovementHasData(row))issues.push('financialForms.costCentreInventoryMovements.'+index)
+ // Inter-stage transfers are stored separately until stage-specific posting is complete.
+ for(const [index,row] of (value.inventoryStageTransfers??[]).entries())if(inventoryStageTransferHasData(row))issues.push('financialForms.inventoryStageTransfers.'+index)
  // Tax form fields are bound to the period engine; schedule validity is checked by the periodic result gate.
  return issues
 }
@@ -381,6 +410,19 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
   }
   if(values.some(amount=>amount===null||!Number.isFinite(amount)||amount<0))errors.push('cost-centre-inventory-'+index+':all-quantities-and-values-required')
   if(!row.sourceReference.trim()||!row.sourceVerified)errors.push('cost-centre-inventory-'+index+':verified-source-required')
+ }
+ const stageTransferIds=new Set<string>()
+ for(const [index,row] of (value.inventoryStageTransfers??[]).entries()){
+  if(!inventoryStageTransferHasData(row))continue
+  const id=row.id.trim().toLocaleLowerCase()
+  if(!id||stageTransferIds.has(id))errors.push('inventory-stage-transfer-'+index+':duplicate-or-missing-id')
+  stageTransferIds.add(id)
+  if(row.period===null||!Number.isInteger(row.period)||row.period<1)errors.push('inventory-stage-transfer-'+index+':invalid-period')
+  if(!row.sourceStage||!row.destinationStage||row.sourceStage===row.destinationStage)errors.push('inventory-stage-transfer-'+index+':distinct-source-and-destination-stages-required')
+  if(!row.sourceProductId.trim()||!row.destinationProductId.trim()||!row.sourceCostCentreId.trim()||!row.destinationCostCentreId.trim())errors.push('inventory-stage-transfer-'+index+':source-and-destination-product-centre-required')
+  if(row.quantity===null||!Number.isFinite(row.quantity)||row.quantity<0||row.conversionFactor===null||!Number.isFinite(row.conversionFactor)||row.conversionFactor<=0||row.transferValue===null||!Number.isFinite(row.transferValue)||row.transferValue<0)errors.push('inventory-stage-transfer-'+index+':invalid-quantity-conversion-or-value')
+  if(!row.sourceUnit.trim()||!row.destinationUnit.trim())errors.push('inventory-stage-transfer-'+index+':source-and-destination-units-required')
+  if(!row.sourceReference.trim()||!row.sourceVerified)errors.push('inventory-stage-transfer-'+index+':verified-source-required')
  }
  errors.push(...validateHelpDrivenProjectForms(value.helpDriven ?? createBlankHelpDrivenProjectForms()))
  value.assets.forEach((item,index)=>validateFixedAssetFormDraft(item).forEach(error=>errors.push('asset-'+index+':'+error)))
