@@ -327,7 +327,7 @@ export default function AdvancedFinancePanel(props: Props) {
     if(draft?.openingBalance==null)return {valid:false,issues:['An explicit opening sales-tax payable / recoverable balance is required.'],rows:[],totalOutputTax:0,totalRecoverableInputTax:0,totalSettlements:0,closingBalance:Number.NaN}
     const outputEntries:SalesTaxOutputEntry[]=baseProductOperatingSchedule.rows
       .filter(row=>row.salesTaxPercent>0)
-      .map(row=>({productId:row.productId,period:row.period,taxableSales:row.taxableSales,ratePercent:row.salesTaxPercent}))
+      .map(row=>({productId:row.productId,period:row.period,taxableSales:row.taxableSales,ratePercent:row.salesTaxPercent,sourceReference:row.salesTaxSourceReference,sourceVerified:row.salesTaxSourceVerified}))
     const inputCredits:SalesTaxInputCreditEntry[]=(draft.inputCredits??[]).map(row=>({
       id:row.id,period:row.period??Number.NaN,taxAmount:row.taxAmount??Number.NaN,
       sourceReference:row.sourceReference,sourceVerified:row.sourceVerified,
