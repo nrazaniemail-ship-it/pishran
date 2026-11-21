@@ -35,6 +35,39 @@ assert.equal(periodSeparated.netValueByProductCentre['1:P1@A'],-100)
 assert.equal(periodSeparated.netValueByProductCentre['2:P1@A'],100)
 assert.equal(Object.keys(periodSeparated.netQuantityByProductCentre).length,4,
  'opposite transfers in different periods must not net against each other')
+
+const centreMovements=[
+ {period:1,productId:'P1',costCentreId:'A',openingQuantity:20,openingValue:200,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:10,closingValue:100},
+ {period:1,productId:'P2',costCentreId:'B',openingQuantity:0,openingValue:0,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:10,closingValue:100},
+ {period:2,productId:'P1',costCentreId:'A',openingQuantity:10,openingValue:100,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:10,closingValue:100},
+ {period:2,productId:'P2',costCentreId:'B',openingQuantity:10,openingValue:100,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:4,consumptionValue:40,wasteQuantity:0,wasteValue:0,closingQuantity:6,closingValue:60},
+]
+const centreReconciled=module.reconcileCostCentreInventory(centreMovements,[
+ {id:'CC-T1',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+],2)
+assert.equal(centreReconciled.valid,true,centreReconciled.issues.join('; '))
+assert.equal(centreReconciled.rows.find(row=>row.productId==='P1').transferNetValue,-100)
+assert.equal(centreReconciled.rows.find(row=>row.productId==='P2').transferNetValue,100)
+assert.equal(centreReconciled.rows.find(row=>row.productId==='P2'&&row.period===2).expectedClosingValue,60)
+const missingTransferCentre=module.reconcileCostCentreInventory(centreMovements.filter(row=>!(row.period===1&&row.productId==='P2')),[
+ {id:'CC-T2',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+],2)
+assert.equal(missingTransferCentre.valid,false,'every transfer endpoint must have an explicit centre stock movement row')
+assert.ok(missingTransferCentre.issues.some(issue=>issue.includes('no matching cost-centre inventory movement row')))
+const wrongCentreClosing=module.reconcileCostCentreInventory(centreMovements.map(row=>row.period===1&&row.productId==='P2'?{...row,closingValue:99}:row),[
+ {id:'CC-T3',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+],2)
+assert.equal(wrongCentreClosing.valid,false,'destination inventory value must include the exact transfer value')
+assert.ok(wrongCentreClosing.issues.some(issue=>issue.includes('closing value does not reconcile')))
+const wrongOpeningCarry=module.reconcileCostCentreInventory(centreMovements.map(row=>row.period===2&&row.productId==='P2'?{...row,openingValue:99}:row),[
+ {id:'CC-T4',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+],2)
+assert.equal(wrongOpeningCarry.valid,false,'each centre opening balance must carry forward its prior closing value')
+assert.ok(wrongOpeningCarry.issues.some(issue=>issue.includes('opening value does not equal prior-period closing value')))
+const overdrawCentre=module.reconcileCostCentreInventory(centreMovements.map(row=>row.period===1&&row.productId==='P1'?{...row,closingQuantity:0,closingValue:0}:row),[
+ {id:'CC-T5',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:25,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:250},
+],2)
+assert.equal(overdrawCentre.valid,false,'a transfer that exceeds source centre stock must fail the centre roll-forward')
 assert.equal(module.validateProductionTransfers([{id:'bad-factor',period:1,sourceProductId:'A',destinationProductId:'B',sourceCostCentreId:'X',destinationCostCentreId:'Y',quantity:1,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0,costAmount:1}],1).valid,false)
 
 assert.equal(transfers.totalSourceValue,transfers.totalDestinationValue)
