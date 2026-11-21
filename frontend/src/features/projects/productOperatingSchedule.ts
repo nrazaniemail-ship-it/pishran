@@ -37,6 +37,7 @@ export type ProductOperatingSchedule = {
   totalClosingInventoryValue: number
   periodRawMaterialInventoryValue: number[]
   periodWipInventoryValue: number[]
+  hasInventoryFlow: boolean
 }
 
 function comfarDaysInPeriod(period:ProjectCalendarPeriod):number {
@@ -66,7 +67,7 @@ export function buildProductOperatingSchedule(
   const empty = (): ProductOperatingSchedule => ({
     valid:false,issues,rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],
     annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,
-    totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],
+    totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],hasInventoryFlow:false,
   })
   if (!count) issues.push('At least one project period is required.')
   if (!Number.isInteger(fiscalYearStartMonth)||fiscalYearStartMonth<1||fiscalYearStartMonth>12)
@@ -181,7 +182,7 @@ export function buildProductOperatingSchedule(
         issues.push('Product '+sale.productId+' requires complete purchase, consumption, production, WIP and conversion-cost inputs for every period.')
         continue
       }
-      const first=sale.periods.find(row=>row.period===periods[0].startDate||row.period===periods[0].endDate||row.period==='1'||row.period===String(periods[0].index))
+      const first=mapped.get(0)
       if(!first||[first.openingRawMaterialQuantity,first.openingRawMaterialValue,first.openingWipQuantity,first.openingWipMaterialValue,first.openingWipConversionValue].some(v=>v===null||v===undefined||!Number.isFinite(v))){
         issues.push('Product '+sale.productId+' requires explicit opening raw-material and WIP quantity/value balances.')
         continue
@@ -341,5 +342,7 @@ export function buildProductOperatingSchedule(
   })
   if(issues.length)return empty()
   return {valid:true,issues:[],rows,periodRevenue,periodCostOfSales,periodSubsidyIncome,annualRevenue,annualCostOfSales,
-    totalProductionQuantity,totalSalesQuantity,totalClosingInventoryValue,periodRawMaterialInventoryValue,periodWipInventoryValue}
+    totalProductionQuantity,totalSalesQuantity,totalClosingInventoryValue,periodRawMaterialInventoryValue,periodWipInventoryValue,hasInventoryFlow:rows.some(row=>row.rawMaterialInventoryValue>0||row.wipInventoryValue>0)||salesHaveInventoryFlow(drafts.sales)}
 }
+
+function salesHaveInventoryFlow(sales:SalesProductFormDraft[]):boolean{return sales.some(sale=>sale.periods.some(row=>row.rawMaterialPurchasesQuantity!==null||row.rawMaterialPurchasesValue!==null||row.rawMaterialConsumptionQuantity!==null||row.unitsStarted!==null||row.unitsCompleted!==null||row.closingWipQuantity!==null||row.conversionCost!==null))}
