@@ -370,9 +370,14 @@ export function buildProductOperatingSchedule(
     if(!sourceCostByProductPeriod.has(sourceKey))sourceCostByProductPeriod.set(sourceKey,source.productionCost)
     const alreadyTransferred=transferredOutByProductPeriod.get(sourceKey)??0
     if(transfer.costAmount>(sourceCostByProductPeriod.get(sourceKey) as number)-alreadyTransferred+0.01){issues.push('Transfer '+transfer.id+' exceeds the remaining source product current-period production cost available for reclassification.');continue}
-    transferredOutByProductPeriod.set(sourceKey,alreadyTransferred+transfer.costAmount)
     const destinationQuantity=transfer.quantity*transfer.conversionFactor
     if(source.closingInventoryQuantity+0.01<transfer.quantity){issues.push('Transfer '+transfer.id+' exceeds the source product finished-goods quantity available for transfer.');continue}
+    const sourceAvailableQuantity=source.openingInventoryQuantity+source.productionQuantity
+    const sourceAvailableValue=source.openingInventoryValue+(sourceCostByProductPeriod.get(sourceKey) as number)
+    const sourceWeightedAverage=sourceAvailableQuantity>0?sourceAvailableValue/sourceAvailableQuantity:0
+    const expectedTransferValue=transfer.quantity*sourceWeightedAverage
+    if(Math.abs(transfer.costAmount-expectedTransferValue)>0.01*Math.max(1,Math.abs(expectedTransferValue))){issues.push('Transfer '+transfer.id+' cost must equal transferred source quantity multiplied by the source weighted-average inventory cost.');continue}
+    transferredOutByProductPeriod.set(sourceKey,alreadyTransferred+transfer.costAmount)
     source.closingInventoryQuantity-=transfer.quantity
     destination.productionQuantity+=destinationQuantity
     destination.completedUnits+=destinationQuantity
@@ -382,7 +387,8 @@ export function buildProductOperatingSchedule(
     for(const row of [source,destination]){
       row.unitProductionCost=row.productionQuantity>0?row.productionCost/row.productionQuantity:row.unitProductionCost
       const availableQty=row.openingInventoryQuantity+row.productionQuantity
-      const availableValue=row.openingInventoryValue+row.productionCost
+      const grossSourceCost=row.productId===transfer.sourceProductId?(sourceCostByProductPeriod.get(sourceKey) as number):row.productionCost
+      const availableValue=row.openingInventoryValue+grossSourceCost
       row.weightedAverageUnitCost=availableQty>0?availableValue/availableQty:0
       row.costOfSales=row.salesQuantity*row.weightedAverageUnitCost
       row.closingInventoryValue=row.closingInventoryQuantity*row.weightedAverageUnitCost
@@ -407,6 +413,7 @@ export function buildProductOperatingSchedule(
   }
   if(issues.length)return empty()
   periodCostOfSales.fill(0)
+  totalProductionQuantity=rows.reduce((sum,row)=>sum+row.productionQuantity,0)
   totalClosingInventoryValue=0
   for(const row of rows){periodCostOfSales[row.period-1]+=row.costOfSales;totalClosingInventoryValue+=row.closingInventoryValue}
   const fiscalYearCount=Math.max(...periods.map(period=>fiscalYearIndexForPeriod(period,periods,fiscalYearStartMonth)))+1
