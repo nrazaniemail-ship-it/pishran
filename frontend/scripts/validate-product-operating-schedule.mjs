@@ -103,7 +103,7 @@ assert.ok(noLiquidation.issues.some(issue=>issue.includes('unsold finished goods
 
 const controlledDraft={
  ...base,
- sales:[{...base.sales[0],unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsValue:1150*20/110}:row)},{...base.sales[0],productId:'P2',unitOfMeasure:'kg',periods:base.sales[0].periods.map(row=>({...row}))}],
+ sales:[{...base.sales[0],unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:20,openingFinishedGoodsValue:1150*20/110}:row)},{...base.sales[0],productId:'P2',unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:40,openingFinishedGoodsValue:(100+1000+1150*10/110)*40/100}:({...row}))}],
  productionCosts:[...base.productionCosts,{...base.productionCosts[0],id:'cost-p2',productId:'P2'}],
  wasteLedgerEntries:[
   {id:'WN-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:5,unitCost:10,amount:50},
