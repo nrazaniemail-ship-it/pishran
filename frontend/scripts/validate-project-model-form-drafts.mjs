@@ -59,6 +59,9 @@ try {
  assert.ok(forms.validateCostCentreFormDraft(blankCentre).includes('cost-centre-name-required'))
  const validCentre={...blankCentre,name:'Rolling mill',type:'production'}
  assert.deepEqual(forms.validateCostCentreFormDraft(validCentre),[])
+ const manualCentre={...validCentre,allocationBasis:'manual',driverRows:[{period:1,productId:'P1',amount:1}]}
+ assert.deepEqual(forms.validateCostCentreFormDraft(manualCentre),[])
+ assert.ok(forms.validateCostCentreFormDraft({...manualCentre,driverRows:[{period:1,productId:'',amount:null}]}).includes('invalid-manual-cost-centre-driver'))
  const trace=forms.createBlankCppCpsTraceItem('trace-1',1)
  Object.assign(trace,{label:'Power',basis:'period-total',behaviour:'variable',fixedPercent:0,variablePercent:100,costCentreId:'CC-1',allocationMethod:'production-quantity',baseCostCoverage:'excluded',periodAmounts:[100],baseCoveredAmounts:[0],source:{status:'verified',reference:'invoice-1',description:'Power invoice',reliability:'primary-document'}})
  assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,cppCpsTraceItems:[trace]}).includes('cpp-cps-item-trace-1:unknown-cost-centre'))
