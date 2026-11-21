@@ -127,3 +127,32 @@ export function calculateFinishedGoodsPeriod(input: FinishedGoodsPeriodInput): F
   const closingInventoryValue = weightedAverageUnitCost === null ? 0 : closingQuantity * weightedAverageUnitCost
   return { cpp: input.currentProductionCost, currentUnitProductionCost: input.currentGoodOutput > 0 ? input.currentProductionCost / input.currentGoodOutput : null, availableQuantity, availableValue, weightedAverageUnitCost, cps, closingQuantity, closingInventoryValue, warnings }
 }
+
+
+export type FinishedGoodsProductInput = FinishedGoodsPeriodInput & { productId: string; currency: string }
+export type FinishedGoodsProductResult = FinishedGoodsPeriodResult & { productId: string; currency: string }
+
+/** Calculate each product's stock and cost independently; never pool unlike products. */
+export function calculateFinishedGoodsPortfolio(products: FinishedGoodsProductInput[]): FinishedGoodsProductResult[] {
+  const ids = new Set<string>()
+  const currencies = new Map<string, string>()
+  return products.map(product => {
+    if (!product.productId.trim() || ids.has(product.productId)) throw new Error('شناسه محصول در سبد موجودی خالی یا تکراری است')
+    ids.add(product.productId)
+    const previousCurrency = currencies.get(product.productId)
+    if (previousCurrency && previousCurrency !== product.currency) throw new Error('ارز موجودی محصول در دوره‌ها ناسازگار است')
+    currencies.set(product.productId, product.currency)
+    return { productId: product.productId, currency: product.currency, ...calculateFinishedGoodsPeriod(product) }
+  })
+}
+
+/** Sum only after product-level valuation; currencies must match before monetary consolidation. */
+export function summarizeFinishedGoodsPortfolio(products: FinishedGoodsProductResult[], reportingCurrency: string) {
+  if (products.some(product => product.currency !== reportingCurrency)) throw new Error('تجمیع موجودی محصولات با ارزهای متفاوت بدون تسعیر مجاز نیست')
+  return products.reduce((sum, product) => ({
+    cpp: sum.cpp + product.cpp,
+    cps: sum.cps + product.cps,
+    closingQuantity: sum.closingQuantity + product.closingQuantity,
+    closingInventoryValue: sum.closingInventoryValue + product.closingInventoryValue,
+  }), { cpp: 0, cps: 0, closingQuantity: 0, closingInventoryValue: 0 })
+}
