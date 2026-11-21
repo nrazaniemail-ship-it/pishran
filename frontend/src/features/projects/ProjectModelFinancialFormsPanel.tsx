@@ -1,17 +1,18 @@
 import {
  createBlankFixedAssetFormDraft, createBlankProductionCostFormDraft,
  createBlankSalesProductFormDraft, createBlankWorkingCapitalComponentFormDraft,
- createBlankLoanFacilityFormDraft, type ProjectModelFinancialFormDrafts,
+ createBlankLoanFacilityFormDraft, createBlankCppCpsTraceItem, type ProjectModelFinancialFormDrafts,
  type FixedAssetFormDraft, type ProductionCostFormDraft,
  type WorkingCapitalComponentFormDraft, type LoanFacilityFormDraft,
  validateProjectModelFinancialFormDrafts
 } from './projectModelFormDrafts'
 import { deriveQuantityPriceTotal, type CommonFinancialItemMetadata } from './projectModelSchema'
 import ProjectModelHelpCoveragePanel from './ProjectModelHelpCoveragePanel'
-import type { ProjectFoundation } from './projectFoundation'
+import type { ProjectFoundation, ProjectCalendarPeriod } from './projectFoundation'
+import type { CppCpsTraceItem } from './cppCpsCostTraceability'
 import { resolveLoanFacilityCurrency } from '../steel/foreignCurrencyTranslation'
 
-type Props={value:ProjectModelFinancialFormDrafts;onChange:(value:ProjectModelFinancialFormDrafts)=>void;language?:'fa'|'en';foundation?:ProjectFoundation}
+type Props={value:ProjectModelFinancialFormDrafts;onChange:(value:ProjectModelFinancialFormDrafts)=>void;language?:'fa'|'en';foundation?:ProjectFoundation;projectPeriods?:ProjectCalendarPeriod[]}
 const parseNumber=(value:string):number|null=>value.trim()===''?null:Number.isFinite(Number(value))?Number(value):null
 function NumberField({label,value,onChange,unit}:{label:string;value:number|null;onChange:(value:number|null)=>void;unit?:string}) {
  return <label className="fw-field"><span>{label}{unit?' ('+unit+')':''}</span><input type="number" step="any" value={value??''} onChange={e=>onChange(parseNumber(e.target.value))}/></label>
@@ -31,7 +32,7 @@ function MetadataFields({metadata,onChange,language}:{metadata:CommonFinancialIt
  </div>
 }
 
-export default function ProjectModelFinancialFormsPanel({value,onChange,language='fa',foundation}:Props) {
+export default function ProjectModelFinancialFormsPanel({value,onChange,language='fa',foundation,projectPeriods=[]}:Props) {
  const en=language==='en'
  const t=(fa:string,english:string)=>en?english:fa
  const errors=validateProjectModelFinancialFormDrafts(value)
@@ -40,6 +41,16 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
  const patchSales=(index:number,patch:Partial<(typeof value.sales)[number]>)=>onChange({...value,sales:value.sales.map((x,i)=>i===index?{...x,...patch}:x)})
  const patchWorking=(id:string,patch:Partial<WorkingCapitalComponentFormDraft>)=>onChange({...value,workingCapital:value.workingCapital.map(x=>x.id===id?{...x,...patch}:x)})
  const patchLoan=(id:string,patch:Partial<LoanFacilityFormDraft>)=>onChange({...value,loans:value.loans.map(x=>x.id===id?{...x,...patch}:x)})
+ const traceItems=value.cppCpsTraceItems??[]
+ const patchTrace=(id:string,patch:Partial<CppCpsTraceItem>)=>onChange({...value,cppCpsTraceItems:traceItems.map(x=>x.id===id?{...x,...patch}:x)})
+ const patchTraceSource=(id:string,patch:Partial<CppCpsTraceItem['source']>)=>{
+  const item=traceItems.find(x=>x.id===id);if(!item)return
+  const source={...item.source,...patch}
+  const verified=Boolean(source.reference.trim()&&source.description.trim()&&source.reliability!=='unverified')
+  patchTrace(id,{source:{...source,status:verified?'verified':'unverified'},...(verified?{}:{baseCostCoverage:'unverified',periodAmounts:item.periodAmounts.map(()=>null),baseCoveredAmounts:item.baseCoveredAmounts.map(()=>null)})})
+ }
+ const addTrace=()=>onChange({...value,cppCpsTraceItems:[...traceItems,createBlankCppCpsTraceItem(crypto.randomUUID(),projectPeriods.length)]})
+
  const patchAssetAcquisition=(assetId:string,index:number,field:'quantity'|'unitPrice'|'total',next:number|null)=>{
   const asset=value.assets.find(x=>x.id===assetId);if(!asset)return
   const rows=asset.acquisitionPeriods.map((row,i)=>{if(i!==index)return row;const derived=deriveQuantityPriceTotal({...row,[field]:next});return {...row,...derived}})
@@ -118,6 +129,40 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
     <button type="button" className="secondary-button" onClick={()=>onChange({...value,economic:{...value.economic,adjustments:value.economic.adjustments.filter((_,k)=>k!==j)}})}>{t('حذف قلم','Remove item')}</button>
    </div>)}
    <button type="button" className="secondary-button" onClick={()=>onChange({...value,economic:{...value.economic,adjustments:[...value.economic.adjustments,{id:crypto.randomUUID(),name:'',period:'',treatment:null,effectType:null,financialAmount:null,economicAmount:null}]}})}>{t('افزودن تعدیل اقتصادی','Add economic adjustment')}</button>
+  </div>
+
+  <div className="fw-card">
+   <h4>{t('۸. دفتر ردیابی تفصیلی هزینه‌های CPP/CPS','8. Detailed CPP/CPS Cost Traceability Ledger')}</h4>
+   <p className="fw-hint">{t('برای هر قلم مواد، نیروی انسانی، انرژی، تعمیرات و سربار، مبنا، رفتار هزینه، پوشش در بهای پایه، روش تخصیص و سند منبع را ثبت کنید. فقط بخش مستندِ خارج از پوشش به CPP افزوده می‌شود. تا وقتی منبع معتبر وارد نشده، مبالغ باید خالی بمانند؛ اقلام CRC200 فاقد مدرک به‌صورت تأییدنشده نگهداری می‌شوند.','For each material, labour, energy, maintenance and overhead item, record its basis, cost behaviour, base-cost coverage, allocation method and source evidence. Only the evidenced uncovered portion is added to CPP. Amounts stay blank until a valid source is supplied; unsupported CRC200 entries remain unverified.')}</p>
+   {traceItems.map(item=><div className="fw-validation" key={item.id} style={{marginTop:10,padding:12}}>
+    <div className="fw-grid">
+     <TextField label={t('شرح قلم هزینه','Cost item')} value={item.label} onChange={v=>patchTrace(item.id,{label:v})}/>
+     <label className="fw-field"><span>{t('گروه هزینه','Cost category')}</span><select value={item.category} onChange={e=>patchTrace(item.id,{category:e.target.value as CppCpsTraceItem['category']})}>{[['materials','مواد'],['labour','نیروی انسانی'],['energy','انرژی'],['maintenance','تعمیرات'],['overhead','سربار']].map(([v,l])=><option key={v} value={v}>{t(l,v==='materials'?'Materials':v==='labour'?'Labour':v==='energy'?'Energy':v==='maintenance'?'Maintenance':'Overhead')}</option>)}</select></label>
+     <label className="fw-field"><span>{t('مبنای محاسبه','Cost basis')}</span><select value={item.basis??''} onChange={e=>patchTrace(item.id,{basis:(e.target.value||null) as CppCpsTraceItem['basis']})}><option value="">{t('انتخاب','Select')}</option><option value="per-unit-output">{t('به‌ازای واحد محصول','Per unit output')}</option><option value="nominal-capacity">{t('بر مبنای ظرفیت اسمی','Nominal capacity')}</option><option value="period-total">{t('جمع هر دوره','Period total')}</option><option value="period-adjustments">{t('تعدیلات دوره‌ای','Period adjustments')}</option></select></label>
+     <label className="fw-field"><span>{t('رفتار هزینه','Cost behaviour')}</span><select value={item.behaviour??''} onChange={e=>patchTrace(item.id,{behaviour:(e.target.value||null) as CppCpsTraceItem['behaviour'],fixedPercent:e.target.value==='fixed'?100:e.target.value==='variable'?0:item.fixedPercent,variablePercent:e.target.value==='fixed'?0:e.target.value==='variable'?100:item.variablePercent})}><option value="">{t('انتخاب','Select')}</option><option value="fixed">{t('ثابت','Fixed')}</option><option value="variable">{t('متغیر','Variable')}</option><option value="mixed">{t('مختلط','Mixed')}</option></select></label>
+     <NumberField label={t('سهم ثابت','Fixed share')} value={item.fixedPercent} unit="%" onChange={v=>patchTrace(item.id,{fixedPercent:v,behaviour:'mixed'})}/>
+     <NumberField label={t('سهم متغیر','Variable share')} value={item.variablePercent} unit="%" onChange={v=>patchTrace(item.id,{variablePercent:v,behaviour:'mixed'})}/>
+     <label className="fw-field"><span>{t('روش تخصیص','Allocation method')}</span><select value={item.allocationMethod} onChange={e=>patchTrace(item.id,{allocationMethod:e.target.value as CppCpsTraceItem['allocationMethod'],productId:e.target.value==='direct-product'?item.productId:null})}><option value="not-allocated">{t('بدون تخصیص','Not allocated')}</option><option value="direct-product">{t('مستقیم به محصول','Direct product')}</option><option value="production-quantity">{t('بر اساس مقدار تولید','Production quantity')}</option><option value="revenue">{t('بر اساس درآمد فروش','Sales revenue')}</option></select></label>
+     {item.allocationMethod==='direct-product'&&<TextField label={t('شناسه محصول مقصد','Target product ID')} value={item.productId??''} onChange={v=>patchTrace(item.id,{productId:v||null})}/>}
+     <label className="fw-field"><span>{t('پوشش در بهای پایه','Base-cost coverage')}</span><select value={item.baseCostCoverage} onChange={e=>patchTrace(item.id,{baseCostCoverage:e.target.value as CppCpsTraceItem['baseCostCoverage']})}><option value="unverified">{t('نامشخص / تأییدنشده','Unverified')}</option><option value="fully-included">{t('کاملاً منظور شده','Fully included')}</option><option value="partially-included">{t('بخشی منظور شده','Partially included')}</option><option value="excluded">{t('منظور نشده','Excluded')}</option></select></label>
+    </div>
+    <div className="fw-grid">
+     <TextField label={t('شناسه سند منبع','Source reference')} value={item.source.reference} onChange={v=>patchTraceSource(item.id,{reference:v})}/>
+     <TextField label={t('شرح و محل داده منبع','Source description / location')} value={item.source.description} onChange={v=>patchTraceSource(item.id,{description:v})}/>
+     <label className="fw-field"><span>{t('اعتبار منبع','Source reliability')}</span><select value={item.source.reliability} onChange={e=>patchTraceSource(item.id,{reliability:e.target.value as CppCpsTraceItem['source']['reliability']})}><option value="unverified">{t('فاقد مدرک / تأییدنشده','Unverified / no evidence')}</option><option value="primary-document">{t('سند اولیه','Primary document')}</option><option value="audited-report">{t('گزارش حسابرسی‌شده','Audited report')}</option><option value="management-record">{t('دفتر/گزارش مدیریت','Management record')}</option><option value="secondary-source">{t('منبع ثانویه','Secondary source')}</option></select></label>
+     <div className="fw-result">{t('وضعیت منبع','Source status')}: <b>{item.source.status==='verified'?t('مستند','Verified'):t('تأییدنشده','Unverified')}</b></div>
+    </div>
+    {item.source.status==='verified'&&item.baseCostCoverage!=='unverified'?<div className="fw-card">
+     <h5>{t('مبالغ دوره‌ای و پوشش هزینه پایه','Period amounts and base-cost coverage')}</h5>
+     {projectPeriods.map((period,index)=><div className="fw-grid" key={index}>
+      <div className="fw-result">{t('دوره','Period')} {index+1} · {period.startDate} – {period.endDate}</div>
+      <NumberField label={t('هزینه ناخالص مستند','Gross sourced cost')} value={item.periodAmounts[index]??null} onChange={v=>patchTrace(item.id,{periodAmounts:item.periodAmounts.map((x,i)=>i===index?v:x)})}/>
+      {item.baseCostCoverage==='partially-included'&&<NumberField label={t('مبلغ منظورشده در بهای پایه','Amount already in base cost')} value={item.baseCoveredAmounts[index]??null} onChange={v=>patchTrace(item.id,{baseCoveredAmounts:item.baseCoveredAmounts.map((x,i)=>i===index?v:x)})}/>}
+     </div>)}
+    </div>:<p className="fw-hint" role="status">{t('برای ورود مبلغ، شناسه و شرح منبع و سطح اعتبار را تکمیل کنید و پوشش در بهای پایه را مشخص کنید. در غیر این صورت ارقام خالی و وضعیت تأییدنشده باقی می‌ماند.','Enter a source reference, description and reliability level, then select base-cost coverage before entering amounts. Otherwise amounts remain blank and unverified.')}</p>}
+    <button type="button" className="secondary-button" onClick={()=>onChange({...value,cppCpsTraceItems:traceItems.filter(x=>x.id!==item.id)})}>{t('حذف قلم ردیابی','Remove trace item')}</button>
+   </div>)}
+   <button type="button" className="secondary-button" onClick={addTrace}>{t('افزودن قلم به دفتر CPP/CPS','Add CPP/CPS trace item')}</button>
   </div>
   {errors.length>0&&<div className="fw-validation" role="alert"><b>{t('موارد نیازمند اصلاح','Validation issues')}</b><ul>{errors.map((error,i)=><li key={i}>{error}</li>)}</ul></div>}
   <ProjectModelHelpCoveragePanel value={value.helpDriven} onChange={helpDriven=>onChange({...value,helpDriven})} language={language}/>
