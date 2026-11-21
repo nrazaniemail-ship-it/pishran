@@ -55,23 +55,25 @@ try {
     const listedProjects = await projects.listProjects()
     const updated = await projects.updateProject(created.id, { name: 'IndexedDB project updated' })
     const projectAfterUpdate = await projects.listProjects()
-    await projects.deleteProject(created.id)
-    const projectsAfterDelete = await projects.listProjects()
 
     const previousPreferences = { enabled: true, interval: '6h', lastAt: 'before', lastSize: 91, lastKind: 'manual', folderName: 'browser-test' }
     await backup.saveBackupPreferences(previousPreferences)
     await localStore.set('browser-test:preserve', { stable: true })
     const backupPayload = await backup.buildBackup()
-    const restoreCount = await backup.restoreBackup({ app: 'Pishran', schema: 2, exportedAt: new Date().toISOString(), records: [{ key: 'browser-test:restored-from-backup', value: { ok: true } }], backupPreferences: { enabled: false, interval: '1d' } })
+    await projects.updateProject(created.id, { name: 'Project changed after backup' })
+    const restoreCount = await backup.restoreBackup(backupPayload.payload)
     const undoAvailable = await backup.canUndoRestore()
-    const restored = await localStore.get('browser-test:restored-from-backup')
+    const restoredProject = (await projects.listProjects())[0]
     const undoCount = await backup.undoLastRestore()
+    const projectAfterUndo = (await projects.listProjects())[0]
     const afterUndo = await localStore.get('browser-test:preserve')
     const preferencesAfterUndo = await backup.getBackupPreferences()
+    await projects.deleteProject(created.id)
+    const projectsAfterDelete = await projects.listProjects()
 
     return { initial, read, listed, exported, replaced, afterReplace, removed, final: await localStore.info(),
       created, listedProjects, updated, projectAfterUpdate, projectsAfterDelete, backupPayload,
-      restoreCount, undoAvailable, restored, undoCount, afterUndo, preferencesAfterUndo }
+      restoreCount, undoAvailable, restoredProject, undoCount, projectAfterUndo, afterUndo, preferencesAfterUndo }
   }, { storeUrl: localStoreUrl, projectsUrl: projectUrl, backupUrl })
 
   assert.equal(result.initial.backend, 'IndexedDB', 'test must exercise native browser IndexedDB, not localStorage fallback')
@@ -88,10 +90,12 @@ try {
   assert.equal(result.projectAfterUpdate[0].name, 'IndexedDB project updated')
   assert.deepEqual(result.projectsAfterDelete, [])
   assert.equal(result.backupPayload.payload.schema, 2)
-  assert.equal(result.restoreCount, 1)
+  assert.ok(result.restoreCount > 0)
   assert.equal(result.undoAvailable, true)
-  assert.deepEqual(result.restored, { ok: true })
+  assert.equal(result.restoredProject.name, 'IndexedDB project updated')
   assert.ok(result.undoCount > 0)
+  assert.equal(result.projectAfterUndo.name, 'Project changed after backup')
+  assert.deepEqual(result.projectsAfterDelete, [])
   assert.deepEqual(result.afterUndo, { stable: true })
   assert.deepEqual(result.preferencesAfterUndo, { enabled: true, interval: '6h', lastAt: 'before', lastSize: 91, lastKind: 'manual', folderName: 'browser-test' })
   console.log('PASS: native IndexedDB storage, project lifecycle, backup restore and undo')
