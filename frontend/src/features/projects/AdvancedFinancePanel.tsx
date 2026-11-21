@@ -438,12 +438,12 @@ export default function AdvancedFinancePanel(props: Props) {
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
-  const rawMaterialInventoryStatus=props.workingCapitalDrafts?.some(item=>item.category==='inventory')
-    ?'manual'
+  const rawMaterialInventoryStatus=props.workingCapitalDrafts?.length
+    ?(props.workingCapitalDrafts.some(item=>item.category==='inventory')?'manual':'not-configured')
     :state.workingCapitalDays.raw===0?'not-configured'
     :state.workingCapitalBases.rawMaterials>0?'automatic':'missing-cost-basis'
-  const workInProgressInventoryStatus=props.workingCapitalDrafts?.some(item=>item.category==='work-in-progress')
-    ?'manual'
+  const workInProgressInventoryStatus=props.workingCapitalDrafts?.length
+    ?(props.workingCapitalDrafts.some(item=>item.category==='work-in-progress')?'manual':'not-configured')
     :state.workingCapitalDays.wip===0?'not-configured'
     :(state.wipCompletion.material+state.wipCompletion.conversion<=0||
       (state.wipCompletion.material>0&&state.workingCapitalBases.rawMaterials<=0)||
