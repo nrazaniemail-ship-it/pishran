@@ -161,21 +161,22 @@ export default function App() {
           <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
           <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
         </div>
-        <div className="hero-art honeycomb-art" aria-label={isEn ? "Pishran capabilities" : "قابلیت‌های پیشران"}>
+        <div className="hero-art honeycomb-art" aria-label={isEn ? "Pishran feasibility and investment modules" : "ماژول‌های امکان‌سنجی و ارزیابی سرمایه‌گذاری پیشران"}>
           <div className="honeycomb-row">
-            <div className="honeycomb-cell honeycomb-yellow"><TrendingUp/><span>{isEn ? 'Financial Analysis' : 'تحلیل مالی'}</span></div>
-            <div className="honeycomb-cell honeycomb-red"><ShieldCheck/><span>{isEn ? 'Risk Assessment' : 'ارزیابی ریسک'}</span></div>
-            <div className="honeycomb-cell honeycomb-yellow"><Gauge/><span>{isEn ? 'Feasibility' : 'امکان‌سنجی'}</span></div>
+            <button type="button" className="honeycomb-cell honeycomb-yellow" onClick={() => setPage('steel-group')} aria-label={isEn ? "Open process engineering" : "ورود به مهندسی و طراحی فرآیند"}><Factory/><span>{isEn ? 'Process Engineering' : 'مهندسی و طراحی فرآیند'}</span></button>
+            <button type="button" className="honeycomb-cell honeycomb-red roadmap" disabled aria-label={isEn ? "Market intelligence roadmap module" : "هوشمندی بازار؛ در نقشه راه"}><Globe2/><span>{isEn ? 'Market Intelligence' : 'هوشمندی بازار'}</span></button>
+            <button type="button" className="honeycomb-cell honeycomb-yellow" onClick={() => setPage('project-wizard')} aria-label={isEn ? "Open financial and economic model" : "ورود به مدل مالی و اقتصادی"}><TrendingUp/><span>{isEn ? 'Financial Model' : 'مدل مالی و اقتصادی'}</span></button>
           </div>
           <div className="honeycomb-row honeycomb-row-middle">
-            <div className="honeycomb-cell honeycomb-red"><Globe2/><span>{isEn ? 'Market Analysis' : 'تحلیل بازار'}</span></div>
-            <div className="honeycomb-cell honeycomb-yellow"><Factory/><span>{isEn ? 'Process Design' : 'طراحی فرآیند'}</span></div>
+            <button type="button" className="honeycomb-cell honeycomb-red roadmap" disabled aria-label={isEn ? "Risk and scenarios roadmap module" : "ریسک و سناریو؛ در نقشه راه"}><ShieldCheck/><span>{isEn ? 'Risk & Scenarios' : 'ریسک و سناریو'}</span></button>
+            <button type="button" className="honeycomb-cell honeycomb-core" onClick={() => setPage('project-wizard')} aria-label={isEn ? "Start feasibility study" : "شروع امکان‌سنجی پروژه"}><Gauge/><span>{isEn ? 'Feasibility Study' : 'امکان‌سنجی پروژه'}</span><small>{isEn ? 'Core workspace' : 'هسته اصلی پیشران'}</small></button>
           </div>
           <div className="honeycomb-row">
-            <div className="honeycomb-cell honeycomb-yellow"><FolderKanban/><span>{isEn ? 'Project Control' : 'مدیریت پروژه'}</span></div>
-            <div className="honeycomb-cell honeycomb-red"><FileChartColumn/><span>{isEn ? 'Reports' : 'گزارش‌گیری'}</span></div>
-            <div className="honeycomb-cell honeycomb-yellow"><Bot/><span>{isEn ? 'AI Assistant' : 'دستیار هوشمند'}</span></div>
+            <button type="button" className="honeycomb-cell honeycomb-yellow" onClick={() => setPage('projects')} aria-label={isEn ? "Open project management" : "ورود به مدیریت پروژه"}><FolderKanban/><span>{isEn ? 'Project Management' : 'مدیریت پروژه'}</span></button>
+            <button type="button" className="honeycomb-cell honeycomb-red roadmap" disabled aria-label={isEn ? "Investment reports roadmap module" : "گزارش سرمایه‌گذاری؛ در نقشه راه"}><FileChartColumn/><span>{isEn ? 'Investment Reports' : 'گزارش سرمایه‌گذاری'}</span></button>
+            <button type="button" className="honeycomb-cell honeycomb-yellow roadmap" disabled aria-label={isEn ? "AI assistant roadmap module" : "دستیار هوشمند؛ در نقشه راه"}><Bot/><span>{isEn ? 'AI Assistant' : 'دستیار هوشمند'}</span></button>
           </div>
+          <p className="honeycomb-hint">{isEn ? 'Select an active module to open it · muted modules are on the roadmap' : 'برای ورود، ماژول‌های فعال را انتخاب کنید؛ ماژول‌های غیرفعال در نقشه راه هستند.'}</p>
         </div>
       </section>
 
