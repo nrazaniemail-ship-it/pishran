@@ -68,6 +68,44 @@ const overdrawCentre=module.reconcileCostCentreInventory(centreMovements.map(row
  {id:'CC-T5',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:25,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:250},
 ],2)
 assert.equal(overdrawCentre.valid,false,'a transfer that exceeds source centre stock must fail the centre roll-forward')
+const stageRow=(period,inventoryStage,productId,openingQuantity,openingValue,receiptsQuantity,receiptsValue,productionQuantity,productionValue,consumptionQuantity,consumptionValue,closingQuantity,closingValue)=>({
+ period,inventoryStage,productId,costCentreId:'CC-'+inventoryStage,
+ openingQuantity,openingValue,receiptsQuantity,receiptsValue,productionQuantity,productionValue,
+ consumptionQuantity,consumptionValue,wasteQuantity:0,wasteValue:0,closingQuantity,closingValue,
+ sourceReference:'inventory register / '+period,sourceVerified:true,
+})
+const stageMovements=[
+ stageRow(1,'raw-materials','RM',0,0,10,100,0,0,0,0,10,100),
+ stageRow(2,'raw-materials','RM',10,100,0,0,0,0,2,20,8,80),
+ stageRow(1,'work-in-progress','WIP',0,0,0,0,4,40,0,0,4,40),
+ stageRow(2,'work-in-progress','WIP',4,40,0,0,1,10,0.5,5,4.5,45),
+ stageRow(1,'finished-goods','FG',0,0,0,0,6,60,0,0,6,60),
+ stageRow(2,'finished-goods','FG',6,60,0,0,0,0,2,20,4,40),
+]
+const stageReconciled=module.reconcileStageInventoryMovements(stageMovements,[
+ {period:1,rawMaterials:100,workInProgress:40,finishedGoods:60},
+ {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
+],2)
+assert.equal(stageReconciled.valid,true,stageReconciled.issues.join('; '))
+assert.equal(stageReconciled.rows.length,6)
+assert.equal(stageReconciled.rows.find(row=>row.period===2&&row.inventoryStage==='work-in-progress').variance,0)
+const missingStagePeriod=module.reconcileStageInventoryMovements(stageMovements.filter(row=>!(row.period===2&&row.inventoryStage==='raw-materials')),[
+ {period:1,rawMaterials:100,workInProgress:40,finishedGoods:60},
+ {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
+],2)
+assert.equal(missingStagePeriod.valid,false,'a stage ledger cannot be treated as complete when a period is missing')
+assert.ok(missingStagePeriod.issues.some(issue=>issue.includes('missing cost-centre inventory rows for period 2')))
+const stageValueMismatch=module.reconcileStageInventoryMovements(stageMovements.map(row=>row.period===2&&row.inventoryStage==='finished-goods'?{...row,closingValue:39}:row),[
+ {period:1,rawMaterials:100,workInProgress:40,finishedGoods:60},
+ {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
+],2)
+assert.equal(stageValueMismatch.valid,false,'stage ledger totals must reconcile to the finance engine without being posted twice')
+const stageUnverified=module.reconcileStageInventoryMovements(stageMovements.map(row=>row.inventoryStage==='raw-materials'?{...row,sourceVerified:false}:row),[
+ {period:1,rawMaterials:100,workInProgress:40,finishedGoods:60},
+ {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
+],2)
+assert.equal(stageUnverified.valid,false,'stage reconciliation requires verified source evidence')
+
 assert.equal(module.validateProductionTransfers([{id:'bad-factor',period:1,sourceProductId:'A',destinationProductId:'B',sourceCostCentreId:'X',destinationCostCentreId:'Y',quantity:1,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0,costAmount:1}],1).valid,false)
 
 assert.equal(transfers.totalSourceValue,transfers.totalDestinationValue)
