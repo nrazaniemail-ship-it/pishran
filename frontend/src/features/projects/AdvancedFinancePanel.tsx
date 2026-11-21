@@ -72,7 +72,7 @@ type Props = {
   openingGrants?: number
   openingCurrentAccounts?: OpeningCurrentAccounts
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
-  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers' | 'inventoryReferenceBenchmarks' | 'costCentres' | 'costCentreInventoryMovements'>>
+  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers' | 'inventoryReferenceBenchmarks' | 'costCentres' | 'costCentreInventoryMovements' | 'inventoryStageTransfers'>>
   cppCpsTraceItems?: CppCpsTraceItem[]
   onCppCpsTraceLedger?: (ledger: CppCpsTraceLedger) => void
   onEditFinancialForms?: () => void
@@ -651,8 +651,8 @@ export default function AdvancedFinancePanel(props: Props) {
       period:row.period,rawMaterials:row.rawMaterialsInventory,
       workInProgress:row.workInProgressInventory,finishedGoods:row.finishedGoodsInventory,
     }))
-    return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length)
-  },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),periodicFinanceResult])
+    return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length,0.01,props.productFinancialDrafts?.inventoryStageTransfers??[])
+  },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),periodicFinanceResult])
   const inventoryReferenceReconciliation=useMemo(()=>{
     const benchmarks=props.productFinancialDrafts?.inventoryReferenceBenchmarks??[]
     if(!benchmarks.length||!periodicFinanceResult?.valid||!productOperatingSchedule?.valid)return null
