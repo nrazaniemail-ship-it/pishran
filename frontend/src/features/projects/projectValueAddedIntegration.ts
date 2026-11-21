@@ -22,8 +22,8 @@ export type ProjectValueAddedIntegrationInput = {
   salesTaxLedger: SalesTaxLedgerResult | null
   salesTaxLedgerActive: boolean
   discountRatePercent: number | null
-  dayCountBasis: 360 | 365
-  timing: PeriodCashFlowTiming
+  dayCountBasis: 360 | 365 | null
+  timing: PeriodCashFlowTiming | 'unspecified'
   valuationDate?: string
   discountConvention: ProjectDiscountConvention
   periodsPerYear: 1 | 2 | 4 | 12
@@ -75,6 +75,8 @@ export function buildIntegratedProjectValueAddedAnalysis(input:ProjectValueAdded
   if(input.salesTaxLedgerActive&&!input.salesTaxLedger?.valid)issues.push('A valid indirect sales-tax ledger is required for value-added analysis.')
   if(input.discountRatePercent===null||!Number.isFinite(input.discountRatePercent)||input.discountRatePercent<=-100)
     issues.push('An explicit economic discount rate greater than -100% is required for value-added efficiency ratios.')
+  if(input.dayCountBasis!==360&&input.dayCountBasis!==365)issues.push('A valid 360- or 365-day economic discount basis is required.')
+  if(input.timing!=='period-end'&&input.timing!=='mid-period')issues.push('A valid economic cash-flow timing convention is required.')
   if(issues.length)return invalid(issues)
 
   const product=input.productSchedule!
@@ -90,7 +92,7 @@ export function buildIntegratedProjectValueAddedAnalysis(input:ProjectValueAdded
       :product.periodOutputSalesTax[index]??Number.NaN
     const factor=calculatePeriodicNpv(
       input.periods.map((__,i)=>i===index?1:0),input.periods,
-      input.discountRatePercent as number,input.dayCountBasis,input.timing,
+      input.discountRatePercent as number,input.dayCountBasis as 360|365,input.timing as PeriodCashFlowTiming,
       input.valuationDate,input.discountConvention,input.periodsPerYear,
     )
     return {
