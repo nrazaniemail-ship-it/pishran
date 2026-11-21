@@ -68,9 +68,9 @@ const overdrawCentre=module.reconcileCostCentreInventory(centreMovements.map(row
  {id:'CC-T5',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:25,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:250},
 ],2)
 assert.equal(overdrawCentre.valid,false,'a transfer that exceeds source centre stock must fail the centre roll-forward')
-const stageRow=(period,inventoryStage,productId,openingQuantity,openingValue,receiptsQuantity,receiptsValue,transfersInQuantity:0,transfersInValue:0,transfersOutQuantity:0,transfersOutValue:0,productionQuantity,productionValue,consumptionQuantity,consumptionValue,closingQuantity,closingValue)=>({
+const stageRow=(period,inventoryStage,productId,openingQuantity,openingValue,receiptsQuantity,receiptsValue,productionQuantity,productionValue,consumptionQuantity,consumptionValue,closingQuantity,closingValue)=>({
  period,inventoryStage,productId,costCentreId:'CC-'+inventoryStage,
- openingQuantity,openingValue,receiptsQuantity,receiptsValue,productionQuantity,productionValue,
+ openingQuantity,openingValue,receiptsQuantity,receiptsValue,transfersInQuantity:0,transfersInValue:0,transfersOutQuantity:0,transfersOutValue:0,productionQuantity,productionValue,
  consumptionQuantity,consumptionValue,wasteQuantity:0,wasteValue:0,closingQuantity,closingValue,
  sourceReference:'inventory register / '+period,sourceVerified:true,
 })
