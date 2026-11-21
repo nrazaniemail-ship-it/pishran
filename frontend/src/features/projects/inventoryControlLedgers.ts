@@ -304,8 +304,20 @@ export function reconcileStageInventoryMovements(
  const rows:StageInventoryReconciliationResult['rows']=[]
  for(const stage of stages){
   const stageRows=adjustedMovements.filter(row=>row.inventoryStage===stage)
-  if(!stageRows.length)continue
   const byPeriod=new Map<number,StageInventoryMovementDraft[]>()
+  if(!stageRows.length){
+   const field=stage==='raw-materials'?'rawMaterials':stage==='work-in-progress'?'workInProgress':'finishedGoods'
+   for(let period=1;period<=periodCount;period++){
+    const expectedRow=expected.get(period)
+    if(!expectedRow){
+     issues.push('Stage '+stage+' has no corresponding finance-engine inventory value for period '+period+'.')
+     continue
+    }
+    if(expectedRow[field]>tolerance/100)
+     issues.push('Stage '+stage+' has a non-zero finance-engine balance but no cost-centre inventory movement rows in period '+period+'.')
+   }
+   continue
+  }
   for(const row of stageRows){
    if(row.period===null||!Number.isInteger(row.period)||row.period<1||row.period>periodCount){
     issues.push('Stage '+stage+' contains a movement with an invalid period.')
