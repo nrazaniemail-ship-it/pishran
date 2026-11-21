@@ -39,7 +39,7 @@ assert.ok(foundation.validateStartingFixedAssetBalances([{...validAsset,commissi
 console.log('PASS: generic financial calculations, project calendar and opening-asset validation')
 
 const integratedWithCps = engine.calculateIntegratedFinance({
- years:3, constructionYears:1, capacity:1000, fullCapacityRevenue:0, fullCapacityVariableCashCost:0, fullCapacityFixedCashCost:0,
+ years:3, constructionYears:1, capacity:1000, fullCapacityRevenue:1000, fullCapacityVariableCashCost:0, fullCapacityFixedCashCost:0,
  annualDepreciation:0, fixedInvestment:1000, preOperatingCost:0, fixedInvestmentSchedule:[1000,0,0], preOperatingSchedule:[0,0,0],
  utilization:[0,1,1], equityContributions:[1000,0,0], loans:[], taxRate:0, costOfEquity:10, workingCapitalPercent:0,
  salesEscalationPercent:0, opexEscalationPercent:0, discountMode:'manual', manualDiscountRate:10,
