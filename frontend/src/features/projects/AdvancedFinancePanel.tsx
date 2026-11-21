@@ -338,7 +338,7 @@ export default function AdvancedFinancePanel(props: Props) {
       period:row.period??Number.NaN,amount:row.amount??Number.NaN,sourceReference:row.sourceReference,
     }))
     return buildSalesTaxLedger(projectPeriods.length,outputEntries,inputCredits,settlements,draft.openingBalance)
-  },[salesTaxLedgerActive,baseProductOperatingSchedule,JSON.stringify(props.salesTaxLedgerDraft??null),JSON.stringify(projectPeriods)])
+  },[salesTaxLedgerActive,baseProductOperatingSchedule,JSON.stringify(props.salesTaxLedgerDraft??null),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods)])
 
   const loanDraftIntegration=useMemo(()=>props.loanDrafts?.length&&props.projectFoundation&&props.dayCountBasis!==null&&props.dayCountBasis!==undefined
     ?buildProjectLoanDraftIntegration(props.loanDrafts,projectPeriods,props.dayCountBasis,props.periodFrequency??'unspecified',props.projectFoundation)
