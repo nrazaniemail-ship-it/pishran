@@ -645,13 +645,21 @@ export default function AdvancedFinancePanel(props: Props) {
   },[periodicFinanceResult,productOperatingSchedule,periodicStatements])
   const stageInventoryReconciliation=useMemo(()=>{
     const movements=props.productFinancialDrafts?.costCentreInventoryMovements??[]
-    if(!movements.length)return null
+    const stageTransfers=props.productFinancialDrafts?.inventoryStageTransfers??[]
+    const hasMovementData=movements.some(row=>[row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
+      row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,row.transfersOutQuantity,row.transfersOutValue,
+      row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,row.wasteQuantity,row.wasteValue,
+      row.closingQuantity,row.closingValue,row.sourceReference].some(value=>value!==null&&value!==undefined&&value!==''))
+    const hasStageTransferData=stageTransfers.some(row=>[row.period,row.sourceStage,row.destinationStage,row.sourceProductId,row.destinationProductId,
+      row.sourceCostCentreId,row.destinationCostCentreId,row.quantity,row.sourceUnit,row.destinationUnit,row.conversionFactor,row.transferValue,row.sourceReference]
+      .some(value=>value!==null&&value!==undefined&&value!==''))
+    if(!hasMovementData&&!hasStageTransferData)return null
     if(!periodicFinanceResult?.valid)return {valid:false,issues:['A valid periodic finance result is required before stage inventory reconciliation.'],rows:[]}
     const expected=periodicFinanceResult.rows.map(row=>({
       period:row.period,rawMaterials:row.rawMaterialsInventory,
       workInProgress:row.workInProgressInventory,finishedGoods:row.finishedGoodsInventory,
     }))
-    return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length,0.01,props.productFinancialDrafts?.inventoryStageTransfers??[])
+    return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length,0.01,stageTransfers)
   },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),periodicFinanceResult])
   const inventoryReferenceReconciliation=useMemo(()=>{
     const benchmarks=props.productFinancialDrafts?.inventoryReferenceBenchmarks??[]
