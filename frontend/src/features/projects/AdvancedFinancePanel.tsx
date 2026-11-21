@@ -343,7 +343,7 @@ export default function AdvancedFinancePanel(props: Props) {
       sourceReference:row.sourceReference,sourceVerified:row.sourceVerified,
     }))
     const settlements:SalesTaxSettlementEntry[]=(draft.settlements??[]).map(row=>({
-      period:row.period??Number.NaN,amount:row.amount??Number.NaN,sourceReference:row.sourceReference,
+      period:row.period??Number.NaN,amount:row.amount??Number.NaN,sourceReference:row.sourceReference,sourceVerified:row.sourceVerified,
     }))
     return buildSalesTaxLedger(projectPeriods.length,outputEntries,inputCredits,settlements,draft.openingBalance)
   },[salesTaxLedgerActive,baseProductOperatingSchedule,JSON.stringify(props.salesTaxLedgerDraft??null),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods)])
