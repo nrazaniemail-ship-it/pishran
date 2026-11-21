@@ -47,7 +47,7 @@ const badOpening=module.buildProductOperatingSchedule({
  ...base,sales:[{...base.sales[0],periods:[base.sales[0].periods[0],{...base.sales[0].periods[1],openingFinishedGoodsValue:301}]}]
 },periods,1,'IRR')
 assert.equal(badOpening.valid,false)
-assert.ok(badOpening.issues.some(issue=>issue.includes('must reconcile to the previous period closing inventory')))
+assert.ok(badOpening.issues.some(issue=>issue.includes('must reconcile to the prior-period closing value')))
 const noCost=module.buildProductOperatingSchedule({...base,productionCosts:[]},periods,1,'IRR')
 assert.equal(noCost.valid,false)
 assert.ok(noCost.issues.some(issue=>issue.includes('requires either a validated direct production-cost basis')))
