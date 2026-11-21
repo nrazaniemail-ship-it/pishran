@@ -103,6 +103,28 @@ assert.equal(multiCentreStage.valid,true,multiCentreStage.issues.join('; '))
 assert.equal(multiCentreStage.rows.find(row=>row.period===1).ledgerClosingValue,100,
  'stage totals must aggregate distinct cost centres without duplicating inventory')
 assert.equal(multiCentreStage.rows.find(row=>row.period===2).ledgerClosingValue,80)
+const productEngineRows=[
+ {period:1,productId:'RM-A',rawMaterials:30,workInProgress:0,finishedGoods:0},
+ {period:1,productId:'RM-B',rawMaterials:70,workInProgress:0,finishedGoods:0},
+ {period:2,productId:'RM-A',rawMaterials:20,workInProgress:0,finishedGoods:0},
+ {period:2,productId:'RM-B',rawMaterials:60,workInProgress:0,finishedGoods:0},
+]
+const productStageMatched=module.reconcileStageInventoryMovements(multiCentreRaw,[
+ {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
+ {period:2,rawMaterials:80,workInProgress:0,finishedGoods:0},
+],2,0.01,[],productEngineRows)
+assert.equal(productStageMatched.valid,true,productStageMatched.issues.join('; '))
+const productStageSwapped=module.reconcileStageInventoryMovements(multiCentreRaw,[
+ {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
+ {period:2,rawMaterials:80,workInProgress:0,finishedGoods:0},
+],2,0.01,[],productEngineRows.map(row=>row.productId==='RM-A'?{...row,rawMaterials:row.period===1?70:60}:{...row,rawMaterials:row.period===1?30:20}))
+assert.equal(productStageSwapped.valid,false,'matching aggregate totals must not hide inventory assigned to the wrong product')
+assert.ok(productStageSwapped.issues.some(issue=>issue.includes('product RM-A closing inventory does not match')))
+const productStageMissingProduct=module.reconcileStageInventoryMovements(multiCentreRaw.filter(row=>row.productId!=='RM-B'),[
+ {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
+ {period:2,rawMaterials:80,workInProgress:0,finishedGoods:0},
+],2,0.01,[],productEngineRows)
+assert.equal(productStageMissingProduct.valid,false,'non-zero product balances cannot be omitted from the detailed stage ledger')
 const balancedStageTransfers=[
  {...stageRow(1,'raw-materials','RM',10,100,0,0,0,0,0,0,5,50),costCentreId:'STORE-A',transfersOutQuantity:5,transfersOutValue:50},
  {...stageRow(1,'raw-materials','RM',0,0,0,0,0,0,0,0,5,50),costCentreId:'STORE-B',transfersInQuantity:5,transfersInValue:50},
