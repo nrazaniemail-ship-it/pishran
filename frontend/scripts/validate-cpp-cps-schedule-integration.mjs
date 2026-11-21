@@ -30,7 +30,7 @@ const schedule = {
 const verifiedItem = {
   id: 'energy-01', label: 'Incremental energy', category: 'energy',
   basis: 'period-total', behaviour: 'variable', fixedPercent: 0, variablePercent: 100,
-  productId: 'P1', allocationMethod: 'direct-product', baseCostCoverage: 'excluded',
+  productId: 'P1', costCentreId: 'CC-UTIL', allocationMethod: 'direct-product', baseCostCoverage: 'excluded',
   periodAmounts: [200, 100], baseCoveredAmounts: [0, 0],
   source: { status: 'verified', reference: 'energy-invoices-2025',
     description: 'Supplier invoices', reliability: 'primary-document' },
@@ -100,7 +100,7 @@ assert.deepEqual(coveredBound.schedule.periodCostOfSales, schedule.periodCostOfS
 
 // CRC200 without evidence is explicitly null and blocks final posting, not treated as zero.
 const unverifiedLedger = ledgerModule.buildCppCpsTraceLedger([{
-  ...verifiedItem, id: 'crc200-overhead', category: 'overhead',
+  ...verifiedItem, id: 'crc200-overhead', category: 'overhead', costCentreId: null,
   baseCostCoverage: 'unverified', periodAmounts: [null, null],
   baseCoveredAmounts: [null, null],
   source: { status: 'unverified', reference: '', description: 'No source supplied',
@@ -139,6 +139,7 @@ assert.ok(advancedPanel.includes('buildCppCpsTraceLedger(props.cppCpsTraceItems'
 assert.ok(advancedPanel.includes('bindCppCpsTraceLedgerToProductSchedule'))
 assert.ok(advancedPanel.includes('bindFinishedGoodsInventoryToWorkingCapital'))
 assert.ok(advancedPanel.includes('annualVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.annualCostOfSales'))
+assert.ok(financialForms.includes('Cost centre ID'))
 assert.ok(financialForms.includes('Source reference'))
 assert.ok(financialForms.includes('baseCoveredAmounts'))
 assert.ok(wizard.includes('cppCpsTraceItems={m.financialForms.cppCpsTraceItems??[]}'))
