@@ -96,7 +96,9 @@ export function reconcileInventoryReference(
    const variance=actual-reference;variances[field]=variance
    if(near(actual,reference,tolerance/100))matchedFields.push(field)
   }
-  const status:InventoryReferenceComparisonRow['status']=missingFields.length?'incomplete':matchedFields.length===pairs.length?'matched':'mismatch'
+  const hasMismatch=pairs.some(([field,reference,actual])=>reference!==null&&reference!==undefined&&Number.isFinite(reference)&&!near(actual,reference,tolerance/100))
+  const status:InventoryReferenceComparisonRow['status']=hasMismatch?'mismatch':missingFields.length?'incomplete':'matched'
+  if(b.rawMaterials!==null&&b.workInProgress!==null&&b.finishedGoods!==null&&b.totalInventory!==null&&!near(b.rawMaterials+b.workInProgress+b.finishedGoods,b.totalInventory,tolerance/100))issues.push('Reference benchmark period '+b.period+' total inventory does not equal raw materials + WIP + finished goods.')
   if(status==='mismatch')issues.push('Reference benchmark period '+b.period+' differs from model values.')
   rows.push({period:b.period,matchedFields,missingFields,variances,status})
  }
