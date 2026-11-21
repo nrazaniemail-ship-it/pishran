@@ -8,7 +8,7 @@ import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
 import { reconcileInventoryThreeWay, reconcileInventoryReference } from './inventoryControlLedgers'
-import { buildCppCpsTraceLedger, type CppCpsTraceItem } from './cppCpsCostTraceability'
+import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
 import { bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
 import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft } from './projectModelFormDrafts'
 import { buildProjectTaxDraftSchedule } from './projectTaxDraftIntegration'
@@ -72,6 +72,7 @@ type Props = {
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
   productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers' | 'inventoryReferenceBenchmarks' | 'costCentres'>>
   cppCpsTraceItems?: CppCpsTraceItem[]
+  onCppCpsTraceLedger?: (ledger: CppCpsTraceLedger) => void
   onEditFinancialForms?: () => void
   taxDraft?: ProjectTaxFormDraft
   loanDrafts?: LoanFacilityFormDraft[]
@@ -296,6 +297,7 @@ export default function AdvancedFinancePanel(props: Props) {
     :null,[JSON.stringify(props.productFinancialDrafts??null),JSON.stringify(projectPeriods),props.fiscalYearStartMonth,props.currency])
   const cppCpsTraceLedger=useMemo(()=>buildCppCpsTraceLedger(props.cppCpsTraceItems??[],projectPeriods.length),
     [JSON.stringify(props.cppCpsTraceItems??[]),projectPeriods.length])
+  useEffect(()=>{props.onCppCpsTraceLedger?.(cppCpsTraceLedger)},[props.onCppCpsTraceLedger,cppCpsTraceLedger])
   const cppCpsScheduleBinding=useMemo(()=>{
     if(!(props.cppCpsTraceItems?.length))return null
     if(!baseProductOperatingSchedule?.valid)return {valid:false,issues:baseProductOperatingSchedule?.issues??['A product-by-product sales and production schedule is required before CPP/CPS posting.'],schedule:null,incrementalCppByPeriod:[]}
