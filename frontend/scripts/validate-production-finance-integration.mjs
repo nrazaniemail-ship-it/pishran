@@ -17,7 +17,7 @@ const mappingUrl = 'data:text/javascript;base64,' + Buffer.from(mappingOutput).t
 const { mapProductionCostsToFinance } = await import(mappingUrl)
 const financeOutput = await transpile('steel/financialModel.ts')
 const financeUrl = 'data:text/javascript;base64,' + Buffer.from(financeOutput).toString('base64')
-const { calculateIntegratedFinance, buildThreeFinancialStatements } = await import(financeUrl)
+const { calculateIntegratedFinance, buildThreeFinancialStatements, calculateSensitivityMatrix, calculateOneWaySensitivity } = await import(financeUrl)
 
 
 const record = (overrides={}) => ({id:'r1',projectId:'p1',lineId:'l1',product:'coil',periodStart:'2026-01-01',periodEnd:'2026-01-31',plannedOutput:100,totalOutput:100,goodOutput:100,scrapOutput:0,matchedMaterialInput:100,matchedMaterialUnit:'t',materials:[{id:'m1',name:'billet',consumedQuantity:100,unit:'t',unitCost:2,currency:'USD'}],directLaborCost:10,energyCost:10,maintenanceCost:0,allocatedOverhead:0,currency:'USD',createdAt:'2026-01-31',updatedAt:'2026-01-31',salesQuantity:80,...overrides})
@@ -63,6 +63,29 @@ assert.equal(integrated.years[1].workingCapitalBreakdown.finishedGoods,44)
 const integratedStatements=buildThreeFinancialStatements(integrated.years)
 assert.equal(integratedStatements[1].incomeStatement.cashOperatingCosts,440)
 assert.equal(integratedStatements[1].balanceSheet.workingCapitalAssets,44)
+const volumeSensitivity=calculateSensitivityMatrix({
+ years:2,constructionYears:1,capacity:100,fullCapacityRevenue:1000,fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,
+ costOfProductsSoldByYear:[0,176],otherVariableCashCostByYear:[0,224],otherFixedCashCostByYear:[0,40],finishedGoodsInventoryValueByYear:[0,44],
+ annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
+ utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
+ salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:10
+},[0],[20])
+const manuallyScaled=calculateIntegratedFinance({
+ years:2,constructionYears:1,capacity:120,fullCapacityRevenue:1200,fullCapacityVariableCashCost:600,fullCapacityFixedCashCost:50,
+ costOfProductsSoldByYear:[0,211.2],otherVariableCashCostByYear:[0,268.8],otherFixedCashCostByYear:[0,40],finishedGoodsInventoryValueByYear:[0,52.8],
+ annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
+ utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
+ salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:10
+})
+assert.ok(Math.abs(volumeSensitivity[0][0].npv-manuallyScaled.npvProject)<1e-6)
+const oneWay=calculateOneWaySensitivity({
+ years:2,constructionYears:1,capacity:100,fullCapacityRevenue:1000,fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,
+ costOfProductsSoldByYear:[0,176],otherVariableCashCostByYear:[0,224],otherFixedCashCostByYear:[0,40],finishedGoodsInventoryValueByYear:[0,44],
+ annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
+ utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
+ salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:10
+},20)
+assert.equal(oneWay.factors.find(factor=>factor.id==='operating-cost')?.available,true)
 assert.equal(mapped.valid,true)
 assert.deepEqual(mapped.costOfProductsSoldByYear,[176,0])
 assert.deepEqual(mapped.otherVariableCashCostByYear,[224,495])
