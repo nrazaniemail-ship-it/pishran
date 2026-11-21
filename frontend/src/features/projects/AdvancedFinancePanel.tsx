@@ -566,7 +566,7 @@ export default function AdvancedFinancePanel(props: Props) {
         kind:item.kind as 'fixed-investment'|'pre-production-net-of-interest'|'inventory-increase',
       }))
       return {
-        period:periodNo,salesRevenue,outputSalesTax,otherIncome:draft.otherIncome??Number.NaN,
+        period:periodNo,salesRevenue,outputSalesTax,otherIncome:draft.otherIncome??Number.NaN,otherValueAdded:draft.otherValueAdded??Number.NaN,
         subsidiesOnOutput:productOperatingSchedule.periodSubsidyIncome[index]??0,
         intermediateInputs,investmentInputs,
         repatriatedWages:draft.repatriatedWages??Number.NaN,
