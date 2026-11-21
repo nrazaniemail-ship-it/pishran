@@ -21,6 +21,9 @@ export type ProductionRecord = {
   matchedMaterialInput: number
   matchedMaterialUnit: string
   materials: ProductionMaterial[]
+  finishedGoodsOpeningQuantity?: number
+  finishedGoodsOpeningValue?: number
+  salesQuantity?: number
   directLaborCost: number
   energyCost: number
   maintenanceCost: number
