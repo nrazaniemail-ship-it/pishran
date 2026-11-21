@@ -333,6 +333,14 @@ export function reconcileStageInventoryMovements(
     }
     if(expectedRow[field]>tolerance/100)
      issues.push('Stage '+stage+' has a non-zero finance-engine balance but no cost-centre inventory movement rows in period '+period+'.')
+    if(stage==='finished-goods'){
+     for(const [key,engineProduct] of expectedProductRows){
+      if(!key.startsWith(period+':'))continue
+      const productId=key.slice(String(period).length+1)
+      if((engineProduct.finishedGoodsSalesQuantity??0)>tolerance/100||(engineProduct.finishedGoodsCostOfSales??0)>tolerance/100)
+       issues.push('Finished-goods product '+productId+' has sales or cost of sales in the product schedule but no finished-goods movement rows in period '+period+'.')
+     }
+    }
    }
    continue
   }
