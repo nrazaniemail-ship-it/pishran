@@ -10,8 +10,9 @@ import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
 import FeasibilityWizard from './features/projects/FeasibilityWizard'
 import Guide from './features/guide/Guide'
 import BackupScheduler from './features/settings/BackupScheduler'
+import ProductionWorkspace from './features/production/ProductionWorkspace'
 
-type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wizard' | 'guide'
+type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wizard' | 'guide' | 'production'
 
 const moduleGroups = [
   {
@@ -191,7 +192,7 @@ export default function App() {
           <div className="honeycomb-row">
             <button type="button" className="honeycomb-cell honeycomb-yellow roadmap" disabled><LayoutDashboard/><span>{isEn ? 'Executive Dashboard' : 'داشبورد هوشمند مدیرعامل'}</span></button>
             <button type="button" className="honeycomb-cell honeycomb-red roadmap" disabled><TrendingUp/><span>{isEn ? 'Cost & Profitability' : 'بهای تمام‌شده و سودآوری'}</span></button>
-            <button type="button" className="honeycomb-cell honeycomb-yellow roadmap" disabled><Activity/><span>{isEn ? 'Production & OEE' : 'تولید و بهره‌وری'}</span></button>
+            <button type="button" className="honeycomb-cell honeycomb-yellow" onClick={() => setPage('production')}><Activity/><span>{isEn ? 'Production & OEE' : 'تولید، Yield و بهره‌وری'}</span></button>
           </div>
           <div className="honeycomb-row honeycomb-row-middle">
             <button type="button" className="honeycomb-cell honeycomb-red roadmap" disabled><Gauge/><span>{isEn ? 'Performance & KPI' : 'مدیریت عملکرد و KPI'}</span></button>
@@ -222,6 +223,7 @@ export default function App() {
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
+    {page === 'production' && <ProductionWorkspace language={settings.language} onBack={() => setPage('dashboard')}/ >}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
 
 
