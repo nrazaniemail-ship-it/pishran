@@ -122,7 +122,7 @@ assert.ok(flowSchedule.periodWipInventoryValue[0]>0)
 assert.equal(flowSchedule.rows[0].costOfSales,flowSchedule.rows[0].weightedAverageUnitCost*80)
 assert.equal(flowSchedule.rows[0].closingInventoryValue,flowSchedule.rows[0].weightedAverageUnitCost*30)
 const badFlow=module.buildProductOperatingSchedule({
- ...flowProduct,sales:[{...flowProduct.sales[0],periods:[{...flowProduct.sales[0].periods[0],unitsCompleted:99}]}]
+ ...flowProduct,sales:[{...flowProduct.sales[0],periods:[{...flowProduct.sales[0].periods[0],unitsStarted:119,unitsCompleted:99}]}]
 },[periods[0]],1,'IRR')
 assert.equal(badFlow.valid,false)
 assert.ok(badFlow.issues.some(issue=>issue.includes('completed production quantity must equal')))
