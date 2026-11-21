@@ -71,7 +71,7 @@ assert.equal(overdrawCentre.valid,false,'a transfer that exceeds source centre s
 const stageRow=(period,inventoryStage,productId,openingQuantity,openingValue,receiptsQuantity,receiptsValue,productionQuantity,productionValue,consumptionQuantity,consumptionValue,closingQuantity,closingValue)=>({
  period,inventoryStage,productId,costCentreId:'CC-'+inventoryStage,
  openingQuantity,openingValue,receiptsQuantity,receiptsValue,transfersInQuantity:0,transfersInValue:0,transfersOutQuantity:0,transfersOutValue:0,productionQuantity,productionValue,
- consumptionQuantity,consumptionValue,wasteQuantity:0,wasteValue:0,closingQuantity,closingValue,
+ consumptionQuantity,consumptionValue,salesQuantity:0,salesCostValue:0,wasteQuantity:0,wasteValue:0,closingQuantity,closingValue,
  sourceReference:'inventory register / '+period,sourceVerified:true,
 })
 const stageMovements=[
@@ -161,6 +161,31 @@ const rawToWipTransfer={id:'ST-1',period:1,sourceStage:'raw-materials',destinati
  sourceProductId:'ORE',destinationProductId:'PELLET',sourceCostCentreId:'ORE-STORE',destinationCostCentreId:'DRI-PLANT',
  quantity:4,sourceUnit:'tonne',destinationUnit:'kg',conversionFactor:1000,transferValue:40,
  sourceReference:'material transfer note / 17',sourceVerified:true}
+const finishedGoodsSalesRow={...stageRow(1,'finished-goods','FG-1',10,100,0,0,0,0,0,0,6,60),salesQuantity:4,salesCostValue:40}
+const finishedGoodsSalesEngine=[{period:1,productId:'FG-1',rawMaterials:0,workInProgress:0,finishedGoods:60,finishedGoodsSalesQuantity:4,finishedGoodsCostOfSales:40}]
+const finishedGoodsSalesCheck=module.reconcileStageInventoryMovements([finishedGoodsSalesRow],[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:60},
+],1,0.01,[],finishedGoodsSalesEngine)
+assert.equal(finishedGoodsSalesCheck.valid,true,finishedGoodsSalesCheck.issues.join('; '))
+const finishedGoodsSalesQtyMismatch=module.reconcileStageInventoryMovements([{...finishedGoodsSalesRow,salesQuantity:3}],[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:60},
+],1,0.01,[],finishedGoodsSalesEngine)
+assert.equal(finishedGoodsSalesQtyMismatch.valid,false,'finished-goods sales quantity must reconcile product by product')
+assert.ok(finishedGoodsSalesQtyMismatch.issues.some(issue=>issue.includes('sales quantity does not match')))
+const finishedGoodsCogsMismatch=module.reconcileStageInventoryMovements([{...finishedGoodsSalesRow,salesCostValue:35}],[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:60},
+],1,0.01,[],finishedGoodsSalesEngine)
+assert.equal(finishedGoodsCogsMismatch.valid,false,'finished-goods issue value must reconcile to product cost of sales, not revenue')
+assert.ok(finishedGoodsCogsMismatch.issues.some(issue=>issue.includes('cost of sales does not match')))
+const finishedGoodsSalesWithoutLedger=module.reconcileStageInventoryMovements([],[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:0},
+],1,0.01,[],finishedGoodsSalesEngine)
+assert.equal(finishedGoodsSalesWithoutLedger.valid,false,'sales cannot disappear from a zero-closing-inventory stage ledger')
+assert.ok(finishedGoodsSalesWithoutLedger.issues.some(issue=>issue.includes('no finished-goods movement rows')))
+const rawMaterialSalesInvalid=module.reconcileStageInventoryMovements([
+ {...stageRow(1,'raw-materials','RM-1',10,100,0,0,0,0,0,0,6,60),salesQuantity:4,salesCostValue:40},
+],[{period:1,rawMaterials:60,workInProgress:0,finishedGoods:0}],1)
+assert.equal(rawMaterialSalesInvalid.valid,false,'raw-material sales fields must not be used for finished-goods COGS')
 const blankStageTransferDraft=module.reconcileStageInventoryMovements([],[
  {period:1,rawMaterials:0,workInProgress:0,finishedGoods:0},
 ],1,0.01,[{id:'',period:null,sourceStage:null,destinationStage:null,sourceProductId:'',destinationProductId:'',
