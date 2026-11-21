@@ -431,6 +431,17 @@ export default function AdvancedFinancePanel(props: Props) {
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
+  const rawMaterialInventoryStatus=props.workingCapitalDrafts?.some(item=>item.category==='inventory')
+    ?'manual'
+    :state.workingCapitalDays.raw===0?'not-configured'
+    :state.workingCapitalBases.rawMaterials>0?'automatic':'missing-cost-basis'
+  const workInProgressInventoryStatus=props.workingCapitalDrafts?.some(item=>item.category==='work-in-progress')
+    ?'manual'
+    :state.workingCapitalDays.wip===0?'not-configured'
+    :(state.wipCompletion.material+state.wipCompletion.conversion<=0||
+      (state.wipCompletion.material>0&&state.workingCapitalBases.rawMaterials<=0)||
+      (state.wipCompletion.conversion>0&&state.workingCapitalBases.conversion<=0))
+      ?'missing-cost-or-completion-basis':'automatic'
   const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult,{
     cash:props.openingCashBalance??0,debt:props.openingDebtBalance??0,
     netFixedAssets:props.openingFixedAssetsNetBookValue??0,
@@ -754,6 +765,11 @@ export default function AdvancedFinancePanel(props: Props) {
       </div>
       <h4>{t('صورت‌های مالی یکپارچه در سطح هر دوره','Linked Three Financial Statements by Period')}</h4>
       <div className="fw-result">{t('ترازهای منطبق','Reconciled periods')}: <b>{periodicStatements.filter(row=>row.balanceSheet.reconciled).length} / {periodicStatements.length}</b></div>
+      <div className="fw-validation">
+        <b>{t('وضعیت ارزش‌گذاری موجودی‌ها','Inventory valuation status')}</b>
+        <p>{t('مواد اولیه','Raw materials')}: {rawMaterialInventoryStatus==='automatic'?t('خودکار بر مبنای بهای مصرف و روز پوشش','Automatic: annual consumption cost × coverage days'):rawMaterialInventoryStatus==='manual'?t('بر اساس مانده‌های دوره‌ای ثبت‌شده','From entered period balances'):rawMaterialInventoryStatus==='not-configured'?t('روز پوشش صفر است؛ موجودی در مدل منظور نشده','Zero coverage days; no stock modeled'):t('مبنای هزینه وارد نشده؛ ارزش قابل تأیید نیست','Cost basis missing; valuation is unverified')}</p>
+        <p>{t('کالای در جریان ساخت','Work in progress')}: {workInProgressInventoryStatus==='automatic'?t('خودکار با تفکیک درصد تکمیل مواد و تبدیل','Automatic: separate material and conversion completion'):workInProgressInventoryStatus==='manual'?t('بر اساس مانده‌های دوره‌ای ثبت‌شده','From entered period balances'):workInProgressInventoryStatus==='not-configured'?t('روز پوشش صفر است؛ WIP در مدل منظور نشده','Zero coverage days; no WIP modeled'):t('مبنای هزینه یا درصد تکمیل ناقص است؛ ارزش قابل تأیید نیست','Cost or completion basis is incomplete; valuation is unverified')}</p>
+      </div>
       {periodicUnreconciledStatements.length>0&&<div className="fw-validation" role="alert">
         <b>{t('هشدار: صورت‌های مالی دوره‌ای هنوز کاملاً تطبیق ندارند.','Warning: periodic financial statements are not fully reconciled.')}</b>
         <p>{t('تعداد دوره‌های دارای اختلاف: ','Periods with differences: ')}{periodicUnreconciledStatements.length} / {periodicStatements.length} · {t('بیشترین قدرمطلق اختلاف تراز: ','Maximum absolute balance difference: ')}{money(maximumPeriodicBalanceDifference)} {props.currency}</p>
