@@ -127,11 +127,11 @@ assert.equal(missingStagePeriod.valid,false,'a stage ledger cannot be treated as
 assert.ok(missingStagePeriod.issues.some(issue=>issue.includes('missing cost-centre inventory rows for period 2')))
 const stageTransferMovementRows=[
  {...stageRow(1,'raw-materials','ORE',10,100,0,0,0,0,0,0,6,60),costCentreId:'ORE-STORE'},
- {...stageRow(1,'work-in-progress','PELLET',0,0,0,0,0,0,0,0,4,40),costCentreId:'DRI-PLANT'},
+ {...stageRow(1,'work-in-progress','PELLET',0,0,0,0,0,0,0,0,4000,40),costCentreId:'DRI-PLANT'},
 ]
 const rawToWipTransfer={id:'ST-1',period:1,sourceStage:'raw-materials',destinationStage:'work-in-progress',
  sourceProductId:'ORE',destinationProductId:'PELLET',sourceCostCentreId:'ORE-STORE',destinationCostCentreId:'DRI-PLANT',
- quantity:4,sourceUnit:'tonne',destinationUnit:'tonne',conversionFactor:1,transferValue:40,
+ quantity:4,sourceUnit:'tonne',destinationUnit:'kg',conversionFactor:1000,transferValue:40,
  sourceReference:'material transfer note / 17',sourceVerified:true}
 const rawToWip=module.reconcileStageInventoryMovements(stageTransferMovementRows,[
  {period:1,rawMaterials:60,workInProgress:40,finishedGoods:0},
