@@ -240,6 +240,8 @@ export type CostCentreInventoryMovementFormDraft = {
  productionValue:number|null
  consumptionQuantity:number|null
  consumptionValue:number|null
+ salesQuantity:number|null
+ salesCostValue:number|null
  wasteQuantity:number|null
  wasteValue:number|null
  closingQuantity:number|null
@@ -250,14 +252,14 @@ export type CostCentreInventoryMovementFormDraft = {
 export function createBlankCostCentreInventoryMovementFormDraft(id=''):CostCentreInventoryMovementFormDraft {
  return {id,period:null,inventoryStage:null,productId:'',costCentreId:'',
   openingQuantity:null,openingValue:null,receiptsQuantity:null,receiptsValue:null,transfersInQuantity:null,transfersInValue:null,
-  transfersOutQuantity:null,transfersOutValue:null,productionQuantity:null,productionValue:null,consumptionQuantity:null,consumptionValue:null,
+  transfersOutQuantity:null,transfersOutValue:null,productionQuantity:null,productionValue:null,consumptionQuantity:null,consumptionValue:null,salesQuantity:null,salesCostValue:null,
   wasteQuantity:null,wasteValue:null,closingQuantity:null,closingValue:null,
   sourceReference:'',sourceVerified:false}
 }
 const costCentreInventoryMovementHasData=(row:CostCentreInventoryMovementFormDraft):boolean =>
  [row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
   row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,row.transfersOutQuantity,row.transfersOutValue,row.productionQuantity,row.productionValue,row.consumptionQuantity,
-  row.consumptionValue,row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue,row.sourceReference]
+  row.consumptionValue,row.salesQuantity,row.salesCostValue,row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue,row.sourceReference]
   .some(value=>value!==null&&value!==undefined&&value!=='')
 
 export type InventoryStageTransferFormDraft={
@@ -400,7 +402,7 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
  const inventoryMovementKeys=new Set<string>()
  for(const [index,row] of (value.costCentreInventoryMovements??[]).entries()){
   if(!costCentreInventoryMovementHasData(row))continue
-  const values=[row.openingQuantity,row.openingValue,row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,row.transfersOutQuantity,row.transfersOutValue,row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue]
+  const values=[row.openingQuantity,row.openingValue,row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,row.transfersOutQuantity,row.transfersOutValue,row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,row.salesQuantity,row.salesCostValue,row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue]
   if(!Number.isInteger(row.period)||row.period===null||row.period<1)errors.push('cost-centre-inventory-'+index+':invalid-period')
   if(!row.inventoryStage)errors.push('cost-centre-inventory-'+index+':inventory-stage-required')
   if(!row.productId.trim()||!row.costCentreId.trim())errors.push('cost-centre-inventory-'+index+':product-and-cost-centre-required')
