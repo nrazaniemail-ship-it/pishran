@@ -17,8 +17,8 @@ const credits = [
   { id: 'INV-2', period: 2, taxAmount: 20, sourceReference: 'purchase-invoice-2', sourceVerified: true },
 ]
 const settlements = [
-  { period: 1, amount: 50, sourceReference: 'tax-payment-receipt-1' },
-  { period: 2, amount: 100, sourceReference: 'tax-payment-receipt-2' },
+  { period: 1, amount: 50, sourceReference: 'tax-payment-receipt-1', sourceVerified: true },
+  { period: 2, amount: 100, sourceReference: 'tax-payment-receipt-2', sourceVerified: true },
 ]
 const result = ledger.buildSalesTaxLedger(2, outputEntries, credits, settlements)
 assert.equal(result.valid, true, result.issues.join('; '))
@@ -43,25 +43,31 @@ assert.ok(unverifiedCredit.issues.some(issue => issue.includes('verified source 
 
 const excessiveSettlement = ledger.buildSalesTaxLedger(1,
   [{ productId: 'A', period: 1, taxableSales: 100, ratePercent: 10, sourceReference: 'tax-law-reference', sourceVerified: true }], [],
-  [{ period: 1, amount: 11, sourceReference: 'receipt' }])
+  [{ period: 1, amount: 11, sourceReference: 'receipt', sourceVerified: true }])
 assert.equal(excessiveSettlement.valid, false)
 assert.ok(excessiveSettlement.issues.some(issue => issue.includes('exceeds the payable balance')))
 
+const unverifiedSettlement = ledger.buildSalesTaxLedger(1,
+  [{ productId: 'A', period: 1, taxableSales: 100, ratePercent: 10, sourceReference: 'tax-law-reference', sourceVerified: true }], [],
+  [{ period: 1, amount: 0, sourceReference: 'no-payment-due', sourceVerified: false }])
+assert.equal(unverifiedSettlement.valid, false)
+assert.ok(unverifiedSettlement.issues.some(issue => issue.includes('verified source reference')))
+
 const invalidRate = ledger.buildSalesTaxLedger(1,
   [{ productId: 'A', period: 1, taxableSales: 100, ratePercent: 101, sourceReference: 'invalid-rate-law', sourceVerified: true }], [],
-  [{ period: 1, amount: 0, sourceReference: 'no-payment-due' }])
+  [{ period: 1, amount: 0, sourceReference: 'no-payment-due', sourceVerified: true }])
 assert.equal(invalidRate.valid, false)
 
 const unverifiedOutputRate = ledger.buildSalesTaxLedger(1, [
   { productId: 'A', period: 1, taxableSales: 100, ratePercent: 10, sourceReference: '', sourceVerified: false },
-], [], [{ period: 1, amount: 0, sourceReference: 'no-payment-due' }])
+], [], [{ period: 1, amount: 0, sourceReference: 'no-payment-due', sourceVerified: true }])
 assert.equal(unverifiedOutputRate.valid, false)
 assert.ok(unverifiedOutputRate.issues.some(issue => issue.includes('verified legal / source reference')))
 
 const duplicateProductPeriod = ledger.buildSalesTaxLedger(1, [
   { productId: 'A', period: 1, taxableSales: 100, ratePercent: 10, sourceReference: 'tax-law-reference', sourceVerified: true },
   { productId: 'a', period: 1, taxableSales: 200, ratePercent: 10, sourceReference: 'tax-law-reference', sourceVerified: true },
-], [], [{ period: 1, amount: 0, sourceReference: 'no-payment-due' }])
+], [], [{ period: 1, amount: 0, sourceReference: 'no-payment-due', sourceVerified: true }])
 assert.equal(duplicateProductPeriod.valid, false)
 
 const wcBinding = ledger.bindSalesTaxLedgerToWorkingCapital([500, 600], 100, result)
@@ -91,6 +97,7 @@ const wizardSource = await readFile(new URL('../src/features/projects/Feasibilit
 assert.ok(formsSource.includes('دفتر مالیات غیرمستقیم فروش'))
 assert.ok(formsSource.includes('sourceVerified'))
 assert.ok(formsSource.includes('مرجع رسید پرداخت یا سند عدم پرداخت'))
+assert.ok(formsSource.includes('Settlement evidence verified'))
 assert.ok(panelSource.includes('buildSalesTaxLedger'))
 assert.ok(panelSource.includes('bindSalesTaxLedgerToWorkingCapital'))
 assert.ok(panelSource.includes('workingCapitalByPeriod:binding.closingWorkingCapitalByPeriod'))
