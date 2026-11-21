@@ -2,6 +2,7 @@ import type { ProjectCalendarPeriod } from './projectFoundation'
 import { fiscalYearIndexForPeriod } from '../steel/periodicFinancialEngine'
 import type { ProjectModelFinancialFormDrafts, SalesProductFormDraft } from './projectModelFormDrafts'
 import { buildInventoryFlowSchedule } from './inventoryProductionFlow'
+import { validateWasteLedger, validateProductionTransfers } from './inventoryControlLedgers'
 
 export type ProductOperatingPeriodRow = {
   productId: string
@@ -57,7 +58,7 @@ function comfarDaysInPeriod(period:ProjectCalendarPeriod):number {
  * payable/receivable ledger is connected to the statements.
  */
 export function buildProductOperatingSchedule(
-  drafts: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'>,
+  drafts: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts' | 'wasteLedgerEntries' | 'productionTransfers'>,
   periods: ProjectCalendarPeriod[],
   fiscalYearStartMonth: number,
   baseCurrency: string,
@@ -74,6 +75,11 @@ export function buildProductOperatingSchedule(
     issues.push('Fiscal-year start month must be between 1 and 12.')
   if (!baseCurrency.trim()) issues.push('Project base currency is required.')
   if (!drafts.sales.length) issues.push('At least one product sales programme is required.')
+  const wasteLedger=validateWasteLedger(drafts.wasteLedgerEntries??[],count)
+  const transferLedger=validateProductionTransfers(drafts.productionTransfers??[],count)
+  issues.push(...wasteLedger.issues,...transferLedger.issues)
+  for(const entry of [...(drafts.wasteLedgerEntries??[])])if(!drafts.sales.some(sale=>sale.productId===entry.productId))issues.push('Waste entry '+entry.id+' references an unknown product.')
+  for(const entry of [...(drafts.productionTransfers??[])])if(!drafts.sales.some(sale=>sale.productId===entry.sourceProductId)||!drafts.sales.some(sale=>sale.productId===entry.destinationProductId))issues.push('Transfer '+entry.id+' references an unknown product.')
   if (new Set(drafts.sales.map(item=>item.productId.trim())).size!==drafts.sales.length||
       drafts.sales.some(item=>!item.productId.trim()))
     issues.push('Product identifiers must be present and unique.')
