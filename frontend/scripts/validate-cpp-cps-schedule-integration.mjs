@@ -88,6 +88,45 @@ close(wipBound.schedule.periodWipInventoryValue[0], 200 + closingWipCpp);
 close((wipRow.productionCost - 1000) + (wipRow.wipInventoryValue - 200), 300,
   'Incremental CPP must reconcile between completed production and closing WIP');
 
+// Shared service-centre cost is allocated using explicit product-period driver quantities.
+const twoProductSchedule = {
+  ...schedule,
+  periodRevenue: [2400], periodCostOfSales: [1050], periodSubsidyIncome: [0],
+  annualRevenue: [2400], annualCostOfSales: [1050],
+  rows: [
+    { ...schedule.rows[0], period: 1, productId: 'P1' },
+    { ...schedule.rows[0], period: 1, productId: 'P2', openingInventoryQuantity: 0,
+      openingInventoryValue: 0, salesQuantity: 50, productionQuantity: 100,
+      closingInventoryQuantity: 50, closingInventoryValue: 250, unitProductionCost: 5,
+      productionCost: 500, weightedAverageUnitCost: 5, costOfSales: 250,
+      netSalesRevenue: 800, grossProfit: 550 },
+  ],
+};
+const sharedCentreLedger = ledgerModule.buildCppCpsTraceLedger([{
+  ...verifiedItem, id: 'shared-maintenance', category: 'maintenance',
+  productId: null, costCentreId: 'CC-SVC', allocationMethod: 'cost-centre-driver',
+  periodAmounts: [200], baseCoveredAmounts: [0],
+}], 1);
+const sharedCentre = {
+  id: 'CC-SVC', name: 'Shared services', type: 'service', description: '',
+  allocationBasis: 'manual',
+  driverRows: [
+    { period: 1, productId: 'P1', amount: 1 },
+    { period: 1, productId: 'P2', amount: 3 },
+  ],
+};
+const sharedBound = integrationModule.bindCppCpsTraceLedgerToProductSchedule(
+  twoProductSchedule, sharedCentreLedger, [0], [sharedCentre]);
+assert.equal(sharedBound.valid, true, sharedBound.issues.join('; '));
+close(sharedBound.schedule.rows.find(row => row.productId === 'P1').productionCost, 1050);
+close(sharedBound.schedule.rows.find(row => row.productId === 'P2').productionCost, 550);
+close(sharedBound.incrementalCppByPeriod[0], 200);
+const missingSharedDriver = integrationModule.bindCppCpsTraceLedgerToProductSchedule(
+  twoProductSchedule, sharedCentreLedger, [0],
+  [{ ...sharedCentre, driverRows: sharedCentre.driverRows.slice(0, 1) }]);
+assert.equal(missingSharedDriver.valid, false);
+assert.ok(missingSharedDriver.issues.some(issue => issue.includes('manual driver amount for every product')));
+
 // The uncovered cost enters CPP once; fully covered cost produces zero incremental CPP.
 const coveredLedger = ledgerModule.buildCppCpsTraceLedger([{
   ...verifiedItem, baseCostCoverage: 'fully-included',
@@ -136,11 +175,14 @@ const advancedPanel = await readFile(new URL('../src/features/projects/AdvancedF
 const financialForms = await readFile(new URL('../src/features/projects/ProjectModelFinancialFormsPanel.tsx', import.meta.url), 'utf8')
 const wizard = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 assert.ok(advancedPanel.includes('buildCppCpsTraceLedger(props.cppCpsTraceItems'))
+assert.ok(advancedPanel.includes('props.productFinancialDrafts?.costCentres??[]'))
 assert.ok(advancedPanel.includes('knownIncrementalByCostCentreAndCategory'))
 assert.ok(advancedPanel.includes('Complete total'))
 assert.ok(advancedPanel.includes('bindCppCpsTraceLedgerToProductSchedule'))
 assert.ok(advancedPanel.includes('bindFinishedGoodsInventoryToWorkingCapital'))
 assert.ok(advancedPanel.includes('annualVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.annualCostOfSales'))
+assert.ok(financialForms.includes('Cost centre allocation basis'))
+assert.ok(financialForms.includes('Cost-centre driver'))
 assert.ok(financialForms.includes('Cost centre ID'))
 assert.ok(financialForms.includes('Source reference'))
 assert.ok(financialForms.includes('baseCoveredAmounts'))
