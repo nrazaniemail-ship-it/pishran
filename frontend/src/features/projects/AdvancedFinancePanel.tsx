@@ -7,7 +7,7 @@ import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConv
 import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
-import { reconcileInventoryThreeWay, reconcileInventoryReference } from './inventoryControlLedgers'
+import { reconcileInventoryThreeWay, reconcileInventoryReference, reconcileStageInventoryMovements } from './inventoryControlLedgers'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
 import { bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
 import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft, SalesTaxLedgerFormDraft, ValueAddedPeriodFormDraft } from './projectModelFormDrafts'
@@ -72,7 +72,7 @@ type Props = {
   openingGrants?: number
   openingCurrentAccounts?: OpeningCurrentAccounts
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
-  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers' | 'inventoryReferenceBenchmarks' | 'costCentres'>>
+  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers' | 'inventoryReferenceBenchmarks' | 'costCentres' | 'costCentreInventoryMovements'>>
   cppCpsTraceItems?: CppCpsTraceItem[]
   onCppCpsTraceLedger?: (ledger: CppCpsTraceLedger) => void
   onEditFinancialForms?: () => void
@@ -643,6 +643,16 @@ export default function AdvancedFinancePanel(props: Props) {
       }
     }))
   },[periodicFinanceResult,productOperatingSchedule,periodicStatements])
+  const stageInventoryReconciliation=useMemo(()=>{
+    const movements=props.productFinancialDrafts?.costCentreInventoryMovements??[]
+    if(!movements.length)return null
+    if(!periodicFinanceResult?.valid)return {valid:false,issues:['A valid periodic finance result is required before stage inventory reconciliation.'],rows:[]}
+    const expected=periodicFinanceResult.rows.map(row=>({
+      period:row.period,rawMaterials:row.rawMaterialsInventory,
+      workInProgress:row.workInProgressInventory,finishedGoods:row.finishedGoodsInventory,
+    }))
+    return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length)
+  },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),periodicFinanceResult])
   const inventoryReferenceReconciliation=useMemo(()=>{
     const benchmarks=props.productFinancialDrafts?.inventoryReferenceBenchmarks??[]
     if(!benchmarks.length||!periodicFinanceResult?.valid||!productOperatingSchedule?.valid)return null
@@ -995,6 +1005,12 @@ export default function AdvancedFinancePanel(props: Props) {
         <p>{t('دوره‌های منطبق: ','Reconciled periods: ')}{inventoryThreeWayReconciliation.rows.filter(row=>Math.abs(row.inventoryVariance)<=0.01&&Math.abs(row.cppCpsVariance)<=0.01&&Math.abs(row.workingCapitalVariance)<=0.01).length} / {inventoryThreeWayReconciliation.rows.length}</p>
         {!inventoryThreeWayReconciliation.valid&&inventoryThreeWayReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
         <p>{t('این کنترل، تطبیق داخلی داده‌های ثبت‌شده را نشان می‌دهد؛ تا زمان ورود ارقام تفکیکی مستقل از گزارش مرجع، تطبیق تاریخی با COMFAR تأییدشده محسوب نمی‌شود.','This checks internal model consistency. Historical COMFAR reconciliation remains unverified until independent detailed reference figures are entered.')}</p>
+      </div>}
+      {stageInventoryReconciliation&&<div className={stageInventoryReconciliation.valid?'fw-result':'fw-validation'} role={stageInventoryReconciliation.valid?'status':'alert'}>
+        <b>{t('تطبیق دفتر موجودی تفکیکی با موتور مالی','Stage inventory register vs finance-engine reconciliation')}</b>
+        <p>{t('ردیف‌های مرحله‌ای منطبق: ','Matched stage rows: ')}{stageInventoryReconciliation.rows.length} / {(props.productFinancialDrafts?.costCentreInventoryMovements??[]).length}</p>
+        {!stageInventoryReconciliation.valid&&stageInventoryReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
+        <p>{t('این کنترل فقط مانده پایان دوره هر مرحله را با موتور مالی تطبیق می‌دهد و هیچ مبلغی را دوباره به CPP/CPS یا سرمایه در گردش اضافه نمی‌کند. اتصال ثبت‌های مرحله‌ای به گردش واقعی مواد، WIP و محصول نهایی همچنان در دست تکمیل است.','This control compares stage closing balances with the finance engine and does not post amounts again to CPP/CPS or working capital. Full stage-specific receipt, WIP and finished-goods posting remains in progress.')}</p>
       </div>}
       {inventoryReferenceReconciliation&&<div className={inventoryReferenceReconciliation.valid?'fw-result':'fw-validation'} role={inventoryReferenceReconciliation.valid?'status':'alert'}>
         <b>{t('تطبیق تاریخی با خروجی مرجع','Historical reconciliation against reference output')}</b>
