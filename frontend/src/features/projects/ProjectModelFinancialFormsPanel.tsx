@@ -197,6 +197,25 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
    </div>)}
    <button type="button" className="secondary-button" onClick={()=>onChange({...value,productionTransfers:[...(value.productionTransfers??[]),{id:crypto.randomUUID(),period:1,sourceProductId:'',destinationProductId:'',sourceCostCentreId:'',destinationCostCentreId:'',quantity:0,sourceUnit:'',destinationUnit:'',conversionFactor:0,costAmount:0}]})}>{t('افزودن انتقال','Add transfer')}</button>
   </div>
+  <div className="fw-card">
+   <h4>{t('دفتر ارقام مرجع برای تطبیق تاریخی موجودی و CPP/CPS','Source evidence register for historical inventory and CPP/CPS reconciliation')}</h4>
+   <p className="fw-hint">{t('برای هر دوره، ارقام را عیناً از خروجی مرجع وارد کنید و نام سند، جدول، صفحه و ارز را ثبت کنید. خانه‌های بدون شاهد را خالی بگذارید؛ صفر به‌معنای داده ناموجود نیست.','Enter figures exactly as published for each period and record document, schedule, page and currency. Leave unsupported fields blank; zero is not a substitute for missing evidence.')}</p>
+   {(value.inventoryReferenceBenchmarks??[]).map((entry,index)=><div className="fw-grid" key={entry.id}>
+    <NumberField label={t('دوره پروژه','Project period')} value={entry.period} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,period:v??0}:x)})}/>
+    <TextField label={t('نام سند مرجع','Reference document')} value={entry.sourceDocument} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,sourceDocument:v}:x)})}/>
+    <TextField label={t('نام جدول / گزارش','Schedule / report name')} value={entry.schedule} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,schedule:v}:x)})}/>
+    <TextField label={t('شماره صفحه','Page number')} value={entry.page} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,page:v}:x)})}/>
+    <TextField label={t('ارز گزارش','Report currency')} value={entry.currency} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,currency:v}:x)})}/>
+    <NumberField label={t('موجودی مواد اولیه','Raw materials')} value={entry.rawMaterials} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,rawMaterials:v}:x)})}/>
+    <NumberField label={t('کالای در جریان ساخت','Work in progress')} value={entry.workInProgress} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,workInProgress:v}:x)})}/>
+    <NumberField label={t('محصول نهایی','Finished goods')} value={entry.finishedGoods} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,finishedGoods:v}:x)})}/>
+    <NumberField label={t('جمع موجودی','Total inventory')} value={entry.totalInventory} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,totalInventory:v}:x)})}/>
+    <NumberField label={t('بهای تولید (CPP)','Cost of products produced (CPP)')} value={entry.cpp} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,cpp:v}:x)})}/>
+    <NumberField label={t('بهای محصول فروخته‌شده (CPS)','Cost of products sold (CPS)')} value={entry.cps} onChange={v=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.map((x,i)=>i===index?{...x,cps:v}:x)})}/>
+    <button type="button" className="secondary-button" onClick={()=>onChange({...value,inventoryReferenceBenchmarks:value.inventoryReferenceBenchmarks.filter(x=>x.id!==entry.id)})}>{t('حذف دوره مرجع','Remove benchmark')}</button>
+   </div>)}
+   <button type="button" className="secondary-button" onClick={()=>onChange({...value,inventoryReferenceBenchmarks:[...(value.inventoryReferenceBenchmarks??[]),{id:crypto.randomUUID(),period:1,sourceDocument:'',schedule:'',page:'',currency:'',rawMaterials:null,workInProgress:null,finishedGoods:null,totalInventory:null,cpp:null,cps:null}]})}>{t('افزودن دوره مرجع','Add reference period')}</button>
+  </div>
   <ProjectModelHelpCoveragePanel value={value.helpDriven} onChange={helpDriven=>onChange({...value,helpDriven})} language={language}/>
  </section>
 }
