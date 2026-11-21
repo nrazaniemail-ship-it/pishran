@@ -57,7 +57,7 @@ const unsupportedIndirect=module.buildProductOperatingSchedule({
 assert.equal(unsupportedIndirect.valid,false)
 assert.ok(unsupportedIndirect.issues.some(issue=>issue.includes('not spread by assumption')))
 const vat=module.buildProductOperatingSchedule({
- ...base,sales:[{...base.sales[0],periods:[{...base.sales[0].periods[0],salesTaxPercent:9},base.sales[0].periods[1]]}]
+ ...base,sales:[{...base.sales[0],periods:[{...base.sales[0].periods[0],salesTaxPercent:9,salesTaxSourceReference:'VAT statute article 1',salesTaxSourceVerified:true},base.sales[0].periods[1]]}]
 },periods,1,'IRR')
 assert.equal(vat.valid,true,vat.issues.join('; '))
 assert.deepEqual(vat.periodOutputSalesTax,[144,0])
