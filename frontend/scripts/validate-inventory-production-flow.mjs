@@ -42,7 +42,7 @@ close(p2.wipValueVariance,0)
 close(result.totalPurchasesValue,1850)
 close(result.totalMaterialConsumptionValue,p1.consumptionValue+p2.consumptionValue)
 assert.equal(mod.buildInventoryFlowSchedule({...input,rawMaterialConsumptionQuantity:[201,80]}).valid,false)
-assert.equal(mod.buildInventoryFlowSchedule(({rawMaterialWasteQuantity:undefined,...input})).valid,false,
+assert.equal(mod.buildInventoryFlowSchedule({...input,rawMaterialWasteQuantity:undefined}).valid,false,
  'Missing normal-waste quantities must block inventory valuation rather than default to zero')
 assert.equal(mod.buildInventoryFlowSchedule({...input,rawMaterialWasteQuantity:[0]}).valid,false,
  'Normal-waste quantities must cover every project period')
