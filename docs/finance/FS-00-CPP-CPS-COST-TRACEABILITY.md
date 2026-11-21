@@ -103,7 +103,7 @@ The saved cost-centre movement rows are now passed into the financial panel. Whe
 
 - Each populated stage must have at least one row in every model period.
 - Every row must have an explicit verified source reference and complete non-negative quantity/value fields.
-- Product/cost-centre roll-forward is checked independently inside each stage, including period opening-to-closing carry-forward.
+- Product/cost-centre roll-forward is checked independently inside each stage, including period opening-to-closing carry-forward. Internal transfer-in and transfer-out quantities and values are captured separately and must balance within each stage and period; these transfers relocate inventory and do not increase total stage value.
 - The sum of stage closing values by period is compared with the corresponding periodic finance-engine inventory balance (raw materials, work in progress, or finished goods).
 - A mismatch, missing stage-period, invalid movement, or unverified source makes this cross-check fail visibly.
 
