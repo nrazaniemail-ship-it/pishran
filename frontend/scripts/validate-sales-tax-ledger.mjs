@@ -8,9 +8,9 @@ const output = ts.transpileModule(source, {
 }).outputText
 const ledger = await import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
 const outputEntries = [
-  { productId: 'A', period: 1, taxableSales: 1000, ratePercent: 10 },
-  { productId: 'B', period: 1, taxableSales: 500, ratePercent: 10 },
-  { productId: 'A', period: 2, taxableSales: 1200, ratePercent: 10 },
+  { productId: 'A', period: 1, taxableSales: 1000, ratePercent: 10, sourceReference: 'tax-law-reference', sourceVerified: true },
+  { productId: 'B', period: 1, taxableSales: 500, ratePercent: 10, sourceReference: 'tax-law-reference', sourceVerified: true },
+  { productId: 'A', period: 2, taxableSales: 1200, ratePercent: 10, sourceReference: 'tax-law-reference', sourceVerified: true },
 ]
 const credits = [
   { id: 'INV-1', period: 1, taxAmount: 30, sourceReference: 'purchase-invoice-1', sourceVerified: true },
@@ -42,19 +42,25 @@ assert.equal(unverifiedCredit.valid, false)
 assert.ok(unverifiedCredit.issues.some(issue => issue.includes('verified source reference')))
 
 const excessiveSettlement = ledger.buildSalesTaxLedger(1,
-  [{ productId: 'A', period: 1, taxableSales: 100, ratePercent: 10 }], [],
+  [{ productId: 'A', period: 1, taxableSales: 100, ratePercent: 10, sourceReference: 'tax-law-reference', sourceVerified: true }], [],
   [{ period: 1, amount: 11, sourceReference: 'receipt' }])
 assert.equal(excessiveSettlement.valid, false)
 assert.ok(excessiveSettlement.issues.some(issue => issue.includes('exceeds the payable balance')))
 
 const invalidRate = ledger.buildSalesTaxLedger(1,
-  [{ productId: 'A', period: 1, taxableSales: 100, ratePercent: 101 }], [],
+  [{ productId: 'A', period: 1, taxableSales: 100, ratePercent: 101, sourceReference: 'invalid-rate-law', sourceVerified: true }], [],
   [{ period: 1, amount: 0, sourceReference: 'no-payment-due' }])
 assert.equal(invalidRate.valid, false)
 
+const unverifiedOutputRate = ledger.buildSalesTaxLedger(1, [
+  { productId: 'A', period: 1, taxableSales: 100, ratePercent: 10, sourceReference: '', sourceVerified: false },
+], [], [{ period: 1, amount: 0, sourceReference: 'no-payment-due' }])
+assert.equal(unverifiedOutputRate.valid, false)
+assert.ok(unverifiedOutputRate.issues.some(issue => issue.includes('verified legal / source reference')))
+
 const duplicateProductPeriod = ledger.buildSalesTaxLedger(1, [
-  { productId: 'A', period: 1, taxableSales: 100, ratePercent: 10 },
-  { productId: 'a', period: 1, taxableSales: 200, ratePercent: 10 },
+  { productId: 'A', period: 1, taxableSales: 100, ratePercent: 10, sourceReference: 'tax-law-reference', sourceVerified: true },
+  { productId: 'a', period: 1, taxableSales: 200, ratePercent: 10, sourceReference: 'tax-law-reference', sourceVerified: true },
 ], [], [{ period: 1, amount: 0, sourceReference: 'no-payment-due' }])
 assert.equal(duplicateProductPeriod.valid, false)
 
