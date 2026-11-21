@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
+import { listProductionRecords } from '../production/productionRepository'
+import { buildProductionFinanceBridge, type ProductionFinanceBridge } from './productionFinanceIntegration'
 import { allocateJointVentureCashFlows, type JointVenturePartner, type PartnerFinanceResult } from './partnerFinance'
 import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
@@ -132,6 +134,8 @@ export default function AdvancedFinancePanel(props: Props) {
   const activePreOperatingSchedule = props.preOperatingSchedule?.length===years ? props.preOperatingSchedule : fallbackPreOperatingSchedule
   const initialCapexSchedule = activeFixedInvestmentSchedule.map((amount,i)=>amount+activePreOperatingSchedule[i])
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
+  const [productionBridge,setProductionBridge] = useState<ProductionFinanceBridge|null>(null)
+  useEffect(()=>{let active=true;setProductionBridge(null);listProductionRecords(props.projectId).then(records=>{if(active)setProductionBridge(buildProductionFinanceBridge(records,props.projectId,projectPeriods,props.currency))}).catch(error=>{if(active)setProductionBridge({valid:false,periods:[],errors:[error instanceof Error?error.message:'خطا در خواندن سوابق تولید'],warnings:[]})});return()=>{active=false}},[props.projectId,props.currency,JSON.stringify(projectPeriods)])
   const [state,setState] = useState<SavedState>(() => ({
     loans:[{id:'loan-1',label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),drawdownMode:'annual-day-weighted',annualRate:props.initialLoanRatePercent??props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:props.initialRepaymentMethod??'equal-principal',capitalizeInterest:true}],
     assets:props.depreciationAssets??props.capexRows.filter(r=>r.amount>0&&!r.name.includes('زمین')).map((r,i)=>({id:r.id||'asset-'+i,name:r.name,cost:r.amount,residualValue:0,usefulLife:10,startYear:construction+1,method:'straight-line' as const,decliningRate:20})), equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??0):0),fundingStructureVersion:2,
@@ -233,6 +237,19 @@ export default function AdvancedFinancePanel(props: Props) {
       : undefined
   const utilization = Array.from({length:years},(_,i)=>i<construction?0:Math.max(0,Math.min(100,props.ramp[i-construction]??100))/100)
   const fixedInvestmentSchedule = capexSchedule
+  const productionAnnual = useMemo(()=>{
+    if(!productionBridge?.valid||!projectPeriods.length||props.fiscalYearStartMonth==null)return null
+    const cpp=Array(years).fill(0),cps=Array(years).fill(0),finishedGoods=Array(years).fill(0)
+    for(const row of productionBridge.periods){
+      const calendarPeriod=projectPeriods.find(period=>period.index===row.periodIndex+1)
+      if(!calendarPeriod)return null
+      const fiscalIndex=fiscalYearIndexForPeriod(calendarPeriod,projectPeriods,props.fiscalYearStartMonth)
+      if(fiscalIndex<0||fiscalIndex>=years)return null
+      cpp[fiscalIndex]+=row.cpp;cps[fiscalIndex]+=row.cps;finishedGoods[fiscalIndex]=row.closingFinishedGoodsValue
+    }
+    return {cpp,cps,finishedGoods}
+  },[productionBridge,JSON.stringify(projectPeriods),props.fiscalYearStartMonth,years])
+  const productionCostMappingSafe=Math.abs(props.fullCapacityVariableCashCost)<0.005
   const workingCapitalPolicy = useMemo(()=>({
     dayBasis:(props.dayCountBasis??360) as 360|365,rawMaterialDays:state.workingCapitalDays.raw,energyDays:state.workingCapitalDays.energy,sparePartsDays:state.workingCapitalDays.spareParts,workInProgressDays:state.workingCapitalDays.wip,
     workInProgressMaterialCompletionPercent:state.wipCompletion.material,workInProgressConversionCompletionPercent:state.wipCompletion.conversion,
@@ -256,7 +273,7 @@ export default function AdvancedFinancePanel(props: Props) {
     fixedInvestmentSchedule,preOperatingSchedule:activePreOperatingSchedule,utilization,equityContributions,
     loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
     taxRate:props.taxRate,taxRateSchedule:taxRates,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
-    workingCapitalPercent:0,workingCapitalPolicy,salesEscalationPercent:state.salesEscalationPercent,opexEscalationPercent:state.opexEscalationPercent,
+    workingCapitalPercent:0,workingCapitalPolicy,...(productionAnnual?{costOfProductsSoldByYear:productionCostMappingSafe?productionAnnual.cps:undefined,finishedGoodsInventoryValueByYear:productionAnnual.finishedGoods}:{}),salesEscalationPercent:state.salesEscalationPercent,opexEscalationPercent:state.opexEscalationPercent,
     discountMode:state.discountMode,manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.mirrFinanceRate??props.costOfEquity,equityMirrReinvestmentRate:props.mirrReinvestmentRate??props.costOfEquity
   }
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
@@ -295,7 +312,9 @@ export default function AdvancedFinancePanel(props: Props) {
       const operatingYear=Math.max(0,fiscalIndex-construction)
       const salesFactor=Math.pow(1+state.salesEscalationPercent/100,operatingYear)
       const opexFactor=Math.pow(1+state.opexEscalationPercent/100,operatingYear)
-      return calculateOperatingCycleWorkingCapital(workingCapitalPolicy,annualRow.utilization,salesFactor,opexFactor).netWorkingCapital
+      const cycle=calculateOperatingCycleWorkingCapital(workingCapitalPolicy,annualRow.utilization,salesFactor,opexFactor)
+      const productionPeriod=productionBridge?.valid?productionBridge.periods.find(row=>row.periodIndex===period.index-1):undefined
+      return cycle.netWorkingCapital-cycle.finishedGoods+(productionPeriod?.closingFinishedGoodsValue??cycle.finishedGoods)
     })
     return calculateIntegratedPeriodicFinance({
       periods,fiscalYearStartMonth:fiscalMonth,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
@@ -339,6 +358,12 @@ export default function AdvancedFinancePanel(props: Props) {
 
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
+    {productionBridge&&<div className="fw-hint" role="status">
+      {productionBridge.valid
+        ? <>{t('سوابق تولید پروژه به تقویم مالی متصل شد.','Project production records are mapped to the financial calendar.') } CPP: {money(productionAnnual?.cpp.reduce((sum,value)=>sum+value,0)??0)}؛ CPS: {productionCostMappingSafe?t('به بهای کالای فروش‌رفته متصل شد.','mapped to cost of products sold.'):t('به‌علت وجود هزینه متغیر پایه، اتصال CPS برای جلوگیری از دوباره‌شماری مسدود است.','CPS mapping is blocked because base variable costs exist; this prevents double counting.')} {t('موجودی محصول نهایی به سرمایه در گردش متصل شد.','Finished goods inventory is linked to working capital.')}
+      </>
+        : <>{t('اتصال سوابق تولید به مدل مالی انجام نشد:','Production-to-finance mapping was rejected:')} {productionBridge.errors.join('؛ ')}</>}
+    </div>}
     {props.fixedInvestmentSchedule?.length===years && props.preOperatingSchedule?.length===years
       ? <p className="fw-hint">{t('زمان‌بندی CAPEX دارایی‌های ثابت و هزینه‌های قبل از بهره‌برداری از نوبت‌های تحصیل مستند یا تأییدشده استخراج شده است.','Fixed-asset CAPEX and pre-production timing both use source-supported or user-confirmed acquisition vintages.')}</p>
       : props.fixedInvestmentSchedule?.length===years
