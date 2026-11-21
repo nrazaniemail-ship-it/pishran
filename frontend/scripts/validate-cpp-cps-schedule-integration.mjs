@@ -109,7 +109,7 @@ const sharedCentreLedger = ledgerModule.buildCppCpsTraceLedger([{
 }], 1);
 const sharedCentre = {
   id: 'CC-SVC', name: 'Shared services', type: 'service', description: '',
-  allocationBasis: 'manual',
+  allocationBasis: 'manual', manualDriverName: 'Machine hours', manualDriverUnit: 'h',
   driverRows: [
     { period: 1, productId: 'P1', amount: 1 },
     { period: 1, productId: 'P2', amount: 3 },
