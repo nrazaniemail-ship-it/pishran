@@ -21,6 +21,17 @@ const [engine, foundation, financialModel] = await Promise.all([
   load('../src/features/projects/projectFoundation.ts'),
   loadFinancialModel()
 ])
+const automaticInventoryValuation=financialModel.calculateOperatingCycleWorkingCapital({
+  dayBasis:360,rawMaterialDays:30,workInProgressDays:15,
+  workInProgressMaterialCompletionPercent:100,workInProgressConversionCompletionPercent:50,
+  finishedGoodsDays:0,receivableDays:0,cashDays:0,payableDays:0,
+  annualRawMaterialCost:3600,annualConversionCost:7200,annualFinishedGoodsCost:0,
+  annualRevenue:0,annualCashOperatingCost:0
+},1)
+assert.equal(automaticInventoryValuation.rawMaterials,300,
+  'Raw-material inventory must be automatically valued from evidenced annual consumption cost and coverage days')
+assert.equal(automaticInventoryValuation.workInProgress,300,
+  'WIP must automatically combine material and conversion cost using separate completion percentages')
 const periods=foundation.buildProjectCalendarPeriods('2025-01-01','2027-12-31','annual',1)
 assert.equal(periods.length,3)
 const detailedOpeningAccounts={
