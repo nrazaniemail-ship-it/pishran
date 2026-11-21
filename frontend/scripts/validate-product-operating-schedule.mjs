@@ -170,6 +170,51 @@ assert.ok(Math.abs(openingStockTransfer.rows.find(row=>row.productId==='P2'&&row
  (700+(1150*20/110)/20*5))<1e-8,
  'opening-stock transfer value must be reclassified into the destination CPP without creating group cost')
 
+// Same-period chained transfers: P1 -> P2 -> P3 must preserve group CPP and carry
+// the intermediate weighted-average cost through each transfer without losing stock.
+const chainedBase={
+ ...controlledDraft,
+ sales:[
+  ...controlledDraft.sales,
+  {...controlledDraft.sales[1],productId:'P3',periods:controlledDraft.sales[1].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:35,openingFinishedGoodsValue:0}:row)},
+ ],
+ productionCosts:[...controlledDraft.productionCosts,{...controlledDraft.productionCosts[1],id:'cost-p3',productId:'P3'}],
+ productionTransfers:[],
+}
+const chainedProbe=module.buildProductOperatingSchedule(chainedBase,periods,1,'IRR')
+assert.equal(chainedProbe.valid,true,chainedProbe.issues.join('; '))
+const p1Wac=(100+1000+50)/110
+const transferOneCost=10*p1Wac
+const p2Wac=(100+1000+transferOneCost)/(10+100+10)
+const transferTwoCost=5*p2Wac
+const chainedDraft={
+ ...chainedBase,
+ sales:chainedBase.sales.map(sale=>({...sale,periods:sale.periods.map((row,index)=>{
+  if(index!==1)return row
+  if(sale.productId==='P1')return {...row,openingFinishedGoodsQuantity:20,openingFinishedGoodsValue:20*p1Wac}
+  if(sale.productId==='P2')return {...row,openingFinishedGoodsQuantity:35,openingFinishedGoodsValue:35*p2Wac}
+  return {...row,openingFinishedGoodsQuantity:35,openingFinishedGoodsValue:35*(100+1000+transferTwoCost)/115}
+ })})),
+ productionTransfers:[
+  {id:'CHAIN-1',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:transferOneCost},
+  {id:'CHAIN-2',period:1,sourceProductId:'P2',destinationProductId:'P3',sourceCostCentreId:'CC-B',destinationCostCentreId:'CC-C',quantity:5,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:transferTwoCost},
+ ],
+}
+const chained=module.buildProductOperatingSchedule(chainedDraft,periods,1,'IRR')
+assert.equal(chained.valid,true,chained.issues.join('; '))
+const chainP1=chained.rows.find(row=>row.productId==='P1'&&row.period===1)
+const chainP2=chained.rows.find(row=>row.productId==='P2'&&row.period===1)
+const chainP3=chained.rows.find(row=>row.productId==='P3'&&row.period===1)
+close(chainP1.closingInventoryQuantity,20)
+close(chainP2.closingInventoryQuantity,35)
+close(chainP3.closingInventoryQuantity,35)
+close(chainP1.productionCost+chainP2.productionCost+chainP3.productionCost,3050)
+close(chainP2.weightedAverageUnitCost,p2Wac)
+close(chainP3.weightedAverageUnitCost,(100+1000+transferTwoCost)/115)
+close(chained.rows.find(row=>row.productId==='P2'&&row.period===2).openingInventoryValue,35*p2Wac)
+close(chained.rows.find(row=>row.productId==='P3'&&row.period===2).openingInventoryValue,35*(100+1000+transferTwoCost)/115)
+assert.equal(chained.totalProductionQuantity,/* actual production only plus transfer accounting units */ 305)
+
 console.log('Product-by-product production, weighted-average inventory, COGS and sales validation passed.')
 
 const flowProduct={
