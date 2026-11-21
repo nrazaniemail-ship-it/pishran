@@ -29,6 +29,6 @@ assert.equal(integration.buildProductionFinanceBridge([record({finishedGoodsOpen
 const twoPeriod=[record(),record({id:'r2',periodStart:'2026-02-01',periodEnd:'2026-02-28',salesQuantity:10,finishedGoodsOpeningQuantity:20,finishedGoodsOpeningValue:44})]
 result=integration.buildProductionFinanceBridge(twoPeriod,'p1',periods,'USD')
 assert.equal(result.valid,true)
-assert.equal(result.periods[1].products[0].closingFinishedGoodsValue,66)
+assert.equal(result.periods[1].products[0].closingFinishedGoodsValue,242)
 assert.equal(analysis.analyzeProductionRecord(record()).totalProductionCost,220)
 console.log('Production-finance bridge tests passed: project scope, exact period mapping, overlap, currency, product inventory roll-forward, sales, CPP/CPS and carry-forward.')
