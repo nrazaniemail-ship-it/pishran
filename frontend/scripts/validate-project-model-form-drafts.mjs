@@ -72,10 +72,14 @@ try {
  assert.deepEqual(complete.costCentreInventoryMovements,[])
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[blankMovement]}),[])
  const verificationOnlyMovement={...blankMovement,sourceVerified:true}
- assert.ok(forms.listUnintegratedFinancialDraftInputs({...complete,costCentreInventoryMovements:[verificationOnlyMovement]}).includes('financialForms.costCentreInventoryMovements.0'),
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[verificationOnlyMovement]}).includes('cost-centre-inventory-0:all-quantities-and-values-required'),
+  'a verification-only inventory row must be validated as incomplete')
+assert.ok(forms.listUnintegratedFinancialDraftInputs({...complete,costCentreInventoryMovements:[verificationOnlyMovement]}).includes('financialForms.costCentreInventoryMovements.0'),
   'a verification-only inventory row must remain a report blocker')
  const verificationOnlyTransfer={...blankStageTransfer,sourceVerified:true}
- assert.ok(forms.listUnintegratedFinancialDraftInputs({...complete,inventoryStageTransfers:[verificationOnlyTransfer]}).includes('financialForms.inventoryStageTransfers.0'),
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,inventoryStageTransfers:[verificationOnlyTransfer]}).includes('inventory-stage-transfer-0:invalid-period'),
+  'a verification-only inter-stage transfer must be validated as incomplete')
+assert.ok(forms.listUnintegratedFinancialDraftInputs({...complete,inventoryStageTransfers:[verificationOnlyTransfer]}).includes('financialForms.inventoryStageTransfers.0'),
   'a verification-only inter-stage transfer must remain a report blocker')
 
  const partialMovement={...blankMovement,period:1,inventoryStage:'raw-materials',productId:'RM-1',costCentreId:'STORE-A',openingQuantity:0}
