@@ -343,6 +343,10 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
      <NumberField label={t('ارزش اول دوره','Opening value')} value={entry.openingValue} onChange={v=>patch({openingValue:v})}/>
      <NumberField label={t('مقدار ورودی/رسید','Receipts quantity')} value={entry.receiptsQuantity} onChange={v=>patch({receiptsQuantity:v})}/>
      <NumberField label={t('ارزش ورودی/رسید','Receipts value')} value={entry.receiptsValue} onChange={v=>patch({receiptsValue:v})}/>
+     <NumberField label={t('مقدار انتقال داخلی ورودی','Internal transfer-in quantity')} value={entry.transfersInQuantity} onChange={v=>patch({transfersInQuantity:v})}/>
+     <NumberField label={t('ارزش انتقال داخلی ورودی','Internal transfer-in value')} value={entry.transfersInValue} onChange={v=>patch({transfersInValue:v})}/>
+     <NumberField label={t('مقدار انتقال داخلی خروجی','Internal transfer-out quantity')} value={entry.transfersOutQuantity} onChange={v=>patch({transfersOutQuantity:v})}/>
+     <NumberField label={t('ارزش انتقال داخلی خروجی','Internal transfer-out value')} value={entry.transfersOutValue} onChange={v=>patch({transfersOutValue:v})}/>
      <NumberField label={t('مقدار تولید/تکمیل ورودی','Production quantity')} value={entry.productionQuantity} onChange={v=>patch({productionQuantity:v})}/>
      <NumberField label={t('ارزش تولید/تکمیل ورودی','Production value')} value={entry.productionValue} onChange={v=>patch({productionValue:v})}/>
      <NumberField label={t('مقدار مصرف/خروج','Consumption quantity')} value={entry.consumptionQuantity} onChange={v=>patch({consumptionQuantity:v})}/>
