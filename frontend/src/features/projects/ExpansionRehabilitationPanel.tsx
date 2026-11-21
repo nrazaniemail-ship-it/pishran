@@ -165,11 +165,11 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   state.opening.cashSurplusLocal,state.opening.cashSurplusForeign,state.opening.payablesLocal,
   state.opening.payablesForeign,state.opening.otherLiabilitiesLocal,debt,accruedLoanInterest,
   openingPaidInCapital,state.opening.retainedEarnings,state.opening.accumulatedLosses,state.opening.grants])
- const openingBalanceReady=!!state.baseDate&&!!state.openingSourceReference.trim()&&state.openingSourceVerified&&assetIssues.length===0&&Math.abs(balanceDifference)<=0.01
+ const openingBalanceReady=/^\\d{4}-\\d{2}-\\d{2}$/.test(state.baseDate)&&!!state.openingSourceReference.trim()&&state.openingSourceVerified&&assetIssues.length===0&&Math.abs(balanceDifference)<=0.01
  useEffect(()=>{if(loaded&&openingBalanceReady)onStartingAssetsChange?.(state.assets)},[loaded,openingBalanceReady,state.assets,onStartingAssetsChange])
  useEffect(()=>{if(loaded&&openingBalanceReady)onStartingBalancesChange?.(openingBalanceSummary)},[loaded,openingBalanceReady,onStartingBalancesChange,openingBalanceSummary])
  const scenarioIssues:string[]=[]
- if(!state.baseDate)scenarioIssues.push('تاریخ مبنای مانده افتتاحیه لازم است. / Opening balance effective date is required.')
+ if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(state.baseDate))scenarioIssues.push('تاریخ مبنای مانده افتتاحیه باید معتبر و پیش از نخستین دوره باشد. / A valid opening balance effective date before the first project period is required.')
  if(!state.openingSourceReference.trim()||!state.openingSourceVerified)scenarioIssues.push('مرجع مستند و تأییدشده برای مانده‌های افتتاحیه لازم است. / Verified source evidence is required for opening balances.')
  if(assetIssues.length)scenarioIssues.push('دارایی‌های افتتاحیه باید بدون خطا باشند. / Opening fixed assets must pass validation.')
  if(Math.abs(balanceDifference)>0.01)scenarioIssues.push('تراز افتتاحیه باید بدون رقم ترازکننده به صفر برسد. / Opening balance sheet must reconcile without a balancing plug.')
@@ -180,6 +180,7 @@ export default function ExpansionRehabilitationPanel({projectId,currency,constru
   rows.forEach((row,index)=>{
    if(!row.sourceReference.trim()||!row.sourceVerified)scenarioIssues.push('منبع دوره '+(index+1)+' سناریوی '+scenario+' تأیید نشده است. / Period '+(index+1)+' source for '+scenario+' is not verified.')
    if(![row.revenue,row.cashOperatingCosts,row.tax,row.capex,row.changeInWorkingCapital,row.opportunityCost??0,row.assetSaleProceeds??0,row.terminalValue??0].every(Number.isFinite))scenarioIssues.push('مقادیر دوره '+(index+1)+' سناریوی '+scenario+' معتبر نیست. / Period '+(index+1)+' values for '+scenario+' are invalid.')
+   if([row.revenue,row.cashOperatingCosts,row.tax,row.capex,row.opportunityCost??0,row.assetSaleProceeds??0,row.terminalValue??0].some(value=>value<0))scenarioIssues.push('درآمد، هزینه، مالیات، سرمایه‌گذاری، هزینه فرصت، عواید فروش و ارزش نهایی نباید منفی باشند؛ تغییر سرمایه در گردش می‌تواند منفی باشد. / Revenue, costs, tax, CAPEX, opportunity cost, asset proceeds and terminal value must be non-negative; working-capital change may be negative.')
   })
  }
  const result=useMemo(()=>scenarioIssues.length||state.discountRate===null?null:calculateIncrementalEnterpriseAnalysis(state.without,state.with,state.discountRate/100),[scenarioIssues.join('|'),state.without,state.with,state.discountRate])
