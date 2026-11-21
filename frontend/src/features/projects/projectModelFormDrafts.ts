@@ -33,13 +33,14 @@ export function createBlankProductionCostFormDraft(id=''):ProductionCostFormDraf
 
 export type SalesProductFormDraft={
  productId:string
+ unitOfMeasure?:string
  inventoryPolicy:'manual'|'comfar-days-coverage'|null
  finishedGoodsDaysCoverage:number|null
  productionStartPeriod:number|null
  productionEndPeriod:number|null
  periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;subsidyPercent:number|null;subsidyAmount:number|null;openingFinishedGoodsQuantity:number|null;openingFinishedGoodsValue:number|null;finishedGoodsClosingQuantity:number|null;rawMaterialPurchasesQuantity:number|null;rawMaterialPurchasesValue:number|null;rawMaterialConsumptionQuantity:number|null;rawMaterialWasteQuantity:number|null;unitsStarted:number|null;unitsCompleted:number|null;closingWipQuantity:number|null;materialCompletionPercent:number|null;conversionCompletionPercent:number|null;conversionCost:number|null;openingRawMaterialQuantity:number|null;openingRawMaterialValue:number|null;openingWipQuantity:number|null;openingWipMaterialValue:number|null;openingWipConversionValue:number|null}[]
 }
-export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,inventoryPolicy:null,finishedGoodsDaysCoverage:null,productionStartPeriod:null,productionEndPeriod:null,periods:[]}}
+export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,unitOfMeasure:'',inventoryPolicy:null,finishedGoodsDaysCoverage:null,productionStartPeriod:null,productionEndPeriod:null,periods:[]}}
 
 export type WorkingCapitalComponentFormDraft={
  id:string; name:string; category:'inventory'|'work-in-progress'|'finished-goods'|'receivables'|'cash'|'payables'|'other-current-asset'|'other-current-liability'|null
