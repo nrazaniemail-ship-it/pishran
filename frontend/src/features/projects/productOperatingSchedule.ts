@@ -315,7 +315,7 @@ export function buildProductOperatingSchedule(
       }
       const flowRow=inventoryFlow?.rows[index]
       if(flowRow&&Math.abs(flowRow.unitsCompleted-productionQuantity)>0.000001){issues.push('Product '+sale.productId+' completed production quantity must equal finished-goods production transfer in period '+(index+1)+'.');continue}
-      const productionCost=flowRow?flowRow.completedProductionCost:Math.max(0,productionQuantity)*baseUnitProductionCost+periodAdjustment
+      const productionCost=flowRow?flowRow.completedProductionCost+periodAdjustment:Math.max(0,productionQuantity)*baseUnitProductionCost+periodAdjustment
       const unitProductionCost=productionQuantity>0?productionCost/productionQuantity:(unitCostByProduct.get(sale.productId)??0)
       const availableQuantity=openingQuantity+Math.max(0,productionQuantity)
       const availableValue:number=openingValue+productionCost
@@ -357,13 +357,15 @@ export function buildProductOperatingSchedule(
   // Reclassify transferred CPP from the source product/cost centre to the destination.
   // Quantity is retained as an audit/control quantity; value is the posted accounting amount.
   const transferredOutByProductPeriod=new Map<string,number>()
+  const sourceCostByProductPeriod=new Map<string,number>()
   for(const transfer of drafts.productionTransfers??[]){
     const source=rows.find(row=>row.productId===transfer.sourceProductId&&row.period===transfer.period)
     const destination=rows.find(row=>row.productId===transfer.destinationProductId&&row.period===transfer.period)
     if(!source||!destination){issues.push('Transfer '+transfer.id+' requires source and destination product rows in the same period.');continue}
     const sourceKey=transfer.sourceProductId+':'+transfer.period
+    if(!sourceCostByProductPeriod.has(sourceKey))sourceCostByProductPeriod.set(sourceKey,source.productionCost)
     const alreadyTransferred=transferredOutByProductPeriod.get(sourceKey)??0
-    if(transfer.costAmount>source.productionCost-alreadyTransferred+0.01){issues.push('Transfer '+transfer.id+' exceeds the remaining source product current-period production cost available for reclassification.');continue}
+    if(transfer.costAmount>(sourceCostByProductPeriod.get(sourceKey) as number)-alreadyTransferred+0.01){issues.push('Transfer '+transfer.id+' exceeds the remaining source product current-period production cost available for reclassification.');continue}
     transferredOutByProductPeriod.set(sourceKey,alreadyTransferred+transfer.costAmount)
     if(destination.productionQuantity<=0&&transfer.costAmount>0){issues.push('Transfer '+transfer.id+' cannot post value to a destination product with no production in the period.');continue}
     source.productionCost-=transfer.costAmount
