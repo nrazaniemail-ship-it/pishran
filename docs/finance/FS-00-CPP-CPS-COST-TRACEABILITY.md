@@ -58,7 +58,7 @@ The engine retains known incremental subtotals separately from complete totals. 
 
 Raw-material closing stock, WIP, and finished-goods stock are current-asset components. They must be connected to the working-capital schedule once, with matching inventory subledgers and balance-sheet controls. Cost of sales is not itself an additional working-capital asset. Trade payables, accrued payroll, utility creditors, and other operating liabilities are included only when a distinct balance and source are provided; do not infer a payable merely because an expense exists.
 
-Inventory control compares, by period, the project model, balance sheet, and CPP/CPS inventory totals. The raw-material, WIP, and finished-goods detail must reconcile to the reported total inventory. Transfers between products/cost centres preserve total group cost and must balance at source and destination.
+Inventory control compares, by period, the project model, balance sheet, and CPP/CPS inventory totals. The raw-material, WIP, and finished-goods detail must reconcile to the reported total inventory. Transfer-ledger quantity and value deltas are keyed by period, product, and cost centre (`period:product@costCentre`), so opposite movements in different periods cannot cancel each other in the audit totals. Transfers between products/cost centres preserve total group cost and must balance at source and destination. The current transfer ledger is a movement register, not a full cost-centre stock subledger: source-centre availability against its own opening stock, receipts, issues, and closing balance remains unverified until those centre-level stock movements are entered and reconciled separately.
 
 ## Evidence and completion gates
 
