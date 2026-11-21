@@ -624,6 +624,12 @@ input,select,textarea{color:var(--text)}
 @media(max-width:650px){.page-language-switch{top:18px;transform:none}.topbar .brand{margin-left:58px}}
 
 
+
+.module-group{margin:18px 0 24px}
+.module-group>h3{margin:0 0 12px;padding-inline-start:12px;border-inline-start:3px solid #8eaf9f;color:#36584d;font-size:15px;font-weight:800}
+.module-group .module-grid{margin-top:0}
+.module-group .module{min-height:112px}
+
 /* Warm, dimensional honeycomb capability cluster in the dashboard hero */
 .honeycomb-cell{font:inherit;border:0;cursor:pointer}
 .honeycomb-cell:focus-visible{outline:3px solid #315b4d;outline-offset:3px}
