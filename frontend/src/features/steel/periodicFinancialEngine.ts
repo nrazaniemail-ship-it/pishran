@@ -1704,6 +1704,8 @@ function scalePeriodicOperatingInput(
     annualPreOperatingCost:input.annualPreOperatingCost.map(value=>value*capexFactor),
     annualMaintenanceCapex:input.annualMaintenanceCapex.map(value=>value*capexFactor),
     workingCapitalByPeriod:scale(input.workingCapitalByPeriod,volumeFactor)??[],
+    rawMaterialsInventoryByPeriod:scale(input.rawMaterialsInventoryByPeriod,volumeFactor),
+    workInProgressInventoryByPeriod:scale(input.workInProgressInventoryByPeriod,volumeFactor),
     cashInHandByPeriod:scale(input.cashInHandByPeriod,volumeFactor),
     shortTermDepositsByPeriod:scale(input.shortTermDepositsByPeriod,volumeFactor),
     annualEquityWorkingCapitalContributions:scale(input.annualEquityWorkingCapitalContributions,volumeFactor),
