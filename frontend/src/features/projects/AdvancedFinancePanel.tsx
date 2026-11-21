@@ -1008,7 +1008,7 @@ export default function AdvancedFinancePanel(props: Props) {
       </div>}
       {stageInventoryReconciliation&&<div className={stageInventoryReconciliation.valid?'fw-result':'fw-validation'} role={stageInventoryReconciliation.valid?'status':'alert'}>
         <b>{t('تطبیق دفتر موجودی تفکیکی با موتور مالی','Stage inventory register vs finance-engine reconciliation')}</b>
-        <p>{t('ردیف‌های مرحله‌ای منطبق: ','Matched stage rows: ')}{stageInventoryReconciliation.rows.length} / {(props.productFinancialDrafts?.costCentreInventoryMovements??[]).length}</p>
+        <p>{t('تطبیق‌های مرحله/دوره: ','Matched stage-period balances: ')}{stageInventoryReconciliation.rows.length} / {new Set((props.productFinancialDrafts?.costCentreInventoryMovements??[]).map(row=>String(row.inventoryStage)+':'+String(row.period))).size}</p>
         {!stageInventoryReconciliation.valid&&stageInventoryReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
         <p>{t('این کنترل فقط مانده پایان دوره هر مرحله را با موتور مالی تطبیق می‌دهد و هیچ مبلغی را دوباره به CPP/CPS یا سرمایه در گردش اضافه نمی‌کند. اتصال ثبت‌های مرحله‌ای به گردش واقعی مواد، WIP و محصول نهایی همچنان در دست تکمیل است.','This control compares stage closing balances with the finance engine and does not post amounts again to CPP/CPS or working capital. Full stage-specific receipt, WIP and finished-goods posting remains in progress.')}</p>
       </div>}
