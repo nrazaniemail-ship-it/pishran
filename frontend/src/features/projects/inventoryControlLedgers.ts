@@ -1,6 +1,6 @@
 export type WasteClassification='normal'|'abnormal'
 export type WasteLedgerEntry={id:string;period:number;productId:string;costCentreId:string;classification:WasteClassification;quantity:number;unitCost:number;amount:number}
-export type ProductionTransferEntry={id:string;period:number;sourceProductId:string;destinationProductId:string;sourceCostCentreId:string;destinationCostCentreId:string;quantity:number;costAmount:number}
+export type ProductionTransferEntry={id:string;period:number;sourceProductId:string;destinationProductId:string;sourceCostCentreId:string;destinationCostCentreId:string;quantity:number;sourceUnit:string;destinationUnit:string;conversionFactor:number;costAmount:number}
 export type InventoryReconciliationPeriod={
  period:number
  model:{rawMaterials:number;workInProgress:number;finishedGoods:number;otherCurrentAssets:number;currentLiabilities:number;netWorkingCapital:number}
@@ -38,9 +38,11 @@ export function validateProductionTransfers(entries:ProductionTransferEntry[],pe
   if(!Number.isInteger(e.period)||e.period<1||e.period>periodCount)issues.push('Transfer '+e.id+' has an invalid period.')
   if(!e.sourceProductId.trim()||!e.destinationProductId.trim()||!e.sourceCostCentreId.trim()||!e.destinationCostCentreId.trim())issues.push('Transfer '+e.id+' requires source and destination product and cost-centre identifiers.')
   if(e.sourceProductId===e.destinationProductId&&e.sourceCostCentreId===e.destinationCostCentreId)issues.push('Transfer '+e.id+' cannot have identical source and destination.')
-  if(!finite(e.quantity)||!finite(e.costAmount))issues.push('Transfer '+e.id+' requires finite non-negative quantity and cost.')
+  if(!finite(e.quantity)||!finite(e.costAmount)||!e.sourceUnit?.trim()||!e.destinationUnit?.trim()||!Number.isFinite(e.conversionFactor)||e.conversionFactor<=0)issues.push('Transfer '+e.id+' requires finite quantity and cost, explicit source and destination units, and a positive conversion factor.')
+  if(e.sourceUnit?.trim()===e.destinationUnit?.trim()&&Math.abs(e.conversionFactor-1)>tolerance/100)issues.push('Transfer '+e.id+' uses identical units; its conversion factor must equal 1.')
+  if(!e.sourceUnit?.trim()||!e.destinationUnit?.trim()||!Number.isFinite(e.conversionFactor)||e.conversionFactor<=0)continue
   const from=e.sourceProductId+'@'+e.sourceCostCentreId,to=e.destinationProductId+'@'+e.destinationCostCentreId
-  qty[from]=(qty[from]??0)-e.quantity;qty[to]=(qty[to]??0)+e.quantity
+  qty[from]=(qty[from]??0)-e.quantity;qty[to]=(qty[to]??0)+e.quantity*e.conversionFactor
   value[from]=(value[from]??0)-e.costAmount;value[to]=(value[to]??0)+e.costAmount
   source+=e.costAmount;destination+=e.costAmount
  }
