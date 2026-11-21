@@ -58,4 +58,36 @@ const duplicateProductPeriod = ledger.buildSalesTaxLedger(1, [
 ], [], [{ period: 1, amount: 0, sourceReference: 'no-payment-due' }])
 assert.equal(duplicateProductPeriod.valid, false)
 
+const wcBinding = ledger.bindSalesTaxLedgerToWorkingCapital([500, 600], 100, result)
+assert.equal(wcBinding.valid, true, wcBinding.issues.join('; '))
+assert.equal(wcBinding.openingWorkingCapital, 100)
+assert.deepEqual(wcBinding.closingWorkingCapitalByPeriod, [430, 530])
+// The 70 closing payable is deducted from net working capital once; the 100 settlement
+// in period two is already reflected in the closing payable movement and is not a second cash deduction.
+assert.equal((wcBinding.closingWorkingCapitalByPeriod[1] - wcBinding.closingWorkingCapitalByPeriod[0]), 100)
+
+// A recoverable opening balance is an asset and therefore increases net working capital.
+const recoveryLedger = ledger.buildSalesTaxLedger(1, [], [], [
+  { period: 1, amount: 0, sourceReference: 'no-settlement' },
+], -25)
+const recoveryBinding = ledger.bindSalesTaxLedgerToWorkingCapital([100], 40, recoveryLedger)
+assert.equal(recoveryBinding.valid, true)
+assert.equal(recoveryBinding.openingWorkingCapital, 65)
+assert.deepEqual(recoveryBinding.closingWorkingCapitalByPeriod, [125])
+
+const invalidBinding = ledger.bindSalesTaxLedgerToWorkingCapital([1, 2], 0, result)
+assert.equal(invalidBinding.valid, false)
+assert.ok(invalidBinding.issues.some(issue => issue.includes('align with every sales-tax ledger period')))
+
+const formsSource = await readFile(new URL('../src/features/projects/ProjectModelFinancialFormsPanel.tsx', import.meta.url), 'utf8')
+const panelSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+const wizardSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
+assert.ok(formsSource.includes('دفتر مالیات غیرمستقیم فروش'))
+assert.ok(formsSource.includes('sourceVerified'))
+assert.ok(formsSource.includes('مرجع رسید پرداخت یا سند عدم پرداخت'))
+assert.ok(panelSource.includes('buildSalesTaxLedger'))
+assert.ok(panelSource.includes('bindSalesTaxLedgerToWorkingCapital'))
+assert.ok(panelSource.includes('workingCapitalByPeriod:binding.closingWorkingCapitalByPeriod'))
+assert.ok(wizardSource.includes('salesTaxLedgerDraft={m.financialForms.salesTaxLedger}'))
+
 console.log('Sales-tax ledger regression tests passed.')
