@@ -96,7 +96,7 @@ const negativeWorkingCapitalResult = engine.calculateIntegratedPeriodicFinance(n
 assert.equal(negativeWorkingCapitalResult.valid, true, negativeWorkingCapitalResult.warnings.join('; '))
 assert.ok(Math.abs(negativeWorkingCapitalResult.rows[0].cfads - 20) < 0.01,
   'Period 1 has no revenue and releases 20 through the increase in negative net working capital')
-assert.ok(Math.abs(negativeWorkingCapitalResult.rows[1].cfads - 110) < 0.01,
-  'Period 2 operating cash flow must include the 10 release from further negative working capital')
-assert.ok(Math.abs(negativeWorkingCapitalResult.rows[2].cfads - 60) < 0.01,
-  'Settling 40 of negative net working capital must reduce terminal CFADS by 40')
+assert.ok(Math.abs(negativeWorkingCapitalResult.rows[1].cfads - 90) < 0.01,
+  'Period 2 CFADS must equal 80 operating margin plus 10 cash released by the increase in negative working capital')
+assert.ok(Math.abs(negativeWorkingCapitalResult.rows[2].cfads - 40) < 0.01,
+  'Period 3 CFADS must equal 80 operating margin less the 40 cash outflow when negative working capital is settled')
