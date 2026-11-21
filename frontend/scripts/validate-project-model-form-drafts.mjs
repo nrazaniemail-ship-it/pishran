@@ -66,7 +66,7 @@ try {
  assert.ok(forms.validateProjectModelFinancialFormDrafts(partialMovementDraft).includes('cost-centre-inventory-0:all-quantities-and-values-required'))
  assert.ok(forms.listUnintegratedFinancialDraftInputs(partialMovementDraft).includes('financialForms.costCentreInventoryMovements.0'),
   'entered inventory rows must remain report blockers until posted into the financial engine')
- const verifiedMovement={...partialMovement,openingValue:0,receiptsQuantity:10,receiptsValue:100,productionQuantity:0,productionValue:0,consumptionQuantity:4,consumptionValue:40,wasteQuantity:0,wasteValue:0,closingQuantity:6,closingValue:60,sourceReference:'inventory card / page 2',sourceVerified:true}
+ const verifiedMovement={...partialMovement,openingValue:0,receiptsQuantity:10,receiptsValue:100,transfersInQuantity:0,transfersInValue:0,transfersOutQuantity:0,transfersOutValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:4,consumptionValue:40,wasteQuantity:0,wasteValue:0,closingQuantity:6,closingValue:60,sourceReference:'inventory card / page 2',sourceVerified:true}
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[verifiedMovement]}),[])
  const duplicateMovement={...verifiedMovement,id:'movement-2'}
  assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[verifiedMovement,duplicateMovement]}).includes('cost-centre-inventory-1:duplicate-movement-key'))
