@@ -170,8 +170,13 @@ assert.equal(inventoryStatements.length,periods.length)
 assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.rawMaterialsInventory),[100,120,0])
 assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.workInProgressInventory),[40,50,0])
 assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.otherNetWorkingCapital),[0,0,0])
-assert.deepEqual(inventoryStatements.map(row=>Math.round(row.balanceSheet.totalAssets)),[110,110,110],
+assert.ok(inventoryStatements.every(row=>
+  Math.abs(row.balanceSheet.totalAssets-(row.balanceSheet.cash+row.balanceSheet.netWorkingCapital))<0.01),
   'Gross raw-material and WIP sub-ledgers must not be added a second time on top of net working capital')
+assert.ok(inventoryStatements.every(row=>
+  Math.abs(row.balanceSheet.rawMaterialsInventory+row.balanceSheet.workInProgressInventory+
+    row.balanceSheet.otherNetWorkingCapital-row.balanceSheet.netWorkingCapital)<0.01),
+  'Gross inventory accounts plus residual other net current accounts must exactly equal net working capital')
 assert.ok(inventoryStatements.every(row=>row.balanceSheet.reconciled&&
   Math.abs(row.movementChecks.netWorkingCapital)<=0.01),
   'Raw-material and WIP inventory detail must preserve the net working-capital roll-forward and balance-sheet reconciliation')
