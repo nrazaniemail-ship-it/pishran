@@ -19,6 +19,7 @@ export type SalesTaxSettlementEntry = {
   period: number
   amount: number
   sourceReference: string
+  sourceVerified: boolean
 }
 
 export type SalesTaxPeriodRow = {
@@ -121,8 +122,8 @@ export function buildSalesTaxLedger(
   const settlementByPeriod = new Map<number, SalesTaxSettlementEntry>()
   for (const entry of settlements) {
     if (!Number.isInteger(entry.period) || entry.period < 1 || entry.period > periodCount ||
-        !Number.isFinite(entry.amount) || entry.amount < 0 || !entry.sourceReference.trim()) {
-      issues.push('Sales-tax settlement requires a valid period, non-negative amount and source reference.')
+        !Number.isFinite(entry.amount) || entry.amount < 0 || !entry.sourceReference.trim() || entry.sourceVerified !== true) {
+      issues.push('Sales-tax settlement requires a valid period, non-negative amount and verified source reference.')
       continue
     }
     if (settlementByPeriod.has(entry.period)) issues.push('Only one consolidated sales-tax settlement row is allowed per period.')
