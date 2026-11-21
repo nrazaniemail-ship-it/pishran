@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Calculator, X } from 'lucide-react'
+import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Calculator, X, Zap, Wrench, Boxes, Target, BriefcaseBusiness } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
 import { createProject, deleteProject, purgeRemovedCaseProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
@@ -14,12 +14,18 @@ import BackupScheduler from './features/settings/BackupScheduler'
 type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wizard' | 'guide'
 
 const modules = [
-  { icon: Factory, title: 'مهندسی و طراحی فرآیند', enTitle: 'Process Engineering & Design', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', enSub: 'Capacity, material balance, energy and equipment', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: Globe2, title: 'هوشمندی بازار', enTitle: 'Market Intelligence', sub: 'عرضه، تقاضا، قیمت و رقبا', enSub: 'Supply, demand, pricing and competitors', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: TrendingUp, title: 'مدل مالی و اقتصادی', enTitle: 'Financial & Economic Model', sub: 'NPV، IRR، جریان نقدی و تأمین مالی', enSub: 'NPV, IRR, cash flow and financing', status: 'نمونه اولیه', enStatus: 'Prototype' },
-  { icon: Activity, title: 'ریسک و سناریو', enTitle: 'Risk & Scenarios', sub: 'حساسیت، سناریو و مونت‌کارلو', enSub: 'Sensitivity, scenarios and Monte Carlo', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: Bot, title: 'دستیار هوش مصنوعی', enTitle: 'AI Assistant', sub: 'تحلیل مستند و پاسخ‌گویی به سرمایه‌گذار', enSub: 'Evidence-based analysis for investors', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: FileChartColumn, title: 'گزارش سرمایه‌گذاری', enTitle: 'Investment Reports', sub: 'گزارش مدیریتی، بانکی و سرمایه‌گذار', enSub: 'Management, banking and investor reports', status: 'در نقشه راه', enStatus: 'Roadmap' },
+  { icon: LayoutDashboard, title: 'داشبورد هوشمند مدیرعامل', enTitle: 'Executive Intelligence Dashboard', sub: 'نمای یکپارچه وضعیت و استثناهای مدیریتی', enSub: 'Unified business status and management exceptions', group: 'دید مدیریتی و سودآوری', enGroup: 'Management & Profitability' },
+  { icon: TrendingUp, title: 'مدیریت اقتصادی و بهای تمام‌شده', enTitle: 'Steel Cost & Profitability Intelligence', sub: 'هزینه، حاشیه سود و انحراف بهای تمام‌شده', enSub: 'Cost, margin and cost variance analysis', group: 'دید مدیریتی و سودآوری', enGroup: 'Management & Profitability' },
+  { icon: Gauge, title: 'هوشمندی تولید و بهره‌وری', enTitle: 'Production & OEE Intelligence', sub: 'تولید، ظرفیت، توقفات و راندمان', enSub: 'Output, capacity, downtime and OEE', group: 'دید مدیریتی و سودآوری', enGroup: 'Management & Profitability' },
+  { icon: Target, title: 'مدیریت عملکرد و شاخص‌ها', enTitle: 'Enterprise Performance Management', sub: 'اهداف، KPI و تحلیل انحراف عملکرد', enSub: 'Goals, KPIs and performance variance', group: 'دید مدیریتی و سودآوری', enGroup: 'Management & Profitability' },
+  { icon: Zap, title: 'مدیریت انرژی', enTitle: 'Energy Intelligence & Optimization', sub: 'مصرف ویژه، هزینه و فرصت‌های بهینه‌سازی', enSub: 'Specific consumption, cost and optimization', group: 'بهره‌وری و تعالی عملیات', enGroup: 'Operational Excellence' },
+  { icon: Wrench, title: 'تعمیرات و قابلیت اطمینان', enTitle: 'Maintenance & Asset Reliability', sub: 'خرابی، توقف و قابلیت اطمینان تجهیزات', enSub: 'Failures, downtime and asset reliability', group: 'بهره‌وری و تعالی عملیات', enGroup: 'Operational Excellence' },
+  { icon: Factory, title: 'مهندسی فرآیند و تعالی عملیاتی', enTitle: 'Process Engineering & Operational Excellence', sub: 'توازن مواد و انرژی، گلوگاه و بهبود', enSub: 'Material and energy balance, bottlenecks and improvement', group: 'بهره‌وری و تعالی عملیات', enGroup: 'Operational Excellence' },
+  { icon: Boxes, title: 'زنجیره تأمین و موجودی', enTitle: 'Supply Chain & Inventory Intelligence', sub: 'تأمین، گردش موجودی و سرمایه در گردش', enSub: 'Procurement, inventory turnover and working capital', group: 'بهره‌وری و تعالی عملیات', enGroup: 'Operational Excellence' },
+  { icon: Globe2, title: 'هوشمندی بازار و سودآوری محصول', enTitle: 'Steel Market & Product Profitability', sub: 'بازار، قیمت، رقبا و ترکیب سودآور محصول', enSub: 'Markets, pricing, competitors and product mix', group: 'بازار و رشد سودآور', enGroup: 'Market & Profitable Growth' },
+  { icon: ShieldCheck, title: 'رتبه‌بندی و هوشمندی تصمیم', enTitle: 'Ranking & Decision Intelligence', sub: 'مقایسه گزینه‌ها با معیار و شواهد شفاف', enSub: 'Evidence-based comparison and ranking', group: 'تصمیم‌گیری و تاب‌آوری', enGroup: 'Decision & Resilience' },
+  { icon: FolderKanban, title: 'مدیریت پروژه و سرمایه‌گذاری', enTitle: 'Capital Project & Portfolio Management', sub: 'بودجه، پیشرفت، زمان و منافع پروژه', enSub: 'Project budget, progress, schedule and benefits', group: 'تصمیم‌گیری و تاب‌آوری', enGroup: 'Decision & Resilience' },
+  { icon: Activity, title: 'مدیریت ریسک و تاب‌آوری', enTitle: 'Enterprise Risk & Resilience', sub: 'ریسک‌های عملیاتی، مالی و استمرار کسب‌وکار', enSub: 'Operational, financial and continuity risks', group: 'تصمیم‌گیری و تاب‌آوری', enGroup: 'Decision & Resilience' },
 ]
 
 
@@ -163,21 +169,16 @@ export default function App() {
           <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
           <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
         </div>
-        <div className="hero-art honeycomb-art" aria-label={isEn ? "Pishran capabilities" : "قابلیت‌های پیشران"}>
-          <div className="honeycomb-row">
-            <div className="honeycomb-cell honeycomb-yellow"><TrendingUp/><span>{isEn ? 'Financial Analysis' : 'تحلیل مالی'}</span></div>
-            <div className="honeycomb-cell honeycomb-red"><ShieldCheck/><span>{isEn ? 'Risk Assessment' : 'ارزیابی ریسک'}</span></div>
-            <div className="honeycomb-cell honeycomb-yellow"><Gauge/><span>{isEn ? 'Feasibility' : 'امکان‌سنجی'}</span></div>
+        <div className="hero-art honeycomb-art" aria-label={isEn ? "Pishran proposed management modules" : "ماژول‌های مدیریتی پیشنهادی پیشران"}>
+          <div className="honeycomb-grid">
+            {modules.map(({ icon: Icon, title, enTitle }, index) => (
+              <div className={`honeycomb-cell honeycomb-tone-${index % 6}`} key={title}>
+                <Icon aria-hidden="true" />
+                <span>{isEn ? enTitle : title}</span>
+              </div>
+            ))}
           </div>
-          <div className="honeycomb-row honeycomb-row-middle">
-            <div className="honeycomb-cell honeycomb-red"><Globe2/><span>{isEn ? 'Market Analysis' : 'تحلیل بازار'}</span></div>
-            <div className="honeycomb-cell honeycomb-yellow"><Factory/><span>{isEn ? 'Process Design' : 'طراحی فرآیند'}</span></div>
-          </div>
-          <div className="honeycomb-row">
-            <div className="honeycomb-cell honeycomb-yellow"><FolderKanban/><span>{isEn ? 'Project Control' : 'مدیریت پروژه'}</span></div>
-            <div className="honeycomb-cell honeycomb-red"><FileChartColumn/><span>{isEn ? 'Reports' : 'گزارش‌گیری'}</span></div>
-            <div className="honeycomb-cell honeycomb-yellow"><Bot/><span>{isEn ? 'AI Assistant' : 'دستیار هوشمند'}</span></div>
-          </div>
+          <div className="honeycomb-core">{isEn ? 'Feasibility Study · Core' : 'هسته ثابت · امکان‌سنجی فنی، اقتصادی و مالی'}</div>
         </div>
       </section>
 
@@ -190,7 +191,7 @@ export default function App() {
       </section>
 
       <section className="section-head"><div><h2>{isEn ? "Pishran Modules" : "ماژول‌های پیشران"}</h2></div><span className="muted">{isEn ? 'Layered and extensible architecture' : 'معماری لایه‌ای و توسعه‌پذیر'}</span></section>
-      <section className="module-grid">{modules.map(({icon: Icon,title,sub,status,enTitle,enSub,enStatus})=><article className="module" key={title}><div className="module-icon"><Icon size={21}/></div><div className="module-text"><b>{isEn ? enTitle : title}</b><p>{isEn ? enSub : sub}</p><small>{isEn ? enStatus : status}</small></div></article>)}</section>
+      <section className="module-grid">{modules.map(({icon: Icon,title,sub,enTitle,enSub,group,enGroup})=><article className="module" key={title}><div className="module-icon"><Icon size={21}/></div><div className="module-text"><b>{isEn ? enTitle : title}</b><p>{isEn ? enSub : sub}</p><small>{isEn ? enGroup : group} · {isEn ? "Roadmap" : "در نقشه راه"}</small></div></article>)}</section>
 
       <section className="analytics">
         <article className="chart-card"><div className="card-heading"><div><h3>{isEn ? "Illustrative return trend" : "نمای نمونه روند بازده"}</h3></div><span className="tag">{isEn ? "Sample data" : "داده نمایشی"}</span></div><ReactECharts option={chart} style={{height:250}}/></article>
