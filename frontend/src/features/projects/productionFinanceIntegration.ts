@@ -102,7 +102,7 @@ export function buildProductionFinanceBridge(
     for (let periodIndex = 0; periodIndex < sortedPeriods.length; periodIndex++) {
       const current = entries.filter(entry => entry.periodIndex === periodIndex)
       if (!current.length) {
-        rows[periodIndex].products.push({ product, currency, cpp: 0, cps: 0, openingInventoryValue: openingValue, closingInventoryValue: openingValue, closingQuantity: openingQuantity })
+        rows[periodIndex].products.push({ product, currency, cpp: 0, cps: 0, materialCost: 0, directLaborCost: 0, energyCost: 0, maintenanceCost: 0, allocatedOverhead: 0, openingInventoryValue: openingValue, closingInventoryValue: openingValue, closingQuantity: openingQuantity })
         continue
       }
       const explicitOpenings = current.filter(({ record }) => record.finishedGoodsOpeningQuantity !== undefined || record.finishedGoodsOpeningValue !== undefined)
