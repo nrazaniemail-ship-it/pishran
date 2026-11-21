@@ -9,7 +9,7 @@ export type InventoryFlowInput = {
   rawMaterialPurchasesQuantity: number[]
   rawMaterialPurchasesValue: number[]
   rawMaterialConsumptionQuantity: number[]
-  rawMaterialWasteQuantity?: number[]
+  rawMaterialWasteQuantity: number[]
   openingWipQuantity: number
   openingWipMaterialValue: number
   openingWipConversionValue: number
@@ -84,7 +84,7 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
   const issues: string[] = []
   const count = input.rawMaterialPurchasesQuantity.length
   const arrays: (keyof InventoryFlowInput)[] = [
-    'rawMaterialPurchasesValue','rawMaterialConsumptionQuantity','unitsStarted','unitsCompleted',
+    'rawMaterialPurchasesValue','rawMaterialConsumptionQuantity','rawMaterialWasteQuantity','unitsStarted','unitsCompleted',
     'closingWipQuantity','materialCompletionPercent','conversionCompletionPercent','conversionCost',
   ]
   if (!count) issues.push('At least one inventory period is required.')
@@ -111,7 +111,7 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
   for (let i = 0; i < count; i++) {
     const values = [
       input.rawMaterialPurchasesQuantity[i], input.rawMaterialPurchasesValue[i],
-      input.rawMaterialConsumptionQuantity[i], input.rawMaterialWasteQuantity?.[i] ?? 0, input.unitsStarted[i], input.unitsCompleted[i],
+      input.rawMaterialConsumptionQuantity[i], input.rawMaterialWasteQuantity[i], input.unitsStarted[i], input.unitsCompleted[i],
       input.closingWipQuantity[i], input.materialCompletionPercent[i],
       input.conversionCompletionPercent[i], input.conversionCost[i],
     ]
