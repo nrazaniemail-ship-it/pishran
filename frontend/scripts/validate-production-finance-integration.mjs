@@ -47,31 +47,33 @@ assert.ok(Math.abs(result.periods[1].products[0].closingInventoryValue-242)<1e-9
 assert.equal(analyzeProductionRecord(record()).totalProductionCost,220)
 const mapped = mapProductionCostsToFinance({
  cpp:[220,0],cps:[176,0],hasProductionRecords:[true,false],utilization:[0.8,0.9],opexFactors:[1,1.1],
- fullCapacityVariableCashCost:500,
- mappedBaseCosts:{materials:100,directLabor:50,energy:30,maintenance:20,overhead:20}
+ fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,
+ mappedBaseCosts:{variable:{materials:100,directLabor:50,energy:30,maintenance:20,overhead:20},fixed:{materials:0,directLabor:0,energy:0,maintenance:10,overhead:0}}
 })
 const integrated = calculateIntegratedFinance({
- years:2,constructionYears:1,capacity:100,fullCapacityRevenue:1000,fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:0,
- costOfProductsSoldByYear:[0,176],otherVariableCashCostByYear:[0,224],finishedGoodsInventoryValueByYear:[0,44],
+ years:2,constructionYears:1,capacity:100,fullCapacityRevenue:1000,fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,
+ costOfProductsSoldByYear:[0,176],otherVariableCashCostByYear:[0,224],otherFixedCashCostByYear:[0,40],finishedGoodsInventoryValueByYear:[0,44],
  annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
  utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
  salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:10
 })
 assert.equal(integrated.years[1].variableCashCost,400)
+assert.equal(integrated.years[1].fixedCashCost,40)
 assert.equal(integrated.years[1].workingCapitalBreakdown.finishedGoods,44)
 const integratedStatements=buildThreeFinancialStatements(integrated.years)
-assert.equal(integratedStatements[1].incomeStatement.cashOperatingCosts,400)
+assert.equal(integratedStatements[1].incomeStatement.cashOperatingCosts,440)
 assert.equal(integratedStatements[1].balanceSheet.workingCapitalAssets,44)
 assert.equal(mapped.valid,true)
 assert.deepEqual(mapped.costOfProductsSoldByYear,[176,0])
 assert.deepEqual(mapped.otherVariableCashCostByYear,[224,495])
+assert.deepEqual(mapped.otherFixedCashCostByYear,[32,49.5])
 assert.equal(mapProductionCostsToFinance({
  cpp:[220],cps:[176],hasProductionRecords:[true],utilization:[1],opexFactors:[1],
- fullCapacityVariableCashCost:100,mappedBaseCosts:{materials:100,directLabor:50,energy:30,maintenance:20,overhead:20}
+ fullCapacityVariableCashCost:100,fullCapacityFixedCashCost:50,mappedBaseCosts:{variable:{materials:100,directLabor:50,energy:30,maintenance:20,overhead:20},fixed:{materials:0,directLabor:0,energy:0,maintenance:0,overhead:0}}
 }).valid,false)
 assert.equal(mapProductionCostsToFinance({
  cpp:[220],cps:[176],hasProductionRecords:[true],utilization:[1],opexFactors:[1],
- fullCapacityVariableCashCost:500,mappedBaseCosts:{materials:-1,directLabor:0,energy:0,maintenance:0,overhead:0}
+ fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,mappedBaseCosts:{variable:{materials:-1,directLabor:0,energy:0,maintenance:0,overhead:0},fixed:{materials:0,directLabor:0,energy:0,maintenance:0,overhead:0}}
 }).valid,false)
 
 console.log('Production-finance tests passed: project scope, period mapping, overlap, currency, inventory roll-forward, sales, CPP/CPS, baseline component replacement and no-double-counting.')
