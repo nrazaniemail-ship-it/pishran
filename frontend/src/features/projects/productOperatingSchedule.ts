@@ -370,7 +370,7 @@ export function buildProductOperatingSchedule(
       totalProductionQuantity+=row.productionQuantity
       totalSalesQuantity+=salesQuantity
       totalClosingInventoryValue+=closingInventoryValue
-      if(flowRow){periodRawMaterialInventoryValue[index]+=flowRow.closingRawMaterialValue;periodWipInventoryValue[index]+=flowRow.closingWipValue}
+      if(flowRow){periodRawMaterialInventoryValue[index]+=flowRow.closingRawMaterialValue;periodWipInventoryValue[index]+=flowRow.closingWipValue;periodNormalWasteAbsorbed[index]+=flowRow.normalWasteValue}
       previousClosingQuantity=closingQuantity
       previousClosingValue=closingInventoryValue
     }
