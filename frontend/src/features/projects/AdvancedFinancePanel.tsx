@@ -300,7 +300,7 @@ export default function AdvancedFinancePanel(props: Props) {
     if(!(props.cppCpsTraceItems?.length))return null
     if(!baseProductOperatingSchedule?.valid)return {valid:false,issues:baseProductOperatingSchedule?.issues??['A product-by-product sales and production schedule is required before CPP/CPS posting.'],schedule:null,incrementalCppByPeriod:[]}
     return bindCppCpsTraceLedgerToProductSchedule(baseProductOperatingSchedule,cppCpsTraceLedger,
-      projectPeriods.map(period=>fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth??1)))
+      projectPeriods.map(period=>fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth??1)),props.productFinancialDrafts?.costCentres??[])
   },[JSON.stringify(props.cppCpsTraceItems??[]),baseProductOperatingSchedule,cppCpsTraceLedger,JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
   const productOperatingSchedule=useMemo(()=>{
     if(!props.cppCpsTraceItems?.length)return baseProductOperatingSchedule
