@@ -272,6 +272,13 @@ export default function AdvancedFinancePanel(props: Props) {
     annualFinishedGoodsCost:state.workingCapitalBases.finishedGoods,
     annualRevenue:props.fullCapacityRevenue,annualCashOperatingCost:state.workingCapitalBases.cash
   }),[state.workingCapitalDays,state.workingCapitalBases,state.wipCompletion,props.fullCapacityRevenue,props.dayCountBasis])
+  const productionFinishedGoodsInventory=productionAnnual?productionAnnual.finishedGoods.map((value,index)=>{
+    if(productionAnnual.hasProductionRecords[index])return value
+    const operatingYear=Math.max(0,index-construction)
+    const salesFactor=Math.pow(1+Math.max(-99,state.salesEscalationPercent)/100,operatingYear)
+    const opexFactor=Math.pow(1+Math.max(-99,state.opexEscalationPercent)/100,operatingYear)
+    return calculateOperatingCycleWorkingCapital(workingCapitalPolicy,utilization[index],salesFactor,opexFactor).finishedGoods
+  }):undefined
   const equityContributions = state.equityContributions.length===years ? state.equityContributions : Array(years).fill(0)
   const equityWorkingCapitalContributions = Array.isArray(state.equityWorkingCapitalContributions)&&state.equityWorkingCapitalContributions.length===years ? state.equityWorkingCapitalContributions : Array(years).fill(0)
   const taxRates = state.taxRates?.length===years ? state.taxRates : Array(years).fill(props.taxRate)
@@ -284,7 +291,7 @@ export default function AdvancedFinancePanel(props: Props) {
     fixedInvestmentSchedule,preOperatingSchedule:activePreOperatingSchedule,utilization,equityContributions,
     loans:state.loans.map(l=>({...l,drawdowns:Array.from({length:years},(_,i)=>Math.max(0,l.drawdowns[i]??0))})),
     taxRate:props.taxRate,taxRateSchedule:taxRates,waccTaxRate:props.taxRate,costOfEquity:props.costOfEquity,
-    workingCapitalPercent:0,workingCapitalPolicy,...(productionCostMappingSafe&&productionCostMappingResult?{costOfProductsSoldByYear:productionCostMappingResult.costOfProductsSoldByYear,otherVariableCashCostByYear:productionCostMappingResult.otherVariableCashCostByYear,finishedGoodsInventoryValueByYear:productionAnnual!.finishedGoods}:{}),salesEscalationPercent:state.salesEscalationPercent,opexEscalationPercent:state.opexEscalationPercent,
+    workingCapitalPercent:0,workingCapitalPolicy,...(productionCostMappingSafe&&productionCostMappingResult?{costOfProductsSoldByYear:productionCostMappingResult.costOfProductsSoldByYear,otherVariableCashCostByYear:productionCostMappingResult.otherVariableCashCostByYear,finishedGoodsInventoryValueByYear:productionFinishedGoodsInventory!}:{}),salesEscalationPercent:state.salesEscalationPercent,opexEscalationPercent:state.opexEscalationPercent,
     discountMode:state.discountMode,manualDiscountRate:state.manualRate,mirrFinanceRate:props.mirrFinanceRate,mirrReinvestmentRate:props.mirrReinvestmentRate,equityMirrFinanceRate:props.mirrFinanceRate??props.costOfEquity,equityMirrReinvestmentRate:props.mirrReinvestmentRate??props.costOfEquity
   }
   const result=useMemo(()=>calculateIntegratedFinance(input),[JSON.stringify(input)])
@@ -325,7 +332,7 @@ export default function AdvancedFinancePanel(props: Props) {
       const opexFactor=Math.pow(1+state.opexEscalationPercent/100,operatingYear)
       const cycle=calculateOperatingCycleWorkingCapital(workingCapitalPolicy,annualRow.utilization,salesFactor,opexFactor)
       const productionPeriod=productionBridge?.valid?productionBridge.periods.find(row=>row.periodIndex===period.index-1):undefined
-      return cycle.netWorkingCapital-cycle.finishedGoods+(productionPeriod?.closingFinishedGoodsValue??cycle.finishedGoods)
+      return cycle.netWorkingCapital-cycle.finishedGoods+(productionPeriod?.recordCount?productionPeriod.closingFinishedGoodsValue:cycle.finishedGoods)
     })
     return calculateIntegratedPeriodicFinance({
       periods,fiscalYearStartMonth:fiscalMonth,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
