@@ -68,7 +68,7 @@ assert.equal(result.rows[0].grossOutput,1120,'Sales subsidy must be excluded fro
 assert.equal(result.rows[0].intermediateInput.amountDeducted,194.4)
 assert.equal(result.rows[0].investment.amountDeducted,45)
 assert.equal(result.rows[0].repatriatedPayments,47)
-assert.equal(result.rows[0].governmentShare,40+100+30+5-0-0-0)
+assert.equal(result.rows[0].governmentShare,40+100+30+5-100)
 assert.equal(result.rows[1].grossOutput,600)
 assert.equal(result.rows[1].governmentShare,20+50)
 assert.ok(result.rows[1].presentValueFactor<result.rows[0].presentValueFactor)
