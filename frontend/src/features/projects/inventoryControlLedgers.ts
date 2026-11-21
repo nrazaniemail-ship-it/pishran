@@ -7,6 +7,9 @@ export type InventoryReconciliationPeriod={
  balanceSheet:{rawMaterials:number;workInProgress:number;finishedGoods:number;otherCurrentAssets:number;currentLiabilities:number;netWorkingCapital:number}
  cppCps:{rawMaterials:number;workInProgress:number;finishedGoods:number;totalInventory:number}
 }
+export type InventoryReferenceBenchmarkEntry={id:string;period:number;sourceDocument:string;schedule:string;page:string;currency:string;rawMaterials:number|null;workInProgress:number|null;finishedGoods:number|null;totalInventory:number|null;cpp:number|null;cps:number|null}
+export type InventoryReferenceComparisonRow={period:number;matchedFields:string[];missingFields:string[];variances:Record<string,number>;status:'matched'|'mismatch'|'incomplete'}
+export type InventoryReferenceComparisonResult={valid:boolean;rows:InventoryReferenceComparisonRow[];issues:string[]}
 export type WasteLedgerResult={valid:boolean;issues:string[];normalWasteAbsorbedByPeriod:number[];abnormalWasteExpenseByPeriod:number[];totalNormalWaste:number;totalAbnormalWaste:number}
 export type TransferLedgerResult={valid:boolean;issues:string[];netQuantityByProductCentre:Record<string,number>;netValueByProductCentre:Record<string,number>;totalSourceValue:number;totalDestinationValue:number}
 export type InventoryReconciliationResult={valid:boolean;issues:string[];rows:{period:number;inventoryModel:number;inventoryBalanceSheet:number;inventoryCppCps:number;netWorkingCapitalModel:number;netWorkingCapitalBalanceSheet:number;inventoryVariance:number;cppCpsVariance:number;workingCapitalVariance:number}[]}
@@ -63,4 +66,32 @@ export function reconcileInventoryThreeWay(periods:InventoryReconciliationPeriod
   return row
  })
  return {valid:!issues.length,issues,rows}
+}
+
+export function reconcileInventoryReference(
+ benchmarks:InventoryReferenceBenchmarkEntry[],
+ modeled: {period:number;rawMaterials:number;workInProgress:number;finishedGoods:number;totalInventory:number;cpp:number;cps:number}[],
+ tolerance=0.01
+):InventoryReferenceComparisonResult{
+ const issues:string[]=[],rows:InventoryReferenceComparisonRow[]=[]
+ const seen=new Set<number>()
+ for(const b of benchmarks){
+  if(seen.has(b.period))issues.push('Reference inventory benchmark has duplicate period '+b.period+'.')
+  seen.add(b.period)
+  if(!b.sourceDocument.trim()||!b.schedule.trim()||!b.page.trim()||!b.currency.trim())issues.push('Reference benchmark period '+b.period+' requires source document, schedule, page and currency.')
+  const m=modeled.find(x=>x.period===b.period)
+  if(!m){issues.push('Reference benchmark period '+b.period+' has no matching model period.');continue}
+  const pairs=[['rawMaterials',b.rawMaterials,m.rawMaterials],['workInProgress',b.workInProgress,m.workInProgress],['finishedGoods',b.finishedGoods,m.finishedGoods],['totalInventory',b.totalInventory,m.totalInventory],['cpp',b.cpp,m.cpp],['cps',b.cps,m.cps]] as const
+  const matchedFields:string[]=[],missingFields:string[]=[],variances:Record<string,number>={}
+  for(const [field,reference,actual] of pairs){
+   if(reference===null||reference===undefined){missingFields.push(field);continue}
+   if(!Number.isFinite(reference)||reference<0){issues.push('Reference benchmark '+field+' in period '+b.period+' must be a finite non-negative amount.');continue}
+   const variance=actual-reference;variances[field]=variance
+   if(near(actual,reference,tolerance/100))matchedFields.push(field)
+  }
+  const status:InventoryReferenceComparisonRow['status']=missingFields.length?'incomplete':matchedFields.length===pairs.length?'matched':'mismatch'
+  if(status==='mismatch')issues.push('Reference benchmark period '+b.period+' differs from model values.')
+  rows.push({period:b.period,matchedFields,missingFields,variances,status})
+ }
+ return {valid:issues.length===0&&rows.length>0&&rows.every(row=>row.status==='matched'),rows,issues}
 }
