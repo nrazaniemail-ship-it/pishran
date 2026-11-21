@@ -3,6 +3,7 @@
  * Every quantitative field is null until explicitly supplied by the analyst.
  */
 import type { CommonFinancialItemMetadata } from './projectModelSchema'
+import type { CppCpsTraceItem } from './cppCpsCostTraceability'
 import { HELP_FORM_SECTIONS, createBlankHelpDrivenProjectForms, validateHelpDrivenProjectForms, type HelpDrivenProjectForms } from './projectModelHelpForms'
 const createBlankCommonFinancialItemMetadata=():CommonFinancialItemMetadata=>({description:'',currencyCode:null,marketOrigin:null,escalationPercent:null,remarks:'',costCentreId:null})
 
@@ -142,6 +143,7 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
 
 export type EconomicAdjustmentFormDraft = { id:string; name:string; period:string; treatment:'benefit'|'cost'|null; effectType:'general'|'foreign-exchange'|'employment'|null; financialAmount:number|null; economicAmount:number|null }
 export type ProjectModelFinancialFormDrafts = {
+ cppCpsTraceItems: CppCpsTraceItem[]
  helpDriven: HelpDrivenProjectForms
  assets: FixedAssetFormDraft[]
  productionCosts: ProductionCostFormDraft[]
@@ -152,7 +154,7 @@ export type ProjectModelFinancialFormDrafts = {
  economic: { discountRatePercent:number|null; adjustments:EconomicAdjustmentFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
+ return {cppCpsTraceItems:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{
