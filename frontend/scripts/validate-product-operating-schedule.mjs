@@ -213,7 +213,7 @@ close(chainP2.weightedAverageUnitCost,p2Wac)
 close(chainP3.weightedAverageUnitCost,(100+1000+transferTwoCost)/115)
 close(chained.rows.find(row=>row.productId==='P2'&&row.period===2).openingInventoryValue,35*p2Wac)
 close(chained.rows.find(row=>row.productId==='P3'&&row.period===2).openingInventoryValue,35*(100+1000+transferTwoCost)/115)
-assert.equal(chained.totalProductionQuantity,/* actual production only plus transfer accounting units */ 305)
+assert.deepEqual([chainP1.productionQuantity,chainP2.productionQuantity,chainP3.productionQuantity],[100,110,105], 'destination-stage transfer quantities must be included in the destination product operating volume')
 
 console.log('Product-by-product production, weighted-average inventory, COGS and sales validation passed.')
 
