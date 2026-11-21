@@ -107,6 +107,12 @@ try {
  assert.match(forms.describeUnintegratedFinancialDraftInput('financialForms.economic:employment-effect-required','fa'),/اشتغال/)
  assert.doesNotMatch(forms.describeUnintegratedFinancialDraftInput('financialForms.loans.0','fa'),/financialForms\\./)
  assert.match(forms.describeUnintegratedFinancialDraftInput('financialForms.workingCapital:periodic-working-capital-schedule-not-valid','en'),/Working-capital schedule/)
+ const sourcedEconomic={...auditDraft,economic:{...auditDraft.economic,discountRatePercent:10,discountRateSourceReference:'economic-study-page-4',discountRateSourceVerified:true,adjustments:[]}}
+ assert.deepEqual(forms.validateProjectModelFinancialFormDrafts(sourcedEconomic),[])
+ const missingRateSource={...sourcedEconomic,economic:{...sourcedEconomic.economic,discountRateSourceVerified:false}}
+ assert.ok(forms.validateProjectModelFinancialFormDrafts(missingRateSource).includes('economic-discount-rate:verified-source-required'))
+ const missingShadowSource={...sourcedEconomic,economic:{...sourcedEconomic.economic,adjustments:[{id:'fx-1',name:'FX shadow adjustment',period:'1',treatment:'cost',effectType:'foreign-exchange',financialAmount:100,economicAmount:90,sourceReference:'',sourceVerified:false}]}}
+ assert.ok(forms.validateProjectModelFinancialFormDrafts(missingShadowSource).includes('economic-adjustment-0:verified-source-required'))
 
  console.log('Help-driven item-level finance forms: all assertions passed.')
 } finally {
