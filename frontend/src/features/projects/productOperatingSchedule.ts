@@ -19,6 +19,9 @@ export type ProductOperatingPeriodRow = {
   costOfSales: number
   netSalesRevenue: number
   subsidyIncome: number
+  salesTaxPercent: number
+  taxableSales: number
+  outputSalesTax: number
   grossProfit: number
   rawMaterialInventoryValue: number
   wipInventoryValue: number
@@ -37,6 +40,7 @@ export type ProductOperatingSchedule = {
   periodRevenue: number[]
   periodCostOfSales: number[]
   periodSubsidyIncome: number[]
+  periodOutputSalesTax: number[]
   annualRevenue: number[]
   annualCostOfSales: number[]
   totalProductionQuantity: number
@@ -74,7 +78,7 @@ export function buildProductOperatingSchedule(
   const issues: string[] = []
   const count = periods.length
   const empty = (): ProductOperatingSchedule => ({
-    valid:false,issues,rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],
+    valid:false,issues,rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],periodOutputSalesTax:[],
     annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,
     totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],periodAbnormalWasteExpense:[],periodNormalWasteAbsorbed:[],hasInventoryFlow:false,
   })
@@ -168,6 +172,7 @@ export function buildProductOperatingSchedule(
   const periodRevenue=Array(count).fill(0) as number[]
   const periodCostOfSales=Array(count).fill(0) as number[]
   const periodSubsidyIncome=Array(count).fill(0) as number[]
+  const periodOutputSalesTax=Array(count).fill(0) as number[]
   const periodRawMaterialInventoryValue=Array(count).fill(0) as number[]
   const periodWipInventoryValue=Array(count).fill(0) as number[]
   const rows:ProductOperatingPeriodRow[]=[]
@@ -308,10 +313,6 @@ export function buildProductOperatingSchedule(
         issues.push('Product '+sale.productId+' opening inventory quantity in period '+(index+1)+' must reconcile to the previous period closing quantity after inter-product transfers.')
         continue
       }
-      if((source.salesTaxPercent??0)!==0) {
-        issues.push('Product '+sale.productId+' has sales tax/VAT in period '+(index+1)+'; tax payable/receivable posting is not yet connected.')
-        continue
-      }
       if(source.subsidyPercent!=null&&(!Number.isFinite(source.subsidyPercent)||source.subsidyPercent<0||source.subsidyPercent>100)||
         source.subsidyAmount!=null&&(!Number.isFinite(source.subsidyAmount)||source.subsidyAmount<0)||
         (source.subsidyPercent??0)>0&&(source.subsidyAmount??0)>0) {
@@ -347,11 +348,16 @@ export function buildProductOperatingSchedule(
         ?baseRevenue*source.subsidyPercent/100
         :source.subsidyAmount??0
       const netSalesRevenue=baseRevenue+subsidyIncome
+      // The declared sales-tax rate applies to the explicit tax-exclusive unit price;
+      // subsidy is excluded from the taxable base until its legal treatment is sourced.
+      const salesTaxPercent=source.salesTaxPercent as number
+      const outputSalesTax=baseRevenue*salesTaxPercent/100
       const row:ProductOperatingPeriodRow={
         productId:sale.productId,period:index+1,openingInventoryQuantity:openingQuantity,
         openingInventoryValue:openingValue,salesQuantity,productionQuantity:Math.max(0,productionQuantity),
         closingInventoryQuantity:closingQuantity,closingInventoryValue,unitProductionCost,
         productionCost,weightedAverageUnitCost,costOfSales,netSalesRevenue,subsidyIncome,
+        salesTaxPercent,taxableSales:baseRevenue,outputSalesTax,
         grossProfit:netSalesRevenue-costOfSales,
         rawMaterialInventoryValue:flowRow?.closingRawMaterialValue??0,
         wipInventoryValue:flowRow?.closingWipValue??0,
@@ -367,6 +373,7 @@ export function buildProductOperatingSchedule(
       periodRevenue[index]+=netSalesRevenue
       periodCostOfSales[index]+=costOfSales
       periodSubsidyIncome[index]+=subsidyIncome
+      periodOutputSalesTax[index]+=outputSalesTax
       totalProductionQuantity+=row.productionQuantity
       totalSalesQuantity+=salesQuantity
       totalClosingInventoryValue+=closingInventoryValue
@@ -451,7 +458,7 @@ export function buildProductOperatingSchedule(
     else {annualRevenue[year]+=periodRevenue[index];annualCostOfSales[year]+=periodCostOfSales[index]}
   })
   if(issues.length)return empty()
-  return {valid:true,issues:[],rows,periodRevenue,periodCostOfSales,periodSubsidyIncome,annualRevenue,annualCostOfSales,
+  return {valid:true,issues:[],rows,periodRevenue,periodCostOfSales,periodSubsidyIncome,periodOutputSalesTax,annualRevenue,annualCostOfSales,
     totalProductionQuantity,totalSalesQuantity,totalClosingInventoryValue,periodRawMaterialInventoryValue,periodWipInventoryValue,periodAbnormalWasteExpense,periodNormalWasteAbsorbed,hasInventoryFlow:rows.some(row=>row.rawMaterialInventoryValue>0||row.wipInventoryValue>0)||salesHaveInventoryFlow(drafts.sales)}
 }
 
