@@ -286,10 +286,25 @@ export function buildProductOperatingSchedule(
         closingQuantity=source.finishedGoodsClosingQuantity as number
         productionQuantity=salesQuantity+closingQuantity-openingQuantity
       }
+      let expectedOpeningQuantity=previousClosingQuantity??Number.NaN
+      let expectedOpeningValue=previousClosingValue??Number.NaN
+      if(index>0){
+        for(const transfer of drafts.productionTransfers??[]){
+          if(transfer.period!==index)continue
+          if(transfer.sourceProductId===sale.productId){
+            expectedOpeningQuantity-=transfer.quantity
+            expectedOpeningValue-=transfer.costAmount
+          }
+          if(transfer.destinationProductId===sale.productId){
+            expectedOpeningQuantity+=transfer.quantity*transfer.conversionFactor
+            expectedOpeningValue+=transfer.costAmount
+          }
+        }
+      }
       if(index>0&&sale.inventoryPolicy==='manual'&&
-        (Math.abs((source.openingFinishedGoodsQuantity as number)-(previousClosingQuantity??Number.NaN))>0.000001||
-         Math.abs((source.openingFinishedGoodsValue as number)-(previousClosingValue??Number.NaN))>0.01)){
-        issues.push('Product '+sale.productId+' opening inventory in period '+(index+1)+' must reconcile to the previous period closing inventory.')
+        (Math.abs((source.openingFinishedGoodsQuantity as number)-expectedOpeningQuantity)>0.000001||
+         Math.abs((source.openingFinishedGoodsValue as number)-expectedOpeningValue)>0.01)){
+        issues.push('Product '+sale.productId+' opening inventory in period '+(index+1)+' must reconcile to the previous period closing inventory after inter-product transfers.')
         continue
       }
       if((source.salesTaxPercent??0)!==0) {
