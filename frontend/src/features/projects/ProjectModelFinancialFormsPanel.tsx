@@ -43,7 +43,7 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
  const patchLoan=(id:string,patch:Partial<LoanFacilityFormDraft>)=>onChange({...value,loans:value.loans.map(x=>x.id===id?{...x,...patch}:x)})
  const costCentres=value.costCentres??[]
  const patchCostCentre=(id:string,patch:Partial<CostCentreFormDraft>)=>onChange({...value,costCentres:costCentres.map(x=>x.id===id?{...x,...patch}:x)})
- const addCostCentre=()=>onChange({...value,costCentres:[...costCentres,{id:crypto.randomUUID(),name:'',type:null,description:''}]})
+ const addCostCentre=()=>onChange({...value,costCentres:[...costCentres,{id:crypto.randomUUID(),name:'',type:null,description:'',allocationBasis:null,driverRows:[]}]})
  const traceItems=value.cppCpsTraceItems??[]
  const patchTrace=(id:string,patch:Partial<CppCpsTraceItem>)=>onChange({...value,cppCpsTraceItems:traceItems.map(x=>x.id===id?{...x,...patch}:x)})
  const patchTraceSource=(id:string,patch:Partial<CppCpsTraceItem['source']>)=>{
