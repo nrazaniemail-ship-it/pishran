@@ -61,6 +61,18 @@ assert.equal(result.rows.find(row => row.itemId === 'energy' && row.period === 1
 assert.equal(result.rows.find(row => row.itemId === 'overhead' && row.period === 1).grossCost, null,
   'Unverified CRC200 amounts must remain null')
 assert.equal(result.rows.find(row => row.itemId === 'overhead' && row.period === 1).incrementalCpp, null)
+
+// An unverified-only cost centre must remain represented as unknown, not disappear from reporting.
+const unverifiedOnlyCentre = ledgerModule.buildCppCpsTraceLedger([{
+  ...items[4], id: 'unverified-only-centre', costCentreId: 'CC-UNKNOWN',
+}], 2)
+assert.equal(unverifiedOnlyCentre.valid, true)
+assert.equal(unverifiedOnlyCentre.complete, false)
+assert.deepEqual(unverifiedOnlyCentre.knownIncrementalByCostCentre, {})
+assert.deepEqual(unverifiedOnlyCentre.completeIncrementalByCostCentre, { 'CC-UNKNOWN': null })
+assert.deepEqual(unverifiedOnlyCentre.completeIncrementalByCostCentreByPeriod, { 'CC-UNKNOWN': [null, null] })
+assert.equal(unverifiedOnlyCentre.rows[0].sourceStatus, 'unverified')
+
 assert.deepEqual(result.rows.find(row => row.itemId === 'materials').path,
   ['raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'])
 
