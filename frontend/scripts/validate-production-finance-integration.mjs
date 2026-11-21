@@ -79,10 +79,10 @@ const manuallyScaled=calculateIntegratedFinance({
 })
 assert.ok(Math.abs(volumeSensitivity[0][0].npv-manuallyScaled.npvProject)<1e-6)
 const oneWay=calculateOneWaySensitivity({
- years:2,constructionYears:1,capacity:100,fullCapacityRevenue:1000,fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,
- costOfProductsSoldByYear:[0,176],otherVariableCashCostByYear:[0,224],otherFixedCashCostByYear:[0,40],finishedGoodsInventoryValueByYear:[0,44],
- annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
- utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
+ years:3,constructionYears:1,capacity:100,fullCapacityRevenue:1000,fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,
+ costOfProductsSoldByYear:[0,176,0],otherVariableCashCostByYear:[0,224,0],otherFixedCashCostByYear:[0,40,0],finishedGoodsInventoryValueByYear:[0,44,0],
+ annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0,0],preOperatingSchedule:[0,0,0],
+ utilization:[0,1,0],equityContributions:[0,0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
  salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:10
 },20)
 assert.equal(oneWay.factors.find(factor=>factor.id==='operating-cost')?.available,true)
