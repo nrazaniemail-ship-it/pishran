@@ -390,6 +390,7 @@ export function buildProductOperatingSchedule(
   // Quantity is retained as an audit/control quantity; value is the posted accounting amount.
   const transferredOutByProductPeriod=new Map<string,number>()
   const transferredOutQuantityByProductPeriod=new Map<string,number>()
+  const sourceClosingQuantityByProductPeriod=new Map<string,number>()
   const sourceCostByProductPeriod=new Map<string,number>()
   for(const transfer of drafts.productionTransfers??[]){
     const source=rows.find(row=>row.productId===transfer.sourceProductId&&row.period===transfer.period)
@@ -401,10 +402,11 @@ export function buildProductOperatingSchedule(
     if(!destinationProduct?.unitOfMeasure?.trim()||destinationProduct.unitOfMeasure.trim()!==transfer.destinationUnit.trim())issues.push('Transfer '+transfer.id+' destination unit must match the declared base unit of product '+transfer.destinationProductId+'.')
     const sourceKey=transfer.sourceProductId+':'+transfer.period
     if(!sourceCostByProductPeriod.has(sourceKey))sourceCostByProductPeriod.set(sourceKey,source.productionCost)
+    if(!sourceClosingQuantityByProductPeriod.has(sourceKey))sourceClosingQuantityByProductPeriod.set(sourceKey,source.closingInventoryQuantity)
     const alreadyTransferred=transferredOutByProductPeriod.get(sourceKey)??0
     const alreadyTransferredQuantity=transferredOutQuantityByProductPeriod.get(sourceKey)??0
     const destinationQuantity=transfer.quantity*transfer.conversionFactor
-    if(source.closingInventoryQuantity+0.01<alreadyTransferredQuantity+transfer.quantity){issues.push('Transfer '+transfer.id+' exceeds the source product finished-goods quantity available for transfer.');continue}
+    if((sourceClosingQuantityByProductPeriod.get(sourceKey) as number)+0.01<alreadyTransferredQuantity+transfer.quantity){issues.push('Transfer '+transfer.id+' exceeds the source product finished-goods quantity available for transfer.');continue}
     const sourceAvailableQuantity=source.openingInventoryQuantity+source.productionQuantity
     const sourceAvailableValue=source.openingInventoryValue+(sourceCostByProductPeriod.get(sourceKey) as number)
     if(transfer.costAmount>sourceAvailableValue-alreadyTransferred+0.01){issues.push('Transfer '+transfer.id+' exceeds the remaining source product inventory value available for reclassification.');continue}
