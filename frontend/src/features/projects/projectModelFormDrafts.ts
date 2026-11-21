@@ -162,10 +162,12 @@ export type CostCentreFormDraft = {
  type:'production'|'service'|'administration'|'sales'|'other'|null
  description:string
  allocationBasis:CostCentreAllocationBasis|null
+ manualDriverName:string
+ manualDriverUnit:string
  driverRows:CostCentreDriverRow[]
 }
 export function createBlankCostCentreFormDraft(id=''):CostCentreFormDraft {
- return {id,name:'',type:null,description:'',allocationBasis:null,driverRows:[]}
+ return {id,name:'',type:null,description:'',allocationBasis:null,manualDriverName:'',manualDriverUnit:'',driverRows:[]}
 }
 export function validateCostCentreFormDraft(value:CostCentreFormDraft):string[] {
  const errors:string[]=[]
@@ -173,6 +175,8 @@ export function validateCostCentreFormDraft(value:CostCentreFormDraft):string[] 
  if(!value.name.trim())errors.push('cost-centre-name-required')
  if(!value.type)errors.push('cost-centre-type-required')
  if(value.allocationBasis==='manual'){
+  if(!value.manualDriverName.trim())errors.push('manual-cost-centre-driver-name-required')
+  if(!value.manualDriverUnit.trim())errors.push('manual-cost-centre-driver-unit-required')
   const keys=new Set<string>()
   for(const row of value.driverRows){
    const key=row.period+':'+row.productId
