@@ -834,7 +834,7 @@ export default function AdvancedFinancePanel(props: Props) {
       {inventoryReferenceReconciliation&&<div className={inventoryReferenceReconciliation.valid?'fw-result':'fw-validation'} role={inventoryReferenceReconciliation.valid?'status':'alert'}>
         <b>{t('تطبیق تاریخی با خروجی مرجع','Historical reconciliation against reference output')}</b>
         <p>{t('دوره‌های کاملاً منطبق: ','Fully matched periods: ')}{inventoryReferenceReconciliation.rows.filter(row=>row.status==='matched').length} / {inventoryReferenceReconciliation.rows.length}</p>
-        {inventoryReferenceReconciliation.rows.map(row=><p key={row.period}>{t('دوره ','Period ')}{row.period}: {row.status==='matched'?t('منطبق','Matched'):row.status==='mismatch'?t('دارای اختلاف','Mismatch'):t('ناقص؛ داده مرجع کافی نیست','Incomplete; insufficient reference evidence')} · {t('اقلام فاقد شاهد: ','Missing evidence: ')}{row.missingFields.join(', ')||t('هیچ','None')}</p>)}
+        {inventoryReferenceReconciliation.rows.map(row=><p key={row.period}>{t('دوره ','Period ')}{row.period}: {row.status==='matched'?t('منطبق','Matched'):row.status==='mismatch'?t('دارای اختلاف','Mismatch'):t('ناقص؛ داده مرجع کافی نیست','Incomplete; insufficient reference evidence')} · {t('اقلام منطبق: ','Matched fields: ')}{row.matchedFields.join(', ')||'—'} · {t('اقلام فاقد شاهد: ','Missing evidence: ')}{row.missingFields.join(', ')||t('هیچ','None')} · {t('اختلاف‌ها: ','Variances: ')}{Object.entries(row.variances).map(([key,value])=>key+': '+money(value)).join(' | ')||'—'}</p>)}
         {inventoryReferenceReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
       </div>}
       {periodicUnreconciledStatements.length>0&&<div className="fw-validation" role="alert">
