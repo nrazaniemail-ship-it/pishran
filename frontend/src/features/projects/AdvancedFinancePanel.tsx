@@ -10,13 +10,14 @@ import { buildProductOperatingSchedule } from './productOperatingSchedule'
 import { reconcileInventoryThreeWay, reconcileInventoryReference } from './inventoryControlLedgers'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
 import { bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
-import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft, SalesTaxLedgerFormDraft } from './projectModelFormDrafts'
+import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft, SalesTaxLedgerFormDraft, ValueAddedPeriodFormDraft } from './projectModelFormDrafts'
+import { buildComfarValueAddedAnalysis, type ValueAddedAnalysisResult, type ValueAddedInputItem, type ValueAddedInvestmentItem } from './projectValueAddedAnalysis'
 import { buildSalesTaxLedger, bindSalesTaxLedgerToWorkingCapital, type SalesTaxInputCreditEntry, type SalesTaxOutputEntry, type SalesTaxSettlementEntry, type SalesTaxLedgerResult } from './salesTaxLedger'
 import { buildProjectTaxDraftSchedule } from './projectTaxDraftIntegration'
 import { buildProjectLoanDraftIntegration } from './projectLoanDraftIntegration'
 import type { LoanFacilityFormDraft } from './projectModelFormDrafts'
 import { calculateOperatingCycleWorkingCapital, calculateWorkingCapitalTurnoverCoefficient, calculateWorkingCapitalDaysCoverageFromTurnover } from '../steel/financialModel'
-import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, calculatePeriodicSensitivityMatrix, calculatePeriodicFinancialScenarios, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput, type PeriodicFinancialScenarioSet, type PeriodicSensitivityCell } from '../steel/periodicFinancialEngine'
+import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, calculatePeriodicNpv, calculatePeriodicSensitivityMatrix, calculatePeriodicFinancialScenarios, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput, type PeriodicFinancialScenarioSet, type PeriodicSensitivityCell } from '../steel/periodicFinancialEngine'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule,
   calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
@@ -77,6 +78,10 @@ type Props = {
   onEditFinancialForms?: () => void
   taxDraft?: ProjectTaxFormDraft
   salesTaxLedgerDraft?: SalesTaxLedgerFormDraft
+  valueAddedAnalysisEnabled?: boolean
+  valueAddedPeriodDrafts?: ValueAddedPeriodFormDraft[]
+  economicDiscountRatePercent?: number | null
+  onValueAddedAnalysisResult?: (result:ValueAddedAnalysisResult|null)=>void
   loanDrafts?: LoanFacilityFormDraft[]
   projectFoundation?: ProjectFoundation
   initialWorkingCapitalEquityContribution?: number
