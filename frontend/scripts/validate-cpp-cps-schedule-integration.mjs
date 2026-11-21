@@ -136,6 +136,8 @@ const advancedPanel = await readFile(new URL('../src/features/projects/AdvancedF
 const financialForms = await readFile(new URL('../src/features/projects/ProjectModelFinancialFormsPanel.tsx', import.meta.url), 'utf8')
 const wizard = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 assert.ok(advancedPanel.includes('buildCppCpsTraceLedger(props.cppCpsTraceItems'))
+assert.ok(advancedPanel.includes('knownIncrementalByCostCentreAndCategory'))
+assert.ok(advancedPanel.includes('Complete total'))
 assert.ok(advancedPanel.includes('bindCppCpsTraceLedgerToProductSchedule'))
 assert.ok(advancedPanel.includes('bindFinishedGoodsInventoryToWorkingCapital'))
 assert.ok(advancedPanel.includes('annualVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.annualCostOfSales'))
