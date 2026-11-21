@@ -108,3 +108,15 @@ The saved cost-centre movement rows are now passed into the financial panel. Whe
 - A mismatch, missing stage-period, invalid movement, or unverified source makes this cross-check fail visibly.
 
 This is a **cross-check only**. It does not add the ledger closing value to inventory, CPP/CPS, or working capital a second time. The entered rows remain unintegrated report blockers until stage-specific receipts, issues, WIP conversion, finished-goods completion and inter-stage transfer posting are connected to the underlying accounting schedules. In particular, production quantity/value is not treated as a raw-material receipt without an explicit stage transition record.
+
+## Inter-stage inventory transfers
+
+A separate persisted transfer register now records movement between raw materials, work in progress and finished goods. Each transfer requires period, distinct source/destination stages, product and cost-centre endpoints, source quantity/unit, destination unit and conversion factor, transferred value, and a verified document reference.
+
+- Both source-stage and destination-stage movement rows must exist for the same period and matching product/cost-centre endpoints.
+- The source stage is relieved by the source quantity and transferred value; the destination stage receives the converted quantity and the same transferred value.
+- Conversion or processing costs added at the destination remain separate production costs; the transfer itself does not create a second inventory value.
+- Same-stage centre movements remain in the separate internal transfer-in/out fields and must balance by stage and period.
+- Invalid, incomplete or unverified transfers fail reconciliation and remain report blockers.
+
+The current bridge validates these movements against the existing engine balances. It does not yet create or post the underlying production conversion entries, nor does it automatically infer transfers from CPP/CPS source lines.
