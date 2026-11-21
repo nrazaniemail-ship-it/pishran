@@ -15,6 +15,10 @@ const { buildProductionFinanceBridge } = await import(integrationUrl)
 const mappingOutput = await transpile('projects/productionCostMapping.ts')
 const mappingUrl = 'data:text/javascript;base64,' + Buffer.from(mappingOutput).toString('base64')
 const { mapProductionCostsToFinance } = await import(mappingUrl)
+const financeOutput = await transpile('steel/financialModel.ts')
+const financeUrl = 'data:text/javascript;base64,' + Buffer.from(financeOutput).toString('base64')
+const { calculateIntegratedFinance, buildThreeFinancialStatements } = await import(financeUrl)
+
 
 const record = (overrides={}) => ({id:'r1',projectId:'p1',lineId:'l1',product:'coil',periodStart:'2026-01-01',periodEnd:'2026-01-31',plannedOutput:100,totalOutput:100,goodOutput:100,scrapOutput:0,matchedMaterialInput:100,matchedMaterialUnit:'t',materials:[{id:'m1',name:'billet',consumedQuantity:100,unit:'t',unitCost:2,currency:'USD'}],directLaborCost:10,energyCost:10,maintenanceCost:0,allocatedOverhead:0,currency:'USD',createdAt:'2026-01-31',updatedAt:'2026-01-31',salesQuantity:80,...overrides})
 const periods=[{index:1,startDate:'2026-01-01',endDate:'2026-01-31',days:31,partial:false},{index:2,startDate:'2026-02-01',endDate:'2026-02-28',days:28,partial:false}]
@@ -25,6 +29,9 @@ assert.equal(result.periods[0].cpp,220)
 assert.equal(result.periods[0].cps,176)
 assert.equal(result.periods[0].closingFinishedGoodsQuantity,20)
 assert.equal(result.periods[0].closingFinishedGoodsValue,44)
+assert.equal(result.periods[0].materialCost,200)
+assert.equal(result.periods[0].directLaborCost,10)
+assert.equal(result.periods[0].energyCost,10)
 assert.equal(result.periods[1].closingFinishedGoodsValue,44)
 assert.equal(result.periods[1].products[0].openingInventoryValue,44)
 assert.equal(buildProductionFinanceBridge([record({projectId:'p2'})],'p1',periods,'USD').valid,false)
@@ -43,6 +50,18 @@ const mapped = mapProductionCostsToFinance({
  fullCapacityVariableCashCost:500,
  mappedBaseCosts:{materials:100,directLabor:50,energy:30,maintenance:20,overhead:20}
 })
+const integrated = calculateIntegratedFinance({
+ years:2,constructionYears:1,capacity:100,fullCapacityRevenue:1000,fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:0,
+ costOfProductsSoldByYear:[0,176],otherVariableCashCostByYear:[0,224],finishedGoodsInventoryValueByYear:[0,44],
+ annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
+ utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
+ salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:10
+})
+assert.equal(integrated.years[1].variableCashCost,400)
+assert.equal(integrated.years[1].workingCapitalBreakdown.finishedGoods,44)
+const integratedStatements=buildThreeFinancialStatements(integrated.years)
+assert.equal(integratedStatements[1].incomeStatement.cashOperatingCosts,400)
+assert.equal(integratedStatements[1].balanceSheet.workingCapitalAssets,44)
 assert.equal(mapped.valid,true)
 assert.deepEqual(mapped.costOfProductsSoldByYear,[176,0])
 assert.deepEqual(mapped.otherVariableCashCostByYear,[224,495])
