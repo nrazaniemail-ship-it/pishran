@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict'
-import { analyzeProductionRecord, validateProductionRecord } from '../src/features/production/productionAnalysis.ts'
+import { readFile } from 'node:fs/promises'
+import ts from 'typescript'
+const source = await readFile(new URL('../src/features/production/productionAnalysis.ts', import.meta.url), 'utf8')
+const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
+const { analyzeProductionRecord, validateProductionRecord } = await import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
 
 const base = {
  id:'rec-1', projectId:'project-1', lineId:'line-1', product:'Hot rolled coil',
