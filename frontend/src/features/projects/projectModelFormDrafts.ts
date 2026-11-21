@@ -259,7 +259,7 @@ export function createBlankCostCentreInventoryMovementFormDraft(id=''):CostCentr
 const costCentreInventoryMovementHasData=(row:CostCentreInventoryMovementFormDraft):boolean =>
  [row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
   row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,row.transfersOutQuantity,row.transfersOutValue,row.productionQuantity,row.productionValue,row.consumptionQuantity,
-  row.consumptionValue,row.salesQuantity,row.salesCostValue,row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue,row.sourceReference]
+  row.consumptionValue,row.salesQuantity,row.salesCostValue,row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue,row.sourceReference,row.sourceVerified===true?true:null]
   .some(value=>value!==null&&value!==undefined&&value!=='')
 
 export type InventoryStageTransferFormDraft={
@@ -286,7 +286,7 @@ export function createBlankInventoryStageTransferFormDraft(id=''):InventoryStage
 }
 const inventoryStageTransferHasData=(row:InventoryStageTransferFormDraft):boolean=>
  [row.period,row.sourceStage,row.destinationStage,row.sourceProductId,row.destinationProductId,row.sourceCostCentreId,
-  row.destinationCostCentreId,row.quantity,row.sourceUnit,row.destinationUnit,row.conversionFactor,row.transferValue,row.sourceReference]
+  row.destinationCostCentreId,row.quantity,row.sourceUnit,row.destinationUnit,row.conversionFactor,row.transferValue,row.sourceReference,row.sourceVerified===true?true:null]
   .some(value=>value!==null&&value!==undefined&&value!=='')
 
 export type ProjectModelFinancialFormDrafts = {
