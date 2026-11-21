@@ -188,11 +188,14 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
     <TextField label={t('محصول مقصد','Destination product')} value={entry.destinationProductId} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,destinationProductId:v}:x)})}/>
     <TextField label={t('مرکز هزینه مقصد','Destination cost centre')} value={entry.destinationCostCentreId} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,destinationCostCentreId:v}:x)})}/>
     <NumberField label={t('دوره','Period')} value={entry.period} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,period:v??0}:x)})}/>
-    <NumberField label={t('مقدار انتقال','Transferred quantity')} value={entry.quantity} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,quantity:v??0}:x)})}/>
+    <NumberField label={t('مقدار انتقال در واحد مبدأ','Transferred quantity in source unit')} value={entry.quantity} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,quantity:v??0}:x)})}/>
+    <TextField label={t('واحد مبدأ','Source unit')} value={entry.sourceUnit} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,sourceUnit:v}:x)})}/>
+    <TextField label={t('واحد مقصد','Destination unit')} value={entry.destinationUnit} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,destinationUnit:v}:x)})}/>
+    <NumberField label={t('ضریب تبدیل (مقدار مقصد به ازای یک واحد مبدأ)','Conversion factor (destination units per source unit)')} value={entry.conversionFactor} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,conversionFactor:v??0}:x)})}/>
     <NumberField label={t('ارزش انتقال','Transfer value')} value={entry.costAmount} onChange={v=>onChange({...value,productionTransfers:(value.productionTransfers??[]).map((x,i)=>i===index?{...x,costAmount:v??0}:x)})}/>
     <button type="button" className="secondary-button" onClick={()=>onChange({...value,productionTransfers:value.productionTransfers.filter(x=>x.id!==entry.id)})}>{t('حذف','Remove')}</button>
    </div>)}
-   <button type="button" className="secondary-button" onClick={()=>onChange({...value,productionTransfers:[...(value.productionTransfers??[]),{id:crypto.randomUUID(),period:1,sourceProductId:'',destinationProductId:'',sourceCostCentreId:'',destinationCostCentreId:'',quantity:0,costAmount:0}]})}>{t('افزودن انتقال','Add transfer')}</button>
+   <button type="button" className="secondary-button" onClick={()=>onChange({...value,productionTransfers:[...(value.productionTransfers??[]),{id:crypto.randomUUID(),period:1,sourceProductId:'',destinationProductId:'',sourceCostCentreId:'',destinationCostCentreId:'',quantity:0,sourceUnit:'',destinationUnit:'',conversionFactor:0,costAmount:0}]})}>{t('افزودن انتقال','Add transfer')}</button>
   </div>
   <ProjectModelHelpCoveragePanel value={value.helpDriven} onChange={helpDriven=>onChange({...value,helpDriven})} language={language}/>
  </section>
