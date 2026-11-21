@@ -96,3 +96,15 @@ The project financial-form draft now persists a separate `costCentreInventoryMov
 - The existing cost-centre roll-forward calculation contract still handles product/cost-centre movements and transfers, but it must not be reused indiscriminately for raw materials and WIP. The next integration step must define stage-specific posting semantics and reconcile inter-stage transfers without duplicating inventory value or CPP/CPS.
 
 This boundary prevents an entered register from being mistaken for an integrated and tested financial calculation.
+
+## Stage inventory cross-check (raw materials / WIP / finished goods)
+
+The saved cost-centre movement rows are now passed into the financial panel. When at least one stage is entered, the panel runs a separate reconciliation for each populated stage:
+
+- Each populated stage must have at least one row in every model period.
+- Every row must have an explicit verified source reference and complete non-negative quantity/value fields.
+- Product/cost-centre roll-forward is checked independently inside each stage, including period opening-to-closing carry-forward.
+- The sum of stage closing values by period is compared with the corresponding periodic finance-engine inventory balance (raw materials, work in progress, or finished goods).
+- A mismatch, missing stage-period, invalid movement, or unverified source makes this cross-check fail visibly.
+
+This is a **cross-check only**. It does not add the ledger closing value to inventory, CPP/CPS, or working capital a second time. The entered rows remain unintegrated report blockers until stage-specific receipts, issues, WIP conversion, finished-goods completion and inter-stage transfer posting are connected to the underlying accounting schedules. In particular, production quantity/value is not treated as a raw-material receipt without an explicit stage transition record.
