@@ -11,7 +11,7 @@
 
 ## Extracted evidence
 
-The COMFAR output exposes the **aggregate total inventory** line only in this schedule extract. It does not separately publish raw materials, WIP and finished goods on these pages. Values below are therefore valid only for `totalInventory`; the three component fields must remain blank.
+The COMFAR output exposes the **aggregate total inventory** line only in this schedule extract. It does not separately publish raw materials, WIP and finished goods on these pages. Values below are therefore valid only for `totalInventory`; the three component fields must remain blank. The comparison form must also record the currency code (`IRR`) and an explicit amount-scale factor (e.g. `1` if the model also uses million IRR, or `1,000,000` if the model uses whole rials).
 
 | Project year | Project period* | Total inventory (million IRR) | Source |
 |---|---:|---:|---|
