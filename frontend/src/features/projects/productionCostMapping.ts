@@ -85,7 +85,9 @@ export function mapProductionCostsToFinance(input: ProductionAnnualCostInput): P
     const remainingBase = input.hasProductionRecords[index]
       ? input.fullCapacityFixedCashCost - mappedFixedBaseCostTotal
       : input.fullCapacityFixedCashCost
-    return remainingBase * input.utilization[index] * input.opexFactors[index]
+    // Fixed cash costs are not volume-scaled; the finance engine applies them
+    // in operating years independently of utilization.
+    return remainingBase * input.opexFactors[index]
   })
   return { valid: true, errors, costOfProductsSoldByYear, otherVariableCashCostByYear, otherFixedCashCostByYear, mappedVariableBaseCostTotal, mappedFixedBaseCostTotal }
 }
