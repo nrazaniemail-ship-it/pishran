@@ -304,7 +304,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const productOperatingSchedule=useMemo(()=>{
     if(!props.cppCpsTraceItems?.length)return baseProductOperatingSchedule
     if(!baseProductOperatingSchedule?.valid||!cppCpsScheduleBinding?.valid||!cppCpsScheduleBinding.schedule){
-      return {valid:false,issues:[...(baseProductOperatingSchedule?.issues??[]),...(cppCpsScheduleBinding?.issues??[])],rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,totalSalesQuantity:0,totalClosingInventoryValue:0}
+      return {valid:false,issues:[...(baseProductOperatingSchedule?.issues??[]),...(cppCpsScheduleBinding?.issues??[])],rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],hasInventoryFlow:false}
     }
     return cppCpsScheduleBinding.schedule
   },[JSON.stringify(props.cppCpsTraceItems??[]),baseProductOperatingSchedule,cppCpsScheduleBinding])
@@ -371,8 +371,8 @@ export default function AdvancedFinancePanel(props: Props) {
         return fallback[index]??0
       })
     }
-    const rawMaterialsInventoryByPeriod=inventoryDetailByCategory('inventory',workingCapitalBreakdownByPeriod.map(row=>row.rawMaterials))
-    const workInProgressInventoryByPeriod=inventoryDetailByCategory('work-in-progress',workingCapitalBreakdownByPeriod.map(row=>row.workInProgress))
+    const rawMaterialsInventoryByPeriod=inventoryDetailByCategory('inventory',productOperatingSchedule?.valid&&productOperatingSchedule.hasInventoryFlow?productOperatingSchedule.periodRawMaterialInventoryValue:workingCapitalBreakdownByPeriod.map(row=>row.rawMaterials))
+    const workInProgressInventoryByPeriod=inventoryDetailByCategory('work-in-progress',productOperatingSchedule?.valid&&productOperatingSchedule.hasInventoryFlow?productOperatingSchedule.periodWipInventoryValue:workingCapitalBreakdownByPeriod.map(row=>row.workInProgress))
     const periodicInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,constructionPeriodCount:periods.filter(period=>fiscalYearIndexForPeriod(period,periods,fiscalMonth)<construction).length,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
