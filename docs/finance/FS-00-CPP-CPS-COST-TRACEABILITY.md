@@ -124,4 +124,4 @@ A separate persisted transfer register now records movement between raw material
 - Same-stage centre movements remain in the separate internal transfer-in/out fields and must balance by stage and period.
 - Invalid, incomplete or unverified transfers fail reconciliation and remain report blockers.
 
-The current bridge validates these movements against the existing engine balances. It does not yet create or post the underlying production conversion entries, nor does it automatically infer transfers from CPP/CPS source lines.
+Regression coverage now includes the complete raw-materials → WIP → finished-goods chain with unit conversion in both transfers, proving that the transferred value is relocated across all three stages without increasing total inventory value. The current bridge validates these movements against the existing engine balances. It does not yet create or post the underlying production conversion entries, nor does it automatically infer transfers from CPP/CPS source lines.
