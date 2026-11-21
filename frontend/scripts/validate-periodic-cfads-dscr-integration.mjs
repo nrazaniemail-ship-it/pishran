@@ -94,7 +94,7 @@ const negativeWorkingCapitalInput = {
 }
 const negativeWorkingCapitalResult = engine.calculateIntegratedPeriodicFinance(negativeWorkingCapitalInput)
 assert.equal(negativeWorkingCapitalResult.valid, true, negativeWorkingCapitalResult.warnings.join('; '))
-assert.ok(Math.abs(negativeWorkingCapitalResult.rows[0].cfads - 110) < 0.01,
+assert.ok(Math.abs(negativeWorkingCapitalResult.rows[0].cfads - 100) < 0.01,
   'An increase in negative net working capital must release 20 into CFADS')
 assert.ok(Math.abs(negativeWorkingCapitalResult.rows[1].cfads - 90) < 0.01,
   'A further 10 increase in negative net working capital must release 10 into CFADS')
