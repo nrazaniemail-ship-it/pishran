@@ -176,7 +176,7 @@ const chainedBase={
  ...controlledDraft,
  sales:[
   ...controlledDraft.sales,
-  {...controlledDraft.sales[1],productId:'P3',periods:controlledDraft.sales[1].periods.map((row,index)=>index===1?row)},
+  {...controlledDraft.sales[1],productId:'P3',periods:controlledDraft.sales[1].periods.map(row=>({...row}))},
  ],
  productionCosts:[...controlledDraft.productionCosts,{...controlledDraft.productionCosts[1],id:'cost-p3',productId:'P3'}],
  productionTransfers:[],
