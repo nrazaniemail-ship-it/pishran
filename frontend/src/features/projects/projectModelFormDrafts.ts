@@ -194,6 +194,34 @@ export function validateCostCentreFormDraft(value:CostCentreFormDraft):string[] 
  return errors
 }
 
+export type ValueAddedInputFormDraft={
+ id:string;description:string;amount:number|null;marketOrigin:'local'|'foreign'|null
+ taxesDutiesIncludedPercent:number|null;valueAddedIncludedPercentages:[number|null,number|null,number|null]
+ sourceReference:string;sourceVerified:boolean
+}
+export type ValueAddedInvestmentFormDraft=ValueAddedInputFormDraft&{kind:'fixed-investment'|'pre-production-net-of-interest'|'inventory-increase'|null}
+export type ValueAddedPeriodFormDraft={
+ period:number;otherIncome:number|null;subsidiesOnInput:number|null;subsidiesOnInvestment:number|null
+ repatriatedWages:number|null;repatriatedProfitDividends:number|null;repatriatedInterest:number|null;repatriatedOther:number|null
+ domesticWages:number|null;domesticDividendsAndInterest:number|null
+ skilledDomesticLabour:number|null;totalDomesticLabour:number|null;foreignExchangeOutflow:number|null
+ sourceReference:string;sourceVerified:boolean
+ intermediateInputs:ValueAddedInputFormDraft[];investmentInputs:ValueAddedInvestmentFormDraft[]
+}
+export function createBlankValueAddedInputFormDraft(id:string):ValueAddedInputFormDraft{
+ return{id,description:'',amount:null,marketOrigin:null,taxesDutiesIncludedPercent:null,
+  valueAddedIncludedPercentages:[null,null,null],sourceReference:'',sourceVerified:false}
+}
+export function createBlankValueAddedInvestmentFormDraft(id:string):ValueAddedInvestmentFormDraft{
+ return{...createBlankValueAddedInputFormDraft(id),kind:null}
+}
+export function createBlankValueAddedPeriodFormDraft(period:number):ValueAddedPeriodFormDraft{
+ return{period,otherIncome:null,subsidiesOnInput:null,subsidiesOnInvestment:null,
+  repatriatedWages:null,repatriatedProfitDividends:null,repatriatedInterest:null,repatriatedOther:null,
+  domesticWages:null,domesticDividendsAndInterest:null,skilledDomesticLabour:null,totalDomesticLabour:null,
+  foreignExchangeOutflow:null,sourceReference:'',sourceVerified:false,intermediateInputs:[],investmentInputs:[]}
+}
+
 export type ProjectModelFinancialFormDrafts = {
  cppCpsTraceItems: CppCpsTraceItem[]
  costCentres: CostCentreFormDraft[]
@@ -208,10 +236,10 @@ export type ProjectModelFinancialFormDrafts = {
  loans: LoanFacilityFormDraft[]
  tax: ProjectTaxFormDraft
  salesTaxLedger: SalesTaxLedgerFormDraft
- economic: { discountRatePercent:number|null; adjustments:EconomicAdjustmentFormDraft[] }
+ economic: { discountRatePercent:number|null; adjustments:EconomicAdjustmentFormDraft[]; valueAddedPeriods:ValueAddedPeriodFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),salesTaxLedger:createBlankSalesTaxLedgerFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
+ return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),salesTaxLedger:createBlankSalesTaxLedgerFormDraft(),economic:{discountRatePercent:null,adjustments:[],valueAddedPeriods:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{
