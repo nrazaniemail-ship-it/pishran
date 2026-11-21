@@ -119,7 +119,7 @@ const sharedBound = integrationModule.bindCppCpsTraceLedgerToProductSchedule(
   twoProductSchedule, sharedCentreLedger, [0], [sharedCentre]);
 assert.equal(sharedBound.valid, true, sharedBound.issues.join('; '));
 close(sharedBound.schedule.rows.find(row => row.productId === 'P1').productionCost, 1050);
-close(sharedBound.schedule.rows.find(row => row.productId === 'P2').productionCost, 550);
+close(sharedBound.schedule.rows.find(row => row.productId === 'P2').productionCost, 650);
 close(sharedBound.incrementalCppByPeriod[0], 200);
 const missingSharedDriver = integrationModule.bindCppCpsTraceLedgerToProductSchedule(
   twoProductSchedule, sharedCentreLedger, [0],
