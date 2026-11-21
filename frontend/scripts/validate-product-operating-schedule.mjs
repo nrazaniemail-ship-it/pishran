@@ -176,7 +176,7 @@ const chainedBase={
  ...controlledDraft,
  sales:[
   ...controlledDraft.sales,
-  {...controlledDraft.sales[1],productId:'P3',periods:controlledDraft.sales[1].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:35,openingFinishedGoodsValue:0}:row)},
+  {...controlledDraft.sales[1],productId:'P3',periods:controlledDraft.sales[1].periods.map((row,index)=>index===1?row)},
  ],
  productionCosts:[...controlledDraft.productionCosts,{...controlledDraft.productionCosts[1],id:'cost-p3',productId:'P3'}],
  productionTransfers:[],
@@ -192,7 +192,7 @@ const chainedDraft={
  sales:chainedBase.sales.map(sale=>({...sale,periods:sale.periods.map((row,index)=>{
   if(index!==1)return row
   if(sale.productId==='P1')return {...row,openingFinishedGoodsQuantity:20,openingFinishedGoodsValue:20*p1Wac}
-  if(sale.productId==='P2')return {...row,openingFinishedGoodsQuantity:35,openingFinishedGoodsValue:35*p2Wac}
+  if(sale.productId==='P2')return {...row,openingFinishedGoodsQuantity:40,openingFinishedGoodsValue:40*p2Wac}
   return {...row,openingFinishedGoodsQuantity:35,openingFinishedGoodsValue:35*(100+1000+transferTwoCost)/115}
  })})),
  productionTransfers:[
