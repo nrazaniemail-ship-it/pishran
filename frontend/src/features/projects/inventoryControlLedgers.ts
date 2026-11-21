@@ -159,6 +159,23 @@ export function reconcileCostCentreInventory(
  return {valid:!issues.length,issues,rows:issues.length?[]:rows}
 }
 
+export type InventoryStageTransfer={
+ id:string
+ period:number|null
+ sourceStage:'raw-materials'|'work-in-progress'|'finished-goods'|null
+ destinationStage:'raw-materials'|'work-in-progress'|'finished-goods'|null
+ sourceProductId:string
+ destinationProductId:string
+ sourceCostCentreId:string
+ destinationCostCentreId:string
+ quantity:number|null
+ sourceUnit:string
+ destinationUnit:string
+ conversionFactor:number|null
+ transferValue:number|null
+ sourceReference:string
+ sourceVerified:boolean
+}
 export type StageInventoryMovementDraft={
  period:number|null
  inventoryStage:'raw-materials'|'work-in-progress'|'finished-goods'|null
@@ -197,9 +214,64 @@ export function reconcileStageInventoryMovements(
  movements:StageInventoryMovementDraft[],
  expectedByPeriod:{period:number;rawMaterials:number;workInProgress:number;finishedGoods:number}[],
  periodCount:number,
- tolerance=0.01
+ tolerance=0.01,
+ stageTransfers:InventoryStageTransfer[]=[]
 ):StageInventoryReconciliationResult{
  const issues:string[]=[]
+ const movementByStageKey=new Map<string,StageInventoryMovementDraft>()
+ for(const row of movements){
+  if(row.period!==null&&row.inventoryStage&&row.productId.trim()&&row.costCentreId.trim())
+   movementByStageKey.set([row.period,row.inventoryStage,row.productId.trim(),row.costCentreId.trim()].join(':'),row)
+ }
+ const transferIds=new Set<string>()
+ const transferOut=new Map<string,{quantity:number;value:number}>()
+ const transferIn=new Map<string,{quantity:number;value:number}>()
+ for(const transfer of stageTransfers){
+  const id=transfer.id.trim()
+  if(!id||transferIds.has(id))issues.push('Inter-stage transfers require unique non-empty identifiers.')
+  transferIds.add(id)
+  if(transfer.period===null||!Number.isInteger(transfer.period)||transfer.period<1||transfer.period>periodCount)
+   issues.push('Inter-stage transfer '+id+' has an invalid period.')
+  if(!transfer.sourceStage||!transfer.destinationStage||transfer.sourceStage===transfer.destinationStage)
+   issues.push('Inter-stage transfer '+id+' requires two distinct inventory stages.')
+  if(!transfer.sourceProductId.trim()||!transfer.destinationProductId.trim()||!transfer.sourceCostCentreId.trim()||!transfer.destinationCostCentreId.trim())
+   issues.push('Inter-stage transfer '+id+' requires source and destination product and cost-centre identifiers.')
+  if(transfer.quantity===null||!Number.isFinite(transfer.quantity)||transfer.quantity<=0||
+     transfer.conversionFactor===null||!Number.isFinite(transfer.conversionFactor)||transfer.conversionFactor<=0||
+     transfer.transferValue===null||!Number.isFinite(transfer.transferValue)||transfer.transferValue<0)
+   issues.push('Inter-stage transfer '+id+' requires positive quantity and conversion factor and a finite non-negative transfer value.')
+  if(!transfer.sourceUnit.trim()||!transfer.destinationUnit.trim())
+   issues.push('Inter-stage transfer '+id+' requires explicit source and destination units.')
+  if(transfer.sourceUnit.trim()===transfer.destinationUnit.trim()&&transfer.conversionFactor!==null&&Math.abs(transfer.conversionFactor-1)>tolerance/100)
+   issues.push('Inter-stage transfer '+id+' has identical units and must use conversion factor 1.')
+  if(!transfer.sourceReference.trim()||!transfer.sourceVerified)
+   issues.push('Inter-stage transfer '+id+' requires a verified source reference.')
+  if(transfer.period===null||!transfer.sourceStage||!transfer.destinationStage||transfer.sourceStage===transfer.destinationStage||
+     !transfer.sourceProductId.trim()||!transfer.destinationProductId.trim()||!transfer.sourceCostCentreId.trim()||!transfer.destinationCostCentreId.trim()||
+     transfer.quantity===null||!Number.isFinite(transfer.quantity)||transfer.quantity<=0||
+     transfer.conversionFactor===null||!Number.isFinite(transfer.conversionFactor)||transfer.conversionFactor<=0||
+     transfer.transferValue===null||!Number.isFinite(transfer.transferValue)||transfer.transferValue<0)continue
+  const sourceKey=[transfer.period,transfer.sourceStage,transfer.sourceProductId.trim(),transfer.sourceCostCentreId.trim()].join(':')
+  const destinationKey=[transfer.period,transfer.destinationStage,transfer.destinationProductId.trim(),transfer.destinationCostCentreId.trim()].join(':')
+  if(!movementByStageKey.has(sourceKey))issues.push('Inter-stage transfer '+id+' has no matching source-stage inventory movement row.')
+  if(!movementByStageKey.has(destinationKey))issues.push('Inter-stage transfer '+id+' has no matching destination-stage inventory movement row.')
+  const from=transferOut.get(sourceKey)??{quantity:0,value:0}
+  from.quantity+=transfer.quantity;from.value+=transfer.transferValue;transferOut.set(sourceKey,from)
+  const to=transferIn.get(destinationKey)??{quantity:0,value:0}
+  to.quantity+=transfer.quantity*transfer.conversionFactor;to.value+=transfer.transferValue;transferIn.set(destinationKey,to)
+ }
+ if(issues.length)return {valid:false,issues,rows:[]}
+ const adjustedMovements=movements.map(row=>{
+  const key=[row.period,row.inventoryStage,row.productId.trim(),row.costCentreId.trim()].join(':')
+  const outgoing=transferOut.get(key)??{quantity:0,value:0}
+  const incoming=transferIn.get(key)??{quantity:0,value:0}
+  return {...row,
+   receiptsQuantity:(row.receiptsQuantity??0)+incoming.quantity,
+   receiptsValue:(row.receiptsValue??0)+incoming.value,
+   consumptionQuantity:(row.consumptionQuantity??0)+outgoing.quantity,
+   consumptionValue:(row.consumptionValue??0)+outgoing.value,
+  }
+ })
  const stages=['raw-materials','work-in-progress','finished-goods'] as const
  if(!Number.isInteger(periodCount)||periodCount<1)issues.push('Stage inventory reconciliation requires a positive period count.')
  if(!Number.isFinite(tolerance)||tolerance<0)issues.push('Stage inventory tolerance must be finite and non-negative.')
@@ -213,7 +285,7 @@ export function reconcileStageInventoryMovements(
  }
  const rows:StageInventoryReconciliationResult['rows']=[]
  for(const stage of stages){
-  const stageRows=movements.filter(row=>row.inventoryStage===stage)
+  const stageRows=adjustedMovements.filter(row=>row.inventoryStage===stage)
   if(!stageRows.length)continue
   const byPeriod=new Map<number,StageInventoryMovementDraft[]>()
   for(const row of stageRows){
