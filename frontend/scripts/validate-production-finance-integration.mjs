@@ -12,6 +12,10 @@ const integrationOutput = (await transpile('projects/productionFinanceIntegratio
 const integrationUrl = 'data:text/javascript;base64,' + Buffer.from(integrationOutput).toString('base64')
 const { analyzeProductionRecord } = await import(analysisUrl)
 const { buildProductionFinanceBridge } = await import(integrationUrl)
+const mappingOutput = await transpile('projects/productionCostMapping.ts')
+const mappingUrl = 'data:text/javascript;base64,' + Buffer.from(mappingOutput).toString('base64')
+const { mapProductionCostsToFinance } = await import(mappingUrl)
+
 const record = (overrides={}) => ({id:'r1',projectId:'p1',lineId:'l1',product:'coil',periodStart:'2026-01-01',periodEnd:'2026-01-31',plannedOutput:100,totalOutput:100,goodOutput:100,scrapOutput:0,matchedMaterialInput:100,matchedMaterialUnit:'t',materials:[{id:'m1',name:'billet',consumedQuantity:100,unit:'t',unitCost:2,currency:'USD'}],directLaborCost:10,energyCost:10,maintenanceCost:0,allocatedOverhead:0,currency:'USD',createdAt:'2026-01-31',updatedAt:'2026-01-31',salesQuantity:80,...overrides})
 const periods=[{index:1,startDate:'2026-01-01',endDate:'2026-01-31',days:31,partial:false},{index:2,startDate:'2026-02-01',endDate:'2026-02-28',days:28,partial:false}]
 let result=buildProductionFinanceBridge([record()], 'p1', periods, 'USD')
@@ -34,4 +38,21 @@ result=buildProductionFinanceBridge(twoPeriod,'p1',periods,'USD')
 assert.equal(result.valid,true)
 assert.ok(Math.abs(result.periods[1].products[0].closingInventoryValue-242)<1e-9)
 assert.equal(analyzeProductionRecord(record()).totalProductionCost,220)
-console.log('Production-finance bridge tests passed: project scope, exact period mapping, overlap, currency, product inventory roll-forward, sales, CPP/CPS and carry-forward.')
+const mapped = mapProductionCostsToFinance({
+ cpp:[220,0],cps:[176,0],hasProductionRecords:[true,false],utilization:[0.8,0.9],opexFactors:[1,1.1],
+ fullCapacityVariableCashCost:500,
+ mappedBaseCosts:{materials:100,directLabor:50,energy:30,maintenance:20,overhead:20}
+})
+assert.equal(mapped.valid,true)
+assert.deepEqual(mapped.costOfProductsSoldByYear,[176,0])
+assert.deepEqual(mapped.otherVariableCashCostByYear,[224,495])
+assert.equal(mapProductionCostsToFinance({
+ cpp:[220],cps:[176],hasProductionRecords:[true],utilization:[1],opexFactors:[1],
+ fullCapacityVariableCashCost:100,mappedBaseCosts:{materials:100,directLabor:50,energy:30,maintenance:20,overhead:20}
+}).valid,false)
+assert.equal(mapProductionCostsToFinance({
+ cpp:[220],cps:[176],hasProductionRecords:[true],utilization:[1],opexFactors:[1],
+ fullCapacityVariableCashCost:500,mappedBaseCosts:{materials:-1,directLabor:0,energy:0,maintenance:0,overhead:0}
+}).valid,false)
+
+console.log('Production-finance tests passed: project scope, period mapping, overlap, currency, inventory roll-forward, sales, CPP/CPS, baseline component replacement and no-double-counting.')
