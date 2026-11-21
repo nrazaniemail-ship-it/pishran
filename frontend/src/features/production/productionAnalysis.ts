@@ -156,3 +156,38 @@ export function summarizeFinishedGoodsPortfolio(products: FinishedGoodsProductRe
     closingInventoryValue: sum.closingInventoryValue + product.closingInventoryValue,
   }), { cpp: 0, cps: 0, closingQuantity: 0, closingInventoryValue: 0 })
 }
+
+
+export type ComfarProductionStockInput = {
+  openingStock: number
+  salesQuantity: number
+  closingStockRequirement: number
+}
+
+/** COMFAR III production/sales schedule: production = sales + closing stock - opening stock. */
+export function calculateComfarProductionRequirement(input: ComfarProductionStockInput) {
+  const values = [input.openingStock, input.salesQuantity, input.closingStockRequirement]
+  if (!values.every(finiteNonNegative)) throw new Error('مقادیر فروش و موجودی اول/پایان باید محدود و نامنفی باشند')
+  const productionQuantity = input.salesQuantity + input.closingStockRequirement - input.openingStock
+  if (productionQuantity < -1e-9) throw new Error('موجودی اول دوره برای فروش و موجودی پایان تعیین‌شده کافی است؛ تولید منفی مجاز نیست')
+  return { productionQuantity: Math.max(0, productionQuantity), openingStock: input.openingStock, salesQuantity: input.salesQuantity, closingStock: input.closingStockRequirement }
+}
+
+export type ProductIncomeStatementInput = {
+  productId: string
+  currency: string
+  salesRevenue: number
+  cpp: number
+  openingInventoryValue: number
+  closingInventoryValue: number
+}
+
+/** Product-level P&L bridge; cost of sales follows opening stock + current production cost - closing stock. */
+export function calculateProductIncomeStatementLine(input: ProductIncomeStatementInput) {
+  const values = [input.salesRevenue, input.cpp, input.openingInventoryValue, input.closingInventoryValue]
+  if (!input.productId.trim() || !input.currency.trim() || !values.every(finiteNonNegative)) throw new Error('ورودی سطر سود و زیان محصول معتبر نیست')
+  const availableCost = input.openingInventoryValue + input.cpp
+  if (input.closingInventoryValue > availableCost + 1e-9) throw new Error('ارزش موجودی پایان از بهای کالای قابل فروش بیشتر است')
+  const cps = availableCost - input.closingInventoryValue
+  return { productId: input.productId, currency: input.currency, salesRevenue: input.salesRevenue, cpp: input.cpp, cps, grossProfit: input.salesRevenue - cps, closingInventoryAsset: input.closingInventoryValue }
+}
