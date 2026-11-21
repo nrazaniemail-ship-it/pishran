@@ -216,6 +216,32 @@ close(chained.rows.find(row=>row.productId==='P2'&&row.period===2).openingInvent
 close(chained.rows.find(row=>row.productId==='P3'&&row.period===2).openingInventoryValue,35*(100+1000+transferTwoCost)/115)
 assert.deepEqual([chainP1.productionQuantity,chainP2.productionQuantity,chainP3.productionQuantity],[100,110,105], 'destination-stage transfer quantities must be included in the destination product operating volume')
 
+// A transfer between cost centres of the same product is an internal
+// reclassification at product-schedule level: it must not create output or COGS.
+const sameProductCentreTransfer=module.buildProductOperatingSchedule({
+ ...base,
+ productionTransfers:[
+  {id:'INTRA-1',period:1,sourceProductId:'P1',destinationProductId:'P1',
+   sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:10,
+   sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+ ],
+},periods,1,'IRR')
+assert.equal(sameProductCentreTransfer.valid,true,sameProductCentreTransfer.issues.join('; '))
+const intraRow=sameProductCentreTransfer.rows.find(row=>row.productId==='P1'&&row.period===1)
+assert.equal(intraRow.productionQuantity,100,'intra-product transfer must not inflate production volume')
+assert.equal(intraRow.productionCost,1000,'intra-product transfer must not duplicate or remove CPP')
+assert.equal(intraRow.closingInventoryQuantity,30,'intra-product transfer must not change aggregate finished-goods quantity')
+assert.equal(intraRow.closingInventoryValue,300,'intra-product transfer must not revalue aggregate finished goods')
+assert.equal(intraRow.costOfSales,800,'intra-product transfer must not distort cost of sales')
+const overTransferredIntra=module.buildProductOperatingSchedule({
+ ...base,
+ productionTransfers:[
+  {id:'INTRA-1',period:1,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:20,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:200},
+  {id:'INTRA-2',period:1,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-C',quantity:20,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:200},
+ ],
+},periods,1,'IRR')
+assert.equal(overTransferredIntra.valid,false,'multiple internal transfers cannot exceed aggregate source closing quantity')
+
 console.log('Product-by-product production, weighted-average inventory, COGS and sales validation passed.')
 
 const flowProduct={
