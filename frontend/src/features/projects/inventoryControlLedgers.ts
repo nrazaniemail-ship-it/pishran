@@ -310,14 +310,17 @@ export function reconcileStageInventoryMovements(
    issues.push('Stage inventory engine values must be finite and non-negative.')
   expected.set(row.period,{rawMaterials:row.rawMaterials,workInProgress:row.workInProgress,finishedGoods:row.finishedGoods})
  }
- const expectedProductRows=new Map<string,{rawMaterials:number;workInProgress:number;finishedGoods:number}>()
+ const expectedProductRows=new Map<string,{rawMaterials:number;workInProgress:number;finishedGoods:number;finishedGoodsSalesQuantity?:number;finishedGoodsCostOfSales?:number}>()
  for(const row of expectedByProductPeriod??[]){
   const key=[row.period,row.productId.trim()].join(':')
   if(!Number.isInteger(row.period)||row.period<1||row.period>periodCount||!row.productId.trim()||expectedProductRows.has(key))
    issues.push('Product-level inventory engine values contain an invalid or duplicate period/product key.')
   if([row.rawMaterials,row.workInProgress,row.finishedGoods].some(value=>!finite(value)))
    issues.push('Product-level inventory engine values must be finite and non-negative.')
-  expectedProductRows.set(key,{rawMaterials:row.rawMaterials,workInProgress:row.workInProgress,finishedGoods:row.finishedGoods,finishedGoodsSalesQuantity:row.finishedGoodsSalesQuantity,finishedGoodsCostOfSales:row.finishedGoodsCostOfSales})
+  if([row.finishedGoodsSalesQuantity,row.finishedGoodsCostOfSales].some(value=>value!==undefined&&(!Number.isFinite(value)||value<0)))
+   issues.push('Product-level finished-goods sales quantity and cost of sales must be finite and non-negative when supplied.')
+  expectedProductRows.set(key,{rawMaterials:row.rawMaterials,workInProgress:row.workInProgress,finishedGoods:row.finishedGoods,
+   finishedGoodsSalesQuantity:row.finishedGoodsSalesQuantity,finishedGoodsCostOfSales:row.finishedGoodsCostOfSales})
  }
  const rows:StageInventoryReconciliationResult['rows']=[]
  for(const stage of stages){
