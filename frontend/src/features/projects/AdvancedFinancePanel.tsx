@@ -721,10 +721,10 @@ export default function AdvancedFinancePanel(props: Props) {
          <article><small>{t('آورده خودکار ساخت','Automatic construction equity')}</small><b>{money(periodicFinanceResult.totalAutomaticEquity)}</b></article>
          <article><small>{t('اوج اضافه‌برداشت خودکار','Peak automatic overdraft')}</small><b>{money(periodicFinanceResult.peakAutomaticOverdraft)}</b></article>
       </div>
-      {props.cppCpsTraceItems?.length>0&&<div className="fw-card">
+      {(props.cppCpsTraceItems?.length??0)>0&&<div className="fw-card">
         <h4>{t('دفتر ردیابی CPP/CPS و کنترل منبع','CPP/CPS Traceability & Source Control')}</h4>
         <div className="fw-result">{t('وضعیت دفتر','Ledger status')}: <b>{cppCpsTraceLedger.readyForCppPosting?t('آماده ثبت','Ready to post'):t('نیازمند تکمیل / تأیید','Completion / verification required')}</b></div>
-        <div className="fw-result">{t('اقلام فاقد منبع معتبر','Items without verified source')}: <b>{cppCpsTraceLedger.unverifiedItemIds.length}</b> · {t('جمع افزایشی مستند (به تفکیک دوره)','Known incremental cost by period')}: <b>{cppCpsTraceLedger.knownIncrementalByPeriod.map(money).join(' · ')}</b></div>
+        <div className="fw-result">{t('اقلام فاقد منبع معتبر','Items without verified source')}: <b>{cppCpsTraceLedger.unverifiedItemIds.length}</b> · {t('جمع افزایشی مستند (به تفکیک دوره)','Known incremental cost by period')}: <b>{cppCpsTraceLedger.knownIncrementalByPeriod.map(value=>value===null?'—':money(value)).join(' · ')}</b></div>
         {cppCpsTraceLedger.issues.length>0&&<ul className="fw-checklist">{cppCpsTraceLedger.issues.map((issue,index)=><li key={index}>{issue}</li>)}</ul>}
         {cppCpsTraceLedger.unverifiedItemIds.length>0&&<p className="fw-hint" role="alert">{t('مبالغ اقلام تأییدنشده خالی مانده‌اند و جمع کامل هزینه قابل ثبت نیست. هیچ مقدار جایگزین یا صفر فرض نشده است.','Unverified item amounts remain blank; complete costs cannot be posted. No substitute or zero values have been assumed.')}</p>}
         {cppCpsScheduleBinding?.issues.map((issue,index)=><p className="fw-hint" key={'binding-'+index} role="alert">{issue}</p>)}
