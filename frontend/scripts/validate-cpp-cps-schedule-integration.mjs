@@ -19,12 +19,12 @@ const schedule = {
       salesQuantity: 80, productionQuantity: 100, closingInventoryQuantity: 30,
       closingInventoryValue: 300, unitProductionCost: 10, productionCost: 1000,
       weightedAverageUnitCost: 10, costOfSales: 800, netSalesRevenue: 1600,
-      subsidyIncome: 0, grossProfit: 800 },
+      subsidyIncome: 0, grossProfit: 800, hasInventoryFlow: false, wipQuantity: 0, materialEquivalentUnits: 0, conversionEquivalentUnits: 0, materialCompletionPercent: 0, conversionCompletionPercent: 0 },
     { productId: 'P1', period: 2, openingInventoryQuantity: 30, openingInventoryValue: 300,
       salesQuantity: 90, productionQuantity: 80, closingInventoryQuantity: 20,
       closingInventoryValue: 200, unitProductionCost: 10, productionCost: 800,
       weightedAverageUnitCost: 10, costOfSales: 900, netSalesRevenue: 1980,
-      subsidyIncome: 0, grossProfit: 1080 },
+      subsidyIncome: 0, grossProfit: 1080, hasInventoryFlow: false, wipQuantity: 0, materialEquivalentUnits: 0, conversionEquivalentUnits: 0, materialCompletionPercent: 0, conversionCompletionPercent: 0 },
   ],
 }
 const verifiedItem = {
