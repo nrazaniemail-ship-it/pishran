@@ -3,6 +3,8 @@ export type SalesTaxOutputEntry = {
   period: number
   taxableSales: number
   ratePercent: number
+  sourceReference: string
+  sourceVerified: boolean
 }
 
 export type SalesTaxInputCreditEntry = {
