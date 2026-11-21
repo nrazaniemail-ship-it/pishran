@@ -39,7 +39,7 @@ export function buildProductionFinanceBridge(
   const sortedPeriods = [...periods].sort((a, b) => a.startDate.localeCompare(b.startDate))
   for (let i = 0; i < sortedPeriods.length; i++) {
     const period = sortedPeriods[i]
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(period.startDate) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(period.endDate) || period.startDate > period.endDate)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(period.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(period.endDate) || period.startDate > period.endDate)
       errors.push(`دوره مالی ${period.index} تاریخ نامعتبر دارد`)
     if (i > 0 && sortedPeriods[i - 1].endDate >= period.startDate) errors.push('دوره‌های مالی هم‌پوشان یا نامرتب هستند')
   }
