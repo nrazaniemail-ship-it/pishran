@@ -7,7 +7,7 @@ export type TraceCostBehaviour = 'fixed' | 'variable' | 'mixed'
 export type TraceCostBasis = 'per-unit-output' | 'nominal-capacity' | 'period-total' | 'period-adjustments'
 export type BaseCostCoverage = 'fully-included' | 'partially-included' | 'excluded' | 'unverified'
 export type TraceSourceStatus = 'verified' | 'unverified'
-export type TraceAllocationMethod = 'direct-product' | 'production-quantity' | 'revenue' | 'not-allocated'
+export type TraceAllocationMethod = 'direct-product' | 'production-quantity' | 'revenue' | 'cost-centre-driver' | 'not-allocated'
 
 export type CppCpsTraceItem = {
   id: string
@@ -117,7 +117,7 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
       issues.push(prefix + 'direct-product-allocation-requires-product-id')
     if (item.allocationMethod !== 'direct-product' && item.productId)
       issues.push(prefix + 'product-id-only-allowed-for-direct-product-allocation')
-    if (!['direct-product', 'production-quantity', 'revenue', 'not-allocated'].includes(item.allocationMethod))
+    if (!['direct-product', 'production-quantity', 'revenue', 'cost-centre-driver', 'not-allocated'].includes(item.allocationMethod))
       issues.push(prefix + 'allocation-method-required')
 
     const amounts = item.periodAmounts ?? []
