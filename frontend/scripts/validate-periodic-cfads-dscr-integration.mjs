@@ -78,3 +78,25 @@ assert.ok(Math.abs(schedule[2].principal - 250) < 0.01)
 assert.ok(Math.abs(schedule[2].closingBalance) < 0.01)
 
 console.log('Periodic CFADS, debt service, DSCR covenant and working-capital release validation passed.')
+
+// Negative net working capital is a funding source while it grows, but its
+// settlement is a cash outflow. Verify the signed movement reaches CFADS.
+const negativeWorkingCapitalInput = {
+  ...input,
+  annualRevenue: [0, 100, 100],
+  annualVariableCost: [0, 20, 20],
+  annualFixedCost: [0, 0, 0],
+  annualFixedInvestment: [0, 0, 0],
+  annualEquityContributions: [0, 0, 0],
+  workingCapitalByPeriod: [-30, -40, 0],
+  openingWorkingCapital: -10,
+  loans: [],
+}
+const negativeWorkingCapitalResult = engine.calculateIntegratedPeriodicFinance(negativeWorkingCapitalInput)
+assert.equal(negativeWorkingCapitalResult.valid, true, negativeWorkingCapitalResult.warnings.join('; '))
+assert.ok(Math.abs(negativeWorkingCapitalResult.rows[0].cfads - 110) < 0.01,
+  'An increase in negative net working capital must release 20 into CFADS')
+assert.ok(Math.abs(negativeWorkingCapitalResult.rows[1].cfads - 90) < 0.01,
+  'A further 10 increase in negative net working capital must release 10 into CFADS')
+assert.ok(Math.abs(negativeWorkingCapitalResult.rows[2].cfads - 40) < 0.01,
+  'Settling 40 of negative net working capital must reduce terminal CFADS by 40')
