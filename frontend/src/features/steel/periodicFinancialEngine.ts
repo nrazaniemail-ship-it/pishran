@@ -1864,10 +1864,6 @@ export function buildPeriodicThreeFinancialStatements(
         automaticFunding.automaticOverdraftRepayment),
       automaticOverdraft: automaticOverdraftBalance - automaticFunding.automaticOverdraftBalance,
       netWorkingCapital: closingWorkingCapital - netWorkingCapital - row.changeInWorkingCapital,
-      rawMaterialsInventory: closingRawMaterialsInventory - rawMaterialsInventory - (closingRawMaterialsInventory - rawMaterialsInventory),
-      workInProgressInventory: closingWorkInProgressInventory - workInProgressInventory - (closingWorkInProgressInventory - workInProgressInventory),
-      otherNetWorkingCapital: closingOtherNetWorkingCapital - (netWorkingCapital - rawMaterialsInventory - workInProgressInventory) -
-        ((closingWorkingCapital - netWorkingCapital) - (closingRawMaterialsInventory - rawMaterialsInventory) - (closingWorkInProgressInventory - workInProgressInventory)),
       netFixedAssets: closingNetFixedAssets - netFixedAssets -
         (row.fixedInvestment + row.maintenanceCapex - row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed),
       deferredPreOperatingAssets: closingPreOperatingAssets - deferredPreOperatingAssets - row.preOperatingCost - row.capitalizedInterest - row.capitalizedFinancingFees,
