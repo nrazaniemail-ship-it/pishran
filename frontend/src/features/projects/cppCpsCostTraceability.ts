@@ -18,6 +18,7 @@ export type CppCpsTraceItem = {
   fixedPercent: number | null
   variablePercent: number | null
   productId: string | null
+  costCentreId: string | null
   allocationMethod: TraceAllocationMethod
   baseCostCoverage: BaseCostCoverage
   periodAmounts: (number | null)[]
@@ -41,6 +42,7 @@ export type CppCpsTracePeriodRow = {
   sourceStatus: TraceSourceStatus
   allocationMethod: TraceAllocationMethod
   productId: string | null
+  costCentreId: string | null
   path: readonly ['production-cost' | 'raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital']
 }
 
@@ -52,6 +54,10 @@ export type CppCpsTraceLedger = {
   knownIncrementalByPeriod: (number | null)[]
   completeIncrementalByPeriod: (number | null)[]
   knownIncrementalByCategory: Record<TraceCostCategory, number>
+  knownIncrementalByCostCentre: Record<string, number>
+  completeIncrementalByCostCentre: Record<string, number | null>
+  knownIncrementalByCostCentreAndCategory: Record<string, Record<TraceCostCategory, number>>
+  unverifiedCostCentreIds: string[]
   unverifiedItemIds: string[]
   readyForCppPosting: boolean
 }
@@ -75,6 +81,9 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
   const knownIncrementalByPeriod = Array(Math.max(0, periodCount)).fill(0) as number[]
   const hasUnverifiedByPeriod = Array(Math.max(0, periodCount)).fill(false) as boolean[]
   const knownIncrementalByCategory = emptyCategoryTotals()
+  const knownIncrementalByCostCentre: Record<string, number> = {}
+  const knownIncrementalByCostCentreAndCategory: Record<string, Record<TraceCostCategory, number>> = {}
+  const unverifiedCostCentreIds: string[] = []
   const unverifiedItemIds: string[] = []
   const ids = new Set<string>()
 
@@ -118,6 +127,8 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
 
     if (item.source?.status === 'unverified') {
       unverifiedItemIds.push(item.id)
+      const unverifiedCentre = item.costCentreId?.trim()
+      if (unverifiedCentre && !unverifiedCostCentreIds.includes(unverifiedCentre)) unverifiedCostCentreIds.push(unverifiedCentre)
       if (item.source.reliability !== 'unverified')
         issues.push(prefix + 'unverified-source-must-use-unverified-reliability')
       if (amounts.some(value => value !== null) || covered.some(value => value !== null))
@@ -130,7 +141,7 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
           itemId: item.id, category: item.category, period: period + 1,
           grossCost: null, baseCoveredCost: null, incrementalCpp: null,
           baseCoverage: 'unverified', sourceStatus: 'unverified',
-          allocationMethod: item.allocationMethod, productId: item.productId,
+          allocationMethod: item.allocationMethod, productId: item.productId, costCentreId: unverifiedCentre || null,
           path: item.category === 'materials'
             ? ['raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital']
             : ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'],
@@ -144,6 +155,7 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
       issues.push(prefix + 'verified-source-requires-reference-description-and-reliability')
       continue
     }
+    if (!item.costCentreId?.trim()) issues.push(prefix + 'cost-centre-id-required-for-verified-cost')
     if (item.baseCostCoverage === 'unverified') {
       issues.push(prefix + 'verified-cost-requires-explicit-base-coverage-treatment')
       continue
@@ -170,11 +182,15 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
       const incremental = gross - coveredAmount
       knownIncrementalByPeriod[period] += incremental
       knownIncrementalByCategory[item.category] += incremental
+      const centre = item.costCentreId!.trim()
+      knownIncrementalByCostCentre[centre] = (knownIncrementalByCostCentre[centre] ?? 0) + incremental
+      knownIncrementalByCostCentreAndCategory[centre] ??= emptyCategoryTotals()
+      knownIncrementalByCostCentreAndCategory[centre][item.category] += incremental
       rows.push({
         itemId: item.id, category: item.category, period: period + 1,
         grossCost: gross, baseCoveredCost: coveredAmount, incrementalCpp: incremental,
         baseCoverage: item.baseCostCoverage, sourceStatus: 'verified',
-        allocationMethod: item.allocationMethod, productId: item.productId,
+        allocationMethod: item.allocationMethod, productId: item.productId, costCentreId: item.costCentreId!.trim(),
         path: item.category === 'materials'
           ? ['raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital']
           : ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'],
@@ -183,6 +199,8 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
   }
 
   const complete = unverifiedItemIds.length === 0
+  const completeIncrementalByCostCentre: Record<string, number | null> = { ...knownIncrementalByCostCentre }
+  for (const centre of unverifiedCostCentreIds) completeIncrementalByCostCentre[centre] = null
   const valid = issues.length === 0
   return {
     valid, complete: valid && complete, issues, rows: valid ? rows : [],
@@ -190,7 +208,9 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
     completeIncrementalByPeriod: valid
       ? knownIncrementalByPeriod.map((amount, index) => hasUnverifiedByPeriod[index] ? null : amount)
       : [],
-    knownIncrementalByCategory, unverifiedItemIds,
+    knownIncrementalByCategory, knownIncrementalByCostCentre,
+    completeIncrementalByCostCentre, knownIncrementalByCostCentreAndCategory,
+    unverifiedCostCentreIds, unverifiedItemIds,
     readyForCppPosting: valid && complete,
   }
 }
