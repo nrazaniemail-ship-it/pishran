@@ -215,7 +215,8 @@ export function reconcileStageInventoryMovements(
  expectedByPeriod:{period:number;rawMaterials:number;workInProgress:number;finishedGoods:number}[],
  periodCount:number,
  tolerance=0.01,
- stageTransfers:InventoryStageTransfer[]=[]
+ stageTransfers:InventoryStageTransfer[]=[],
+ expectedByProductPeriod?:{period:number;productId:string;rawMaterials:number;workInProgress:number;finishedGoods:number}[]
 ):StageInventoryReconciliationResult{
  const issues:string[]=[]
  for(const row of movements){
@@ -305,6 +306,15 @@ export function reconcileStageInventoryMovements(
    issues.push('Stage inventory engine values must be finite and non-negative.')
   expected.set(row.period,{rawMaterials:row.rawMaterials,workInProgress:row.workInProgress,finishedGoods:row.finishedGoods})
  }
+ const expectedProductRows=new Map<string,{rawMaterials:number;workInProgress:number;finishedGoods:number}>()
+ for(const row of expectedByProductPeriod??[]){
+  const key=[row.period,row.productId.trim()].join(':')
+  if(!Number.isInteger(row.period)||row.period<1||row.period>periodCount||!row.productId.trim()||expectedProductRows.has(key))
+   issues.push('Product-level inventory engine values contain an invalid or duplicate period/product key.')
+  if([row.rawMaterials,row.workInProgress,row.finishedGoods].some(value=>!finite(value)))
+   issues.push('Product-level inventory engine values must be finite and non-negative.')
+  expectedProductRows.set(key,{rawMaterials:row.rawMaterials,workInProgress:row.workInProgress,finishedGoods:row.finishedGoods})
+ }
  const rows:StageInventoryReconciliationResult['rows']=[]
  for(const stage of stages){
   const stageRows=adjustedMovements.filter(row=>row.inventoryStage===stage)
@@ -355,6 +365,23 @@ export function reconcileStageInventoryMovements(
    }))
    const centreCheck=reconcileCostCentreInventory(mapped,[],periodCount,tolerance)
    issues.push(...centreCheck.issues.map(issue=>'Stage '+stage+': '+issue))
+   if(expectedByProductPeriod){
+    const ledgerByProduct=new Map<string,number>()
+    for(const row of periodRows)ledgerByProduct.set(row.productId.trim(),(ledgerByProduct.get(row.productId.trim())??0)+(row.closingValue??0))
+    for(const [key,engineProduct] of expectedProductRows){
+     if(!key.startsWith(period+':'))continue
+     const productId=key.slice(String(period).length+1)
+     const field=stage==='raw-materials'?'rawMaterials':stage==='work-in-progress'?'workInProgress':'finishedGoods'
+     const ledgerValue=ledgerByProduct.get(productId)??0
+     if(!near(ledgerValue,engineProduct[field],tolerance/100))
+      issues.push('Stage '+stage+' product '+productId+' closing inventory does not match the finance engine in period '+period+'.')
+     ledgerByProduct.delete(productId)
+    }
+    for(const [productId,ledgerValue] of ledgerByProduct){
+     if(ledgerValue>tolerance/100)
+      issues.push('Stage '+stage+' product '+productId+' has no matching product-level finance-engine inventory row in period '+period+'.')
+    }
+   }
    const ledgerClosingValue=periodRows.reduce((sum,row)=>sum+(row.closingValue??0),0)
    const expectedRow=expected.get(period)
    if(!expectedRow){
