@@ -361,7 +361,11 @@ export function buildProductOperatingSchedule(
   for(const transfer of drafts.productionTransfers??[]){
     const source=rows.find(row=>row.productId===transfer.sourceProductId&&row.period===transfer.period)
     const destination=rows.find(row=>row.productId===transfer.destinationProductId&&row.period===transfer.period)
+    const sourceProduct=drafts.sales.find(item=>item.productId===transfer.sourceProductId)
+    const destinationProduct=drafts.sales.find(item=>item.productId===transfer.destinationProductId)
     if(!source||!destination){issues.push('Transfer '+transfer.id+' requires source and destination product rows in the same period.');continue}
+    if(!sourceProduct?.unitOfMeasure?.trim()||sourceProduct.unitOfMeasure.trim()!==transfer.sourceUnit.trim())issues.push('Transfer '+transfer.id+' source unit must match the declared base unit of product '+transfer.sourceProductId+'.')
+    if(!destinationProduct?.unitOfMeasure?.trim()||destinationProduct.unitOfMeasure.trim()!==transfer.destinationUnit.trim())issues.push('Transfer '+transfer.id+' destination unit must match the declared base unit of product '+transfer.destinationProductId+'.')
     const sourceKey=transfer.sourceProductId+':'+transfer.period
     if(!sourceCostByProductPeriod.has(sourceKey))sourceCostByProductPeriod.set(sourceKey,source.productionCost)
     const alreadyTransferred=transferredOutByProductPeriod.get(sourceKey)??0
