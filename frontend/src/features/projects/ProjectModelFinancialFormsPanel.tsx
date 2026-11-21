@@ -127,8 +127,9 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
    <h5>{t('برنامه پرداخت مالیات فروش به تفکیک دوره','Sales-tax remittance by project period')}</h5>
    {projectPeriods.map((period,index)=>{const periodNo=index+1;const entry=salesTaxLedger.settlements.find(x=>x.period===periodNo);return <div className="fw-grid" key={periodNo}>
     <div className="fw-result">{t('دوره','Period')} {periodNo} · {period.startDate} – {period.endDate}</div>
-    <NumberField label={t('مبلغ پرداخت / تهاتر','Cash settlement / offset')} value={entry?.amount??null} onChange={v=>patchSalesTaxLedger({settlements:[...salesTaxLedger.settlements.filter(x=>x.period!==periodNo),{period:periodNo,amount:v,sourceReference:entry?.sourceReference??''}]})}/>
-    <TextField label={t('مرجع رسید پرداخت یا سند عدم پرداخت','Payment receipt / no-payment-due reference')} value={entry?.sourceReference??''} onChange={v=>patchSalesTaxLedger({settlements:[...salesTaxLedger.settlements.filter(x=>x.period!==periodNo),{period:periodNo,amount:entry?.amount??null,sourceReference:v}]})}/>
+    <NumberField label={t('مبلغ پرداخت / تهاتر','Cash settlement / offset')} value={entry?.amount??null} onChange={v=>patchSalesTaxLedger({settlements:[...salesTaxLedger.settlements.filter(x=>x.period!==periodNo),{period:periodNo,amount:v,sourceReference:entry?.sourceReference??'',sourceVerified:entry?.sourceVerified??false}]})}/>
+    <TextField label={t('مرجع رسید پرداخت یا سند عدم پرداخت','Payment receipt / no-payment-due reference')} value={entry?.sourceReference??''} onChange={v=>patchSalesTaxLedger({settlements:[...salesTaxLedger.settlements.filter(x=>x.period!==periodNo),{period:periodNo,amount:entry?.amount??null,sourceReference:v,sourceVerified:false}]})}/>
+    <label className="fw-field"><span>{t('تأیید سند پرداخت / عدم پرداخت','Settlement evidence verified')}</span><select value={entry?.sourceVerified?'yes':'no'} onChange={e=>patchSalesTaxLedger({settlements:[...salesTaxLedger.settlements.filter(x=>x.period!==periodNo),{period:periodNo,amount:entry?.amount??null,sourceReference:entry?.sourceReference??'',sourceVerified:e.target.value==='yes'}]})}><option value="no">{t('خیر','No')}</option><option value="yes">{t('بله','Yes')}</option></select></label>
    </div>})}
   </div>
   <div className="fw-card">
