@@ -285,7 +285,7 @@ export function describeUnintegratedFinancialDraftInput(path:string,language:'fa
   const messages:Record<string,[string,string]> = {
    'foreign-exchange-effect-required':['برای اثر ارز خارجی، تعدیل اقتصادی با طبقه ارز خارجی ثبت کنید','Add at least one foreign-exchange economic adjustment'],
    'employment-effect-required':['برای اثر اشتغال، تعدیل اقتصادی اشتغال ثبت کنید','Add at least one employment economic adjustment'],
-   'value-added-analysis-not-integrated':['گزارش ارزش افزوده هنوز به تفکیک مصرف واسطه‌ای و عوامل تولید متصل نشده است','Value-added reporting is not yet connected to intermediate consumption and factor inputs'],
+   'value-added-analysis-not-valid':['دفتر ارزش افزوده ناقص است یا با CPP/CPS، سرمایه‌گذاری و دوره‌های مالی تطبیق ندارد','Value-added ledger is incomplete or does not reconcile to CPP/CPS, investment and financial periods'],
    'cost-centre-analysis-not-integrated':['گزارش مراکز هزینه هنوز به دفتر هزینه تفصیلی متصل نشده است','Cost-centre reporting is not yet connected to the detailed cost ledger'],
    'cost-centre-ledger-not-ready':['برای تحلیل مراکز هزینه، دفتر CPP/CPS معتبر و دست‌کم یک قلم هزینه لازم است','A valid CPP/CPS trace ledger with at least one cost item is required for cost-centre analysis'],
    'cost-allocation-not-integrated':['تخصیص هزینه هنوز به مبانی و محرک‌های هزینه متصل نشده است','Cost allocation is not yet connected to cost drivers and allocation bases'],
