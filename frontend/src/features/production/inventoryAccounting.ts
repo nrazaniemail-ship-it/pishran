@@ -38,7 +38,7 @@ export function valueInventoryLedger(x:InventoryLedger):InventoryValuation {
 }
 export type ConversionCostPool = { id:string; name:string; amount:number; currency:string }
 export type ConversionAllocation = { poolId:string; poolName:string; allocatedAmount:number; allocationRate:number }
-export function allocateConversionCosts(pools:ConversionCostPool, outputBase:number):ConversionAllocation[]
+export function allocateConversionCosts(pools:ConversionCostPool[], outputBase:number):ConversionAllocation[]
 export function allocateConversionCosts(pools:ConversionCostPool[], outputBase:number):ConversionAllocation[] {
   if(!Number.isFinite(outputBase)||outputBase<=0) throw new Error('مبنای تخصیص باید بزرگ‌تر از صفر باشد')
   if(pools.some(p=>!p.id.trim()||!p.name.trim()||!valid(p.amount)||!p.currency.trim())) throw new Error('مرکز هزینه یا مبلغ تخصیص نامعتبر است')
