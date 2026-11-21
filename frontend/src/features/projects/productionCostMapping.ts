@@ -1,5 +1,5 @@
 export type ProductionCostComponent = 'materials' | 'directLabor' | 'energy' | 'maintenance' | 'overhead'
-export type ProductionCostMapping = Record<ProductionCostComponent, number>
+export type ProductionCostMapping = { variable: Record<ProductionCostComponent, number>; fixed: Record<ProductionCostComponent, number> }
 export type ProductionAnnualCostInput = {
   cpp: number[]
   cps: number[]
@@ -7,6 +7,7 @@ export type ProductionAnnualCostInput = {
   utilization: number[]
   opexFactors: number[]
   fullCapacityVariableCashCost: number
+  fullCapacityFixedCashCost: number
   mappedBaseCosts: ProductionCostMapping
 }
 export type ProductionCostMappingResult = {
@@ -14,7 +15,9 @@ export type ProductionCostMappingResult = {
   errors: string[]
   costOfProductsSoldByYear: number[]
   otherVariableCashCostByYear: number[]
-  mappedBaseCostTotal: number
+  otherFixedCashCostByYear: number[]
+  mappedVariableBaseCostTotal: number
+  mappedFixedBaseCostTotal: number
 }
 
 /** Replace only the explicitly mapped portion of legacy variable costs with actual CPS. */
@@ -25,23 +28,33 @@ export function mapProductionCostsToFinance(input: ProductionAnnualCostInput): P
     errors.push('طول برنامه سالانه هزینه تولید و ضرایب مالی یکسان نیست')
   if (!Number.isFinite(input.fullCapacityVariableCashCost) || input.fullCapacityVariableCashCost < 0)
     errors.push('هزینه متغیر پایه باید عددی معتبر و نامنفی باشد')
-  const entries = Object.entries(input.mappedBaseCosts) as [ProductionCostComponent, number][]
-  if (entries.some(([, value]) => !Number.isFinite(value) || value < 0))
+  const variableEntries = Object.entries(input.mappedBaseCosts.variable) as [ProductionCostComponent, number][]
+  const fixedEntries = Object.entries(input.mappedBaseCosts.fixed) as [ProductionCostComponent, number][]
+  if ([...variableEntries, ...fixedEntries].some(([, value]) => !Number.isFinite(value) || value < 0))
     errors.push('مبالغ نگاشت هزینه پایه باید محدود و نامنفی باشند')
-  const mappedBaseCostTotal = entries.reduce((sum, [, value]) => sum + value, 0)
-  if (mappedBaseCostTotal > input.fullCapacityVariableCashCost + 0.005)
-    errors.push('جمع اجزای نگاشت‌شده از کل هزینه متغیر پایه بیشتر است؛ اتصال CPS برای جلوگیری از دوباره‌شماری متوقف شد')
+  const mappedVariableBaseCostTotal = variableEntries.reduce((sum, [, value]) => sum + value, 0)
+  const mappedFixedBaseCostTotal = fixedEntries.reduce((sum, [, value]) => sum + value, 0)
+  if (mappedVariableBaseCostTotal > input.fullCapacityVariableCashCost + 0.005)
+    errors.push('جمع اجزای نگاشت متغیر از کل هزینه متغیر پایه بیشتر است')
+  if (mappedFixedBaseCostTotal > input.fullCapacityFixedCashCost + 0.005)
+    errors.push('جمع اجزای نگاشت ثابت از کل هزینه ثابت پایه بیشتر است؛ اتصال CPS برای جلوگیری از دوباره‌شماری متوقف شد')
   if (input.cps.some(value => !Number.isFinite(value) || value < 0) ||
       input.utilization.some(value => !Number.isFinite(value) || value < 0 || value > 1) ||
       input.opexFactors.some(value => !Number.isFinite(value) || value < 0))
     errors.push('CPS، ضریب ظرفیت یا ضریب تعدیل هزینه دارای مقدار نامعتبر است')
-  if (errors.length) return { valid: false, errors, costOfProductsSoldByYear: [], otherVariableCashCostByYear: [], mappedBaseCostTotal }
+  if (errors.length) return { valid: false, errors, costOfProductsSoldByYear: [], otherVariableCashCostByYear: [], otherFixedCashCostByYear: [], mappedVariableBaseCostTotal, mappedFixedBaseCostTotal }
   const costOfProductsSoldByYear = input.cps.map((cps, index) => input.hasProductionRecords[index] ? cps : 0)
   const otherVariableCashCostByYear = input.cps.map((_, index) => {
     const remainingBase = input.hasProductionRecords[index]
-      ? input.fullCapacityVariableCashCost - mappedBaseCostTotal
+      ? input.fullCapacityVariableCashCost - mappedVariableBaseCostTotal
       : input.fullCapacityVariableCashCost
     return remainingBase * input.utilization[index] * input.opexFactors[index]
   })
-  return { valid: true, errors, costOfProductsSoldByYear, otherVariableCashCostByYear, mappedBaseCostTotal }
+  const otherFixedCashCostByYear = input.cps.map((_, index) => {
+    const remainingBase = input.hasProductionRecords[index]
+      ? input.fullCapacityFixedCashCost - mappedFixedBaseCostTotal
+      : input.fullCapacityFixedCashCost
+    return remainingBase * input.utilization[index] * input.opexFactors[index]
+  })
+  return { valid: true, errors, costOfProductsSoldByYear, otherVariableCashCostByYear, otherFixedCashCostByYear, mappedVariableBaseCostTotal, mappedFixedBaseCostTotal }
 }
