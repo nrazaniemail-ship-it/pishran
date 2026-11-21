@@ -294,6 +294,7 @@ export type ProjectModelFinancialFormDrafts = {
  productionTransfers: ProductionTransferEntry[]
  inventoryReferenceBenchmarks: InventoryReferenceBenchmarkEntry[]
  costCentreInventoryMovements: CostCentreInventoryMovementFormDraft[]
+ inventoryStageTransfers: InventoryStageTransferFormDraft[]
  helpDriven: HelpDrivenProjectForms
  assets: FixedAssetFormDraft[]
  productionCosts: ProductionCostFormDraft[]
