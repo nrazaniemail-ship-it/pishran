@@ -34,10 +34,30 @@ assert.deepEqual(report.economicCashFlows,[67,75])
 assert.ok(Math.abs(report.economicNpv-(67/1.1+75/1.1**2))<0.01)
 assert.equal(report.totalForeignExchangeAdjustment,2)
 assert.equal(report.totalEmploymentAdjustment,5)
+
+const salesTaxLedger={
+ valid:true,issues:[],totalOutputTax:50,totalRecoverableInputTax:0,totalSettlements:30,closingBalance:20,
+ rows:[
+  {period:1,openingBalance:0,outputTax:50,recoverableInputTax:0,netTaxAccrued:50,settlement:0,closingBalance:50},
+  {period:2,openingBalance:50,outputTax:0,recoverableInputTax:0,netTaxAccrued:0,settlement:30,closingBalance:20},
+ ],
+}
+const economicWithIndirectTax=module.buildProjectEconomicAnalysis(
+ result,periods,adjustments,10,365,'period-end',undefined,'actual-days',1,salesTaxLedger,true)
+assert.equal(economicWithIndirectTax.valid,true,economicWithIndirectTax.issues.join('; '))
+assert.deepEqual(economicWithIndirectTax.rows.map(row=>row.indirectTaxTransferRemoved),[-50,30])
+assert.deepEqual(economicWithIndirectTax.economicCashFlows,[17,105])
+assert.equal(economicWithIndirectTax.totalIndirectTaxTransferRemoved,-20)
+
+const invalidIndirectTax=module.buildProjectEconomicAnalysis(
+ result,periods,adjustments,10,365,'period-end',undefined,'actual-days',1,{...salesTaxLedger,valid:false},true)
+assert.equal(invalidIndirectTax.valid,false)
+assert.ok(invalidIndirectTax.issues.some(issue=>issue.includes('indirect sales-tax ledger')))
+
 const missingDiscount=module.buildProjectEconomicAnalysis(result,periods,adjustments,null,365,'period-end',undefined,'actual-days',1)
 assert.equal(missingDiscount.valid,false)
 const invalidAmount=module.buildProjectEconomicAnalysis(result,periods,[{...adjustments[0],economicAmount:-1}],10,365,'period-end',undefined,'actual-days',1)
 assert.equal(invalidAmount.valid,false)
 const unknownPeriod=module.buildProjectEconomicAnalysis(result,periods,[{...adjustments[0],period:'2035'}],10,365,'period-end',undefined,'actual-days',1)
 assert.equal(unknownPeriod.valid,false)
-console.log('Economic NPV/IRR, tax and subsidy transfer removal, shadow FX and employment adjustments passed.')
+console.log('Economic NPV/IRR, corporate and indirect-tax transfer removal, subsidy, shadow FX and employment adjustments passed.')
