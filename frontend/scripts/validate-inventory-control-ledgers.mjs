@@ -164,6 +164,17 @@ const stageValueMismatch=module.reconcileStageInventoryMovements(stageMovements.
  {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
 ],2)
 assert.equal(stageValueMismatch.valid,false,'stage ledger totals must reconcile to the finance engine without being posted twice')
+const absentNonZeroStage=module.reconcileStageInventoryMovements(stageMovements.filter(row=>row.inventoryStage!=='finished-goods'),[
+ {period:1,rawMaterials:100,workInProgress:40,finishedGoods:60},
+ {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
+],2)
+assert.equal(absentNonZeroStage.valid,false,'a non-zero finance-engine stage cannot be omitted from the subledger')
+assert.ok(absentNonZeroStage.issues.some(issue=>issue.includes('non-zero finance-engine balance but no cost-centre inventory movement rows')))
+const absentZeroStage=module.reconcileStageInventoryMovements(stageMovements.filter(row=>row.inventoryStage!=='finished-goods').map(row=>row),[
+ {period:1,rawMaterials:100,workInProgress:40,finishedGoods:0},
+ {period:2,rawMaterials:80,workInProgress:45,finishedGoods:0},
+],2)
+assert.equal(absentZeroStage.valid,true,absentZeroStage.issues.join('; '))
 const stageUnverified=module.reconcileStageInventoryMovements(stageMovements.map(row=>row.inventoryStage==='raw-materials'?{...row,sourceVerified:false}:row),[
  {period:1,rawMaterials:100,workInProgress:40,finishedGoods:60},
  {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
