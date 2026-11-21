@@ -345,4 +345,4 @@ export function buildProductOperatingSchedule(
     totalProductionQuantity,totalSalesQuantity,totalClosingInventoryValue,periodRawMaterialInventoryValue,periodWipInventoryValue,hasInventoryFlow:rows.some(row=>row.rawMaterialInventoryValue>0||row.wipInventoryValue>0)||salesHaveInventoryFlow(drafts.sales)}
 }
 
-function salesHaveInventoryFlow(sales:SalesProductFormDraft[]):boolean{return sales.some(sale=>sale.periods.some(row=>row.rawMaterialPurchasesQuantity!==null||row.rawMaterialPurchasesValue!==null||row.rawMaterialConsumptionQuantity!==null||row.unitsStarted!==null||row.unitsCompleted!==null||row.closingWipQuantity!==null||row.conversionCost!==null))}
+function salesHaveInventoryFlow(sales:SalesProductFormDraft[]):boolean{return sales.some(sale=>sale.periods.some(row=>row.rawMaterialPurchasesQuantity!=null||row.rawMaterialPurchasesValue!=null||row.rawMaterialConsumptionQuantity!=null||row.unitsStarted!=null||row.unitsCompleted!=null||row.closingWipQuantity!=null||row.conversionCost!=null))}
