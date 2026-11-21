@@ -43,7 +43,7 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
  const patchLoan=(id:string,patch:Partial<LoanFacilityFormDraft>)=>onChange({...value,loans:value.loans.map(x=>x.id===id?{...x,...patch}:x)})
  const costCentres=value.costCentres??[]
  const patchCostCentre=(id:string,patch:Partial<CostCentreFormDraft>)=>onChange({...value,costCentres:costCentres.map(x=>x.id===id?{...x,...patch}:x)})
- const addCostCentre=()=>onChange({...value,costCentres:[...costCentres,{id:crypto.randomUUID(),name:'',type:null,description:'',allocationBasis:null,driverRows:[]}]})
+ const addCostCentre=()=>onChange({...value,costCentres:[...costCentres,{id:crypto.randomUUID(),name:'',type:null,description:'',allocationBasis:null,manualDriverName:'',manualDriverUnit:'',driverRows:[]}]})
  const traceItems=value.cppCpsTraceItems??[]
  const patchTrace=(id:string,patch:Partial<CppCpsTraceItem>)=>onChange({...value,cppCpsTraceItems:traceItems.map(x=>x.id===id?{...x,...patch}:x)})
  const patchTraceSource=(id:string,patch:Partial<CppCpsTraceItem['source']>)=>{
@@ -146,6 +146,7 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
      <label className="fw-field"><span>{t('مبنای تخصیص مرکز','Centre allocation basis')}</span><select value={centre.allocationBasis??''} onChange={e=>patchCostCentre(centre.id,{allocationBasis:(e.target.value||null) as CostCentreFormDraft['allocationBasis'],driverRows:e.target.value==='manual'?centre.driverRows:[]})}><option value="">{t('بدون مبنای تخصیص','No allocation basis')}</option><option value="production-quantity">{t('مقدار تولید','Production quantity')}</option><option value="sales-revenue">{t('درآمد فروش','Sales revenue')}</option><option value="manual">{t('محرک دستی محصول/دوره','Manual product-period driver')}</option></select></label>
     </div>
     {centre.allocationBasis==='manual'&&<div className="fw-validation" style={{marginTop:8,padding:8}}>
+     <div className="fw-grid"><TextField label={t('نام محرک','Driver name')} value={centre.manualDriverName} onChange={v=>patchCostCentre(centre.id,{manualDriverName:v})}/><TextField label={t('واحد محرک','Driver unit')} value={centre.manualDriverUnit} onChange={v=>patchCostCentre(centre.id,{manualDriverUnit:v})}/></div>
      <b>{t('مقادیر محرک تخصیص','Allocation driver values')}</b>
      {centre.driverRows.map((driver,index)=><div className="fw-grid" key={index}>
       <NumberField label={t('شماره دوره','Period number')} value={driver.period} onChange={v=>patchCostCentre(centre.id,{driverRows:centre.driverRows.map((x,i)=>i===index?{...x,period:v??1}:x)})}/>
