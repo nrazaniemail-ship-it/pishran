@@ -5,8 +5,10 @@ import ts from 'typescript'
 const transpile=source=>ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 const engineSource=await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts',import.meta.url),'utf8')
 const engineUrl='data:text/javascript;base64,'+Buffer.from(transpile(engineSource)).toString('base64')
+const flowSource=await readFile(new URL('../src/features/projects/inventoryProductionFlow.ts',import.meta.url),'utf8')
+const flowUrl='data:text/javascript;base64,'+Buffer.from(transpile(flowSource)).toString('base64')
 const source=await readFile(new URL('../src/features/projects/productOperatingSchedule.ts',import.meta.url),'utf8')
-const output=transpile(source).replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl))
+const output=transpile(source).replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl)).replace("'./inventoryProductionFlow'",JSON.stringify(flowUrl))
 const module=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
 const periods=[
  {index:1,startDate:'2025-01-01',endDate:'2025-03-31',days:90,partial:false},
@@ -46,7 +48,7 @@ assert.equal(badOpening.valid,false)
 assert.ok(badOpening.issues.some(issue=>issue.includes('must reconcile to the previous period closing inventory')))
 const noCost=module.buildProductOperatingSchedule({...base,productionCosts:[]},periods,1,'IRR')
 assert.equal(noCost.valid,false)
-assert.ok(noCost.issues.some(issue=>issue.includes('no validated direct production-cost basis')))
+assert.ok(noCost.issues.some(issue=>issue.includes('requires either a validated direct production-cost basis')))
 const unsupportedIndirect=module.buildProductOperatingSchedule({
  ...base,productionCosts:[{...base.productionCosts[0],classification:'indirect',productId:null}]
 },periods,1,'IRR')
@@ -97,3 +99,32 @@ assert.equal(noLiquidation.valid,false)
 assert.ok(noLiquidation.issues.some(issue=>issue.includes('unsold finished goods')))
 
 console.log('Product-by-product production, weighted-average inventory, COGS and sales validation passed.')
+
+const flowProduct={
+ sales:[{productId:'FLOW-1',inventoryPolicy:'manual',periods:[{
+  period:'1',salesQuantity:80,netUnitPrice:20,salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
+  openingFinishedGoodsQuantity:10,openingFinishedGoodsValue:100,finishedGoodsClosingQuantity:30,
+  openingRawMaterialQuantity:100,openingRawMaterialValue:1000,openingWipQuantity:0,openingWipMaterialValue:0,openingWipConversionValue:0,
+  rawMaterialPurchasesQuantity:100,rawMaterialPurchasesValue:1200,rawMaterialConsumptionQuantity:120,
+  unitsStarted:120,unitsCompleted:100,closingWipQuantity:20,materialCompletionPercent:100,
+  conversionCompletionPercent:50,conversionCost:500,
+ }]}],
+ productionCosts:[],
+}
+const flowSchedule=module.buildProductOperatingSchedule(flowProduct,[periods[0]],1,'IRR')
+assert.equal(flowSchedule.valid,true,flowSchedule.issues.join('; '))
+assert.equal(flowSchedule.hasInventoryFlow,true)
+assert.equal(flowSchedule.rows[0].productionQuantity,100)
+assert.equal(flowSchedule.rows[0].completedUnits,100)
+assert.equal(flowSchedule.rows[0].productionCost,flowSchedule.rows[0].unitProductionCost*100)
+assert.equal(flowSchedule.periodRawMaterialInventoryValue[0],880)
+assert.ok(flowSchedule.periodWipInventoryValue[0]>0)
+assert.equal(flowSchedule.rows[0].costOfSales,flowSchedule.rows[0].weightedAverageUnitCost*80)
+assert.equal(flowSchedule.rows[0].closingInventoryValue,flowSchedule.rows[0].weightedAverageUnitCost*30)
+const badFlow=module.buildProductOperatingSchedule({
+ ...flowProduct,sales:[{...flowProduct.sales[0],periods:[{...flowProduct.sales[0].periods[0],unitsCompleted:99}]}]
+},[periods[0]],1,'IRR')
+assert.equal(badFlow.valid,false)
+assert.ok(badFlow.issues.some(issue=>issue.includes('completed production quantity must equal')))
+
+console.log('Product schedule posts completed production from raw-material/WIP ledger and recognizes cost of sales only on sales.');
