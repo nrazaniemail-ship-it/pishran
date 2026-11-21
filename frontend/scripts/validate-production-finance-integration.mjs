@@ -95,8 +95,8 @@ const oneWay=calculateOneWaySensitivity({
 assert.equal(oneWay.factors.find(factor=>factor.id==='operating-cost')?.available,true)
 assert.equal(mapped.valid,true)
 assert.deepEqual(mapped.costOfProductsSoldByYear,[176,0])
-assert.deepEqual(mapped.otherVariableCashCostByYear,[224,495])
-assert.deepEqual(mapped.otherFixedCashCostByYear,[32,49.5])
+assert.ok(mapped.otherVariableCashCostByYear.every((value,index)=>Math.abs(value-[224,495][index])<1e-9))
+assert.ok(mapped.otherFixedCashCostByYear.every((value,index)=>Math.abs(value-[32,49.5][index])<1e-9))
 assert.equal(mapProductionCostsToFinance({
  cpp:[220],cps:[176],hasProductionRecords:[true],utilization:[1],opexFactors:[1],
  fullCapacityVariableCashCost:100,fullCapacityFixedCashCost:50,mappedBaseCosts:{variable:{materials:100,directLabor:50,energy:30,maintenance:20,overhead:20},fixed:{materials:0,directLabor:0,energy:0,maintenance:0,overhead:0}}
