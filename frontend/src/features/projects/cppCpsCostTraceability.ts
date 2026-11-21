@@ -56,8 +56,6 @@ export type CppCpsTraceLedger = {
   knownIncrementalByCategory: Record<TraceCostCategory, number>
   knownIncrementalByCostCentre: Record<string, number>
   completeIncrementalByCostCentre: Record<string, number | null>
-  knownIncrementalByCostCentreAndPeriod: Record<string, number[]>
-  completeIncrementalByCostCentreAndPeriod: Record<string, (number | null)[]>
   knownIncrementalByCostCentreAndCategory: Record<string, Record<TraceCostCategory, number>>
   knownFixedIncrementalByCostCentre: Record<string, number>
   knownVariableIncrementalByCostCentre: Record<string, number>
@@ -203,8 +201,6 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
       knownIncrementalByCostCentre[centre] = (knownIncrementalByCostCentre[centre] ?? 0) + incremental
       knownIncrementalByCostCentreAndCategory[centre] ??= emptyCategoryTotals()
       knownIncrementalByCostCentreAndCategory[centre][item.category] += incremental
-      knownIncrementalByCostCentreAndPeriod[centre] ??= Array(Math.max(0, periodCount)).fill(0)
-      knownIncrementalByCostCentreAndPeriod[centre][period] += incremental
       knownFixedIncrementalByCostCentre[centre] = (knownFixedIncrementalByCostCentre[centre] ?? 0) + incremental * (item.fixedPercent ?? 0) / 100
       knownVariableIncrementalByCostCentre[centre] = (knownVariableIncrementalByCostCentre[centre] ?? 0) + incremental * (item.variablePercent ?? 0) / 100
       rows.push({
