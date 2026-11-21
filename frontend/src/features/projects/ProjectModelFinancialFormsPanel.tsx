@@ -3,7 +3,7 @@ import {
  createBlankSalesProductFormDraft, createBlankWorkingCapitalComponentFormDraft,
  createBlankLoanFacilityFormDraft, createBlankCppCpsTraceItem, type ProjectModelFinancialFormDrafts,
  type FixedAssetFormDraft, type ProductionCostFormDraft,
- type WorkingCapitalComponentFormDraft, type LoanFacilityFormDraft,
+ type WorkingCapitalComponentFormDraft, type LoanFacilityFormDraft, type CostCentreFormDraft,
  validateProjectModelFinancialFormDrafts
 } from './projectModelFormDrafts'
 import { deriveQuantityPriceTotal, type CommonFinancialItemMetadata } from './projectModelSchema'
@@ -41,6 +41,9 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
  const patchSales=(index:number,patch:Partial<(typeof value.sales)[number]>)=>onChange({...value,sales:value.sales.map((x,i)=>i===index?{...x,...patch}:x)})
  const patchWorking=(id:string,patch:Partial<WorkingCapitalComponentFormDraft>)=>onChange({...value,workingCapital:value.workingCapital.map(x=>x.id===id?{...x,...patch}:x)})
  const patchLoan=(id:string,patch:Partial<LoanFacilityFormDraft>)=>onChange({...value,loans:value.loans.map(x=>x.id===id?{...x,...patch}:x)})
+ const costCentres=value.costCentres??[]
+ const patchCostCentre=(id:string,patch:Partial<CostCentreFormDraft>)=>onChange({...value,costCentres:costCentres.map(x=>x.id===id?{...x,...patch}:x)})
+ const addCostCentre=()=>onChange({...value,costCentres:[...costCentres,{id:crypto.randomUUID(),name:'',type:null,description:''}]})
  const traceItems=value.cppCpsTraceItems??[]
  const patchTrace=(id:string,patch:Partial<CppCpsTraceItem>)=>onChange({...value,cppCpsTraceItems:traceItems.map(x=>x.id===id?{...x,...patch}:x)})
  const patchTraceSource=(id:string,patch:Partial<CppCpsTraceItem['source']>)=>{
@@ -132,11 +135,25 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
   </div>
 
   <div className="fw-card">
-   <h4>{t('۸. دفتر ردیابی تفصیلی هزینه‌های CPP/CPS','8. Detailed CPP/CPS Cost Traceability Ledger')}</h4>
+   <h4>{t('۸. ساختار مراکز هزینه','8. Cost centre structure')}</h4>
+   <p className="fw-hint">{t('هر مرکز هزینه را یک‌بار تعریف کنید و سپس اقلام دفتر CPP/CPS را به آن متصل کنید. شناسه‌ها باید یکتا و پایدار باشند.','Define each cost centre once, then assign CPP/CPS trace items to it. IDs must be unique and stable.')}</p>
+   {costCentres.map(centre=><div className="fw-validation" key={centre.id} style={{marginTop:10,padding:12}}>
+    <div className="fw-grid">
+     <TextField label={t('شناسه مرکز هزینه','Cost centre ID')} value={centre.id} onChange={v=>patchCostCentre(centre.id,{id:v})}/>
+     <TextField label={t('نام مرکز هزینه','Cost centre name')} value={centre.name} onChange={v=>patchCostCentre(centre.id,{name:v})}/>
+     <label className="fw-field"><span>{t('نوع مرکز','Centre type')}</span><select value={centre.type??''} onChange={e=>patchCostCentre(centre.id,{type:(e.target.value||null) as CostCentreFormDraft['type']})}><option value="">{t('انتخاب','Select')}</option><option value="production">{t('تولیدی','Production')}</option><option value="service">{t('خدماتی','Service')}</option><option value="administration">{t('اداری','Administration')}</option><option value="sales">{t('فروش','Sales')}</option><option value="other">{t('سایر','Other')}</option></select></label>
+     <TextField label={t('شرح مرکز','Centre description')} value={centre.description} onChange={v=>patchCostCentre(centre.id,{description:v})}/>
+    </div>
+    <button type="button" className="secondary-button" onClick={()=>onChange({...value,costCentres:costCentres.filter(x=>x.id!==centre.id)})}>{t('حذف مرکز هزینه','Remove cost centre')}</button>
+   </div>)}
+   <button type="button" className="secondary-button" onClick={addCostCentre}>{t('افزودن مرکز هزینه','Add cost centre')}</button>
+  </div>
+  <div className="fw-card">
+   <h4>{t('۹. دفتر ردیابی تفصیلی هزینه‌های CPP/CPS','9. Detailed CPP/CPS Cost Traceability Ledger')}</h4>
    <p className="fw-hint">{t('برای هر قلم مواد، نیروی انسانی، انرژی، تعمیرات و سربار، مبنا، رفتار هزینه، پوشش در بهای پایه، روش تخصیص و سند منبع را ثبت کنید. فقط بخش مستندِ خارج از پوشش به CPP افزوده می‌شود. تا وقتی منبع معتبر وارد نشده، مبالغ باید خالی بمانند؛ اقلام CRC200 فاقد مدرک به‌صورت تأییدنشده نگهداری می‌شوند.','For each material, labour, energy, maintenance and overhead item, record its basis, cost behaviour, base-cost coverage, allocation method and source evidence. Only the evidenced uncovered portion is added to CPP. Amounts stay blank until a valid source is supplied; unsupported CRC200 entries remain unverified.')}</p>
    {traceItems.map(item=><div className="fw-validation" key={item.id} style={{marginTop:10,padding:12}}>
     <div className="fw-grid">
-     <TextField label={t('شرح قلم هزینه','Cost item')} value={item.label} onChange={v=>patchTrace(item.id,{label:v})}/><TextField label={t('شناسه مرکز هزینه','Cost centre ID')} value={item.costCentreId??''} onChange={v=>patchTrace(item.id,{costCentreId:v||null})}/>
+     <TextField label={t('شرح قلم هزینه','Cost item')} value={item.label} onChange={v=>patchTrace(item.id,{label:v})}/><label className="fw-field"><span>{t('مرکز هزینه','Cost centre')}</span><select value={item.costCentreId??''} onChange={e=>patchTrace(item.id,{costCentreId:e.target.value||null})}><option value="">{t('انتخاب مرکز هزینه','Select cost centre')}</option>{costCentres.map(centre=><option key={centre.id} value={centre.id}>{centre.name||centre.id}</option>)}{item.costCentreId&&!costCentres.some(centre=>centre.id===item.costCentreId)&&<option value={item.costCentreId}>{item.costCentreId} — {t('تعریف‌نشده','Undefined')}</option>}</select></label>
      <label className="fw-field"><span>{t('گروه هزینه','Cost category')}</span><select value={item.category} onChange={e=>patchTrace(item.id,{category:e.target.value as CppCpsTraceItem['category']})}>{[['materials','مواد'],['labour','نیروی انسانی'],['energy','انرژی'],['maintenance','تعمیرات'],['overhead','سربار']].map(([v,l])=><option key={v} value={v}>{t(l,v==='materials'?'Materials':v==='labour'?'Labour':v==='energy'?'Energy':v==='maintenance'?'Maintenance':'Overhead')}</option>)}</select></label>
      <label className="fw-field"><span>{t('مبنای محاسبه','Cost basis')}</span><select value={item.basis??''} onChange={e=>patchTrace(item.id,{basis:(e.target.value||null) as CppCpsTraceItem['basis']})}><option value="">{t('انتخاب','Select')}</option><option value="per-unit-output">{t('به‌ازای واحد محصول','Per unit output')}</option><option value="nominal-capacity">{t('بر مبنای ظرفیت اسمی','Nominal capacity')}</option><option value="period-total">{t('جمع هر دوره','Period total')}</option><option value="period-adjustments">{t('تعدیلات دوره‌ای','Period adjustments')}</option></select></label>
      <label className="fw-field"><span>{t('رفتار هزینه','Cost behaviour')}</span><select value={item.behaviour??''} onChange={e=>patchTrace(item.id,{behaviour:(e.target.value||null) as CppCpsTraceItem['behaviour'],fixedPercent:e.target.value==='fixed'?100:e.target.value==='variable'?0:item.fixedPercent,variablePercent:e.target.value==='fixed'?0:e.target.value==='variable'?100:item.variablePercent})}><option value="">{t('انتخاب','Select')}</option><option value="fixed">{t('ثابت','Fixed')}</option><option value="variable">{t('متغیر','Variable')}</option><option value="mixed">{t('مختلط','Mixed')}</option></select></label>
