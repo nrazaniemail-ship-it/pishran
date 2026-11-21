@@ -23,6 +23,12 @@ export type ProductOperatingPeriodRow = {
   rawMaterialInventoryValue: number
   wipInventoryValue: number
   completedUnits: number
+  hasInventoryFlow: boolean
+  wipQuantity: number
+  materialEquivalentUnits: number
+  conversionEquivalentUnits: number
+  materialCompletionPercent: number
+  conversionCompletionPercent: number
 }
 export type ProductOperatingSchedule = {
   valid: boolean
@@ -350,6 +356,12 @@ export function buildProductOperatingSchedule(
         rawMaterialInventoryValue:flowRow?.closingRawMaterialValue??0,
         wipInventoryValue:flowRow?.closingWipValue??0,
         completedUnits:flowRow?.unitsCompleted??productionQuantity,
+        hasInventoryFlow:!!flowRow,
+        wipQuantity:flowRow?.closingWipQuantity??0,
+        materialEquivalentUnits:flowRow?.materialEquivalentUnits??0,
+        conversionEquivalentUnits:flowRow?.conversionEquivalentUnits??0,
+        materialCompletionPercent:flowRow?.closingWipQuantity?flowRow.materialEquivalentUnits===0?0:Math.max(0,Math.min(100,(flowRow.materialEquivalentUnits-flowRow.unitsCompleted)/flowRow.closingWipQuantity*100)):0,
+        conversionCompletionPercent:flowRow?.closingWipQuantity?flowRow.conversionEquivalentUnits===0?0:Math.max(0,Math.min(100,(flowRow.conversionEquivalentUnits-flowRow.unitsCompleted)/flowRow.closingWipQuantity*100)):0,
       }
       rows.push(row)
       periodRevenue[index]+=netSalesRevenue
