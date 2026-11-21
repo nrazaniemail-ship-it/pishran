@@ -148,7 +148,7 @@ export function validateLoanFacilityFormDraft(value:LoanFacilityFormDraft):strin
 }
 
 
-export type EconomicAdjustmentFormDraft = { id:string; name:string; period:string; treatment:'benefit'|'cost'|null; effectType:'general'|'foreign-exchange'|'employment'|null; financialAmount:number|null; economicAmount:number|null }
+export type EconomicAdjustmentFormDraft = { id:string; name:string; period:string; treatment:'benefit'|'cost'|null; effectType:'general'|'foreign-exchange'|'employment'|null; financialAmount:number|null; economicAmount:number|null; sourceReference:string; sourceVerified:boolean }
 export function createBlankCppCpsTraceItem(id:string,periodCount:number):CppCpsTraceItem {
  return {
   id,label:'',category:'materials',basis:null,behaviour:null,fixedPercent:null,variablePercent:null,
@@ -236,10 +236,10 @@ export type ProjectModelFinancialFormDrafts = {
  loans: LoanFacilityFormDraft[]
  tax: ProjectTaxFormDraft
  salesTaxLedger: SalesTaxLedgerFormDraft
- economic: { discountRatePercent:number|null; adjustments:EconomicAdjustmentFormDraft[]; valueAddedPeriods:ValueAddedPeriodFormDraft[] }
+ economic: { discountRatePercent:number|null; discountRateSourceReference:string; discountRateSourceVerified:boolean; adjustments:EconomicAdjustmentFormDraft[]; valueAddedPeriods:ValueAddedPeriodFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),salesTaxLedger:createBlankSalesTaxLedgerFormDraft(),economic:{discountRatePercent:null,adjustments:[],valueAddedPeriods:[]}}
+ return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),salesTaxLedger:createBlankSalesTaxLedgerFormDraft(),economic:{discountRatePercent:null,discountRateSourceReference:'',discountRateSourceVerified:false,adjustments:[],valueAddedPeriods:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{
@@ -349,6 +349,15 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
   if(item.amount===null||!Number.isFinite(item.amount)||item.amount<0||!item.sourceReference.trim())errors.push('sales-tax-settlement-'+index+':amount-and-source-required')
  }
  if(salesTax.openingBalance!==null&&!Number.isFinite(salesTax.openingBalance))errors.push('sales-tax-opening-balance:invalid')
+ if(value.economic.discountRatePercent!==null&&(!Number.isFinite(value.economic.discountRatePercent)||value.economic.discountRatePercent<=-100))errors.push('economic-discount-rate:invalid-rate')
+ if(value.economic.discountRatePercent!==null&&(!value.economic.discountRateSourceReference.trim()||!value.economic.discountRateSourceVerified))errors.push('economic-discount-rate:verified-source-required')
+ for(const [index,item] of value.economic.adjustments.entries()){
+  const entered=[item.name,item.period,item.treatment,item.effectType,item.financialAmount,item.economicAmount].some(hasEnteredValue)
+  if(entered&&(!item.sourceReference.trim()||!item.sourceVerified))errors.push('economic-adjustment-'+index+':verified-source-required')
+  if(item.financialAmount!==null&&(!Number.isFinite(item.financialAmount)||item.financialAmount<0)||
+    item.economicAmount!==null&&(!Number.isFinite(item.economicAmount)||item.economicAmount<0))
+    errors.push('economic-adjustment-'+index+':invalid-amount')
+ }
  const valueAddedPeriods=value.economic?.valueAddedPeriods??[]
  const valueAddedPeriodNumbers=new Set<number>()
  for(const [index,row] of valueAddedPeriods.entries()){
