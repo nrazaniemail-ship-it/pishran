@@ -30,6 +30,8 @@ export type ValueAddedPeriodInput = {
   salesRevenue: number
   outputSalesTax: number
   otherIncome: number
+  /** Independently sourced operating surplus / other value added used to test distribution reconciliation. */
+  otherValueAdded: number
   subsidiesOnOutput: number
   intermediateInputs: ValueAddedInputItem[]
   investmentInputs: ValueAddedInvestmentItem[]
@@ -183,6 +185,7 @@ export function buildComfarValueAddedAnalysis(periods: ValueAddedPeriodInput[]):
       ['foreign-exchange outflow',row.foreignExchangeOutflow],
     ]
     for(const [name,value] of nonNegativeFields)if(!finiteNonNegative(value))issues.push('Period '+row.period+' '+name+' must be finite and non-negative.')
+    if(!Number.isFinite(row.otherValueAdded))issues.push('Period '+row.period+' other value added / operating surplus must be finite; losses may be negative.')
     if(!Number.isFinite(row.presentValueFactor)||row.presentValueFactor<=0)issues.push('Period '+row.period+' requires a positive economic present-value factor.')
     if(row.skilledDomesticLabour>row.totalDomesticLabour+0.000001)issues.push('Period '+row.period+' skilled domestic labour cannot exceed total domestic labour.')
     if(!row.sourceVerified||!row.sourceReference.trim())issues.push('Period '+row.period+' requires a verified source reference for linked output, wages, taxes and repatriated-payment data.')
@@ -232,7 +235,7 @@ export function buildComfarValueAddedAnalysis(periods: ValueAddedPeriodInput[]):
     const netNationalValueAdded=netDomesticValueAdded-repatriatedPayments
     const governmentShare=row.corporateTax+row.outputSalesTax+intermediateInput.indirectTaxIncluded+
       investment.indirectTaxIncluded-row.subsidiesOnOutput-row.subsidiesOnInvestment-row.subsidiesOnInput
-    const otherValueAdded=netNationalValueAdded-row.domesticWages-row.domesticDividendsAndInterest-governmentShare
+    const otherValueAdded=row.otherValueAdded
     const distributionDifference=netNationalValueAdded-(row.domesticWages+row.domesticDividendsAndInterest+governmentShare+otherValueAdded)
     return {
       period:row.period,grossOutput,intermediateInput,investment,grossDomesticValueAdded,
@@ -241,6 +244,9 @@ export function buildComfarValueAddedAnalysis(periods: ValueAddedPeriodInput[]):
       distributionDifference,presentValueFactor:row.presentValueFactor,
     }
   })
+  for(const row of rows)if(Math.abs(row.distributionDifference)>0.01)
+    issues.push('Period '+row.period+' value-added distribution does not reconcile; independently sourced other value added differs by '+row.distributionDifference+'.')
+  if(issues.length)return emptyResult(issues)
   const sum=(key:keyof Pick<ValueAddedPeriodRow,'grossDomesticValueAdded'|'netDomesticValueAdded'|'repatriatedPayments'|'netNationalValueAdded'|'domesticWages'|'domesticDividendsAndInterest'|'governmentShare'|'otherValueAdded'>)=>
     rows.reduce((total,row)=>total+row[key],0)
   const pv=(selector:(row:ValueAddedPeriodInput)=>number)=>periods.reduce((total,row)=>total+selector(row)*row.presentValueFactor,0)
