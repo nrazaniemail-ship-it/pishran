@@ -99,6 +99,11 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
   ]
   for (const key of openingFields) if (!finiteNonNegative(input[key]))
     issues.push(key + ' must be an explicit finite non-negative amount.')
+  if (input.openingRawMaterialQuantity === 0 && input.openingRawMaterialValue > 0)
+    issues.push('Opening raw-material value cannot be positive when opening raw-material quantity is zero.')
+  if (input.openingWipQuantity === 0 &&
+      (input.openingWipMaterialValue > 0 || input.openingWipConversionValue > 0))
+    issues.push('Opening WIP value cannot be positive when opening WIP quantity is zero.')
   if (issues.length) return empty(issues)
 
   const rows: InventoryFlowPeriod[] = []
@@ -125,6 +130,8 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
       issues.push('Period ' + (i + 1) + ' WIP completion percentages must be between 0 and 100.')
     const availableRawQty = rawQty + purchasesQty
     const availableRawValue = rawValue + purchasesValue
+    if (availableRawQty === 0 && availableRawValue > 0)
+      issues.push('Period ' + (i + 1) + ' raw-material value cannot be positive when available quantity is zero.')
     if (consumptionQty + wasteQty > availableRawQty + 1e-7)
       issues.push('Period ' + (i + 1) + ' raw-material consumption plus normal waste exceeds available stock.')
     const materialUnitCost = availableRawQty > 0 ? availableRawValue / availableRawQty : 0
