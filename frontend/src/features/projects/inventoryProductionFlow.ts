@@ -23,6 +23,7 @@ export type InventoryFlowInput = {
 export type InventoryFlowPeriod = {
   period: number
   openingRawMaterialQuantity: number
+  openingRawMaterialValue: number
   purchasesQuantity: number
   consumptionQuantity: number
   closingRawMaterialQuantity: number
@@ -31,6 +32,8 @@ export type InventoryFlowPeriod = {
   consumptionValue: number
   closingRawMaterialValue: number
   openingWipQuantity: number
+  openingWipMaterialValue: number
+  openingWipConversionValue: number
   unitsStarted: number
   unitsCompleted: number
   closingWipQuantity: number
@@ -147,11 +150,12 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
     const materialValueVariance = materialPool - completedMaterial - closingWipMaterialValue
     const wipValueVariance = materialPool + conversionPool - completedMaterial - completedConversion - closingWipValue
     rows.push({
-      period:i+1, openingRawMaterialQuantity:rawQty, purchasesQuantity:purchasesQty,
+      period:i+1, openingRawMaterialQuantity:rawQty, openingRawMaterialValue:rawValue, purchasesQuantity:purchasesQty,
       consumptionQuantity:consumptionQty, closingRawMaterialQuantity:closingRawQty,
       weightedAverageRawMaterialUnitCost:materialUnitCost, purchasesValue,
       consumptionValue, closingRawMaterialValue:closingRawValue,
-      openingWipQuantity:wipQty, unitsStarted:started, unitsCompleted:completed,
+      openingWipQuantity:wipQty, openingWipMaterialValue:wipMaterialValue,
+      openingWipConversionValue:wipConversionValue, unitsStarted:started, unitsCompleted:completed,
       closingWipQuantity:closingWip, materialEquivalentUnits, conversionEquivalentUnits,
       materialCostPerEquivalentUnit:materialPerEU, conversionCostPerEquivalentUnit:conversionPerEU,
       completedProductionMaterialCost:completedMaterial,
