@@ -82,6 +82,8 @@ type Props = {
   valueAddedAnalysisEnabled?: boolean
   valueAddedPeriodDrafts?: ValueAddedPeriodFormDraft[]
   economicDiscountRatePercent?: number | null
+  economicDiscountRateSourceReference?: string
+  economicDiscountRateSourceVerified?: boolean
   onValueAddedAnalysisResult?: (result:ValueAddedAnalysisResult|null)=>void
   loanDrafts?: LoanFacilityFormDraft[]
   projectFoundation?: ProjectFoundation
@@ -506,8 +508,10 @@ export default function AdvancedFinancePanel(props: Props) {
     if(!periodicFinanceResult?.valid)return invalid(['A valid periodic financial model is required for value-added analysis.'])
     if(!productOperatingSchedule?.valid)return invalid(['A valid product-by-product sales schedule is required for value-added analysis.'])
     if(!cppCpsTraceLedger.valid||!cppCpsTraceLedger.complete)return invalid(['The CPP/CPS trace ledger must be complete and source-verified before value-added inputs can be reconciled.'])
-    if(!props.economicDiscountRatePercent||!Number.isFinite(props.economicDiscountRatePercent)||props.economicDiscountRatePercent<=-100)
+    if(props.economicDiscountRatePercent===null||props.economicDiscountRatePercent===undefined||!Number.isFinite(props.economicDiscountRatePercent)||props.economicDiscountRatePercent<=-100)
       return invalid(['An explicit economic discount rate greater than -100% is required.'])
+    if(!props.economicDiscountRateSourceReference?.trim()||props.economicDiscountRateSourceVerified!==true)
+      return invalid(['The economic discount rate requires an independently verified source reference.'])
     if(!props.dayCountBasis||!props.cashFlowTiming||props.cashFlowTiming==='unspecified')
       return invalid(['Economic discount timing and day-count basis must be defined.'])
     if(props.valueAddedPeriodDrafts?.length!==projectPeriods.length)
@@ -587,7 +591,7 @@ export default function AdvancedFinancePanel(props: Props) {
     if(issues.length)return invalid(issues)
     return buildComfarValueAddedAnalysis(rows.filter((row):row is NonNullable<typeof row>=>row!==null))
   },[props.valueAddedAnalysisEnabled,periodicFinanceResult,productOperatingSchedule,cppCpsTraceLedger,
-    props.economicDiscountRatePercent,props.dayCountBasis,props.cashFlowTiming,props.valuationDate,props.discountConvention,
+    props.economicDiscountRatePercent,props.economicDiscountRateSourceReference,props.economicDiscountRateSourceVerified,props.dayCountBasis,props.cashFlowTiming,props.valuationDate,props.discountConvention,
     props.valueAddedPeriodDrafts,JSON.stringify(props.valueAddedPeriodDrafts??[]),JSON.stringify(projectPeriods),
     JSON.stringify(props.openingCurrentAccounts??null),salesTaxLedgerActive,salesTaxLedgerResult,periodsPerYear])
   useEffect(()=>{props.onValueAddedAnalysisResult?.(valueAddedAnalysisResult)},[props.onValueAddedAnalysisResult,valueAddedAnalysisResult])
