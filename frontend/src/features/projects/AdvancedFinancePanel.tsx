@@ -304,7 +304,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const productOperatingSchedule=useMemo(()=>{
     if(!props.cppCpsTraceItems?.length)return baseProductOperatingSchedule
     if(!baseProductOperatingSchedule?.valid||!cppCpsScheduleBinding?.valid||!cppCpsScheduleBinding.schedule){
-      return {valid:false,issues:[...(baseProductOperatingSchedule?.issues??[]),...(cppCpsScheduleBinding?.issues??[])],rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],hasInventoryFlow:false}
+      return {valid:false,issues:[...(baseProductOperatingSchedule?.issues??[]),...(cppCpsScheduleBinding?.issues??[])],rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],periodAbnormalWasteExpense:[],periodNormalWasteAbsorbed:[],hasInventoryFlow:false}
     }
     return cppCpsScheduleBinding.schedule
   },[JSON.stringify(props.cppCpsTraceItems??[]),baseProductOperatingSchedule,cppCpsScheduleBinding])
@@ -391,7 +391,7 @@ export default function AdvancedFinancePanel(props: Props) {
       periods,fiscalYearStartMonth:fiscalMonth,constructionPeriodCount:periods.filter(period=>fiscalYearIndexForPeriod(period,periods,fiscalMonth)<construction).length,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
       annualRevenue:productOperatingSchedule?.valid?productOperatingSchedule.annualRevenue:productOperatingSchedule?Array(years).fill(Number.NaN):result.years.map(row=>row.revenue),periodRevenue:productOperatingSchedule?.valid?productOperatingSchedule.periodRevenue:undefined,periodSubsidyIncome:productOperatingSchedule?.valid?productOperatingSchedule.periodSubsidyIncome:undefined,annualVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.annualCostOfSales:productOperatingSchedule?Array(years).fill(Number.NaN):result.years.map(row=>row.variableCashCost),periodVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.periodCostOfSales:undefined,
-      annualFixedCost:result.years.map(row=>row.fixedCashCost),annualDepreciation:depreciationValues,
+      annualFixedCost:result.years.map((row,year)=>row.fixedCashCost+(productOperatingSchedule?.periodAbnormalWasteExpense??[]).reduce((sum,amount,index)=>sum+(fiscalYearIndexForPeriod(periods[index],periods,fiscalMonth)===year?amount:0),0)),annualDepreciation:depreciationValues,
       annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
       annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:projectTaxSchedule?.active?(projectTaxSchedule.valid?projectTaxSchedule.annualTaxRates:Array(years).fill(Number.NaN)):taxRates,annualEquityContributions:equityContributions,
       annualEquityWorkingCapitalContributions:equityWorkingCapitalContributions,
