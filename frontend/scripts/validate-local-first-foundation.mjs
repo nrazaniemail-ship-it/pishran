@@ -97,9 +97,15 @@ const restorePayload = {
 assert.equal(await backup.restoreBackup(restorePayload), 1)
 assert.equal(await backup.canUndoRestore(), true, 'Undo snapshot must survive replaceAll clearing app-prefixed keys')
 assert.equal((await projects.listProjects())[0].id, 'after-restore')
-assert.equal(await backup.undoLastRestore(), 1)
+assert.equal(await backup.undoLastRestore(), built.payload.records.length)
 assert.equal((await projects.listProjects())[0].id, 'before-restore')
 assert.deepEqual(await backup.getBackupPreferences(), previousPreferences)
 assert.equal(await backup.canUndoRestore(), false, 'Undo snapshot must be cleared after successful undo')
+
+const schema1Restore = { ...legacyBackup, records: [{ key: 'projects:list:v1', value: [restoredProject] }] }
+await backup.restoreBackup(schema1Restore)
+assert.deepEqual(await backup.getBackupPreferences(), previousPreferences, 'Schema 1 restore must preserve local backup preferences')
+await backup.undoLastRestore()
+assert.deepEqual(await backup.getBackupPreferences(), previousPreferences)
 
 console.log('PASS: local storage fallback, project repository, backup schema 1/2, restore and undo')
