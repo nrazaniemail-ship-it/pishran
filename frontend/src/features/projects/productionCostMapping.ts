@@ -1,5 +1,28 @@
 export type ProductionCostComponent = 'materials' | 'directLabor' | 'energy' | 'maintenance' | 'overhead'
 export type ProductionCostMapping = { variable: Record<ProductionCostComponent, number>; fixed: Record<ProductionCostComponent, number> }
+const emptyComponents = (): Record<ProductionCostComponent, number> => ({
+  materials: 0, directLabor: 0, energy: 0, maintenance: 0, overhead: 0,
+})
+
+/** Backward-compatible normalization for previously saved cost mappings. */
+export function normalizeProductionCostMapping(value: unknown): ProductionCostMapping {
+  if (!value || typeof value !== 'object') return { variable: emptyComponents(), fixed: emptyComponents() }
+  const candidate = value as { variable?: unknown; fixed?: unknown } & Record<string, unknown>
+  const normalize = (source: unknown) => {
+    const result = emptyComponents()
+    if (source && typeof source === 'object') {
+      for (const key of Object.keys(result) as ProductionCostComponent[]) {
+        const amount = (source as Record<string, unknown>)[key]
+        if (typeof amount === 'number' && Number.isFinite(amount) && amount >= 0) result[key] = amount
+      }
+    }
+    return result
+  }
+  if (candidate.variable && candidate.fixed)
+    return { variable: normalize(candidate.variable), fixed: normalize(candidate.fixed) }
+  return { variable: normalize(candidate), fixed: emptyComponents() }
+}
+
 export type ProductionAnnualCostInput = {
   cpp: number[]
   cps: number[]
