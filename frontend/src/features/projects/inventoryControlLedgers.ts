@@ -218,6 +218,24 @@ export function reconcileStageInventoryMovements(
  stageTransfers:InventoryStageTransfer[]=[]
 ):StageInventoryReconciliationResult{
  const issues:string[]=[]
+ for(const row of movements){
+  const hasAnyValue=[row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
+   row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,row.transfersOutQuantity,row.transfersOutValue,
+   row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,row.wasteQuantity,row.wasteValue,
+   row.closingQuantity,row.closingValue,row.sourceReference].some(value=>value!==null&&value!==undefined&&value!=='')
+  if(!hasAnyValue)continue
+  if(row.period===null||!Number.isInteger(row.period)||row.period<1||row.period>periodCount||
+     !row.inventoryStage||!row.productId.trim()||!row.costCentreId.trim())
+   issues.push('Stage inventory movement requires a valid period, stage, product and cost-centre identifier.')
+  const amounts=[row.openingQuantity,row.openingValue,row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,
+   row.transfersOutQuantity,row.transfersOutValue,row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,
+   row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue]
+  if(amounts.some(value=>value===null||!finite(value as number)))
+   issues.push('Stage inventory movement requires every quantity and value to be explicitly entered as a finite non-negative amount.')
+  if(!row.sourceReference.trim()||!row.sourceVerified)
+   issues.push('Stage inventory movement requires a verified source reference.')
+ }
+ if(issues.length)return {valid:false,issues,rows:[]}
  const movementByStageKey=new Map<string,StageInventoryMovementDraft>()
  for(const row of movements){
   if(row.period!==null&&row.inventoryStage&&row.productId.trim()&&row.costCentreId.trim())
