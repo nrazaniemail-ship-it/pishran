@@ -34,4 +34,15 @@ assert.equal(reconciled.valid,true,reconciled.issues.join('; '))
 const mismatch=module.reconcileInventoryThreeWay([{...p,balanceSheet:{...p.balanceSheet,finishedGoods:149}}])
 assert.equal(mismatch.valid,false)
 assert.ok(mismatch.issues.some(x=>x.includes('model vs balance sheet')))
+const reference=module.reconcileInventoryReference([
+ {id:'R1',period:1,sourceDocument:'COMFAR III report.pdf',schedule:'Working capital requirements',page:'246',currency:'IRR',rawMaterials:100,workInProgress:50,finishedGoods:150,totalInventory:300,cpp:500,cps:450},
+], [{period:1,rawMaterials:100,workInProgress:50,finishedGoods:150,totalInventory:300,cpp:500,cps:450}],0.01,'IRR')
+assert.equal(reference.valid,true,reference.issues.join('; '))
+assert.equal(reference.rows[0].status,'matched')
+const incompleteReference=module.reconcileInventoryReference([
+ {id:'R2',period:1,sourceDocument:'COMFAR III report.pdf',schedule:'Working capital requirements',page:'246',currency:'IRR',rawMaterials:100,workInProgress:null,finishedGoods:150,totalInventory:null,cpp:null,cps:null},
+], [{period:1,rawMaterials:100,workInProgress:50,finishedGoods:150,totalInventory:300,cpp:500,cps:450}],0.01,'IRR')
+assert.equal(incompleteReference.valid,false)
+assert.equal(incompleteReference.rows[0].status,'incomplete')
+assert.equal(module.reconcileInventoryReference([{id:'R3',period:1,sourceDocument:'x',schedule:'y',page:'1',currency:'USD',rawMaterials:1,workInProgress:1,finishedGoods:1,totalInventory:3,cpp:4,cps:3}], [{period:1,rawMaterials:1,workInProgress:1,finishedGoods:1,totalInventory:3,cpp:4,cps:3}],0.01,'IRR').valid,false)
 console.log('Waste classification, inter-product/cost-centre transfer and three-way inventory reconciliation validations passed.')
