@@ -195,6 +195,6 @@ assert.ok(wizard.includes('productionTransfers:m.financialForms.productionTransf
 assert.ok(wizard.includes('inventoryReferenceBenchmarks:m.financialForms.inventoryReferenceBenchmarks??[]'))
 assert.ok(wizard.includes('costCentres:m.financialForms.costCentres??[]'))
 assert.ok(wizard.includes('onCppCpsTraceLedger={setReportCppCpsTraceLedger}'))
-assert.ok(wizard.includes('reportCppCpsTraceLedger.knownIncrementalByCostCentreByPeriod'))
+assert.ok(wizard.includes('reportCppCpsTraceLedger.completeIncrementalByCostCentreByPeriod'))
 assert.ok(wizard.includes("onClick={()=>setStep('profile')}"))
 console.log('CPP/CPS finance integration, working-capital reconciliation, source gating and report actions passed.')
