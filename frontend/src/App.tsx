@@ -223,7 +223,7 @@ export default function App() {
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
-    {page === 'production' && <ProductionWorkspace language={settings.language} onBack={() => setPage('dashboard')}/ >}
+    {page === 'production' && <ProductionWorkspace language={settings.language} onBack={() => setPage('dashboard')}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
 
 
