@@ -105,7 +105,7 @@ const flowProduct={
   period:'1',salesQuantity:80,netUnitPrice:20,salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
   openingFinishedGoodsQuantity:10,openingFinishedGoodsValue:100,finishedGoodsClosingQuantity:30,
   openingRawMaterialQuantity:100,openingRawMaterialValue:1000,openingWipQuantity:0,openingWipMaterialValue:0,openingWipConversionValue:0,
-  rawMaterialPurchasesQuantity:100,rawMaterialPurchasesValue:1200,rawMaterialConsumptionQuantity:120,
+  rawMaterialPurchasesQuantity:100,rawMaterialPurchasesValue:1200,rawMaterialConsumptionQuantity:120,rawMaterialWasteQuantity:5,
   unitsStarted:120,unitsCompleted:100,closingWipQuantity:20,materialCompletionPercent:100,
   conversionCompletionPercent:50,conversionCost:500,
  }]}],
@@ -117,7 +117,8 @@ assert.equal(flowSchedule.hasInventoryFlow,true)
 assert.equal(flowSchedule.rows[0].productionQuantity,100)
 assert.equal(flowSchedule.rows[0].completedUnits,100)
 assert.equal(flowSchedule.rows[0].productionCost,flowSchedule.rows[0].unitProductionCost*100)
-assert.equal(flowSchedule.periodRawMaterialInventoryValue[0],880)
+assert.equal(flowSchedule.periodRawMaterialInventoryValue[0],825)
+assert.equal(flowSchedule.rows[0].rawMaterialInventoryValue,825)
 assert.ok(flowSchedule.periodWipInventoryValue[0]>0)
 assert.equal(flowSchedule.rows[0].costOfSales,flowSchedule.rows[0].weightedAverageUnitCost*80)
 assert.equal(flowSchedule.rows[0].closingInventoryValue,flowSchedule.rows[0].weightedAverageUnitCost*30)
