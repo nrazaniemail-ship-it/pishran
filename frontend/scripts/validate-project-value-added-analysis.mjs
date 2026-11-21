@@ -35,7 +35,7 @@ const inventoryIncrease = {
 }
 const periods = [
   {
-    period:1,salesRevenue:1000,outputSalesTax:100,otherIncome:20,subsidiesOnOutput:10,
+    period:1,salesRevenue:1000,outputSalesTax:100,otherIncome:20,otherValueAdded:418.6,subsidiesOnOutput:10,
     intermediateInputs:[material,energy],investmentInputs:[fixedAsset,preProduction,inventoryIncrease],
     repatriatedWages:30,repatriatedProfitDividends:5,repatriatedInterest:10,repatriatedOther:2,
     domesticWages:100,domesticDividendsAndInterest:20,corporateTax:40,
@@ -44,7 +44,7 @@ const periods = [
     sourceReference:'period-1-linked-financial-and-payroll-schedules',sourceVerified:true,
   },
   {
-    period:2,salesRevenue:500,outputSalesTax:50,otherIncome:0,subsidiesOnOutput:0,
+    period:2,salesRevenue:500,outputSalesTax:50,otherIncome:0,otherValueAdded:420,subsidiesOnOutput:0,
     intermediateInputs:[],investmentInputs:[],
     repatriatedWages:0,repatriatedProfitDividends:0,repatriatedInterest:0,repatriatedOther:0,
     domesticWages:50,domesticDividendsAndInterest:10,corporateTax:20,
@@ -110,5 +110,17 @@ const invalidLabour = module.buildComfarValueAddedAnalysis([{
 }])
 assert.equal(invalidLabour.valid,false)
 assert.ok(invalidLabour.issues.some(issue=>issue.includes('cannot exceed total domestic labour')))
+
+const unreconciledDistribution = module.buildComfarValueAddedAnalysis([{
+  ...periods[0],otherValueAdded:419.6,
+}])
+assert.equal(unreconciledDistribution.valid,false)
+assert.ok(unreconciledDistribution.issues.some(issue=>issue.includes('value-added distribution does not reconcile')))
+
+const negativeOperatingSurplus = module.buildComfarValueAddedAnalysis([{
+  ...periods[0],otherValueAdded:-10,
+}])
+assert.equal(negativeOperatingSurplus.valid,false,'Negative operating surplus is valid only when it reconciles to the rest of the distribution.')
+assert.ok(negativeOperatingSurplus.issues.some(issue=>issue.includes('value-added distribution does not reconcile')))
 
 console.log('COMFAR value-added analysis and distribution regression tests passed.')
