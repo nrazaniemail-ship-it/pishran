@@ -100,6 +100,37 @@ const noLiquidation=module.buildProductOperatingSchedule({
 assert.equal(noLiquidation.valid,false)
 assert.ok(noLiquidation.issues.some(issue=>issue.includes('unsold finished goods')))
 
+
+const controlledDraft={
+ ...base,
+ sales:[base.sales[0],{...base.sales[0],productId:'P2',periods:base.sales[0].periods.map(row=>({...row}))}],
+ wasteLedgerEntries:[
+  {id:'WN-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:5,unitCost:10,amount:50},
+  {id:'WA-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:2,unitCost:10,amount:20},
+ ],
+ productionTransfers:[
+  {id:'TR-1',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:10,costAmount:100},
+ ],
+}
+const controlled=module.buildProductOperatingSchedule(controlledDraft,periods,1,'IRR')
+assert.equal(controlled.valid,true,controlled.issues.join('; '))
+const p1=controlled.rows.find(row=>row.productId==='P1'&&row.period===1)
+const p2=controlled.rows.find(row=>row.productId==='P2'&&row.period===1)
+assert.equal(p1.productionCost,950,'normal waste is absorbed, then transferred CPP is removed from source')
+assert.equal(p2.productionCost,1100,'transferred CPP is posted to destination without creating new total cost')
+assert.equal(controlled.periodAbnormalWasteExpense[0],20,'abnormal waste is separated from inventory cost')
+assert.equal(controlled.periodNormalWasteAbsorbed[0],50,'normal waste is disclosed as absorbed production cost')
+assert.equal(p1.productionCost+p2.productionCost,2050,'inter-product transfer must preserve total CPP')
+const duplicateWaste=module.buildProductOperatingSchedule({
+ ...controlledDraft,
+ sales:[{...controlledDraft.sales[0],periods:controlledDraft.sales[0].periods.map((row,index)=>index===0?{...row,rawMaterialWasteQuantity:2}:row)},controlledDraft.sales[1]]
+},periods,1,'IRR')
+assert.equal(duplicateWaste.valid,false,'normal waste must not be absorbed twice when already in inventory-flow waste')
+const excessiveTransfer=module.buildProductOperatingSchedule({
+ ...controlledDraft,productionTransfers:[{...controlledDraft.productionTransfers[0],costAmount:5000}]
+},periods,1,'IRR')
+assert.equal(excessiveTransfer.valid,false,'transfer value cannot exceed source-period production cost')
+
 console.log('Product-by-product production, weighted-average inventory, COGS and sales validation passed.')
 
 const flowProduct={
