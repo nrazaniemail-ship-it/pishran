@@ -5,8 +5,10 @@ process.on('uncaughtExceptionMonitor',error=>{console.error('COMFAR DRI referenc
 const transpile=source=>ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 const engineSource=transpile(await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts',import.meta.url),'utf8'))
 const engineUrl='data:text/javascript;base64,'+Buffer.from(engineSource).toString('base64')
+const flowSource=transpile(await readFile(new URL('../src/features/projects/inventoryProductionFlow.ts',import.meta.url),'utf8'))
+const flowUrl='data:text/javascript;base64,'+Buffer.from(flowSource).toString('base64')
 let productSource=transpile(await readFile(new URL('../src/features/projects/productOperatingSchedule.ts',import.meta.url),'utf8'))
-productSource=productSource.replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl))
+productSource=productSource.replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl)).replace("'./inventoryProductionFlow'",JSON.stringify(flowUrl))
 const productModule=await import('data:text/javascript;base64,'+Buffer.from(productSource).toString('base64'))
 const engine=await import(engineUrl)
 const periods=[
