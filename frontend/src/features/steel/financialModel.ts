@@ -327,6 +327,7 @@ export type IntegratedFinanceInput = {
   /** When supplied, replaces fullCapacityVariableCashCost with explicit cost-of-sales plus other variable cash costs by project year. */
   costOfProductsSoldByYear?: number[]
   otherVariableCashCostByYear?: number[]
+  otherFixedCashCostByYear?: number[]
   /** Exact closing finished-goods asset values by project year; overrides the policy-derived finished-goods balance. */
   finishedGoodsInventoryValueByYear?: number[]
   annualDepreciation: number
@@ -484,6 +485,7 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
   }
   validateAnnualVector(input.costOfProductsSoldByYear, 'Cost of products sold')
   validateAnnualVector(input.otherVariableCashCostByYear, 'Other variable cash costs')
+  validateAnnualVector(input.otherFixedCashCostByYear, 'Other fixed cash costs')
   validateAnnualVector(input.finishedGoodsInventoryValueByYear, 'Finished-goods inventory')
   if (input.costOfProductsSoldByYear && !input.otherVariableCashCostByYear) throw new Error('Other variable cash costs must be supplied separately when cost of products sold is bound')
   const loanSchedules: Record<string, IntegratedLoanYear[]> = {}
@@ -533,7 +535,9 @@ export function calculateIntegratedFinance(input: IntegratedFinanceInput): Integ
     const variableCashCost = input.costOfProductsSoldByYear
       ? input.costOfProductsSoldByYear[index] + (input.otherVariableCashCostByYear?.[index] ?? 0)
       : Math.max(0, input.fullCapacityVariableCashCost) * utilization * opexFactor
-    const fixedCashCost = year > constructionYears && utilization > 0 ? Math.max(0, input.fullCapacityFixedCashCost) * opexFactor : 0
+    const fixedCashCost = year > constructionYears && utilization > 0
+      ? (input.otherFixedCashCostByYear ? input.otherFixedCashCostByYear[index] : Math.max(0, input.fullCapacityFixedCashCost) * opexFactor)
+      : 0
     const depreciation = year > constructionYears && utilization > 0 ? Math.max(0, Number(input.depreciationSchedule?.[index] ?? input.annualDepreciation)) : 0
     const maintenanceCapex = Math.max(0, Number(input.maintenanceCapexSchedule?.[index]) || 0)
     const fixedInvestment = Math.max(0, Number(input.fixedInvestmentSchedule[index]) || 0)
