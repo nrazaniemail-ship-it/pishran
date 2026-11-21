@@ -250,7 +250,7 @@ export function reconcileStageInventoryMovements(
  const transferOut=new Map<string,{quantity:number;value:number}>()
  const transferIn=new Map<string,{quantity:number;value:number}>()
  for(const transfer of stageTransfers){
-  const hasAnyValue=[transfer.id,transfer.period,transfer.sourceStage,transfer.destinationStage,transfer.sourceProductId,transfer.destinationProductId,
+  const hasAnyValue=[transfer.period,transfer.sourceStage,transfer.destinationStage,transfer.sourceProductId,transfer.destinationProductId,
    transfer.sourceCostCentreId,transfer.destinationCostCentreId,transfer.quantity,transfer.sourceUnit,transfer.destinationUnit,
    transfer.conversionFactor,transfer.transferValue,transfer.sourceReference,transfer.sourceVerified===true?true:null].some(value=>value!==null&&value!==undefined&&value!=='')
   if(!hasAnyValue)continue
