@@ -58,6 +58,36 @@ close(bound.schedule.periodCostOfSales[0], p1.costOfSales)
 close(bound.schedule.annualCostOfSales[0], p1.costOfSales + p2.costOfSales)
 close(bound.schedule.totalClosingInventoryValue, p1.closingInventoryValue + p2.closingInventoryValue)
 
+// Incremental material and conversion CPP are split between completed output and WIP by equivalent units.
+const wipSchedule = {
+  ...schedule,
+  periodRevenue: [1600], periodCostOfSales: [800], periodSubsidyIncome: [0],
+  annualRevenue: [1600], annualCostOfSales: [800],
+  periodRawMaterialInventoryValue: [500], periodWipInventoryValue: [200],
+  rows: [{
+    ...schedule.rows[0], period: 1, productionQuantity: 100, completedUnits: 100,
+    hasInventoryFlow: true, wipQuantity: 20, materialEquivalentUnits: 110,
+    conversionEquivalentUnits: 105, wipInventoryValue: 200,
+  }],
+};
+const wipLedger = ledgerModule.buildCppCpsTraceLedger([
+  { ...verifiedItem, id: 'materials-01', category: 'materials',
+    periodAmounts: [200], baseCoveredAmounts: [0] },
+  { ...verifiedItem, id: 'energy-01', category: 'energy',
+    periodAmounts: [100], baseCoveredAmounts: [0] },
+], 1);
+const wipBound = integrationModule.bindCppCpsTraceLedgerToProductSchedule(wipSchedule, wipLedger, [0]);
+assert.equal(wipBound.valid, true, wipBound.issues.join('; '));
+const wipRow = wipBound.schedule.rows[0];
+const completedMaterialCpp = 200 * 100 / 110;
+const completedConversionCpp = 100 * 100 / 105;
+const closingWipCpp = 200 * 10 / 110 + 100 * 5 / 105;
+close(wipRow.productionCost, 1000 + completedMaterialCpp + completedConversionCpp);
+close(wipRow.wipInventoryValue, 200 + closingWipCpp);
+close(wipBound.schedule.periodWipInventoryValue[0], 200 + closingWipCpp);
+close((wipRow.productionCost - 1000) + (wipRow.wipInventoryValue - 200), 300,
+  'Incremental CPP must reconcile between completed production and closing WIP');
+
 // The uncovered cost enters CPP once; fully covered cost produces zero incremental CPP.
 const coveredLedger = ledgerModule.buildCppCpsTraceLedger([{
   ...verifiedItem, baseCostCoverage: 'fully-included',
