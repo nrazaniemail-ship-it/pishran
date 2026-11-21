@@ -288,7 +288,7 @@ export function describeUnintegratedFinancialDraftInput(path:string,language:'fa
    'value-added-analysis-not-valid':['دفتر ارزش افزوده ناقص است یا با CPP/CPS، سرمایه‌گذاری و دوره‌های مالی تطبیق ندارد','Value-added ledger is incomplete or does not reconcile to CPP/CPS, investment and financial periods'],
    'cost-centre-analysis-not-integrated':['گزارش مراکز هزینه هنوز به دفتر هزینه تفصیلی متصل نشده است','Cost-centre reporting is not yet connected to the detailed cost ledger'],
    'cost-centre-ledger-not-ready':['برای تحلیل مراکز هزینه، دفتر CPP/CPS معتبر و دست‌کم یک قلم هزینه لازم است','A valid CPP/CPS trace ledger with at least one cost item is required for cost-centre analysis'],
-   'cost-allocation-not-integrated':['تخصیص هزینه هنوز به مبانی و محرک‌های هزینه متصل نشده است','Cost allocation is not yet connected to cost drivers and allocation bases'],
+   'cost-allocation-not-ready':['برای تأیید تخصیص، دفتر CPP/CPS باید کامل و مستند باشد و برنامه محصول/مالی با محرک تخصیص معتبر محاسبه شود','Cost allocation requires a complete sourced CPP/CPS ledger and a valid product/financial schedule with allocation drivers'],
    'economic-analysis-not-valid':['نرخ تنزیل یا تعدیلات قیمت سایه‌ای اقتصادی ناقص یا نامعتبر است','Economic discount rate or shadow-price adjustments are incomplete or invalid'],
   }
   const code=path.split(':')[1]??''
