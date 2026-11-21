@@ -141,6 +141,15 @@ assert.equal(rawToWip.rows.find(row=>row.inventoryStage==='raw-materials').ledge
 assert.equal(rawToWip.rows.find(row=>row.inventoryStage==='work-in-progress').ledgerClosingValue,40)
 assert.equal(rawToWip.rows.reduce((sum,row)=>sum+row.ledgerClosingValue,0),100,
  'inter-stage transfer must move value between stages without increasing total inventory')
+const incompleteTransferMovement=module.reconcileStageInventoryMovements([
+ {...stageTransferMovementRows[0],receiptsQuantity:null,receiptsValue:null},
+ stageTransferMovementRows[1],
+],[
+ {period:1,rawMaterials:60,workInProgress:40,finishedGoods:0},
+],1,0.01,[rawToWipTransfer])
+assert.equal(incompleteTransferMovement.valid,false,
+ 'a stage transfer must not turn missing base receipts into an implicit zero')
+assert.ok(incompleteTransferMovement.issues.some(issue=>issue.includes('every quantity and value to be explicitly entered')))
 const missingStageTransferEndpoint=module.reconcileStageInventoryMovements(stageTransferMovementRows.slice(1),[
  {period:1,rawMaterials:60,workInProgress:40,finishedGoods:0},
 ],1,0.01,[rawToWipTransfer])
