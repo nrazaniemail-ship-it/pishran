@@ -14,7 +14,7 @@ const { analyzeProductionRecord } = await import(analysisUrl)
 const { buildProductionFinanceBridge } = await import(integrationUrl)
 const mappingOutput = await transpile('projects/productionCostMapping.ts')
 const mappingUrl = 'data:text/javascript;base64,' + Buffer.from(mappingOutput).toString('base64')
-const { mapProductionCostsToFinance, normalizeProductionCostMapping } = await import(mappingUrl)
+const { mapProductionCostsToFinance, normalizeProductionCostMapping, buildProductionCostTraceabilityLedger } = await import(mappingUrl)
 const financeOutput = await transpile('steel/financialModel.ts')
 const financeUrl = 'data:text/javascript;base64,' + Buffer.from(financeOutput).toString('base64')
 const { calculateIntegratedFinance, buildThreeFinancialStatements, calculateSensitivityMatrix, calculateOneWaySensitivity } = await import(financeUrl)
@@ -61,6 +61,29 @@ assert.equal(legacyMapping.fixed.materials,0)
 const normalizedMapping=normalizeProductionCostMapping({variable:{materials:5},fixed:{overhead:7}})
 assert.equal(normalizedMapping.variable.materials,5)
 assert.equal(normalizedMapping.fixed.overhead,7)
+const traceabilityLedger=buildProductionCostTraceabilityLedger({
+ projectReference:'CRC200',
+ mappedBaseCosts:{variable:{materials:100,directLabor:50,energy:30,maintenance:20,overhead:20},fixed:{materials:0,directLabor:10,energy:5,maintenance:10,overhead:5}},
+ fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:100
+})
+assert.equal(traceabilityLedger.sourceVerification,'unverified')
+assert.equal(traceabilityLedger.rows.length,5)
+assert.equal(traceabilityLedger.mappedVariableTotal,220)
+assert.equal(traceabilityLedger.mappedFixedTotal,30)
+assert.equal(traceabilityLedger.unallocatedVariableBaseline,280)
+assert.equal(traceabilityLedger.unallocatedFixedBaseline,70)
+assert.ok(traceabilityLedger.rows.every(row=>row.outsideBasePoolAmount===null&&row.sourceStatus==='project-source-missing'&&row.sourceReference===null))
+assert.ok(traceabilityLedger.rows.every(row=>row.classificationStatus==='user-split-required'))
+const crc200UnverifiedLedger=buildProductionCostTraceabilityLedger({
+ projectReference:'CRC200',
+ mappedBaseCosts:{variable:{materials:0,directLabor:0,energy:0,maintenance:0,overhead:0},fixed:{materials:0,directLabor:0,energy:0,maintenance:0,overhead:0}}
+})
+assert.equal(crc200UnverifiedLedger.baselineVariablePool,null)
+assert.equal(crc200UnverifiedLedger.baselineFixedPool,null)
+assert.equal(crc200UnverifiedLedger.unallocatedVariableBaseline,null)
+assert.equal(crc200UnverifiedLedger.unallocatedFixedBaseline,null)
+assert.ok(crc200UnverifiedLedger.rows.every(row=>row.totalMappedAmount===0&&row.outsideBasePoolAmount===null&&row.baselineCoverageStatus==='not-mapped'))
+
 const mapped = mapProductionCostsToFinance({
  cpp:[220,0],cps:[176,0],hasProductionRecords:[true,false],utilization:[0.8,0.9],opexFactors:[1,1.1],
  fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,
