@@ -78,6 +78,7 @@ type Props = {
   onEditFinancialForms?: () => void
   taxDraft?: ProjectTaxFormDraft
   salesTaxLedgerDraft?: SalesTaxLedgerFormDraft
+  onSalesTaxLedgerResult?: (result:SalesTaxLedgerResult|null)=>void
   valueAddedAnalysisEnabled?: boolean
   valueAddedPeriodDrafts?: ValueAddedPeriodFormDraft[]
   economicDiscountRatePercent?: number | null
@@ -344,6 +345,7 @@ export default function AdvancedFinancePanel(props: Props) {
     }))
     return buildSalesTaxLedger(projectPeriods.length,outputEntries,inputCredits,settlements,draft.openingBalance)
   },[salesTaxLedgerActive,baseProductOperatingSchedule,JSON.stringify(props.salesTaxLedgerDraft??null),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods)])
+  useEffect(()=>{props.onSalesTaxLedgerResult?.(salesTaxLedgerResult)},[props.onSalesTaxLedgerResult,salesTaxLedgerResult])
 
   const loanDraftIntegration=useMemo(()=>props.loanDrafts?.length&&props.projectFoundation&&props.dayCountBasis!==null&&props.dayCountBasis!==undefined
     ?buildProjectLoanDraftIntegration(props.loanDrafts,projectPeriods,props.dayCountBasis,props.periodFrequency??'unspecified',props.projectFoundation)
