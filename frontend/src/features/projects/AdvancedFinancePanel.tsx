@@ -335,7 +335,7 @@ export default function AdvancedFinancePanel(props: Props) {
       discountPeriodsPerYear:periodsPerYear,
       mirrFinanceRatePercent:props.mirrFinanceRate??null,mirrReinvestmentRatePercent:props.mirrReinvestmentRate??null
     })
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule)])
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(productionBridge)])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
@@ -359,10 +359,10 @@ export default function AdvancedFinancePanel(props: Props) {
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
     {productionBridge&&<div className="fw-hint" role="status">
-      {productionBridge.valid
-        ? <>{t('سوابق تولید پروژه به تقویم مالی متصل شد.','Project production records are mapped to the financial calendar.') } CPP: {money(productionAnnual?.cpp.reduce((sum,value)=>sum+value,0)??0)}؛ CPS: {productionCostMappingSafe?t('به بهای کالای فروش‌رفته متصل شد.','mapped to cost of products sold.'):t('به‌علت وجود هزینه متغیر پایه، اتصال CPS برای جلوگیری از دوباره‌شماری مسدود است.','CPS mapping is blocked because base variable costs exist; this prevents double counting.')} {t('موجودی محصول نهایی به سرمایه در گردش متصل شد.','Finished goods inventory is linked to working capital.')}
+      {productionBridge.valid&&productionAnnual
+        ? <>{t('سوابق تولید پروژه به تقویم مالی متصل شد.','Project production records are mapped to the financial calendar.') } CPP: {money(productionAnnual.cpp.reduce((sum,value)=>sum+value,0))}؛ CPS: {productionCostMappingSafe?t('به بهای کالای فروش‌رفته متصل شد.','mapped to cost of products sold.'):t('به‌علت وجود هزینه متغیر پایه، اتصال CPS برای جلوگیری از دوباره‌شماری مسدود است.','CPS mapping is blocked because base variable costs exist; this prevents double counting.')} {t('موجودی محصول نهایی به سرمایه در گردش متصل شد.','Finished goods inventory is linked to working capital.')}
       </>
-        : <>{t('اتصال سوابق تولید به مدل مالی انجام نشد:','Production-to-finance mapping was rejected:')} {productionBridge.errors.join('؛ ')}</>}
+        : productionBridge.valid ? t('تقویم مالی/سال مالی برای تجمیع سوابق تولید کامل نیست؛ ارقام تولید به موتور مالی تزریق نشد.','Fiscal-year mapping is incomplete; production amounts were not injected into the finance engine.') : <>{t('اتصال سوابق تولید به مدل مالی انجام نشد:','Production-to-finance mapping was rejected:')} {productionBridge.errors.join('؛ ')}</>}
     </div>}
     {props.fixedInvestmentSchedule?.length===years && props.preOperatingSchedule?.length===years
       ? <p className="fw-hint">{t('زمان‌بندی CAPEX دارایی‌های ثابت و هزینه‌های قبل از بهره‌برداری از نوبت‌های تحصیل مستند یا تأییدشده استخراج شده است.','Fixed-asset CAPEX and pre-production timing both use source-supported or user-confirmed acquisition vintages.')}</p>
