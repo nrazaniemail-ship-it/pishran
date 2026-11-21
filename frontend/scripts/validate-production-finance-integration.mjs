@@ -51,10 +51,10 @@ const mapped = mapProductionCostsToFinance({
  mappedBaseCosts:{variable:{materials:100,directLabor:50,energy:30,maintenance:20,overhead:20},fixed:{materials:0,directLabor:0,energy:0,maintenance:10,overhead:0}}
 })
 const integrated = calculateIntegratedFinance({
- years:2,constructionYears:1,capacity:100,fullCapacityRevenue:1000,fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,
- costOfProductsSoldByYear:[0,176],otherVariableCashCostByYear:[0,224],otherFixedCashCostByYear:[0,40],finishedGoodsInventoryValueByYear:[0,44],
- annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
- utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
+ years:3,constructionYears:1,capacity:100,fullCapacityRevenue:1000,fullCapacityVariableCashCost:500,fullCapacityFixedCashCost:50,
+ costOfProductsSoldByYear:[0,176,0],otherVariableCashCostByYear:[0,224,0],otherFixedCashCostByYear:[0,40,0],finishedGoodsInventoryValueByYear:[0,44,0],
+ annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0,0],preOperatingSchedule:[0,0,0],
+ utilization:[0,1,0],equityContributions:[0,0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
  salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:10
 })
 assert.equal(integrated.years[1].variableCashCost,400)
@@ -71,10 +71,10 @@ const volumeSensitivity=calculateSensitivityMatrix({
  salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:10
 },[0],[20])
 const manuallyScaled=calculateIntegratedFinance({
- years:2,constructionYears:1,capacity:120,fullCapacityRevenue:1200,fullCapacityVariableCashCost:600,fullCapacityFixedCashCost:50,
- costOfProductsSoldByYear:[0,211.2],otherVariableCashCostByYear:[0,268.8],otherFixedCashCostByYear:[0,40],finishedGoodsInventoryValueByYear:[0,52.8],
- annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0],preOperatingSchedule:[0,0],
- utilization:[0,1],equityContributions:[0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
+ years:3,constructionYears:1,capacity:120,fullCapacityRevenue:1200,fullCapacityVariableCashCost:600,fullCapacityFixedCashCost:50,
+ costOfProductsSoldByYear:[0,211.2,0],otherVariableCashCostByYear:[0,268.8,0],otherFixedCashCostByYear:[0,40,0],finishedGoodsInventoryValueByYear:[0,52.8,0],
+ annualDepreciation:0,fixedInvestment:0,preOperatingCost:0,fixedInvestmentSchedule:[0,0,0],preOperatingSchedule:[0,0,0],
+ utilization:[0,1,0],equityContributions:[0,0,0],loans:[],taxRate:0,costOfEquity:10,workingCapitalPercent:0,
  salesEscalationPercent:0,opexEscalationPercent:0,discountMode:'manual',manualDiscountRate:10
 })
 assert.ok(Math.abs(volumeSensitivity[0][0].npv-manuallyScaled.npvProject)<1e-6)
