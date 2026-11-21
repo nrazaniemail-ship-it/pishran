@@ -421,7 +421,7 @@ export function validateProjectModelFinancialFormDrafts(value:ProjectModelFinanc
   if(row.period===null||!Number.isInteger(row.period)||row.period<1)errors.push('inventory-stage-transfer-'+index+':invalid-period')
   if(!row.sourceStage||!row.destinationStage||row.sourceStage===row.destinationStage)errors.push('inventory-stage-transfer-'+index+':distinct-source-and-destination-stages-required')
   if(!row.sourceProductId.trim()||!row.destinationProductId.trim()||!row.sourceCostCentreId.trim()||!row.destinationCostCentreId.trim())errors.push('inventory-stage-transfer-'+index+':source-and-destination-product-centre-required')
-  if(row.quantity===null||!Number.isFinite(row.quantity)||row.quantity<0||row.conversionFactor===null||!Number.isFinite(row.conversionFactor)||row.conversionFactor<=0||row.transferValue===null||!Number.isFinite(row.transferValue)||row.transferValue<0)errors.push('inventory-stage-transfer-'+index+':invalid-quantity-conversion-or-value')
+  if(row.quantity===null||!Number.isFinite(row.quantity)||row.quantity<=0||row.conversionFactor===null||!Number.isFinite(row.conversionFactor)||row.conversionFactor<=0||row.transferValue===null||!Number.isFinite(row.transferValue)||row.transferValue<0)errors.push('inventory-stage-transfer-'+index+':invalid-quantity-conversion-or-value')
   if(!row.sourceUnit.trim()||!row.destinationUnit.trim())errors.push('inventory-stage-transfer-'+index+':source-and-destination-units-required')
   if(!row.sourceReference.trim()||!row.sourceVerified)errors.push('inventory-stage-transfer-'+index+':verified-source-required')
  }
