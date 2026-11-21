@@ -4,6 +4,7 @@
  */
 import type { CommonFinancialItemMetadata } from './projectModelSchema'
 import type { CppCpsTraceItem } from './cppCpsCostTraceability'
+import type { WasteLedgerEntry, ProductionTransferEntry } from './inventoryControlLedgers'
 import { HELP_FORM_SECTIONS, createBlankHelpDrivenProjectForms, validateHelpDrivenProjectForms, type HelpDrivenProjectForms } from './projectModelHelpForms'
 const createBlankCommonFinancialItemMetadata=():CommonFinancialItemMetadata=>({description:'',currencyCode:null,marketOrigin:null,escalationPercent:null,remarks:'',costCentreId:null})
 
@@ -154,6 +155,8 @@ export function createBlankCppCpsTraceItem(id:string,periodCount:number):CppCpsT
 
 export type ProjectModelFinancialFormDrafts = {
  cppCpsTraceItems: CppCpsTraceItem[]
+ wasteLedgerEntries: WasteLedgerEntry[]
+ productionTransfers: ProductionTransferEntry[]
  helpDriven: HelpDrivenProjectForms
  assets: FixedAssetFormDraft[]
  productionCosts: ProductionCostFormDraft[]
@@ -164,7 +167,7 @@ export type ProjectModelFinancialFormDrafts = {
  economic: { discountRatePercent:number|null; adjustments:EconomicAdjustmentFormDraft[] }
 }
 export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinancialFormDrafts {
- return {cppCpsTraceItems:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
+ return {cppCpsTraceItems:[],wasteLedgerEntries:[],productionTransfers:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),economic:{discountRatePercent:null,adjustments:[]}}
 }
 
 const hasEnteredValue=(value:unknown):boolean=>{
