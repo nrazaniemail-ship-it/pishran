@@ -356,6 +356,13 @@ export default function AdvancedFinancePanel(props: Props) {
     if(periodicWorkingCapitalByPeriod.length) periodicWorkingCapitalByPeriod[periodicWorkingCapitalByPeriod.length-1]=0
     const inventoryDetailByCategory=(category:'inventory'|'work-in-progress',fallback:number[])=>{
       if(props.workingCapitalDrafts?.length&&!workingCapitalDraftSchedule?.valid)return Array(periods.length).fill(Number.NaN)
+      if(!props.workingCapitalDrafts?.length&&category==='inventory'&&state.workingCapitalDays.raw>0&&state.workingCapitalBases.rawMaterials<=0)
+        return Array(periods.length).fill(Number.NaN)
+      if(!props.workingCapitalDrafts?.length&&category==='work-in-progress'&&state.workingCapitalDays.wip>0&&
+        (state.wipCompletion.material+state.wipCompletion.conversion<=0||
+         (state.wipCompletion.material>0&&state.workingCapitalBases.rawMaterials<=0)||
+         (state.wipCompletion.conversion>0&&state.workingCapitalBases.conversion<=0)))
+        return Array(periods.length).fill(Number.NaN)
       const hasExplicit=workingCapitalDraftSchedule?.componentRows.some(row=>row.category===category)??false
       return periods.map((_,index)=>{
         if(index===periods.length-1)return 0
