@@ -103,27 +103,30 @@ assert.ok(noLiquidation.issues.some(issue=>issue.includes('unsold finished goods
 
 const controlledDraft={
  ...base,
- sales:[{...base.sales[0],unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsValue:1150*30/110}:row)},{...base.sales[0],productId:'P2',unitOfMeasure:'kg',periods:base.sales[0].periods.map(row=>({...row}))}],
+ sales:[{...base.sales[0],unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsValue:1150*20/110}:row)},{...base.sales[0],productId:'P2',unitOfMeasure:'kg',periods:base.sales[0].periods.map(row=>({...row}))}],
  productionCosts:[...base.productionCosts,{...base.productionCosts[0],id:'cost-p2',productId:'P2'}],
  wasteLedgerEntries:[
   {id:'WN-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:5,unitCost:10,amount:50},
   {id:'WA-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:2,unitCost:10,amount:20},
  ],
  productionTransfers:[
-  {id:'TR-1',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+  {id:'TR-1',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:1150*10/110},
  ],
 }
 const controlled=module.buildProductOperatingSchedule(controlledDraft,periods,1,'IRR')
 assert.equal(controlled.valid,true,controlled.issues.join('; '))
 const p1=controlled.rows.find(row=>row.productId==='P1'&&row.period===1)
 const p2=controlled.rows.find(row=>row.productId==='P2'&&row.period===1)
-assert.equal(p1.productionCost,950,'normal waste is absorbed, then transferred CPP is removed from source')
-assert.equal(p2.productionCost,1100,'transferred CPP is posted to destination without creating new total cost')
+assert.ok(Math.abs(p1.productionCost-(1050-1150*10/110))<1e-8,'normal waste is absorbed, then weighted-average transfer value is reclassified from source CPP')
+assert.ok(Math.abs(p2.productionCost-(1000+1150*10/110))<1e-8,'transferred CPP is posted to destination without creating new total cost')
 assert.equal(controlled.periodAbnormalWasteExpense[0],20,'abnormal waste is separated from inventory cost')
 assert.equal(controlled.periodNormalWasteAbsorbed[0],50,'normal waste is disclosed as absorbed production cost')
-assert.equal(p1.productionCost+p2.productionCost,2050,'inter-product transfer must preserve total CPP')
+assert.ok(Math.abs(p1.productionCost+p2.productionCost-2050)<1e-8,'inter-product transfer must preserve total CPP')
 assert.equal(p1.closingInventoryQuantity,20,'source finished-goods quantity is reduced by transferred source units')
 assert.equal(p2.closingInventoryQuantity,40,'destination finished-goods quantity receives converted transfer units')
+const wrongTransferCost=module.buildProductOperatingSchedule({...controlledDraft,productionTransfers:[{...controlledDraft.productionTransfers[0],costAmount:100}]},periods,1,'IRR')
+assert.equal(wrongTransferCost.valid,false,'transfer value must reconcile to source weighted-average cost times transferred quantity')
+
 const convertedDraft={...controlledDraft,sales:controlledDraft.sales.map((sale,index)=>({...sale,unitOfMeasure:index===0?'kg':'tonne'})),productionTransfers:[{...controlledDraft.productionTransfers[0],quantity:10,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0.001,costAmount:100}]}
 const convertedSchedule=module.buildProductOperatingSchedule(convertedDraft,periods,1,'IRR')
 assert.equal(convertedSchedule.valid,true,convertedSchedule.issues.join('; '))
