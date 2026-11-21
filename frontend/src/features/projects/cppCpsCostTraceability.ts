@@ -39,6 +39,8 @@ export type CppCpsTracePeriodRow = {
   incrementalCpp: number | null
   baseCoverage: BaseCostCoverage
   sourceStatus: TraceSourceStatus
+  allocationMethod: TraceAllocationMethod
+  productId: string | null
   path: readonly ['production-cost' | 'raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital']
 }
 
@@ -128,6 +130,7 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
           itemId: item.id, category: item.category, period: period + 1,
           grossCost: null, baseCoveredCost: null, incrementalCpp: null,
           baseCoverage: 'unverified', sourceStatus: 'unverified',
+          allocationMethod: item.allocationMethod, productId: item.productId,
           path: item.category === 'materials'
             ? ['raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital']
             : ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'],
@@ -171,6 +174,7 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
         itemId: item.id, category: item.category, period: period + 1,
         grossCost: gross, baseCoveredCost: coveredAmount, incrementalCpp: incremental,
         baseCoverage: item.baseCostCoverage, sourceStatus: 'verified',
+        allocationMethod: item.allocationMethod, productId: item.productId,
         path: item.category === 'materials'
           ? ['raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital']
           : ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'],
