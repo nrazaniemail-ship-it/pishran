@@ -45,4 +45,18 @@ const incompleteReference=module.reconcileInventoryReference([
 assert.equal(incompleteReference.valid,false)
 assert.equal(incompleteReference.rows[0].status,'incomplete')
 assert.equal(module.reconcileInventoryReference([{id:'R3',period:1,sourceDocument:'x',schedule:'y',page:'1',currency:'USD',rawMaterials:1,workInProgress:1,finishedGoods:1,totalInventory:3,cpp:4,cps:3}], [{period:1,rawMaterials:1,workInProgress:1,finishedGoods:1,totalInventory:3,cpp:4,cps:3}],0.01,'IRR').valid,false)
+// Extracted aggregate inventory values from COMFAR III SARZAMIN tank-project report, printed pp.32-35.
+const comfarInventory=[
+ [3,236787.88,32],[4,264340.10,32],[5,292726.11,33],[6,321112.12,33],
+ [7,320973.15,33],[8,320973.15,33],[9,320973.15,33],[10,320973.15,34],
+ [11,320973.15,34],[12,320973.15,34],[13,320973.15,34],[14,320973.15,34],
+ [15,320973.15,35],[16,320973.15,35],[17,320973.15,35],
+].map(([period,totalInventory,page])=>({id:'SARZAMIN-'+period,period,sourceDocument:'COMFAR III - 001 - جدول خلاصه عملکرد پروژه.pdf',schedule:'سرمایه در گردش خالص مورد نیاز - کل / کل موجودی کالا',page:String(page),currency:'میلیون ریال',rawMaterials:null,workInProgress:null,finishedGoods:null,totalInventory,cpp:null,cps:null}))
+const comfarModel=comfarInventory.map(row=>({period:row.period,rawMaterials:0,workInProgress:0,finishedGoods:0,totalInventory:row.totalInventory,cpp:0,cps:0}))
+const aggregateOnly=module.reconcileInventoryReference(comfarInventory,comfarModel,0.01,'میلیون ریال')
+assert.equal(aggregateOnly.valid,false,'Aggregate inventory alone must not falsely certify component inventory or CPP/CPS reconciliation')
+assert.equal(aggregateOnly.rows.length,15)
+assert.ok(aggregateOnly.rows.every(row=>row.status==='incomplete'&&row.missingFields.includes('rawMaterials')&&row.missingFields.includes('cpp')))
+const changedTotal=module.reconcileInventoryReference([comfarInventory[0]],[{...comfarModel[0],totalInventory:236787.89}],0.000001,'میلیون ریال')
+assert.equal(changedTotal.rows[0].status,'mismatch','Aggregate inventory mismatch must remain visible even when component evidence is incomplete')
 console.log('Waste classification, inter-product/cost-centre transfer and three-way inventory reconciliation validations passed.')
