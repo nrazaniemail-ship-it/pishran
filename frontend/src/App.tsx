@@ -13,13 +13,39 @@ import BackupScheduler from './features/settings/BackupScheduler'
 
 type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wizard' | 'guide'
 
-const modules = [
-  { icon: Factory, title: 'مهندسی و طراحی فرآیند', enTitle: 'Process Engineering & Design', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', enSub: 'Capacity, material balance, energy and equipment', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: Globe2, title: 'هوشمندی بازار', enTitle: 'Market Intelligence', sub: 'عرضه، تقاضا، قیمت و رقبا', enSub: 'Supply, demand, pricing and competitors', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: TrendingUp, title: 'مدل مالی و اقتصادی', enTitle: 'Financial & Economic Model', sub: 'NPV، IRR، جریان نقدی و تأمین مالی', enSub: 'NPV, IRR, cash flow and financing', status: 'نمونه اولیه', enStatus: 'Prototype' },
-  { icon: Activity, title: 'ریسک و سناریو', enTitle: 'Risk & Scenarios', sub: 'حساسیت، سناریو و مونت‌کارلو', enSub: 'Sensitivity, scenarios and Monte Carlo', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: Bot, title: 'دستیار هوش مصنوعی', enTitle: 'AI Assistant', sub: 'تحلیل مستند و پاسخ‌گویی به سرمایه‌گذار', enSub: 'Evidence-based analysis for investors', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: FileChartColumn, title: 'گزارش سرمایه‌گذاری', enTitle: 'Investment Reports', sub: 'گزارش مدیریتی، بانکی و سرمایه‌گذار', enSub: 'Management, banking and investor reports', status: 'در نقشه راه', enStatus: 'Roadmap' },
+const moduleGroups = [
+  {
+    title: 'دید مدیریتی، سودآوری و کنترل عملکرد', enTitle: 'Management, Profitability & Performance',
+    modules: [
+      { icon: LayoutDashboard, title: 'داشبورد هوشمند مدیرعامل', enTitle: 'Executive Intelligence Dashboard', sub: 'وضعیت شرکت، انحراف‌ها و هشدارهای مدیریتی', enSub: 'Company status, variances and executive alerts' },
+      { icon: TrendingUp, title: 'مدیریت اقتصادی و بهای تمام‌شده', enTitle: 'Steel Cost & Profitability Intelligence', sub: 'بهای تمام‌شده، حاشیه سود و نقطه سربه‌سر', enSub: 'Cost, margins and break-even analysis' },
+      { icon: Activity, title: 'هوشمندی تولید و بهره‌وری', enTitle: 'Production & OEE Intelligence', sub: 'تولید، ظرفیت، توقفات و راندمان', enSub: 'Output, capacity, downtime and OEE' },
+      { icon: Gauge, title: 'مدیریت عملکرد و شاخص‌ها', enTitle: 'Enterprise Performance Management', sub: 'اهداف، KPI، انحراف و اقدام اصلاحی', enSub: 'Objectives, KPIs, variances and actions' },
+    ],
+  },
+  {
+    title: 'بهره‌وری، پایداری و تعالی عملیات', enTitle: 'Productivity, Sustainability & Operational Excellence',
+    modules: [
+      { icon: Activity, title: 'مدیریت انرژی', enTitle: 'Energy Intelligence & Optimization', sub: 'مصرف ویژه، هزینه و فرصت‌های بهینه‌سازی', enSub: 'Specific consumption, cost and optimization' },
+      { icon: Settings, title: 'تعمیرات و قابلیت اطمینان', enTitle: 'Maintenance & Asset Reliability', sub: 'خرابی، توقف، MTBF و MTTR', enSub: 'Failures, downtime, MTBF and MTTR' },
+      { icon: Factory, title: 'مهندسی فرآیند و تعالی عملیاتی', enTitle: 'Process Engineering & Operational Excellence', sub: 'توازن مواد و انرژی، گلوگاه و بهبود', enSub: 'Material and energy balance, bottlenecks and improvement' },
+      { icon: FolderKanban, title: 'زنجیره تأمین و موجودی', enTitle: 'Supply Chain & Inventory Intelligence', sub: 'تأمین‌کنندگان، موجودی و سرمایه در گردش', enSub: 'Suppliers, inventory and working capital' },
+    ],
+  },
+  {
+    title: 'بازار، مشتری و رشد سودآور', enTitle: 'Market, Customer & Profitable Growth',
+    modules: [
+      { icon: Globe2, title: 'هوشمندی بازار و سودآوری محصول', enTitle: 'Steel Market & Product Profitability', sub: 'قیمت، عرضه و تقاضا، رقبا و ترکیب محصول', enSub: 'Prices, supply, demand, competitors and product mix' },
+    ],
+  },
+  {
+    title: 'تصمیم‌گیری، سرمایه‌گذاری و تاب‌آوری', enTitle: 'Decision, Investment & Resilience',
+    modules: [
+      { icon: FileChartColumn, title: 'رتبه‌بندی و هوشمندی تصمیم', enTitle: 'Ranking & Decision Intelligence', sub: 'وزن‌دهی، رتبه‌بندی و پایداری تصمیم', enSub: 'Weighting, ranking and decision robustness' },
+      { icon: FolderKanban, title: 'مدیریت پروژه‌های توسعه و سرمایه‌گذاری', enTitle: 'Capital Project & Portfolio Management', sub: 'بودجه، پیشرفت، زمان‌بندی و سبد پروژه', enSub: 'Budget, progress, schedule and project portfolio' },
+      { icon: ShieldCheck, title: 'مدیریت ریسک و تاب‌آوری', enTitle: 'Enterprise Risk & Resilience', sub: 'ریسک‌های عملیاتی، مالی و استمرار کسب‌وکار', enSub: 'Operational, financial and continuity risks' },
+    ],
+  },
 ]
 
 
@@ -161,24 +187,18 @@ export default function App() {
           <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
           <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
         </div>
-        <div className="hero-art honeycomb-art" aria-label={isEn ? "Pishran feasibility and investment modules" : "ماژول‌های امکان‌سنجی و ارزیابی سرمایه‌گذاری پیشران"}>
+        <div className="hero-art honeycomb-art" aria-label={isEn ? "Feasibility core and priority modules" : "هسته امکان‌سنجی و ماژول‌های اولویت‌دار"}>
           <div className="honeycomb-row">
-            <button type="button" className="honeycomb-cell honeycomb-yellow" onClick={() => setPage('steel-group')} aria-label={isEn ? "Open process engineering" : "ورود به مهندسی و طراحی فرآیند"}><Factory/><span>{isEn ? 'Process Engineering' : 'مهندسی و طراحی فرآیند'}</span></button>
-            <button type="button" className="honeycomb-cell honeycomb-red roadmap" disabled aria-label={isEn ? "Market intelligence roadmap module" : "هوشمندی بازار؛ در نقشه راه"}><Globe2/><span>{isEn ? 'Market Intelligence' : 'هوشمندی بازار'}</span></button>
-            <button type="button" className="honeycomb-cell honeycomb-yellow" onClick={() => setPage('project-wizard')} aria-label={isEn ? "Open financial and economic model" : "ورود به مدل مالی و اقتصادی"}><TrendingUp/><span>{isEn ? 'Financial Model' : 'مدل مالی و اقتصادی'}</span></button>
+            <button type="button" className="honeycomb-cell honeycomb-yellow roadmap" disabled><LayoutDashboard/><span>{isEn ? 'Executive Dashboard' : 'داشبورد هوشمند مدیرعامل'}</span></button>
+            <button type="button" className="honeycomb-cell honeycomb-red roadmap" disabled><TrendingUp/><span>{isEn ? 'Cost & Profitability' : 'بهای تمام‌شده و سودآوری'}</span></button>
+            <button type="button" className="honeycomb-cell honeycomb-yellow roadmap" disabled><Activity/><span>{isEn ? 'Production & OEE' : 'تولید و بهره‌وری'}</span></button>
           </div>
           <div className="honeycomb-row honeycomb-row-middle">
-            <button type="button" className="honeycomb-cell honeycomb-red roadmap" disabled aria-label={isEn ? "Risk and scenarios roadmap module" : "ریسک و سناریو؛ در نقشه راه"}><ShieldCheck/><span>{isEn ? 'Risk & Scenarios' : 'ریسک و سناریو'}</span></button>
-            <button type="button" className="honeycomb-cell honeycomb-core" onClick={() => setPage('project-wizard')} aria-label={isEn ? "Start feasibility study" : "شروع امکان‌سنجی پروژه"}><Gauge/><span>{isEn ? 'Feasibility Study' : 'امکان‌سنجی پروژه'}</span><small>{isEn ? 'Core workspace' : 'هسته اصلی پیشران'}</small></button>
+            <button type="button" className="honeycomb-cell honeycomb-red roadmap" disabled><Gauge/><span>{isEn ? 'Performance & KPI' : 'مدیریت عملکرد و KPI'}</span></button>
+            <button type="button" className="honeycomb-cell honeycomb-core" onClick={() => setPage('project-wizard')} aria-label={isEn ? "Start feasibility study" : "شروع امکان‌سنجی پروژه"}><Gauge/><span>{isEn ? 'Feasibility Study' : 'امکان‌سنجی فنی، اقتصادی و مالی'}</span><small>{isEn ? 'Pishran core' : 'هسته ثابت پیشران'}</small></button>
           </div>
-          <div className="honeycomb-row">
-            <button type="button" className="honeycomb-cell honeycomb-yellow" onClick={() => setPage('projects')} aria-label={isEn ? "Open project management" : "ورود به مدیریت پروژه"}><FolderKanban/><span>{isEn ? 'Project Management' : 'مدیریت پروژه'}</span></button>
-            <button type="button" className="honeycomb-cell honeycomb-red roadmap" disabled aria-label={isEn ? "Investment reports roadmap module" : "گزارش سرمایه‌گذاری؛ در نقشه راه"}><FileChartColumn/><span>{isEn ? 'Investment Reports' : 'گزارش سرمایه‌گذاری'}</span></button>
-            <button type="button" className="honeycomb-cell honeycomb-yellow roadmap" disabled aria-label={isEn ? "AI assistant roadmap module" : "دستیار هوشمند؛ در نقشه راه"}><Bot/><span>{isEn ? 'AI Assistant' : 'دستیار هوشمند'}</span></button>
-          </div>
-          <p className="honeycomb-hint">{isEn ? 'Select an active module to open it · muted modules are on the roadmap' : 'برای ورود، ماژول‌های فعال را انتخاب کنید؛ ماژول‌های غیرفعال در نقشه راه هستند.'}</p>
-        </div>
-      </section>
+          <p className="honeycomb-hint">{isEn ? 'Feasibility is the active core; enterprise modules are introduced in phases.' : 'امکان‌سنجی هسته فعال پیشران است؛ ماژول‌های بنگاه به‌صورت مرحله‌ای توسعه می‌یابند.'}</p>
+        </div>      </section>
 
       <section className="section-head"><div><h2>{isEn ? "Investment Control Center" : "مرکز کنترل سرمایه‌گذاری"}</h2></div><span className="muted">{isEn ? 'Version 1.0.1' : 'نسخه ۱.۰.۱'}</span></section>
       <section className="kpis">
@@ -188,8 +208,8 @@ export default function App() {
         <article className="kpi"><span>{isEn ? 'Storage status' : 'وضعیت ذخیره‌سازی'}</span><b className="live">{isEn&&storageInfo.backend==='در حال بررسی'?'Checking...':storageInfo.backend}</b><small>{isEn ? 'Data is kept on this device' : 'اطلاعات روی دستگاه نگهداری می‌شود'}</small></article>
       </section>
 
-      <section className="section-head"><div><h2>{isEn ? "Pishran Modules" : "ماژول‌های پیشران"}</h2></div><span className="muted">{isEn ? 'Layered and extensible architecture' : 'معماری لایه‌ای و توسعه‌پذیر'}</span></section>
-      <section className="module-grid">{modules.map(({icon: Icon,title,sub,status,enTitle,enSub,enStatus})=><article className="module" key={title}><div className="module-icon"><Icon size={21}/></div><div className="module-text"><b>{isEn ? enTitle : title}</b><p>{isEn ? enSub : sub}</p><small>{isEn ? enStatus : status}</small></div></article>)}</section>
+      <section className="section-head"><div><h2>{isEn ? "Pishran Modules" : "نقشه ماژول‌های پیشران"}</h2></div><span className="muted">{isEn ? '12 specialized modules · phased roadmap' : '۱۲ ماژول تخصصی · نقشه راه مرحله‌ای'}</span></section>
+      {moduleGroups.map(group=><section className="module-group" key={group.title}><h3>{isEn ? group.enTitle : group.title}</h3><div className="module-grid">{group.modules.map(({icon: Icon,title,sub,enTitle,enSub})=><article className="module" key={title}><div className="module-icon"><Icon size={21}/></div><div className="module-text"><b>{isEn ? enTitle : title}</b><p>{isEn ? enSub : sub}</p><small>{isEn ? 'Roadmap · not yet active' : 'در نقشه راه · هنوز فعال نشده'}</small></div></article>)}</div></section>)}
 
       <section className="analytics">
         <article className="chart-card"><div className="card-heading"><div><h3>{isEn ? "Illustrative return trend" : "نمای نمونه روند بازده"}</h3></div><span className="tag">{isEn ? "Sample data" : "داده نمایشی"}</span></div><ReactECharts option={chart} style={{height:250}}/></article>
