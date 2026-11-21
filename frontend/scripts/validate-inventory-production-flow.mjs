@@ -49,4 +49,14 @@ assert.equal(mod.buildInventoryFlowSchedule({...input,rawMaterialWasteQuantity:[
 assert.equal(mod.buildInventoryFlowSchedule({...input,closingWipQuantity:[21,0]}).valid,false)
 assert.equal(mod.buildInventoryFlowSchedule({...input,conversionCompletionPercent:[101,100]}).valid,false)
 assert.equal(mod.buildInventoryFlowSchedule({...input,rawMaterialPurchasesValue:[null,650]}).valid,false)
+// Orphaned inventory value must not be silently carried at zero quantity / zero unit cost.
+assert.equal(mod.buildInventoryFlowSchedule({...input,openingRawMaterialQuantity:0,openingRawMaterialValue:1}).valid,false,
+ 'Positive opening raw-material value without physical quantity must block valuation')
+assert.equal(mod.buildInventoryFlowSchedule({...input,openingWipQuantity:0,openingWipMaterialValue:1}).valid,false,
+ 'Positive opening WIP value without WIP quantity must block process costing')
+assert.equal(mod.buildInventoryFlowSchedule({...input,openingWipQuantity:0,openingWipConversionValue:1}).valid,false,
+ 'Positive opening WIP conversion value without WIP quantity must block process costing')
+assert.equal(mod.buildInventoryFlowSchedule({...input,openingRawMaterialQuantity:0,openingRawMaterialValue:0,
+ rawMaterialPurchasesQuantity:[0,50],rawMaterialPurchasesValue:[1,650]}).valid,false,
+ 'Purchase value without available raw-material quantity must not be valued at zero unit cost')
 console.log('Raw-material purchases/issues, WIP equivalent-unit valuation and transfer-to-finished-production reconciliations passed.')
