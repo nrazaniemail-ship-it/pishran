@@ -1,7 +1,7 @@
 import {
  createBlankFixedAssetFormDraft, createBlankProductionCostFormDraft,
  createBlankSalesProductFormDraft, createBlankWorkingCapitalComponentFormDraft,
- createBlankLoanFacilityFormDraft, createBlankCppCpsTraceItem, createBlankSalesTaxLedgerFormDraft, createBlankValueAddedPeriodFormDraft, createBlankValueAddedInputFormDraft, createBlankValueAddedInvestmentFormDraft, createBlankCostCentreInventoryMovementFormDraft, type ProjectModelFinancialFormDrafts,
+ createBlankLoanFacilityFormDraft, createBlankCppCpsTraceItem, createBlankSalesTaxLedgerFormDraft, createBlankValueAddedPeriodFormDraft, createBlankValueAddedInputFormDraft, createBlankValueAddedInvestmentFormDraft, createBlankCostCentreInventoryMovementFormDraft, createBlankInventoryStageTransferFormDraft, type ProjectModelFinancialFormDrafts,
  type FixedAssetFormDraft, type ProductionCostFormDraft,
  type WorkingCapitalComponentFormDraft, type LoanFacilityFormDraft, type CostCentreFormDraft, type ValueAddedPeriodFormDraft, type ValueAddedInputFormDraft, type ValueAddedInvestmentFormDraft,
  validateProjectModelFinancialFormDrafts
@@ -361,6 +361,32 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
     </div>
    })}
    <button type="button" className="secondary-button" onClick={()=>onChange({...value,costCentreInventoryMovements:[...(value.costCentreInventoryMovements??[]),createBlankCostCentreInventoryMovementFormDraft(crypto.randomUUID())]})}>{t('افزودن ردیف موجودی مرکز هزینه','Add cost-centre inventory row')}</button>
+  </div>
+  <div className="fw-card">
+   <h4>{t('دفتر انتقال بین مراحل موجودی','Inter-stage inventory transfer register')}</h4>
+   <p className="fw-hint">{t('انتقال مواد اولیه به WIP و WIP به محصول نهایی را با سند مستقل ثبت کنید. ارزش انتقال از مرحله مبدأ به مقصد منتقل می‌شود و نباید دوباره به موجودی کل اضافه شود؛ هزینه تبدیل افزوده‌شده در مرحله مقصد جداگانه در دفتر تولید ثبت می‌شود.','Record raw-material-to-WIP and WIP-to-finished-goods movements as explicit transfers. Transfer value moves from source to destination and must not be added again to total inventory; conversion costs added at the destination remain separate production costs.')}</p>
+   {(value.inventoryStageTransfers??[]).map((entry,index)=>{
+    const patch=(changes:Partial<typeof entry>)=>onChange({...value,inventoryStageTransfers:(value.inventoryStageTransfers??[]).map((row,i)=>i===index?{...row,...changes}:row)})
+    const stageOptions=[['raw-materials',t('مواد اولیه','Raw materials')],['work-in-progress',t('کالای در جریان ساخت','Work in progress')],['finished-goods',t('محصول نهایی','Finished goods')]] as const
+    return <div className="fw-grid" key={entry.id}>
+     <NumberField label={t('دوره','Period')} value={entry.period} onChange={v=>patch({period:v})}/>
+     <label className="fw-field"><span>{t('مرحله مبدأ','Source stage')}</span><select value={entry.sourceStage??''} onChange={e=>patch({sourceStage:(e.target.value||null) as typeof entry.sourceStage})}><option value="">{t('انتخاب مرحله','Select stage')}</option>{stageOptions.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+     <label className="fw-field"><span>{t('مرحله مقصد','Destination stage')}</span><select value={entry.destinationStage??''} onChange={e=>patch({destinationStage:(e.target.value||null) as typeof entry.destinationStage})}><option value="">{t('انتخاب مرحله','Select stage')}</option>{stageOptions.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+     <TextField label={t('محصول مبدأ','Source product')} value={entry.sourceProductId} onChange={v=>patch({sourceProductId:v})}/>
+     <TextField label={t('مرکز هزینه مبدأ','Source cost centre')} value={entry.sourceCostCentreId} onChange={v=>patch({sourceCostCentreId:v})}/>
+     <TextField label={t('محصول مقصد','Destination product')} value={entry.destinationProductId} onChange={v=>patch({destinationProductId:v})}/>
+     <TextField label={t('مرکز هزینه مقصد','Destination cost centre')} value={entry.destinationCostCentreId} onChange={v=>patch({destinationCostCentreId:v})}/>
+     <NumberField label={t('مقدار مبدأ','Source quantity')} value={entry.quantity} onChange={v=>patch({quantity:v})}/>
+     <TextField label={t('واحد مبدأ','Source unit')} value={entry.sourceUnit} onChange={v=>patch({sourceUnit:v})}/>
+     <TextField label={t('واحد مقصد','Destination unit')} value={entry.destinationUnit} onChange={v=>patch({destinationUnit:v})}/>
+     <NumberField label={t('ضریب تبدیل مقصد','Destination conversion factor')} value={entry.conversionFactor} onChange={v=>patch({conversionFactor:v})}/>
+     <NumberField label={t('ارزش انتقال','Transferred value')} value={entry.transferValue} onChange={v=>patch({transferValue:v})}/>
+     <TextField label={t('ارجاع سند / صفحه','Source document / page')} value={entry.sourceReference} onChange={v=>patch({sourceReference:v})}/>
+     <label className="fw-field"><span>{t('وضعیت منبع','Source status')}</span><select value={entry.sourceVerified?'verified':'unverified'} onChange={e=>patch({sourceVerified:e.target.value==='verified'})}><option value="unverified">{t('تأییدنشده','Unverified')}</option><option value="verified">{t('تأییدشده','Verified')}</option></select></label>
+     <button type="button" className="secondary-button" onClick={()=>onChange({...value,inventoryStageTransfers:(value.inventoryStageTransfers??[]).filter(row=>row.id!==entry.id)})}>{t('حذف انتقال','Remove transfer')}</button>
+    </div>
+   })}
+   <button type="button" className="secondary-button" onClick={()=>onChange({...value,inventoryStageTransfers:[...(value.inventoryStageTransfers??[]),createBlankInventoryStageTransferFormDraft(crypto.randomUUID())]})}>{t('افزودن انتقال بین مراحل','Add inter-stage transfer')}</button>
   </div>
   <ProjectModelHelpCoveragePanel value={value.helpDriven} onChange={helpDriven=>onChange({...value,helpDriven})} language={language}/>
  </section>
