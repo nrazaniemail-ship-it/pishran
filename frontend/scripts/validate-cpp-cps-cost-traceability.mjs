@@ -44,6 +44,11 @@ assert.deepEqual(result.completeIncrementalByPeriod, [null, null])
 assert.deepEqual(result.knownIncrementalByCostCentre, { 'CC-PROD': 330 })
 assert.deepEqual(result.completeIncrementalByCostCentre, { 'CC-PROD': null },
   'A centre containing unverified costs must not expose a complete total')
+assert.deepEqual(result.knownIncrementalByCostCentreByPeriod, { 'CC-PROD': [150, 180] })
+assert.deepEqual(result.completeIncrementalByCostCentreByPeriod, { 'CC-PROD': [null, null] },
+  'Unverified costs must null the affected centre-period totals')
+assert.deepEqual(result.knownFixedIncrementalByCostCentre, { 'CC-PROD': 20 })
+assert.deepEqual(result.knownVariableIncrementalByCostCentre, { 'CC-PROD': 310 })
 assert.deepEqual(result.knownIncrementalByCostCentreAndCategory['CC-PROD'], {
   materials: 220, labour: 0, energy: 100, maintenance: 10, overhead: 0,
 })
@@ -65,6 +70,7 @@ assert.equal(ready.valid, true)
 assert.equal(ready.complete, true)
 assert.equal(ready.readyForCppPosting, true)
 assert.deepEqual(ready.completeIncrementalByPeriod, [150, 180])
+assert.deepEqual(ready.completeIncrementalByCostCentreByPeriod, { 'CC-PROD': [150, 180] })
 
 const duplicate = ledgerModule.buildCppCpsTraceLedger([items[0], items[0]], 2)
 assert.equal(duplicate.valid, false)
