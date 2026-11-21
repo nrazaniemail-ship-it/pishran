@@ -102,9 +102,6 @@ export function buildSalesTaxLedger(
     if (entry.ratePercent > 0 && (!entry.sourceVerified || !entry.sourceReference.trim())) {
       issues.push('Sales-tax rate for product ' + entry.productId + ' requires a verified legal / source reference.')
     }
-    if (false) {
-      issues.push('Sales-tax output row for ' + entry.productId + ' has an invalid period, taxable sales or rate.')
-    }
   }
   const creditIds = new Set<string>()
   for (const entry of inputCredits) {
