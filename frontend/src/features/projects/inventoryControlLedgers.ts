@@ -59,8 +59,16 @@ export function validateProductionTransfers(entries:ProductionTransferEntry[],pe
 }
 
 export function reconcileInventoryThreeWay(periods:InventoryReconciliationPeriod[],tolerance=0.01):InventoryReconciliationResult{
- const issues:string[]=[]
+ const issues:string[]=[],seen=new Set<number>()
+ if(!Number.isFinite(tolerance)||tolerance<0)issues.push('Inventory reconciliation tolerance must be a finite non-negative percentage.')
  const rows=periods.map(p=>{
+  if(!Number.isInteger(p.period)||p.period<1)issues.push('Inventory reconciliation requires a positive integer period.')
+  if(seen.has(p.period))issues.push('Inventory reconciliation contains duplicate period '+p.period+'.')
+  seen.add(p.period)
+  const groups=[['model',p.model],['balance sheet',p.balanceSheet],['CPP/CPS',p.cppCps]] as const
+  for(const [label,values] of groups)for(const [field,value] of Object.entries(values)){
+   if(!Number.isFinite(value)||value<0)issues.push('Period '+p.period+' '+label+' '+field+' must be a finite non-negative amount.')
+  }
   const mi=p.model.rawMaterials+p.model.workInProgress+p.model.finishedGoods
   const bi=p.balanceSheet.rawMaterials+p.balanceSheet.workInProgress+p.balanceSheet.finishedGoods
   const ci=p.cppCps.rawMaterials+p.cppCps.workInProgress+p.cppCps.finishedGoods
@@ -70,6 +78,7 @@ export function reconcileInventoryThreeWay(periods:InventoryReconciliationPeriod
   for(const [label,a,b] of [['model vs balance sheet',mi,bi],['model vs CPP/CPS',mi,ci],['CPP/CPS total vs detail',p.cppCps.totalInventory,ci],['working capital vs model control',mn,p.model.netWorkingCapital],['working capital vs balance sheet',mn,bn]] as const)if(!near(a,b,tolerance/100))issues.push('Period '+p.period+' reconciliation failed: '+label+'.')
   return row
  })
+ if(!periods.length)issues.push('At least one inventory reconciliation period is required.')
  return {valid:!issues.length,issues,rows}
 }
 
