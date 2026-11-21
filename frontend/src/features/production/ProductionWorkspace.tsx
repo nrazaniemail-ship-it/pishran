@@ -20,6 +20,7 @@ export default function ProductionWorkspace({language='fa',onBack}:Props){
  const [error,setError]=useState('')
  const [saved,setSaved]=useState(false)
  const result=useMemo(()=>{try{return analyzeProductionRecord(record)}catch{return null}},[record])
+ const finishedGoods=useMemo(()=>{try{return result?calculateFinishedGoodsPeriod({openingQuantity:record.finishedGoodsOpeningQuantity??0,openingValue:record.finishedGoodsOpeningValue??0,currentGoodOutput:record.goodOutput,currentProductionCost:result.totalProductionCost,salesQuantity:record.salesQuantity??0}):null}catch{return null}},[record,result])
  const refresh=async()=>setRecords(await listProductionRecords())
  useEffect(()=>{void refresh()},[])
  const t=(fa:string,english:string)=>en?english:fa
