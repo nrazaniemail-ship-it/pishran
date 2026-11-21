@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
-import { calculateIncrementalEnterpriseAnalysis, calculateExistingLoanSchedule, type ExistingLoanRepaymentType, type EnterpriseScenarioPeriodInput } from '../steel/financialModel'
+import { calculateIncrementalEnterpriseAnalysis, calculateExistingLoanSchedule, type ExistingLoanRepaymentType, type EnterpriseScenarioPeriodInput, type IncrementalAnalysisResult } from '../steel/financialModel'
 import { calculateStartingFinancialBalanceSummary, validateStartingFixedAssetBalances, type StartingFixedAssetBalance, type StartingFinancialBalanceSummary, type ProjectFoundation, type OpeningCurrentAccounts } from './projectFoundation'
 
 type Asset = StartingFixedAssetBalance
