@@ -54,3 +54,14 @@ assert.deepEqual(summarizeFinishedGoodsPortfolio(portfolio,'IRR'),{cpp:565000,cp
 assert.throws(()=>calculateFinishedGoodsPortfolio([{...portfolio[0],productId:''}]))
 assert.throws(()=>summarizeFinishedGoodsPortfolio(portfolio,'USD'))
 console.log('Finished goods multi-product independent valuation tests passed')
+
+const crc200Schedule = [
+ {openingStock:0,salesQuantity:160000,closingStockRequirement:2222.22,expectedProduction:162222.22},
+ {openingStock:2222.22,salesQuantity:180000,closingStockRequirement:2500,expectedProduction:180277.78},
+ {openingStock:2500,salesQuantity:200000,closingStockRequirement:2777.78,expectedProduction:200277.78},
+ {openingStock:2777.78,salesQuantity:200000,closingStockRequirement:2777.78,expectedProduction:200000},
+]
+for (const row of crc200Schedule) assert.ok(Math.abs(calculateComfarProductionRequirement(row).productionQuantity-row.expectedProduction)<0.011)
+assert.deepEqual(calculateProductIncomeStatementLine({productId:'coil-a',currency:'IRR',salesRevenue:500000,cpp:340000,openingInventoryValue:20000,closingInventoryValue:72000}),{productId:'coil-a',currency:'IRR',salesRevenue:500000,cpp:340000,cps:288000,grossProfit:212000,closingInventoryAsset:72000})
+assert.throws(()=>calculateComfarProductionRequirement({openingStock:10,salesQuantity:0,closingStockRequirement:0}))
+console.log('COMFAR production stock equation and product P&L bridge tests passed')
