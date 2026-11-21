@@ -107,6 +107,8 @@ The saved cost-centre movement rows are now passed into the financial panel. Whe
 - The sum of stage closing values by period is compared with the corresponding periodic finance-engine inventory balance (raw materials, work in progress, or finished goods).
 - A mismatch, missing stage-period, invalid movement, or unverified source makes this cross-check fail visibly.
 
+A stage with no subledger rows is accepted only when the finance engine reports zero closing inventory for that stage in every period. A non-zero engine balance with no stage/cost-centre movement rows is a visible reconciliation failure; it is never silently omitted.
+
 This is a **cross-check only**. It does not add the ledger closing value to inventory, CPP/CPS, or working capital a second time. The entered rows remain unintegrated report blockers until stage-specific receipts, issues, WIP conversion, finished-goods completion and inter-stage transfer posting are connected to the underlying accounting schedules. In particular, production quantity/value is not treated as a raw-material receipt without an explicit stage transition record.
 
 ## Inter-stage inventory transfers
