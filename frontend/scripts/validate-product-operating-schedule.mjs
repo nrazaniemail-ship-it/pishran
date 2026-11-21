@@ -104,6 +104,7 @@ assert.ok(noLiquidation.issues.some(issue=>issue.includes('unsold finished goods
 const controlledDraft={
  ...base,
  sales:[base.sales[0],{...base.sales[0],productId:'P2',periods:base.sales[0].periods.map(row=>({...row}))}],
+ productionCosts:[...base.productionCosts,{...base.productionCosts[0],id:'cost-p2',productId:'P2'}],
  wasteLedgerEntries:[
   {id:'WN-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:5,unitCost:10,amount:50},
   {id:'WA-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:2,unitCost:10,amount:20},
