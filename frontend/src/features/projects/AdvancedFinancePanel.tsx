@@ -3,7 +3,7 @@ import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import { listProductionRecords } from '../production/productionRepository'
 import { buildProductionFinanceBridge, type ProductionFinanceBridge } from './productionFinanceIntegration'
-import { mapProductionCostsToFinance, normalizeProductionCostMapping, type ProductionCostMapping } from './productionCostMapping'
+import { buildProductionCostTraceabilityLedger, mapProductionCostsToFinance, normalizeProductionCostMapping, type ProductionCostMapping } from './productionCostMapping'
 import { allocateJointVentureCashFlows, type JointVenturePartner, type PartnerFinanceResult } from './partnerFinance'
 import { listFinancialMethods } from './financialMethodDirectory'
 import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConvention } from './projectFoundation'
@@ -261,6 +261,12 @@ export default function AdvancedFinancePanel(props: Props) {
     fullCapacityVariableCashCost:props.fullCapacityVariableCashCost,fullCapacityFixedCashCost:props.fullCapacityFixedCashCost,mappedBaseCosts:state.productionCostMapping
   }):null
   const productionCostMappingSafe=Boolean(productionCostMappingResult?.valid)
+  const productionCostTraceabilityLedger=buildProductionCostTraceabilityLedger({
+    projectReference:props.projectId,
+    mappedBaseCosts:state.productionCostMapping,
+    fullCapacityVariableCashCost:props.fullCapacityVariableCashCost,
+    fullCapacityFixedCashCost:props.fullCapacityFixedCashCost
+  })
   const workingCapitalPolicy = useMemo(()=>({
     dayBasis:(props.dayCountBasis??360) as 360|365,rawMaterialDays:state.workingCapitalDays.raw,energyDays:state.workingCapitalDays.energy,sparePartsDays:state.workingCapitalDays.spareParts,workInProgressDays:state.workingCapitalDays.wip,
     workInProgressMaterialCompletionPercent:state.wipCompletion.material,workInProgressConversionCompletionPercent:state.wipCompletion.conversion,
@@ -477,6 +483,14 @@ export default function AdvancedFinancePanel(props: Props) {
      </div>
      {productionCostMappingResult&&!productionCostMappingResult.valid&&<p className="fw-validation">{productionCostMappingResult.errors.join('؛ ')}</p>}
      {productionAnnual&&<p className="fw-hint">{tr('اجزای واقعی تولید ثبت‌شده در افق مدل','Recorded production cost components over the model horizon')}: {tr('مواد','Materials')} {money(productionAnnual.materialCost.reduce((a,b)=>a+b,0))} · {tr('دستمزد','Direct labor')} {money(productionAnnual.directLaborCost.reduce((a,b)=>a+b,0))} · {tr('انرژی','Energy')} {money(productionAnnual.energyCost.reduce((a,b)=>a+b,0))} · {tr('تعمیرات','Maintenance')} {money(productionAnnual.maintenanceCost.reduce((a,b)=>a+b,0))} · {tr('سربار','Overhead')} {money(productionAnnual.allocatedOverhead.reduce((a,b)=>a+b,0))}</p>}
+     <p className="fw-hint">{tr('دفتر ردیابی CPP/CPS؛ مبالغ نگاشت‌شده ورودی کاربرند و تا تطبیق با دفتر هزینه و منبع اولیه، تأییدشده محسوب نمی‌شوند. مبلغ خارج از پوشش و منبع CRC200 در نبود سند خالی می‌ماند.','CPP/CPS traceability ledger; mapped amounts are user inputs and remain unverified until reconciled to source cost records. Outside-pool amounts and CRC200 source values stay blank when evidence is unavailable.')}</p>
+     <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
+       <th>{t('جزء هزینه','Cost component')}</th><th>{t('مبنای متغیر','Variable mapped')}</th><th>{t('مبنای ثابت','Fixed mapped')}</th><th>{t('جمع نگاشت','Mapped total')}</th><th>{t('خارج از پایه','Outside baseline')}</th><th>{t('منبع پروژه','Project source')}</th>
+     </tr></thead><tbody>{productionCostTraceabilityLedger.rows.map(row=><tr key={row.component}>
+       <td>{tr(row.titleFa)}</td><td>{money(row.variableMappedAmount)}</td><td>{money(row.fixedMappedAmount)}</td><td>{money(row.totalMappedAmount)}</td>
+       <td>—</td><td>{t('فاقد سند منطبق؛ تأییدنشده','No matching source; unverified')}</td>
+     </tr>)}</tbody></table></div>
+     <p className="fw-hint">{tr('مانده پایه متغیر پس از نگاشت','Unallocated variable baseline')}: {productionCostTraceabilityLedger.unallocatedVariableBaseline===null?'—':money(productionCostTraceabilityLedger.unallocatedVariableBaseline)} · {tr('مانده پایه ثابت پس از نگاشت','Unallocated fixed baseline')}: {productionCostTraceabilityLedger.unallocatedFixedBaseline===null?'—':money(productionCostTraceabilityLedger.unallocatedFixedBaseline)}</p>
      <h4>{t('آورده سهامدار برای سرمایه در گردش','Shareholder Equity for Working Capital')}</h4>
       <div className="fw-grid">{Array.from({length:opYears},(_,i)=>{const yearIndex=construction+i;return <label className="fw-field" key={yearIndex}><span>{tr('آورده سرمایه در گردش سال بهره‌برداری')} {i+1}</span><input type="number" min="0" value={equityWorkingCapitalContributions[yearIndex]??0} onChange={e=>setWorkingCapitalEquity(yearIndex,Number(e.target.value))}/></label>})}</div>
       <p className="fw-hint">{tr('این مبلغ، آورده نقدی سهامدار برای تأمین سرمایه در گردش است و فقط یک‌بار ثبت می‌شود. اگر از افزایش خالص سرمایه در گردش بیشتر باشد، مازاد در مانده نقد ترازنامه دیده می‌شود؛ اگر کمتر باشد، کسری نقدینگی باقی می‌ماند. سهم تأمین‌شده از محل وام در این قسمت وارد نمی‌شود.','This is the shareholder cash contribution to working capital; enter it only once. Any amount above the net working-capital increase remains as cash on the balance sheet; any shortfall remains visible as a cash deficit. Do not enter debt-funded amounts here.')}</p>
