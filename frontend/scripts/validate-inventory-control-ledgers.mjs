@@ -166,7 +166,7 @@ const blankStageTransferDraft=module.reconcileStageInventoryMovements([],[
 ],1,0.01,[{id:'',period:null,sourceStage:null,destinationStage:null,sourceProductId:'',destinationProductId:'',
  sourceCostCentreId:'',destinationCostCentreId:'',quantity:null,sourceUnit:'',destinationUnit:'',conversionFactor:null,
  transferValue:null,sourceReference:'',sourceVerified:false}])
-assert.equal(blankStageTransferDraft.valid,true,'an untouched blank transfer form row must not create a false validation failure')
+assert.equal(blankStageTransferDraft.valid,true,'an untouched blank transfer form row must not create a false validation failure: '+JSON.stringify(blankStageTransferDraft))
 const idOnlyStageTransfer=module.reconcileStageInventoryMovements([],[{period:1,rawMaterials:0,workInProgress:0,finishedGoods:0}],1,0.01,[
  {id:'ST-INCOMPLETE',period:null,sourceStage:null,destinationStage:null,sourceProductId:'',destinationProductId:'',
   sourceCostCentreId:'',destinationCostCentreId:'',quantity:null,sourceUnit:'',destinationUnit:'',conversionFactor:null,
