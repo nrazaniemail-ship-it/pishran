@@ -168,6 +168,10 @@ export type StageInventoryMovementDraft={
  openingValue:number|null
  receiptsQuantity:number|null
  receiptsValue:number|null
+ transfersInQuantity:number|null
+ transfersInValue:number|null
+ transfersOutQuantity:number|null
+ transfersOutValue:number|null
  productionQuantity:number|null
  productionValue:number|null
  consumptionQuantity:number|null
@@ -228,12 +232,18 @@ export function reconcileStageInventoryMovements(
     issues.push('Stage '+stage+' is missing cost-centre inventory rows for period '+period+'.')
     continue
    }
+   const transferInQuantity=periodRows.reduce((sum,row)=>sum+(row.transfersInQuantity??0),0)
+   const transferOutQuantity=periodRows.reduce((sum,row)=>sum+(row.transfersOutQuantity??0),0)
+   const transferInValue=periodRows.reduce((sum,row)=>sum+(row.transfersInValue??0),0)
+   const transferOutValue=periodRows.reduce((sum,row)=>sum+(row.transfersOutValue??0),0)
+   if(!near(transferInQuantity,transferOutQuantity,tolerance/100)||!near(transferInValue,transferOutValue,tolerance/100))
+    issues.push('Stage '+stage+' internal cost-centre transfers do not balance in period '+period+'.')
    const mapped:CostCentreInventoryMovement[]=periodRows.map(row=>({
     period:row.period as number,productId:row.productId,costCentreId:row.costCentreId,
     openingQuantity:row.openingQuantity as number,openingValue:row.openingValue as number,
-    receiptsQuantity:row.receiptsQuantity as number,receiptsValue:row.receiptsValue as number,
+    receiptsQuantity:(row.receiptsQuantity as number)+(row.transfersInQuantity as number),receiptsValue:(row.receiptsValue as number)+(row.transfersInValue as number),
     productionQuantity:row.productionQuantity as number,productionValue:row.productionValue as number,
-    consumptionQuantity:row.consumptionQuantity as number,consumptionValue:row.consumptionValue as number,
+    consumptionQuantity:(row.consumptionQuantity as number)+(row.transfersOutQuantity as number),consumptionValue:(row.consumptionValue as number)+(row.transfersOutValue as number),
     wasteQuantity:row.wasteQuantity as number,wasteValue:row.wasteValue as number,
     closingQuantity:row.closingQuantity as number,closingValue:row.closingValue as number,
    }))
