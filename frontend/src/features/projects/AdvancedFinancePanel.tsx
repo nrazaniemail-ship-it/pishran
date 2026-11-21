@@ -352,7 +352,7 @@ export default function AdvancedFinancePanel(props: Props) {
     const estimatedWorkingCapitalByPeriod=workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:row.netWorkingCapital)
     const cashInHandByPeriod=workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:Math.max(0,row.minimumCash-(row.shortTermDeposits??0)))
     const shortTermDepositsByPeriod=workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:row.shortTermDeposits??0)
-    const periodicWorkingCapitalByPeriod=workingCapitalDraftSchedule?.valid?[...workingCapitalDraftSchedule.closingWorkingCapital]:[...estimatedWorkingCapitalByPeriod]
+    let periodicWorkingCapitalByPeriod=workingCapitalDraftSchedule?.valid?[...workingCapitalDraftSchedule.closingWorkingCapital]:[...estimatedWorkingCapitalByPeriod]
     if(periodicWorkingCapitalByPeriod.length) periodicWorkingCapitalByPeriod[periodicWorkingCapitalByPeriod.length-1]=0
     const inventoryDetailByCategory=(category:'inventory'|'work-in-progress',fallback:number[])=>{
       if(props.workingCapitalDrafts?.length&&!workingCapitalDraftSchedule?.valid)return Array(periods.length).fill(Number.NaN)
@@ -365,7 +365,7 @@ export default function AdvancedFinancePanel(props: Props) {
         return Array(periods.length).fill(Number.NaN)
       const hasExplicit=workingCapitalDraftSchedule?.componentRows.some(row=>row.category===category)??false
       return periods.map((_,index)=>{
-        if(index===periods.length-1)return 0
+        if(index===periods.length-1&&!(productOperatingSchedule?.valid&&productOperatingSchedule.hasInventoryFlow))return 0
         if(hasExplicit)return workingCapitalDraftSchedule!.componentRows.filter(row=>row.category===category&&row.period===index+1).reduce((sum,row)=>sum+row.amount,0)
         if(props.workingCapitalDrafts?.length)return 0
         return fallback[index]??0
@@ -373,6 +373,18 @@ export default function AdvancedFinancePanel(props: Props) {
     }
     const rawMaterialsInventoryByPeriod=inventoryDetailByCategory('inventory',productOperatingSchedule?.valid&&productOperatingSchedule.hasInventoryFlow?productOperatingSchedule.periodRawMaterialInventoryValue:workingCapitalBreakdownByPeriod.map(row=>row.rawMaterials))
     const workInProgressInventoryByPeriod=inventoryDetailByCategory('work-in-progress',productOperatingSchedule?.valid&&productOperatingSchedule.hasInventoryFlow?productOperatingSchedule.periodWipInventoryValue:workingCapitalBreakdownByPeriod.map(row=>row.workInProgress))
+    if(productOperatingSchedule?.valid&&productOperatingSchedule.hasInventoryFlow){
+      if(props.workingCapitalDrafts?.length){
+        const mismatches=periods.some((_,index)=>
+          Math.abs((rawMaterialsInventoryByPeriod[index]??Number.NaN)-(productOperatingSchedule.periodRawMaterialInventoryValue[index]??Number.NaN))>0.01||
+          Math.abs((workInProgressInventoryByPeriod[index]??Number.NaN)-(productOperatingSchedule.periodWipInventoryValue[index]??Number.NaN))>0.01)
+        if(mismatches)periodicWorkingCapitalByPeriod=Array(periods.length).fill(Number.NaN)
+      }else{
+        periodicWorkingCapitalByPeriod=periodicWorkingCapitalByPeriod.map((balance,index)=>
+          balance+(productOperatingSchedule.periodRawMaterialInventoryValue[index]??0)+(productOperatingSchedule.periodWipInventoryValue[index]??0)-
+          (workingCapitalBreakdownByPeriod[index]?.rawMaterials??0)-(workingCapitalBreakdownByPeriod[index]?.workInProgress??0))
+      }
+    }
     const periodicInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,constructionPeriodCount:periods.filter(period=>fiscalYearIndexForPeriod(period,periods,fiscalMonth)<construction).length,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
