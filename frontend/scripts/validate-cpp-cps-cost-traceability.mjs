@@ -42,12 +42,10 @@ assert.deepEqual(result.unverifiedItemIds, ['overhead'])
 assert.deepEqual(result.knownIncrementalByPeriod, [150, 180])
 assert.deepEqual(result.completeIncrementalByPeriod, [null, null])
 assert.deepEqual(result.knownIncrementalByCostCentre, { 'CC-PROD': 330 })
-assert.deepEqual(result.knownIncrementalByCostCentreAndPeriod, { 'CC-PROD': [150, 180] })
+assert.deepEqual(result.knownIncrementalByCostCentreByPeriod, { 'CC-PROD': [150, 180] })
 assert.deepEqual(result.completeIncrementalByCostCentreByPeriod, { 'CC-PROD': [null, null] })
 assert.deepEqual(result.completeIncrementalByCostCentre, { 'CC-PROD': null },
   'A centre containing unverified costs must not expose a complete total')
-assert.deepEqual(result.knownIncrementalByCostCentreAndPeriod, { 'CC-PROD': [150, 180] })
-assert.deepEqual(result.completeIncrementalByCostCentreAndPeriod, { 'CC-PROD': [null, null] },
   'Unverified costs must null the affected centre-period totals')
 assert.deepEqual(result.knownFixedIncrementalByCostCentre, { 'CC-PROD': 66 })
 assert.deepEqual(result.knownVariableIncrementalByCostCentre, { 'CC-PROD': 264 })
@@ -90,7 +88,7 @@ const unknownCentreEvidence = ledgerModule.buildCppCpsTraceLedger([
 assert.equal(unknownCentreEvidence.valid, true)
 assert.equal(unknownCentreEvidence.complete, false)
 assert.deepEqual(unknownCentreEvidence.unallocatedUnverifiedItemIds, ['overhead'])
-assert.deepEqual(unknownCentreEvidence.completeIncrementalByCostCentreAndPeriod, { 'CC-PROD': [null, null] })
+assert.deepEqual(unknownCentreEvidence.completeIncrementalByCostCentreByPeriod, { 'CC-PROD': [null, null] })
 assert.deepEqual(unknownCentreEvidence.completeIncrementalByCostCentre, { 'CC-PROD': null },
   'Unverified cost with no centre must prevent any centre total from being labelled complete')
 
