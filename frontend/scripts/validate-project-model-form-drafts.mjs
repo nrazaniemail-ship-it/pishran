@@ -55,6 +55,11 @@ try {
  const complete=forms.createBlankProjectModelFinancialFormDrafts()
  assert.deepEqual(complete.costCentres,[])
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts(complete),[])
+ const blankStageTransfer=forms.createBlankInventoryStageTransferFormDraft('stage-transfer-1')
+ assert.equal(blankStageTransfer.transferValue,null,'inter-stage transfer value must remain blank until sourced')
+ assert.equal(blankStageTransfer.sourceVerified,false)
+ assert.deepEqual(complete.inventoryStageTransfers,[])
+ assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,inventoryStageTransfers:[blankStageTransfer]}),[])
  const blankMovement=forms.createBlankCostCentreInventoryMovementFormDraft('movement-1')
  assert.equal(blankMovement.openingQuantity,null,'new inventory rows must keep unknown quantities blank')
  assert.equal(blankMovement.closingValue,null,'new inventory rows must keep unknown values blank')
@@ -78,6 +83,15 @@ try {
  const duplicateMovement={...verifiedMovement,id:'movement-2'}
  assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[verifiedMovement,duplicateMovement]}).includes('cost-centre-inventory-1:duplicate-movement-key'))
  assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[{...verifiedMovement,sourceVerified:false}]}).includes('cost-centre-inventory-0:verified-source-required'))
+ const validStageTransfer={...blankStageTransfer,period:1,sourceStage:'raw-materials',destinationStage:'work-in-progress',
+  sourceProductId:'ORE',destinationProductId:'PELLET',sourceCostCentreId:'ORE-STORE',destinationCostCentreId:'DRI-PLANT',
+  quantity:4,sourceUnit:'tonne',destinationUnit:'tonne',conversionFactor:1,transferValue:40,
+  sourceReference:'material transfer note / 17',sourceVerified:true}
+ assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,inventoryStageTransfers:[validStageTransfer]}),[])
+ assert.ok(forms.listUnintegratedFinancialDraftInputs({...complete,inventoryStageTransfers:[validStageTransfer]}).includes('financialForms.inventoryStageTransfers.0'))
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,inventoryStageTransfers:[{...validStageTransfer,destinationStage:'raw-materials'}]}).includes('inventory-stage-transfer-0:distinct-source-and-destination-stages-required'))
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,inventoryStageTransfers:[{...validStageTransfer,sourceVerified:false}]}).includes('inventory-stage-transfer-0:verified-source-required'))
+
  const blankCentre=forms.createBlankCostCentreFormDraft('CC-1')
  assert.ok(forms.validateCostCentreFormDraft(blankCentre).includes('cost-centre-name-required'))
  const validCentre={...blankCentre,name:'Rolling mill',type:'production'}
