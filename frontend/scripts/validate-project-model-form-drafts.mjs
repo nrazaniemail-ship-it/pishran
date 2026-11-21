@@ -72,6 +72,8 @@ try {
  const driverCentre={...manualCentre,allocationBasis:'manual',driverRows:[{period:1,productId:'P1',amount:1}]}
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentres:[driverCentre],cppCpsTraceItems:[driverTrace]}),[])
  assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentres:[validCentre,{...validCentre,name:'Duplicate'}]}).includes('cost-centre-1:duplicate-cost-centre-id'))
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentres:[validCentre,{...validCentre,id:' cc-1 ',name:'Duplicate'}]}).includes('cost-centre-1:duplicate-cost-centre-id'))
+ assert.ok(forms.validateCostCentreFormDraft({...manualCentre,driverRows:[{period:1,productId:'P1',amount:1},{period:1,productId:' p1 ',amount:2}]}).includes('duplicate-manual-cost-centre-driver'))
 
  const auditDraft=forms.createBlankProjectModelFinancialFormDrafts()
  assert.deepEqual(forms.listUnintegratedFinancialDraftInputs(auditDraft),[])
