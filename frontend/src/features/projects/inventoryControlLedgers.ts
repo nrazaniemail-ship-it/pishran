@@ -71,7 +71,8 @@ export function reconcileInventoryThreeWay(periods:InventoryReconciliationPeriod
 export function reconcileInventoryReference(
  benchmarks:InventoryReferenceBenchmarkEntry[],
  modeled: {period:number;rawMaterials:number;workInProgress:number;finishedGoods:number;totalInventory:number;cpp:number;cps:number}[],
- tolerance=0.01
+ tolerance=0.01,
+ expectedCurrency?:string
 ):InventoryReferenceComparisonResult{
  const issues:string[]=[],rows:InventoryReferenceComparisonRow[]=[]
  const seen=new Set<number>()
@@ -79,6 +80,7 @@ export function reconcileInventoryReference(
   if(seen.has(b.period))issues.push('Reference inventory benchmark has duplicate period '+b.period+'.')
   seen.add(b.period)
   if(!b.sourceDocument.trim()||!b.schedule.trim()||!b.page.trim()||!b.currency.trim())issues.push('Reference benchmark period '+b.period+' requires source document, schedule, page and currency.')
+  if(expectedCurrency&&b.currency.trim().toUpperCase()!==expectedCurrency.trim().toUpperCase())issues.push('Reference benchmark period '+b.period+' currency '+b.currency+' does not match project currency '+expectedCurrency+'. Convert through an evidenced exchange-rate schedule before comparison.')
   const m=modeled.find(x=>x.period===b.period)
   if(!m){issues.push('Reference benchmark period '+b.period+' has no matching model period.');continue}
   const pairs=[['rawMaterials',b.rawMaterials,m.rawMaterials],['workInProgress',b.workInProgress,m.workInProgress],['finishedGoods',b.finishedGoods,m.finishedGoods],['totalInventory',b.totalInventory,m.totalInventory],['cpp',b.cpp,m.cpp],['cps',b.cps,m.cps]] as const
