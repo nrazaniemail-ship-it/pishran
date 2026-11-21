@@ -66,6 +66,10 @@ try {
  Object.assign(trace,{label:'Power',basis:'period-total',behaviour:'variable',fixedPercent:0,variablePercent:100,costCentreId:'CC-1',allocationMethod:'production-quantity',baseCostCoverage:'excluded',periodAmounts:[100],baseCoveredAmounts:[0],source:{status:'verified',reference:'invoice-1',description:'Power invoice',reliability:'primary-document'}})
  assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,cppCpsTraceItems:[trace]}).includes('cpp-cps-item-trace-1:unknown-cost-centre'))
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentres:[validCentre],cppCpsTraceItems:[trace]}),[])
+ const driverTrace={...trace,allocationMethod:'cost-centre-driver'}
+ assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentres:[validCentre],cppCpsTraceItems:[driverTrace]}).includes('cpp-cps-item-trace-1:cost-centre-allocation-basis-required'))
+ const driverCentre={...manualCentre,allocationBasis:'manual',driverRows:[{period:1,productId:'P1',amount:1}]}
+ assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentres:[driverCentre],cppCpsTraceItems:[driverTrace]}),[])
  assert.ok(forms.validateProjectModelFinancialFormDrafts({...complete,costCentres:[validCentre,{...validCentre,name:'Duplicate'}]}).includes('cost-centre-1:duplicate-cost-centre-id'))
 
  const auditDraft=forms.createBlankProjectModelFinancialFormDrafts()
