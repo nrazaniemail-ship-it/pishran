@@ -103,7 +103,7 @@ assert.ok(noLiquidation.issues.some(issue=>issue.includes('unsold finished goods
 
 const controlledDraft={
  ...base,
- sales:[{...base.sales[0],unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:30,openingFinishedGoodsValue:1150*30/110}:({...row}))},{...base.sales[0],productId:'P2',unitOfMeasure:'kg',periods:base.sales[0].periods.map(row=>({...row}))}],
+ sales:[{...base.sales[0],unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:20,openingFinishedGoodsValue:1150*20/110}:({...row}))},{...base.sales[0],productId:'P2',unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:40,openingFinishedGoodsValue:300+1150*10/110}:({...row}))}],
  productionCosts:[...base.productionCosts,{...base.productionCosts[0],id:'cost-p2',productId:'P2'}],
  wasteLedgerEntries:[
   {id:'WN-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:5,unitCost:10,amount:50},
@@ -133,7 +133,7 @@ assert.equal(p2.closingInventoryQuantity,40,'destination finished-goods quantity
 const wrongTransferCost=module.buildProductOperatingSchedule({...controlledDraft,productionTransfers:[{...controlledDraft.productionTransfers[0],costAmount:100}]},periods,1,'IRR')
 assert.equal(wrongTransferCost.valid,false,'transfer value must reconcile to source weighted-average cost times transferred quantity')
 
-const convertedDraft={...controlledDraft,sales:controlledDraft.sales.map((sale,index)=>({...sale,unitOfMeasure:index===0?'kg':'tonne'})),productionTransfers:[{...controlledDraft.productionTransfers[0],quantity:10,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0.001,costAmount:1150*10/110}]}
+const convertedDraft={...controlledDraft,sales:controlledDraft.sales.map((sale,index)=>({...sale,unitOfMeasure:index===0?'kg':'tonne',periods:sale.periods.map((row,periodIndex)=>periodIndex===1&&index===1?{...row,openingFinishedGoodsQuantity:30.01,openingFinishedGoodsValue:300+1150*10/110}:row)})),productionTransfers:[{...controlledDraft.productionTransfers[0],quantity:10,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0.001,costAmount:1150*10/110}]}
 const convertedSchedule=module.buildProductOperatingSchedule(convertedDraft,periods,1,'IRR')
 assert.equal(convertedSchedule.valid,true,convertedSchedule.issues.join('; '))
 assert.equal(convertedSchedule.rows.find(row=>row.productId==='P1'&&row.period===1).closingInventoryQuantity,20)
