@@ -58,7 +58,7 @@ function comfarDaysInPeriod(period:ProjectCalendarPeriod):number {
  * payable/receivable ledger is connected to the statements.
  */
 export function buildProductOperatingSchedule(
-  drafts: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts' | 'wasteLedgerEntries' | 'productionTransfers'>,
+  drafts: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers'>>,
   periods: ProjectCalendarPeriod[],
   fiscalYearStartMonth: number,
   baseCurrency: string,
