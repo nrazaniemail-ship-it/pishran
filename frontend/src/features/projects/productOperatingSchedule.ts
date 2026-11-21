@@ -380,6 +380,22 @@ export function buildProductOperatingSchedule(
       row.grossProfit=row.netSalesRevenue-row.costOfSales
     }
   }
+  // Carry transferred closing-stock value into the next period's opening balance,
+  // then revalue subsequent sales and closing stock using the revised weighted average.
+  for(const productId of drafts.sales.map(item=>item.productId)){
+    const productRows=rows.filter(row=>row.productId===productId).sort((a,b)=>a.period-b.period)
+    for(let index=1;index<productRows.length;index++){
+      const previous=productRows[index-1],current=productRows[index]
+      current.openingInventoryQuantity=previous.closingInventoryQuantity
+      current.openingInventoryValue=previous.closingInventoryValue
+      const availableQuantity=current.openingInventoryQuantity+current.productionQuantity
+      const availableValue=current.openingInventoryValue+current.productionCost
+      current.weightedAverageUnitCost=availableQuantity>0?availableValue/availableQuantity:0
+      current.costOfSales=current.salesQuantity*current.weightedAverageUnitCost
+      current.closingInventoryValue=current.closingInventoryQuantity*current.weightedAverageUnitCost
+      current.grossProfit=current.netSalesRevenue-current.costOfSales
+    }
+  }
   if(issues.length)return empty()
   periodCostOfSales.fill(0)
   totalClosingInventoryValue=0
