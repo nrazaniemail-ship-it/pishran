@@ -625,6 +625,16 @@ input,select,textarea{color:var(--text)}
 
 
 /* Warm, dimensional honeycomb capability cluster in the dashboard hero */
+.honeycomb-cell{font:inherit;border:0;cursor:pointer}
+.honeycomb-cell:focus-visible{outline:3px solid #315b4d;outline-offset:3px}
+.honeycomb-cell.roadmap{cursor:not-allowed;filter:grayscale(.58) saturate(.58) opacity(.76)}
+.honeycomb-cell.roadmap:hover{transform:none;filter:grayscale(.58) saturate(.58) opacity(.76)}
+.honeycomb-cell.honeycomb-core{width:132px;height:112px;color:#244c42;background:linear-gradient(155deg,#f1fff7 0%,#b8e2cb 38%,#78bd98 76%,#4e9875 100%);border:1px solid #65a985;transform:translateZ(30px) rotateX(6deg) scale(1.04);filter:drop-shadow(0 17px 10px rgba(42,105,76,.27))}
+.honeycomb-cell.honeycomb-core span{font-size:11px}
+.honeycomb-cell.honeycomb-core small{position:relative;z-index:1;font-size:8px;font-weight:700;opacity:.82}
+.honeycomb-hint{margin:2px 0 0;text-align:center;font-size:9px;color:#64748b;line-height:1.5}
+@media(max-width:650px){.honeycomb-cell.honeycomb-core{width:108px;height:94px}.honeycomb-hint{max-width:310px;margin:8px auto 0}}
+
 .hero-art.honeycomb-art{width:390px;height:252px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0;overflow:visible;flex-shrink:0;perspective:900px;perspective-origin:50% 45%}
 .honeycomb-row{display:flex;justify-content:center;gap:3px;height:82px;transform-style:preserve-3d}
 .honeycomb-row-middle{transform:translateX(0) translateZ(10px)}
