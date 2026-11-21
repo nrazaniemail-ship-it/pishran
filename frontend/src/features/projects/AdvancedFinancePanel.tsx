@@ -498,6 +498,21 @@ export default function AdvancedFinancePanel(props: Props) {
   },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),JSON.stringify(props.cppCpsTraceItems??[]),productOperatingSchedule,projectTaxSchedule,loanDraftIntegration,salesTaxLedgerActive,salesTaxLedgerResult,props.openingWorkingCapitalBalance,props.openingCashBalance,JSON.stringify(props.salesTaxLedgerDraft??null)])
   const periodicFinanceResult=periodicFinanceBundle?.result??null
   const periodicFinanceInput=periodicFinanceBundle?.input??null
+  const valueAddedAnalysisResult=useMemo<ValueAddedAnalysisResult|null>(()=>props.valueAddedPeriods
+    ?buildIntegratedProjectValueAddedAnalysis({
+      periods:projectPeriods,drafts:props.valueAddedPeriods,
+      productSchedule:productOperatingSchedule,finance:periodicFinanceResult,
+      salesTaxLedger:salesTaxLedgerResult,salesTaxLedgerActive,
+      discountRatePercent:props.economicDiscountRatePercent??null,
+      dayCountBasis:props.dayCountBasis??null,
+      timing:props.cashFlowTiming??'unspecified',
+      valuationDate:props.valuationDate,
+      discountConvention:props.discountConvention??'actual-days',
+      periodsPerYear,
+    })
+    :null,[JSON.stringify(props.valueAddedPeriods??null),JSON.stringify(projectPeriods),productOperatingSchedule,
+      periodicFinanceResult,salesTaxLedgerResult,salesTaxLedgerActive,props.economicDiscountRatePercent,
+      props.dayCountBasis,props.cashFlowTiming,props.valuationDate,props.discountConvention,periodsPerYear])
   const valueAddedAnalysisResult=useMemo<ValueAddedAnalysisResult|null>(()=>{
     if(!props.valueAddedAnalysisEnabled)return null
     const invalid=(issues:string[])=>({...buildComfarValueAddedAnalysis([]),issues})
@@ -594,6 +609,7 @@ export default function AdvancedFinancePanel(props: Props) {
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
   useEffect(()=>{props.onPeriodicResult?.(periodicFinanceResult)},[periodicFinanceResult,props.onPeriodicResult])
   useEffect(()=>{props.onPartnerFinanceResult?.(partnerFinanceResult)},[partnerFinanceResult,props.onPartnerFinanceResult])
+  useEffect(()=>{props.onValueAddedAnalysisResult?.(valueAddedAnalysisResult)},[valueAddedAnalysisResult,props.onValueAddedAnalysisResult])
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
@@ -967,6 +983,20 @@ export default function AdvancedFinancePanel(props: Props) {
         </div><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('مانده اول','Opening balance')}</th><th>{t('مالیات خروجی','Output tax')}</th><th>{t('اعتبار ورودی','Input credit')}</th><th>{t('خالص تعهد دوره','Net accrued')}</th><th>{t('پرداخت / تهاتر','Settlement')}</th><th>{t('مانده پایان (+پرداختنی / −دریافتنی)','Closing (+payable / −recoverable)')}</th></tr></thead><tbody>{salesTaxLedgerResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{money(row.openingBalance)}</td><td>{money(row.outputTax)}</td><td>{money(row.recoverableInputTax)}</td><td>{money(row.netTaxAccrued)}</td><td>{money(row.settlement)}</td><td>{money(row.closingBalance)}</td></tr>)}</tbody></table></div>
         <p className="fw-hint">{t('مانده مالیات پرداختنی/دریافتنی در سرمایه در گردش خالص منظور شده است؛ بنابراین اثر پرداخت در تغییر مانده منعکس می‌شود و پرداخت نقدی دوباره از جریان نقدی کسر نمی‌شود. سناریو و حساسیت تا زمان بازسازی دفتر مالیات در هر سناریو غیرفعال است.','The net payable / recoverable tax balance is included in net working capital. Remittances therefore flow through the change in that balance and are not deducted from cash flow a second time. Sensitivity and scenarios are disabled until the tax ledger is recalculated for each scenario.')}</p>
         </>:<><b>{t('دفتر مالیات برای ثبت در مدل آماده نیست.','Sales-tax ledger is not ready for posting.')}</b><ul>{(salesTaxLedgerResult?.issues??['Sales-tax ledger inputs are incomplete.']).map((issue,index)=><li key={index}>{issue}</li>)}</ul></>}
+      </div>}
+      {props.valueAddedPeriods&&<div className={valueAddedAnalysisResult?.valid?'fw-card':'fw-validation'} role={valueAddedAnalysisResult?.valid?'status':'alert'}>
+        <h4>{t('تحلیل ارزش افزوده و توزیع آن مطابق COMFAR III','COMFAR III Value-Added Analysis & Distribution')}</h4>
+        {valueAddedAnalysisResult?.valid?<><div className="fw-kpis">
+          <article><small>{t('ارزش افزوده ناخالص داخلی','Gross domestic value added')}</small><b>{money(valueAddedAnalysisResult.totals.grossDomesticValueAdded)}</b></article>
+          <article><small>{t('ارزش افزوده خالص داخلی','Net domestic value added')}</small><b>{money(valueAddedAnalysisResult.totals.netDomesticValueAdded)}</b></article>
+          <article><small>{t('ارزش افزوده خالص ملی','Net national value added')}</small><b>{money(valueAddedAnalysisResult.totals.netNationalValueAdded)}</b></article>
+          <article><small>{t('ارزش فعلی ارزش افزوده خالص ملی','PV of net national value added')}</small><b>{money(valueAddedAnalysisResult.totals.presentValueNetNationalValueAdded)}</b></article>
+          <article><small>{t('نسبت کارایی مطلق','Absolute efficiency ratio')}</small><b>{valueAddedAnalysisResult.totals.absoluteEfficiencyRatio===null?'—':money(valueAddedAnalysisResult.totals.absoluteEfficiencyRatio)}</b></article>
+        </div><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr>
+          <th>{t('دوره','Period')}</th><th>{t('خروجی ناخالص','Gross output')}</th><th>{t('نهاده واسطه‌ای کسرشده','Adjusted intermediate inputs')}</th><th>{t('سرمایه‌گذاری کسرشده','Adjusted investment')}</th><th>{t('ارزش افزوده ناخالص داخلی','GDVA')}</th><th>{t('ارزش افزوده خالص داخلی','NDVA')}</th><th>{t('پرداخت‌های خروجی','Repatriated payments')}</th><th>{t('ارزش افزوده خالص ملی','NNVA')}</th><th>{t('سهم دستمزد داخلی','Domestic wages')}</th><th>{t('سهم دولت','Government share')}</th><th>{t('سایر ارزش افزوده','Other value added')}</th><th>{t('اختلاف توزیع','Distribution variance')}</th>
+        </tr></thead><tbody>{valueAddedAnalysisResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{money(row.grossOutput)}</td><td>{money(row.intermediateInput.amountDeducted)}</td><td>{money(row.investment.amountDeducted)}</td><td>{money(row.grossDomesticValueAdded)}</td><td>{money(row.netDomesticValueAdded)}</td><td>{money(row.repatriatedPayments)}</td><td>{money(row.netNationalValueAdded)}</td><td>{money(row.domesticWages)}</td><td>{money(row.governmentShare)}</td><td>{money(row.otherValueAdded)}</td><td>{money(row.distributionDifference)}</td></tr>)}</tbody></table></div>
+        <p className="fw-hint">{t('ضرایب محتوای ارزش افزوده نهاده‌ها و اقلام سرمایه‌گذاری باید از اسناد/مطالعه اقتصادی استخراج شوند. نسبت‌های کارایی بر مبنای ضریب ارزش فعلی و نرخ تنزیل اقتصادی ثبت‌شده محاسبه شده‌اند.','Value-added content coefficients for inputs and investment must come from documented studies. Efficiency ratios use present-value factors and the entered economic discount rate.')}</p>
+        </>:<><b>{t('تحلیل ارزش افزوده برای گزارش آماده نیست.','Value-added analysis is not ready for reporting.')}</b><ul>{(valueAddedAnalysisResult?.issues??['No value-added schedule was supplied.']).map((issue,index)=><li key={index}>{issue}</li>)}</ul></>}
       </div>}
       {productOperatingSchedule?.valid&&<div className="fw-card"><h4>{t('برنامه تولید، فروش و بهای تمام‌شده به تفکیک محصول','Product-by-product production, sales and cost-of-sales schedule')}</h4><div style={{overflowX:'auto',maxHeight:320}}><table className="fw-table"><thead><tr><th>{t('محصول','Product')}</th><th>{t('دوره','Period')}</th><th>{t('مقدار فروش','Sales quantity')}</th><th>{t('مقدار تولید','Production quantity')}</th><th>{t('موجودی پایان','Closing stock')}</th><th>{t('ارزش موجودی پایان','Closing stock value')}</th><th>{t('بهای واحد میانگین','Weighted unit cost')}</th><th>{t('بهای کالای فروش‌رفته','Cost of sales')}</th><th>{t('درآمد خالص فروش','Net sales revenue')}</th><th>{t('سود ناخالص محصول','Product gross profit')}</th></tr></thead><tbody>{productOperatingSchedule.rows.map(row=><tr key={row.productId+'-'+row.period}><td>{row.productId}</td><td>{row.period}</td><td>{money(row.salesQuantity)}</td><td>{money(row.productionQuantity)}</td><td>{money(row.closingInventoryQuantity)}</td><td>{money(row.closingInventoryValue)}</td><td>{money(row.weightedAverageUnitCost)}</td><td>{money(row.costOfSales)}</td><td>{money(row.netSalesRevenue)}</td><td>{money(row.grossProfit)}</td></tr>)}</tbody></table></div><p className="fw-hint">{t('روش ارزش‌گذاری موجودی: میانگین موزون؛ تولید با روش انتخاب‌شده در فرم محصول (ورود دستی یا روز پوشش COMFAR) محاسبه می‌شود.','Inventory valuation uses weighted-average cost; production follows the selected product form policy (manual or COMFAR days coverage).')}</p></div>}
       <h4>{t('منابع خودکار پوشش کسری طبق COMFAR XI.N','COMFAR XI.N Automatic Deficit Funding')}</h4>
