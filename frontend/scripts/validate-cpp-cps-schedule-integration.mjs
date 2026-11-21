@@ -183,6 +183,10 @@ assert.ok(advancedPanel.includes('Driver and unit'))
 assert.ok(advancedPanel.includes('Complete total'))
 assert.ok(advancedPanel.includes('bindCppCpsTraceLedgerToProductSchedule'))
 assert.ok(advancedPanel.includes('bindFinishedGoodsInventoryToWorkingCapital'))
+assert.ok(advancedPanel.includes('...cppCpsTraceLedger.completeIncrementalByCostCentre'),
+  'Cost centres containing only unverified items must remain visible in the traceability report')
+assert.ok(advancedPanel.includes('categoryRows.length===0||categoryRows.some(row=>row.sourceStatus!==\'verified\')'),
+  'A category with missing or unverified evidence must display as unknown, never as zero')
 assert.ok(advancedPanel.includes('annualVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.annualCostOfSales'))
 assert.ok(financialForms.includes('Centre allocation basis'))
 assert.ok(financialForms.includes('Cost-centre driver'))
