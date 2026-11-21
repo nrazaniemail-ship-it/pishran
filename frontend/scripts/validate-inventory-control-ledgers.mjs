@@ -103,6 +103,22 @@ assert.equal(multiCentreStage.valid,true,multiCentreStage.issues.join('; '))
 assert.equal(multiCentreStage.rows.find(row=>row.period===1).ledgerClosingValue,100,
  'stage totals must aggregate distinct cost centres without duplicating inventory')
 assert.equal(multiCentreStage.rows.find(row=>row.period===2).ledgerClosingValue,80)
+const balancedStageTransfers=[
+ {...stageRow(1,'raw-materials','RM',10,100,0,0,0,0,0,0,5,50),costCentreId:'STORE-A',transfersOutQuantity:5,transfersOutValue:50},
+ {...stageRow(1,'raw-materials','RM',0,0,0,0,0,0,0,0,5,50),costCentreId:'STORE-B',transfersInQuantity:5,transfersInValue:50},
+]
+const balancedStageTransferResult=module.reconcileStageInventoryMovements(balancedStageTransfers,[
+ {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
+],1)
+assert.equal(balancedStageTransferResult.valid,true,balancedStageTransferResult.issues.join('; '))
+assert.equal(balancedStageTransferResult.rows[0].ledgerClosingValue,100,
+ 'internal transfers must relocate value without increasing total stage inventory')
+const unbalancedStageTransfers=balancedStageTransfers.map(row=>row.costCentreId==='STORE-B'?{...row,transfersInValue:45}:row)
+const unbalancedStageTransferResult=module.reconcileStageInventoryMovements(unbalancedStageTransfers,[
+ {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
+],1)
+assert.equal(unbalancedStageTransferResult.valid,false,'internal transfer-in and transfer-out values must balance')
+assert.ok(unbalancedStageTransferResult.issues.some(issue=>issue.includes('internal cost-centre transfers do not balance')))
 const missingStagePeriod=module.reconcileStageInventoryMovements(stageMovements.filter(row=>!(row.period===2&&row.inventoryStage==='raw-materials')),[
  {period:1,rawMaterials:100,workInProgress:40,finishedGoods:60},
  {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
