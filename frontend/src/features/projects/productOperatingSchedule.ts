@@ -1,6 +1,7 @@
 import type { ProjectCalendarPeriod } from './projectFoundation'
 import { fiscalYearIndexForPeriod } from '../steel/periodicFinancialEngine'
 import type { ProjectModelFinancialFormDrafts, SalesProductFormDraft } from './projectModelFormDrafts'
+import { buildInventoryFlowSchedule } from './inventoryProductionFlow'
 
 export type ProductOperatingPeriodRow = {
   productId: string
@@ -18,6 +19,9 @@ export type ProductOperatingPeriodRow = {
   netSalesRevenue: number
   subsidyIncome: number
   grossProfit: number
+  rawMaterialInventoryValue: number
+  wipInventoryValue: number
+  completedUnits: number
 }
 export type ProductOperatingSchedule = {
   valid: boolean
@@ -31,6 +35,8 @@ export type ProductOperatingSchedule = {
   totalProductionQuantity: number
   totalSalesQuantity: number
   totalClosingInventoryValue: number
+  periodRawMaterialInventoryValue: number[]
+  periodWipInventoryValue: number[]
 }
 
 function comfarDaysInPeriod(period:ProjectCalendarPeriod):number {
@@ -60,7 +66,7 @@ export function buildProductOperatingSchedule(
   const empty = (): ProductOperatingSchedule => ({
     valid:false,issues,rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],
     annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,
-    totalSalesQuantity:0,totalClosingInventoryValue:0,
+    totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],
   })
   if (!count) issues.push('At least one project period is required.')
   if (!Number.isInteger(fiscalYearStartMonth)||fiscalYearStartMonth<1||fiscalYearStartMonth>12)
@@ -135,13 +141,11 @@ export function buildProductOperatingSchedule(
   const periodRevenue=Array(count).fill(0) as number[]
   const periodCostOfSales=Array(count).fill(0) as number[]
   const periodSubsidyIncome=Array(count).fill(0) as number[]
+  const periodRawMaterialInventoryValue=Array(count).fill(0) as number[]
+  const periodWipInventoryValue=Array(count).fill(0) as number[]
   const rows:ProductOperatingPeriodRow[]=[]
   let totalProductionQuantity=0,totalSalesQuantity=0,totalClosingInventoryValue=0
   for (const sale of drafts.sales) {
-    if (!unitCostByProduct.has(sale.productId)) {
-      issues.push('Product '+sale.productId+' has no validated direct production-cost basis.')
-      continue
-    }
     if(!sale.inventoryPolicy){
       issues.push('Product '+sale.productId+' must select manual inventory or COMFAR days-coverage production.')
       continue
@@ -167,6 +171,41 @@ export function buildProductOperatingSchedule(
       if(matches.length!==1) { issues.push('Product '+sale.productId+' has an unknown or ambiguous project period: '+row.period); continue }
       if(mapped.has(matches[0])) { issues.push('Product '+sale.productId+' has duplicate data for period '+(matches[0]+1)+'.'); continue }
       mapped.set(matches[0],row)
+    }
+    const flowKeys=['rawMaterialPurchasesQuantity','rawMaterialPurchasesValue','rawMaterialConsumptionQuantity','unitsStarted','unitsCompleted','closingWipQuantity','materialCompletionPercent','conversionCompletionPercent','conversionCost'] as const
+    const flowEntered=sale.periods.some(row=>flowKeys.some(key=>row[key]!==null&&row[key]!==undefined))
+    let inventoryFlow:ReturnType<typeof buildInventoryFlowSchedule>|null=null
+    if(flowEntered){
+      const flowRows=periods.map((_,index)=>mapped.get(index))
+      if(flowRows.some(row=>!row||flowKeys.some(key=>row[key]===null||row[key]===undefined||!Number.isFinite(row[key] as number)))){
+        issues.push('Product '+sale.productId+' requires complete purchase, consumption, production, WIP and conversion-cost inputs for every period.')
+        continue
+      }
+      const first=sale.periods.find(row=>row.period===periods[0].startDate||row.period===periods[0].endDate||row.period==='1'||row.period===String(periods[0].index))
+      if(!first||[first.openingRawMaterialQuantity,first.openingRawMaterialValue,first.openingWipQuantity,first.openingWipMaterialValue,first.openingWipConversionValue].some(v=>v===null||v===undefined||!Number.isFinite(v))){
+        issues.push('Product '+sale.productId+' requires explicit opening raw-material and WIP quantity/value balances.')
+        continue
+      }
+      inventoryFlow=buildInventoryFlowSchedule({
+        openingRawMaterialQuantity:first.openingRawMaterialQuantity as number,
+        openingRawMaterialValue:first.openingRawMaterialValue as number,
+        rawMaterialPurchasesQuantity:flowRows.map(row=>row!.rawMaterialPurchasesQuantity as number),
+        rawMaterialPurchasesValue:flowRows.map(row=>row!.rawMaterialPurchasesValue as number),
+        rawMaterialConsumptionQuantity:flowRows.map(row=>row!.rawMaterialConsumptionQuantity as number),
+        openingWipQuantity:first.openingWipQuantity as number,
+        openingWipMaterialValue:first.openingWipMaterialValue as number,
+        openingWipConversionValue:first.openingWipConversionValue as number,
+        unitsStarted:flowRows.map(row=>row!.unitsStarted as number),
+        unitsCompleted:flowRows.map(row=>row!.unitsCompleted as number),
+        closingWipQuantity:flowRows.map(row=>row!.closingWipQuantity as number),
+        materialCompletionPercent:flowRows.map(row=>row!.materialCompletionPercent as number),
+        conversionCompletionPercent:flowRows.map(row=>row!.conversionCompletionPercent as number),
+        conversionCost:flowRows.map(row=>row!.conversionCost as number),
+      })
+      if(!inventoryFlow.valid){issues.push(...inventoryFlow.issues.map(issue=>'Product '+sale.productId+': '+issue));continue}
+    } else if(!unitCostByProduct.has(sale.productId)){
+      issues.push('Product '+sale.productId+' requires either a validated direct production-cost basis or a complete inventory production flow.')
+      continue
     }
     let previousClosingQuantity:number|null=null
     let previousClosingValue:number|null=null
@@ -251,8 +290,10 @@ export function buildProductOperatingSchedule(
       if(productionQuantity>0&&baseUnitProductionCost===0&&!periodAdjustmentByProduct.get(sale.productId)?.has(index)){
         issues.push('Product '+sale.productId+' has no production-cost amount for period '+(index+1)+'.');continue
       }
-      const productionCost=Math.max(0,productionQuantity)*baseUnitProductionCost+periodAdjustment
-      const unitProductionCost=productionQuantity>0?productionCost/productionQuantity:baseUnitProductionCost
+      const flowRow=inventoryFlow?.rows[index]
+      if(flowRow&&Math.abs(flowRow.unitsCompleted-productionQuantity)>0.000001){issues.push('Product '+sale.productId+' completed production quantity must equal finished-goods production transfer in period '+(index+1)+'.');continue}
+      const productionCost=flowRow?flowRow.completedProductionCost:Math.max(0,productionQuantity)*baseUnitProductionCost+periodAdjustment
+      const unitProductionCost=productionQuantity>0?productionCost/productionQuantity:(unitCostByProduct.get(sale.productId)??0)
       const availableQuantity=openingQuantity+Math.max(0,productionQuantity)
       const availableValue:number=openingValue+productionCost
       if(availableQuantity<=0&&(salesQuantity>0||closingQuantity>0)) {
@@ -273,6 +314,9 @@ export function buildProductOperatingSchedule(
         closingInventoryQuantity:closingQuantity,closingInventoryValue,unitProductionCost,
         productionCost,weightedAverageUnitCost,costOfSales,netSalesRevenue,subsidyIncome,
         grossProfit:netSalesRevenue-costOfSales,
+        rawMaterialInventoryValue:flowRow?.closingRawMaterialValue??0,
+        wipInventoryValue:flowRow?.closingWipValue??0,
+        completedUnits:flowRow?.unitsCompleted??productionQuantity,
       }
       rows.push(row)
       periodRevenue[index]+=netSalesRevenue
@@ -281,6 +325,7 @@ export function buildProductOperatingSchedule(
       totalProductionQuantity+=row.productionQuantity
       totalSalesQuantity+=salesQuantity
       totalClosingInventoryValue+=closingInventoryValue
+      if(flowRow){periodRawMaterialInventoryValue[index]+=flowRow.closingRawMaterialValue;periodWipInventoryValue[index]+=flowRow.closingWipValue}
       previousClosingQuantity=closingQuantity
       previousClosingValue=closingInventoryValue
     }
@@ -296,5 +341,5 @@ export function buildProductOperatingSchedule(
   })
   if(issues.length)return empty()
   return {valid:true,issues:[],rows,periodRevenue,periodCostOfSales,periodSubsidyIncome,annualRevenue,annualCostOfSales,
-    totalProductionQuantity,totalSalesQuantity,totalClosingInventoryValue}
+    totalProductionQuantity,totalSalesQuantity,totalClosingInventoryValue,periodRawMaterialInventoryValue,periodWipInventoryValue}
 }
