@@ -31,6 +31,8 @@ export function buildProjectEconomicAnalysis(
   periodsPerYear:1|2|4|12,
   salesTaxLedger:SalesTaxLedgerResult|null=null,
   salesTaxLedgerActive=false,
+  discountRateSourceReference='',
+  discountRateSourceVerified=false,
 ):ProjectEconomicAnalysisResult {
   const issues:string[]=[]
   const empty=():ProjectEconomicAnalysisResult=>({
@@ -44,6 +46,8 @@ export function buildProjectEconomicAnalysis(
   if(periods.length!==finance.rows.length||!periods.length)issues.push('Economic appraisal requires one financial result for every project period.')
   if(discountRatePercent===null||!Number.isFinite(discountRatePercent)||discountRatePercent<=-100)
     issues.push('Enter an explicit economic discount rate greater than -100%.')
+  if(!discountRateSourceReference.trim()||!discountRateSourceVerified)
+    issues.push('The economic discount rate requires an independently verified source reference.')
   if((dayCountBasis!==360&&dayCountBasis!==365)||!['period-end','mid-period'].includes(timing))
     issues.push('A valid economic discount timing and day-count basis are required.')
   const adjustmentByPeriod=periods.map(()=>0)
@@ -51,6 +55,10 @@ export function buildProjectEconomicAnalysis(
   for(const item of adjustments){
     if(!item.name.trim()||!item.treatment||!item.effectType){
       issues.push('Every economic adjustment requires a description, treatment and effect category.')
+      continue
+    }
+    if(!item.sourceReference.trim()||!item.sourceVerified){
+      issues.push('Economic adjustment '+item.name+' requires a verified shadow-price source reference.')
       continue
     }
     const matches:number[]=[]
