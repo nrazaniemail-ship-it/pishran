@@ -1710,6 +1710,7 @@ function scalePeriodicOperatingInput(
     workingCapitalByPeriod:scale(input.workingCapitalByPeriod,volumeFactor)??[],
     rawMaterialsInventoryByPeriod:scale(input.rawMaterialsInventoryByPeriod,volumeFactor),
     workInProgressInventoryByPeriod:scale(input.workInProgressInventoryByPeriod,volumeFactor),
+    finishedGoodsInventoryByPeriod:scale(input.finishedGoodsInventoryByPeriod,volumeFactor),
     cashInHandByPeriod:scale(input.cashInHandByPeriod,volumeFactor),
     shortTermDepositsByPeriod:scale(input.shortTermDepositsByPeriod,volumeFactor),
     annualEquityWorkingCapitalContributions:scale(input.annualEquityWorkingCapitalContributions,volumeFactor),
