@@ -498,6 +498,97 @@ export default function AdvancedFinancePanel(props: Props) {
   },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),JSON.stringify(props.cppCpsTraceItems??[]),productOperatingSchedule,projectTaxSchedule,loanDraftIntegration,salesTaxLedgerActive,salesTaxLedgerResult,props.openingWorkingCapitalBalance,props.openingCashBalance,JSON.stringify(props.salesTaxLedgerDraft??null)])
   const periodicFinanceResult=periodicFinanceBundle?.result??null
   const periodicFinanceInput=periodicFinanceBundle?.input??null
+  const valueAddedAnalysisResult=useMemo<ValueAddedAnalysisResult|null>(()=>{
+    if(!props.valueAddedAnalysisEnabled)return null
+    const invalid=(issues:string[])=>({...buildComfarValueAddedAnalysis([]),issues})
+    if(!periodicFinanceResult?.valid)return invalid(['A valid periodic financial model is required for value-added analysis.'])
+    if(!productOperatingSchedule?.valid)return invalid(['A valid product-by-product sales schedule is required for value-added analysis.'])
+    if(!cppCpsTraceLedger.valid||!cppCpsTraceLedger.complete)return invalid(['The CPP/CPS trace ledger must be complete and source-verified before value-added inputs can be reconciled.'])
+    if(!props.economicDiscountRatePercent||!Number.isFinite(props.economicDiscountRatePercent)||props.economicDiscountRatePercent<=-100)
+      return invalid(['An explicit economic discount rate greater than -100% is required.'])
+    if(!props.dayCountBasis||!props.cashFlowTiming||props.cashFlowTiming==='unspecified')
+      return invalid(['Economic discount timing and day-count basis must be defined.'])
+    if(props.valueAddedPeriodDrafts?.length!==projectPeriods.length)
+      return invalid(['Value-added inputs must be initialized for every project period.'])
+    const issues:string[]=[]
+    const rows=projectPeriods.map((period,index)=>{
+      const periodNo=index+1
+      const draft=props.valueAddedPeriodDrafts?.find(item=>item.period===periodNo)
+      const financeRow=periodicFinanceResult.rows[index]
+      if(!draft){issues.push('Missing value-added input for period '+periodNo+'.');return null}
+      const traceRows=cppCpsTraceLedger.rows.filter(item=>item.period===periodNo)
+      if(traceRows.some(item=>item.grossCost===null)){
+        issues.push('CPP/CPS contains an unverified gross cost in period '+periodNo+'.')
+      }
+      const expectedIntermediate=traceRows.filter(item=>item.category!=='labour').reduce((sum,item)=>sum+(item.grossCost??0),0)
+      const expectedLabour=traceRows.filter(item=>item.category==='labour').reduce((sum,item)=>sum+(item.grossCost??0),0)
+      const enteredIntermediate=draft.intermediateInputs.reduce((sum,item)=>sum+(item.amount??Number.NaN),0)
+      const enteredLabour=(draft.domesticWages??Number.NaN)+(draft.repatriatedWages??Number.NaN)
+      if(!Number.isFinite(enteredIntermediate)||Math.abs(enteredIntermediate-expectedIntermediate)>0.01)
+        issues.push('Intermediate-input gross amounts in period '+periodNo+' must reconcile to non-labour CPP/CPS trace costs.')
+      if(!Number.isFinite(enteredLabour)||Math.abs(enteredLabour-expectedLabour)>0.01)
+        issues.push('Domestic plus repatriated wages in period '+periodNo+' must reconcile to the CPP/CPS labour cost.')
+      const currentInventory=financeRow.rawMaterialsInventory+financeRow.workInProgressInventory+financeRow.finishedGoodsInventory
+      const previousInventory=index===0
+        ?(props.openingCurrentAccounts?.rawMaterials??0)+(props.openingCurrentAccounts?.workInProgress??0)+(props.openingCurrentAccounts?.finishedGoods??0)
+        :periodicFinanceResult.rows[index-1].rawMaterialsInventory+periodicFinanceResult.rows[index-1].workInProgressInventory+periodicFinanceResult.rows[index-1].finishedGoodsInventory
+      const expectedInventoryIncrease=currentInventory-previousInventory
+      const expectedInvestmentByKind={
+        'fixed-investment':financeRow.fixedInvestment,
+        'pre-production-net-of-interest':financeRow.preOperatingCost,
+        'inventory-increase':expectedInventoryIncrease,
+      }
+      for(const [kind,expected] of Object.entries(expectedInvestmentByKind)){
+        const entered=draft.investmentInputs.filter(item=>item.kind===kind).reduce((sum,item)=>sum+(item.amount??Number.NaN),0)
+        if(!Number.isFinite(entered)||Math.abs(entered-expected)>0.01)
+          issues.push('Value-added investment item '+kind+' in period '+periodNo+' must reconcile to the periodic financial model.')
+      }
+      const presentValueFactor=calculatePeriodicNpv(
+        projectPeriods.map((_,periodIndex)=>periodIndex===index?1:0),projectPeriods,
+        props.economicDiscountRatePercent as number,props.dayCountBasis as 360|365,
+        props.cashFlowTiming as 'period-end'|'mid-period',props.valuationDate,
+        props.discountConvention??'actual-days',periodsPerYear)
+      const outputSalesTax=salesTaxLedgerActive?(salesTaxLedgerResult?.rows[index]?.outputTax??Number.NaN):0
+      const salesRevenue=(productOperatingSchedule.periodRevenue[index]??Number.NaN)-(productOperatingSchedule.periodSubsidyIncome[index]??0)
+      const intermediateInputs:ValueAddedInputItem[]=draft.intermediateInputs.map(item=>({
+        id:item.id,period:periodNo,description:item.description,amount:item.amount??Number.NaN,
+        marketOrigin:item.marketOrigin as 'local'|'foreign',
+        taxesDutiesIncludedPercent:item.taxesDutiesIncludedPercent??Number.NaN,
+        valueAddedIncludedPercentages:item.valueAddedIncludedPercentages.map(value=>value??Number.NaN) as [number,number,number],
+        sourceReference:item.sourceReference,sourceVerified:item.sourceVerified,
+      }))
+      const investmentInputs:ValueAddedInvestmentItem[]=draft.investmentInputs.map(item=>({
+        id:item.id,period:periodNo,description:item.description,amount:item.amount??Number.NaN,
+        marketOrigin:item.marketOrigin as 'local'|'foreign',
+        taxesDutiesIncludedPercent:item.taxesDutiesIncludedPercent??Number.NaN,
+        valueAddedIncludedPercentages:item.valueAddedIncludedPercentages.map(value=>value??Number.NaN) as [number,number,number],
+        sourceReference:item.sourceReference,sourceVerified:item.sourceVerified,
+        kind:item.kind as 'fixed-investment'|'pre-production-net-of-interest'|'inventory-increase',
+      }))
+      return {
+        period:periodNo,salesRevenue,outputSalesTax,otherIncome:draft.otherIncome??Number.NaN,
+        subsidiesOnOutput:productOperatingSchedule.periodSubsidyIncome[index]??0,
+        intermediateInputs,investmentInputs,
+        repatriatedWages:draft.repatriatedWages??Number.NaN,
+        repatriatedProfitDividends:draft.repatriatedProfitDividends??Number.NaN,
+        repatriatedInterest:draft.repatriatedInterest??Number.NaN,repatriatedOther:draft.repatriatedOther??Number.NaN,
+        domesticWages:draft.domesticWages??Number.NaN,
+        domesticDividendsAndInterest:draft.domesticDividendsAndInterest??Number.NaN,
+        corporateTax:financeRow.tax,subsidiesOnInput:draft.subsidiesOnInput??Number.NaN,
+        subsidiesOnInvestment:draft.subsidiesOnInvestment??Number.NaN,
+        skilledDomesticLabour:draft.skilledDomesticLabour??Number.NaN,
+        totalDomesticLabour:draft.totalDomesticLabour??Number.NaN,
+        foreignExchangeOutflow:draft.foreignExchangeOutflow??Number.NaN,
+        presentValueFactor,sourceReference:draft.sourceReference,sourceVerified:draft.sourceVerified,
+      }
+    })
+    if(issues.length)return invalid(issues)
+    return buildComfarValueAddedAnalysis(rows.filter((row):row is NonNullable<typeof row>=>row!==null))
+  },[props.valueAddedAnalysisEnabled,periodicFinanceResult,productOperatingSchedule,cppCpsTraceLedger,
+    props.economicDiscountRatePercent,props.dayCountBasis,props.cashFlowTiming,props.valuationDate,props.discountConvention,
+    props.valueAddedPeriodDrafts,JSON.stringify(props.valueAddedPeriodDrafts??[]),JSON.stringify(projectPeriods),
+    JSON.stringify(props.openingCurrentAccounts??null),salesTaxLedgerActive,salesTaxLedgerResult,periodsPerYear])
+  useEffect(()=>{props.onValueAddedAnalysisResult?.(valueAddedAnalysisResult)},[props.onValueAddedAnalysisResult,valueAddedAnalysisResult])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
