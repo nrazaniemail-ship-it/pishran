@@ -391,4 +391,107 @@ const doubleCountedThreeWay = inventoryControlModule.reconcileInventoryThreeWay(
 assert.equal(doubleCountedThreeWay.valid, false,
   'Adding the same transfer value to consolidated CPP/CPS inventory a second time must fail three-way reconciliation')
 
+
+const stageMovement = (period, inventoryStage, costCentreId, openingQuantity, openingValue,
+  receiptsQuantity, receiptsValue, transfersInQuantity, transfersInValue,
+  transfersOutQuantity, transfersOutValue, productionQuantity, productionValue,
+  consumptionQuantity, consumptionValue, salesQuantity, salesCostValue,
+  closingQuantity, closingValue) => ({
+    period, inventoryStage, productId: 'P1', costCentreId,
+    openingQuantity, openingValue, receiptsQuantity, receiptsValue,
+    transfersInQuantity, transfersInValue, transfersOutQuantity, transfersOutValue,
+    productionQuantity, productionValue, consumptionQuantity, consumptionValue,
+    salesQuantity, salesCostValue, wasteQuantity: 0, wasteValue: 0,
+    closingQuantity, closingValue, sourceReference: 'verified-test-fixture-period-' + period,
+    sourceVerified: true,
+  })
+
+// Build the cost-centre subledger from the SAME CPP/CPS-adjusted product schedule.
+// The A/B split follows the registered 10-unit/100-value and 5-unit/50-value
+// internal transfers; sales and production remain posted once at centre A.
+const linkedStageMovements = []
+let rawOpening = 0, wipOpening = 0
+let centreAQty = 0, centreAValue = 0, centreBQty = 0, centreBValue = 0
+for (const row of roundTripCpp.schedule.rows) {
+  const period = row.period
+  const rawClosing = row.rawMaterialInventoryValue
+  const rawDelta = rawClosing - rawOpening
+  linkedStageMovements.push(stageMovement(period, 'raw-materials', 'CC-RAW',
+    0, rawOpening, 0, Math.max(0, rawDelta), 0, 0, 0, 0, 0, 0,
+    0, Math.max(0, -rawDelta), 0, 0, 0, rawClosing))
+  rawOpening = rawClosing
+
+  const wipClosing = row.wipInventoryValue
+  const wipDelta = wipClosing - wipOpening
+  linkedStageMovements.push(stageMovement(period, 'work-in-progress', 'CC-WIP',
+    0, wipOpening, 0, Math.max(0, wipDelta), 0, 0, 0, 0, 0, 0,
+    0, Math.max(0, -wipDelta), 0, 0, 0, wipClosing))
+  wipOpening = wipClosing
+
+  const transferOutQty = period === 1 ? 10 : period === 2 ? 5 : 0
+  const transferOutValue = period === 1 ? 100 : period === 2 ? 50 : 0
+  const transferInQty = transferOutQty
+  const transferInValue = transferOutValue
+  const nextBQty = centreBQty - transferOutQty + transferInQty
+  const nextBValue = centreBValue - transferOutValue + transferInValue
+  const nextAQty = row.closingInventoryQuantity - nextBQty
+  const nextAValue = row.closingInventoryValue - nextBValue
+
+  linkedStageMovements.push(stageMovement(period, 'finished-goods', 'CC-A',
+    centreAQty, centreAValue, 0, 0, transferInQty, transferInValue,
+    transferOutQty, transferOutValue, row.productionQuantity, row.productionCost,
+    0, 0, row.salesQuantity, row.costOfSales, nextAQty, nextAValue))
+  linkedStageMovements.push(stageMovement(period, 'finished-goods', 'CC-B',
+    centreBQty, centreBValue, 0, 0, transferOutQty, transferOutValue,
+    transferInQty, transferInValue, 0, 0, 0, 0, 0, 0, nextBQty, nextBValue))
+  centreAQty = nextAQty
+  centreAValue = nextAValue
+  centreBQty = nextBQty
+  centreBValue = nextBValue
+}
+
+const linkedExpectedByPeriod = roundTripCpp.schedule.rows.map(row => ({
+  period: row.period,
+  rawMaterials: row.rawMaterialInventoryValue,
+  workInProgress: row.wipInventoryValue,
+  finishedGoods: row.closingInventoryValue,
+}))
+const linkedExpectedByProductPeriod = roundTripCpp.schedule.rows.map(row => ({
+  period: row.period, productId: row.productId,
+  rawMaterials: row.rawMaterialInventoryValue,
+  workInProgress: row.wipInventoryValue,
+  finishedGoods: row.closingInventoryValue,
+  finishedGoodsSalesQuantity: row.salesQuantity,
+  finishedGoodsCostOfSales: row.costOfSales,
+  productionQuantity: row.productionQuantity,
+  productionCost: row.productionCost,
+}))
+const linkedStageCheck = inventoryControlModule.reconcileStageInventoryMovements(
+  linkedStageMovements, linkedExpectedByPeriod, 3, 0.01, [], linkedExpectedByProductPeriod)
+assert.equal(linkedStageCheck.valid, true, linkedStageCheck.issues.join('; '))
+assert.deepEqual(linkedStageCheck.rows.filter(row => row.inventoryStage === 'finished-goods')
+  .map(row => [row.period, row.ledgerClosingValue, row.engineClosingValue, row.variance]),
+  linkedExpectedByPeriod.map(row => [row.period, row.finishedGoods, row.finishedGoods, 0]),
+  'Cost-centre finished-goods closing values must equal the CPP/CPS-adjusted product schedule in every period')
+assert.deepEqual(linkedStageCheck.rows.filter(row => row.inventoryStage === 'raw-materials')
+  .map(row => row.variance), [0, 0, 0])
+assert.deepEqual(linkedStageCheck.rows.filter(row => row.inventoryStage === 'work-in-progress')
+  .map(row => row.variance), [0, 0, 0])
+
+const incompleteLinkedReturn = linkedStageMovements.map(row =>
+  row.period === 2 && row.inventoryStage === 'finished-goods' && row.costCentreId === 'CC-A'
+    ? { ...row, closingQuantity: row.closingQuantity - 5, closingValue: row.closingValue - 50 } : row)
+const incompleteLinkedReturnCheck = inventoryControlModule.reconcileStageInventoryMovements(
+  incompleteLinkedReturn, linkedExpectedByPeriod, 3, 0.01, [], linkedExpectedByProductPeriod)
+assert.equal(incompleteLinkedReturnCheck.valid, false,
+  'The shared product/centre ledger must reject an incomplete B→A return at the destination centre')
+
+const duplicatedLinkedTransfer = linkedStageMovements.map(row =>
+  row.period === 1 && row.inventoryStage === 'finished-goods' && row.costCentreId === 'CC-B'
+    ? { ...row, receiptsQuantity: 10, receiptsValue: 100 } : row)
+const duplicatedLinkedTransferCheck = inventoryControlModule.reconcileStageInventoryMovements(
+  duplicatedLinkedTransfer, linkedExpectedByPeriod, 3, 0.01, [], linkedExpectedByProductPeriod)
+assert.equal(duplicatedLinkedTransferCheck.valid, false,
+  'The shared product/centre ledger must reject posting A→B transfer again as an external receipt')
+
 console.log('PASS: FS-00 three-period product + A→B/B→A transfer round-trip → CPP/CPS → COGS/WIP/FG → working capital → income statement/cash flow/balance sheet integration.')
