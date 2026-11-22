@@ -72,6 +72,19 @@ const wrongOpeningCarry=module.reconcileCostCentreInventory(centreMovements.map(
 ],2)
 assert.equal(wrongOpeningCarry.valid,false,'each centre opening balance must carry forward its prior closing value')
 assert.ok(wrongOpeningCarry.issues.some(issue=>issue.includes('opening value does not equal prior-period closing value')))
+const skippedCentrePeriod=module.reconcileCostCentreInventory([
+ {...centreMovements[0]},
+ {...centreMovements[2],period:3},
+],[],3)
+assert.equal(skippedCentrePeriod.valid,false,
+ 'A cost centre with stock on hand must not skip an intervening period and silently carry inventory across the gap.')
+assert.ok(skippedCentrePeriod.issues.some(issue=>issue.includes('missing one or more intervening period movement rows')))
+const zeroStockGap=module.reconcileCostCentreInventory([
+ {...centreMovements[0],closingQuantity:0,closingValue:0},
+ {...centreMovements[2],period:3,openingQuantity:0,openingValue:0},
+],[],3)
+assert.equal(zeroStockGap.valid,true,zeroStockGap.issues.join('; '),
+ 'A sparse cost-centre ledger may omit a period only when no stock remains to carry.')
 const overdrawCentre=module.reconcileCostCentreInventory(centreMovements.map(row=>row.period===1&&row.productId==='P1'?{...row,closingQuantity:0,closingValue:0}:row),[
  {id:'CC-T5',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:25,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:250},
 ],2)
