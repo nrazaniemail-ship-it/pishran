@@ -140,6 +140,35 @@ const productStageSwapped=module.reconcileStageInventoryMovements(finishedGoodsP
 ],2,0.01,[],productEngineRows.map(row=>row.productId==='FG-A'?{...row,finishedGoods:row.period===1?70:60}:{...row,finishedGoods:row.period===1?30:20}))
 assert.equal(productStageSwapped.valid,false,'matching aggregate totals must not hide finished goods assigned to the wrong product')
 assert.ok(productStageSwapped.issues.some(issue=>issue.includes('product FG-A closing inventory does not match')))
+
+const rawMaterialProductRows=[
+ stageRow(1,'raw-materials','RM-A',0,0,3,30,0,0,0,0,3,30),
+ stageRow(1,'raw-materials','RM-B',0,0,7,70,0,0,0,0,7,70),
+]
+const rawMaterialProductEngine=[
+ {period:1,productId:'RM-A',rawMaterials:70,workInProgress:0,finishedGoods:0},
+ {period:1,productId:'RM-B',rawMaterials:30,workInProgress:0,finishedGoods:0},
+]
+const rawMaterialProductMismatch=module.reconcileStageInventoryMovements(rawMaterialProductRows,[
+ {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
+],1,0.01,[],rawMaterialProductEngine)
+assert.equal(rawMaterialProductMismatch.valid,false,
+ 'matching raw-material aggregate totals must not hide balances assigned to the wrong product')
+assert.ok(rawMaterialProductMismatch.issues.some(issue=>issue.includes('Stage raw-materials product RM-A closing inventory does not match')))
+const wipProductRows=[
+ stageRow(1,'work-in-progress','WIP-A',0,0,0,0,3,30,0,0,3,30),
+ stageRow(1,'work-in-progress','WIP-B',0,0,0,0,7,70,0,0,7,70),
+]
+const wipProductEngine=[
+ {period:1,productId:'WIP-A',rawMaterials:0,workInProgress:70,finishedGoods:0},
+ {period:1,productId:'WIP-B',rawMaterials:0,workInProgress:30,finishedGoods:0},
+]
+const wipProductMismatch=module.reconcileStageInventoryMovements(wipProductRows,[
+ {period:1,rawMaterials:0,workInProgress:100,finishedGoods:0},
+],1,0.01,[],wipProductEngine)
+assert.equal(wipProductMismatch.valid,false,
+ 'matching WIP aggregate totals must not hide balances assigned to the wrong product')
+assert.ok(wipProductMismatch.issues.some(issue=>issue.includes('Stage work-in-progress product WIP-A closing inventory does not match')))
 const productStageMissingProduct=module.reconcileStageInventoryMovements(finishedGoodsProducts.filter(row=>row.productId!=='FG-B'),[
  {period:1,rawMaterials:0,workInProgress:0,finishedGoods:100},
  {period:2,rawMaterials:0,workInProgress:0,finishedGoods:80},
