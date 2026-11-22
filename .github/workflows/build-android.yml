@@ -17,8 +17,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: pishran-mobile-build-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Keep distinct commits isolated so a newer PR push cannot cancel an
+  # emulator boot or SDK setup that is still running for another SHA.
+  group: pishran-mobile-build-${{ github.event.pull_request.number || github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   build-apk:
