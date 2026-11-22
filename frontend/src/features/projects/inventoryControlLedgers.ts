@@ -392,8 +392,9 @@ export function reconcileStageInventoryMovements(
      sales.quantity+=row.salesQuantity??0;sales.cost+=row.salesCostValue??0;ledgerSalesByProduct.set(productId,sales)
      if(stage==='finished-goods'){
       const production=ledgerProductionByProduct.get(productId)??{quantity:0,value:0}
-      production.quantity+=(row.productionQuantity??0)
-      production.value+=(row.productionValue??0)
+      const stageTransferIn=transferIn.get([row.period,row.inventoryStage,row.productId.trim(),row.costCentreId.trim()].join(':'))??{quantity:0,value:0}
+      production.quantity+=(row.productionQuantity??0)+stageTransferIn.quantity
+      production.value+=(row.productionValue??0)+stageTransferIn.value
       ledgerProductionByProduct.set(productId,production)
      }
     }
