@@ -16,10 +16,12 @@ type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wiz
 type ModuleWorkspace = { id: string; moduleId: string; name: string; createdAt: string }
 
 const moduleGridSlots = [
-  { gridColumn: '2', gridRow: '1' }, { gridColumn: '3', gridRow: '1' }, { gridColumn: '4', gridRow: '1' },
-  { gridColumn: '5', gridRow: '2' }, { gridColumn: '5', gridRow: '3' }, { gridColumn: '5', gridRow: '4' },
-  { gridColumn: '4', gridRow: '5' }, { gridColumn: '3', gridRow: '5' }, { gridColumn: '2', gridRow: '5' },
-  { gridColumn: '1', gridRow: '4' }, { gridColumn: '1', gridRow: '3' }, { gridColumn: '1', gridRow: '2' },
+  { gridColumn: '3', gridRow: '1' }, { gridColumn: '5', gridRow: '1' },
+  { gridColumn: '6', gridRow: '2' }, { gridColumn: '7', gridRow: '3' },
+  { gridColumn: '7', gridRow: '5' }, { gridColumn: '6', gridRow: '6' },
+  { gridColumn: '5', gridRow: '7' }, { gridColumn: '3', gridRow: '7' },
+  { gridColumn: '2', gridRow: '6' }, { gridColumn: '1', gridRow: '5' },
+  { gridColumn: '1', gridRow: '3' }, { gridColumn: '2', gridRow: '2' },
 ]
 
 const modules = [
@@ -224,7 +226,7 @@ export default function App() {
                 <span>{isEn ? enTitle : title}</span>
               </button>
             ))}
-            <div className="honeycomb-core" style={{ gridColumn: '2 / 5', gridRow: '2 / 5' }}><strong>{isEn ? 'Technical & Economic Assessment' : 'ارزیابی فنی و اقتصادی'}</strong><small>{isEn ? 'Central decision-making core' : 'هسته مرکزی ارزیابی و تصمیم‌گیری'}</small></div>
+            <div className="honeycomb-core" style={{ gridColumn: '3 / 6', gridRow: '3 / 6' }}><strong>{isEn ? 'Technical & Economic Assessment' : 'ارزیابی فنی و اقتصادی'}</strong><small>{isEn ? 'Central decision-making core' : 'هسته مرکزی ارزیابی و تصمیم‌گیری'}</small></div>
           </div>
         </div>
       </section>
