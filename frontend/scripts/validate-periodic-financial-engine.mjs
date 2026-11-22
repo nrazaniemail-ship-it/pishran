@@ -16,6 +16,10 @@ const loadFinancialModel = async () => {
   const output = transpile(source).replace("'../projects/projectModelFormulaRules'", JSON.stringify(formulaRulesUrl))
   return asDataModule(output)
 }
+const advancedFinancePanelSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+assert.match(advancedFinancePanelSource,
+  /workingCapitalByPeriod:periodicWorkingCapitalByPeriod,rawMaterialsInventoryByPeriod,workInProgressInventoryByPeriod,finishedGoodsInventoryByPeriod/,
+  'Product finished-goods closing values must be passed into the periodic finance engine for balance-sheet disclosure')
 const [engine, foundation, financialModel] = await Promise.all([
   load('../src/features/steel/periodicFinancialEngine.ts'),
   load('../src/features/projects/projectFoundation.ts'),
