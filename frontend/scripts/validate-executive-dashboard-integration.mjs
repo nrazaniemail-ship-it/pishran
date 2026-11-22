@@ -1,85 +1,99 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { executeModuleAnalysis } from '../src/features/modules/moduleAnalysisWorkflow.js'
 import { loadExecutiveDashboardReports } from '../src/features/modules/executiveDashboardData.js'
 
-const costKey = 'module-intelligence:MOD-02:v1'
-const productionKey = 'module-intelligence:MOD-03:v1'
-
-function report(moduleId, id, createdAt, metrics) {
-  return { id, moduleId, createdAt, inputs: {}, metrics }
-}
-
-function memoryStore(initial = {}) {
-  const values = new Map(Object.entries(initial))
+const costKey='module-intelligence:MOD-02:v1'
+const productionKey='module-intelligence:MOD-03:v1'
+function memoryStore(initial={}) {
+  const values=new Map(Object.entries(initial))
   return {
-    get: async key => values.get(key),
-    set: (key, value) => values.set(key, value),
+    get:async key=>values.get(key),
+    set:async(key,value)=>values.set(key,value),
+    values,
   }
 }
+const costInput={outputTon:'100',material:'4000',labor:'1000',energy:'500',maintenance:'300',overhead:'200',sellingPrice:'80'}
+const productionInput={plannedMinutes:'480',downtimeMinutes:'60',idealCycleSeconds:'30',totalCount:'700',goodCount:'665'}
+const at=day=>`2026-06-${String(day).padStart(2,'0')}T10:00:00.000Z`
 
-test('MOD-01 shows empty states when MOD-02 and MOD-03 have no saved reports', async () => {
-  const reports = await loadExecutiveDashboardReports(memoryStore())
-  assert.deepEqual(reports, { cost: [], production: [] })
+test('empty MOD-02/MOD-03 store produces explicit empty dashboard datasets',async()=>{
+ const dashboard=await loadExecutiveDashboardReports(memoryStore())
+ assert.deepEqual(dashboard,{cost:[],production:[]})
 })
 
-test('MOD-01 selects the newest valid report by timestamp, independent of array order', async () => {
-  const store = memoryStore({
-    [costKey]: [
-      report('MOD-02', 'cost-old', '2026-01-01T00:00:00.000Z', { unitCost: 100 }),
-      report('MOD-02', 'cost-new', '2026-03-01T00:00:00.000Z', { unitCost: 250 }),
-      report('MOD-02', 'cost-middle', '2026-02-01T00:00:00.000Z', { unitCost: 175 }),
-      report('MOD-03', 'wrong-module', '2026-04-01T00:00:00.000Z', { unitCost: 999 }),
-      report('MOD-02', 'invalid-date', 'not-a-date', { unitCost: 999 }),
-      { id: 'missing-metrics', moduleId: 'MOD-02', createdAt: '2026-04-02T00:00:00.000Z' },
-    ],
-    [productionKey]: [
-      report('MOD-03', 'oee-new', '2026-05-01T00:00:00.000Z', { oee: 92 }),
-      report('MOD-03', 'oee-old', '2026-02-01T00:00:00.000Z', { oee: 70 }),
-    ],
-  })
-
-  const reports = await loadExecutiveDashboardReports(store)
-  assert.equal(reports.cost[0].id, 'cost-new')
-  assert.equal(reports.cost[0].metrics.unitCost, 250)
-  assert.equal(reports.cost.length, 3)
-  assert.equal(reports.production[0].id, 'oee-new')
-  assert.equal(reports.production[0].metrics.oee, 92)
-  assert.equal(reports.production.length, 2)
+test('actual MOD-02 and MOD-03 analysis workflow persists reports consumed by MOD-01',async()=>{
+ const store=memoryStore()
+ const cost=await executeModuleAnalysis('MOD-02',costInput,store,at(1))
+ const production=await executeModuleAnalysis('MOD-03',productionInput,store,at(1))
+ const dashboard=await loadExecutiveDashboardReports(store)
+ assert.equal(cost.metrics.totalCost,6000)
+ assert.equal(cost.metrics.unitCost,60)
+ assert.equal(production.metrics.availability,87.5)
+ assert.equal(dashboard.cost[0].id,cost.id)
+ assert.equal(dashboard.cost[0].metrics.grossMarginPerTon,20)
+ assert.equal(dashboard.production[0].id,production.id)
+ assert.ok(Math.abs(dashboard.production[0].metrics.oee-71.09375)<1e-9)
 })
 
-test('MOD-01 refresh reads newly saved MOD-02 and MOD-03 reports', async () => {
-  const store = memoryStore({
-    [costKey]: [report('MOD-02', 'cost-v1', '2026-01-01T00:00:00.000Z', { unitCost: 100 })],
-    [productionKey]: [report('MOD-03', 'oee-v1', '2026-01-01T00:00:00.000Z', { oee: 75 })],
-  })
-
-  const beforeRefresh = await loadExecutiveDashboardReports(store)
-  assert.equal(beforeRefresh.cost[0].id, 'cost-v1')
-  assert.equal(beforeRefresh.production[0].id, 'oee-v1')
-
-  await store.set(costKey, [
-    report('MOD-02', 'cost-v2', '2026-06-01T00:00:00.000Z', { unitCost: 80 }),
-    ...beforeRefresh.cost,
-  ])
-  await store.set(productionKey, [
-    report('MOD-03', 'oee-v2', '2026-06-01T00:00:00.000Z', { oee: 96 }),
-    ...beforeRefresh.production,
-  ])
-
-  const afterRefresh = await loadExecutiveDashboardReports(store)
-  assert.equal(afterRefresh.cost[0].id, 'cost-v2')
-  assert.equal(afterRefresh.cost[0].metrics.unitCost, 80)
-  assert.equal(afterRefresh.production[0].id, 'oee-v2')
-  assert.equal(afterRefresh.production[0].metrics.oee, 96)
-  assert.equal(afterRefresh.cost.length, 2)
-  assert.equal(afterRefresh.production.length, 2)
+test('several real executions preserve history and MOD-01 selects latest valid report',async()=>{
+ const store=memoryStore()
+ await executeModuleAnalysis('MOD-02',costInput,store,at(1))
+ await executeModuleAnalysis('MOD-02',{...costInput,material:'5000'},store,at(2))
+ await executeModuleAnalysis('MOD-03',productionInput,store,at(1))
+ await executeModuleAnalysis('MOD-03',{...productionInput,goodCount:'690'},store,at(3))
+ const dashboard=await loadExecutiveDashboardReports(store)
+ assert.equal(dashboard.cost.length,2)
+ assert.equal(dashboard.cost[0].createdAt,at(2))
+ assert.equal(dashboard.cost[0].metrics.unitCost,70)
+ assert.equal(dashboard.production.length,2)
+ assert.equal(dashboard.production[0].createdAt,at(3))
+ assert.equal(dashboard.production[0].metrics.quality,690/700*100)
 })
 
-test('MOD-01 component refresh delegates to the tested MOD-02/MOD-03 storage loader', async () => {
-  const source = await readFile(new URL('../src/features/modules/ExecutiveDashboardPanel.tsx', import.meta.url), 'utf8')
-  assert.match(source, /loadExecutiveDashboardReports\(localStore\)/)
-  assert.match(source, /setCost\(reports\.cost\)/)
-  assert.match(source, /setProduction\(reports\.production\)/)
-  assert.match(source, /onClick=\{\(\)=>void refresh\(\)\}/)
+test('dashboard refresh reads reports created after the previous read',async()=>{
+ const store=memoryStore()
+ assert.equal((await loadExecutiveDashboardReports(store)).cost.length,0)
+ await executeModuleAnalysis('MOD-02',costInput,store,at(4))
+ await executeModuleAnalysis('MOD-03',productionInput,store,at(4))
+ const refreshed=await loadExecutiveDashboardReports(store)
+ assert.equal(refreshed.cost.length,1)
+ assert.equal(refreshed.production.length,1)
+})
+
+test('incomplete or invalid source input is rejected without writing a report',async()=>{
+ const store=memoryStore()
+ await assert.rejects(executeModuleAnalysis('MOD-02',{...costInput,energy:''},store,at(1)),/تکمیل/)
+ await assert.rejects(executeModuleAnalysis('MOD-03',{...productionInput,goodCount:'800'},store,at(1)),/کنترل/)
+ assert.equal(store.values.has(costKey),false)
+ assert.equal(store.values.has(productionKey),false)
+})
+
+test('failed localStore write propagates and no dashboard report is fabricated',async()=>{
+ const store=memoryStore()
+ store.set=async()=>{throw new Error('quota exceeded')}
+ await assert.rejects(executeModuleAnalysis('MOD-02',costInput,store,at(1)),/quota exceeded/)
+ await assert.rejects(executeModuleAnalysis('MOD-03',productionInput,store,at(1)),/quota exceeded/)
+ assert.deepEqual(await loadExecutiveDashboardReports(store),{cost:[],production:[]})
+})
+
+test('MOD-01 ignores incomplete metric payloads and invalid dates',async()=>{
+ const store=memoryStore({
+  [costKey]:[
+   {id:'bad-metrics',moduleId:'MOD-02',createdAt:at(6),metrics:{unitCost:10}},
+   {id:'bad-date',moduleId:'MOD-02',createdAt:'not-a-date',metrics:{unitCost:10,grossMarginPerTon:2,grossMarginPercent:20}},
+  ],
+  [productionKey]:[{id:'partial',moduleId:'MOD-03',createdAt:at(6),metrics:{oee:90}}],
+ })
+ assert.deepEqual(await loadExecutiveDashboardReports(store),{cost:[],production:[]})
+})
+
+test('the real module form delegates calculations and persistence to the tested workflow',async()=>{
+ const source=await readFile(new URL('../src/features/modules/ModuleIntelligencePanel.tsx',import.meta.url),'utf8')
+ assert.match(source,/executeModuleAnalysis\(moduleId/)
+ assert.match(source,/localStore\)/)
+ const dashboard=await readFile(new URL('../src/features/modules/ExecutiveDashboardPanel.tsx',import.meta.url),'utf8')
+ assert.match(dashboard,/loadExecutiveDashboardReports\(localStore\)/)
+ assert.match(dashboard,/onClick=\{\(\)=>void refresh\(\)\}/)
 })
