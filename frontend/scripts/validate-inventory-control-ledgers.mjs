@@ -97,6 +97,64 @@ const zeroStockGap=module.reconcileCostCentreInventory([
 ],[],3)
 assert.equal(zeroStockGap.valid,true,zeroStockGap.issues.join('; '),
  'A sparse cost-centre ledger may omit a period only when no stock remains to carry.')
+const zeroStockReintroduced=module.reconcileCostCentreInventory([
+ {...centreMovements[0],consumptionQuantity:20,consumptionValue:200,closingQuantity:0,closingValue:0},
+ {...centreMovements[2],period:3,openingQuantity:5,openingValue:50,closingQuantity:5,closingValue:50},
+],[],3)
+assert.equal(zeroStockReintroduced.valid,false,
+ 'A later opening balance must not appear after a zero-stock gap without an intervening movement row.')
+assert.ok(zeroStockReintroduced.issues.some(issue=>issue.includes('missing one or more intervening period movement rows')))
+
+const centreStageRow=(period,costCentreId,openingQuantity,openingValue,transfersInQuantity,transfersInValue,transfersOutQuantity,transfersOutValue,salesQuantity,salesCostValue,closingQuantity,closingValue)=>({
+ ...stageRow(period,'finished-goods','P1',openingQuantity,openingValue,0,0,0,0,0,0,closingQuantity,closingValue),
+ costCentreId,transfersInQuantity,transfersInValue,transfersOutQuantity,transfersOutValue,salesQuantity,salesCostValue,
+})
+const multiPeriodCentreStageRows=[
+ centreStageRow(1,'CC-A',20,200,0,0,10,100,0,0,10,100),
+ centreStageRow(1,'CC-B',0,0,10,100,0,0,0,0,10,100),
+ centreStageRow(1,'CC-C',0,0,0,0,0,0,0,0,0,0),
+ centreStageRow(2,'CC-A',10,100,0,0,0,0,0,0,10,100),
+ centreStageRow(2,'CC-B',10,100,0,0,5,50,0,0,5,50),
+ centreStageRow(2,'CC-C',0,0,5,50,0,0,0,0,5,50),
+ centreStageRow(3,'CC-A',10,100,0,0,0,0,0,0,10,100),
+ centreStageRow(3,'CC-B',5,50,0,0,0,0,0,0,5,50),
+ centreStageRow(3,'CC-C',5,50,0,0,0,0,2,20,3,30),
+]
+const multiPeriodCentreTransfers=[
+ {id:'CC-MULTI-1',period:1,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+ {id:'CC-MULTI-2',period:2,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-B',destinationCostCentreId:'CC-C',quantity:5,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:50},
+]
+const multiPeriodCentreCheck=module.reconcileCostCentreInventory(
+ multiPeriodCentreStageRows.map(row=>({
+  period:row.period,productId:row.productId,costCentreId:row.costCentreId,
+  openingQuantity:row.openingQuantity,openingValue:row.openingValue,receiptsQuantity:0,receiptsValue:0,
+  productionQuantity:0,productionValue:0,consumptionQuantity:row.salesQuantity,consumptionValue:row.salesCostValue,
+  wasteQuantity:0,wasteValue:0,closingQuantity:row.closingQuantity,closingValue:row.closingValue,
+ })),
+ multiPeriodCentreTransfers,3)
+assert.equal(multiPeriodCentreCheck.valid,true,multiPeriodCentreCheck.issues.join('; '))
+const multiPeriodStageCheck=module.reconcileStageInventoryMovements(multiPeriodCentreStageRows,[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:200},
+ {period:2,rawMaterials:0,workInProgress:0,finishedGoods:200},
+ {period:3,rawMaterials:0,workInProgress:0,finishedGoods:180},
+],3,0.01,[],[
+ {period:1,productId:'P1',rawMaterials:0,workInProgress:0,finishedGoods:200,finishedGoodsSalesQuantity:0,finishedGoodsCostOfSales:0},
+ {period:2,productId:'P1',rawMaterials:0,workInProgress:0,finishedGoods:200,finishedGoodsSalesQuantity:0,finishedGoodsCostOfSales:0},
+ {period:3,productId:'P1',rawMaterials:0,workInProgress:0,finishedGoods:180,finishedGoodsSalesQuantity:2,finishedGoodsCostOfSales:20},
+])
+assert.equal(multiPeriodStageCheck.valid,true,multiPeriodStageCheck.issues.join('; '))
+assert.equal(multiPeriodStageCheck.rows.filter(row=>row.inventoryStage==='finished-goods').length,9)
+const multiPeriodInventoryTotals=[200,200,180]
+const multiPeriodWorkingCapitalCheck=module.reconcileInventoryThreeWay(multiPeriodInventoryTotals.map((inventory, index)=>{
+ const period=index+1
+ const model={rawMaterials:0,workInProgress:0,finishedGoods:inventory,otherCurrentAssets:10,currentLiabilities:5,netWorkingCapital:inventory+5}
+ return {period,model,balanceSheet:{...model},cppCps:{rawMaterials:0,workInProgress:0,finishedGoods:inventory,totalInventory:inventory}}
+}))
+assert.equal(multiPeriodWorkingCapitalCheck.valid,true,multiPeriodWorkingCapitalCheck.issues.join('; '))
+assert.deepEqual(multiPeriodWorkingCapitalCheck.rows.map(row=>row.inventoryModel),multiPeriodInventoryTotals,
+ 'internal transfers must preserve aggregate inventory; the period-three 20 cost-of-sales issue must reduce it only once')
+assert.deepEqual(multiPeriodWorkingCapitalCheck.rows.map(row=>row.netWorkingCapitalModel),[205,205,185])
+
 const overdrawCentre=module.reconcileCostCentreInventory(centreMovements.map(row=>row.period===1&&row.productId==='P1'?{...row,closingQuantity:0,closingValue:0}:row),[
  {id:'CC-T5',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'A',destinationCostCentreId:'B',quantity:25,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:250},
 ],2)
