@@ -112,16 +112,16 @@ assert.equal(multiCentreStage.rows.find(row=>row.period===1).ledgerClosingValue,
  'stage totals must aggregate distinct cost centres without duplicating inventory')
 assert.equal(multiCentreStage.rows.find(row=>row.period===2).ledgerClosingValue,80)
 const finishedGoodsProducts=[
- stageRow(1,'finished-goods','FG-A',0,0,0,0,0,0,0,0,30,30),
- stageRow(1,'finished-goods','FG-B',0,0,0,0,0,0,0,0,70,70),
+ stageRow(1,'finished-goods','FG-A',0,0,0,0,30,30,0,0,30,30),
+ stageRow(1,'finished-goods','FG-B',0,0,0,0,70,70,0,0,70,70),
  stageRow(2,'finished-goods','FG-A',30,30,0,0,0,0,10,10,20,20),
  stageRow(2,'finished-goods','FG-B',70,70,0,0,0,0,10,10,60,60),
 ]
 const productEngineRows=[
- {period:1,productId:'FG-A',rawMaterials:0,workInProgress:0,finishedGoods:30},
- {period:1,productId:'FG-B',rawMaterials:0,workInProgress:0,finishedGoods:70},
- {period:2,productId:'FG-A',rawMaterials:0,workInProgress:0,finishedGoods:20},
- {period:2,productId:'FG-B',rawMaterials:0,workInProgress:0,finishedGoods:60},
+ {period:1,productId:'FG-A',rawMaterials:0,workInProgress:0,finishedGoods:30,productionQuantity:30,productionCost:30},
+ {period:1,productId:'FG-B',rawMaterials:0,workInProgress:0,finishedGoods:70,productionQuantity:70,productionCost:70},
+ {period:2,productId:'FG-A',rawMaterials:0,workInProgress:0,finishedGoods:20,productionQuantity:0,productionCost:0},
+ {period:2,productId:'FG-B',rawMaterials:0,workInProgress:0,finishedGoods:60,productionQuantity:0,productionCost:0},
 ]
 const productStageMatched=module.reconcileStageInventoryMovements(finishedGoodsProducts,[
  {period:1,rawMaterials:0,workInProgress:0,finishedGoods:100},
