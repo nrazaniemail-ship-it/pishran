@@ -106,8 +106,10 @@ assert.equal(zeroStockReintroduced.valid,false,
 assert.ok(zeroStockReintroduced.issues.some(issue=>issue.includes('missing one or more intervening period movement rows')))
 
 const centreStageRow=(period,costCentreId,openingQuantity,openingValue,transfersInQuantity,transfersInValue,transfersOutQuantity,transfersOutValue,salesQuantity,salesCostValue,closingQuantity,closingValue)=>({
- ...stageRow(period,'finished-goods','P1',openingQuantity,openingValue,0,0,0,0,0,0,closingQuantity,closingValue),
- costCentreId,transfersInQuantity,transfersInValue,transfersOutQuantity,transfersOutValue,salesQuantity,salesCostValue,
+ period,inventoryStage:'finished-goods',productId:'P1',costCentreId,
+ openingQuantity,openingValue,receiptsQuantity:0,receiptsValue:0,transfersInQuantity,transfersInValue,transfersOutQuantity,transfersOutValue,
+ productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,salesQuantity,salesCostValue,wasteQuantity:0,wasteValue:0,
+ closingQuantity,closingValue,sourceReference:'inventory register / '+period,sourceVerified:true,
 })
 const multiPeriodCentreStageRows=[
  centreStageRow(1,'CC-A',20,200,0,0,10,100,0,0,10,100),
