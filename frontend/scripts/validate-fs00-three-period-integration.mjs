@@ -273,6 +273,10 @@ assert.equal(correctedStatements.length, 3)
 close(correctedStatements[2].incomeStatement.cashOperatingCosts, statements[2].incomeStatement.cashOperatingCosts + 5)
 close(correctedStatements[2].balanceSheet.netWorkingCapital, statements[2].balanceSheet.netWorkingCapital - 5)
 close(correctedStatements[2].balanceSheet.finishedGoodsInventory, statements[2].balanceSheet.finishedGoodsInventory - 5)
+close(correctedStatements[2].cashFlowStatement.operatingCashFlow, statements[2].cashFlowStatement.operatingCashFlow,
+  'The COGS expense and matching finished-goods/WC release must not create a second cash outflow')
+close(correctedStatements[2].cashFlowStatement.netChangeInCash, statements[2].cashFlowStatement.netChangeInCash)
+close(correctedStatements[2].cashFlowStatement.closingCash, statements[2].cashFlowStatement.closingCash)
 assert.ok(correctedStatements.every(row => row.balanceSheet.reconciled),
   'Reversal and adjustment effects must reconcile through all three statements')
 const priorSalesCorrection = integrationModule.applyStageJournalCorrectionsToProductSchedule(
