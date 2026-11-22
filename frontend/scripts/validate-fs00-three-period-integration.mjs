@@ -5,14 +5,28 @@ import ts from 'typescript'
 const transpile = source => ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
 }).outputText
+const dataUrl = source => 'data:text/javascript;base64,' + Buffer.from(source).toString('base64')
 const load = async path => {
   const source = await readFile(new URL(path, import.meta.url), 'utf8')
-  return import('data:text/javascript;base64,' + Buffer.from(transpile(source)).toString('base64'))
+  return import(dataUrl(transpile(source)))
+}
+const loadProductSchedule = async () => {
+  const [productSource, engineSource, flowSource, controlSource] = await Promise.all([
+    readFile(new URL('../src/features/projects/productOperatingSchedule.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/features/steel/periodicFinancialEngine.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/features/projects/inventoryProductionFlow.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/features/projects/inventoryControlLedgers.ts', import.meta.url), 'utf8'),
+  ])
+  let output = transpile(productSource)
+  output = output.replace("from '../steel/periodicFinancialEngine'", 'from ' + JSON.stringify(dataUrl(transpile(engineSource))))
+  output = output.replace("from './inventoryProductionFlow'", 'from ' + JSON.stringify(dataUrl(transpile(flowSource))))
+  output = output.replace("from './inventoryControlLedgers'", 'from ' + JSON.stringify(dataUrl(transpile(controlSource))))
+  return import(dataUrl(output))
 }
 const [ledgerModule, integrationModule, productScheduleModule, engine] = await Promise.all([
   load('../src/features/projects/cppCpsCostTraceability.ts'),
   load('../src/features/projects/cppCpsScheduleIntegration.ts'),
-  load('../src/features/projects/productOperatingSchedule.ts'),
+  loadProductSchedule(),
   load('../src/features/steel/periodicFinancialEngine.ts'),
 ])
 const close = (actual, expected, message) => assert.ok(
