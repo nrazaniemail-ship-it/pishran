@@ -156,8 +156,7 @@ export default function App() {
   }
 
   function openModule(moduleId: string) {
-    setActiveModuleId(moduleId)
-    navigateTo('module')
+    navigateTo('module', activeProject, moduleId)
   }
 
   async function createModuleWorkspace() {
