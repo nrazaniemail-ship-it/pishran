@@ -333,7 +333,7 @@ const centreMovements = [
   centreMovement(2, 'CC-B', 10, 100, 5, 50),
   centreMovement(3, 'CC-A', 95, 950, 95, 950),
   centreMovement(3, 'CC-B', 5, 50, 3, 30, 2, 20),
-])
+]
 const centreTransferLedger = inventoryControlModule.reconcileCostCentreInventory(
   centreMovements, transferRoundTrip, 3)
 assert.equal(centreTransferLedger.valid, true, centreTransferLedger.issues.join('; '))
