@@ -243,9 +243,15 @@ export function reconcileStageInventoryMovements(
  if(issues.length)return {valid:false,issues,rows:[]}
  const movementByStageKey=new Map<string,StageInventoryMovementDraft>()
  for(const row of movements){
-  if(row.period!==null&&row.inventoryStage&&row.productId.trim()&&row.costCentreId.trim())
-   movementByStageKey.set([row.period,row.inventoryStage,row.productId.trim(),row.costCentreId.trim()].join(':'),row)
+  if(row.period===null||!row.inventoryStage||!row.productId.trim()||!row.costCentreId.trim())continue
+  const key=[row.period,row.inventoryStage,row.productId.trim(),row.costCentreId.trim()].join(':')
+  if(movementByStageKey.has(key)){
+   issues.push('Duplicate stage inventory movement '+key+'. Each period, stage, product and cost centre must have exactly one closing-balance row.')
+   continue
+  }
+  movementByStageKey.set(key,row)
  }
+ if(issues.length)return {valid:false,issues,rows:[]}
  const transferIds=new Set<string>()
  const transferOut=new Map<string,{quantity:number;value:number}>()
  const transferIn=new Map<string,{quantity:number;value:number}>()
