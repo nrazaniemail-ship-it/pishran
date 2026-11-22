@@ -220,16 +220,8 @@ export default function App() {
           <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
           <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
         </div>
-        <div className="hero-art honeycomb-art" aria-label={isEn ? "Technical and economic assessment core with twelve modules" : "هسته ارزیابی فنی و اقتصادی و دوازده ماژول"}>
-          <div className="honeycomb-grid">
-            {modules.map(({ id, icon: Icon, title, enTitle }, index) => (
-              <button type="button" className={`honeycomb-cell honeycomb-tone-${index % 6}`} key={id} style={moduleGridSlots[index]} onClick={() => openModule(id)} aria-label={isEn ? `Open ${enTitle}` : `باز کردن ${title}`}>
-                <Icon aria-hidden="true" />
-                <span>{isEn ? enTitle : title}</span>
-              </button>
-            ))}
-            <div className="honeycomb-core" style={{ gridColumn: '3 / 6', gridRow: '3 / 6' }}><strong>{isEn ? 'Technical & Economic Assessment' : 'ارزیابی فنی و اقتصادی'}</strong><small>{isEn ? 'Central decision-making core' : 'هسته مرکزی ارزیابی و تصمیم‌گیری'}</small></div>
-          </div>
+        <div className="hero-art dashboard-image-art" role="img" aria-label={isEn ? "Pishran technical and economic assessment dashboard with its honeycomb module layout" : "نمای لانه‌زنبوری ماژول‌های داشبورد ارزیابی فنی و اقتصادی پیشران"}>
+          <img className="dashboard-module-image" src="/dashboard-modules.webp" alt={isEn ? "Pishran modules arranged around the technical and economic assessment core" : "ماژول‌های پیشران در آرایش لانه‌زنبوری پیرامون هسته ارزیابی فنی و اقتصادی"} />
         </div>
       </section>
 
