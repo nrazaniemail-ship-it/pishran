@@ -159,6 +159,10 @@ export async function appendStageInventoryAccountingAdjustment(
     if (adjustment.productId !== original.productId || adjustment.kind !== original.kind) {
       throw new Error('An adjustment must retain the original product and document kind.')
     }
+    if (adjustment.debitAccount !== original.debitAccount ||
+        adjustment.creditAccount !== original.creditAccount) {
+      throw new Error('An adjustment must retain the original debit and credit accounts; use a reversal for an opposite-direction correction.')
+    }
     const existingById = store.entries.find(entry => entry.id === adjustment.id)
     if (existingById) {
       const expected = { ...adjustment, documentType: 'adjustment' as const, adjustmentOfDocumentId: originalDocumentId }
