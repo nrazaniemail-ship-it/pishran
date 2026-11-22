@@ -96,12 +96,7 @@ jobs:
             adb install -r frontend/android/app/build/outputs/apk/debug/app-debug.apk
             adb logcat -c
             adb shell monkey -p com.pishran.app 1
-            for attempt in $(seq 1 30); do
-              if adb shell pidof com.pishran.app >/dev/null 2>&1; then
-                break
-              fi
-              sleep 1
-            done
+            sleep 5
             adb shell pidof com.pishran.app
             adb shell dumpsys activity activities | grep -F "com.pishran.app"
             if adb logcat -d -s AndroidRuntime:E | grep -q "FATAL EXCEPTION"; then
