@@ -43,7 +43,7 @@ export type CppCpsTracePeriodRow = {
   allocationMethod: TraceAllocationMethod
   productId: string | null
   costCentreId: string | null
-  path: readonly ['production-cost' | 'raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital']
+  path: readonly ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital']
 }
 
 export type CppCpsTraceLedger = {
@@ -157,9 +157,7 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
           grossCost: null, baseCoveredCost: null, incrementalCpp: null,
           baseCoverage: 'unverified', sourceStatus: 'unverified',
           allocationMethod: item.allocationMethod, productId: item.productId, costCentreId: unverifiedCentre || null,
-          path: item.category === 'materials'
-            ? ['raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital']
-            : ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'],
+          path: ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'],
         })
       }
       continue
@@ -213,9 +211,7 @@ export function buildCppCpsTraceLedger(items: CppCpsTraceItem[], periodCount: nu
         grossCost: gross, baseCoveredCost: coveredAmount, incrementalCpp: incremental,
         baseCoverage: item.baseCostCoverage, sourceStatus: 'verified',
         allocationMethod: item.allocationMethod, productId: item.productId, costCentreId: item.costCentreId!.trim(),
-        path: item.category === 'materials'
-          ? ['raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital']
-          : ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'],
+        path: ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'],
       })
     }
   }
