@@ -621,4 +621,43 @@ const invalidMixedUnitCarry=module.reconcileCostCentreInventory(mixedUnitMovemen
 assert.equal(invalidMixedUnitCarry.valid,false,'period-two opening quantity must carry forward the prior period closing quantity');
 assert.ok(invalidMixedUnitCarry.issues.some(issue=>issue.includes('opening quantity does not equal prior-period closing quantity')));
 
+
+// Three-period same-product centre round trip: move stock A -> B, return part B -> A,
+// then issue the remaining B stock to sales. Internal transfers must conserve group FG.
+const roundTripCentreMovements=[
+ {period:1,productId:'P1',costCentreId:'CC-A',openingQuantity:100,openingValue:1000,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:90,closingValue:900},
+ {period:1,productId:'P1',costCentreId:'CC-B',openingQuantity:0,openingValue:0,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:10,closingValue:100},
+ {period:2,productId:'P1',costCentreId:'CC-A',openingQuantity:90,openingValue:900,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:95,closingValue:950},
+ {period:2,productId:'P1',costCentreId:'CC-B',openingQuantity:10,openingValue:100,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:5,closingValue:50},
+ {period:3,productId:'P1',costCentreId:'CC-A',openingQuantity:95,openingValue:950,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:95,closingValue:950},
+ {period:3,productId:'P1',costCentreId:'CC-B',openingQuantity:5,openingValue:50,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:2,consumptionValue:20,wasteQuantity:0,wasteValue:0,closingQuantity:3,closingValue:30},
+];
+const roundTripCentreTransfers=[
+ {id:'RT-OUT',period:1,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+ {id:'RT-RETURN',period:2,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-B',destinationCostCentreId:'CC-A',quantity:5,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:50},
+];
+const roundTripCentreCheck=module.reconcileCostCentreInventory(roundTripCentreMovements,roundTripCentreTransfers,3);
+assert.equal(roundTripCentreCheck.valid,true,roundTripCentreCheck.issues.join('; '));
+assert.deepEqual([1,2,3].map(period=>roundTripCentreCheck.rows
+ .filter(row=>row.period===period).reduce((sum,row)=>sum+row.expectedClosingQuantity,0)),[100,100,98],
+ 'a partial return must restore only the returned quantity; the remaining stock is consumed once in period three');
+assert.deepEqual([1,2,3].map(period=>roundTripCentreCheck.rows
+ .filter(row=>row.period===period).reduce((sum,row)=>sum+row.expectedClosingValue,0)),[1000,1000,980],
+ 'A -> B and B -> A transfers must not create or destroy group inventory value');
+assert.deepEqual([1,2,3].map(period=>roundTripCentreCheck.rows
+ .filter(row=>row.period===period).reduce((sum,row)=>sum+row.transferNetValue,0)),[0,0,0],
+ 'each period transfer must net to zero across centres independently');
+const roundTripThreeWay=module.reconcileInventoryThreeWay([1000,1000,980].map((finishedGoods,index)=>{
+ const model={rawMaterials:0,workInProgress:0,finishedGoods,otherCurrentAssets:0,currentLiabilities:0,netWorkingCapital:finishedGoods};
+ return {period:index+1,model,balanceSheet:{...model},cppCps:{rawMaterials:0,workInProgress:0,finishedGoods,totalInventory:finishedGoods}};
+}));
+assert.equal(roundTripThreeWay.valid,true,roundTripThreeWay.issues.join('; '));
+assert.deepEqual(roundTripThreeWay.rows.map(row=>row.inventoryCppCps),[1000,1000,980]);
+assert.deepEqual(roundTripThreeWay.rows.map(row=>row.netWorkingCapitalModel),[1000,1000,980],
+ 'centre transfers must not add a second FG balance to CPP/CPS or working capital');
+const missingRoundTripReturn=module.reconcileCostCentreInventory(
+ roundTripCentreMovements.map(row=>row.period===2&&row.costCentreId==='CC-A'?{...row,closingQuantity:90,closingValue:900}:row),
+ roundTripCentreTransfers,3);
+assert.equal(missingRoundTripReturn.valid,false,'the return transfer must appear in the destination centre closing stock');
+
 console.log('Waste classification, inter-product/cost-centre transfer and three-way inventory reconciliation validations passed.')

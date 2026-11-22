@@ -242,6 +242,38 @@ const overTransferredIntra=module.buildProductOperatingSchedule({
 },periods,1,'IRR')
 assert.equal(overTransferredIntra.valid,false,'multiple internal transfers cannot exceed aggregate source closing quantity')
 
+
+// Three-period round trip between centres of the same product must be invisible
+// to product CPP, weighted-average valuation, COGS and finished-goods working capital.
+const roundTripSameProduct=module.buildProductOperatingSchedule({
+ ...base,
+ productionTransfers:[
+  {id:'RT-OUT',period:1,sourceProductId:'P1',destinationProductId:'P1',
+   sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:10,
+   sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+  {id:'RT-RETURN',period:2,sourceProductId:'P1',destinationProductId:'P1',
+   sourceCostCentreId:'CC-B',destinationCostCentreId:'CC-A',quantity:5,
+   sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:50},
+ ],
+},periods,1,'IRR')
+assert.equal(roundTripSameProduct.valid,true,roundTripSameProduct.issues.join('; '))
+assert.deepEqual(roundTripSameProduct.rows.map(row=>row.productionQuantity),result.rows.map(row=>row.productionQuantity))
+assert.deepEqual(roundTripSameProduct.rows.map(row=>row.productionCost),result.rows.map(row=>row.productionCost))
+assert.deepEqual(roundTripSameProduct.rows.map(row=>row.costOfSales),result.rows.map(row=>row.costOfSales),
+ 'returning stock to its original centre in a later period must not reverse or duplicate sales COGS')
+assert.deepEqual(roundTripSameProduct.rows.map(row=>row.closingInventoryQuantity),result.rows.map(row=>row.closingInventoryQuantity))
+assert.deepEqual(roundTripSameProduct.rows.map(row=>row.closingInventoryValue),result.rows.map(row=>row.closingInventoryValue))
+assert.deepEqual(roundTripSameProduct.periodCostOfSales,result.periodCostOfSales)
+assert.equal(roundTripSameProduct.totalProductionQuantity,result.totalProductionQuantity)
+assert.equal(roundTripSameProduct.totalClosingInventoryValue,result.totalClosingInventoryValue)
+const roundTripWorkingCapital=module.bindFinishedGoodsInventoryToWorkingCapital([0,0],roundTripSameProduct,false)
+assert.equal(roundTripWorkingCapital.valid,true,roundTripWorkingCapital.issues.join('; '))
+assert.deepEqual(roundTripWorkingCapital.closingWorkingCapitalByPeriod,
+ result.rows.map(row=>row.closingInventoryValue),
+ 'finished goods must enter working capital once, regardless of centre transfer and reversal');
+assert.deepEqual(roundTripWorkingCapital.inventoryAddedByPeriod,
+ result.rows.map(row=>row.closingInventoryValue));
+
 console.log('Product-by-product production, weighted-average inventory, COGS and sales validation passed.')
 
 const flowProduct={
