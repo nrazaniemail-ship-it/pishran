@@ -210,10 +210,10 @@ export default function App() {
                 <span>{isEn ? item.enTitle : item.title}</span>
               </button>
             })}
-            <div className="dashboard-honeycomb-core">
+            <button className="dashboard-honeycomb-core" type="button" onClick={() => navigateTo('projects')} aria-label={isEn ? "Open project assessment" : "ورود به ارزیابی فنی و اقتصادی پروژه‌ها"}>
               <FileChartColumn aria-hidden="true" />
               <strong>{isEn ? "Technical & Economic Project Assessment" : "ارزیابی فنی و اقتصادی پروژه‌ها"}</strong>
-            </div>
+            </button>
           </div>
         </div>
       </section>
