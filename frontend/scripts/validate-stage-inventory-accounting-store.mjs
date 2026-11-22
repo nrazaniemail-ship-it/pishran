@@ -156,6 +156,13 @@ await assert.rejects(
   ),
   /retain the original product and document kind/,
 )
+await assert.rejects(
+  restoredModule.appendStageInventoryAccountingAdjustment(
+    projectId, postings[2].id, { ...adjustmentPosting, id: 'ADJ-WRONG-ACCOUNTS', debitAccount: 'Inventory:finished-goods', creditAccount: 'Cost of Sales' },
+  ),
+  /retain the original debit and credit accounts/,
+  'An incremental adjustment must preserve the original account direction; opposite-direction corrections require a reversal',
+)
 const adjusted = await restoredModule.appendStageInventoryAccountingAdjustment(
   projectId, postings[2].id, adjustmentPosting,
 )
