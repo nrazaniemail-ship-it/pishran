@@ -473,6 +473,33 @@ const linkedExpectedByProductPeriod = roundTripCpp.schedule.rows.map(row => ({
 const linkedStageCheck = inventoryControlModule.reconcileStageInventoryMovements(
   linkedStageMovements, linkedExpectedByPeriod, 3, 0.01, [], linkedExpectedByProductPeriod)
 assert.equal(linkedStageCheck.valid, true, linkedStageCheck.issues.join('; '))
+
+const linkedCostCentreMovements = linkedStageMovements
+  .filter(row => row.inventoryStage === 'finished-goods')
+  .map(row => ({
+    period: row.period, productId: row.productId, costCentreId: row.costCentreId,
+    openingQuantity: row.openingQuantity, openingValue: row.openingValue,
+    receiptsQuantity: row.receiptsQuantity, receiptsValue: row.receiptsValue,
+    productionQuantity: row.productionQuantity, productionValue: row.productionValue,
+    consumptionQuantity: row.consumptionQuantity + row.salesQuantity,
+    consumptionValue: row.consumptionValue + row.salesCostValue,
+    wasteQuantity: row.wasteQuantity, wasteValue: row.wasteValue,
+    closingQuantity: row.closingQuantity, closingValue: row.closingValue,
+  }))
+const linkedCentreRegisterCheck = inventoryControlModule.reconcileCostCentreInventory(
+  linkedCostCentreMovements, transferRoundTrip, 3)
+assert.equal(linkedCentreRegisterCheck.valid, true, linkedCentreRegisterCheck.issues.join('; '))
+assert.deepEqual([1, 2, 3].map(period => linkedCentreRegisterCheck.rows
+  .filter(row => row.period === period)
+  .reduce((sum, row) => sum + row.expectedClosingQuantity, 0)),
+  roundTripCpp.schedule.rows.map(row => row.closingInventoryQuantity),
+  'The exact A→B/B→A register and cost-centre subledger must reconcile to product closing quantity in every period')
+assert.deepEqual([1, 2, 3].map(period => linkedCentreRegisterCheck.rows
+  .filter(row => row.period === period)
+  .reduce((sum, row) => sum + row.expectedClosingValue, 0)),
+  roundTripCpp.schedule.rows.map(row => row.closingInventoryValue),
+  'The exact A→B/B→A register and cost-centre subledger must reconcile to CPP/CPS-adjusted product closing value in every period')
+
 assert.deepEqual(linkedStageCheck.rows.filter(row => row.inventoryStage === 'finished-goods')
   .map(row => [row.period, row.ledgerClosingValue, row.engineClosingValue, row.variance]),
   linkedExpectedByPeriod.map(row => [row.period, row.finishedGoods, row.finishedGoods, 0]),
