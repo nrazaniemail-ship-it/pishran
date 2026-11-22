@@ -69,6 +69,25 @@ try {
  assert.equal(blankMovement.salesQuantity,null,'finished-goods sales quantity must remain unknown until explicitly entered')
  assert.equal(blankMovement.salesCostValue,null,'finished-goods cost of sales must remain unknown until explicitly entered')
 
+ const persistedMovement={...blankMovement,period:1,inventoryStage:'raw-materials',productId:'ORE',costCentreId:'ORE-STORE',
+  openingQuantity:10,openingValue:100,receiptsQuantity:0,receiptsValue:0,transfersInQuantity:0,transfersInValue:0,
+  transfersOutQuantity:0,transfersOutValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:2,consumptionValue:20,
+  wasteQuantity:0,wasteValue:0,closingQuantity:8,closingValue:80,sourceReference:'stock-card-1',sourceVerified:true}
+ const persistedTransfer={...blankStageTransfer,period:1,sourceStage:'raw-materials',destinationStage:'work-in-progress',
+  sourceProductId:'ORE',destinationProductId:'PELLET',sourceCostCentreId:'ORE-STORE',destinationCostCentreId:'DRI',
+  quantity:2,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,transferValue:20,sourceReference:'issue-1',sourceVerified:true}
+ const restored=forms.mergeProjectModelFinancialFormDrafts({costCentreInventoryMovements:[persistedMovement],inventoryStageTransfers:[persistedTransfer]})
+ assert.deepEqual(restored.costCentreInventoryMovements,[persistedMovement],'saved cost-centre inventory rows must survive project hydration')
+ assert.deepEqual(restored.inventoryStageTransfers,[persistedTransfer],'saved inter-stage transfer rows must survive project hydration')
+ const legacyRestored=forms.mergeProjectModelFinancialFormDrafts({tax:{system:'profit-tax'},economic:{discountRatePercent:12,adjustments:[]}})
+ assert.deepEqual(legacyRestored.costCentreInventoryMovements,[],'legacy projects without the inventory ledger must hydrate with an empty collection')
+ assert.deepEqual(legacyRestored.inventoryStageTransfers,[],'legacy projects without inter-stage transfers must hydrate with an empty collection')
+ assert.equal(legacyRestored.tax.system,'profit-tax','hydration must retain existing nested tax settings')
+ assert.equal(legacyRestored.economic.discountRatePercent,12,'hydration must retain existing economic settings')
+ const malformedRestored=forms.mergeProjectModelFinancialFormDrafts({costCentreInventoryMovements:null,inventoryStageTransfers:null})
+ assert.deepEqual(malformedRestored.costCentreInventoryMovements,[],'malformed null inventory collection must not break hydration')
+ assert.deepEqual(malformedRestored.inventoryStageTransfers,[],'malformed null transfer collection must not break hydration')
+
  assert.deepEqual(complete.costCentreInventoryMovements,[])
  assert.deepEqual(forms.validateProjectModelFinancialFormDrafts({...complete,costCentreInventoryMovements:[blankMovement]}),[])
  const verificationOnlyMovement={...blankMovement,sourceVerified:true}
