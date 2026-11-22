@@ -373,7 +373,7 @@ const multiPeriodFlowProduct={
    openingFinishedGoodsQuantity:30,openingFinishedGoodsValue:flowSchedule.rows[0].closingInventoryValue,
    finishedGoodsClosingQuantity:20,
    rawMaterialPurchasesQuantity:0,rawMaterialPurchasesValue:0,
-   rawMaterialConsumptionQuantity:20,rawMaterialWasteQuantity:0,
+   rawMaterialConsumptionQuantity:20,normalRawMaterialWasteQuantity:0,abnormalRawMaterialWasteQuantity:0,
    unitsStarted:80,unitsCompleted:90,closingWipQuantity:10,
    materialCompletionPercent:100,conversionCompletionPercent:50,conversionCost:400,
   },
