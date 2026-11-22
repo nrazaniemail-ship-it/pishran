@@ -383,7 +383,7 @@ export function reconcileStageInventoryMovements(
    issues.push(...centreCheck.issues.map(issue=>'Stage '+stage+': '+issue))
    const productField=stage==='raw-materials'?'rawMaterials':stage==='work-in-progress'?'workInProgress':'finishedGoods'
    const expectedProductStageTotal=[...expectedProductRows.entries()].filter(([key])=>key.startsWith(period+':')).reduce((sum,[,row])=>sum+row[productField],0)
-   const productBreakdownMatchesStage=!!expectedByProductPeriod&&near(expectedProductStageTotal,expected.get(period)?.[productField]??0,tolerance/100)
+   const productBreakdownMatchesStage=stage==='finished-goods'&&!!expectedByProductPeriod&&near(expectedProductStageTotal,expected.get(period)?.[productField]??0,tolerance/100)
    if(productBreakdownMatchesStage&&stage==='finished-goods'){
     const ledgerByProduct=new Map<string,number>()
     const ledgerSalesByProduct=new Map<string,{quantity:number;cost:number}>()
