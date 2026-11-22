@@ -381,7 +381,10 @@ export function reconcileStageInventoryMovements(
    }))
    const centreCheck=reconcileCostCentreInventory(mapped,[],periodCount,tolerance)
    issues.push(...centreCheck.issues.map(issue=>'Stage '+stage+': '+issue))
-   if(expectedByProductPeriod&&stage==='finished-goods'){
+   const productField=stage==='raw-materials'?'rawMaterials':stage==='work-in-progress'?'workInProgress':'finishedGoods'
+   const expectedProductStageTotal=[...expectedProductRows.entries()].filter(([key])=>key.startsWith(period+':')).reduce((sum,[,row])=>sum+row[productField],0)
+   const productBreakdownMatchesStage=!!expectedByProductPeriod&&near(expectedProductStageTotal,expected.get(period)?.[productField]??0,tolerance/100)
+   if(productBreakdownMatchesStage){
     const ledgerByProduct=new Map<string,number>()
     const ledgerSalesByProduct=new Map<string,{quantity:number;cost:number}>()
     const ledgerProductionByProduct=new Map<string,{quantity:number;value:number}>()
@@ -399,7 +402,7 @@ export function reconcileStageInventoryMovements(
     for(const [key,engineProduct] of expectedProductRows){
      if(!key.startsWith(period+':'))continue
      const productId=key.slice(String(period).length+1)
-     const field='finishedGoods'
+     const field=productField
      const ledgerValue=ledgerByProduct.get(productId)??0
      if(!near(ledgerValue,engineProduct[field],tolerance/100))
       issues.push('Stage '+stage+' product '+productId+' closing inventory does not match the finance engine in period '+period+'.')
