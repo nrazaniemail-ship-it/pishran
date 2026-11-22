@@ -352,6 +352,41 @@ export default function AdvancedFinancePanel(props: Props) {
   const loanDraftIntegration=useMemo(()=>props.loanDrafts?.length&&props.projectFoundation&&props.dayCountBasis!==null&&props.dayCountBasis!==undefined
     ?buildProjectLoanDraftIntegration(props.loanDrafts,projectPeriods,props.dayCountBasis,props.periodFrequency??'unspecified',props.projectFoundation)
     :null,[JSON.stringify(props.loanDrafts??[]),JSON.stringify(projectPeriods),props.dayCountBasis,props.periodFrequency,JSON.stringify(props.projectFoundation??null)])
+  const stageInventoryPreflight=useMemo(()=>{
+    const movements=props.productFinancialDrafts?.costCentreInventoryMovements??[]
+    const stageTransfers=props.productFinancialDrafts?.inventoryStageTransfers??[]
+    const hasData=movements.some(row=>[
+      row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
+      row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,
+      row.transfersOutQuantity,row.transfersOutValue,row.productionQuantity,row.productionValue,
+      row.consumptionQuantity,row.consumptionValue,row.salesQuantity,row.salesCostValue,
+      row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue,row.sourceReference,
+      row.sourceVerified===true,
+    ].some(value=>value!==null&&value!==undefined&&value!==''))||stageTransfers.some(row=>[
+      row.id,row.period,row.sourceStage,row.destinationStage,row.sourceProductId,row.destinationProductId,
+      row.sourceCostCentreId,row.destinationCostCentreId,row.quantity,row.sourceUnit,row.destinationUnit,
+      row.conversionFactor,row.transferValue,row.sourceReference,row.sourceVerified===true,
+    ].some(value=>value!==null&&value!==undefined&&value!==''))
+    if(!hasData)return null
+    if(!productOperatingSchedule?.valid)return {valid:false,issues:['A valid product operating schedule is required before detailed stage inventory can be reconciled.'],rows:[]}
+    const expectedByPeriod=(props.projectPeriods??[]).map((_,index)=>({
+      period:index+1,
+      rawMaterials:productOperatingSchedule.periodRawMaterialInventoryValue[index]??0,
+      workInProgress:productOperatingSchedule.periodWipInventoryValue[index]??0,
+      finishedGoods:productOperatingSchedule.rows.filter(row=>row.period===index+1).reduce((sum,row)=>sum+row.closingInventoryValue,0),
+    }))
+    const expectedByProductPeriod=productOperatingSchedule.rows.map(row=>({
+      period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,
+      workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,
+      finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales,
+      productionQuantity:row.productionQuantity,productionCost:row.productionCost,
+    }))
+    return reconcileStageInventoryMovements(movements,expectedByPeriod,props.projectPeriods?.length??0,0.01,stageTransfers,expectedByProductPeriod)
+  },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),
+    JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),productOperatingSchedule,JSON.stringify(props.projectPeriods??[])])
+  const hasUnpostedStageInventoryData=Boolean(
+    stageInventoryPreflight&&stageInventoryPreflight.valid!==true
+  )
   const periodicFinanceBundle=useMemo<{result:PeriodicProjectFinanceResult;input:PeriodicProjectFinanceInput}|null>(()=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
@@ -621,21 +656,6 @@ export default function AdvancedFinancePanel(props: Props) {
       (state.wipCompletion.material>0&&state.workingCapitalBases.rawMaterials<=0)||
       (state.wipCompletion.conversion>0&&state.workingCapitalBases.conversion<=0))
       ?'missing-cost-or-completion-basis':'automatic'
-  const hasUnpostedStageInventoryData=Boolean(
-    props.productFinancialDrafts?.costCentreInventoryMovements?.some(row=>[
-      row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
-      row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,
-      row.transfersOutQuantity,row.transfersOutValue,row.productionQuantity,row.productionValue,
-      row.consumptionQuantity,row.consumptionValue,row.salesQuantity,row.salesCostValue,
-      row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue,row.sourceReference,
-      row.sourceVerified===true,
-    ].some(value=>value!==null&&value!==undefined&&value!==''))||
-    props.productFinancialDrafts?.inventoryStageTransfers?.some(row=>[
-      row.id,row.period,row.sourceStage,row.destinationStage,row.sourceProductId,row.destinationProductId,
-      row.sourceCostCentreId,row.destinationCostCentreId,row.quantity,row.sourceUnit,row.destinationUnit,
-      row.conversionFactor,row.transferValue,row.sourceReference,row.sourceVerified===true,
-    ].some(value=>value!==null&&value!==undefined&&value!==''))
-  )
   const periodicStatements=useMemo(()=>periodicFinanceResult?.valid&&!hasUnpostedStageInventoryData?buildPeriodicThreeFinancialStatements(periodicFinanceResult,{
     cash:props.openingCashBalance??0,debt:props.openingDebtBalance??0,
     netFixedAssets:props.openingFixedAssetsNetBookValue??0,
@@ -725,8 +745,9 @@ export default function AdvancedFinancePanel(props: Props) {
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
     {hasUnpostedStageInventoryData&&<div className="fw-validation" role="alert">
-      <b>{t('دفتر تفصیلی موجودی هنوز به موتور ثبت مالی متصل نیست؛ گزارش‌های دوره‌ای، سه صورت مالی، حساسیت و سناریو تا تکمیل اتصال متوقف شده‌اند.','The detailed inventory ledger is not yet posted into the financial engine; periodic reports, three statements, sensitivity and scenarios are blocked until posting is integrated.')}</b>
-      <p>{t('اطلاعات مراکز هزینه و انتقال بین مراحل فعلاً فقط برای کنترل و تطبیق استفاده می‌شوند و نباید به‌عنوان ثبت حسابداری انجام‌شده تلقی شوند. این محدودیت از نمایش خروجی مالی تأییدنشده یا دوباره‌شماری موجودی جلوگیری می‌کند.','Cost-centre movements and inter-stage transfers are currently validation-only, not accounting postings. This guard prevents unverified financial outputs and inventory double counting.')}</p>
+      <b>{t('دفتر تفصیلی موجودی با برنامه تولید/موجودی محصول‌به‌محصول تطبیق ندارد؛ گزارش‌های دوره‌ای، سه صورت مالی، حساسیت و سناریو متوقف شده‌اند.','The detailed inventory ledger does not reconcile to the product operating schedule; periodic reports, three statements, sensitivity and scenarios are blocked.')}</b>
+      {(stageInventoryPreflight?.issues??[]).map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}
+      <p>{t('دفتر تفصیلی مبلغ جدیدی به CPP/CPS اضافه نمی‌کند. پس از تطبیق، موتور مالی از برنامه محصول‌به‌محصول به‌عنوان مبنای یکتای ارزش موجودی و بهای فروش استفاده می‌کند و دفتر مراکز هزینه/انتقال به‌عنوان کنترل مستقل ثبت می‌ماند؛ بنابراین انتقال داخلی دوباره‌شماری نمی‌شود.','The detailed ledger does not add a second CPP/CPS charge. Once reconciled, the finance engine uses the product schedule as the single source for inventory values and cost of sales; the cost-centre / transfer ledger remains an independent control, preventing internal-transfer double counting.')}</p>
     </div>}
     {loanDraftIntegration&&!loanDraftIntegration.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه تسهیلات از فرم‌های تفصیلی معتبر نیست؛ صورت‌های مالی دوره‌ای متوقف شده‌اند.','Detailed loan facilities are invalid; periodic financial statements are blocked.')}</b>{loanDraftIntegration.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {projectTaxSchedule?.active&&!projectTaxSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه مالیات و انتقال زیان ناقص یا نامعتبر است؛ محاسبه دوره‌ای متوقف شده است.','The tax and loss carry-forward schedule is incomplete or invalid; periodic calculation is blocked.')}</b>{projectTaxSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
