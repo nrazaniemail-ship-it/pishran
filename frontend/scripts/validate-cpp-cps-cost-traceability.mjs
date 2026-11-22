@@ -74,7 +74,10 @@ assert.deepEqual(unverifiedOnlyCentre.completeIncrementalByCostCentreByPeriod, {
 assert.equal(unverifiedOnlyCentre.rows[0].sourceStatus, 'unverified')
 
 assert.deepEqual(result.rows.find(row => row.itemId === 'materials').path,
-  ['raw-material-inventory', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'])
+  ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'],
+  'Consumed materials must flow from production cost into WIP, not through raw-material purchases')
+assert.deepEqual(result.rows.find(row => row.itemId === 'overhead').path,
+  ['production-cost', 'wip', 'finished-goods', 'cost-of-sales', 'income-statement', 'working-capital'])
 
 const ready = ledgerModule.buildCppCpsTraceLedger(items.slice(0, 4), 2)
 assert.equal(ready.valid, true)
