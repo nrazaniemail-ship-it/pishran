@@ -73,15 +73,15 @@ const wrongOpeningCarry=module.reconcileCostCentreInventory(centreMovements.map(
 assert.equal(wrongOpeningCarry.valid,false,'each centre opening balance must carry forward its prior closing value')
 assert.ok(wrongOpeningCarry.issues.some(issue=>issue.includes('opening value does not equal prior-period closing value')))
 const skippedCentrePeriod=module.reconcileCostCentreInventory([
- {...centreMovements[0]},
+ {...centreMovements[0],consumptionQuantity:10,consumptionValue:100},
  {...centreMovements[2],period:3},
 ],[],3)
 assert.equal(skippedCentrePeriod.valid,false,
  'A cost centre with stock on hand must not skip an intervening period and silently carry inventory across the gap.')
 assert.ok(skippedCentrePeriod.issues.some(issue=>issue.includes('missing one or more intervening period movement rows')))
 const zeroStockGap=module.reconcileCostCentreInventory([
- {...centreMovements[0],closingQuantity:0,closingValue:0},
- {...centreMovements[2],period:3,openingQuantity:0,openingValue:0},
+ {...centreMovements[0],consumptionQuantity:20,consumptionValue:200,closingQuantity:0,closingValue:0},
+ {...centreMovements[2],period:3,openingQuantity:0,openingValue:0,closingQuantity:0,closingValue:0},
 ],[],3)
 assert.equal(zeroStockGap.valid,true,zeroStockGap.issues.join('; '),
  'A sparse cost-centre ledger may omit a period only when no stock remains to carry.')
