@@ -560,4 +560,65 @@ assert.deepEqual(rollingInventoryThreeWay.rows.map(row=>row.inventoryCppCps),[13
 assert.deepEqual(rollingInventoryThreeWay.rows.map(row=>row.netWorkingCapitalModel),[1250,1250,1200],
  'WC must reflect raw materials, WIP and transferred finished goods once, less current liabilities');
 
+
+// Three-period mixed-unit transfers exercise conversion, partial quantities, reversal,
+// and period-by-period carry-forward without netting opposite movements across periods.
+const mixedUnitTransfers=[
+ {id:'MIX-1-ORE-TO-CONC',period:1,sourceProductId:'ORE',destinationProductId:'CONC',sourceCostCentreId:'MINE',destinationCostCentreId:'PLANT',quantity:1000,sourceUnit:'kg',destinationUnit:'tonne',conversionFactor:0.001,costAmount:250},
+ {id:'MIX-2-CONC-REVERSAL',period:2,sourceProductId:'CONC',destinationProductId:'ORE',sourceCostCentreId:'PLANT',destinationCostCentreId:'MINE',quantity:0.4,sourceUnit:'tonne',destinationUnit:'kg',conversionFactor:1000,costAmount:100},
+ {id:'MIX-3-PARTIAL-ORE-MOVE',period:3,sourceProductId:'ORE',destinationProductId:'ORE',sourceCostCentreId:'MINE',destinationCostCentreId:'MILL',quantity:200,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:50},
+];
+const mixedUnitMovements=[
+ {period:1,productId:'ORE',costCentreId:'MINE',openingQuantity:2000,openingValue:500,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:1000,closingValue:250},
+ {period:1,productId:'CONC',costCentreId:'PLANT',openingQuantity:0,openingValue:0,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:1,closingValue:250},
+ {period:2,productId:'ORE',costCentreId:'MINE',openingQuantity:1000,openingValue:250,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:1400,closingValue:350},
+ {period:2,productId:'CONC',costCentreId:'PLANT',openingQuantity:1,openingValue:250,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:0.6,closingValue:150},
+ {period:3,productId:'ORE',costCentreId:'MINE',openingQuantity:1400,openingValue:350,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:1200,closingValue:300},
+ {period:3,productId:'ORE',costCentreId:'MILL',openingQuantity:0,openingValue:0,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:200,closingValue:50},
+ {period:3,productId:'CONC',costCentreId:'PLANT',openingQuantity:0.6,openingValue:150,receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,consumptionQuantity:0,consumptionValue:0,wasteQuantity:0,wasteValue:0,closingQuantity:0.6,closingValue:150},
+];
+const mixedUnitTransferLedger=module.validateProductionTransfers(mixedUnitTransfers,3);
+assert.equal(mixedUnitTransferLedger.valid,true,mixedUnitTransferLedger.issues.join('; '));
+assert.equal(mixedUnitTransferLedger.netQuantityByProductCentre['1:ORE@MINE'],-1000);
+assert.equal(mixedUnitTransferLedger.netQuantityByProductCentre['1:CONC@PLANT'],1,
+ '1000 kg converted at 0.001 must post exactly 1 tonne to the receiving product and centre');
+assert.equal(mixedUnitTransferLedger.netQuantityByProductCentre['2:CONC@PLANT'],-0.4);
+assert.equal(mixedUnitTransferLedger.netQuantityByProductCentre['2:ORE@MINE'],400,
+ 'the reverse transfer must convert 0.4 tonne back to 400 kg');
+assert.equal(mixedUnitTransferLedger.netQuantityByProductCentre['3:ORE@MINE'],-200);
+assert.equal(mixedUnitTransferLedger.netQuantityByProductCentre['3:ORE@MILL'],200);
+assert.equal(mixedUnitTransferLedger.totalSourceValue,400);
+assert.equal(mixedUnitTransferLedger.totalDestinationValue,400);
+const mixedUnitCentreCheck=module.reconcileCostCentreInventory(mixedUnitMovements,mixedUnitTransfers,3);
+assert.equal(mixedUnitCentreCheck.valid,true,mixedUnitCentreCheck.issues.join('; '));
+const mixedUnitValueByPeriod=[1,2,3].map(period=>mixedUnitCentreCheck.rows
+ .filter(row=>row.period===period).reduce((sum,row)=>sum+row.expectedClosingValue,0));
+assert.deepEqual(mixedUnitValueByPeriod,[500,500,500],
+ 'conversion, reversal and partial transfers must conserve total inventory value in each period');
+const mixedUnitTransferNetByPeriod=[1,2,3].map(period=>mixedUnitCentreCheck.rows
+ .filter(row=>row.period===period).reduce((sum,row)=>sum+row.transferNetValue,0));
+assert.deepEqual(mixedUnitTransferNetByPeriod,[0,0,0],
+ 'the source and destination postings must offset in each period, not merely over the full horizon');
+assert.equal(mixedUnitCentreCheck.rows.find(row=>row.period===1&&row.productId==='ORE').expectedClosingQuantity,1000);
+assert.equal(mixedUnitCentreCheck.rows.find(row=>row.period===2&&row.productId==='ORE').expectedClosingQuantity,1400);
+assert.equal(mixedUnitCentreCheck.rows.find(row=>row.period===2&&row.productId==='CONC').expectedClosingQuantity,0.6);
+assert.equal(mixedUnitCentreCheck.rows.find(row=>row.period===3&&row.costCentreId==='MILL').expectedClosingQuantity,200);
+const mixedUnitInventoryThreeWay=module.reconcileInventoryThreeWay(mixedUnitValueByPeriod.map((finishedGoods,index)=>{
+ const inventory=finishedGoods+100;
+ const model={rawMaterials:100,workInProgress:0,finishedGoods,otherCurrentAssets:20,currentLiabilities:30,netWorkingCapital:inventory-10};
+ return {period:index+1,model,balanceSheet:{...model},cppCps:{rawMaterials:100,workInProgress:0,finishedGoods,totalInventory:inventory}};
+}));
+assert.equal(mixedUnitInventoryThreeWay.valid,true,mixedUnitInventoryThreeWay.issues.join('; '));
+assert.deepEqual(mixedUnitInventoryThreeWay.rows.map(row=>row.inventoryModel),[600,600,600]);
+assert.deepEqual(mixedUnitInventoryThreeWay.rows.map(row=>row.netWorkingCapitalModel),[590,590,590],
+ 'internal centre transfers must not inflate CPP/CPS inventory or working capital');
+const invalidMixedUnitFactor=module.validateProductionTransfers([
+ {...mixedUnitTransfers[0],id:'MIX-BAD-FACTOR',conversionFactor:0},
+],3);
+assert.equal(invalidMixedUnitFactor.valid,false,'zero conversion factors must fail instead of silently moving quantity');
+const invalidMixedUnitCarry=module.reconcileCostCentreInventory(mixedUnitMovements.map(row=>
+ row.period===2&&row.productId==='ORE'?{...row,openingQuantity:999}:row),mixedUnitTransfers,3);
+assert.equal(invalidMixedUnitCarry.valid,false,'period-two opening quantity must carry forward the prior period closing quantity');
+assert.ok(invalidMixedUnitCarry.issues.some(issue=>issue.includes('opening quantity does not equal prior-period closing quantity')));
+
 console.log('Waste classification, inter-product/cost-centre transfer and three-way inventory reconciliation validations passed.')
