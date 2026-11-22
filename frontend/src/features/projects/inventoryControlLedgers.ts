@@ -390,18 +390,16 @@ export function reconcileStageInventoryMovements(
      ledgerByProduct.set(productId,(ledgerByProduct.get(productId)??0)+(row.closingValue??0))
      const sales=ledgerSalesByProduct.get(productId)??{quantity:0,cost:0}
      sales.quantity+=row.salesQuantity??0;sales.cost+=row.salesCostValue??0;ledgerSalesByProduct.set(productId,sales)
-     if(stage==='finished-goods'){
-      const production=ledgerProductionByProduct.get(productId)??{quantity:0,value:0}
-      const stageTransferIn=transferIn.get([row.period,row.inventoryStage,row.productId.trim(),row.costCentreId.trim()].join(':'))??{quantity:0,value:0}
-      production.quantity+=(row.productionQuantity??0)+stageTransferIn.quantity
-      production.value+=(row.productionValue??0)+stageTransferIn.value
-      ledgerProductionByProduct.set(productId,production)
-     }
+     const production=ledgerProductionByProduct.get(productId)??{quantity:0,value:0}
+     const stageTransferIn=transferIn.get([row.period,row.inventoryStage,row.productId.trim(),row.costCentreId.trim()].join(':'))??{quantity:0,value:0}
+     production.quantity+=(row.productionQuantity??0)+stageTransferIn.quantity
+     production.value+=(row.productionValue??0)+stageTransferIn.value
+     ledgerProductionByProduct.set(productId,production)
     }
     for(const [key,engineProduct] of expectedProductRows){
      if(!key.startsWith(period+':'))continue
      const productId=key.slice(String(period).length+1)
-     const field=stage==='raw-materials'?'rawMaterials':stage==='work-in-progress'?'workInProgress':'finishedGoods'
+     const field='finishedGoods'
      const ledgerValue=ledgerByProduct.get(productId)??0
      if(!near(ledgerValue,engineProduct[field],tolerance/100))
       issues.push('Stage '+stage+' product '+productId+' closing inventory does not match the finance engine in period '+period+'.')
