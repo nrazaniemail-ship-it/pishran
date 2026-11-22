@@ -85,6 +85,8 @@ const closingWipCpp = 200 * 10 / 110 + 100 * 5 / 105;
 close(wipRow.productionCost, 1000 + completedMaterialCpp + completedConversionCpp);
 close(wipRow.wipInventoryValue, 200 + closingWipCpp);
 close(wipBound.schedule.periodWipInventoryValue[0], 200 + closingWipCpp);
+close(wipBound.schedule.periodRawMaterialInventoryValue[0], 500,
+  'CPP/CPS material consumption must not post raw-material purchases or alter the raw-material stock ledger');
 close((wipRow.productionCost - 1000) + (wipRow.wipInventoryValue - 200), 300,
   'Incremental CPP must reconcile between completed production and closing WIP');
 
