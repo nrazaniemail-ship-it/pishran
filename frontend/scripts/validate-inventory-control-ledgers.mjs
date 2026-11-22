@@ -174,6 +174,14 @@ const productStageMissingProduct=module.reconcileStageInventoryMovements(finishe
  {period:2,rawMaterials:0,workInProgress:0,finishedGoods:80},
 ],2,0.01,[],productEngineRows)
 assert.equal(productStageMissingProduct.valid,false,'non-zero finished-goods product balances cannot be omitted from the detailed stage ledger')
+const missingIntermediateProductMovement=module.reconcileStageInventoryMovements(
+ finishedGoodsProducts.filter(row=>!(row.period===2&&row.productId==='FG-B')),[
+  {period:1,rawMaterials:0,workInProgress:0,finishedGoods:100},
+  {period:2,rawMaterials:0,workInProgress:0,finishedGoods:20},
+ ],2,0.01,[],productEngineRows.map(row=>row.period===2&&row.productId==='FG-B'?{...row,finishedGoods:0}:row))
+assert.equal(missingIntermediateProductMovement.valid,false,
+ 'a product inventory balance must not disappear between periods merely because the engine closing balance is zero')
+assert.ok(missingIntermediateProductMovement.issues.some(issue=>issue.includes('FG-B is missing its period 2 movement row')))
 const duplicateProductEngineRows=module.reconcileStageInventoryMovements(finishedGoodsProducts,[
  {period:1,rawMaterials:0,workInProgress:0,finishedGoods:100},
  {period:2,rawMaterials:0,workInProgress:0,finishedGoods:80},
