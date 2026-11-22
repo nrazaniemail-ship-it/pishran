@@ -381,7 +381,7 @@ export function reconcileStageInventoryMovements(
    }))
    const centreCheck=reconcileCostCentreInventory(mapped,[],periodCount,tolerance)
    issues.push(...centreCheck.issues.map(issue=>'Stage '+stage+': '+issue))
-   if(expectedByProductPeriod){
+   if(expectedByProductPeriod&&stage==='finished-goods'){
     const ledgerByProduct=new Map<string,number>()
     const ledgerSalesByProduct=new Map<string,{quantity:number;cost:number}>()
     const ledgerProductionByProduct=new Map<string,{quantity:number;value:number}>()
