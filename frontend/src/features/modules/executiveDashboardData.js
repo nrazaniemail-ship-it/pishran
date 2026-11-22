@@ -9,6 +9,9 @@ function newestValidReports(rows, moduleId) {
       row.moduleId === moduleId &&
       row.metrics &&
       typeof row.metrics === 'object' &&
+      (moduleId === 'MOD-02'
+        ? ['unitCost', 'grossMarginPerTon', 'grossMarginPercent'].every(key => Number.isFinite(row.metrics[key]))
+        : ['oee', 'availability', 'quality'].every(key => Number.isFinite(row.metrics[key]))) &&
       Number.isFinite(Date.parse(row.createdAt))
     )
     .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
