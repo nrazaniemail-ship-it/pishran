@@ -145,7 +145,7 @@ assert.ok(Math.abs(convertedSchedule.rows.find(row=>row.productId==='P2'&&row.pe
 
 const duplicateWaste=module.buildProductOperatingSchedule({
  ...controlledDraft,
- sales:[{...controlledDraft.sales[0],periods:controlledDraft.sales[0].periods.map((row,index)=>index===0?{...row,rawMaterialWasteQuantity:2}:row)},controlledDraft.sales[1]]
+ sales:[{...controlledDraft.sales[0],periods:controlledDraft.sales[0].periods.map((row,index)=>index===0?{...row,normalRawMaterialWasteQuantity:2}:row)},controlledDraft.sales[1]]
 },periods,1,'IRR')
 assert.equal(duplicateWaste.valid,false,'normal waste must not be absorbed twice when already in inventory-flow waste')
 const excessiveTransfer=module.buildProductOperatingSchedule({
