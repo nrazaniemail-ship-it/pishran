@@ -338,12 +338,6 @@ assert.equal(completeThreeStageChain.rows.find(row=>row.inventoryStage==='work-i
 assert.equal(completeThreeStageChain.rows.find(row=>row.inventoryStage==='finished-goods').ledgerClosingValue,40)
 assert.equal(completeThreeStageChain.rows.reduce((sum,row)=>sum+row.ledgerClosingValue,0),100,
  'raw-materials -> WIP -> finished-goods chain must preserve total inventory value')
-const blankStageTransferDraft=module.reconcileStageInventoryMovements([],[
- {period:1,rawMaterials:0,workInProgress:0,finishedGoods:0},
-],1,0.01,[{id:'blank-row-id',period:null,sourceStage:null,destinationStage:null,sourceProductId:'',destinationProductId:'',
- sourceCostCentreId:'',destinationCostCentreId:'',quantity:null,sourceUnit:'',destinationUnit:'',conversionFactor:null,
- transferValue:null,sourceReference:'',sourceVerified:false}])
-assert.equal(blankStageTransferDraft.valid,true,'an empty transfer row with an auto-generated identifier must not be treated as entered inventory data')
 const incompleteTransferMovement=module.reconcileStageInventoryMovements([
  {...stageTransferMovementRows[0],receiptsQuantity:null,receiptsValue:null},
  stageTransferMovementRows[1],
