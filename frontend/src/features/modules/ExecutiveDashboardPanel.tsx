@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { localStore } from '../../core/storage/localStore'
+import { loadExecutiveDashboardReports } from './executiveDashboardData'
 
 type CostReport = { id:string; moduleId:'MOD-02'; createdAt:string; inputs:Record<string,string>; metrics:Record<string,number> }
 type ProductionReport = { id:string; moduleId:'MOD-03'; createdAt:string; inputs:Record<string,string>; metrics:Record<string,number> }
@@ -18,11 +19,9 @@ export default function ExecutiveDashboardPanel({language='fa',onOpenModule}:Pro
  const refresh=useCallback(async()=>{
   setLoading(true);setError('')
   try{
-   const [costRows,productionRows]=await Promise.all([
-    localStore.get<CostReport[]>(costKey),localStore.get<ProductionReport[]>(productionKey)
-   ])
-   setCost(Array.isArray(costRows)?costRows.filter(row=>row?.moduleId==='MOD-02'&&row.metrics&&row.createdAt):[])
-   setProduction(Array.isArray(productionRows)?productionRows.filter(row=>row?.moduleId==='MOD-03'&&row.metrics&&row.createdAt):[])
+   const reports=await loadExecutiveDashboardReports(localStore)
+   setCost(reports.cost)
+   setProduction(reports.production)
   }catch{setError(en?'Could not read the local module reports.':'خواندن گزارش‌های محلی ماژول‌ها ناموفق بود.')}
   finally{setLoading(false)}
  },[en])
