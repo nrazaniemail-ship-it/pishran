@@ -428,22 +428,26 @@ for (const row of roundTripCpp.schedule.rows) {
     0, Math.max(0, -wipDelta), 0, 0, 0, wipClosing))
   wipOpening = wipClosing
 
-  const transferOutQty = period === 1 ? 10 : period === 2 ? 5 : 0
-  const transferOutValue = period === 1 ? 100 : period === 2 ? 50 : 0
-  const transferInQty = transferOutQty
-  const transferInValue = transferOutValue
-  const nextBQty = centreBQty - transferOutQty + transferInQty
-  const nextBValue = centreBValue - transferOutValue + transferInValue
+  const aTransferInQty = period === 2 ? 5 : 0
+  const aTransferInValue = period === 2 ? 50 : 0
+  const aTransferOutQty = period === 1 ? 10 : 0
+  const aTransferOutValue = period === 1 ? 100 : 0
+  const bTransferInQty = period === 1 ? 10 : 0
+  const bTransferInValue = period === 1 ? 100 : 0
+  const bTransferOutQty = period === 2 ? 5 : 0
+  const bTransferOutValue = period === 2 ? 50 : 0
+  const nextBQty = centreBQty - bTransferOutQty + bTransferInQty
+  const nextBValue = centreBValue - bTransferOutValue + bTransferInValue
   const nextAQty = row.closingInventoryQuantity - nextBQty
   const nextAValue = row.closingInventoryValue - nextBValue
 
   linkedStageMovements.push(stageMovement(period, 'finished-goods', 'CC-A',
-    centreAQty, centreAValue, 0, 0, transferInQty, transferInValue,
-    transferOutQty, transferOutValue, row.productionQuantity, row.productionCost,
+    centreAQty, centreAValue, 0, 0, aTransferInQty, aTransferInValue,
+    aTransferOutQty, aTransferOutValue, row.productionQuantity, row.productionCost,
     0, 0, row.salesQuantity, row.costOfSales, nextAQty, nextAValue))
   linkedStageMovements.push(stageMovement(period, 'finished-goods', 'CC-B',
-    centreBQty, centreBValue, 0, 0, transferOutQty, transferOutValue,
-    transferInQty, transferInValue, 0, 0, 0, 0, 0, 0, nextBQty, nextBValue))
+    centreBQty, centreBValue, 0, 0, bTransferInQty, bTransferInValue,
+    bTransferOutQty, bTransferOutValue, 0, 0, 0, 0, 0, 0, nextBQty, nextBValue))
   centreAQty = nextAQty
   centreAValue = nextAValue
   centreBQty = nextBQty
