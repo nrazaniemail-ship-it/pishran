@@ -5,6 +5,9 @@ const source=await readFile(new URL('../src/features/projects/inventoryProductio
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 const mod=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'))
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-7, 'Expected '+b+', got '+a)
+const ledgerSource=await readFile(new URL('../src/features/projects/inventoryControlLedgers.ts',import.meta.url),'utf8')
+const ledgerJs=ts.transpileModule(ledgerSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+const ledger=await import('data:text/javascript;base64,'+Buffer.from(ledgerJs).toString('base64'))
 const input={
  openingRawMaterialQuantity:100,openingRawMaterialValue:1000,
  rawMaterialPurchasesQuantity:[100,50],rawMaterialPurchasesValue:[1200,650],
@@ -49,6 +52,17 @@ close(abnormalRawTransfer.quantity,abnormalBridgeSchedule.rows[0].consumptionQua
 close(abnormalRawTransfer.transferValue,abnormalBridgeSchedule.rows[0].consumptionValue+abnormalBridgeSchedule.rows[0].normalWasteValue,
  'Abnormal waste value must be excluded from the WIP transfer.')
 assert.ok(abnormalBridgeSchedule.rows[0].abnormalWasteValue>0)
+const toLedgerTransfer=draft=>({id:draft.id,period:draft.period,sourceProductId:draft.sourceProductId,
+ destinationProductId:draft.destinationProductId,sourceCostCentreId:draft.sourceCostCentreId,
+ destinationCostCentreId:draft.destinationCostCentreId,quantity:draft.quantity,sourceUnit:draft.sourceUnit,
+ destinationUnit:draft.destinationUnit,conversionFactor:draft.conversionFactor,costAmount:draft.transferValue})
+const ledgerDrafts=bridge.map(toLedgerTransfer)
+assert.equal(ledger.validateProductionTransfers(ledgerDrafts,result.rows.length).valid,true,
+ 'Generated raw-to-WIP and WIP-to-finished-goods drafts must balance in the transfer ledger.')
+const replayedDrafts=ledger.validateProductionTransfers([...ledgerDrafts,...ledgerDrafts],result.rows.length)
+assert.equal(replayedDrafts.valid,false,'Replaying generated production-transfer IDs must be rejected before ledger reconciliation.')
+assert.ok(replayedDrafts.issues.some(issue=>issue.includes('unique non-empty identifiers')),
+ 'Duplicate bridge replay must fail specifically on duplicate transfer identity.')
 assert.equal(result.valid,true,result.issues.join('; '))
 const [p1,p2]=result.rows
 close(p1.weightedAverageRawMaterialUnitCost,11)
