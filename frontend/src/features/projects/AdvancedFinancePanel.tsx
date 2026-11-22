@@ -336,7 +336,12 @@ export default function AdvancedFinancePanel(props: Props) {
   },[JSON.stringify(props.cppCpsTraceItems??[]),baseProductOperatingSchedule,cppCpsScheduleBinding])
 
   const productOperatingSchedule=useMemo(()=>{
-    if(!baseIntegratedProductOperatingSchedule?.valid)return baseIntegratedProductOperatingSchedule
+    if(!baseIntegratedProductOperatingSchedule){
+      const hasCorrections=stageJournalEntries.some(entry=>entry.documentType==='reversal'||entry.documentType==='adjustment')
+      if(!hasCorrections)return null
+      return {valid:false,issues:['Persisted stage journal corrections require a valid product-by-product operating schedule; no correction has been silently skipped.'],rows:[],periodRevenue:Array(projectPeriods.length).fill(Number.NaN),periodCostOfSales:Array(projectPeriods.length).fill(Number.NaN),periodSubsidyIncome:[],periodOutputSalesTax:[],annualRevenue:Array(years).fill(Number.NaN),annualCostOfSales:Array(years).fill(Number.NaN),totalProductionQuantity:0,totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:Array(projectPeriods.length).fill(Number.NaN),periodWipInventoryValue:Array(projectPeriods.length).fill(Number.NaN),periodAbnormalWasteExpense:[],periodNormalWasteAbsorbed:[],hasInventoryFlow:false}
+    }
+    if(!baseIntegratedProductOperatingSchedule.valid)return baseIntegratedProductOperatingSchedule
     if(!stageJournalLoaded)return {...baseIntegratedProductOperatingSchedule,valid:false,issues:[...baseIntegratedProductOperatingSchedule.issues,'Stage accounting journal recovery is still in progress.']}
     const binding=applyStageJournalCorrectionsToProductSchedule(
       baseIntegratedProductOperatingSchedule,
