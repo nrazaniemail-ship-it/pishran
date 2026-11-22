@@ -23,11 +23,12 @@ const loadProductSchedule = async () => {
   output = output.replace("from './inventoryControlLedgers'", 'from ' + JSON.stringify(dataUrl(transpile(controlSource))))
   return import(dataUrl(output))
 }
-const [ledgerModule, integrationModule, productScheduleModule, engine] = await Promise.all([
+const [ledgerModule, integrationModule, productScheduleModule, engine, inventoryControlModule] = await Promise.all([
   load('../src/features/projects/cppCpsCostTraceability.ts'),
   load('../src/features/projects/cppCpsScheduleIntegration.ts'),
   loadProductSchedule(),
   load('../src/features/steel/periodicFinancialEngine.ts'),
+  load('../src/features/projects/inventoryControlLedgers.ts'),
 ])
 const close = (actual, expected, message) => assert.ok(
   Math.abs(actual - expected) < 1e-7 * Math.max(1, Math.abs(expected)),
@@ -318,5 +319,76 @@ for (let i = 0; i < 3; i++) {
     roundTripCpp.schedule.rows[i].closingInventoryValue,
     'Integrated balance sheet must carry product-led finished goods once in period ' + (i + 1))
 }
+
+
+const centreMovement = (period, costCentreId, openingQuantity, openingValue, closingQuantity, closingValue, consumptionQuantity = 0, consumptionValue = 0) => ({
+  period, productId: 'P1', costCentreId, openingQuantity, openingValue,
+  receiptsQuantity: 0, receiptsValue: 0, productionQuantity: 0, productionValue: 0,
+  consumptionQuantity, consumptionValue, wasteQuantity: 0, wasteValue: 0, closingQuantity, closingValue,
+})
+const centreMovements = [
+  centreMovement(1, 'CC-A', 100, 1000, 90, 900),
+  centreMovement(1, 'CC-B', 0, 0, 10, 100),
+  centreMovement(2, 'CC-A', 90, 900, 95, 950),
+  centreMovement(2, 'CC-B', 10, 100, 5, 50),
+  centreMovement(3, 'CC-A', 95, 950, 95, 950),
+  centreMovement(3, 'CC-B', 5, 50, 3, 30, 2, 20),
+])
+const centreTransferLedger = inventoryControlModule.reconcileCostCentreInventory(
+  centreMovements, transferRoundTrip, 3)
+assert.equal(centreTransferLedger.valid, true, centreTransferLedger.issues.join('; '))
+const centreQuantityByPeriod = [1, 2, 3].map(period => centreTransferLedger.rows
+  .filter(row => row.period === period).reduce((sum, row) => sum + row.expectedClosingQuantity, 0))
+const centreValueByPeriod = [1, 2, 3].map(period => centreTransferLedger.rows
+  .filter(row => row.period === period).reduce((sum, row) => sum + row.expectedClosingValue, 0))
+assert.deepEqual(centreQuantityByPeriod, [100, 100, 98],
+  'A→B then partial B→A must conserve centre-group quantity until the separately evidenced period-three issue')
+assert.deepEqual(centreValueByPeriod, [1000, 1000, 980],
+  'A→B then partial B→A must conserve centre-group value until the separately evidenced period-three issue')
+assert.deepEqual([1, 2, 3].map(period => centreTransferLedger.rows
+  .filter(row => row.period === period).reduce((sum, row) => sum + row.transferNetQuantity, 0)), [0, 0, 0])
+assert.deepEqual([1, 2, 3].map(period => centreTransferLedger.rows
+  .filter(row => row.period === period).reduce((sum, row) => sum + row.transferNetValue, 0)), [0, 0, 0])
+
+const threeWayFromCostCentres = inventoryControlModule.reconcileInventoryThreeWay(
+  centreValueByPeriod.map((finishedGoods, index) => {
+    const model = { rawMaterials: 0, workInProgress: 0, finishedGoods,
+      otherCurrentAssets: 0, currentLiabilities: 0, netWorkingCapital: finishedGoods }
+    return { period: index + 1, model, balanceSheet: { ...model },
+      cppCps: { rawMaterials: 0, workInProgress: 0, finishedGoods, totalInventory: finishedGoods } }
+  }))
+assert.equal(threeWayFromCostCentres.valid, true, threeWayFromCostCentres.issues.join('; '))
+assert.deepEqual(threeWayFromCostCentres.rows.map(row => row.inventoryCppCps), [1000, 1000, 980])
+assert.deepEqual(threeWayFromCostCentres.rows.map(row => row.netWorkingCapitalModel), [1000, 1000, 980],
+  'The centre-group inventory must enter CPP/CPS and WC once, after consolidating cost-centre balances')
+
+const incompleteReturnMovements = centreMovements.map(row =>
+  row.period === 2 && row.costCentreId === 'CC-A'
+    ? { ...row, closingQuantity: 90, closingValue: 900 } : row)
+const incompleteReturn = inventoryControlModule.reconcileCostCentreInventory(
+  incompleteReturnMovements, transferRoundTrip, 3)
+assert.equal(incompleteReturn.valid, false,
+  'A B→A return missing from destination closing stock must fail reconciliation')
+assert.ok(incompleteReturn.issues.some(issue => issue.includes('closing quantity does not reconcile')))
+
+const doubleCountedCentreMovements = centreMovements.map(row =>
+  row.period === 1 && row.costCentreId === 'CC-B'
+    ? { ...row, receiptsQuantity: 10, receiptsValue: 100 } : row)
+const doubleCountedCentre = inventoryControlModule.reconcileCostCentreInventory(
+  doubleCountedCentreMovements, transferRoundTrip, 3)
+assert.equal(doubleCountedCentre.valid, false,
+  'Posting the transfer again as a receipt must be rejected as duplicated stock')
+
+const doubleCountedThreeWay = inventoryControlModule.reconcileInventoryThreeWay(
+  centreValueByPeriod.map((finishedGoods, index) => {
+    const doubled = finishedGoods + (index === 0 ? 100 : 0)
+    const model = { rawMaterials: 0, workInProgress: 0, finishedGoods: doubled,
+      otherCurrentAssets: 0, currentLiabilities: 0, netWorkingCapital: doubled }
+    return { period: index + 1, model, balanceSheet: { ...model },
+      cppCps: { rawMaterials: 0, workInProgress: 0, finishedGoods: doubled,
+        totalInventory: doubled + (index === 0 ? 100 : 0) } }
+  }))
+assert.equal(doubleCountedThreeWay.valid, false,
+  'Adding the same transfer value to consolidated CPP/CPS inventory a second time must fail three-way reconciliation')
 
 console.log('PASS: FS-00 three-period product + A→B/B→A transfer round-trip → CPP/CPS → COGS/WIP/FG → working capital → income statement/cash flow/balance sheet integration.')
