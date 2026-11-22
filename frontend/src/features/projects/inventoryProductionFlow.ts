@@ -9,7 +9,8 @@ export type InventoryFlowInput = {
   rawMaterialPurchasesQuantity: number[]
   rawMaterialPurchasesValue: number[]
   rawMaterialConsumptionQuantity: number[]
-  rawMaterialWasteQuantity: number[]
+  normalRawMaterialWasteQuantity: number[]
+  abnormalRawMaterialWasteQuantity: number[]
   openingWipQuantity: number
   openingWipMaterialValue: number
   openingWipConversionValue: number
@@ -29,6 +30,8 @@ export type InventoryFlowPeriod = {
   consumptionQuantity: number
   normalWasteQuantity: number
   normalWasteValue: number
+  abnormalWasteQuantity: number
+  abnormalWasteValue: number
   closingRawMaterialQuantity: number
   weightedAverageRawMaterialUnitCost: number
   purchasesValue: number
@@ -84,7 +87,7 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
   const issues: string[] = []
   const count = input.rawMaterialPurchasesQuantity.length
   const arrays: (keyof InventoryFlowInput)[] = [
-    'rawMaterialPurchasesValue','rawMaterialConsumptionQuantity','rawMaterialWasteQuantity','unitsStarted','unitsCompleted',
+    'rawMaterialPurchasesValue','rawMaterialConsumptionQuantity','normalRawMaterialWasteQuantity','abnormalRawMaterialWasteQuantity','unitsStarted','unitsCompleted',
     'closingWipQuantity','materialCompletionPercent','conversionCompletionPercent','conversionCost',
   ]
   if (!count) issues.push('At least one inventory period is required.')
@@ -116,7 +119,7 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
   for (let i = 0; i < count; i++) {
     const values = [
       input.rawMaterialPurchasesQuantity[i], input.rawMaterialPurchasesValue[i],
-      input.rawMaterialConsumptionQuantity[i], input.rawMaterialWasteQuantity[i], input.unitsStarted[i], input.unitsCompleted[i],
+      input.rawMaterialConsumptionQuantity[i], input.normalRawMaterialWasteQuantity[i], input.abnormalRawMaterialWasteQuantity[i], input.unitsStarted[i], input.unitsCompleted[i],
       input.closingWipQuantity[i], input.materialCompletionPercent[i],
       input.conversionCompletionPercent[i], input.conversionCost[i],
     ]
@@ -124,7 +127,7 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
       issues.push('Period ' + (i + 1) + ' contains missing, negative or non-finite inventory-flow data.')
       continue
     }
-    const [purchasesQty,purchasesValue,consumptionQty,wasteQty,started,completed,closingWip,
+    const [purchasesQty,purchasesValue,consumptionQty,normalWasteQty,abnormalWasteQty,started,completed,closingWip,
       materialPct,conversionPct,conversionCost] = values as number[]
     if (materialPct > 100 || conversionPct > 100)
       issues.push('Period ' + (i + 1) + ' WIP completion percentages must be between 0 and 100.')
@@ -132,13 +135,14 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
     const availableRawValue = rawValue + purchasesValue
     if (availableRawQty === 0 && availableRawValue > 0)
       issues.push('Period ' + (i + 1) + ' raw-material value cannot be positive when available quantity is zero.')
-    if (consumptionQty + wasteQty > availableRawQty + 1e-7)
-      issues.push('Period ' + (i + 1) + ' raw-material consumption plus normal waste exceeds available stock.')
+    if (consumptionQty + normalWasteQty + abnormalWasteQty > availableRawQty + 1e-7)
+      issues.push('Period ' + (i + 1) + ' raw-material consumption plus normal and abnormal waste exceeds available stock.')
     const materialUnitCost = availableRawQty > 0 ? availableRawValue / availableRawQty : 0
     const consumptionValue = consumptionQty * materialUnitCost
-    const normalWasteValue = wasteQty * materialUnitCost
-    const closingRawQty = availableRawQty - consumptionQty - wasteQty
-    const closingRawValue = availableRawValue - consumptionValue - normalWasteValue
+    const normalWasteValue = normalWasteQty * materialUnitCost
+    const abnormalWasteValue = abnormalWasteQty * materialUnitCost
+    const closingRawQty = availableRawQty - consumptionQty - normalWasteQty - abnormalWasteQty
+    const closingRawValue = availableRawValue - consumptionValue - normalWasteValue - abnormalWasteValue
     const quantityVariance = rawQty + purchasesQty - consumptionQty - closingRawQty
     const wipQuantityVariance = wipQty + started - completed - closingWip
     if (!closeEnough(wipQty + started, completed + closingWip))
@@ -162,7 +166,8 @@ export function buildInventoryFlowSchedule(input: InventoryFlowInput): Inventory
     const wipValueVariance = materialPool + conversionPool - completedMaterial - completedConversion - closingWipValue
     rows.push({
       period:i+1, openingRawMaterialQuantity:rawQty, openingRawMaterialValue:rawValue, purchasesQuantity:purchasesQty,
-      consumptionQuantity:consumptionQty, normalWasteQuantity:wasteQty, normalWasteValue, closingRawMaterialQuantity:closingRawQty,
+      consumptionQuantity:consumptionQty, normalWasteQuantity:normalWasteQty, normalWasteValue,
+      abnormalWasteQuantity:abnormalWasteQty, abnormalWasteValue, closingRawMaterialQuantity:closingRawQty,
       weightedAverageRawMaterialUnitCost:materialUnitCost, purchasesValue,
       consumptionValue, closingRawMaterialValue:closingRawValue,
       openingWipQuantity:wipQty, openingWipMaterialValue:wipMaterialValue,
