@@ -329,6 +329,51 @@ export function reconcileStageInventoryMovements(
    finishedGoodsSalesQuantity:row.finishedGoodsSalesQuantity,finishedGoodsCostOfSales:row.finishedGoodsCostOfSales,
    productionQuantity:row.productionQuantity,productionCost:row.productionCost})
  }
+ // Product-stage opening balances must roll forward from the prior period's closing
+ // balances, even when the finance-engine closing balance happens to be zero.
+ // Otherwise a missing movement row could silently erase stock between periods.
+ for(const stage of stages){
+  const field=stage==='raw-materials'?'rawMaterials':stage==='work-in-progress'?'workInProgress':'finishedGoods'
+  const productIds=new Set<string>()
+  for(const row of expectedProductRows.values()) productIds.add('')
+  for(const row of adjustedMovements){
+   if(row.inventoryStage===stage&&row.productId.trim())productIds.add(row.productId.trim())
+  }
+  for(const key of expectedProductRows.keys()){
+   const separator=key.indexOf(':')
+   const productId=key.slice(separator+1)
+   if(productId)productIds.add(productId)
+  }
+  for(const productId of productIds){
+   let previousClosing:{quantity:number;value:number}|null=null
+   for(let period=1;period<=periodCount;period++){
+    const currentRows=adjustedMovements.filter(row=>row.period===period&&row.inventoryStage===stage&&row.productId.trim()===productId)
+    if(!currentRows.length){
+     const priorExpected=expectedProductRows.get((period-1)+':'+productId)
+     const priorExpectedValue=priorExpected?.[field]??0
+     if((previousClosing&&(previousClosing.quantity>tolerance/100||previousClosing.value>tolerance/100))||
+        (!previousClosing&&period>1&&priorExpectedValue>tolerance/100))
+      issues.push('Stage '+stage+' product '+productId+' is missing its period '+period+' movement row while prior-period inventory remains on hand.')
+     previousClosing=null
+     continue
+    }
+    const openingQuantity=currentRows.reduce((sum,row)=>sum+(row.openingQuantity??0),0)
+    const openingValue=currentRows.reduce((sum,row)=>sum+(row.openingValue??0),0)
+    if(previousClosing&&(!near(openingQuantity,previousClosing.quantity,tolerance/100)||!near(openingValue,previousClosing.value,tolerance/100)))
+     issues.push('Stage '+stage+' product '+productId+' period '+period+' opening balance does not equal the prior-period product closing balance.')
+    else if(!previousClosing&&period>1){
+     const priorExpected=expectedProductRows.get((period-1)+':'+productId)
+     if(priorExpected&&priorExpected[field]>tolerance/100&&
+        (!near(openingQuantity,priorExpected[field],tolerance/100)))
+      issues.push('Stage '+stage+' product '+productId+' period '+period+' opening balance does not carry forward the prior finance-engine closing value.')
+    }
+    previousClosing={
+     quantity:currentRows.reduce((sum,row)=>sum+(row.closingQuantity??0),0),
+     value:currentRows.reduce((sum,row)=>sum+(row.closingValue??0),0),
+    }
+   }
+  }
+ }
  const rows:StageInventoryReconciliationResult['rows']=[]
  for(const stage of stages){
   const stageRows=adjustedMovements.filter(row=>row.inventoryStage===stage)
