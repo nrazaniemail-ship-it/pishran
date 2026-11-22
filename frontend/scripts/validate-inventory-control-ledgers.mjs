@@ -255,7 +255,9 @@ const wipToFinishedTransfer={id:'ST-2',period:1,sourceStage:'work-in-progress',d
  sourceReference:'casting transfer note / 18',sourceVerified:true}
 const completeThreeStageChain=module.reconcileStageInventoryMovements(threeStageMovementRows,[
  {period:1,rawMaterials:60,workInProgress:0,finishedGoods:40},
-],1,0.01,[rawToWipTransfer,wipToFinishedTransfer])
+],1,0.01,[rawToWipTransfer,wipToFinishedTransfer],[
+ {period:1,productId:'SLAB',rawMaterials:0,workInProgress:0,finishedGoods:40,productionQuantity:4,productionCost:40},
+])
 assert.equal(completeThreeStageChain.valid,true,completeThreeStageChain.issues.join('; '))
 assert.equal(completeThreeStageChain.rows.find(row=>row.inventoryStage==='raw-materials').ledgerClosingValue,60)
 assert.equal(completeThreeStageChain.rows.find(row=>row.inventoryStage==='work-in-progress').ledgerClosingValue,0)
