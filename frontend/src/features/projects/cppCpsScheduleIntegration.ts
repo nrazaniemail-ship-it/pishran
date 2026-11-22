@@ -215,6 +215,7 @@ export function bindFinishedGoodsInventoryToWorkingCapital(
   closingWorkingCapitalByPeriod: number[],
   schedule: ProductOperatingSchedule | null,
   hasExplicitFinishedGoodsComponent: boolean,
+  estimatedFinishedGoodsByPeriod: number[] = [],
 ): FinishedGoodsWorkingCapitalBinding {
   const issues: string[] = []
   if (!Array.isArray(closingWorkingCapitalByPeriod) ||
@@ -222,11 +223,23 @@ export function bindFinishedGoodsInventoryToWorkingCapital(
     issues.push('A finite working-capital closing balance is required for every project period.')
   if (schedule && (!schedule.valid || schedule.periodRevenue.length !== closingWorkingCapitalByPeriod.length))
     issues.push('A valid product operating schedule matching the working-capital period count is required.')
+  if (estimatedFinishedGoodsByPeriod.length &&
+      (estimatedFinishedGoodsByPeriod.length !== closingWorkingCapitalByPeriod.length ||
+       estimatedFinishedGoodsByPeriod.some(value => !Number.isFinite(value) || value < 0)))
+    issues.push('Estimated finished-goods inventory must contain one finite non-negative amount for every project period.')
   if (issues.length) return { valid: false, issues, closingWorkingCapitalByPeriod: [], inventoryAddedByPeriod: [] }
 
   const result = [...closingWorkingCapitalByPeriod]
   const inventoryAddedByPeriod = Array(result.length).fill(0) as number[]
   if (schedule && !hasExplicitFinishedGoodsComponent) {
+    // The automatic operating-cycle estimate may already contain a finished-goods
+    // allowance. Replace that estimate with the product-led closing stock instead
+    // of adding the product-led value on top of it.
+    for (let index = 0; index < result.length; index++) {
+      const estimated = estimatedFinishedGoodsByPeriod[index] ?? 0
+      result[index] -= estimated
+      inventoryAddedByPeriod[index] -= estimated
+    }
     for (const row of schedule.rows) {
       const index = row.period - 1
       if (!Number.isInteger(row.period) || index < 0 || index >= result.length ||
