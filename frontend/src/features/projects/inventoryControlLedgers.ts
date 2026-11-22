@@ -536,7 +536,7 @@ export function reconcileStageInventoryMovements(
   if(row.inventoryStage!=='finished-goods'||row.period===null||
      row.salesCostValue===null||!Number.isFinite(row.salesCostValue)||row.salesCostValue<=0)continue
   accountingPostings.push({
-   id:['stage-cogs',row.period,row.productId.trim(),row.costCentreId.trim()].join(':'),
+   id:['stage-cogs',row.period,row.productId.trim(),row.costCentreId.trim(),row.sourceReference.trim()].join(':'),
    period:row.period,kind:'cost-of-sales',productId:row.productId.trim(),
    sourceReference:row.sourceReference,debitAccount:'Cost of Sales',
    creditAccount:'Inventory:finished-goods',amount:row.salesCostValue,
