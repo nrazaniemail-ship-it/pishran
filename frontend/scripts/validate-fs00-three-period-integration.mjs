@@ -208,6 +208,22 @@ const journalBinding = integrationModule.applyStageJournalCorrectionsToProductSc
 )
 assert.equal(journalBinding.valid, true, journalBinding.issues.join('; '))
 assert.deepEqual(journalBinding.appliedDocumentIds, ['REV-RAW-WIP-001', 'ADJ-COGS-003'])
+
+const malformedReversal = integrationModule.applyStageJournalCorrectionsToProductSchedule(
+  bound.schedule,
+  [...journalDocuments, { ...journalDocuments[2], id: 'REV-WRONG-AMOUNT', amount: 9 }],
+  [0, 1, 2],
+)
+assert.equal(malformedReversal.valid, false)
+assert.ok(malformedReversal.issues.some(issue => issue.includes('exactly reverse')))
+const crossProductAdjustment = integrationModule.applyStageJournalCorrectionsToProductSchedule(
+  bound.schedule,
+  [...journalDocuments, { ...journalDocuments[3], id: 'ADJ-WRONG-PRODUCT', productId: 'P2' }],
+  [0, 1, 2],
+)
+assert.equal(crossProductAdjustment.valid, false)
+assert.ok(crossProductAdjustment.issues.some(issue => issue.includes('original product')))
+
 const correctedSchedule = journalBinding.schedule
 assert.ok(correctedSchedule)
 close(correctedSchedule.periodRawMaterialInventoryValue[0], bound.schedule.periodRawMaterialInventoryValue[0])
