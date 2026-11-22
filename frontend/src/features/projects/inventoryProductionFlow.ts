@@ -1,3 +1,4 @@
+import type { InventoryStageTransfer } from './inventoryControlLedgers'
 /**
  * Periodic raw-material and work-in-process inventory roll-forward.
  * Weighted-average raw-material valuation and weighted-average process costing.
