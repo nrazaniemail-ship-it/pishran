@@ -9,9 +9,10 @@ const load = async path => {
   const source = await readFile(new URL(path, import.meta.url), 'utf8')
   return import('data:text/javascript;base64,' + Buffer.from(transpile(source)).toString('base64'))
 }
-const [ledgerModule, integrationModule, engine] = await Promise.all([
+const [ledgerModule, integrationModule, productScheduleModule, engine] = await Promise.all([
   load('../src/features/projects/cppCpsCostTraceability.ts'),
   load('../src/features/projects/cppCpsScheduleIntegration.ts'),
+  load('../src/features/projects/productOperatingSchedule.ts'),
   load('../src/features/steel/periodicFinancialEngine.ts'),
 ])
 const close = (actual, expected, message) => assert.ok(
@@ -171,4 +172,137 @@ for (let i = 0; i < 3; i++) {
   close(statement.movementChecks.netWorkingCapital, 0,
     'Net WC movement must reconcile in period ' + (i + 1))
 }
-console.log('PASS: FS-00 three-period product → CPP/CPS → COGS/WIP/FG → working capital → income statement/cash flow/balance sheet integration.')
+
+const transferPeriods = [
+  { period: '1', salesQuantity: 80, netUnitPrice: 20, salesTaxPercent: 0, subsidyPercent: null, subsidyAmount: null,
+    openingFinishedGoodsQuantity: 10, openingFinishedGoodsValue: 100, finishedGoodsClosingQuantity: 30,
+    rawMaterialPurchasesQuantity: null, rawMaterialPurchasesValue: null, rawMaterialConsumptionQuantity: null,
+    rawMaterialWasteQuantity: null, unitsStarted: null, unitsCompleted: null, closingWipQuantity: null,
+    materialCompletionPercent: null, conversionCompletionPercent: null, conversionCost: null,
+    openingRawMaterialQuantity: null, openingRawMaterialValue: null, openingWipQuantity: null,
+    openingWipMaterialValue: null, openingWipConversionValue: null },
+  { period: '2', salesQuantity: 90, netUnitPrice: 22, salesTaxPercent: 0, subsidyPercent: null, subsidyAmount: null,
+    openingFinishedGoodsQuantity: 30, openingFinishedGoodsValue: 300, finishedGoodsClosingQuantity: 20,
+    rawMaterialPurchasesQuantity: null, rawMaterialPurchasesValue: null, rawMaterialConsumptionQuantity: null,
+    rawMaterialWasteQuantity: null, unitsStarted: null, unitsCompleted: null, closingWipQuantity: null,
+    materialCompletionPercent: null, conversionCompletionPercent: null, conversionCost: null,
+    openingRawMaterialQuantity: null, openingRawMaterialValue: null, openingWipQuantity: null,
+    openingWipMaterialValue: null, openingWipConversionValue: null },
+  { period: '3', salesQuantity: 80, netUnitPrice: 22, salesTaxPercent: 0, subsidyPercent: null, subsidyAmount: null,
+    openingFinishedGoodsQuantity: 20, openingFinishedGoodsValue: 200, finishedGoodsClosingQuantity: 10,
+    rawMaterialPurchasesQuantity: null, rawMaterialPurchasesValue: null, rawMaterialConsumptionQuantity: null,
+    rawMaterialWasteQuantity: null, unitsStarted: null, unitsCompleted: null, closingWipQuantity: null,
+    materialCompletionPercent: null, conversionCompletionPercent: null, conversionCost: null,
+    openingRawMaterialQuantity: null, openingRawMaterialValue: null, openingWipQuantity: null,
+    openingWipMaterialValue: null, openingWipConversionValue: null },
+]
+const transferSales = [{
+  productId: 'P1', unitOfMeasure: 'ton', inventoryPolicy: 'manual',
+  finishedGoodsDaysCoverage: null, productionStartPeriod: null, productionEndPeriod: null,
+  periods: transferPeriods,
+}]
+const transferProductionCosts = [{
+  id: 'base-cpp-P1', metadata: { description: 'Existing base CPP', currencyCode: 'USD',
+    marketOrigin: null, escalationPercent: null, remarks: '', costCentreId: 'CC-A' },
+  classification: 'direct', productId: 'P1', basis: 'per-unit-output',
+  standardQuantity: 1, standardUnitPrice: 10, standardTotal: null, nominalCapacity: null,
+  fixedPercent: 0, variablePercent: 100, adjustments: [],
+}]
+const transferBaseline = productScheduleModule.buildProductOperatingSchedule({
+  sales: transferSales, productionCosts: transferProductionCosts, productionTransfers: [],
+}, periods, 1, 'USD')
+assert.equal(transferBaseline.valid, true, transferBaseline.issues.join('; '))
+const transferRoundTrip = [
+  { id: 'centre-A-to-B-period-1', period: 1, sourceProductId: 'P1', destinationProductId: 'P1',
+    sourceCostCentreId: 'CC-A', destinationCostCentreId: 'CC-B', quantity: 10,
+    sourceUnit: 'ton', destinationUnit: 'ton', conversionFactor: 1, costAmount: 100 },
+  { id: 'centre-B-to-A-period-2', period: 2, sourceProductId: 'P1', destinationProductId: 'P1',
+    sourceCostCentreId: 'CC-B', destinationCostCentreId: 'CC-A', quantity: 5,
+    sourceUnit: 'ton', destinationUnit: 'ton', conversionFactor: 1, costAmount: 50 },
+]
+const transferSchedule = productScheduleModule.buildProductOperatingSchedule({
+  sales: transferSales, productionCosts: transferProductionCosts, productionTransfers: transferRoundTrip,
+}, periods, 1, 'USD')
+assert.equal(transferSchedule.valid, true, transferSchedule.issues.join('; '))
+assert.deepEqual(transferSchedule.rows.map(row => row.productionQuantity),
+  transferBaseline.rows.map(row => row.productionQuantity),
+  'A→B then B→A cost-centre movement must not manufacture additional product output')
+assert.deepEqual(transferSchedule.rows.map(row => row.productionCost),
+  transferBaseline.rows.map(row => row.productionCost),
+  'Internal cost-centre transfers must not post CPP a second time')
+assert.deepEqual(transferSchedule.periodCostOfSales, transferBaseline.periodCostOfSales,
+  'Internal cost-centre transfers must not duplicate or suppress COGS')
+assert.deepEqual(transferSchedule.rows.map(row => row.closingInventoryQuantity),
+  transferBaseline.rows.map(row => row.closingInventoryQuantity),
+  'Internal cost-centre transfers must not change consolidated finished-goods quantity')
+assert.deepEqual(transferSchedule.rows.map(row => row.closingInventoryValue),
+  transferBaseline.rows.map(row => row.closingInventoryValue),
+  'Internal cost-centre transfers must not change consolidated finished-goods value')
+
+const baselineCpp = integrationModule.bindCppCpsTraceLedgerToProductSchedule(
+  transferBaseline, ledger, [0, 1, 2])
+const roundTripCpp = integrationModule.bindCppCpsTraceLedgerToProductSchedule(
+  transferSchedule, ledger, [0, 1, 2])
+assert.equal(baselineCpp.valid, true, baselineCpp.issues.join('; '))
+assert.equal(roundTripCpp.valid, true, roundTripCpp.issues.join('; '))
+assert.deepEqual(roundTripCpp.incrementalCppByPeriod, baselineCpp.incrementalCppByPeriod)
+for (const field of ['productionCost', 'costOfSales', 'closingInventoryQuantity', 'closingInventoryValue', 'wipInventoryValue']) {
+  assert.deepEqual(roundTripCpp.schedule.rows.map(row => row[field]),
+    baselineCpp.schedule.rows.map(row => row[field]),
+    'Round-trip transfer must preserve product ' + field + ' after CPP/CPS posting')
+}
+assert.deepEqual(roundTripCpp.schedule.periodCostOfSales, baselineCpp.schedule.periodCostOfSales)
+assert.deepEqual(roundTripCpp.schedule.periodWipInventoryValue, baselineCpp.schedule.periodWipInventoryValue)
+
+const makeTransferFinance = product => {
+  const raw = [...product.periodRawMaterialInventoryValue]
+  const wipValues = [...product.periodWipInventoryValue]
+  const fg = product.rows.map(row => row.closingInventoryValue)
+  const wcBinding = integrationModule.bindFinishedGoodsInventoryToWorkingCapital(
+    raw.map((value, index) => value + wipValues[index]), product, false)
+  assert.equal(wcBinding.valid, true, wcBinding.issues.join('; '))
+  const result = engine.calculateIntegratedPeriodicFinance({
+    periods, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+    annualRevenue: [...product.periodRevenue], periodRevenue: [...product.periodRevenue],
+    annualVariableCost: [...product.periodCostOfSales], periodVariableCost: [...product.periodCostOfSales],
+    annualFixedCost: [0, 0, 0], annualDepreciation: [0, 0, 0],
+    annualFixedInvestment: [0, 0, 0], annualPreOperatingCost: [0, 0, 0],
+    annualMaintenanceCapex: [0, 0, 0], annualTaxRates: [0, 0, 0],
+    annualEquityContributions: [0, 0, 0],
+    workingCapitalByPeriod: wcBinding.closingWorkingCapitalByPeriod,
+    rawMaterialsInventoryByPeriod: raw, workInProgressInventoryByPeriod: wipValues,
+    finishedGoodsInventoryByPeriod: fg, openingWorkingCapital: wcBinding.closingWorkingCapitalByPeriod[0],
+    openingCash: 0, loans: [], discountRatePercent: 10,
+  })
+  assert.equal(result.valid, true, result.warnings.join('; '))
+  const statements = engine.buildPeriodicThreeFinancialStatements(result, {
+    cash: 0, debt: 0, netFixedAssets: 0,
+    netWorkingCapital: wcBinding.closingWorkingCapitalByPeriod[0],
+    rawMaterialsInventory: raw[0], workInProgressInventory: wipValues[0],
+    finishedGoodsInventory: fg[0], paidInCapital: wcBinding.closingWorkingCapitalByPeriod[0],
+    retainedEarnings: 0, grants: 0,
+  })
+  assert.equal(statements.length, 3)
+  assert.ok(statements.every(row => row.balanceSheet.reconciled),
+    'Round-trip scenario must retain three-statement balance-sheet reconciliation')
+  return { result, statements, wcBinding }
+}
+const baselineFinancial = makeTransferFinance(baselineCpp.schedule)
+const roundTripFinancial = makeTransferFinance(roundTripCpp.schedule)
+assert.deepEqual(roundTripFinancial.wcBinding.closingWorkingCapitalByPeriod,
+  baselineFinancial.wcBinding.closingWorkingCapitalByPeriod,
+  'Internal transfers must not double-count finished goods in working capital')
+assert.deepEqual(roundTripFinancial.result.rows, baselineFinancial.result.rows,
+  'Internal transfers must not change periodic finance rows or cash-flow movements')
+assert.deepEqual(roundTripFinancial.statements, baselineFinancial.statements,
+  'Internal transfers must not change income statement, cash flow or balance sheet')
+for (let i = 0; i < 3; i++) {
+  close(roundTripFinancial.statements[i].incomeStatement.cashOperatingCosts,
+    roundTripCpp.schedule.periodCostOfSales[i],
+    'Integrated income statement costs must equal single-posted COGS in period ' + (i + 1))
+  close(roundTripFinancial.statements[i].balanceSheet.finishedGoodsInventory,
+    roundTripCpp.schedule.rows[i].closingInventoryValue,
+    'Integrated balance sheet must carry product-led finished goods once in period ' + (i + 1))
+}
+
+console.log('PASS: FS-00 three-period product + A→B/B→A transfer round-trip → CPP/CPS → COGS/WIP/FG → working capital → income statement/cash flow/balance sheet integration.')
