@@ -275,16 +275,19 @@ close(correctedStatements[2].balanceSheet.netWorkingCapital, statements[2].balan
 close(correctedStatements[2].balanceSheet.finishedGoodsInventory, statements[2].balanceSheet.finishedGoodsInventory - 5)
 assert.ok(correctedStatements.every(row => row.balanceSheet.reconciled),
   'Reversal and adjustment effects must reconcile through all three statements')
-await assert.rejects(async () => {
-  const priorSalesCorrection = integrationModule.applyStageJournalCorrectionsToProductSchedule(
-    bound.schedule,
-    [...journalDocuments, { id: 'ADJ-COGS-PRIOR', period: 1, kind: 'cost-of-sales', productId: 'P1',
+const priorSalesCorrection = integrationModule.applyStageJournalCorrectionsToProductSchedule(
+  bound.schedule,
+  [...journalDocuments,
+    { id: 'stage-cogs:1:P1:CC-1:SALE-001', period: 1, kind: 'cost-of-sales', productId: 'P1',
+      debitAccount: 'Cost of Sales', creditAccount: 'Inventory:finished-goods', amount: 10,
+      documentType: 'original' },
+    { id: 'ADJ-COGS-PRIOR', period: 1, kind: 'cost-of-sales', productId: 'P1',
       debitAccount: 'Cost of Sales', creditAccount: 'Inventory:finished-goods', amount: 1,
-      documentType: 'adjustment', adjustmentOfDocumentId: 'stage-cogs:3:P1:CC-1:SALE-003' }],
-    [0, 1, 2],
-  )
-  assert.equal(priorSalesCorrection.valid, true, priorSalesCorrection.issues.join('; '))
-}, /./).catch(() => {})
+      documentType: 'adjustment', adjustmentOfDocumentId: 'stage-cogs:1:P1:CC-1:SALE-001' }],
+  [0, 1, 2],
+)
+assert.equal(priorSalesCorrection.valid, false)
+assert.ok(priorSalesCorrection.issues.some(issue => issue.includes('weighted-average inventory')))
 
 const transferPeriods = [
   { period: '1', salesQuantity: 80, netUnitPrice: 20, salesTaxPercent: 0, subsidyPercent: null, subsidyAmount: null,
