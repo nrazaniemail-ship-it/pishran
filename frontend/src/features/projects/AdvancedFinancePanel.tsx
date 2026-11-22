@@ -8,9 +8,9 @@ import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
 import { reconcileInventoryThreeWay, reconcileInventoryReference, reconcileStageInventoryMovements } from './inventoryControlLedgers'
-import { persistStageInventoryAccountingPostings } from './stageInventoryAccountingStore'
+import { loadStageInventoryAccountingPostings, persistStageInventoryAccountingPostings, type PersistedStageInventoryAccountingPosting } from './stageInventoryAccountingStore'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
-import { bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
+import { applyStageJournalCorrectionsToProductSchedule, bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
 import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft, SalesTaxLedgerFormDraft, ValueAddedPeriodFormDraft } from './projectModelFormDrafts'
 import { buildComfarValueAddedAnalysis, type ValueAddedAnalysisResult, type ValueAddedInputItem, type ValueAddedInvestmentItem } from './projectValueAddedAnalysis'
 import { buildSalesTaxLedger, bindSalesTaxLedgerToWorkingCapital, type SalesTaxInputCreditEntry, type SalesTaxOutputEntry, type SalesTaxSettlementEntry, type SalesTaxLedgerResult } from './salesTaxLedger'
@@ -181,6 +181,17 @@ export default function AdvancedFinancePanel(props: Props) {
   }))
   const [loaded,setLoaded]=useState(false)
   const [stagePostingPersistence,setStagePostingPersistence]=useState<{status:'idle'|'saving'|'saved'|'error';count:number;error:string}>({status:'idle',count:0,error:''})
+  const [stageJournalEntries,setStageJournalEntries]=useState<PersistedStageInventoryAccountingPosting[]>([])
+  const [stageJournalLoaded,setStageJournalLoaded]=useState(false)
+  useEffect(()=>{
+    let active=true
+    setStageJournalLoaded(false)
+    loadStageInventoryAccountingPostings(props.projectId)
+      .then(store=>{if(active){setStageJournalEntries(store.entries);setStageJournalLoaded(true)}})
+      .catch(error=>{if(active){setStagePostingPersistence({status:'error',count:0,error:error instanceof Error?error.message:String(error)});setStageJournalLoaded(true)}})
+    return()=>{active=false}
+  },[props.projectId])
+
   useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved,workingCapitalDays:{...state.workingCapitalDays,...saved.workingCapitalDays},workingCapitalBases:{...state.workingCapitalBases,...saved.workingCapitalBases}};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const matchesLegacyDefault=Math.abs(legacyContribution-legacyWorkingCapitalEquity)<0.01;restored.equityWorkingCapitalContributions=Array(years).fill(0);if(matchesLegacyDefault){restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-legacyWorkingCapitalEquity):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??legacyWorkingCapitalEquity):0)}}if((saved.fundingStructureVersion??0)<2){const legacyDrawdowns=initialCapexSchedule.map((value,index)=>value*initialDebtShare+(index===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0));restored.loans=restored.loans.map(loan=>{const untouchedLegacyDefault=loan.label==='تسهیلات اصلی و سرمایه در گردش'&&loan.drawdowns.length===years&&loan.drawdowns.every((value,index)=>Math.abs(value-legacyDrawdowns[index])<0.01)&&Math.abs(loan.annualRate-props.costOfDebt)<0.0001&&loan.repaymentMethod==='equal-principal';return untouchedLegacyDefault?{...loan,label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(value=>value*initialDebtShare),annualRate:props.initialLoanRatePercent??props.costOfDebt,repaymentMethod:props.initialRepaymentMethod??'equal-principal'}:loan});if(props.initialWorkingCapitalEquityContribution&&restored.equityWorkingCapitalContributions.every(value=>value===0)){restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?props.initialWorkingCapitalEquityContribution!:0)}restored.fundingStructureVersion=2}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
@@ -316,13 +327,25 @@ export default function AdvancedFinancePanel(props: Props) {
     return bindCppCpsTraceLedgerToProductSchedule(baseProductOperatingSchedule,cppCpsTraceLedger,
       projectPeriods.map(period=>fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth??1)),props.productFinancialDrafts?.costCentres??[])
   },[JSON.stringify(props.cppCpsTraceItems??[]),baseProductOperatingSchedule,cppCpsTraceLedger,JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
-  const productOperatingSchedule=useMemo(()=>{
+  const baseIntegratedProductOperatingSchedule=useMemo(()=>{
     if(!props.cppCpsTraceItems?.length)return baseProductOperatingSchedule
     if(!baseProductOperatingSchedule?.valid||!cppCpsScheduleBinding?.valid||!cppCpsScheduleBinding.schedule){
       return {valid:false,issues:[...(baseProductOperatingSchedule?.issues??[]),...(cppCpsScheduleBinding?.issues??[])],rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],periodOutputSalesTax:[],annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],periodAbnormalWasteExpense:[],periodNormalWasteAbsorbed:[],hasInventoryFlow:false}
     }
     return cppCpsScheduleBinding.schedule
   },[JSON.stringify(props.cppCpsTraceItems??[]),baseProductOperatingSchedule,cppCpsScheduleBinding])
+
+  const productOperatingSchedule=useMemo(()=>{
+    if(!baseIntegratedProductOperatingSchedule?.valid)return baseIntegratedProductOperatingSchedule
+    if(!stageJournalLoaded)return {...baseIntegratedProductOperatingSchedule,valid:false,issues:[...baseIntegratedProductOperatingSchedule.issues,'Stage accounting journal recovery is still in progress.']}
+    const binding=applyStageJournalCorrectionsToProductSchedule(
+      baseIntegratedProductOperatingSchedule,
+      stageJournalEntries,
+      projectPeriods.map(period=>fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth??1)),
+    )
+    if(!binding.valid||!binding.schedule)return {...baseIntegratedProductOperatingSchedule,valid:false,issues:[...baseIntegratedProductOperatingSchedule.issues,...binding.issues]}
+    return binding.schedule
+  },[baseIntegratedProductOperatingSchedule,stageJournalEntries,stageJournalLoaded,JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
   const projectTaxSchedule=useMemo(()=>props.taxDraft?buildProjectTaxDraftSchedule(props.taxDraft,projectPeriods,props.fiscalYearStartMonth??1):null,[JSON.stringify(props.taxDraft??null),JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
   const salesTaxLedgerActive=Boolean(
     baseProductOperatingSchedule?.rows.some(row=>row.salesTaxPercent>0)||
@@ -697,22 +720,26 @@ export default function AdvancedFinancePanel(props: Props) {
       .some(value=>value!==null&&value!==undefined&&value!==''))
     if(!hasMovementData&&!hasStageTransferData)return null
     if(!periodicFinanceResult?.valid)return {valid:false,issues:['A valid periodic finance result is required before stage inventory reconciliation.'],rows:[]}
-    const expected=periodicFinanceResult.rows.map(row=>({
-      period:row.period,rawMaterials:row.rawMaterialsInventory,
-      workInProgress:row.workInProgressInventory,finishedGoods:row.finishedGoodsInventory,
-    }))
-    const expectedByProductPeriod=productOperatingSchedule?.valid?productOperatingSchedule.rows.map(row=>({period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales,productionQuantity:row.productionQuantity,productionCost:row.productionCost})):undefined
+    const expected=baseIntegratedProductOperatingSchedule?.valid
+      ?Array.from({length:periodicFinanceResult.rows.length},(_,index)=>({
+        period:index+1,
+        rawMaterials:baseIntegratedProductOperatingSchedule.periodRawMaterialInventoryValue[index]??0,
+        workInProgress:baseIntegratedProductOperatingSchedule.periodWipInventoryValue[index]??0,
+        finishedGoods:baseIntegratedProductOperatingSchedule.rows.filter(item=>item.period===index+1).reduce((sum,item)=>sum+item.closingInventoryValue,0),
+      }))
+      :periodicFinanceResult.rows.map(row=>({period:row.period,rawMaterials:row.rawMaterialsInventory,workInProgress:row.workInProgressInventory,finishedGoods:row.finishedGoodsInventory}))
+    const expectedByProductPeriod=baseIntegratedProductOperatingSchedule?.valid?baseIntegratedProductOperatingSchedule.rows.map(row=>({period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales,productionQuantity:row.productionQuantity,productionCost:row.productionCost})):undefined
     return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length,0.01,stageTransfers,expectedByProductPeriod)
-  },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),periodicFinanceResult,productOperatingSchedule])
+  },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),periodicFinanceResult,productOperatingSchedule,baseIntegratedProductOperatingSchedule])
   const stagePostingSignature=JSON.stringify(stageInventoryReconciliation?.accountingPostings??[])
   useEffect(()=>{
-    if(!stageInventoryReconciliation?.valid||!props.projectId)return
+    if(!stageJournalLoaded||!stageInventoryReconciliation?.valid||!props.projectId)return
     const postings=stageInventoryReconciliation.accountingPostings??[]
     if(!postings.length){setStagePostingPersistence({status:'idle',count:0,error:''});return}
     let active=true
     setStagePostingPersistence(previous=>({...previous,status:'saving',error:''}))
     persistStageInventoryAccountingPostings(props.projectId,postings)
-      .then(result=>{if(active)setStagePostingPersistence({status:'saved',count:result.entries.length,error:''})})
+      .then(result=>{if(active){setStageJournalEntries(result.entries);setStagePostingPersistence({status:'saved',count:result.entries.length,error:''})}})
       .catch(error=>{if(active)setStagePostingPersistence({status:'error',count:0,error:error instanceof Error?error.message:String(error)})})
     return()=>{active=false}
   },[props.projectId,stageInventoryReconciliation?.valid,stagePostingSignature])
