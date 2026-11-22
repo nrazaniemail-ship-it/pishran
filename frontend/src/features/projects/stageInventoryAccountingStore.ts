@@ -116,6 +116,8 @@ export async function appendStageInventoryAccountingReversal(
     if (reversalPeriod < original.period) throw new Error('A reversal cannot be posted before its original accounting period.')
     const existingById = store.entries.find(entry => entry.id === reversalDocumentId)
     const previousReversal = store.entries.find(entry => entry.documentType === 'reversal' && entry.originalDocumentId === originalDocumentId)
+    const previousAdjustment = store.entries.find(entry => entry.documentType === 'adjustment' && entry.adjustmentOfDocumentId === originalDocumentId)
+    if (previousAdjustment) throw new Error('The original document already has an adjustment; reverse the adjustment explicitly before reversing the original.')
     if (existingById) {
       if (existingById.documentType === 'reversal' && existingById.originalDocumentId === originalDocumentId &&
           existingById.period === reversalPeriod && existingById.amount === original.amount &&
@@ -163,6 +165,8 @@ export async function appendStageInventoryAccountingAdjustment(
         adjustment.creditAccount !== original.creditAccount) {
       throw new Error('An adjustment must retain the original debit and credit accounts; use a reversal for an opposite-direction correction.')
     }
+    const previousReversal = store.entries.find(entry => entry.documentType === 'reversal' && entry.originalDocumentId === originalDocumentId)
+    if (previousReversal) throw new Error('The original document has already been reversed and cannot receive an adjustment.')
     const existingById = store.entries.find(entry => entry.id === adjustment.id)
     if (existingById) {
       const expected = { ...adjustment, documentType: 'adjustment' as const, adjustmentOfDocumentId: originalDocumentId }
