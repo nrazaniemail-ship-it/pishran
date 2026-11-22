@@ -208,10 +208,24 @@ export type StageInventoryMovementDraft={
  sourceReference:string
  sourceVerified:boolean
 }
+export type StageInventoryAccountingPosting={
+ id:string
+ period:number
+ kind:'stage-transfer'|'cost-of-sales'
+ productId:string
+ sourceReference:string
+ debitAccount:string
+ creditAccount:string
+ amount:number
+}
 export type StageInventoryReconciliationResult={
  valid:boolean
  issues:string[]
  rows:{period:number;inventoryStage:'raw-materials'|'work-in-progress'|'finished-goods';ledgerClosingValue:number;engineClosingValue:number;variance:number;movementCount:number}[]
+ /** Balanced posting preview only; statement totals already include these inventory/COGS values. */
+ accountingPostings?:StageInventoryAccountingPosting[]
+ accountingDebitTotal?:number
+ accountingCreditTotal?:number
 }
 /**
  * Cross-checks stage-specific cost-centre closing balances against the existing
@@ -502,7 +516,35 @@ export function reconcileStageInventoryMovements(
    rows.push({period,inventoryStage:stage,ledgerClosingValue,engineClosingValue,variance,movementCount:periodRows.length})
   }
  }
- return {valid:issues.length===0,issues,rows:issues.length?[]:rows}
+ if(issues.length)return {valid:false,issues,rows:[]}
+ const accountingPostings:StageInventoryAccountingPosting[]=[]
+ // Internal stage transfers reclassify inventory control accounts; they do not create CPP/CPS.
+ for(const transfer of stageTransfers){
+  if(transfer.period===null||!transfer.sourceStage||!transfer.destinationStage||
+     transfer.sourceStage===transfer.destinationStage||transfer.transferValue===null||
+     !Number.isFinite(transfer.transferValue)||transfer.transferValue<=0)continue
+  accountingPostings.push({
+   id:'stage-transfer:'+transfer.id,period:transfer.period,kind:'stage-transfer',
+   productId:transfer.destinationProductId,sourceReference:transfer.sourceReference,
+   debitAccount:'Inventory:'+transfer.destinationStage,
+   creditAccount:'Inventory:'+transfer.sourceStage,amount:transfer.transferValue,
+  })
+ }
+ // Finished-goods COGS is already present in the finance engine's variable cost;
+ // this journal preview reconciles the subledger and must never be added a second time.
+ for(const row of movements){
+  if(row.inventoryStage!=='finished-goods'||row.period===null||
+     row.salesCostValue===null||!Number.isFinite(row.salesCostValue)||row.salesCostValue<=0)continue
+  accountingPostings.push({
+   id:['stage-cogs',row.period,row.productId.trim(),row.costCentreId.trim()].join(':'),
+   period:row.period,kind:'cost-of-sales',productId:row.productId.trim(),
+   sourceReference:row.sourceReference,debitAccount:'Cost of Sales',
+   creditAccount:'Inventory:finished-goods',amount:row.salesCostValue,
+  })
+ }
+ const accountingDebitTotal=accountingPostings.reduce((sum,row)=>sum+row.amount,0)
+ const accountingCreditTotal=accountingDebitTotal
+ return {valid:true,issues:[],rows,accountingPostings,accountingDebitTotal,accountingCreditTotal}
 }
 
 export function reconcileInventoryThreeWay(periods:InventoryReconciliationPeriod[],tolerance=0.01):InventoryReconciliationResult{
