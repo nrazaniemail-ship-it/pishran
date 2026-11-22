@@ -64,9 +64,9 @@ export default function App() {
   }
 
   useEffect(() => {
-    // Keep a root history entry so Android's hardware Back key cannot leave
-    // the app while the user is still on its top-level dashboard.
-    window.history.pushState({ pishranNavigation: true }, '', window.location.href)
+    // Each in-app navigation adds one history entry. Android's Back key
+    // therefore unwinds nested screens first; at the dashboard, native
+    // back is left untouched so the user can exit normally.
     const handlePopState = () => {
       if (navigationStackRef.current.length > 1) {
         navigationStackRef.current.pop()
@@ -74,8 +74,6 @@ export default function App() {
         setPage(previous.page)
         setActiveProject(previous.project)
         setActiveModuleId(previous.moduleId)
-      } else {
-        window.history.pushState({ pishranNavigation: true }, '', window.location.href)
       }
     }
     window.addEventListener('popstate', handlePopState)
