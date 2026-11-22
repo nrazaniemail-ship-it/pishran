@@ -621,7 +621,22 @@ export default function AdvancedFinancePanel(props: Props) {
       (state.wipCompletion.material>0&&state.workingCapitalBases.rawMaterials<=0)||
       (state.wipCompletion.conversion>0&&state.workingCapitalBases.conversion<=0))
       ?'missing-cost-or-completion-basis':'automatic'
-  const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult,{
+  const hasUnpostedStageInventoryData=Boolean(
+    props.productFinancialDrafts?.costCentreInventoryMovements?.some(row=>[
+      row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
+      row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,
+      row.transfersOutQuantity,row.transfersOutValue,row.productionQuantity,row.productionValue,
+      row.consumptionQuantity,row.consumptionValue,row.salesQuantity,row.salesCostValue,
+      row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue,row.sourceReference,
+      row.sourceVerified===true,
+    ].some(value=>value!==null&&value!==undefined&&value!==''))||
+    props.productFinancialDrafts?.inventoryStageTransfers?.some(row=>[
+      row.id,row.period,row.sourceStage,row.destinationStage,row.sourceProductId,row.destinationProductId,
+      row.sourceCostCentreId,row.destinationCostCentreId,row.quantity,row.sourceUnit,row.destinationUnit,
+      row.conversionFactor,row.transferValue,row.sourceReference,row.sourceVerified===true,
+    ].some(value=>value!==null&&value!==undefined&&value!==''))
+  )
+  const periodicStatements=useMemo(()=>periodicFinanceResult?.valid&&!hasUnpostedStageInventoryData?buildPeriodicThreeFinancialStatements(periodicFinanceResult,{
     cash:props.openingCashBalance??0,debt:props.openingDebtBalance??0,
     netFixedAssets:props.openingFixedAssetsNetBookValue??0,
     netWorkingCapital:props.openingWorkingCapitalBalance??0,
@@ -631,7 +646,7 @@ export default function AdvancedFinancePanel(props: Props) {
     paidInCapital:props.openingPaidInCapital??0,
     retainedEarnings:props.openingRetainedEarnings??0,grants:props.openingGrants??0,
   }):[],[periodicFinanceResult,props.openingCashBalance,props.openingDebtBalance,props.openingFixedAssetsNetBookValue,
-    props.openingWorkingCapitalBalance,props.openingCurrentAccounts?.rawMaterials,props.openingCurrentAccounts?.workInProgress,props.openingCurrentAccounts?.finishedGoods,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants])
+    props.openingWorkingCapitalBalance,props.openingCurrentAccounts?.rawMaterials,props.openingCurrentAccounts?.workInProgress,props.openingCurrentAccounts?.finishedGoods,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants,hasUnpostedStageInventoryData])
   const inventoryThreeWayReconciliation=useMemo(()=>{
     if(!periodicFinanceResult?.valid||!productOperatingSchedule?.valid||periodicStatements.length!==periodicFinanceResult.rows.length)return null
     return reconcileInventoryThreeWay(periodicFinanceResult.rows.map((row,index)=>{
@@ -695,8 +710,8 @@ export default function AdvancedFinancePanel(props: Props) {
       Math.abs(cashTotal-(props.openingCashBalance??0))<=0.01
     return {valid,assetTotal,liabilityTotal,netWorkingCapital,cashTotal}
   },[props.openingCurrentAccounts,props.openingWorkingCapitalBalance,props.openingCashBalance])
-  const sensitivity=useMemo(()=>periodicFinanceInput&&!salesTaxLedgerActive?calculatePeriodicSensitivityMatrix(periodicFinanceInput,[-20,-10,0,10,20],[-20,-10,0,10,20]):[],[periodicFinanceInput,salesTaxLedgerActive])
-  const scenarios=useMemo(()=>periodicFinanceInput&&periodicFinanceResult?.valid&&!salesTaxLedgerActive?calculatePeriodicFinancialScenarios(periodicFinanceInput):null,[periodicFinanceInput,periodicFinanceResult?.valid,salesTaxLedgerActive])
+  const sensitivity=useMemo(()=>periodicFinanceInput&&!salesTaxLedgerActive&&!hasUnpostedStageInventoryData?calculatePeriodicSensitivityMatrix(periodicFinanceInput,[-20,-10,0,10,20],[-20,-10,0,10,20]):[],[periodicFinanceInput,salesTaxLedgerActive,hasUnpostedStageInventoryData])
+  const scenarios=useMemo(()=>periodicFinanceInput&&periodicFinanceResult?.valid&&!salesTaxLedgerActive&&!hasUnpostedStageInventoryData?calculatePeriodicFinancialScenarios(periodicFinanceInput):null,[periodicFinanceInput,periodicFinanceResult?.valid,salesTaxLedgerActive,hasUnpostedStageInventoryData])
   useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
   const updateAsset=(id:string,patch:Partial<Asset>)=>setState(s=>({...s,assets:s.assets.map(a=>a.id===id?{...a,...patch}:a)}))
   const updateDay=(key:keyof SavedState['workingCapitalDays'],value:number)=>setState(s=>({...s,workingCapitalDays:{...s.workingCapitalDays,[key]:Math.max(0,value)}}))
@@ -709,6 +724,10 @@ export default function AdvancedFinancePanel(props: Props) {
 
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
+    {hasUnpostedStageInventoryData&&<div className="fw-validation" role="alert">
+      <b>{t('دفتر تفصیلی موجودی هنوز به موتور ثبت مالی متصل نیست؛ گزارش‌های دوره‌ای، سه صورت مالی، حساسیت و سناریو تا تکمیل اتصال متوقف شده‌اند.','The detailed inventory ledger is not yet posted into the financial engine; periodic reports, three statements, sensitivity and scenarios are blocked until posting is integrated.')}</b>
+      <p>{t('اطلاعات مراکز هزینه و انتقال بین مراحل فعلاً فقط برای کنترل و تطبیق استفاده می‌شوند و نباید به‌عنوان ثبت حسابداری انجام‌شده تلقی شوند. این محدودیت از نمایش خروجی مالی تأییدنشده یا دوباره‌شماری موجودی جلوگیری می‌کند.','Cost-centre movements and inter-stage transfers are currently validation-only, not accounting postings. This guard prevents unverified financial outputs and inventory double counting.')}</p>
+    </div>}
     {loanDraftIntegration&&!loanDraftIntegration.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه تسهیلات از فرم‌های تفصیلی معتبر نیست؛ صورت‌های مالی دوره‌ای متوقف شده‌اند.','Detailed loan facilities are invalid; periodic financial statements are blocked.')}</b>{loanDraftIntegration.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {projectTaxSchedule?.active&&!projectTaxSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه مالیات و انتقال زیان ناقص یا نامعتبر است؛ محاسبه دوره‌ای متوقف شده است.','The tax and loss carry-forward schedule is incomplete or invalid; periodic calculation is blocked.')}</b>{projectTaxSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {salesTaxLedgerActive&&!salesTaxLedgerResult?.valid&&<div className="fw-validation" role="alert"><b>{t('دفتر مالیات غیرمستقیم ناقص یا نامعتبر است؛ محاسبه دوره‌ای متوقف شده است.','The indirect sales-tax ledger is incomplete or invalid; periodic calculations are blocked.')}</b>{(salesTaxLedgerResult?.issues??['Complete opening balance, verified purchase-tax credits and period settlements.']).map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
@@ -933,7 +952,7 @@ export default function AdvancedFinancePanel(props: Props) {
     <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('سال')}</th><th>{tr('فروش')}</th><th>EBIT</th><th>{tr('درآمد سپرده کوتاه‌مدت')}</th><th>{tr('سود خالص')}</th><th>{tr('وجه نقد ابتدای دوره')}</th><th>{tr('جریان عملیاتی')}</th><th>{tr('جریان سرمایه‌گذاری')}</th><th>{tr('جریان تأمین مالی')}</th><th>{tr('وجه نقد پایان دوره')}</th><th>{tr('وجه نقد در دست')}</th><th>{tr('سپرده کوتاه‌مدت')}</th><th>{tr('جمع دارایی‌ها')}</th><th>{tr('بدهی + حقوق مالکانه')}</th><th>{tr('اختلاف تراز')}</th></tr></thead><tbody>{statements.map(r=><tr key={r.year}><td>{r.year}</td><td>{money(r.incomeStatement.revenue)}</td><td>{money(r.incomeStatement.ebit)}</td><td>{money(r.incomeStatement.shortTermDepositInterest)}</td><td>{money(r.incomeStatement.netIncome)}</td><td>{money(r.openingBalances.cash)}</td><td>{money(r.cashFlowStatement.operatingCashFlow)}</td><td>{money(r.cashFlowStatement.investingCashFlow)}</td><td>{money(r.cashFlowStatement.financingCashFlow)}</td><td>{money(r.cashFlowStatement.closingCash)}</td><td>{money(r.balanceSheet.cashInHand)}</td><td>{money(r.balanceSheet.shortTermDeposits)}</td><td>{money(r.balanceSheet.totalAssets)}</td><td>{money(r.balanceSheet.totalLiabilitiesAndEquity)}</td><td>{money(r.balanceSheet.balanceDifference)} {r.balanceSheet.reconciled?'✓':'⚠'}</td></tr>)}</tbody></table></div>
     <p className="fw-hint">{tr('صورت‌ها از یک مجموعه جریان نقدی و برنامه دارایی/بدهی ساخته می‌شوند؛ هیچ رقم ترازکنندهٔ مصنوعی به حقوق مالکانه اضافه نمی‌شود. اگر اختلاف تراز صفر نباشد، خروجی به‌عنوان عدم تطبیق علامت می‌خورد و باید طبقه‌بندی CAPEX، آورده، بدهی یا سرمایه در گردش بررسی شود. این نسخه هنوز اقلام حسابداری تفصیلی مانند مالیات بر ارزش افزوده، سود تقسیمی، مطالبات/بدهی مالیاتی، تجدید ارزیابی و ثبت‌های چندارزی را پوشش نمی‌دهد.')}</p>
     <h4>{t('۸. موتور یکپارچه جریان نقدی ماهانه/فصلی','8. Integrated Monthly / Quarterly Cash-Flow Engine')}</h4>
-    {periodicFinanceResult?.valid?<div className="fw-card">
+    {periodicFinanceResult?.valid&&!hasUnpostedStageInventoryData?<div className="fw-card">
       <p className="fw-hint">{t('جریان‌های عملیاتی سالانه با تعداد روز واقعی به دوره‌های پروژه تخصیص یافته‌اند. برداشت وام می‌تواند روزشمار از مبالغ سالانه توزیع شود یا برای هر دوره مستقلاً ثبت شود. نرخ مالیات قابل تنظیم در هر دوره است و زیان انتقالی، بهره، اصل بدهی و سرمایه در گردش در سطح هر دوره محاسبه می‌شوند. در صورت وجود تاریخ‌های مستند دفتر دارایی، استهلاک و واگذاری دارایی‌به‌دارایی در سطح ماه/فصل اعمال می‌شود. مانده افتتاحیه نقد، سرمایه در گردش، دارایی ثابت، بدهی، آورده، سود انباشته و کمک‌ها از دفتر مانده‌های افتتاحیه به صورت‌های مالی منتقل می‌شود؛ برای پروژه جدید این مانده‌ها صفر هستند.','Annual operating flows are allocated to project periods by actual day counts. Loan drawdowns can be day-weighted from annual amounts or entered directly by period. Tax rates can be set for each period, and loss carry-forward, interest, principal and working capital are calculated period by period. Dated asset-level depreciation and disposals feed the monthly/quarterly model. Opening cash, net working capital, fixed assets, debt, paid-in capital, retained earnings and grants are carried into the statements; these balances default to zero for greenfield projects.')}</p>
       {props.openingCurrentAccounts&&openingCurrentAccountControl&&<div className="fw-card">
         <h4>{t('تفکیک مانده‌های افتتاحیه دارایی‌ها و بدهی‌های جاری','Opening Current Assets & Liabilities Breakdown')}</h4>
