@@ -2,6 +2,14 @@ import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import ts from 'typescript'
 const source=await readFile(new URL('../src/features/projects/inventoryControlLedgers.ts',import.meta.url),'utf8')
+const financePanel=await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx',import.meta.url),'utf8')
+const financialForms=await readFile(new URL('../src/features/projects/ProjectModelFinancialFormsPanel.tsx',import.meta.url),'utf8')
+assert.match(financePanel,/row\.sourceVerified===true/,'verified-only stage movement rows must enter the reconciliation gate')
+assert.match(financePanel,/row\.id, row\.period|row\.id,row\.period/,'identified stage transfer rows must enter the reconciliation gate')
+assert.match(financialForms,/Internal transfer-in quantity/,'stage movement form must expose internal transfer-in quantity')
+assert.match(financialForms,/Internal transfer-out value/,'stage movement form must expose internal transfer-out value')
+assert.match(financialForms,/Transfer value/,'inter-stage transfer form must expose the transferred inventory value')
+
 const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 const module=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
 const waste=module.validateWasteLedger([
