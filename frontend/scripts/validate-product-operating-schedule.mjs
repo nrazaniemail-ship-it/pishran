@@ -283,7 +283,7 @@ const flowProduct={
   period:'1',salesQuantity:80,netUnitPrice:20,salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
   openingFinishedGoodsQuantity:10,openingFinishedGoodsValue:100,finishedGoodsClosingQuantity:30,
   openingRawMaterialQuantity:100,openingRawMaterialValue:1000,openingWipQuantity:0,openingWipMaterialValue:0,openingWipConversionValue:0,
-  rawMaterialPurchasesQuantity:100,rawMaterialPurchasesValue:1200,rawMaterialConsumptionQuantity:120,rawMaterialWasteQuantity:5,
+  rawMaterialPurchasesQuantity:100,rawMaterialPurchasesValue:1200,rawMaterialConsumptionQuantity:120,normalRawMaterialWasteQuantity:5,abnormalRawMaterialWasteQuantity:2,
   unitsStarted:120,unitsCompleted:100,closingWipQuantity:20,materialCompletionPercent:100,
   conversionCompletionPercent:50,conversionCost:500,
  }]}],
@@ -297,6 +297,7 @@ assert.equal(flowSchedule.rows[0].completedUnits,100)
 assert.ok(Math.abs(flowSchedule.rows[0].productionCost-flowSchedule.rows[0].unitProductionCost*100)<1e-7)
 assert.equal(flowSchedule.periodRawMaterialInventoryValue[0],825)
 assert.equal(flowSchedule.periodNormalWasteAbsorbed[0],55,'normal waste valued from raw-material WAC must be disclosed as absorbed CPP')
+assert.equal(flowSchedule.periodAbnormalWasteExpense[0],22,'abnormal waste must be expensed at weighted-average raw-material cost, not capitalized into WIP or finished goods')
 assert.equal(flowSchedule.rows[0].rawMaterialInventoryValue,825)
 assert.ok(flowSchedule.periodWipInventoryValue[0]>0)
 assert.equal(flowSchedule.rows[0].costOfSales,flowSchedule.rows[0].weightedAverageUnitCost*80)
