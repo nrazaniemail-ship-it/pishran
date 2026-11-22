@@ -212,7 +212,20 @@ export default function App() {
           <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
         </div>
         <div className="hero-art dashboard-image-art" role="img" aria-label={isEn ? "Pishran technical and economic assessment dashboard with its honeycomb module layout" : "نمای لانه‌زنبوری ماژول‌های داشبورد ارزیابی فنی و اقتصادی پیشران"}>
-          <img className="dashboard-module-image" src="/dashboard-modules.webp" alt={isEn ? "Pishran modules arranged around the technical and economic assessment core" : "ماژول‌های پیشران در آرایش لانه‌زنبوری پیرامون هسته ارزیابی فنی و اقتصادی"} />
+          <div className="dashboard-honeycomb-grid" aria-label={isEn ? "Pishran modules" : "ماژول‌های پیشران"}>
+            {modules.map((item, index) => {
+              const ModuleIcon = item.icon
+              return <button key={item.id} type="button" className={`dashboard-module-hex dashboard-module-hex-${index}`} onClick={() => openModule(item.id)} aria-label={`${item.id} ${isEn ? item.enTitle : item.title}`}>
+                <ModuleIcon aria-hidden="true" />
+                <span>{isEn ? item.enTitle : item.title}</span>
+                <small>{item.id}</small>
+              </button>
+            })}
+            <div className="dashboard-honeycomb-core">
+              <FileChartColumn aria-hidden="true" />
+              <strong>{isEn ? "Technical & Economic Project Assessment" : "ارزیابی فنی و اقتصادی پروژه‌ها"}</strong>
+            </div>
+          </div>
         </div>
       </section>
 
