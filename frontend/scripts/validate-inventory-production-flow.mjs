@@ -40,6 +40,15 @@ assert.throws(()=>mod.buildProductionStageTransferDrafts(result,[]),/required fo
 assert.throws(()=>mod.buildProductionStageTransferDrafts(result,bridgeEvidence.map(row=>({...row,sourceVerified:false}))),/verified source reference/)
 assert.throws(()=>mod.buildProductionStageTransferDrafts(result,bridgeEvidence.map(row=>({...row,rawMaterialsToWip:{...row.rawMaterialsToWip,conversionFactor:0}}))),/positive conversion-factor/)
 assert.throws(()=>mod.buildProductionStageTransferDrafts(result,[bridgeEvidence[0],bridgeEvidence[0]]),/duplicate period/)
+const abnormalBridgeSchedule=mod.buildInventoryFlowSchedule({...input,normalRawMaterialWasteQuantity:[2,0],abnormalRawMaterialWasteQuantity:[3,0]})
+assert.equal(abnormalBridgeSchedule.valid,true,abnormalBridgeSchedule.issues.join('; '))
+const abnormalBridge=mod.buildProductionStageTransferDrafts(abnormalBridgeSchedule,bridgeEvidence)
+const abnormalRawTransfer=abnormalBridge.find(row=>row.period===1&&row.sourceStage==='raw-materials')
+close(abnormalRawTransfer.quantity,abnormalBridgeSchedule.rows[0].consumptionQuantity+2,
+ 'Abnormal waste quantity must not be transferred into WIP.')
+close(abnormalRawTransfer.transferValue,abnormalBridgeSchedule.rows[0].consumptionValue+abnormalBridgeSchedule.rows[0].normalWasteValue,
+ 'Abnormal waste value must be excluded from the WIP transfer.')
+assert.ok(abnormalBridgeSchedule.rows[0].abnormalWasteValue>0)
 assert.equal(result.valid,true,result.issues.join('; '))
 const [p1,p2]=result.rows
 close(p1.weightedAverageRawMaterialUnitCost,11)
