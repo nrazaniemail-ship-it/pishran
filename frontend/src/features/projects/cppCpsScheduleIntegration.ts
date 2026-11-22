@@ -375,15 +375,6 @@ export function applyStageJournalCorrectionsToProductSchedule(
       for (const row of matching) {
         row.costOfSales += cogsDelta / matching.length
         row.grossProfit -= cogsDelta / matching.length
-        row.closingInventoryValue -= cogsDelta / matching.length
-      }
-      for (let index = periodIndex + 1; index < rows.length; index++) {
-        const row = rows[index]
-        if (row.productId === document.productId) row.openingInventoryValue -= cogsDelta
-      }
-      for (let index = periodIndex + 1; index < source.periodRevenue.length; index++) {
-        const matchingLater = rows.filter(row => row.productId === document.productId && row.period === index + 1)
-        for (const row of matchingLater) row.closingInventoryValue -= cogsDelta
       }
     }
     appliedDocumentIds.push(document.id)
