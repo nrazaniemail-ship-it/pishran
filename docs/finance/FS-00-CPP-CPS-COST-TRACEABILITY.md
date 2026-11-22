@@ -48,7 +48,7 @@ The engine retains known incremental subtotals separately from complete totals. 
 ## CPP → CPS → profit and loss
 
 1. Verified incremental material cost is allocated to products and follows raw-material stock issue into WIP.
-2. Verified incremental labour, energy, maintenance, and overhead are conversion cost. Where inventory-flow data exist, conversion cost is assigned between completed units and closing WIP using equivalent units.
+2. Raw-material issues are valued at weighted-average cost. Normal waste is absorbed once into good production; abnormal waste is removed from raw-material stock and expensed separately, never capitalized into WIP. Both quantities must be explicitly classified by period. Verified incremental labour, energy, maintenance, and overhead are conversion cost. Where inventory-flow data exist, conversion cost is assigned between completed units and closing WIP using equivalent units.
 3. Completed production cost is transferred to finished goods. Opening/closing finished-goods quantity and value are rolled forward by product and period.
 4. Cost of sales is recognized when the corresponding finished goods are sold. Unsold production remains in finished-goods inventory; it is not expensed prematurely.
 5. CPS is deducted from net sales revenue to derive gross profit. The base CPP remains in the product schedule; the adapter posts only the uncovered incremental amount, preventing a second charge for costs already included in the base.
