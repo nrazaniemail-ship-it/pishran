@@ -507,8 +507,12 @@ export function reconcileInventoryThreeWay(periods:InventoryReconciliationPeriod
   if(seen.has(p.period))issues.push('Inventory reconciliation contains duplicate period '+p.period+'.')
   seen.add(p.period)
   const groups=[['model',p.model],['balance sheet',p.balanceSheet],['CPP/CPS',p.cppCps]] as const
+  // otherCurrentAssets is also used by the integrated panel as a signed residual
+  // for other net current accounts when gross receivables/payables are not evidenced.
+  // Inventory balances and actual current liabilities remain non-negative.
   for(const [label,values] of groups)for(const [field,value] of Object.entries(values)){
-   if(!Number.isFinite(value)||value<0)issues.push('Period '+p.period+' '+label+' '+field+' must be a finite non-negative amount.')
+   if(!Number.isFinite(value)||(field!=='otherCurrentAssets'&&value<0))
+    issues.push('Period '+p.period+' '+label+' '+field+' must be a finite amount (inventory and liability balances must be non-negative).')
   }
   const mi=p.model.rawMaterials+p.model.workInProgress+p.model.finishedGoods
   const bi=p.balanceSheet.rawMaterials+p.balanceSheet.workInProgress+p.balanceSheet.finishedGoods
