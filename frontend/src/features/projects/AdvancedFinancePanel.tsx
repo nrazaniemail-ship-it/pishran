@@ -690,7 +690,7 @@ export default function AdvancedFinancePanel(props: Props) {
       row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,row.transfersOutQuantity,row.transfersOutValue,
       row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,row.wasteQuantity,row.wasteValue,
       row.closingQuantity,row.closingValue,row.sourceReference,row.sourceVerified===true].some(value=>value!==null&&value!==undefined&&value!==''))
-    const hasStageTransferData=stageTransfers.some(row=>[row.id,row.period,row.sourceStage,row.destinationStage,row.sourceProductId,row.destinationProductId,
+    const hasStageTransferData=stageTransfers.some(row=>[row.period,row.sourceStage,row.destinationStage,row.sourceProductId,row.destinationProductId,
       row.sourceCostCentreId,row.destinationCostCentreId,row.quantity,row.sourceUnit,row.destinationUnit,row.conversionFactor,row.transferValue,row.sourceReference,row.sourceVerified===true]
       .some(value=>value!==null&&value!==undefined&&value!==''))
     if(!hasMovementData&&!hasStageTransferData)return null
