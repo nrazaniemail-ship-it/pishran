@@ -475,6 +475,44 @@ const linkedExpectedByProductPeriod = roundTripCpp.schedule.rows.map(row => ({
 const linkedStageCheck = inventoryControlModule.reconcileStageInventoryMovements(
   linkedStageMovements, linkedExpectedByPeriod, 3, 0.01, [], linkedExpectedByProductPeriod)
 assert.equal(linkedStageCheck.valid, true, linkedStageCheck.issues.join('; '))
+const linkedAccountingPostings = linkedStageCheck.accountingPostings ?? []
+assert.equal(new Set(linkedAccountingPostings.map(row => row.id)).size, linkedAccountingPostings.length,
+  'Accounting posting preview IDs must be deterministic and unique')
+assert.ok(Math.abs((linkedStageCheck.accountingDebitTotal ?? NaN) -
+  (linkedStageCheck.accountingCreditTotal ?? NaN)) < 1e-7,
+  'The stage accounting posting preview must balance debits and credits')
+const linkedCogsPostings = linkedAccountingPostings.filter(row => row.kind === 'cost-of-sales')
+close(linkedCogsPostings.reduce((sum, row) => sum + row.amount, 0),
+  roundTripCpp.schedule.rows.reduce((sum, row) => sum + row.costOfSales, 0),
+  'Finished-goods COGS posting preview must reconcile to the existing product schedule exactly once')
+
+const rawToWipPostingPreview = inventoryControlModule.reconcileStageInventoryMovements([
+  { period: 1, inventoryStage: 'raw-materials', productId: 'ORE', costCentreId: 'MINE',
+    openingQuantity: 100, openingValue: 100, receiptsQuantity: 0, receiptsValue: 0,
+    transfersInQuantity: 0, transfersInValue: 0, transfersOutQuantity: 0, transfersOutValue: 0,
+    productionQuantity: 0, productionValue: 0, consumptionQuantity: 0, consumptionValue: 0,
+    salesQuantity: 0, salesCostValue: 0, wasteQuantity: 0, wasteValue: 0,
+    closingQuantity: 90, closingValue: 90, sourceReference: 'SRC-RAW-1', sourceVerified: true },
+  { period: 1, inventoryStage: 'work-in-progress', productId: 'ORE-WIP', costCentreId: 'DRI',
+    openingQuantity: 0, openingValue: 0, receiptsQuantity: 0, receiptsValue: 0,
+    transfersInQuantity: 0, transfersInValue: 0, transfersOutQuantity: 0, transfersOutValue: 0,
+    productionQuantity: 0, productionValue: 0, consumptionQuantity: 0, consumptionValue: 0,
+    salesQuantity: 0, salesCostValue: 0, wasteQuantity: 0, wasteValue: 0,
+    closingQuantity: 10, closingValue: 10, sourceReference: 'SRC-WIP-1', sourceVerified: true },
+], [{ period: 1, rawMaterials: 90, workInProgress: 10, finishedGoods: 0 }], 1, 0.01, [{
+  id: 'RAW-TO-WIP-1', period: 1, sourceStage: 'raw-materials', destinationStage: 'work-in-progress',
+  sourceProductId: 'ORE', destinationProductId: 'ORE-WIP', sourceCostCentreId: 'MINE',
+  destinationCostCentreId: 'DRI', quantity: 10, sourceUnit: 'ton', destinationUnit: 'ton',
+  conversionFactor: 1, transferValue: 10, sourceReference: 'SRC-TRANSFER-1', sourceVerified: true,
+}])
+assert.equal(rawToWipPostingPreview.valid, true, rawToWipPostingPreview.issues.join('; '))
+assert.deepEqual(rawToWipPostingPreview.accountingPostings?.map(row => [
+  row.kind, row.debitAccount, row.creditAccount, row.amount,
+]), [['stage-transfer', 'Inventory:work-in-progress', 'Inventory:raw-materials', 10]],
+'Raw-material-to-WIP transfer must reclassify the same value between inventory accounts')
+assert.equal(rawToWipPostingPreview.accountingDebitTotal, 10)
+assert.equal(rawToWipPostingPreview.accountingCreditTotal, 10)
+
 
 const linkedCostCentreMovements = linkedStageMovements
   .filter(row => row.inventoryStage === 'finished-goods')
