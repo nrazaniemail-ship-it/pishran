@@ -1,6 +1,14 @@
-export type ExecutiveDashboardReport = {
+export type CostDashboardReport = {
   id: string
-  moduleId: 'MOD-02' | 'MOD-03'
+  moduleId: 'MOD-02'
+  createdAt: string
+  inputs: Record<string, string>
+  metrics: Record<string, number>
+}
+
+export type ProductionDashboardReport = {
+  id: string
+  moduleId: 'MOD-03'
   createdAt: string
   inputs: Record<string, string>
   metrics: Record<string, number>
@@ -13,6 +21,6 @@ export type ExecutiveDashboardStore = {
 export function loadExecutiveDashboardReports(
   store: ExecutiveDashboardStore,
 ): Promise<{
-  cost: ExecutiveDashboardReport[]
-  production: ExecutiveDashboardReport[]
+  cost: CostDashboardReport[]
+  production: ProductionDashboardReport[]
 }>
