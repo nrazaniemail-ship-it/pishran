@@ -126,9 +126,12 @@ export function reconcileCostCentreInventory(
   }
   const productCentre=movement.productId+'@'+movement.costCentreId
   const previous=previousByProductCentre.get(productCentre)
-  if(previous&&movement.period>previous.period+1&&
-     (previous.closingQuantity>tolerance/100||previous.closingValue>tolerance/100))
-   issues.push('Cost-centre inventory '+productCentre+' is missing one or more intervening period movement rows while prior stock remains on hand.')
+  if(previous&&movement.period>previous.period+1){
+   const priorStockRemains=previous.closingQuantity>tolerance/100||previous.closingValue>tolerance/100
+   const unexplainedOpeningAppears=movement.openingQuantity>tolerance/100||movement.openingValue>tolerance/100
+   if(priorStockRemains||unexplainedOpeningAppears)
+    issues.push('Cost-centre inventory '+productCentre+' is missing one or more intervening period movement rows; stock cannot be carried across an unrecorded period or reappear as an unexplained opening balance.')
+  }
   if(previous&&previous.period===movement.period-1){
    if(!near(movement.openingQuantity,previous.closingQuantity,tolerance/100))
     issues.push('Cost-centre inventory '+key+' opening quantity does not equal prior-period closing quantity.')
