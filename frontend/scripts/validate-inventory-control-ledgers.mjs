@@ -369,6 +369,17 @@ assert.ok(duplicatePeriod.issues.some(x=>x.includes('duplicate period')))
 const invalidAmounts=module.reconcileInventoryThreeWay([{...p,model:{...p.model,rawMaterials:-1}}])
 assert.equal(invalidAmounts.valid,false,'negative inventory balances must be rejected before reconciliation')
 assert.ok(invalidAmounts.issues.some(x=>x.includes('finite non-negative amount')))
+
+const netNegativeResidual=module.reconcileInventoryThreeWay([{
+ ...p,
+ model:{...p.model,otherCurrentAssets:-100,currentLiabilities:0,netWorkingCapital:200},
+ balanceSheet:{...p.balanceSheet,otherCurrentAssets:-100,currentLiabilities:0,netWorkingCapital:200},
+}])
+assert.equal(netNegativeResidual.valid,true,
+ 'The signed net-current-account residual may be negative when inventories exceed net working capital because of operating payables.')
+assert.equal(netNegativeResidual.rows[0].netWorkingCapitalModel,200)
+assert.equal(netNegativeResidual.rows[0].netWorkingCapitalBalanceSheet,200)
+
 const missingPeriods=module.reconcileInventoryThreeWay([])
 assert.equal(missingPeriods.valid,false,'an empty reconciliation must not pass vacuously')
 const invalidTolerance=module.reconcileInventoryThreeWay([p],-1)
