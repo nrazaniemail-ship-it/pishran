@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { executeModuleAnalysis } from '../src/features/modules/moduleAnalysisWorkflow.js'
 import { loadExecutiveDashboardReports } from '../src/features/modules/executiveDashboardData.js'
+import { localStore } from '../src/core/storage/localStore.ts'
 
 const costKey='module-intelligence:MOD-02:v1'
 const productionKey='module-intelligence:MOD-03:v1'
@@ -96,4 +97,39 @@ test('the real module form delegates calculations and persistence to the tested 
  const dashboard=await readFile(new URL('../src/features/modules/ExecutiveDashboardPanel.tsx',import.meta.url),'utf8')
  assert.match(dashboard,/loadExecutiveDashboardReports\(localStore\)/)
  assert.match(dashboard,/onClick=\{\(\)=>void refresh\(\)\}/)
+})
+
+test('actual localStore fallback persists module executions and MOD-01 reads them',async()=>{
+ const values=new Map()
+ globalThis.localStorage={
+  get length(){return values.size},
+  key:index=>[...values.keys()][index]??null,
+  getItem:key=>values.get(key)??null,
+  setItem:(key,value)=>values.set(key,String(value)),
+  removeItem:key=>values.delete(key),
+ }
+ await localStore.remove(costKey)
+ await localStore.remove(productionKey)
+ await executeModuleAnalysis('MOD-02',costInput,localStore,at(5))
+ await executeModuleAnalysis('MOD-03',productionInput,localStore,at(5))
+ const dashboard=await loadExecutiveDashboardReports(localStore)
+ assert.equal(dashboard.cost[0].metrics.unitCost,60)
+ assert.ok(Number.isFinite(dashboard.production[0].metrics.oee))
+ await localStore.remove(costKey)
+ await localStore.remove(productionKey)
+})
+
+test('actual localStore quota/write error is surfaced and dashboard remains empty',async()=>{
+ const values=new Map()
+ globalThis.localStorage={
+  get length(){return values.size},
+  key:index=>[...values.keys()][index]??null,
+  getItem:key=>values.get(key)??null,
+  setItem:()=>{throw new Error('quota exceeded')},
+  removeItem:key=>values.delete(key),
+ }
+ await localStore.remove(costKey)
+ await assert.rejects(executeModuleAnalysis('MOD-02',costInput,localStore,at(7)),/quota exceeded/)
+ assert.deepEqual(await loadExecutiveDashboardReports(localStore),{cost:[],production:[]})
+ delete globalThis.localStorage
 })
