@@ -491,16 +491,15 @@ const linkedCostCentreMovements = linkedStageMovements
 const linkedCentreRegisterCheck = inventoryControlModule.reconcileCostCentreInventory(
   linkedCostCentreMovements, transferRoundTrip, 3)
 assert.equal(linkedCentreRegisterCheck.valid, true, linkedCentreRegisterCheck.issues.join('; '))
-assert.deepEqual([1, 2, 3].map(period => linkedCentreRegisterCheck.rows
-  .filter(row => row.period === period)
-  .reduce((sum, row) => sum + row.expectedClosingQuantity, 0)),
-  roundTripCpp.schedule.rows.map(row => row.closingInventoryQuantity),
-  'The exact A→B/B→A register and cost-centre subledger must reconcile to product closing quantity in every period')
-assert.deepEqual([1, 2, 3].map(period => linkedCentreRegisterCheck.rows
-  .filter(row => row.period === period)
-  .reduce((sum, row) => sum + row.expectedClosingValue, 0)),
-  roundTripCpp.schedule.rows.map(row => row.closingInventoryValue),
-  'The exact A→B/B→A register and cost-centre subledger must reconcile to CPP/CPS-adjusted product closing value in every period')
+for (let index = 0; index < 3; index++) {
+  const periodRows = linkedCentreRegisterCheck.rows.filter(row => row.period === index + 1)
+  close(periodRows.reduce((sum, row) => sum + row.expectedClosingQuantity, 0),
+    roundTripCpp.schedule.rows[index].closingInventoryQuantity,
+    'The exact A→B/B→A register and cost-centre subledger must reconcile to product closing quantity in period ' + (index + 1))
+  close(periodRows.reduce((sum, row) => sum + row.expectedClosingValue, 0),
+    roundTripCpp.schedule.rows[index].closingInventoryValue,
+    'The exact A→B/B→A register and cost-centre subledger must reconcile to CPP/CPS-adjusted product closing value in period ' + (index + 1))
+}
 
 assert.deepEqual(linkedStageCheck.rows.filter(row => row.inventoryStage === 'finished-goods')
   .map(row => [row.period, row.ledgerClosingValue, row.engineClosingValue, row.variance]),
