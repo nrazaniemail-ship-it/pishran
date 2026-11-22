@@ -5,6 +5,7 @@ const PREFIX = 'pishran_'
 type StoreRecord = { key: string; value: unknown }
 
 let dbPromise: Promise<IDBDatabase | null> | null = null
+let fallbackUpdateQueue: Promise<unknown> = Promise.resolve()
 
 function openDatabase(): Promise<IDBDatabase | null> {
   if (typeof indexedDB === 'undefined') return Promise.resolve(null)
@@ -71,6 +72,38 @@ export const localStore = {
       // Fall through to the browser-local fallback.
     }
     return readFallback<T>(key)
+  },
+
+  async update<T>(key: string, updater: (current: T | undefined) => T): Promise<T> {
+    const db = await openDatabase()
+    if (db) {
+      return new Promise<T>((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite')
+        const store = tx.objectStore(STORE_NAME)
+        const request = store.get(key)
+        let nextValue: T
+        request.onsuccess = () => {
+          try {
+            nextValue = updater((request.result as StoreRecord | undefined)?.value as T | undefined)
+            store.put({ key, value: nextValue })
+          } catch (error) {
+            try { tx.abort() } catch { /* transaction may already be inactive */ }
+            reject(error)
+          }
+        }
+        request.onerror = () => reject(request.error ?? new Error('Storage read failed'))
+        tx.oncomplete = () => resolve(nextValue!)
+        tx.onerror = () => reject(tx.error ?? new Error('Storage update failed'))
+        tx.onabort = () => reject(tx.error ?? new Error('Storage update aborted'))
+      })
+    }
+    const operation = fallbackUpdateQueue.then(() => {
+      const nextValue = updater(readFallback<T>(key))
+      writeFallback(key, nextValue)
+      return nextValue
+    })
+    fallbackUpdateQueue = operation.then(() => undefined, () => undefined)
+    return operation
   },
 
   async set<T>(key: string, value: T): Promise<void> {
