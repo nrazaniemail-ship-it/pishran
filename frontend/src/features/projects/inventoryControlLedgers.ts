@@ -389,28 +389,31 @@ export function reconcileStageInventoryMovements(
    issues.push(...centreCheck.issues.map(issue=>'Stage '+stage+': '+issue))
    const productField=stage==='raw-materials'?'rawMaterials':stage==='work-in-progress'?'workInProgress':'finishedGoods'
    const expectedProductStageTotal=[...expectedProductRows.entries()].filter(([key])=>key.startsWith(period+':')).reduce((sum,[,row])=>sum+row[productField],0)
-   const productBreakdownMatchesStage=stage==='finished-goods'&&!!expectedByProductPeriod&&near(expectedProductStageTotal,expected.get(period)?.[productField]??0,tolerance/100)
-   if(productBreakdownMatchesStage&&stage==='finished-goods'){
+   // Apply product-level closing-balance checks to raw materials, WIP and finished goods.
+   // Only enable this comparison when the product schedule fully explains the stage aggregate.
+   const productBreakdownMatchesStage=!!expectedByProductPeriod&&near(expectedProductStageTotal,expected.get(period)?.[productField]??0,tolerance/100)
+   if(productBreakdownMatchesStage){
     const ledgerByProduct=new Map<string,number>()
     const ledgerSalesByProduct=new Map<string,{quantity:number;cost:number}>()
     const ledgerProductionByProduct=new Map<string,{quantity:number;value:number}>()
     for(const row of periodRows){
      const productId=row.productId.trim()
      ledgerByProduct.set(productId,(ledgerByProduct.get(productId)??0)+(row.closingValue??0))
-     const sales=ledgerSalesByProduct.get(productId)??{quantity:0,cost:0}
-     sales.quantity+=row.salesQuantity??0;sales.cost+=row.salesCostValue??0;ledgerSalesByProduct.set(productId,sales)
-     const production=ledgerProductionByProduct.get(productId)??{quantity:0,value:0}
-     const stageTransferIn=transferIn.get([row.period,row.inventoryStage,row.productId.trim(),row.costCentreId.trim()].join(':'))??{quantity:0,value:0}
-     production.quantity+=(row.productionQuantity??0)+stageTransferIn.quantity
-     production.value+=(row.productionValue??0)+stageTransferIn.value
-     ledgerProductionByProduct.set(productId,production)
+     if(stage==='finished-goods'){
+      const sales=ledgerSalesByProduct.get(productId)??{quantity:0,cost:0}
+      sales.quantity+=row.salesQuantity??0;sales.cost+=row.salesCostValue??0;ledgerSalesByProduct.set(productId,sales)
+      const production=ledgerProductionByProduct.get(productId)??{quantity:0,value:0}
+      const stageTransferIn=transferIn.get([row.period,row.inventoryStage,row.productId.trim(),row.costCentreId.trim()].join(':'))??{quantity:0,value:0}
+      production.quantity+=(row.productionQuantity??0)+stageTransferIn.quantity
+      production.value+=(row.productionValue??0)+stageTransferIn.value
+      ledgerProductionByProduct.set(productId,production)
+     }
     }
     for(const [key,engineProduct] of expectedProductRows){
      if(!key.startsWith(period+':'))continue
      const productId=key.slice(String(period).length+1)
-     const field=productField
      const ledgerValue=ledgerByProduct.get(productId)??0
-     if(!near(ledgerValue,engineProduct[field],tolerance/100))
+     if(!near(ledgerValue,engineProduct[productField],tolerance/100))
       issues.push('Stage '+stage+' product '+productId+' closing inventory does not match the finance engine in period '+period+'.')
      if(stage==='finished-goods'){
       const production=ledgerProductionByProduct.get(productId)??{quantity:0,value:0}
@@ -434,7 +437,7 @@ export function reconcileStageInventoryMovements(
      if(ledgerValue>tolerance/100||sales.quantity>tolerance/100||sales.cost>tolerance/100||production.quantity>tolerance/100||production.value>tolerance/100)
       issues.push('Stage '+stage+' product '+productId+' has no matching product-level finance-engine inventory row in period '+period+'.')
     }
-   }
+   }}
    const ledgerClosingValue=periodRows.reduce((sum,row)=>sum+(row.closingValue??0),0)
    const expectedRow=expected.get(period)
    if(!expectedRow){
