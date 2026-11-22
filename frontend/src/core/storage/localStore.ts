@@ -81,7 +81,7 @@ export const localStore = {
         const tx = db.transaction(STORE_NAME, 'readwrite')
         const store = tx.objectStore(STORE_NAME)
         const request = store.get(key)
-        let nextValue: T
+        let nextValue: T | undefined
         request.onsuccess = () => {
           try {
             nextValue = updater((request.result as StoreRecord | undefined)?.value as T | undefined)
@@ -92,7 +92,7 @@ export const localStore = {
           }
         }
         request.onerror = () => reject(request.error ?? new Error('Storage read failed'))
-        tx.oncomplete = () => resolve(nextValue!)
+        tx.oncomplete = () => resolve(nextValue as T)
         tx.onerror = () => reject(tx.error ?? new Error('Storage update failed'))
         tx.onabort = () => reject(tx.error ?? new Error('Storage update aborted'))
       })
