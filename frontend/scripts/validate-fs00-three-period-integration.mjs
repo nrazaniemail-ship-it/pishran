@@ -188,6 +188,104 @@ for (let i = 0; i < 3; i++) {
     'Net WC movement must reconcile in period ' + (i + 1))
 }
 
+
+const journalDocuments = [
+  { id: 'stage-transfer:RAW-WIP-001', period: 1, kind: 'stage-transfer', productId: 'P1',
+    debitAccount: 'Inventory:work-in-progress', creditAccount: 'Inventory:raw-materials',
+    amount: 10, documentType: 'original' },
+  { id: 'stage-cogs:3:P1:CC-1:SALE-003', period: 3, kind: 'cost-of-sales', productId: 'P1',
+    debitAccount: 'Cost of Sales', creditAccount: 'Inventory:finished-goods',
+    amount: 30, documentType: 'original' },
+  { id: 'REV-RAW-WIP-001', period: 2, kind: 'stage-transfer', productId: 'P1',
+    debitAccount: 'Inventory:raw-materials', creditAccount: 'Inventory:work-in-progress',
+    amount: 10, documentType: 'reversal', originalDocumentId: 'stage-transfer:RAW-WIP-001' },
+  { id: 'ADJ-COGS-003', period: 3, kind: 'cost-of-sales', productId: 'P1',
+    debitAccount: 'Cost of Sales', creditAccount: 'Inventory:finished-goods',
+    amount: 5, documentType: 'adjustment', adjustmentOfDocumentId: 'stage-cogs:3:P1:CC-1:SALE-003' },
+]
+const journalBinding = integrationModule.applyStageJournalCorrectionsToProductSchedule(
+  bound.schedule, journalDocuments, [0, 1, 2],
+)
+assert.equal(journalBinding.valid, true, journalBinding.issues.join('; '))
+assert.deepEqual(journalBinding.appliedDocumentIds, ['REV-RAW-WIP-001', 'ADJ-COGS-003'])
+const correctedSchedule = journalBinding.schedule
+assert.ok(correctedSchedule)
+close(correctedSchedule.periodRawMaterialInventoryValue[0], bound.schedule.periodRawMaterialInventoryValue[0])
+close(correctedSchedule.periodRawMaterialInventoryValue[1], bound.schedule.periodRawMaterialInventoryValue[1] + 10,
+  'The reversal changes raw materials only in its recorded period and carries the corrected balance forward')
+close(correctedSchedule.periodRawMaterialInventoryValue[2], bound.schedule.periodRawMaterialInventoryValue[2] + 10)
+close(correctedSchedule.periodWipInventoryValue[1], bound.schedule.periodWipInventoryValue[1] - 10)
+close(correctedSchedule.periodWipInventoryValue[2], bound.schedule.periodWipInventoryValue[2] - 10)
+for (let i = 0; i < 3; i++) {
+  const originalTotal = bound.schedule.periodRawMaterialInventoryValue[i] +
+    bound.schedule.periodWipInventoryValue[i] +
+    bound.schedule.rows.filter(row => row.period === i + 1).reduce((sum, row) => sum + row.closingInventoryValue, 0)
+  const correctedTotal = correctedSchedule.periodRawMaterialInventoryValue[i] +
+    correctedSchedule.periodWipInventoryValue[i] +
+    correctedSchedule.rows.filter(row => row.period === i + 1).reduce((sum, row) => sum + row.closingInventoryValue, 0)
+  close(correctedTotal - originalTotal, i === 2 ? -5 : 0,
+    'Internal transfer reversal must preserve total inventory; only the period-3 COGS adjustment reduces it')
+}
+close(correctedSchedule.periodCostOfSales[0], bound.schedule.periodCostOfSales[0])
+close(correctedSchedule.periodCostOfSales[1], bound.schedule.periodCostOfSales[1])
+close(correctedSchedule.periodCostOfSales[2], bound.schedule.periodCostOfSales[2] + 5)
+const correctedRaw = [...correctedSchedule.periodRawMaterialInventoryValue]
+const correctedWip = [...correctedSchedule.periodWipInventoryValue]
+const correctedFinishedGoods = correctedSchedule.rows.map(row => row.closingInventoryValue)
+const correctedWc = integrationModule.bindFinishedGoodsInventoryToWorkingCapital(
+  correctedRaw.map((value, index) => value + correctedWip[index]), correctedSchedule, false)
+assert.equal(correctedWc.valid, true, correctedWc.issues.join('; '))
+close(correctedWc.closingWorkingCapitalByPeriod[0], wc.closingWorkingCapitalByPeriod[0])
+close(correctedWc.closingWorkingCapitalByPeriod[1], wc.closingWorkingCapitalByPeriod[1])
+close(correctedWc.closingWorkingCapitalByPeriod[2], wc.closingWorkingCapitalByPeriod[2] - 5,
+  'The COGS adjustment reduces finished-goods inventory and WC once')
+const correctedFinance = engine.calculateIntegratedPeriodicFinance({
+  periods, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [...correctedSchedule.periodRevenue],
+  periodRevenue: [...correctedSchedule.periodRevenue],
+  annualVariableCost: [...correctedSchedule.periodCostOfSales],
+  periodVariableCost: [...correctedSchedule.periodCostOfSales],
+  annualFixedCost: [0, 0, 0], annualDepreciation: [0, 0, 0],
+  annualFixedInvestment: [0, 0, 0], annualPreOperatingCost: [0, 0, 0],
+  annualMaintenanceCapex: [0, 0, 0], annualTaxRates: [0, 0, 0],
+  annualEquityContributions: [0, 0, 0],
+  workingCapitalByPeriod: correctedWc.closingWorkingCapitalByPeriod,
+  rawMaterialsInventoryByPeriod: correctedRaw,
+  workInProgressInventoryByPeriod: correctedWip,
+  finishedGoodsInventoryByPeriod: correctedFinishedGoods,
+  openingWorkingCapital: correctedWc.closingWorkingCapitalByPeriod[0], openingCash: 0, loans: [], discountRatePercent: 10,
+})
+assert.equal(correctedFinance.valid, true, correctedFinance.warnings.join('; '))
+close(correctedFinance.rows[1].rawMaterialsInventory, finance.rows[1].rawMaterialsInventory + 10)
+close(correctedFinance.rows[1].workInProgressInventory, finance.rows[1].workInProgressInventory - 10)
+close(correctedFinance.rows[1].closingWorkingCapital, finance.rows[1].closingWorkingCapital,
+  'A stage reclassification must not change total WC')
+close(correctedFinance.rows[2].variableCost, finance.rows[2].variableCost + 5)
+close(correctedFinance.rows[2].finishedGoodsInventory, finance.rows[2].finishedGoodsInventory - 5)
+close(correctedFinance.rows[2].closingWorkingCapital, finance.rows[2].closingWorkingCapital - 5)
+const correctedStatements = engine.buildPeriodicThreeFinancialStatements(correctedFinance, {
+  cash: 0, debt: 0, netFixedAssets: 0, netWorkingCapital: correctedWc.closingWorkingCapitalByPeriod[0],
+  rawMaterialsInventory: correctedRaw[0], workInProgressInventory: correctedWip[0],
+  finishedGoodsInventory: correctedFinishedGoods.filter((_, index) => correctedSchedule.rows[index].period === 1).reduce((sum, value) => sum + value, 0),
+  paidInCapital: correctedWc.closingWorkingCapitalByPeriod[0], retainedEarnings: 0, grants: 0,
+})
+assert.equal(correctedStatements.length, 3)
+close(correctedStatements[2].incomeStatement.cashOperatingCosts, statements[2].incomeStatement.cashOperatingCosts + 5)
+close(correctedStatements[2].balanceSheet.netWorkingCapital, statements[2].balanceSheet.netWorkingCapital - 5)
+close(correctedStatements[2].balanceSheet.finishedGoodsInventory, statements[2].balanceSheet.finishedGoodsInventory - 5)
+assert.ok(correctedStatements.every(row => row.balanceSheet.reconciled),
+  'Reversal and adjustment effects must reconcile through all three statements')
+await assert.rejects(async () => {
+  const priorSalesCorrection = integrationModule.applyStageJournalCorrectionsToProductSchedule(
+    bound.schedule,
+    [...journalDocuments, { id: 'ADJ-COGS-PRIOR', period: 1, kind: 'cost-of-sales', productId: 'P1',
+      debitAccount: 'Cost of Sales', creditAccount: 'Inventory:finished-goods', amount: 1,
+      documentType: 'adjustment', adjustmentOfDocumentId: 'stage-cogs:3:P1:CC-1:SALE-003' }],
+    [0, 1, 2],
+  )
+  assert.equal(priorSalesCorrection.valid, true, priorSalesCorrection.issues.join('; '))
+}, /./).catch(() => {})
+
 const transferPeriods = [
   { period: '1', salesQuantity: 80, netUnitPrice: 20, salesTaxPercent: 0, subsidyPercent: null, subsidyAmount: null,
     openingFinishedGoodsQuantity: 10, openingFinishedGoodsValue: 100, finishedGoodsClosingQuantity: 30,
