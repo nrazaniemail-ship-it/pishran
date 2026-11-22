@@ -659,7 +659,7 @@ export default function AdvancedFinancePanel(props: Props) {
       period:row.period,rawMaterials:row.rawMaterialsInventory,
       workInProgress:row.workInProgressInventory,finishedGoods:row.finishedGoodsInventory,
     }))
-    const expectedByProductPeriod=productOperatingSchedule?.valid?productOperatingSchedule.rows.map(row=>({period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales})):undefined
+    const expectedByProductPeriod=productOperatingSchedule?.valid?productOperatingSchedule.rows.map(row=>({period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales,productionQuantity:row.productionQuantity,productionCost:row.productionCost})):undefined
     return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length,0.01,stageTransfers,expectedByProductPeriod)
   },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),periodicFinanceResult,productOperatingSchedule])
   const inventoryReferenceReconciliation=useMemo(()=>{
