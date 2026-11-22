@@ -145,7 +145,8 @@ const multiPeriodStageCheck=module.reconcileStageInventoryMovements(multiPeriodC
  {period:3,productId:'P1',rawMaterials:0,workInProgress:0,finishedGoods:180,finishedGoodsSalesQuantity:2,finishedGoodsCostOfSales:20},
 ])
 assert.equal(multiPeriodStageCheck.valid,true,multiPeriodStageCheck.issues.join('; '))
-assert.equal(multiPeriodStageCheck.rows.filter(row=>row.inventoryStage==='finished-goods').length,9)
+assert.equal(multiPeriodStageCheck.rows.filter(row=>row.inventoryStage==='finished-goods').length,3,
+ 'the stage reconciliation reports one aggregated finished-goods row per period, not one row per cost centre')
 const multiPeriodInventoryTotals=[200,200,180]
 const multiPeriodWorkingCapitalCheck=module.reconcileInventoryThreeWay(multiPeriodInventoryTotals.map((inventory, index)=>{
  const period=index+1
