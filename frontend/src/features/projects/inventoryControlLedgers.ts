@@ -335,7 +335,6 @@ export function reconcileStageInventoryMovements(
  for(const stage of stages){
   const field=stage==='raw-materials'?'rawMaterials':stage==='work-in-progress'?'workInProgress':'finishedGoods'
   const productIds=new Set<string>()
-  for(const row of expectedProductRows.values()) productIds.add('')
   for(const row of adjustedMovements){
    if(row.inventoryStage===stage&&row.productId.trim())productIds.add(row.productId.trim())
   }
