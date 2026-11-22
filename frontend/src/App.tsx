@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Calculator, X, Zap, Wrench, Boxes, Target, BriefcaseBusiness } from 'lucide-react'
+import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Zap, Wrench, Boxes, Target, BriefcaseBusiness } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
 import { createProject, deleteProject, purgeRemovedCaseProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
@@ -33,47 +33,6 @@ const modules = [
 ]
 
 
-function calculateExpression(expression: string): number {
-  const tokens = expression.replace(/×/g, '*').replace(/÷/g, '/').match(/(?:\d+\.?\d*|\.\d+)|[()+\-*/%]/g) ?? []
-  let index = 0
-  const parsePrimary = (): number => {
-    const token = tokens[index++]
-    if (token === '(') {
-      const value = parseSum()
-      if (tokens[index++] !== ')') throw new Error('پرانتز نامعتبر')
-      return value
-    }
-    if (token === '-') return -parsePrimary()
-    if (token === '+') return parsePrimary()
-    const value = Number(token)
-    if (!Number.isFinite(value)) throw new Error('عبارت نامعتبر')
-    return value
-  }
-  const parseProduct = (): number => {
-    let value = parsePrimary()
-    while (tokens[index] === '*' || tokens[index] === '/' || tokens[index] === '%') {
-      const op = tokens[index++]
-      const next = parsePrimary()
-      if ((op === '/' || op === '%') && next === 0) throw new Error('تقسیم بر صفر')
-      value = op === '*' ? value * next : op === '/' ? value / next : value % next
-    }
-    return value
-  }
-  const parseSum = (): number => {
-    let value = parseProduct()
-    while (tokens[index] === '+' || tokens[index] === '-') {
-      const op = tokens[index++]
-      const next = parseProduct()
-      value = op === '+' ? value + next : value - next
-    }
-    return value
-  }
-  if (!tokens.length) return 0
-  const result = parseSum()
-  if (index !== tokens.length || !Number.isFinite(result)) throw new Error('عبارت نامعتبر')
-  return result
-}
-
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
@@ -81,14 +40,48 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<FeasibilityProject | null>(null)
   const [storageInfo, setStorageInfo] = useState({ backend: 'در حال بررسی', items: 0 })
   const [ready, setReady] = useState(false)
-  const [calculatorOpen, setCalculatorOpen] = useState(false)
-  const [calculatorExpression, setCalculatorExpression] = useState('')
-  const [calculatorError, setCalculatorError] = useState('')
   const [activeModuleId, setActiveModuleId] = useState('MOD-01')
   const [moduleWorkspaces, setModuleWorkspaces] = useState<ModuleWorkspace[]>([])
   const [moduleWorkspaceName, setModuleWorkspaceName] = useState('')
   const isEn = settings.language === 'en'
   const toggleLanguage = () => setSettings(current => ({ ...current, language: current.language === 'fa' ? 'en' : 'fa' }))
+  type NavigationEntry = { page: Page; project: FeasibilityProject | null; moduleId: string }
+  const navigationStackRef = useRef<NavigationEntry[]>([{ page: 'dashboard', project: null, moduleId: 'MOD-01' }])
+
+  function navigateTo(nextPage: Page, nextProject: FeasibilityProject | null = activeProject, nextModuleId = activeModuleId) {
+    const current = navigationStackRef.current[navigationStackRef.current.length - 1]
+    if (current.page === nextPage && current.project?.id === nextProject?.id && current.moduleId === nextModuleId) return
+    navigationStackRef.current.push({ page: nextPage, project: nextProject, moduleId: nextModuleId })
+    window.history.pushState({ pishranNavigation: true }, '', window.location.href)
+    setActiveProject(nextProject)
+    setActiveModuleId(nextModuleId)
+    setPage(nextPage)
+  }
+
+  function navigateBack(fallbackPage: Page) {
+    if (navigationStackRef.current.length > 1) window.history.back()
+    else navigateTo(fallbackPage)
+  }
+
+  useEffect(() => {
+    // Keep a root history entry so Android's hardware Back key cannot leave
+    // the app while the user is still on its top-level dashboard.
+    window.history.pushState({ pishranNavigation: true }, '', window.location.href)
+    const handlePopState = () => {
+      if (navigationStackRef.current.length > 1) {
+        navigationStackRef.current.pop()
+        const previous = navigationStackRef.current[navigationStackRef.current.length - 1]
+        setPage(previous.page)
+        setActiveProject(previous.project)
+        setActiveModuleId(previous.moduleId)
+      } else {
+        window.history.pushState({ pishranNavigation: true }, '', window.location.href)
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
 
   useEffect(() => {
     let alive = true
@@ -164,7 +157,7 @@ export default function App() {
 
   function openModule(moduleId: string) {
     setActiveModuleId(moduleId)
-    setPage('module')
+    navigateTo('module')
   }
 
   async function createModuleWorkspace() {
@@ -186,19 +179,19 @@ export default function App() {
     <BackupScheduler/>
     <header className="topbar">
       <button className="language-switch page-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button>
-      <div className="brand"><button className="brand-title" type="button" onClick={() => setPage('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
+      <div className="brand"><button className="brand-title" type="button" onClick={() => navigateTo('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
       <nav className="main-nav" aria-label={isEn?"Primary navigation":"ناوبری اصلی"}>
-        <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
-        <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
-        <button className={page === 'steel-group' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('steel-group')}><Factory size={17}/> {isEn ? "Steel Group" : "گروه فولاد"}</button>
+        <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
+        <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
+        <button className={page === 'steel-group' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('steel-group')}><Factory size={17}/> {isEn ? "Steel Group" : "گروه فولاد"}</button>
         <details className="nav-dropdown">
           <summary className={page === 'module' ? 'nav-item active' : 'nav-item'}><Boxes size={17}/> {isEn ? 'Modules' : 'ماژولها'} <span className="nav-caret">▾</span></summary>
           <div className="nav-dropdown-menu">
             {modules.map(item => <button type="button" key={item.id} className={page === 'module' && activeModuleId === item.id ? 'dropdown-module active' : 'dropdown-module'} onClick={() => openModule(item.id)}><span>{item.id}</span>{isEn ? item.enTitle : item.title}</button>)}
           </div>
         </details>
-        <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
-        <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('settings')}><Settings size={17}/> {isEn ? "Settings" : "تنظیمات"}</button>
+        <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
+        <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('settings')}><Settings size={17}/> {isEn ? "Settings" : "تنظیمات"}</button>
       </nav>
       <div className="top-actions"></div>
     </header>
@@ -209,7 +202,7 @@ export default function App() {
           
           <h1>{isEn ? <>From idea to investment decision, <em>with greater confidence.</em></> : <><em> ... با اطمینان بیشتر.</em></>}</h1>
           <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
-          <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
+          <div className="hero-actions"><button className="primary" onClick={() => navigateTo('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
         </div>
         <div className="hero-art dashboard-image-art" role="img" aria-label={isEn ? "Pishran technical and economic assessment dashboard with its honeycomb module layout" : "نمای لانه‌زنبوری ماژول‌های داشبورد ارزیابی فنی و اقتصادی پیشران"}>
           <div className="dashboard-honeycomb-grid" aria-label={isEn ? "Pishran modules" : "ماژول‌های پیشران"}>
@@ -242,13 +235,13 @@ export default function App() {
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView language={settings.language} projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); setPage('project-wizard') }}/>}
+    {page === 'projects' && <ProjectsView language={settings.language} projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => navigateTo('project-wizard', project)}/>}
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
-    {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
+    {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => navigateBack('projects')}/>}
     {page === 'module' && <section className="module-workspace-page">
-      <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => setPage('dashboard')}>{isEn ? 'Back to dashboard' : 'بازگشت به داشبورد'}</button><span className="module-id">{activeModule.id}</span></div>
+      <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => navigateBack('dashboard')}>{isEn ? 'Back to dashboard' : 'بازگشت به داشبورد'}</button><span className="module-id">{activeModule.id}</span></div>
       <div className="module-workspace-hero"><div className="module-icon"><ActiveModuleIcon size={26}/></div><div><h1>{isEn ? activeModule.enTitle : activeModule.title}</h1><p>{isEn ? activeModule.enSub : activeModule.sub}</p><small>{isEn ? activeModule.enGroup : activeModule.group}</small></div></div>
       {activeModule.id === 'MOD-01' && <ExecutiveDashboardPanel language={settings.language} onOpenModule={openModule}/>}
       {(activeModule.id === 'MOD-02' || activeModule.id === 'MOD-03') && <ModuleIntelligencePanel moduleId={activeModule.id} language={settings.language}/>}
@@ -259,28 +252,6 @@ export default function App() {
     </section>}
 
 
-    <div className="floating-calculator" dir="ltr">
-      {calculatorOpen && <section className="calculator-panel" aria-label={isEn ? 'Calculator' : 'ماشین حساب'}>
-        <div className="calculator-heading"><b>{isEn ? 'Calculator' : 'ماشین حساب'}</b><button type="button" aria-label={isEn ? 'Close calculator' : 'بستن ماشین حساب'} onClick={() => setCalculatorOpen(false)}><X size={18}/></button></div>
-        <div className="calculator-display" aria-live="polite"><span>{calculatorExpression || '0'}</span>{calculatorError && <small>{calculatorError}</small>}</div>
-        <div className="calculator-keys">
-          {['C','(',')','⌫','7','8','9','÷','4','5','6','×','1','2','3','−','0','.','%','+','='].map(key => <button key={key} type="button" className={['÷','×','−','+','='].includes(key) ? 'operator' : key === 'C' ? 'clear' : ''} onClick={() => {
-            setCalculatorError('')
-            if (key === 'C') { setCalculatorExpression(''); return }
-            if (key === '⌫') { setCalculatorExpression(value => value.slice(0, -1)); return }
-            if (key === '=') {
-              try { setCalculatorExpression(String(Number(calculateExpression(calculatorExpression).toPrecision(12)))) }
-              catch (error) { setCalculatorError(error instanceof Error ? error.message : (isEn ? 'Invalid expression' : 'عبارت نامعتبر')) }
-              return
-            }
-            setCalculatorExpression(value => value + key)
-          }}>{key}</button>)}
-        </div>
-      </section>}
-      <button className="calculator-launcher" type="button" onClick={() => setCalculatorOpen(value => !value)} aria-label={isEn ? 'Open calculator' : 'باز کردن ماشین حساب'} aria-expanded={calculatorOpen}>
-        {calculatorOpen ? <X size={21}/> : <Calculator size={21}/>}<span>{isEn ? 'Calculator' : 'ماشین حساب'}</span>
-      </button>
-    </div>
     <footer>{isEn ? "Pishran · Intelligent Feasibility & Investment Assessment Platform" : "پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری"} <span>{isEn ? "Version 1.0.1 · No sign-in required" : "نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری"}</span></footer>
   </main>
 }
