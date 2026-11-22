@@ -97,6 +97,12 @@ const stageReconciled=module.reconcileStageInventoryMovements(stageMovements,[
 assert.equal(stageReconciled.valid,true,stageReconciled.issues.join('; '))
 assert.equal(stageReconciled.rows.length,6)
 assert.equal(stageReconciled.rows.find(row=>row.period===2&&row.inventoryStage==='work-in-progress').variance,0)
+const duplicateStageMovement=module.reconcileStageInventoryMovements([...stageMovements,stageMovements[0]],[
+ {period:1,rawMaterials:100,workInProgress:40,finishedGoods:60},
+ {period:2,rawMaterials:80,workInProgress:45,finishedGoods:40},
+],2)
+assert.equal(duplicateStageMovement.valid,false,'duplicate period/stage/product/cost-centre rows must not be silently overwritten or aggregated')
+assert.ok(duplicateStageMovement.issues.some(issue=>issue.includes('Duplicate stage inventory movement')))
 const multiCentreRaw=[
  {...stageRow(1,'raw-materials','RM-A',0,0,3,30,0,0,0,0,3,30),costCentreId:'STORE-A'},
  {...stageRow(1,'raw-materials','RM-B',0,0,7,70,0,0,0,0,7,70),costCentreId:'STORE-B'},
