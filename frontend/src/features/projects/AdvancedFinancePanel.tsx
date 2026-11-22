@@ -463,7 +463,12 @@ export default function AdvancedFinancePanel(props: Props) {
       let boundInput=financeInput
       if(productOperatingSchedule?.valid){
         const hasExplicitFinishedGoods=props.workingCapitalDrafts?.some(item=>item.category==='finished-goods')??false
-        const binding=bindFinishedGoodsInventoryToWorkingCapital(financeInput.workingCapitalByPeriod??[],productOperatingSchedule,hasExplicitFinishedGoods)
+        const estimatedFinishedGoodsByPeriod=!props.workingCapitalDrafts?.length
+          ?workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:row.finishedGoods)
+          :[]
+        const binding=bindFinishedGoodsInventoryToWorkingCapital(
+          financeInput.workingCapitalByPeriod??[],productOperatingSchedule,hasExplicitFinishedGoods,estimatedFinishedGoodsByPeriod
+        )
         if(!binding.valid)return null
         boundInput={...financeInput,workingCapitalByPeriod:binding.closingWorkingCapitalByPeriod}
       }
