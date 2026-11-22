@@ -411,7 +411,9 @@ const stageMovement = (period, inventoryStage, costCentreId, openingQuantity, op
 // internal transfers; sales and production remain posted once at centre A.
 const linkedStageMovements = []
 let rawOpening = 0, wipOpening = 0
-let centreAQty = 0, centreAValue = 0, centreBQty = 0, centreBValue = 0
+let centreAQty = roundTripCpp.schedule.rows[0].openingInventoryQuantity
+let centreAValue = roundTripCpp.schedule.rows[0].openingInventoryValue
+let centreBQty = 0, centreBValue = 0
 for (const row of roundTripCpp.schedule.rows) {
   const period = row.period
   const rawClosing = row.rawMaterialInventoryValue
