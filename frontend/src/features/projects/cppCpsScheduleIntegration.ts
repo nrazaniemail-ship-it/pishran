@@ -254,3 +254,161 @@ export function bindFinishedGoodsInventoryToWorkingCapital(
   if (issues.length) return { valid: false, issues, closingWorkingCapitalByPeriod: [], inventoryAddedByPeriod: [] }
   return { valid: true, issues: [], closingWorkingCapitalByPeriod: result, inventoryAddedByPeriod }
 }
+
+
+export type StageJournalCorrection = {
+  id: string
+  period: number
+  kind: 'stage-transfer' | 'cost-of-sales'
+  productId: string
+  debitAccount: string
+  creditAccount: string
+  amount: number
+  documentType?: 'original' | 'reversal' | 'adjustment'
+  originalDocumentId?: string
+  adjustmentOfDocumentId?: string
+}
+export type StageJournalScheduleBinding = {
+  valid: boolean
+  issues: string[]
+  schedule: ProductOperatingSchedule | null
+  appliedDocumentIds: string[]
+}
+
+/**
+ * Applies only append-only correction documents to the already-calculated
+ * product schedule. Original preview documents are deliberately ignored:
+ * their operational effects are already present in the source schedule.
+ * Inventory transfers are reclassifications; COGS corrections change the
+ * period expense and finished-goods value once, then carry the stock value
+ * forward. Prior-period COGS corrections are blocked if later sales exist,
+ * because a weighted-average re-cost would otherwise be required.
+ */
+export function applyStageJournalCorrectionsToProductSchedule(
+  source: ProductOperatingSchedule,
+  documents: StageJournalCorrection[],
+  periodFiscalYearIndexes: number[],
+): StageJournalScheduleBinding {
+  const issues: string[] = []
+  if (!source.valid) issues.push('A valid base product schedule is required before applying stage journal corrections.')
+  if (periodFiscalYearIndexes.length !== source.periodRevenue.length)
+    issues.push('Fiscal-year indexes must match the product schedule period count.')
+  const originals = new Set(documents.filter(row => (row.documentType ?? 'original') === 'original').map(row => row.id))
+  const ids = new Set<string>()
+  const corrections = documents.filter(row => row.documentType === 'reversal' || row.documentType === 'adjustment')
+  for (const row of corrections) {
+    if (!row.id?.trim() || ids.has(row.id)) issues.push('Stage journal correction IDs must be unique and non-empty.')
+    ids.add(row.id)
+    if (!Number.isInteger(row.period) || row.period < 1 || row.period > source.periodRevenue.length)
+      issues.push('Stage journal correction ' + row.id + ' has an invalid period.')
+    if (!Number.isFinite(row.amount) || row.amount <= 0 || !row.productId?.trim())
+      issues.push('Stage journal correction ' + row.id + ' requires a product and positive finite amount.')
+    const reference = row.documentType === 'reversal' ? row.originalDocumentId : row.adjustmentOfDocumentId
+    if (!reference || !originals.has(reference))
+      issues.push('Stage journal correction ' + row.id + ' must reference an existing original document.')
+  }
+  if (issues.length) return { valid: false, issues, schedule: null, appliedDocumentIds: [] }
+
+  const rows = source.rows.map(row => ({ ...row }))
+  const raw = [...source.periodRawMaterialInventoryValue]
+  const wip = [...source.periodWipInventoryValue]
+  const cogs = [...source.periodCostOfSales]
+  const appliedDocumentIds: string[] = []
+  const stageField = (account: string): 'raw' | 'wip' | 'fg' | null => {
+    if (account === 'Inventory:raw-materials') return 'raw'
+    if (account === 'Inventory:work-in-progress') return 'wip'
+    if (account === 'Inventory:finished-goods') return 'fg'
+    return null
+  }
+  for (const document of corrections) {
+    const periodIndex = document.period - 1
+    const sign = document.documentType === 'reversal' ? -1 : 1
+    const debitStage = stageField(document.debitAccount)
+    const creditStage = stageField(document.creditAccount)
+    const debitCogs = document.debitAccount === 'Cost of Sales'
+    const creditCogs = document.creditAccount === 'Cost of Sales'
+    if ((!debitStage && !debitCogs) || (!creditStage && !creditCogs) ||
+        (debitStage === null && creditStage === null) ||
+        (debitCogs && creditCogs)) {
+      issues.push('Stage journal correction ' + document.id + ' uses unsupported accounts; only inventory-stage and Cost of Sales accounts can affect the product schedule.')
+      continue
+    }
+    const deltas = new Map<'raw' | 'wip' | 'fg', number>()
+    if (debitStage) deltas.set(debitStage, (deltas.get(debitStage) ?? 0) + sign * document.amount)
+    if (creditStage) deltas.set(creditStage, (deltas.get(creditStage) ?? 0) - sign * document.amount)
+    const cogsDelta = (debitCogs ? sign * document.amount : 0) -
+      (creditCogs ? sign * document.amount : 0)
+    const productRows = rows.filter(row => row.productId === document.productId)
+    if (!productRows.some(row => row.period === document.period)) {
+      issues.push('Stage journal correction ' + document.id + ' has no matching product schedule row.')
+      continue
+    }
+    if (Math.abs(cogsDelta) > 0 && rows.some(row => row.productId === document.productId &&
+        row.period > document.period && row.salesQuantity > 0)) {
+      issues.push('Stage journal correction ' + document.id + ' changes prior-period COGS before later sales; weighted-average inventory must be recalculated first.')
+      continue
+    }
+    for (const [stage, delta] of deltas) {
+      for (let index = periodIndex; index < raw.length; index++) {
+        const matching = rows.filter(row => row.productId === document.productId && row.period === index + 1)
+        if (!matching.length) {
+          issues.push('Stage journal correction ' + document.id + ' cannot carry ' + stage + ' inventory through missing product period ' + (index + 1) + '.')
+          break
+        }
+        if (stage === 'raw') {
+          raw[index] += delta
+          for (const row of matching) row.rawMaterialInventoryValue += delta / matching.length
+        } else if (stage === 'wip') {
+          wip[index] += delta
+          for (const row of matching) row.wipInventoryValue += delta / matching.length
+        } else {
+          for (const row of matching) {
+            row.closingInventoryValue += delta / matching.length
+            if (index > periodIndex) row.openingInventoryValue += delta / matching.length
+          }
+        }
+      }
+    }
+    if (Math.abs(cogsDelta) > 0) {
+      cogs[periodIndex] += cogsDelta
+      const matching = rows.filter(row => row.productId === document.productId && row.period === document.period)
+      for (const row of matching) {
+        row.costOfSales += cogsDelta / matching.length
+        row.grossProfit -= cogsDelta / matching.length
+        row.closingInventoryValue -= cogsDelta / matching.length
+      }
+      for (let index = periodIndex + 1; index < rows.length; index++) {
+        const row = rows[index]
+        if (row.productId === document.productId) row.openingInventoryValue -= cogsDelta
+      }
+      for (let index = periodIndex + 1; index < source.periodRevenue.length; index++) {
+        const matchingLater = rows.filter(row => row.productId === document.productId && row.period === index + 1)
+        for (const row of matchingLater) row.closingInventoryValue -= cogsDelta
+      }
+    }
+    appliedDocumentIds.push(document.id)
+  }
+  if (issues.length) return { valid: false, issues, schedule: null, appliedDocumentIds: [] }
+  for (let index = 0; index < source.periodRevenue.length; index++) {
+    if ([raw[index], wip[index], cogs[index]].some(value => !Number.isFinite(value) || value < -0.000001))
+      issues.push('Stage journal corrections create a negative or non-finite inventory/COGS balance in period ' + (index + 1) + '.')
+  }
+  for (const row of rows) {
+    if ([row.openingInventoryValue, row.closingInventoryValue, row.costOfSales, row.grossProfit,
+      row.rawMaterialInventoryValue, row.wipInventoryValue].some(value => !Number.isFinite(value) || value < -0.000001))
+      issues.push('Stage journal corrections create a negative or non-finite product balance in period ' + row.period + '.')
+  }
+  if (issues.length) return { valid: false, issues, schedule: null, appliedDocumentIds: [] }
+  const annualCount = periodFiscalYearIndexes.length ? Math.max(...periodFiscalYearIndexes) + 1 : 0
+  const annualCostOfSales = Array(annualCount).fill(0) as number[]
+  cogs.forEach((amount, index) => { annualCostOfSales[periodFiscalYearIndexes[index]] += amount })
+  return {
+    valid: true, issues: [],
+    schedule: {
+      ...source, rows, periodCostOfSales: cogs, annualCostOfSales,
+      periodRawMaterialInventoryValue: raw, periodWipInventoryValue: wip,
+      totalClosingInventoryValue: rows.reduce((sum, row) => sum + row.closingInventoryValue, 0),
+    },
+    appliedDocumentIds,
+  }
+}
