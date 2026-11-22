@@ -274,3 +274,54 @@ assert.equal(badFlow.valid,false)
 assert.ok(badFlow.issues.some(issue=>issue.includes('completed production quantity must equal')))
 
 console.log('Product schedule posts completed production from raw-material/WIP ledger and recognizes cost of sales only on sales.');
+
+
+// End-to-end accounting bridge: product schedule -> inventory working capital ->
+// periodic finance engine -> linked three-statement balance sheet.
+const financialEngine=await import(engineUrl)
+const closingFinishedGoods=flowSchedule.rows.reduce((sum,row)=>sum+row.closingInventoryValue,0)
+const closingInventory=flowSchedule.periodRawMaterialInventoryValue[0]+
+  flowSchedule.periodWipInventoryValue[0]+closingFinishedGoods
+const openingInventory=1000+0+100
+const integrated=financialEngine.calculateIntegratedPeriodicFinance({
+ periods:[periods[0]],fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+ annualRevenue:[flowSchedule.annualRevenue[0]],
+ periodRevenue:[flowSchedule.periodRevenue[0]],
+ annualVariableCost:[flowSchedule.annualCostOfSales[0]],
+ periodVariableCost:[flowSchedule.periodCostOfSales[0]],
+ annualFixedCost:[0],annualDepreciation:[0],annualFixedInvestment:[0],
+ annualPreOperatingCost:[0],annualMaintenanceCapex:[0],annualTaxRates:[0],
+ annualEquityContributions:[0],
+ workingCapitalByPeriod:[closingInventory],
+ rawMaterialsInventoryByPeriod:[flowSchedule.periodRawMaterialInventoryValue[0]],
+ workInProgressInventoryByPeriod:[flowSchedule.periodWipInventoryValue[0]],
+ finishedGoodsInventoryByPeriod:[closingFinishedGoods],
+ openingWorkingCapital:openingInventory,openingCash:0,loans:[],discountRatePercent:10,
+})
+assert.equal(integrated.valid,true,integrated.warnings.join('; '))
+assert.equal(integrated.rows.length,1)
+close(integrated.rows[0].revenue,flowSchedule.periodRevenue[0])
+close(integrated.rows[0].variableCost,flowSchedule.periodCostOfSales[0])
+close(integrated.rows[0].rawMaterialsInventory,flowSchedule.periodRawMaterialInventoryValue[0])
+close(integrated.rows[0].workInProgressInventory,flowSchedule.periodWipInventoryValue[0])
+close(integrated.rows[0].finishedGoodsInventory,closingFinishedGoods)
+close(integrated.rows[0].closingWorkingCapital,closingInventory)
+close(integrated.rows[0].changeInWorkingCapital,closingInventory-openingInventory)
+const integratedStatements=financialEngine.buildPeriodicThreeFinancialStatements(integrated,{
+ cash:0,debt:0,netFixedAssets:0,netWorkingCapital:openingInventory,
+ rawMaterialsInventory:1000,workInProgressInventory:0,finishedGoodsInventory:100,
+ paidInCapital:openingInventory,
+})
+assert.equal(integratedStatements.length,1)
+const integratedBalanceSheet=integratedStatements[0].balanceSheet
+assert.equal(integratedBalanceSheet.reconciled,true,
+  'Product-derived inventory, working-capital movement, retained earnings and cash must reconcile without a balance-sheet plug')
+close(integratedBalanceSheet.rawMaterialsInventory,flowSchedule.periodRawMaterialInventoryValue[0])
+close(integratedBalanceSheet.workInProgressInventory,flowSchedule.periodWipInventoryValue[0])
+close(integratedBalanceSheet.finishedGoodsInventory,closingFinishedGoods)
+close(integratedBalanceSheet.netWorkingCapital,closingInventory)
+close(integratedBalanceSheet.rawMaterialsInventory+integratedBalanceSheet.workInProgressInventory+
+  integratedBalanceSheet.finishedGoodsInventory+integratedBalanceSheet.otherNetWorkingCapital,
+  integratedBalanceSheet.netWorkingCapital)
+close(integratedStatements[0].movementChecks.netWorkingCapital,0)
+console.log('End-to-end product inventory, COGS, working-capital and three-statement reconciliation passed.')
