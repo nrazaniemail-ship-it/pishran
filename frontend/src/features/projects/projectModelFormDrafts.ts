@@ -311,6 +311,19 @@ export function createBlankProjectModelFinancialFormDrafts():ProjectModelFinanci
  return {cppCpsTraceItems:[],costCentres:[],wasteLedgerEntries:[],productionTransfers:[],inventoryReferenceBenchmarks:[],costCentreInventoryMovements:[],inventoryStageTransfers:[],helpDriven:createBlankHelpDrivenProjectForms(),assets:[],productionCosts:[],sales:[],workingCapital:[],loans:[],tax:createBlankProjectTaxFormDraft(),salesTaxLedger:createBlankSalesTaxLedgerFormDraft(),economic:{discountRatePercent:null,discountRateSourceReference:'',discountRateSourceVerified:false,adjustments:[],valueAddedPeriods:[]}}
 }
 
+/** Merge persisted form data with current defaults without losing newer inventory ledgers. */
+export function mergeProjectModelFinancialFormDrafts(saved?:Partial<ProjectModelFinancialFormDrafts>|null):ProjectModelFinancialFormDrafts {
+ const defaults=createBlankProjectModelFinancialFormDrafts()
+ if(!saved)return defaults
+ return {
+  ...defaults,...saved,
+  costCentreInventoryMovements:Array.isArray(saved.costCentreInventoryMovements)?saved.costCentreInventoryMovements:defaults.costCentreInventoryMovements,
+  inventoryStageTransfers:Array.isArray(saved.inventoryStageTransfers)?saved.inventoryStageTransfers:defaults.inventoryStageTransfers,
+  tax:{...defaults.tax,...saved.tax,openingLossVintages:Array.isArray(saved.tax?.openingLossVintages)?saved.tax.openingLossVintages:defaults.tax.openingLossVintages},
+  economic:{...defaults.economic,...saved.economic,adjustments:Array.isArray(saved.economic?.adjustments)?saved.economic.adjustments:defaults.economic.adjustments},
+ }
+}
+
 const hasEnteredValue=(value:unknown):boolean=>{
  if(value===null||value===undefined||value==='')return false
  if(typeof value==='boolean')return true
