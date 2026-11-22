@@ -103,14 +103,11 @@ jobs:
             # Launch without waiting for ActivityManager's verbose -W report;
             # some emulator images return an empty report despite accepting the launch.
             adb shell am start -n com.pishran.app/.MainActivity
-            app_started=false
-            for attempt in $(seq 1 30); do if adb shell pidof com.pishran.app >/dev/null 2>&1; then app_started=true; break; fi; sleep 2; done
-            if [ "$app_started" != true ]; then
-              adb logcat -d -t 500
-              exit 1
-            fi
+            sleep 10
+            adb shell pidof com.pishran.app
             adb shell dumpsys activity activities | grep -F "com.pishran.app"
-            if adb logcat -d -s AndroidRuntime:E | grep -q "FATAL EXCEPTION"; then adb logcat -d -s AndroidRuntime:E; exit 1; fi
+            adb logcat -d -s AndroidRuntime:E > /tmp/pishran-android-runtime.log
+            ! grep -q "FATAL EXCEPTION" /tmp/pishran-android-runtime.log
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
