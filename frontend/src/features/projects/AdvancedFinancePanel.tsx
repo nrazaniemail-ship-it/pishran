@@ -188,7 +188,7 @@ export default function AdvancedFinancePanel(props: Props) {
     setStageJournalLoaded(false)
     loadStageInventoryAccountingPostings(props.projectId)
       .then(store=>{if(active){setStageJournalEntries(store.entries);setStageJournalLoaded(true)}})
-      .catch(error=>{if(active){setStagePostingPersistence({status:'error',count:0,error:error instanceof Error?error.message:String(error)});setStageJournalLoaded(true)}})
+      .catch(error=>{if(active){setStagePostingPersistence({status:'error',count:0,error:error instanceof Error?error.message:String(error)})}})
     return()=>{active=false}
   },[props.projectId])
 
@@ -742,7 +742,7 @@ export default function AdvancedFinancePanel(props: Props) {
       .then(result=>{if(active){setStageJournalEntries(result.entries);setStagePostingPersistence({status:'saved',count:result.entries.length,error:''})}})
       .catch(error=>{if(active)setStagePostingPersistence({status:'error',count:0,error:error instanceof Error?error.message:String(error)})})
     return()=>{active=false}
-  },[props.projectId,stageInventoryReconciliation?.valid,stagePostingSignature])
+  },[props.projectId,stageInventoryReconciliation?.valid,stagePostingSignature,stageJournalLoaded])
   const inventoryReferenceReconciliation=useMemo(()=>{
     const benchmarks=props.productFinancialDrafts?.inventoryReferenceBenchmarks??[]
     if(!benchmarks.length||!periodicFinanceResult?.valid||!productOperatingSchedule?.valid)return null
