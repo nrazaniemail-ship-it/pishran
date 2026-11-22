@@ -500,4 +500,64 @@ assert.equal(scaledReference.rows[0].matchedFields.includes('totalInventory'),tr
 assert.ok(aggregateOnly.rows.every(row=>row.status==='incomplete'&&row.missingFields.includes('rawMaterials')&&row.missingFields.includes('cpp')))
 const changedTotal=module.reconcileInventoryReference([comfarInventory[0]],[{...comfarModel[0],totalInventory:236787.89}],0.000001,'IRR')
 assert.equal(changedTotal.rows[0].status,'mismatch','Aggregate inventory mismatch must remain visible even when component evidence is incomplete')
+
+// Three-period internal cost-centre transfers must preserve group inventory and CPP;
+// only the evidenced finished-goods consumption in period three reduces COGS/stock.
+const rollingCentreTransfers=[
+ {id:'ROLL-1-A-B',period:1,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:20,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:200},
+ {id:'ROLL-2-A-B',period:2,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+ {id:'ROLL-2-B-C',period:2,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-B',destinationCostCentreId:'CC-C',quantity:5,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:50},
+ {id:'ROLL-3-A-B',period:3,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:20,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:200},
+ {id:'ROLL-3-B-C',period:3,sourceProductId:'P1',destinationProductId:'P1',sourceCostCentreId:'CC-B',destinationCostCentreId:'CC-C',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:100},
+];
+const rollingCentreMovement=(period,costCentreId,openingQuantity,openingValue,closingQuantity,closingValue,consumptionQuantity=0,consumptionValue=0)=>({
+ period,productId:'P1',costCentreId,openingQuantity,openingValue,
+ receiptsQuantity:0,receiptsValue:0,productionQuantity:0,productionValue:0,
+ consumptionQuantity,consumptionValue,wasteQuantity:0,wasteValue:0,closingQuantity,closingValue,
+});
+const rollingCentreMovements=[
+ rollingCentreMovement(1,'CC-A',100,1000,80,800),
+ rollingCentreMovement(1,'CC-B',0,0,20,200),
+ rollingCentreMovement(1,'CC-C',0,0,0,0),
+ rollingCentreMovement(2,'CC-A',80,800,70,700),
+ rollingCentreMovement(2,'CC-B',20,200,25,250),
+ rollingCentreMovement(2,'CC-C',0,0,5,50),
+ rollingCentreMovement(3,'CC-A',70,700,50,500),
+ rollingCentreMovement(3,'CC-B',25,250,30,300,5,50),
+ rollingCentreMovement(3,'CC-C',5,50,15,150),
+];
+const rollingTransferLedger=module.validateProductionTransfers(rollingCentreTransfers,3);
+assert.equal(rollingTransferLedger.valid,true,rollingTransferLedger.issues.join('; '));
+assert.equal(rollingTransferLedger.totalSourceValue,650);
+assert.equal(rollingTransferLedger.totalDestinationValue,650);
+const rollingCentreCheck=module.reconcileCostCentreInventory(rollingCentreMovements,rollingCentreTransfers,3);
+assert.equal(rollingCentreCheck.valid,true,rollingCentreCheck.issues.join('; '));
+const rollingInventoryByPeriod=[1,2,3].map(period=>rollingCentreCheck.rows
+ .filter(row=>row.period===period).reduce((sum,row)=>sum+row.expectedClosingValue,0));
+assert.deepEqual(rollingInventoryByPeriod,[1000,1000,950],
+ 'centre-to-centre movements must conserve total finished-goods value in each period');
+const rollingTransferNetByPeriod=[1,2,3].map(period=>rollingCentreCheck.rows
+ .filter(row=>row.period===period).reduce((sum,row)=>sum+row.transferNetValue,0));
+assert.deepEqual(rollingTransferNetByPeriod,[0,0,0],
+ 'internal transfers must have zero net value at project level and must not create CPP');
+const rollingCogsByPeriod=[1,2,3].map(period=>rollingCentreMovements
+ .filter(row=>row.period===period).reduce((sum,row)=>sum+row.consumptionValue,0));
+assert.deepEqual(rollingCogsByPeriod,[0,0,50],
+ 'only the separately evidenced finished-goods consumption may enter COGS');
+assert.deepEqual(rollingInventoryByPeriod.slice(1).map((value,index)=>rollingInventoryByPeriod[index]-value),
+ [0,50],
+ 'aggregate inventory reduction must equal COGS once, without a second transfer posting');
+const rollingInventoryThreeWay=module.reconcileInventoryThreeWay(rollingInventoryByPeriod.map((finishedGoods,index)=>{
+ const period=index+1;
+ const inventory=200+100+finishedGoods;
+ const workingCapital=inventory+30-80;
+ const model={rawMaterials:200,workInProgress:100,finishedGoods,otherCurrentAssets:30,currentLiabilities:80,netWorkingCapital:workingCapital};
+ return {period,model,balanceSheet:{...model},cppCps:{rawMaterials:200,workInProgress:100,finishedGoods,totalInventory:inventory}};
+}));
+assert.equal(rollingInventoryThreeWay.valid,true,rollingInventoryThreeWay.issues.join('; '));
+assert.deepEqual(rollingInventoryThreeWay.rows.map(row=>row.inventoryModel),[1300,1300,1250]);
+assert.deepEqual(rollingInventoryThreeWay.rows.map(row=>row.inventoryCppCps),[1300,1300,1250]);
+assert.deepEqual(rollingInventoryThreeWay.rows.map(row=>row.netWorkingCapitalModel),[1250,1250,1200],
+ 'WC must reflect raw materials, WIP and transferred finished goods once, less current liabilities');
+
 console.log('Waste classification, inter-product/cost-centre transfer and three-way inventory reconciliation validations passed.')
