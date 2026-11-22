@@ -8,6 +8,7 @@ import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
 import { reconcileInventoryThreeWay, reconcileInventoryReference, reconcileStageInventoryMovements } from './inventoryControlLedgers'
+import { persistStageInventoryAccountingPostings } from './stageInventoryAccountingStore'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
 import { bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
 import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft, SalesTaxLedgerFormDraft, ValueAddedPeriodFormDraft } from './projectModelFormDrafts'
@@ -179,6 +180,7 @@ export default function AdvancedFinancePanel(props: Props) {
     discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0
   }))
   const [loaded,setLoaded]=useState(false)
+  const [stagePostingPersistence,setStagePostingPersistence]=useState<{status:'idle'|'saving'|'saved'|'error';count:number;error:string}>({status:'idle',count:0,error:''})
   useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved,workingCapitalDays:{...state.workingCapitalDays,...saved.workingCapitalDays},workingCapitalBases:{...state.workingCapitalBases,...saved.workingCapitalBases}};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const matchesLegacyDefault=Math.abs(legacyContribution-legacyWorkingCapitalEquity)<0.01;restored.equityWorkingCapitalContributions=Array(years).fill(0);if(matchesLegacyDefault){restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-legacyWorkingCapitalEquity):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??legacyWorkingCapitalEquity):0)}}if((saved.fundingStructureVersion??0)<2){const legacyDrawdowns=initialCapexSchedule.map((value,index)=>value*initialDebtShare+(index===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0));restored.loans=restored.loans.map(loan=>{const untouchedLegacyDefault=loan.label==='تسهیلات اصلی و سرمایه در گردش'&&loan.drawdowns.length===years&&loan.drawdowns.every((value,index)=>Math.abs(value-legacyDrawdowns[index])<0.01)&&Math.abs(loan.annualRate-props.costOfDebt)<0.0001&&loan.repaymentMethod==='equal-principal';return untouchedLegacyDefault?{...loan,label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(value=>value*initialDebtShare),annualRate:props.initialLoanRatePercent??props.costOfDebt,repaymentMethod:props.initialRepaymentMethod??'equal-principal'}:loan});if(props.initialWorkingCapitalEquityContribution&&restored.equityWorkingCapitalContributions.every(value=>value===0)){restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?props.initialWorkingCapitalEquityContribution!:0)}restored.fundingStructureVersion=2}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
@@ -702,6 +704,18 @@ export default function AdvancedFinancePanel(props: Props) {
     const expectedByProductPeriod=productOperatingSchedule?.valid?productOperatingSchedule.rows.map(row=>({period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales,productionQuantity:row.productionQuantity,productionCost:row.productionCost})):undefined
     return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length,0.01,stageTransfers,expectedByProductPeriod)
   },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),periodicFinanceResult,productOperatingSchedule])
+  const stagePostingSignature=JSON.stringify(stageInventoryReconciliation?.accountingPostings??[])
+  useEffect(()=>{
+    if(!stageInventoryReconciliation?.valid||!props.projectId)return
+    const postings=stageInventoryReconciliation.accountingPostings??[]
+    if(!postings.length){setStagePostingPersistence({status:'idle',count:0,error:''});return}
+    let active=true
+    setStagePostingPersistence(previous=>({...previous,status:'saving',error:''}))
+    persistStageInventoryAccountingPostings(props.projectId,postings)
+      .then(result=>{if(active)setStagePostingPersistence({status:'saved',count:result.entries.length,error:''})})
+      .catch(error=>{if(active)setStagePostingPersistence({status:'error',count:0,error:error instanceof Error?error.message:String(error)})})
+    return()=>{active=false}
+  },[props.projectId,stageInventoryReconciliation?.valid,stagePostingSignature])
   const inventoryReferenceReconciliation=useMemo(()=>{
     const benchmarks=props.productFinancialDrafts?.inventoryReferenceBenchmarks??[]
     if(!benchmarks.length||!periodicFinanceResult?.valid||!productOperatingSchedule?.valid)return null
@@ -1065,6 +1079,9 @@ export default function AdvancedFinancePanel(props: Props) {
         <p>{t('تطبیق‌های مرحله/دوره: ','Matched stage-period balances: ')}{stageInventoryReconciliation.rows.length} / {new Set((props.productFinancialDrafts?.costCentreInventoryMovements??[]).map(row=>String(row.inventoryStage)+':'+String(row.period))).size}</p>
         {!stageInventoryReconciliation.valid&&stageInventoryReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
         {stageInventoryReconciliation.valid&&<p>{t('پیش‌نمایش ثبت‌های متوازن: ','Balanced accounting posting preview: ')}{stageInventoryReconciliation.accountingPostings?.length??0} {t('سند','entries')} · {t('بدهکار','Debit')} {money(stageInventoryReconciliation.accountingDebitTotal??0)} · {t('بستانکار','Credit')} {money(stageInventoryReconciliation.accountingCreditTotal??0)}</p>}
+         {stagePostingPersistence.status==='saved'&&<p>{t('اسناد یکتا در ذخیره‌ساز محلی ثبت شده: ','Unique documents persisted locally: ')}{stagePostingPersistence.count}</p>}
+         {stagePostingPersistence.status==='saving'&&<p>{t('در حال ذخیره اسناد مرحله‌ای…','Persisting stage documents…')}</p>}
+         {stagePostingPersistence.status==='error'&&<p role="alert">{t('ذخیره اسناد مرحله‌ای ناموفق بود: ','Stage document persistence failed: ')}{stagePostingPersistence.error}</p>}
         <p>{t('انتقال بین مراحل فقط بدهکار کردن موجودی مرحله مقصد و بستانکار کردن موجودی مرحله مبدأ است؛ جمع موجودی و CPP/CPS را افزایش نمی‌دهد. بهای تمام‌شده فروش در این پیش‌نمایش با دفتر کالای ساخته‌شده تطبیق می‌شود، اما قبلاً در هزینه متغیر و صورت سود و زیان موتور مالی منظور شده و دوباره به آن افزوده نمی‌شود. این خروجی پیش‌نمایش ثبت است و هنوز به دفتر کل پایدار/ERP ارسال نمی‌شود.','Inter-stage transfers debit the destination inventory account and credit the source inventory account only; they do not increase total inventory or CPP/CPS. COGS is tied to the finished-goods subledger in this preview but is already included in the finance engine variable cost and income statement, so it is not added again. This is a posting preview, not a persistent general-ledger or ERP write.')}</p>
       </div>}
       {inventoryReferenceReconciliation&&<div className={inventoryReferenceReconciliation.valid?'fw-result':'fw-validation'} role={inventoryReferenceReconciliation.valid?'status':'alert'}>
