@@ -169,6 +169,19 @@ const wcWithManualFg = integrationModule.bindFinishedGoodsInventoryToWorkingCapi
 assert.equal(wcWithManualFg.valid, true)
 assert.deepEqual(wcWithManualFg.closingWorkingCapitalByPeriod, [25, 15],
   'Explicit finished-goods working capital must not be double counted')
+const automaticFinishedGoodsEstimate = [120, 80]
+const otherAutomaticWorkingCapital = [30, 20]
+const wcWithAutomaticFg = integrationModule.bindFinishedGoodsInventoryToWorkingCapital(
+  otherAutomaticWorkingCapital.map((amount,index)=>amount+automaticFinishedGoodsEstimate[index]),
+  bound.schedule,false,automaticFinishedGoodsEstimate
+)
+assert.equal(wcWithAutomaticFg.valid,true,wcWithAutomaticFg.issues.join('; '))
+close(wcWithAutomaticFg.closingWorkingCapitalByPeriod[0],otherAutomaticWorkingCapital[0]+p1.closingInventoryValue,
+  'Product-led finished goods must replace, not stack on top of, automatic days-coverage inventory')
+close(wcWithAutomaticFg.closingWorkingCapitalByPeriod[1],otherAutomaticWorkingCapital[1]+p2.closingInventoryValue)
+assert.deepEqual(wcWithAutomaticFg.inventoryAddedByPeriod,
+  [p1.closingInventoryValue-120,p2.closingInventoryValue-80],
+  'The inventory adjustment must be the net replacement of the estimated finished-goods allowance')
 
 // Guard the actual UI-to-engine wiring, not just the standalone calculation helpers.
 const advancedPanel = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
