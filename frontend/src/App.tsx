@@ -17,15 +17,6 @@ type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wiz
 
 type ModuleWorkspace = { id: string; moduleId: string; name: string; createdAt: string }
 
-const moduleGridSlots = [
-  { gridColumn: '3', gridRow: '1' }, { gridColumn: '5', gridRow: '1' },
-  { gridColumn: '6', gridRow: '2' }, { gridColumn: '7', gridRow: '3' },
-  { gridColumn: '7', gridRow: '5' }, { gridColumn: '6', gridRow: '6' },
-  { gridColumn: '5', gridRow: '7' }, { gridColumn: '3', gridRow: '7' },
-  { gridColumn: '2', gridRow: '6' }, { gridColumn: '1', gridRow: '5' },
-  { gridColumn: '1', gridRow: '3' }, { gridColumn: '2', gridRow: '2' },
-]
-
 const modules = [
   { id: 'MOD-01', icon: LayoutDashboard, title: 'داشبورد هوشمند مدیرعامل', enTitle: 'Executive Intelligence Dashboard', sub: 'نمای یکپارچه وضعیت و استثناهای مدیریتی', enSub: 'Unified business status and management exceptions', group: 'دید مدیریتی و سودآوری', enGroup: 'Management & Profitability' },
   { id: 'MOD-02', icon: TrendingUp, title: 'مدیریت اقتصادی و بهای تمام‌شده', enTitle: 'Steel Cost & Profitability Intelligence', sub: 'هزینه، حاشیه سود و انحراف بهای تمام‌شده', enSub: 'Cost, margin and cost variance analysis', group: 'دید مدیریتی و سودآوری', enGroup: 'Management & Profitability' },
