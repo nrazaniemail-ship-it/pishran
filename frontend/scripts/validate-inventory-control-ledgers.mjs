@@ -111,31 +111,37 @@ assert.equal(multiCentreStage.valid,true,multiCentreStage.issues.join('; '))
 assert.equal(multiCentreStage.rows.find(row=>row.period===1).ledgerClosingValue,100,
  'stage totals must aggregate distinct cost centres without duplicating inventory')
 assert.equal(multiCentreStage.rows.find(row=>row.period===2).ledgerClosingValue,80)
-const productEngineRows=[
- {period:1,productId:'RM-A',rawMaterials:30,workInProgress:0,finishedGoods:0},
- {period:1,productId:'RM-B',rawMaterials:70,workInProgress:0,finishedGoods:0},
- {period:2,productId:'RM-A',rawMaterials:20,workInProgress:0,finishedGoods:0},
- {period:2,productId:'RM-B',rawMaterials:60,workInProgress:0,finishedGoods:0},
+const finishedGoodsProducts=[
+ stageRow(1,'finished-goods','FG-A',0,0,0,0,0,0,0,0,30,30),
+ stageRow(1,'finished-goods','FG-B',0,0,0,0,0,0,0,0,70,70),
+ stageRow(2,'finished-goods','FG-A',30,30,0,0,0,0,10,10,20,20),
+ stageRow(2,'finished-goods','FG-B',70,70,0,0,0,0,10,10,60,60),
 ]
-const productStageMatched=module.reconcileStageInventoryMovements(multiCentreRaw,[
- {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
- {period:2,rawMaterials:80,workInProgress:0,finishedGoods:0},
+const productEngineRows=[
+ {period:1,productId:'FG-A',rawMaterials:0,workInProgress:0,finishedGoods:30},
+ {period:1,productId:'FG-B',rawMaterials:0,workInProgress:0,finishedGoods:70},
+ {period:2,productId:'FG-A',rawMaterials:0,workInProgress:0,finishedGoods:20},
+ {period:2,productId:'FG-B',rawMaterials:0,workInProgress:0,finishedGoods:60},
+]
+const productStageMatched=module.reconcileStageInventoryMovements(finishedGoodsProducts,[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:100},
+ {period:2,rawMaterials:0,workInProgress:0,finishedGoods:80},
 ],2,0.01,[],productEngineRows)
 assert.equal(productStageMatched.valid,true,productStageMatched.issues.join('; '))
-const productStageSwapped=module.reconcileStageInventoryMovements(multiCentreRaw,[
- {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
- {period:2,rawMaterials:80,workInProgress:0,finishedGoods:0},
-],2,0.01,[],productEngineRows.map(row=>row.productId==='RM-A'?{...row,rawMaterials:row.period===1?70:60}:{...row,rawMaterials:row.period===1?30:20}))
-assert.equal(productStageSwapped.valid,false,'matching aggregate totals must not hide inventory assigned to the wrong product')
-assert.ok(productStageSwapped.issues.some(issue=>issue.includes('product RM-A closing inventory does not match')))
-const productStageMissingProduct=module.reconcileStageInventoryMovements(multiCentreRaw.filter(row=>row.productId!=='RM-B'),[
- {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
- {period:2,rawMaterials:80,workInProgress:0,finishedGoods:0},
+const productStageSwapped=module.reconcileStageInventoryMovements(finishedGoodsProducts,[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:100},
+ {period:2,rawMaterials:0,workInProgress:0,finishedGoods:80},
+],2,0.01,[],productEngineRows.map(row=>row.productId==='FG-A'?{...row,finishedGoods:row.period===1?70:60}:{...row,finishedGoods:row.period===1?30:20}))
+assert.equal(productStageSwapped.valid,false,'matching aggregate totals must not hide finished goods assigned to the wrong product')
+assert.ok(productStageSwapped.issues.some(issue=>issue.includes('product FG-A closing inventory does not match')))
+const productStageMissingProduct=module.reconcileStageInventoryMovements(finishedGoodsProducts.filter(row=>row.productId!=='FG-B'),[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:100},
+ {period:2,rawMaterials:0,workInProgress:0,finishedGoods:80},
 ],2,0.01,[],productEngineRows)
-assert.equal(productStageMissingProduct.valid,false,'non-zero product balances cannot be omitted from the detailed stage ledger')
-const duplicateProductEngineRows=module.reconcileStageInventoryMovements(multiCentreRaw,[
- {period:1,rawMaterials:100,workInProgress:0,finishedGoods:0},
- {period:2,rawMaterials:80,workInProgress:0,finishedGoods:0},
+assert.equal(productStageMissingProduct.valid,false,'non-zero finished-goods product balances cannot be omitted from the detailed stage ledger')
+const duplicateProductEngineRows=module.reconcileStageInventoryMovements(finishedGoodsProducts,[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:100},
+ {period:2,rawMaterials:0,workInProgress:0,finishedGoods:80},
 ],2,0.01,[],[...productEngineRows,{...productEngineRows[0]}])
 assert.equal(duplicateProductEngineRows.valid,false,'duplicate product-period engine balances must not be silently overwritten')
 assert.ok(duplicateProductEngineRows.issues.some(issue=>issue.includes('invalid or duplicate period/product key')))
