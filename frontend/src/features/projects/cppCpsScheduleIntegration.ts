@@ -293,7 +293,12 @@ export function applyStageJournalCorrectionsToProductSchedule(
   if (!source.valid) issues.push('A valid base product schedule is required before applying stage journal corrections.')
   if (periodFiscalYearIndexes.length !== source.periodRevenue.length)
     issues.push('Fiscal-year indexes must match the product schedule period count.')
-  const originals = new Set(documents.filter(row => (row.documentType ?? 'original') === 'original').map(row => row.id))
+  const originalById = new Map(documents.filter(row => (row.documentType ?? 'original') === 'original').map(row => [row.id, row]))
+  const allIds = new Set<string>()
+  for (const row of documents) {
+    if (!row.id?.trim() || allIds.has(row.id)) issues.push('Stage journal document IDs must be globally unique and non-empty.')
+    allIds.add(row.id)
+  }
   const ids = new Set<string>()
   const corrections = documents.filter(row => row.documentType === 'reversal' || row.documentType === 'adjustment')
   for (const row of corrections) {
@@ -304,8 +309,11 @@ export function applyStageJournalCorrectionsToProductSchedule(
     if (!Number.isFinite(row.amount) || row.amount <= 0 || !row.productId?.trim())
       issues.push('Stage journal correction ' + row.id + ' requires a product and positive finite amount.')
     const reference = row.documentType === 'reversal' ? row.originalDocumentId : row.adjustmentOfDocumentId
-    if (!reference || !originals.has(reference))
+    const original = reference ? originalById.get(reference) : undefined
+    if (!original)
       issues.push('Stage journal correction ' + row.id + ' must reference an existing original document.')
+    else if (row.period < original.period)
+      issues.push('Stage journal correction ' + row.id + ' cannot be applied before its original document period.')
   }
   if (issues.length) return { valid: false, issues, schedule: null, appliedDocumentIds: [] }
 
