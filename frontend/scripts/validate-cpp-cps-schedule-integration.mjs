@@ -90,6 +90,55 @@ close(wipBound.schedule.periodRawMaterialInventoryValue[0], 500,
 close((wipRow.productionCost - 1000) + (wipRow.wipInventoryValue - 200), 300,
   'Incremental CPP must reconcile between completed production and closing WIP');
 
+// Two-period material CPP must roll through WIP and finished goods without posting raw-material stock twice.
+const twoPeriodMaterialSchedule = {
+  ...schedule,
+  periodRawMaterialInventoryValue: [500, 400],
+  periodWipInventoryValue: [200, 250],
+  rows: [
+    { ...schedule.rows[0], period: 1, openingInventoryQuantity: 10, openingInventoryValue: 100,
+      salesQuantity: 80, productionQuantity: 100, closingInventoryQuantity: 30,
+      productionCost: 1000, unitProductionCost: 10, weightedAverageUnitCost: 10,
+      costOfSales: 800, netSalesRevenue: 1600, completedUnits: 100,
+      hasInventoryFlow: true, wipQuantity: 10, materialEquivalentUnits: 110,
+      conversionEquivalentUnits: 0, wipInventoryValue: 200 },
+    { ...schedule.rows[1], period: 2, openingInventoryQuantity: 30, openingInventoryValue: 300,
+      salesQuantity: 90, productionQuantity: 80, closingInventoryQuantity: 20,
+      productionCost: 800, unitProductionCost: 10, weightedAverageUnitCost: 10,
+      costOfSales: 900, netSalesRevenue: 1980, completedUnits: 80,
+      hasInventoryFlow: true, wipQuantity: 5, materialEquivalentUnits: 85,
+      conversionEquivalentUnits: 0, wipInventoryValue: 250 },
+  ],
+};
+const twoPeriodMaterialLedger = ledgerModule.buildCppCpsTraceLedger([{
+  ...verifiedItem, id: 'materials-two-period', category: 'materials',
+  costCentreId: 'CC-MAT', periodAmounts: [200, 100], baseCoveredAmounts: [0, 0],
+}], 2);
+const twoPeriodMaterialBound = integrationModule.bindCppCpsTraceLedgerToProductSchedule(
+  twoPeriodMaterialSchedule, twoPeriodMaterialLedger, [0, 1]);
+assert.equal(twoPeriodMaterialBound.valid, true, twoPeriodMaterialBound.issues.join('; '));
+const [materialP1, materialP2] = twoPeriodMaterialBound.schedule.rows;
+close(materialP1.productionCost, 1000 + 200 * 100 / 110);
+close(materialP1.wipInventoryValue, 200 + 200 * 10 / 110);
+close(materialP2.openingInventoryValue, materialP1.closingInventoryValue,
+  'Finished-goods opening value must carry forward from the prior period after CPP allocation');
+close(materialP2.productionCost, 800 + 100 * 80 / 85);
+close(materialP2.wipInventoryValue, 250 + 100 * 5 / 85);
+close(twoPeriodMaterialBound.schedule.periodRawMaterialInventoryValue[0], 500);
+close(twoPeriodMaterialBound.schedule.periodRawMaterialInventoryValue[1], 400);
+close(twoPeriodMaterialBound.schedule.periodWipInventoryValue[0], materialP1.wipInventoryValue);
+close(twoPeriodMaterialBound.schedule.periodWipInventoryValue[1], materialP2.wipInventoryValue);
+close(twoPeriodMaterialBound.schedule.periodCostOfSales[0], materialP1.costOfSales);
+close(twoPeriodMaterialBound.schedule.periodCostOfSales[1], materialP2.costOfSales);
+close(twoPeriodMaterialBound.schedule.annualCostOfSales[0], materialP1.costOfSales);
+close(twoPeriodMaterialBound.schedule.annualCostOfSales[1], materialP2.costOfSales);
+const twoPeriodMaterialWc = integrationModule.bindFinishedGoodsInventoryToWorkingCapital(
+  [0, 0], twoPeriodMaterialBound.schedule, false);
+assert.equal(twoPeriodMaterialWc.valid, true, twoPeriodMaterialWc.issues.join('; '));
+close(twoPeriodMaterialWc.closingWorkingCapitalByPeriod[0], materialP1.closingInventoryValue);
+close(twoPeriodMaterialWc.closingWorkingCapitalByPeriod[1], materialP2.closingInventoryValue);
+
+
 // Shared service-centre cost is allocated using explicit product-period driver quantities.
 const twoProductSchedule = {
   ...schedule,
