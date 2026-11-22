@@ -6,6 +6,11 @@ const financePanel=await readFile(new URL('../src/features/projects/AdvancedFina
 const financialForms=await readFile(new URL('../src/features/projects/ProjectModelFinancialFormsPanel.tsx',import.meta.url),'utf8')
 assert.match(financePanel,/row\.sourceVerified===true/,'verified-only stage movement rows must enter the reconciliation gate')
 assert.match(financePanel,/const hasUnpostedStageInventoryData=Boolean/,'populated stage inventory ledgers must be detected before reporting')
+assert.match(financePanel,/const stageInventoryPreflight=useMemo/,'detailed stage ledgers must be reconciled before periodic finance calculation')
+assert.match(financePanel,/reconcileStageInventoryMovements\(movements,expectedByPeriod/,'stage ledger preflight must reconcile to product-schedule inventory totals')
+assert.match(financePanel,/finishedGoodsCostOfSales:row\.costOfSales/,'stage ledger preflight must reconcile finished-goods cost of sales to the product schedule')
+assert.match(financePanel,/The detailed ledger does not add a second CPP\/CPS charge/,'stage-ledger controls must not add a second CPP/CPS charge')
+
 assert.match(financePanel,/periodicFinanceResult\?\.valid&&!hasUnpostedStageInventoryData\?buildPeriodicThreeFinancialStatements/,'periodic three-statement output must be blocked while detailed stage ledgers are unposted')
 assert.match(financePanel,/periodicFinanceResult\?\.valid&&!hasUnpostedStageInventoryData\?<div className="fw-card">/,'periodic financial report tables must be hidden while detailed stage ledgers are unposted')
 assert.match(financePanel,/!salesTaxLedgerActive&&!hasUnpostedStageInventoryData\?calculatePeriodicSensitivityMatrix/,'sensitivity must be disabled while detailed stage ledgers are unposted')
