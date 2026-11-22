@@ -125,3 +125,18 @@ A separate persisted transfer register now records movement between raw material
 - Invalid, incomplete or unverified transfers fail reconciliation and remain report blockers.
 
 Finished-goods movement rows now distinguish product sales quantity and cost-of-goods-sold value from other consumption/issues. These amounts are checked product-by-product against the product operating schedule; revenue is not substituted for COGS. A non-zero finished-goods sale cannot be omitted merely because closing inventory is zero, and sales fields are prohibited on raw-material and WIP rows. Regression coverage now includes the complete raw-materials → WIP → finished-goods chain with unit conversion in both transfers, proving that the transferred value is relocated across all three stages without increasing total inventory value. The current bridge validates these movements against the existing engine balances. It does not yet create or post the underlying production conversion entries, nor does it automatically infer transfers from CPP/CPS source lines.
+
+## Append-only correction documents in the periodic finance bridge
+
+The stage journal remains a local append-only subledger, not an ERP/general-ledger integration. The periodic finance panel now recovers that journal before calculating the product schedule and applies only persisted `reversal` and `adjustment` documents. `original` documents are deliberately excluded from the correction overlay because their operational values are already represented by the product/inventory schedules.
+
+- A reversal row is applied using its own recorded debit/credit direction. The reversal writer has already swapped the original accounts; the schedule adapter must not invert it a second time.
+- An adjustment row represents only the incremental difference to post, not a replacement total. It is applied once in its own period.
+- `Inventory:raw-materials`, `Inventory:work-in-progress` and `Inventory:finished-goods` are mapped to the matching stage balances. Stage-to-stage movements reclassify value and preserve consolidated inventory, CPP/CPS and net working capital.
+- `Cost of Sales` paired with `Inventory:finished-goods` updates period COGS and finished-goods inventory once. That feeds the periodic finance engine's variable cost, working-capital schedule, income statement, cash flow and balance sheet; the journal is not added again to those outputs.
+- Inventory value deltas carry forward from their effective period to subsequent period closing balances. COGS corrections in a period with no finished-goods sales are rejected. A prior-period COGS correction is also blocked when later-period sales exist, until a weighted-average revaluation path is available; this avoids silently leaving later COGS understated or overstated.
+- Unsupported account combinations, missing product-period rows, missing original references, invalid periods and negative resulting balances block the schedule rather than being guessed or plugged.
+
+The three-period regression fixture proves a period-2 raw-material/WIP reversal reclassifies stage values without changing consolidated inventory or WC, and a period-3 incremental COGS adjustment increases COGS by the difference and reduces finished goods/WC by the same amount. The resulting periodic engine and all three statements are checked for the same period-specific effects and balance-sheet reconciliation.
+
+IndexedDB transaction/recovery and localStorage fallback tests remain separate persistence tests. The current IndexedDB test uses a transaction simulator and module reload; it is not a browser/device IndexedDB acceptance test. This bridge still does not create a general ledger, post to ERP, or infer unsupported cost-account semantics.
