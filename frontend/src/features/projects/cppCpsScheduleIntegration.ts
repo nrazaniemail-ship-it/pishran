@@ -352,6 +352,11 @@ export function applyStageJournalCorrectionsToProductSchedule(
       issues.push('Stage journal correction ' + document.id + ' has no matching product schedule row.')
       continue
     }
+    if (Math.abs(cogsDelta) > 0 && productRows.filter(row => row.period === document.period)
+        .reduce((sum, row) => sum + row.salesQuantity, 0) <= 0) {
+      issues.push('Stage journal correction ' + document.id + ' changes COGS in a period without finished-goods sales.')
+      continue
+    }
     if (Math.abs(cogsDelta) > 0 && rows.some(row => row.productId === document.productId &&
         row.period > document.period && row.salesQuantity > 0)) {
       issues.push('Stage journal correction ' + document.id + ' changes prior-period COGS before later sales; weighted-average inventory must be recalculated first.')
@@ -384,6 +389,7 @@ export function applyStageJournalCorrectionsToProductSchedule(
       for (const row of matching) {
         row.costOfSales += cogsDelta / matching.length
         row.grossProfit -= cogsDelta / matching.length
+        row.weightedAverageUnitCost += cogsDelta / Math.max(1, matching.reduce((sum, item) => sum + item.salesQuantity, 0))
       }
     }
     appliedDocumentIds.push(document.id)
