@@ -302,6 +302,18 @@ export function applyStageJournalCorrectionsToProductSchedule(
   }
   const ids = new Set<string>()
   const corrections = documents.filter(row => row.documentType === 'reversal' || row.documentType === 'adjustment')
+  const correctionTypesByOriginal = new Map<string, Set<StageJournalCorrection['documentType']>>()
+  for (const row of corrections) {
+    const reference = row.documentType === 'reversal' ? row.originalDocumentId : row.adjustmentOfDocumentId
+    if (!reference) continue
+    const types = correctionTypesByOriginal.get(reference) ?? new Set<StageJournalCorrection['documentType']>()
+    types.add(row.documentType)
+    correctionTypesByOriginal.set(reference, types)
+  }
+  for (const [originalId, types] of correctionTypesByOriginal) {
+    if (types.has('reversal') && types.has('adjustment'))
+      issues.push('Original stage journal document ' + originalId + ' cannot have both a reversal and an adjustment; mixed correction chains are blocked.')
+  }
   for (const row of corrections) {
     if (!row.id?.trim() || ids.has(row.id)) issues.push('Stage journal correction IDs must be unique and non-empty.')
     ids.add(row.id)
