@@ -511,8 +511,10 @@ export function reconcileInventoryThreeWay(periods:InventoryReconciliationPeriod
   // for other net current accounts when gross receivables/payables are not evidenced.
   // Inventory balances and actual current liabilities remain non-negative.
   for(const [label,values] of groups)for(const [field,value] of Object.entries(values)){
-   if(!Number.isFinite(value)||(field!=='otherCurrentAssets'&&value<0))
-    issues.push('Period '+p.period+' '+label+' '+field+' must be a finite amount (inventory and liability balances must be non-negative).')
+   if(!Number.isFinite(value))
+    issues.push('Period '+p.period+' '+label+' '+field+' must be a finite amount.')
+   else if(field!=='otherCurrentAssets'&&value<0)
+    issues.push('Period '+p.period+' '+label+' '+field+' must be a finite non-negative amount.')
   }
   const mi=p.model.rawMaterials+p.model.workInProgress+p.model.finishedGoods
   const bi=p.balanceSheet.rawMaterials+p.balanceSheet.workInProgress+p.balanceSheet.finishedGoods
