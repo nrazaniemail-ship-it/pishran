@@ -291,8 +291,9 @@ export function applyStageJournalCorrectionsToProductSchedule(
 ): StageJournalScheduleBinding {
   const issues: string[] = []
   if (!source.valid) issues.push('A valid base product schedule is required before applying stage journal corrections.')
-  if (periodFiscalYearIndexes.length !== source.periodRevenue.length)
-    issues.push('Fiscal-year indexes must match the product schedule period count.')
+  if (periodFiscalYearIndexes.length !== source.periodRevenue.length ||
+      periodFiscalYearIndexes.some(index => !Number.isInteger(index) || index < 0))
+    issues.push('Fiscal-year indexes must be non-negative integers matching the product schedule period count.')
   const originalById = new Map(documents.filter(row => (row.documentType ?? 'original') === 'original').map(row => [row.id, row]))
   const allIds = new Set<string>()
   for (const row of documents) {
@@ -312,8 +313,16 @@ export function applyStageJournalCorrectionsToProductSchedule(
     const original = reference ? originalById.get(reference) : undefined
     if (!original)
       issues.push('Stage journal correction ' + row.id + ' must reference an existing original document.')
-    else if (row.period < original.period)
-      issues.push('Stage journal correction ' + row.id + ' cannot be applied before its original document period.')
+    else {
+      if (row.period < original.period)
+        issues.push('Stage journal correction ' + row.id + ' cannot be applied before its original document period.')
+      if (row.productId !== original.productId || row.kind !== original.kind)
+        issues.push('Stage journal correction ' + row.id + ' must retain the original product and document kind.')
+      if (row.documentType === 'reversal' &&
+          (row.amount !== original.amount || row.debitAccount !== original.creditAccount ||
+           row.creditAccount !== original.debitAccount))
+        issues.push('Reversal document ' + row.id + ' must exactly reverse the original amount and debit/credit accounts.')
+    }
   }
   if (issues.length) return { valid: false, issues, schedule: null, appliedDocumentIds: [] }
 
