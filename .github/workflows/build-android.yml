@@ -100,9 +100,9 @@ jobs:
           script: |
             adb install -r frontend/android/app/build/outputs/apk/debug/app-debug.apk
             adb logcat -c
-            launch_output="$(adb shell am start -W -n com.pishran.app/com.pishran.app.MainActivity)"
-            printf '%s\n' "$launch_output"
-            printf '%s\n' "$launch_output" | grep -q "Status: ok"
+            # Launch without waiting for ActivityManager's verbose -W report;
+            # some emulator images return an empty report despite accepting the launch.
+            adb shell am start -n com.pishran.app/.MainActivity
             app_started=false
             for attempt in $(seq 1 30); do
               if adb shell pidof com.pishran.app >/dev/null 2>&1; then
