@@ -322,6 +322,9 @@ export function applyStageJournalCorrectionsToProductSchedule(
           (row.amount !== original.amount || row.debitAccount !== original.creditAccount ||
            row.creditAccount !== original.debitAccount))
         issues.push('Reversal document ' + row.id + ' must exactly reverse the original amount and debit/credit accounts.')
+      if (row.documentType === 'adjustment' &&
+          (row.debitAccount !== original.debitAccount || row.creditAccount !== original.creditAccount))
+        issues.push('Adjustment document ' + row.id + ' must retain the original debit and credit accounts; use a reversal for an opposite-direction correction.')
     }
   }
   if (issues.length) return { valid: false, issues, schedule: null, appliedDocumentIds: [] }
