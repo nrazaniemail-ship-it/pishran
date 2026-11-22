@@ -200,3 +200,97 @@ function empty(issues: string[]): InventoryFlowSchedule {
     totalCompletedProductionCost:0,closingRawMaterialQuantity:null,closingRawMaterialValue:null,
     closingWipQuantity:null,closingWipValue:null}
 }
+
+
+export type ProductionStageTransferLink = {
+  sourceProductId: string
+  destinationProductId: string
+  sourceCostCentreId: string
+  destinationCostCentreId: string
+  sourceUnit: string
+  destinationUnit: string
+  conversionFactor: number
+}
+export type ProductionStageTransferEvidence = {
+  period: number
+  sourceReference: string
+  sourceVerified: boolean
+  rawMaterialsToWip: ProductionStageTransferLink
+  wipToFinishedGoods: ProductionStageTransferLink
+}
+
+/**
+ * Builds auditable stage-transfer drafts from a validated production-flow schedule.
+ * All product, centre, unit and evidence identities must be supplied explicitly;
+ * the function never guesses a BOM, cost centre, unit conversion or source reference.
+ * Transfers are reclassifications only: callers must not add their values again to
+ * CPP/CPS, COGS, working capital or the three financial statements.
+ */
+export function buildProductionStageTransferDrafts(
+  schedule: InventoryFlowSchedule,
+  evidenceByPeriod: ProductionStageTransferEvidence[],
+): InventoryStageTransfer[] {
+  const issues: string[] = []
+  if (!schedule.valid || !schedule.rows.length)
+    issues.push('A valid non-empty inventory production-flow schedule is required before stage-transfer drafts can be built.')
+  if (evidenceByPeriod.length !== schedule.rows.length)
+    issues.push('Explicit source evidence and stage identities are required for every production period.')
+  const byPeriod = new Map<number, ProductionStageTransferEvidence>()
+  for (const evidence of evidenceByPeriod) {
+    if (!Number.isInteger(evidence.period) || evidence.period < 1 ||
+        evidence.period > schedule.rows.length || byPeriod.has(evidence.period))
+      issues.push('Production stage-transfer evidence contains an invalid or duplicate period.')
+    byPeriod.set(evidence.period, evidence)
+    if (!evidence.sourceReference?.trim() || evidence.sourceVerified !== true)
+      issues.push('Every production stage transfer requires a verified source reference.')
+    for (const [name, link] of [['raw-materials to WIP', evidence.rawMaterialsToWip],
+                                ['WIP to finished goods', evidence.wipToFinishedGoods]] as const) {
+      if (!link || !link.sourceProductId?.trim() || !link.destinationProductId?.trim() ||
+          !link.sourceCostCentreId?.trim() || !link.destinationCostCentreId?.trim() ||
+          !link.sourceUnit?.trim() || !link.destinationUnit?.trim() ||
+          !Number.isFinite(link.conversionFactor) || link.conversionFactor <= 0) {
+        issues.push('The ' + name + ' link in period ' + evidence.period +
+          ' requires explicit product, cost-centre, unit and positive conversion-factor data.')
+        continue
+      }
+      if (link.sourceProductId === link.destinationProductId &&
+          link.sourceCostCentreId === link.destinationCostCentreId)
+        issues.push('The ' + name + ' link in period ' + evidence.period +
+          ' must identify distinct source and destination inventory locations.')
+      if (link.sourceUnit === link.destinationUnit && Math.abs(link.conversionFactor - 1) > 1e-9)
+        issues.push('Identical units in period ' + evidence.period + ' require a conversion factor of 1.')
+    }
+  }
+  if (issues.length) throw new Error(issues.join(' '))
+  const drafts: InventoryStageTransfer[] = []
+  for (const row of schedule.rows) {
+    const evidence = byPeriod.get(row.period) as ProductionStageTransferEvidence
+    const links = [
+      { key: 'raw-to-wip', sourceStage: 'raw-materials' as const, destinationStage: 'work-in-progress' as const,
+        link: evidence.rawMaterialsToWip, quantity: row.consumptionQuantity + row.normalWasteQuantity,
+        value: row.consumptionValue + row.normalWasteValue },
+      { key: 'wip-to-finished-goods', sourceStage: 'work-in-progress' as const, destinationStage: 'finished-goods' as const,
+        link: evidence.wipToFinishedGoods, quantity: row.unitsCompleted, value: row.completedProductionCost },
+    ]
+    for (const transfer of links) {
+      if (transfer.quantity <= 0) {
+        if (transfer.value > 1e-7)
+          throw new Error('Period ' + row.period + ' ' + transfer.key +
+            ' has a positive transfer value without a positive physical quantity.')
+        continue
+      }
+      drafts.push({
+        id: 'production-bridge:' + row.period + ':' + transfer.key + ':' +
+          transfer.link.sourceProductId + '@' + transfer.link.sourceCostCentreId + '->' +
+          transfer.link.destinationProductId + '@' + transfer.link.destinationCostCentreId,
+        period: row.period, sourceStage: transfer.sourceStage, destinationStage: transfer.destinationStage,
+        sourceProductId: transfer.link.sourceProductId, destinationProductId: transfer.link.destinationProductId,
+        sourceCostCentreId: transfer.link.sourceCostCentreId, destinationCostCentreId: transfer.link.destinationCostCentreId,
+        quantity: transfer.quantity, sourceUnit: transfer.link.sourceUnit, destinationUnit: transfer.link.destinationUnit,
+        conversionFactor: transfer.link.conversionFactor, transferValue: transfer.value,
+        sourceReference: evidence.sourceReference, sourceVerified: true,
+      })
+    }
+  }
+  return drafts
+}
