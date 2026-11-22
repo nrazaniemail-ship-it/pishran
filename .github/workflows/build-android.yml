@@ -100,9 +100,21 @@ jobs:
           script: |
             adb install -r frontend/android/app/build/outputs/apk/debug/app-debug.apk
             adb logcat -c
-            adb shell monkey -p com.pishran.app 1
-            sleep 5
-            adb shell pidof com.pishran.app
+            launch_output="$(adb shell am start -W -n com.pishran.app/com.pishran.app.MainActivity)"
+            printf '%s\n' "$launch_output"
+            printf '%s\n' "$launch_output" | grep -q "Status: ok"
+            app_started=false
+            for attempt in $(seq 1 30); do
+              if adb shell pidof com.pishran.app >/dev/null 2>&1; then
+                app_started=true
+                break
+              fi
+              sleep 2
+            done
+            if [ "$app_started" != true ]; then
+              adb logcat -d -t 500
+              exit 1
+            fi
             adb shell dumpsys activity activities | grep -F "com.pishran.app"
             if adb logcat -d -s AndroidRuntime:E | grep -q "FATAL EXCEPTION"; then adb logcat -d -s AndroidRuntime:E; exit 1; fi
 
