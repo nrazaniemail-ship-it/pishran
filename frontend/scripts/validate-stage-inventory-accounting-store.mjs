@@ -254,8 +254,10 @@ globalThis.indexedDB = {
     const request = new FakeRequest()
     setTimeout(() => {
       let db = databases.get(name)
-      if (!db) { db = new FakeDatabase(name); databases.set(name, db); request.onupgradeneeded?.() }
+      const isNew = !db
+      if (!db) { db = new FakeDatabase(name); databases.set(name, db) }
       request.result = db
+      if (isNew) request.onupgradeneeded?.()
       request.onsuccess?.()
     }, 0)
     return request
