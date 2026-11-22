@@ -223,6 +223,15 @@ const crossProductAdjustment = integrationModule.applyStageJournalCorrectionsToP
 )
 assert.equal(crossProductAdjustment.valid, false)
 assert.ok(crossProductAdjustment.issues.some(issue => issue.includes('original product')))
+const wrongDirectionAdjustment = integrationModule.applyStageJournalCorrectionsToProductSchedule(
+  bound.schedule,
+  [...journalDocuments, { ...journalDocuments[3], id: 'ADJ-WRONG-ACCOUNTS',
+    debitAccount: 'Inventory:finished-goods', creditAccount: 'Cost of Sales' }],
+  [0, 1, 2],
+)
+assert.equal(wrongDirectionAdjustment.valid, false)
+assert.ok(wrongDirectionAdjustment.issues.some(issue => issue.includes('original debit and credit accounts')),
+  'A positive incremental adjustment must not silently reverse the original accounting direction')
 
 const correctedSchedule = journalBinding.schedule
 assert.ok(correctedSchedule)
