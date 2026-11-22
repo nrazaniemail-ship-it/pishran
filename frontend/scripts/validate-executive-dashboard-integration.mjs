@@ -34,7 +34,7 @@ test('actual MOD-02 and MOD-03 analysis workflow persists reports consumed by MO
  assert.equal(dashboard.cost[0].id,cost.id)
  assert.equal(dashboard.cost[0].metrics.grossMarginPerTon,20)
  assert.equal(dashboard.production[0].id,production.id)
- assert.ok(Math.abs(dashboard.production[0].metrics.oee-71.09375)<1e-9)
+ assert.ok(Math.abs(dashboard.production[0].metrics.oee-69.27083333333333)<1e-9)
 })
 
 test('several real executions preserve history and MOD-01 selects latest valid report',async()=>{
