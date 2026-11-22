@@ -232,6 +232,17 @@ const wrongDirectionAdjustment = integrationModule.applyStageJournalCorrectionsT
 assert.equal(wrongDirectionAdjustment.valid, false)
 assert.ok(wrongDirectionAdjustment.issues.some(issue => issue.includes('original debit and credit accounts')),
   'A positive incremental adjustment must not silently reverse the original accounting direction')
+const mixedCorrectionChain = integrationModule.applyStageJournalCorrectionsToProductSchedule(
+  bound.schedule,
+  [...journalDocuments,
+    { ...journalDocuments[2], id: 'REV-COGS-003', originalDocumentId: journalDocuments[3].id,
+      debitAccount: journalDocuments[3].creditAccount, creditAccount: journalDocuments[3].debitAccount },
+  ],
+  [0, 1, 2],
+)
+assert.equal(mixedCorrectionChain.valid, false)
+assert.ok(mixedCorrectionChain.issues.some(issue => issue.includes('both a reversal and an adjustment')),
+  'An original journal cannot receive both an incremental adjustment and a reversal')
 
 const correctedSchedule = journalBinding.schedule
 assert.ok(correctedSchedule)
