@@ -218,7 +218,7 @@ export function reconcileStageInventoryMovements(
  periodCount:number,
  tolerance=0.01,
  stageTransfers:InventoryStageTransfer[]=[],
- expectedByProductPeriod?:{period:number;productId:string;rawMaterials:number;workInProgress:number;finishedGoods:number;finishedGoodsSalesQuantity?:number;finishedGoodsCostOfSales?:number}[]
+ expectedByProductPeriod?:{period:number;productId:string;rawMaterials:number;workInProgress:number;finishedGoods:number;finishedGoodsSalesQuantity?:number;finishedGoodsCostOfSales?:number;productionQuantity?:number;productionCost?:number}[]
 ):StageInventoryReconciliationResult{
  const issues:string[]=[]
  for(const row of movements){
@@ -310,17 +310,18 @@ export function reconcileStageInventoryMovements(
    issues.push('Stage inventory engine values must be finite and non-negative.')
   expected.set(row.period,{rawMaterials:row.rawMaterials,workInProgress:row.workInProgress,finishedGoods:row.finishedGoods})
  }
- const expectedProductRows=new Map<string,{rawMaterials:number;workInProgress:number;finishedGoods:number;finishedGoodsSalesQuantity?:number;finishedGoodsCostOfSales?:number}>()
+ const expectedProductRows=new Map<string,{rawMaterials:number;workInProgress:number;finishedGoods:number;finishedGoodsSalesQuantity?:number;finishedGoodsCostOfSales?:number;productionQuantity?:number;productionCost?:number}>()
  for(const row of expectedByProductPeriod??[]){
   const key=[row.period,row.productId.trim()].join(':')
   if(!Number.isInteger(row.period)||row.period<1||row.period>periodCount||!row.productId.trim()||expectedProductRows.has(key))
    issues.push('Product-level inventory engine values contain an invalid or duplicate period/product key.')
   if([row.rawMaterials,row.workInProgress,row.finishedGoods].some(value=>!finite(value)))
    issues.push('Product-level inventory engine values must be finite and non-negative.')
-  if([row.finishedGoodsSalesQuantity,row.finishedGoodsCostOfSales].some(value=>value!==undefined&&(!Number.isFinite(value)||value<0)))
-   issues.push('Product-level finished-goods sales quantity and cost of sales must be finite and non-negative when supplied.')
+  if([row.finishedGoodsSalesQuantity,row.finishedGoodsCostOfSales,row.productionQuantity,row.productionCost].some(value=>value!==undefined&&(!Number.isFinite(value)||value<0)))
+   issues.push('Product-level production, finished-goods sales quantity and cost of sales must be finite and non-negative when supplied.')
   expectedProductRows.set(key,{rawMaterials:row.rawMaterials,workInProgress:row.workInProgress,finishedGoods:row.finishedGoods,
-   finishedGoodsSalesQuantity:row.finishedGoodsSalesQuantity,finishedGoodsCostOfSales:row.finishedGoodsCostOfSales})
+   finishedGoodsSalesQuantity:row.finishedGoodsSalesQuantity,finishedGoodsCostOfSales:row.finishedGoodsCostOfSales,
+   productionQuantity:row.productionQuantity,productionCost:row.productionCost})
  }
  const rows:StageInventoryReconciliationResult['rows']=[]
  for(const stage of stages){
@@ -383,11 +384,18 @@ export function reconcileStageInventoryMovements(
    if(expectedByProductPeriod){
     const ledgerByProduct=new Map<string,number>()
     const ledgerSalesByProduct=new Map<string,{quantity:number;cost:number}>()
+    const ledgerProductionByProduct=new Map<string,{quantity:number;value:number}>()
     for(const row of periodRows){
      const productId=row.productId.trim()
      ledgerByProduct.set(productId,(ledgerByProduct.get(productId)??0)+(row.closingValue??0))
      const sales=ledgerSalesByProduct.get(productId)??{quantity:0,cost:0}
      sales.quantity+=row.salesQuantity??0;sales.cost+=row.salesCostValue??0;ledgerSalesByProduct.set(productId,sales)
+     if(stage==='finished-goods'){
+      const production=ledgerProductionByProduct.get(productId)??{quantity:0,value:0}
+      production.quantity+=(row.productionQuantity??0)
+      production.value+=(row.productionValue??0)
+      ledgerProductionByProduct.set(productId,production)
+     }
     }
     for(const [key,engineProduct] of expectedProductRows){
      if(!key.startsWith(period+':'))continue
@@ -397,18 +405,25 @@ export function reconcileStageInventoryMovements(
      if(!near(ledgerValue,engineProduct[field],tolerance/100))
       issues.push('Stage '+stage+' product '+productId+' closing inventory does not match the finance engine in period '+period+'.')
      if(stage==='finished-goods'){
+      const production=ledgerProductionByProduct.get(productId)??{quantity:0,value:0}
+      if(engineProduct.productionQuantity!==undefined&&!near(production.quantity,engineProduct.productionQuantity,tolerance/100))
+       issues.push('Finished-goods product '+productId+' production quantity does not match the product operating schedule in period '+period+'.')
+      if(engineProduct.productionCost!==undefined&&!near(production.value,engineProduct.productionCost,tolerance/100))
+       issues.push('Finished-goods product '+productId+' production value does not match the product operating schedule in period '+period+'.')
       const sales=ledgerSalesByProduct.get(productId)??{quantity:0,cost:0}
       if(engineProduct.finishedGoodsSalesQuantity!==undefined&&!near(sales.quantity,engineProduct.finishedGoodsSalesQuantity,tolerance/100))
        issues.push('Finished-goods product '+productId+' sales quantity does not match the product operating schedule in period '+period+'.')
       if(engineProduct.finishedGoodsCostOfSales!==undefined&&!near(sales.cost,engineProduct.finishedGoodsCostOfSales,tolerance/100))
        issues.push('Finished-goods product '+productId+' cost of sales does not match the product operating schedule in period '+period+'.')
       ledgerSalesByProduct.delete(productId)
+      ledgerProductionByProduct.delete(productId)
      }
      ledgerByProduct.delete(productId)
     }
     for(const [productId,ledgerValue] of ledgerByProduct){
      const sales=ledgerSalesByProduct.get(productId)??{quantity:0,cost:0}
-     if(ledgerValue>tolerance/100||sales.quantity>tolerance/100||sales.cost>tolerance/100)
+     const production=ledgerProductionByProduct.get(productId)??{quantity:0,value:0}
+     if(ledgerValue>tolerance/100||sales.quantity>tolerance/100||sales.cost>tolerance/100||production.quantity>tolerance/100||production.value>tolerance/100)
       issues.push('Stage '+stage+' product '+productId+' has no matching product-level finance-engine inventory row in period '+period+'.')
     }
    }
