@@ -218,7 +218,6 @@ export default function App() {
               return <button key={item.id} type="button" className={`dashboard-module-hex dashboard-module-hex-${index}`} onClick={() => openModule(item.id)} aria-label={`${item.id} ${isEn ? item.enTitle : item.title}`}>
                 <ModuleIcon aria-hidden="true" />
                 <span>{isEn ? item.enTitle : item.title}</span>
-                <small>{item.id}</small>
               </button>
             })}
             <div className="dashboard-honeycomb-core">
