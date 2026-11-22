@@ -322,14 +322,15 @@ export function applyStageJournalCorrectionsToProductSchedule(
   }
   for (const document of corrections) {
     const periodIndex = document.period - 1
-    const sign = document.documentType === 'reversal' ? -1 : 1
+    const sign = 1 // reversal rows already contain the inverse debit/credit direction
     const debitStage = stageField(document.debitAccount)
     const creditStage = stageField(document.creditAccount)
     const debitCogs = document.debitAccount === 'Cost of Sales'
     const creditCogs = document.creditAccount === 'Cost of Sales'
-    if ((!debitStage && !debitCogs) || (!creditStage && !creditCogs) ||
-        (debitStage === null && creditStage === null) ||
-        (debitCogs && creditCogs)) {
+    const supportedStageTransfer = document.kind === 'stage-transfer' && Boolean(debitStage && creditStage)
+    const supportedCogsCorrection = document.kind === 'cost-of-sales' && Boolean(debitCogs !== creditCogs) &&
+      ((debitCogs && creditStage === 'fg') || (creditCogs && debitStage === 'fg'))
+    if (!supportedStageTransfer && !supportedCogsCorrection) {
       issues.push('Stage journal correction ' + document.id + ' uses unsupported accounts; only inventory-stage and Cost of Sales accounts can affect the product schedule.')
       continue
     }
