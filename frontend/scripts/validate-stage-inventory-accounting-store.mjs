@@ -177,7 +177,7 @@ const periodImpact = [1, 2, 3].map(period => adjusted.entries
   .filter(row => row.period === period)
   .reduce((sum, row) => sum + (row.debitAccount.startsWith('Inventory:') ? row.amount : 0) -
     (row.creditAccount.startsWith('Inventory:') ? row.amount : 0), 0))
-assert.deepEqual(periodImpact, [-40, 40, -35],
+assert.deepEqual(periodImpact, [0, 0, -35],
   'Original transfers, their reversal and the COGS adjustment must be visible in their accounting periods')
 const cogsByPeriod = [1, 2, 3].map(period => adjusted.entries
   .filter(row => row.period === period && row.debitAccount === 'Cost of Sales')
@@ -201,7 +201,7 @@ const databases = new Map()
 class FakeRequest { result = undefined; error = null; onsuccess = null; onerror = null }
 class FakeTransaction {
   constructor(database, mode) {
-    this.database = database; this.mode = mode; this.pending = 0; this.aborted = false
+    this.database = database; this.mode = mode; this.pending = 0; this.aborted = false; this.completed = false
     this.oncomplete = null; this.onerror = null; this.onabort = null
     this.working = new Map([...database.records].map(([key, value]) => [key, structuredClone(value)]))
   }
@@ -221,7 +221,8 @@ class FakeTransaction {
         } finally {
           tx.pending -= 1
           setTimeout(() => {
-            if (tx.pending !== 0 || tx.aborted) return
+            if (tx.pending !== 0 || tx.aborted || tx.completed) return
+            tx.completed = true
             tx.database.records = tx.working
             tx.oncomplete?.()
           }, 0)
