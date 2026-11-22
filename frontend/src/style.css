@@ -1478,3 +1478,25 @@ input,select,textarea{color:var(--text)}
   .module-workspace-hero{padding:18px;align-items:flex-start}
   .module-create-form>div{flex-direction:column}
 }
+
+
+.module-intelligence{background:var(--surface,#fff);border:1px solid var(--border,#dce3ea);border-radius:18px;padding:22px;margin:18px 0;box-shadow:0 8px 24px rgba(25,45,70,.05)}
+.module-intelligence-intro p{color:var(--muted,#64748b);margin:8px 0 18px;line-height:1.8}
+.module-intelligence-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.module-intelligence-fields label{display:flex;flex-direction:column;gap:7px;font-size:13px;color:var(--text,#263445)}
+.module-intelligence-fields input{width:100%;min-width:0;border:1px solid var(--border,#cbd5e1);border-radius:10px;padding:11px 12px;background:#fff;color:#172334;font:inherit}
+.module-intelligence-fields input:focus{outline:2px solid rgba(40,115,170,.22);border-color:#3984b5}
+.module-intelligence-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:18px}
+.module-intelligence-actions small{color:var(--muted,#64748b)}
+.module-intelligence-error{color:#b42318;background:#fff1f0;padding:10px 12px;border-radius:9px}
+.module-analysis-report{margin-top:20px;padding:18px;border:1px solid #a8c9b8;background:#f4faf6;border-radius:14px}
+.module-analysis-report h3,.module-analysis-history h3{margin:0 0 14px}
+.module-analysis-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:12px}
+.module-analysis-metrics article{background:#fff;border:1px solid #dce8df;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.module-analysis-metrics small{color:#526477;line-height:1.5}
+.module-analysis-metrics b{font-size:20px;color:#183d31;font-variant-numeric:tabular-nums}
+.module-analysis-history{margin-top:20px}
+.module-analysis-history>button{width:100%;display:flex;justify-content:space-between;gap:12px;padding:11px 4px;border:0;border-bottom:1px solid var(--border,#e2e8f0);background:transparent;color:inherit;text-align:start;cursor:pointer}
+.module-analysis-history>p{color:var(--muted,#64748b)}
+@media(max-width:760px){.module-intelligence{padding:16px}.module-intelligence-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:460px){.module-intelligence-fields{grid-template-columns:1fr}}
