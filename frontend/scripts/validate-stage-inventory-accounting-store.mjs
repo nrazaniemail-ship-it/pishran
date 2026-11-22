@@ -139,6 +139,15 @@ await assert.rejects(
   restoredModule.appendStageInventoryAccountingReversal(projectId, 'REV-TRANSFER-001', 'REV-REVERSAL', 3),
   /Only an existing original/,
 )
+await assert.rejects(
+  restoredModule.appendStageInventoryAccountingAdjustment(projectId, postings[0].id, {
+    id: 'ADJ-AFTER-REVERSAL', period: 2, kind: 'stage-transfer', productId: 'DRI',
+    sourceReference: 'ADJUST:TRANSFER-001', debitAccount: 'Inventory:work-in-progress',
+    creditAccount: 'Inventory:raw-materials', amount: 2,
+  }),
+  /already been reversed/,
+  'A reversed original must not also accept a separate incremental adjustment',
+)
 const adjustmentPosting = {
   id: 'ADJ-SALE-003', period: 3, kind: 'cost-of-sales', productId: 'SLAB',
   sourceReference: 'ADJUST:SALE-003', debitAccount: 'Cost of Sales',
@@ -186,6 +195,11 @@ await assert.rejects(
     projectId, postings[2].id, { ...adjustmentPosting, id: 'ADJ-SALE-003-EARLY', period: 2 },
   ),
   /cannot be posted before/,
+)
+await assert.rejects(
+  restoredModule.appendStageInventoryAccountingReversal(projectId, postings[2].id, 'REV-AFTER-ADJUSTMENT', 3),
+  /already has an adjustment/,
+  'An adjusted original must not be reversed without an explicit adjustment reversal chain',
 )
 assert.deepEqual(
   adjusted.entries.filter(row => row.documentType === 'original').map(row => row.id),
