@@ -325,3 +325,82 @@ close(integratedBalanceSheet.rawMaterialsInventory+integratedBalanceSheet.workIn
   integratedBalanceSheet.netWorkingCapital)
 close(integratedStatements[0].movementChecks.netWorkingCapital,0)
 console.log('End-to-end product inventory, COGS, working-capital and three-statement reconciliation passed.')
+
+ 
+// Two-period end-to-end roll-forward: raw materials -> WIP -> finished goods -> sales/COGS.
+// Period 2 must open from period 1 closing quantities and values at every inventory stage.
+const multiPeriodFlowProduct={
+ ...flowProduct,
+ sales:[{...flowProduct.sales[0],periods:[
+  {...flowProduct.sales[0].periods[0]},
+  {...flowProduct.sales[0].periods[0],
+   period:'2',salesQuantity:100,netUnitPrice:22,
+   openingFinishedGoodsQuantity:30,openingFinishedGoodsValue:flowSchedule.rows[0].closingInventoryValue,
+   finishedGoodsClosingQuantity:20,
+   rawMaterialPurchasesQuantity:0,rawMaterialPurchasesValue:0,
+   rawMaterialConsumptionQuantity:20,rawMaterialWasteQuantity:0,
+   unitsStarted:80,unitsCompleted:90,closingWipQuantity:10,
+   materialCompletionPercent:100,conversionCompletionPercent:50,conversionCost:400,
+  },
+ ]}],
+}
+const multiPeriodSchedule=module.buildProductOperatingSchedule(multiPeriodFlowProduct,periods,1,'IRR')
+assert.equal(multiPeriodSchedule.valid,true,multiPeriodSchedule.issues.join('; '))
+assert.deepEqual(multiPeriodSchedule.rows.map(row=>row.productionQuantity),[100,90])
+assert.ok(Math.abs(multiPeriodSchedule.rows[1].openingInventoryValue-multiPeriodSchedule.rows[0].closingInventoryValue)<1e-8,
+ 'Finished-goods opening value must carry forward from prior-period closing value')
+assert.ok(Math.abs(multiPeriodSchedule.rows[1].openingInventoryQuantity-multiPeriodSchedule.rows[0].closingInventoryQuantity)<1e-8,
+ 'Finished-goods opening quantity must carry forward from prior-period closing quantity')
+assert.ok(Math.abs(multiPeriodSchedule.rows[1].rawMaterialInventoryValue-
+ multiPeriodSchedule.rows[0].rawMaterialInventoryValue+220)<1e-7,
+ 'Period-2 raw-material closing value must reflect the 20-unit issue at the carried weighted-average material cost')
+assert.ok(multiPeriodSchedule.periodWipInventoryValue[1]>=0)
+assert.ok(Math.abs(multiPeriodSchedule.rows[1].wipInventoryValue-multiPeriodSchedule.periodWipInventoryValue[1])<1e-8)
+assert.ok(Math.abs(multiPeriodSchedule.periodCostOfSales[1]-multiPeriodSchedule.rows[1].costOfSales)<1e-8,
+ 'Period-2 COGS must be recognized once against sales, not against production transfers')
+const multiPeriodFinishedGoods=periods.map((_,index)=>multiPeriodSchedule.rows
+ .filter(row=>row.period===index+1).reduce((sum,row)=>sum+row.closingInventoryValue,0))
+const multiPeriodInventory=periods.map((_,index)=>
+ (multiPeriodSchedule.periodRawMaterialInventoryValue[index]??0)+
+ (multiPeriodSchedule.periodWipInventoryValue[index]??0)+multiPeriodFinishedGoods[index])
+const multiPeriodOpeningInventory=1000+0+100
+const multiPeriodIntegrated=financialEngine.calculateIntegratedPeriodicFinance({
+ periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+ annualRevenue:multiPeriodSchedule.annualRevenue,periodRevenue:multiPeriodSchedule.periodRevenue,
+ annualVariableCost:multiPeriodSchedule.annualCostOfSales,periodVariableCost:multiPeriodSchedule.periodCostOfSales,
+ annualFixedCost:[0],annualDepreciation:[0],annualFixedInvestment:[0],
+ annualPreOperatingCost:[0],annualMaintenanceCapex:[0],annualTaxRates:[0],
+ annualEquityContributions:[0],workingCapitalByPeriod:multiPeriodInventory,
+ rawMaterialsInventoryByPeriod:multiPeriodSchedule.periodRawMaterialInventoryValue,
+ workInProgressInventoryByPeriod:multiPeriodSchedule.periodWipInventoryValue,
+ finishedGoodsInventoryByPeriod:multiPeriodFinishedGoods,
+ openingWorkingCapital:multiPeriodOpeningInventory,openingCash:0,loans:[],discountRatePercent:10,
+})
+assert.equal(multiPeriodIntegrated.valid,true,multiPeriodIntegrated.warnings.join('; '))
+assert.deepEqual(multiPeriodIntegrated.rows.map(row=>row.variableCost),multiPeriodSchedule.periodCostOfSales,
+ 'Periodic engine must consume product-schedule COGS exactly once in each period')
+for(let index=0;index<periods.length;index++){
+ const row=multiPeriodIntegrated.rows[index]
+ close(row.rawMaterialsInventory,multiPeriodSchedule.periodRawMaterialInventoryValue[index])
+ close(row.workInProgressInventory,multiPeriodSchedule.periodWipInventoryValue[index])
+ close(row.finishedGoodsInventory,multiPeriodFinishedGoods[index])
+ close(row.closingWorkingCapital,multiPeriodInventory[index])
+ close(row.changeInWorkingCapital,multiPeriodInventory[index]-(index===0?multiPeriodOpeningInventory:multiPeriodInventory[index-1]))
+}
+const multiPeriodStatements=financialEngine.buildPeriodicThreeFinancialStatements(multiPeriodIntegrated,{
+ cash:0,debt:0,netFixedAssets:0,netWorkingCapital:multiPeriodOpeningInventory,
+ rawMaterialsInventory:1000,workInProgressInventory:0,finishedGoodsInventory:100,
+ paidInCapital:multiPeriodOpeningInventory,
+})
+assert.equal(multiPeriodStatements.length,2)
+assert.ok(multiPeriodStatements.every(row=>row.balanceSheet.reconciled),
+ 'Both periods must reconcile without a balance-sheet plug after raw-material, WIP and finished-goods roll-forward')
+for(let index=0;index<periods.length;index++){
+ const bs=multiPeriodStatements[index].balanceSheet
+ close(bs.rawMaterialsInventory,multiPeriodSchedule.periodRawMaterialInventoryValue[index])
+ close(bs.workInProgressInventory,multiPeriodSchedule.periodWipInventoryValue[index])
+ close(bs.finishedGoodsInventory,multiPeriodFinishedGoods[index])
+ close(bs.netWorkingCapital,multiPeriodInventory[index])
+ close(multiPeriodStatements[index].movementChecks.netWorkingCapital,0)
+}
+console.log('PASS: two-period raw materials, WIP, finished goods, single-post COGS, working capital and three statements reconcile.')
