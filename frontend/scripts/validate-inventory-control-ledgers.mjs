@@ -169,6 +169,22 @@ const rawToWipTransfer={id:'ST-1',period:1,sourceStage:'raw-materials',destinati
  sourceProductId:'ORE',destinationProductId:'PELLET',sourceCostCentreId:'ORE-STORE',destinationCostCentreId:'DRI-PLANT',
  quantity:4,sourceUnit:'tonne',destinationUnit:'kg',conversionFactor:1000,transferValue:40,
  sourceReference:'material transfer note / 17',sourceVerified:true}
+const finishedGoodsProductionRow={...stageRow(1,'finished-goods','FG-PROD',0,0,0,0,6,60,0,0,6,60)}
+const finishedGoodsProductionEngine=[{period:1,productId:'FG-PROD',rawMaterials:0,workInProgress:0,finishedGoods:60,productionQuantity:6,productionCost:60}]
+const finishedGoodsProductionCheck=module.reconcileStageInventoryMovements([finishedGoodsProductionRow],[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:60},
+],1,0.01,[],finishedGoodsProductionEngine)
+assert.equal(finishedGoodsProductionCheck.valid,true,finishedGoodsProductionCheck.issues.join('; '))
+const finishedGoodsProductionQtyMismatch=module.reconcileStageInventoryMovements([{...finishedGoodsProductionRow,productionQuantity:5}],[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:60},
+],1,0.01,[],finishedGoodsProductionEngine)
+assert.equal(finishedGoodsProductionQtyMismatch.valid,false,'finished-goods production quantity must reconcile to product operating schedule')
+assert.ok(finishedGoodsProductionQtyMismatch.issues.some(issue=>issue.includes('production quantity does not match')))
+const finishedGoodsProductionValueMismatch=module.reconcileStageInventoryMovements([{...finishedGoodsProductionRow,productionValue:55}],[
+ {period:1,rawMaterials:0,workInProgress:0,finishedGoods:60},
+],1,0.01,[],finishedGoodsProductionEngine)
+assert.equal(finishedGoodsProductionValueMismatch.valid,false,'finished-goods production value must reconcile to product operating schedule')
+assert.ok(finishedGoodsProductionValueMismatch.issues.some(issue=>issue.includes('production value does not match')))
 const finishedGoodsSalesRow={...stageRow(1,'finished-goods','FG-1',10,100,0,0,0,0,0,0,6,60),salesQuantity:4,salesCostValue:40}
 const finishedGoodsSalesEngine=[{period:1,productId:'FG-1',rawMaterials:0,workInProgress:0,finishedGoods:60,finishedGoodsSalesQuantity:4,finishedGoodsCostOfSales:40}]
 const finishedGoodsSalesCheck=module.reconcileStageInventoryMovements([finishedGoodsSalesRow],[
