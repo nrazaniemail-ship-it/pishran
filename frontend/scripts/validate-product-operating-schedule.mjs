@@ -9,6 +9,8 @@ const flowSource=await readFile(new URL('../src/features/projects/inventoryProdu
 const flowUrl='data:text/javascript;base64,'+Buffer.from(transpile(flowSource)).toString('base64')
 const controlSource=transpile(await readFile(new URL('../src/features/projects/inventoryControlLedgers.ts',import.meta.url),'utf8'))
 const controlUrl='data:text/javascript;base64,'+Buffer.from(controlSource).toString('base64')
+const integrationSource=await readFile(new URL('../src/features/projects/cppCpsScheduleIntegration.ts',import.meta.url),'utf8')
+const integrationModule=await import('data:text/javascript;base64,'+Buffer.from(transpile(integrationSource)).toString('base64'))
 const source=await readFile(new URL('../src/features/projects/productOperatingSchedule.ts',import.meta.url),'utf8')
 const output=transpile(source).replace("'../steel/periodicFinancialEngine'",JSON.stringify(engineUrl)).replace("'./inventoryProductionFlow'",JSON.stringify(flowUrl)).replace("'./inventoryControlLedgers'",JSON.stringify(controlUrl))
 const module=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
@@ -266,7 +268,7 @@ assert.deepEqual(roundTripSameProduct.rows.map(row=>row.closingInventoryValue),r
 assert.deepEqual(roundTripSameProduct.periodCostOfSales,result.periodCostOfSales)
 assert.equal(roundTripSameProduct.totalProductionQuantity,result.totalProductionQuantity)
 assert.equal(roundTripSameProduct.totalClosingInventoryValue,result.totalClosingInventoryValue)
-const roundTripWorkingCapital=module.bindFinishedGoodsInventoryToWorkingCapital([0,0],roundTripSameProduct,false)
+const roundTripWorkingCapital=integrationModule.bindFinishedGoodsInventoryToWorkingCapital([0,0],roundTripSameProduct,false)
 assert.equal(roundTripWorkingCapital.valid,true,roundTripWorkingCapital.issues.join('; '))
 assert.deepEqual(roundTripWorkingCapital.closingWorkingCapitalByPeriod,
  result.rows.map(row=>row.closingInventoryValue),
