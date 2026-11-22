@@ -1630,3 +1630,67 @@ input,select,textarea{color:var(--text)}
 @media(prefers-reduced-motion:reduce){
  .dashboard-module-hex,.dashboard-module-hex:hover,.dashboard-module-hex:focus-visible{transition:none}
 }
+
+
+/* Regular, enlarged dashboard hexagons with hue-matched darker outlines. */
+.dashboard-module-hex{
+  width:20%;
+  height:auto;
+  aspect-ratio:1.1547 / 1;
+  padding:8px 7px;
+  clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+  border:3px solid var(--tile-border,#8b929b);
+  box-sizing:border-box;
+}
+.dashboard-module-hex span{
+  font-size:clamp(9px,1.05vw,12px);
+  line-height:1.5;
+  -webkit-line-clamp:4;
+  overflow-wrap:anywhere;
+}
+.dashboard-module-hex-0{--tile-border:#c47d98}
+.dashboard-module-hex-1{--tile-border:#c58b68}
+.dashboard-module-hex-2{--tile-border:#b89b4c}
+.dashboard-module-hex-3{--tile-border:#829f5d}
+.dashboard-module-hex-4{--tile-border:#579b7d}
+.dashboard-module-hex-5{--tile-border:#579c99}
+.dashboard-module-hex-6{--tile-border:#5d91b1}
+.dashboard-module-hex-7{--tile-border:#7185c3}
+.dashboard-module-hex-8{--tile-border:#9477b8}
+.dashboard-module-hex-9{--tile-border:#b17ca7}
+.dashboard-module-hex-10{--tile-border:#b77c66}
+.dashboard-module-hex-11{--tile-border:#8295a2}
+.dashboard-honeycomb-core{
+  appearance:none;
+  -webkit-appearance:none;
+  left:30%;
+  top:32.7%;
+  width:40%;
+  height:auto;
+  aspect-ratio:1.1547 / 1;
+  clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+  border:3px solid #879da8;
+  box-sizing:border-box;
+  padding:5% 8%;
+  font:inherit;
+  cursor:pointer;
+  transition:transform .2s ease,filter .2s ease;
+}
+.dashboard-honeycomb-core:hover,.dashboard-honeycomb-core:focus-visible{
+  transform:translateY(-4px) scale(1.025);
+  filter:drop-shadow(0 4px 0 rgba(255,255,255,.95)) drop-shadow(0 12px 0 rgba(87,101,111,.3)) drop-shadow(0 20px 14px rgba(40,53,68,.24));
+  outline:none;
+}
+.dashboard-honeycomb-core:focus-visible{outline:3px solid #397d82;outline-offset:5px}
+.dashboard-honeycomb-core svg{flex:none}
+.dashboard-honeycomb-core strong{max-width:100%;overflow-wrap:anywhere}
+@media(max-width:850px){
+  .dashboard-module-hex{width:20%;padding:5px 4px}
+  .dashboard-module-hex span{font-size:clamp(8px,1.35vw,11px)}
+}
+@media(max-width:650px){
+  .dashboard-module-hex{width:20%;padding:5px 4px}
+  .dashboard-module-hex span{font-size:clamp(8px,2.15vw,11px);line-height:1.35;-webkit-line-clamp:4}
+  .dashboard-honeycomb-core{left:30%;top:32.7%;width:40%;padding:5% 7%}
+  .dashboard-honeycomb-core strong{font-size:clamp(11px,3.2vw,17px)}
+}
