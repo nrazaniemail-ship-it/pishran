@@ -144,6 +144,18 @@ const adjustmentPosting = {
   sourceReference: 'ADJUST:SALE-003', debitAccount: 'Cost of Sales',
   creditAccount: 'Inventory:finished-goods', amount: 5,
 }
+await assert.rejects(
+  restoredModule.appendStageInventoryAccountingAdjustment(
+    projectId, postings[2].id, { ...adjustmentPosting, id: 'ADJ-WRONG-PRODUCT', productId: 'DRI' },
+  ),
+  /retain the original product and document kind/,
+)
+await assert.rejects(
+  restoredModule.appendStageInventoryAccountingAdjustment(
+    projectId, postings[2].id, { ...adjustmentPosting, id: 'ADJ-WRONG-KIND', kind: 'stage-transfer' },
+  ),
+  /retain the original product and document kind/,
+)
 const adjusted = await restoredModule.appendStageInventoryAccountingAdjustment(
   projectId, postings[2].id, adjustmentPosting,
 )

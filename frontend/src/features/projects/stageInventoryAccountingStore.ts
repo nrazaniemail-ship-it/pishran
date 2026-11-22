@@ -156,6 +156,9 @@ export async function appendStageInventoryAccountingAdjustment(
       throw new Error('An adjustment must reference an existing original document.')
     }
     if (adjustment.period < original.period) throw new Error('An adjustment cannot be posted before its original accounting period.')
+    if (adjustment.productId !== original.productId || adjustment.kind !== original.kind) {
+      throw new Error('An adjustment must retain the original product and document kind.')
+    }
     const existingById = store.entries.find(entry => entry.id === adjustment.id)
     if (existingById) {
       const expected = { ...adjustment, documentType: 'adjustment' as const, adjustmentOfDocumentId: originalDocumentId }
