@@ -437,7 +437,7 @@ export function reconcileStageInventoryMovements(
      if(ledgerValue>tolerance/100||sales.quantity>tolerance/100||sales.cost>tolerance/100||production.quantity>tolerance/100||production.value>tolerance/100)
       issues.push('Stage '+stage+' product '+productId+' has no matching product-level finance-engine inventory row in period '+period+'.')
     }
-   }}
+   }
    const ledgerClosingValue=periodRows.reduce((sum,row)=>sum+(row.closingValue??0),0)
    const expectedRow=expected.get(period)
    if(!expectedRow){
