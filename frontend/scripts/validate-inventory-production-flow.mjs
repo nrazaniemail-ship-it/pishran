@@ -15,6 +15,31 @@ const input={
  conversionCost:[500,600],
 }
 const result=mod.buildInventoryFlowSchedule(input)
+const bridgeEvidence=[1,2].map(period=>({
+ period,sourceReference:'PRODUCTION-ORDER-'+period,sourceVerified:true,
+ rawMaterialsToWip:{sourceProductId:'ORE',destinationProductId:'DRI',sourceCostCentreId:'RM-01',destinationCostCentreId:'DRI-01',sourceUnit:'tonne',destinationUnit:'tonne',conversionFactor:1},
+ wipToFinishedGoods:{sourceProductId:'DRI',destinationProductId:'SLAB',sourceCostCentreId:'DRI-01',destinationCostCentreId:'CAST-01',sourceUnit:'tonne',destinationUnit:'tonne',conversionFactor:1},
+}))
+const bridge=mod.buildProductionStageTransferDrafts(result,bridgeEvidence)
+assert.equal(bridge.length,4,'Each period must produce at most one raw-to-WIP and one WIP-to-finished-goods transfer.')
+assert.deepEqual(bridge.map(row=>row.id),mod.buildProductionStageTransferDrafts(result,bridgeEvidence).map(row=>row.id),
+ 'Generated transfer identifiers must be deterministic for safe replay.')
+for(let index=0;index<result.rows.length;index++){
+ const flow=result.rows[index]
+ const rawToWip=bridge.find(row=>row.period===flow.period&&row.sourceStage==='raw-materials')
+ const wipToFinished=bridge.find(row=>row.period===flow.period&&row.destinationStage==='finished-goods')
+ assert.ok(rawToWip&&wipToFinished)
+ close(rawToWip.quantity,flow.consumptionQuantity+flow.normalWasteQuantity)
+ close(rawToWip.transferValue,flow.consumptionValue+flow.normalWasteValue)
+ close(wipToFinished.quantity,flow.unitsCompleted)
+ close(wipToFinished.transferValue,flow.completedProductionCost)
+ assert.equal(rawToWip.sourceReference,'PRODUCTION-ORDER-'+flow.period)
+ assert.equal(wipToFinished.sourceVerified,true)
+}
+assert.throws(()=>mod.buildProductionStageTransferDrafts(result,[]),/required for every production period/)
+assert.throws(()=>mod.buildProductionStageTransferDrafts(result,bridgeEvidence.map(row=>({...row,sourceVerified:false}))),/verified source reference/)
+assert.throws(()=>mod.buildProductionStageTransferDrafts(result,bridgeEvidence.map(row=>({...row,rawMaterialsToWip:{...row.rawMaterialsToWip,conversionFactor:0}}))),/positive conversion-factor/)
+assert.throws(()=>mod.buildProductionStageTransferDrafts(result,[bridgeEvidence[0],bridgeEvidence[0]]),/duplicate period/)
 assert.equal(result.valid,true,result.issues.join('; '))
 const [p1,p2]=result.rows
 close(p1.weightedAverageRawMaterialUnitCost,11)
