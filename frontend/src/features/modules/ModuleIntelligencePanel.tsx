@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { localStore } from '../../core/storage/localStore'
+import { executeModuleAnalysis } from './moduleAnalysisWorkflow'
 
 type Language = 'fa' | 'en'
 type CostInput = { outputTon: string; material: string; labor: string; energy: string; maintenance: string; overhead: string; sellingPrice: string }
@@ -32,35 +33,16 @@ export default function ModuleIntelligencePanel({ moduleId, language='fa' }: { m
     ['plannedMinutes','زمان برنامه‌ریزی‌شده (دقیقه)','Planned time (min)'],['downtimeMinutes','توقفات (دقیقه)','Downtime (min)'],['idealCycleSeconds','زمان سیکل ایده‌آل (ثانیه/واحد)','Ideal cycle (sec/unit)'],['totalCount','کل تولید','Total output'],['goodCount','تولید سالم','Good output']
   ] as const,[isCost])
   async function runAnalysis() {
-    setError(''); setReport(null)
-    const input = isCost ? cost : production
-    const values = Object.fromEntries(Object.entries(input).map(([key,value])=>[key,n(value)]))
-    if(Object.values(values).some(value=>!Number.isFinite(value)||value<0)){setError(en?'Enter valid non-negative values in every field.':'همه فیلدها باید با اعداد معتبر و غیرمنفی تکمیل شوند.');return}
-    let metrics:Record<string,number>
-    if(isCost){
-      const x=values as Record<keyof CostInput,number>
-      if(x.outputTon<=0){setError(en?'Output must be greater than zero.':'مقدار تولید باید بزرگ‌تر از صفر باشد.');return}
-      const total=x.material+x.labor+x.energy+x.maintenance+x.overhead
-      const unit=total/x.outputTon
-      metrics={totalCost:total,unitCost:unit,sellingPrice:x.sellingPrice,grossMarginPerTon:x.sellingPrice-unit,grossMarginPercent:x.sellingPrice>0?(x.sellingPrice-unit)/x.sellingPrice*100:Number.NaN}
-      if(x.sellingPrice<=0){setError(en?'Selling price must be greater than zero to calculate margin.':'برای محاسبه حاشیه سود، قیمت فروش باید بزرگ‌تر از صفر باشد.');return}
-    }else{
-      const x=values as Record<keyof ProductionInput,number>
-      const runMinutes=x.plannedMinutes-x.downtimeMinutes
-      if(x.plannedMinutes<=0||x.downtimeMinutes>x.plannedMinutes||x.idealCycleSeconds<=0||x.totalCount<=0||x.goodCount>x.totalCount){setError(en?'Check planned time, downtime, ideal cycle and production counts.':'زمان برنامه‌ریزی، توقفات، سیکل ایده‌آل و تعداد تولید را کنترل کنید.');return}
-      const availability=runMinutes/x.plannedMinutes*100
-      const performance=x.totalCount*x.idealCycleSeconds/(runMinutes*60)*100
-      const quality=x.goodCount/x.totalCount*100
-      metrics={availability,performance,quality,oee:availability/100*performance/100*quality/100*100}
-    }
-    const saved:SavedRun={id:`${moduleId}-${Date.now()}`,moduleId:moduleId as SavedRun['moduleId'],createdAt:new Date().toISOString(),inputs:input,metrics}
-    setBusy(true)
-    try{
-      const next=[saved,...history].slice(0,30)
-      await localStore.set(isCost?COST_KEY:OEE_KEY,next)
-      setHistory(next);setReport(saved)
-    }catch{setError(en?'Could not save this report on this device.':'ذخیره گزارش روی این دستگاه ناموفق بود.')}
-    finally{setBusy(false)}
+    setError(''); setReport(null); setBusy(true)
+    try {
+      const saved = await executeModuleAnalysis(moduleId as 'MOD-02'|'MOD-03', isCost ? cost : production, localStore)
+      const rows = await localStore.get<SavedRun[]>(isCost ? COST_KEY : OEE_KEY)
+      setHistory(Array.isArray(rows) ? rows : [])
+      setReport(saved)
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : ''
+      setError(message || (en?'Could not save this report on this device.':'ذخیره گزارش روی این دستگاه ناموفق بود.'))
+    } finally { setBusy(false) }
   }
   const metricLabels = isCost ? (en?{totalCost:'Total production cost',unitCost:'Cost per ton',sellingPrice:'Selling price / ton',grossMarginPerTon:'Gross margin / ton',grossMarginPercent:'Gross margin (%)'}:{totalCost:'کل هزینه تولید',unitCost:'بهای تمام‌شده هر تن',sellingPrice:'قیمت فروش هر تن',grossMarginPerTon:'حاشیه سود ناخالص هر تن',grossMarginPercent:'حاشیه سود ناخالص (%)'}) : (en?{availability:'Availability (%)',performance:'Performance (%)',quality:'Quality (%)',oee:'OEE (%)'}:{availability:'دسترس‌پذیری (%)',performance:'عملکرد (%)',quality:'کیفیت (%)',oee:'اثربخشی کلی تجهیزات OEE (%)'})
   return <section className="module-intelligence">
