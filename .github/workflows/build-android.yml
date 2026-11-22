@@ -104,10 +104,7 @@ jobs:
             sleep 5
             adb shell pidof com.pishran.app
             adb shell dumpsys activity activities | grep -F "com.pishran.app"
-            if adb logcat -d -s AndroidRuntime:E | grep -q "FATAL EXCEPTION"; then
-              adb logcat -d -s AndroidRuntime:E
-              exit 1
-            fi
+            if adb logcat -d -s AndroidRuntime:E | grep -q "FATAL EXCEPTION"; then adb logcat -d -s AndroidRuntime:E; exit 1; fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
