@@ -54,6 +54,8 @@ The engine retains known incremental subtotals separately from complete totals. 
 5. CPS is deducted from net sales revenue to derive gross profit. The base CPP remains in the product schedule; the adapter posts only the uncovered incremental amount, preventing a second charge for costs already included in the base.
 6. Normal waste is absorbed once at weighted-average raw-material cost. Abnormal waste is separately expensed and must not be reintroduced as normal material consumption.
 
+**Classification follow-up:** the current AdvancedFinancePanel adapter routes period abnormal-waste expense through `annualFixedCost`. This keeps it out of inventory, but also classifies it as fixed cash cost for the finance engine's break-even/sensitivity calculations. The source data do not establish that abnormal waste is fixed. A dedicated separately expensed operating-cost input and regression coverage are still required before fixed/variable cost analysis can be considered fully reconciled; do not interpret the current fixed-cost bucket as an evidenced cost-behaviour classification.
+
 ## Working-capital connection
 
 Raw-material closing stock, WIP, and finished-goods stock are current-asset components. They must be connected to the working-capital schedule once, with matching inventory subledgers and balance-sheet controls. Cost of sales is not itself an additional working-capital asset. Trade payables, accrued payroll, utility creditors, and other operating liabilities are included only when a distinct balance and source are provided; do not infer a payable merely because an expense exists.
