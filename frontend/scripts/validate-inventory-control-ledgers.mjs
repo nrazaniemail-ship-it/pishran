@@ -8,7 +8,7 @@ assert.match(financePanel,/row\.sourceVerified===true/,'verified-only stage move
 assert.match(financePanel,/row\.id, row\.period|row\.id,row\.period/,'identified stage transfer rows must enter the reconciliation gate')
 assert.match(financialForms,/Internal transfer-in quantity/,'stage movement form must expose internal transfer-in quantity')
 assert.match(financialForms,/Internal transfer-out value/,'stage movement form must expose internal transfer-out value')
-assert.match(financialForms,/Transfer value/,'inter-stage transfer form must expose the transferred inventory value')
+assert.match(financialForms,/Transferred value/,'inter-stage transfer form must expose the transferred inventory value')
 
 const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 const module=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
