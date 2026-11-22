@@ -38,7 +38,7 @@ export default function ModuleIntelligencePanel({ moduleId, language='fa' }: { m
       const saved = await executeModuleAnalysis(moduleId as 'MOD-02'|'MOD-03', isCost ? cost : production, localStore)
       const rows = await localStore.get<SavedRun[]>(isCost ? COST_KEY : OEE_KEY)
       setHistory(Array.isArray(rows) ? rows : [])
-      setReport(saved)
+      setReport(saved as SavedRun)
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : ''
       setError(message || (en?'Could not save this report on this device.':'ذخیره گزارش روی این دستگاه ناموفق بود.'))
