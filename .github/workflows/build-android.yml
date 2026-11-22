@@ -87,10 +87,13 @@ jobs:
         env:
           ANDROID_I_WANT_MY_TCG: "yes"
         with:
-          api-level: 35
-          target: google_apis
+          api-level: 34
+          target: default
           arch: x86_64
-          profile: pixel_6
+          profile: pixel_2
+          emulator-boot-timeout: 600
+          ram-size: 2048M
+          heap-size: 512M
           disable-animations: true
           script: |
             adb install -r frontend/android/app/build/outputs/apk/debug/app-debug.apk
