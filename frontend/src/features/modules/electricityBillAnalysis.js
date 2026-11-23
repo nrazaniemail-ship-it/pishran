@@ -31,7 +31,7 @@ const patterns={
  meterNumber:[/(?:شماره\s*کنتور|شناسه\s*کنتور|meter\s*(?:no|number))\s*[:：-]?\s*([\w/-]+)?/i],
  previousReading:[/(?:قرائت\s*قبلی|رقم\s*پیشین|previous\s*reading)\D{0,22}([\d,.]+)?/i],
  currentReading:[/(?:قرائت\s*فعلی|رقم\s*فعلی|current\s*reading)\D{0,22}([\d,.]+)?/i],
- consumption:[/(?:مصرف\s*(?:کل|دوره)?|انرژی\s*مصرفی|انرژی\s*اکتیو|کیلووات\s*ساعت|kwh)\D{0,22}([\d,.]+)?/i],
+ consumption:[/(?:(?<!دوره\s)مصرف\s*(?:کل|دوره)?|انرژی\s*مصرفی|انرژی\s*اکتیو|کیلووات\s*ساعت|kwh)\D{0,22}([\d,.]+)?/i],
  billingDays:[/(?:تعداد\s*روز|مدت\s*دوره|روز\s*مصرف|billing\s*days)\D{0,12}(\d{1,3})?/i],
  demand:[/(?:حداکثر\s*دیماند|دیماند\s*(?:مصرفی|ثبت\s*شده)?|قدرت\s*مصرفی|peak\s*demand)\D{0,22}([\d,.]+)?/i],
  contractDemand:[/(?:دیماند\s*قراردادی|قدرت\s*قراردادی|contract\s*demand)\D{0,22}([\d,.]+)?/i],
