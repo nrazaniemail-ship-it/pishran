@@ -2,7 +2,7 @@ name: Deploy Pishran PWA to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/pishran-module-exports-nav]
   workflow_dispatch:
 
 permissions:
@@ -32,6 +32,9 @@ jobs:
       - name: Validate Excel financial benchmark
         working-directory: frontend
         run: npm run test:financial
+      - name: Validate module exports and navigation
+        working-directory: frontend
+        run: npm run test:modules
       - name: Build
         working-directory: frontend
         env:
