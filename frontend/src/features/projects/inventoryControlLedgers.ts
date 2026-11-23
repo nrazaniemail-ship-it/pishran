@@ -1,5 +1,5 @@
 export type WasteClassification='normal'|'abnormal'
-export type WasteLedgerEntry={id:string;period:number;productId:string;costCentreId:string;classification:WasteClassification;quantity:number;unitCost:number;amount:number}
+export type WasteLedgerEntry={id:string;period:number;productId:string;costCentreId:string;classification:WasteClassification;quantity:number;unitCost:number;amount:number;sourceReference:string;sourceVerified:boolean}
 export type ProductionTransferEntry={id:string;period:number;sourceProductId:string;destinationProductId:string;sourceCostCentreId:string;destinationCostCentreId:string;quantity:number;sourceUnit:string;destinationUnit:string;conversionFactor:number;costAmount:number}
 export type InventoryReconciliationPeriod={
  period:number
@@ -46,6 +46,7 @@ export function validateWasteLedger(entries:WasteLedgerEntry[],periodCount:numbe
   if(!Number.isInteger(e.period)||e.period<1||e.period>periodCount){issues.push('Waste entry '+e.id+' has an invalid period.');continue}
   if(!e.productId.trim()||!e.costCentreId.trim())issues.push('Waste entry '+e.id+' requires product and cost-centre identifiers.')
   if(!finite(e.quantity)||!finite(e.unitCost)||!finite(e.amount))issues.push('Waste entry '+e.id+' requires explicit finite non-negative quantity, unit cost and amount.')
+  if(!e.sourceReference?.trim()||e.sourceVerified!==true)issues.push('Waste entry '+e.id+' requires a verified source document reference.')
   if(!near(e.quantity*e.unitCost,e.amount,tolerance/100))issues.push('Waste entry '+e.id+' amount does not equal quantity multiplied by unit cost.')
   if(e.classification==='normal')normal[e.period-1]+=e.amount
   else if(e.classification==='abnormal')abnormal[e.period-1]+=e.amount
