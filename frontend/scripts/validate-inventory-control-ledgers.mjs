@@ -7,6 +7,12 @@ const financialForms=await readFile(new URL('../src/features/projects/ProjectMod
 assert.match(financePanel,/row\.sourceVerified===true/,'verified-only stage movement rows must enter the reconciliation gate')
 assert.match(financePanel,/const hasUnpostedStageInventoryData=Boolean/,'populated stage inventory ledgers must be detected before reporting')
 assert.match(financePanel,/const stageInventoryPreflight=useMemo/,'detailed stage ledgers must be reconciled before periodic finance calculation')
+assert.match(financePanel,/buildAbnormalWasteAccountingPostings/,
+  'verified abnormal waste must produce an accounting journal in the finance workflow')
+assert.match(financePanel,/combinedStageAccountingPostings/,
+  'abnormal-waste journals must be persisted with the stage accounting ledger')
+assert.match(financePanel,/abnormalWasteAccounting\.valid/,
+  'invalid or unverified abnormal waste must block journal persistence')
 assert.match(financePanel,/reconcileStageInventoryMovements\(movements,expectedByPeriod/,'stage ledger preflight must reconcile to product-schedule inventory totals')
 assert.match(financePanel,/finishedGoodsCostOfSales:row\.costOfSales/,'stage ledger preflight must reconcile finished-goods cost of sales to the product schedule')
 assert.match(financePanel,/The detailed ledger does not add a second CPP\/CPS charge/,'stage-ledger controls must not add a second CPP/CPS charge')
