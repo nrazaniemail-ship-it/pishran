@@ -39,6 +39,7 @@ try {
   page.on('pageerror', error => pageErrors.push(error.message))
   const pageResponse = await page.goto(previewUrl)
   const launcherCards = page.locator('.module-launcher-card')
+  await launcherCards.first().waitFor({ state: 'visible' })
   assert.equal(await launcherCards.count(), 12, 'dashboard must expose all twelve launcher cards')
   const desktopColumns = await page.locator('.module-launcher-grid').first().evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length)
   assert.equal(desktopColumns, 4, 'desktop launcher must use four columns')
