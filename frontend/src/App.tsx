@@ -48,6 +48,7 @@ export default function App() {
   const toggleLanguage = () => setSettings(current => ({ ...current, language: current.language === 'fa' ? 'en' : 'fa' }))
   type NavigationEntry = { page: Page; project: FeasibilityProject | null; moduleId: string }
   const navigationStackRef = useRef<NavigationEntry[]>([{ page: 'dashboard', project: null, moduleId: 'MOD-01' }])
+  const moduleDropdownRef = useRef<HTMLDetailsElement>(null)
 
   function navigateTo(nextPage: Page, nextProject: FeasibilityProject | null = activeProject, nextModuleId = activeModuleId) {
     const current = navigationStackRef.current[navigationStackRef.current.length - 1]
@@ -155,6 +156,7 @@ export default function App() {
   }
 
   function openModule(moduleId: string) {
+    if (moduleDropdownRef.current?.open) moduleDropdownRef.current.open = false
     navigateTo('module', activeProject, moduleId)
   }
 
@@ -182,7 +184,7 @@ export default function App() {
         <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
         <button className={page === 'steel-group' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('steel-group')}><Factory size={17}/> {isEn ? "Steel Group" : "گروه فولاد"}</button>
-        <details className="nav-dropdown">
+        <details className="nav-dropdown" ref={moduleDropdownRef}>
           <summary className={page === 'module' ? 'nav-item active' : 'nav-item'}><Boxes size={17}/> {isEn ? 'Modules' : 'ماژولها'} <span className="nav-caret">▾</span></summary>
           <div className="nav-dropdown-menu">
             {modules.map(item => <button type="button" key={item.id} className={page === 'module' && activeModuleId === item.id ? 'dropdown-module active' : 'dropdown-module'} onClick={() => openModule(item.id)}><span>{item.id}</span>{isEn ? item.enTitle : item.title}</button>)}
