@@ -35,7 +35,11 @@ try {
 
   browser = await chromium.launch({ headless: true })
   const page = await browser.newPage()
-  await page.goto(previewUrl)
+  const pageErrors = []
+  page.on('pageerror', error => pageErrors.push(error.message))
+  const pageResponse = await page.goto(previewUrl)
+  await delay(1200)
+  console.log('Pishran UI smoke diagnostic:', JSON.stringify({ url: page.url(), status: pageResponse?.status(), title: await page.title(), body: (await page.locator('body').innerText()).slice(0, 1200), pageErrors }))
   const moduleMenuButton = page.locator('.nav-module-toggle')
   await moduleMenuButton.waitFor({ state: 'visible' })
   await moduleMenuButton.click()
