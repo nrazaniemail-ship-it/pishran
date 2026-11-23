@@ -42,7 +42,7 @@ The electricity area includes a local-image OCR workflow. The user selects or ca
 The bill register captures billing period, account and meter identifiers, opening/closing readings, billed kWh, billing days, peak/mid/off-peak quantities, maximum and contracted demand, reactive energy, power factor, meter multiplier, tariff and voltage descriptors, and available bill-charge components. The parser is deliberately conservative and leaves unknown fields blank for manual review.
 
 Analytical controls include:
-- opening/closing meter delta against billed consumption (2% review tolerance);
+- opening/closing meter delta multiplied by the meter multiplier against billed consumption (2% review tolerance);
 - daily consumption comparison only against the most recent saved bill for the same meter or account, never an unrelated account;
 - kWh per tonne when period production is supplied;
 - demand-to-contract ratio and power-factor review;
