@@ -98,3 +98,6 @@ test('MOD-02 handoff uses only the selected cost-center allocation and preserves
  assert.equal(prepared.sourceReferences.energyAllocationCenter,'CC-1')
  assert.match(prepared.duplicatePostingGuard,/full bill total separately/)
 })
+
+
+test('MOD-05 presents an industrial dashboard hierarchy with live resource-specific KPIs', async()=>{const {readFile}=await import('node:fs/promises');const app=await readFile(new URL('../src/features/modules/ModuleEnergyPanel.tsx',import.meta.url),'utf8');const css=await readFile(new URL('../src/style.css',import.meta.url),'utf8');assert.match(app,/energy-dashboard-hero/);assert.match(app,/energy-resource-tabs/);assert.match(app,/totals\\[resource\\]\\.consumption/);assert.match(app,/energy-resource-summary/);assert.match(app,/EnergyIntelligenceInsights/);assert.match(app,/ResourceBillAnalysis/);assert.match(app,/ResourceBillCostAllocationPanel/);assert.match(css,/\\.energy-dashboard-hero/);assert.match(css,/@media\\(max-width:460px\\)\\{\\s*\\.energy-management/);assert.match(css,/energy-resource-tab-icon/)})
