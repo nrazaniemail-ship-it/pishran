@@ -1,6 +1,6 @@
 name: Frontend build and financial validation
 
-# Keep this workflow active on pushes to the periodic financing feature branch.
+# Keep frontend validation active on Pishran feature branches, including utility bill upload work.
 
 on:
   push:
