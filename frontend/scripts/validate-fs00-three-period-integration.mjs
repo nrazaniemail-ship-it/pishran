@@ -760,11 +760,14 @@ assert.deepEqual(abnormalWasteScenarios.optimistic.rows.map(row => row.abnormalW
 const abnormalWasteSensitivity = engine.calculatePeriodicSensitivityMatrix(abnormalWasteInput, [0, 10], [0, 10])
 assert.equal(abnormalWasteSensitivity[0][0].npv, abnormalWasteResult.npvProject,
   'The zero-change sensitivity cell must equal the validated base case including abnormal waste')
-const invalidAbnormalWaste = engine.calculateIntegratedPeriodicFinance({
-  ...abnormalWasteInput, periodAbnormalWasteExpense: [10, -1, 30],
+const reversedAbnormalWaste = engine.calculateIntegratedPeriodicFinance({
+  ...abnormalWasteInput, periodAbnormalWasteExpense: [10, -10, 30],
 })
-assert.equal(invalidAbnormalWaste.valid, false,
-  'Negative abnormal-waste expense must be rejected rather than silently accepted')
+assert.equal(reversedAbnormalWaste.valid, true, reversedAbnormalWaste.warnings.join('; '))
+assert.deepEqual(reversedAbnormalWaste.rows.map(row => row.abnormalWasteExpense), [10, -10, 30],
+  'A signed abnormal-waste expense must preserve a reversal credit in its own registered period.')
+assert.deepEqual(reversedAbnormalWaste.rows.map(row => row.ebit), [840, 850, 820],
+  'A reversal credit must increase EBIT only in its posting period.')
 const missingAbnormalWastePeriod = engine.calculateIntegratedPeriodicFinance({
   ...abnormalWasteInput, periodAbnormalWasteExpense: [10, 20],
 })
