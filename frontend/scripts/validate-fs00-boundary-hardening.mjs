@@ -65,4 +65,22 @@ assert.equal(inconsistentProductUnit.valid, false,
 assert.ok(inconsistentProductUnit.issues.some(issue => issue.includes('A product must have one base unit')),
   'Cross-transfer unit inconsistency must be reported')
 
-console.log('PASS: FS-00 boundary hardening — finite inventory values, NaN rejection, tolerance validation, transfer horizon and product base-unit consistency.')
+const wasteEntry = {
+  id: 'W-1', period: 1, productId: 'P1', costCentreId: 'CC-1',
+  classification: 'abnormal', quantity: 2, unitCost: 5, amount: 10,
+  sourceReference: 'INC-1', sourceVerified: true,
+}
+for (const tolerance of [Number.NaN, Number.POSITIVE_INFINITY, -0.01]) {
+  const result = module.validateWasteLedger([wasteEntry], 1, tolerance)
+  assert.equal(result.valid, false, 'Waste ledger must reject invalid tolerances')
+  assert.ok(result.issues.some(issue => issue.includes('Waste ledger tolerance must be a finite non-negative percentage')),
+    'Waste ledger must report invalid tolerance explicitly')
+}
+for (const tolerance of [Number.NaN, Number.POSITIVE_INFINITY, -0.01]) {
+  const result = module.validateProductionTransfers([], 1, tolerance)
+  assert.equal(result.valid, false, 'Production transfer ledger must reject invalid tolerances')
+  assert.ok(result.issues.some(issue => issue.includes('Production transfer tolerance must be a finite non-negative percentage')),
+    'Production transfer ledger must report invalid tolerance explicitly')
+}
+
+console.log('PASS: FS-00 boundary hardening — finite inventory values, invalid tolerance rejection, transfer horizon and product base-unit consistency.')
