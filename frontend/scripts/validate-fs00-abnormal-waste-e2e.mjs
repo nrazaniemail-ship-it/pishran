@@ -178,12 +178,14 @@ const opening = {
   rawMaterialsInventory: 0, workInProgressInventory: 0, finishedGoodsInventory: 200,
   paidInCapital: 200, retainedEarnings: 0, grants: 0,
 }
+const baselineStatements = engine.buildPeriodicThreeFinancialStatements(baselineFinance, opening)
 const statements = engine.buildPeriodicThreeFinancialStatements(correctedFinance, opening)
 assert.equal(statements.length, 3)
 assert.deepEqual(statements.map(row => row.incomeStatement.abnormalWasteExpense), [20, -10, 5])
-assert.deepEqual(statements.map(row => row.incomeStatement.costOfSales), [800, 800, 800])
+assert.deepEqual(statements.map(row => row.incomeStatement.cashOperatingCosts), [820, 790, 805],
+  'The linked income statement includes COGS and the separate abnormal-waste expense once; COGS itself is asserted on the product schedule above.')
 assert.deepEqual(statements.map(row => row.cashFlowStatement.operatingCashFlow),
-  baselineFinance.rows.map(row => row.operatingCashFlow))
+  baselineStatements.map(row => row.cashFlowStatement.operatingCashFlow))
 assert.deepEqual(statements.map(row => row.balanceSheet.rawMaterialsInventory), [0, 20, 15])
 assert.ok(statements.every(row => row.balanceSheet.reconciled),
   'The three statements must reconcile in all periods after persisted reversal and adjustment.')
