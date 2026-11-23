@@ -52,7 +52,7 @@ try {
   const excelDownloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'خروجی Excel' }).click()
   const excelDownload = await excelDownloadPromise
-  assert.match(excelDownload.suggestedFilename(), /\\.xlsx$/, 'module Excel export must download an XLSX workbook')
+  assert.match(excelDownload.suggestedFilename(), /\.xlsx$/, 'module Excel export must download an XLSX workbook')
   await page.evaluate(() => { window.print = () => { document.documentElement.dataset.pishranPrintCalled = 'true' } })
   await page.getByRole('button', { name: 'چاپ / ذخیره PDF' }).click()
   assert.equal(await page.locator('html').getAttribute('data-pishran-print-called'), 'true', 'PDF action must open the browser print/save flow')
