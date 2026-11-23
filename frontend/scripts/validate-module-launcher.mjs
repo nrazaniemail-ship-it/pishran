@@ -23,3 +23,10 @@ test('launcher has responsive desktop, tablet and phone layouts with keyboard fo
   assert.ok(style.includes('@media(max-width:430px){.module-launcher-heading'))
   assert.ok(style.includes('.module-launcher-card:focus-visible'))
 })
+
+test('launcher preserves the twelve-module catalogue and four operational groupings', () => {
+  const ids = [...app.matchAll(/id: 'MOD-\\d{2}'/g)].map(match => match[0])
+  const groups = [...app.matchAll(/group: '([^']+)'/g)].map(match => match[1])
+  assert.equal(ids.length, 12)
+  assert.equal(new Set(groups).size, 4)
+})
