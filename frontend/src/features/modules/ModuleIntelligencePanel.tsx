@@ -45,7 +45,7 @@ export default function ModuleIntelligencePanel({ moduleId, language='fa' }: { m
   async function runAnalysis() {
     setError(''); setReport(null); setBusy(true)
     try {
-      const saved = await executeModuleAnalysis(moduleId as 'MOD-02'|'MOD-03', isCost ? cost : production, localStore, undefined, appliedBill&&appliedBillCost!==null&&Number(cost.energy)===appliedBillCost?{energyBillId:appliedBill.id,billingPeriod:appliedBill.period,billNumber:appliedBill.billNumber||'',accountNumber:appliedBill.accountNumber||'',meterNumber:appliedBill.meterNumber||'',energyBillAmountBasis:billCostBasis,energyBillAmount:appliedBillCost}:{}))
+      const saved = await executeModuleAnalysis(moduleId as 'MOD-02'|'MOD-03', isCost ? cost : production, localStore, undefined, appliedBill&&appliedBillCost!==null&&Number(cost.energy)===appliedBillCost?{energyBillId:appliedBill.id,billingPeriod:appliedBill.period,billNumber:appliedBill.billNumber||'',accountNumber:appliedBill.accountNumber||'',meterNumber:appliedBill.meterNumber||'',energyBillAmountBasis:billCostBasis,energyBillAmount:appliedBillCost}: {})
       const rows = await localStore.get<SavedRun[]>(isCost ? COST_KEY : OEE_KEY)
       setHistory(Array.isArray(rows) ? rows : [])
       setReport(saved as SavedRun)
