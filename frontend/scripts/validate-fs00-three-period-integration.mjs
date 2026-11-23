@@ -527,6 +527,18 @@ const doubleCountedCentre = inventoryControlModule.reconcileCostCentreInventory(
 assert.equal(doubleCountedCentre.valid, false,
   'Posting the transfer again as a receipt must be rejected as duplicated stock')
 
+const overdrawnSourceCentreMovements = centreMovements.map(row =>
+  row.period === 1 && row.costCentreId === 'CC-A'
+    ? { ...row, openingQuantity: 5, openingValue: 50, closingQuantity: 0, closingValue: 0 }
+    : row)
+const overdrawnSourceCentre = inventoryControlModule.reconcileCostCentreInventory(
+  overdrawnSourceCentreMovements, transferRoundTrip, 3)
+assert.equal(overdrawnSourceCentre.valid, false,
+  'A→B must be blocked when centre A transfers more quantity and value than its available opening stock, even if centre B records the receipt')
+assert.ok(overdrawnSourceCentre.issues.some(issue => issue.includes('negative expected closing quantity')) &&
+  overdrawnSourceCentre.issues.some(issue => issue.includes('negative expected closing value')),
+  'The source-centre availability boundary must report both quantity and value overdraw')
+
 const doubleCountedThreeWay = inventoryControlModule.reconcileInventoryThreeWay(
   centreValueByPeriod.map((finishedGoods, index) => {
     const doubled = finishedGoods + (index === 0 ? 100 : 0)
