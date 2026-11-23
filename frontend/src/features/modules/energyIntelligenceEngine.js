@@ -66,7 +66,7 @@ export function forecastEnergyIntensity(records,{resource,site,seu,horizon=3,fut
    const production=Number(futureProduction[i])>0?Number(futureProduction[i]):avgProduction
    predicted.push({step:i+1,periodIndex:n+i,predictedIntensity:intensity,predictedProduction:production,predictedConsumption:intensity*production,indicativeLowerIntensity:Math.max(0,intensity-1.96*rmse),indicativeUpperIntensity:intensity+1.96*rmse})
   }
-  forecasts.push({seriesKey:s.key,resource:s.resource,site:s.site,seu:s.seu,unit:points[0].unit,comparisonBasis:s.comparisonBasis,method:'ordinary-least-squares-linear-intensity-trend',historicalPeriods:n,rmse,forecast:predicted})
+  forecasts.push({seriesKey:s.key,resource:s.resource,site:s.site,seu:s.seu,unit:points[0].unit,comparisonBasis:s.comparisonBasis,method:'ordinary-least-squares-linear-intensity-trend',productionAssumption:futureProduction.length?'user-supplied-by-horizon':'historical-average-production',historicalPeriods:n,rmse,forecast:predicted})
  }
  warnings.push('پیش‌بینی روند خطی روی شدت مصرف است؛ بازه عدم‌قطعیت صرفاً شاخصی مبتنی بر RMSE است و فاصله اطمینان آماری کالیبره‌شده یا تضمین صرفه‌جویی محسوب نمی‌شود.')
  return {forecasts,warnings}

@@ -116,7 +116,7 @@ export function allocateElectricityBillCost({bill,consumers}){
  })
  const allocatedTotal=allocations.reduce((s,x)=>s+x.totalCost,0)
  if(Math.abs(allocatedTotal-amount)>Math.max(.0001,amount*1e-10))throw new Error('تخصیص اجزای قبض با مبلغ نهایی تطبیق ندارد.')
- return {billId:String(bill.id??''),billNumber:String(bill.billNumber??''),period:String(bill.period??''),currencyUnit:'واحد پول قبض',billAmount:amount,componentTotal,residual,allocatedTotal,allocations,sourceReference:{type:'MOD-05-electricity-bill',billId:String(bill.id??''),billNumber:String(bill.billNumber??''),period:String(bill.period??'')},duplicatePostingGuard:'MOD-02 must post this source reference once; do not add bill total again if component allocations are already posted.'}
+ return {billId:String(bill.id??''),billNumber:String(bill.billNumber??''),period:String(bill.period??''),currencyUnit:'واحد پول قبض',billAmount:amount,componentTotal,residual,allocatedTotal,allocations,allocationRules:{energyCharge:'consumptionKwh',demandCharge:'peakDemandKw',reactiveCharge:'reactiveKvarh',taxCharge:'pre-tax allocated cost',residual:'consumptionKwh'},warnings:residual>0?['باقیمانده قبض که در اجزای تفکیک‌شده ثبت نشده، به نسبت kWh تخصیص یافته است؛ ماهیت اقلام ثابت/سایر را از روی قبض بررسی و در صورت لزوم تفکیک کنید.']:[],sourceReference:{type:'MOD-05-electricity-bill',billId:String(bill.id??''),billNumber:String(bill.billNumber??''),period:String(bill.period??'')},duplicatePostingGuard:'MOD-02 must post this source reference once; do not add bill total again if component allocations are already posted.'}
 }
 
 export function prepareModule02EnergyCostPosting({baseInput,allocation,costCenterId}){

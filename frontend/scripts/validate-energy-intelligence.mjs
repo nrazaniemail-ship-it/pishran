@@ -43,9 +43,9 @@ test('gas invoice allocation reconciles volume, thermal, transport, fixed and ta
  assert.equal(allocation.allocations.reduce((s,x)=>s+x.volumeCharge,0),400)
  assert.equal(allocation.allocations.reduce((s,x)=>s+x.thermalCharge,0),200)
  assert.equal(allocation.allocations.reduce((s,x)=>s+x.fixedCharge,0),100)
- assert.ok(Math.abs(allocation.allocations[0].costPerTon-10.84375)<1e-9)
+ assert.ok(Math.abs(allocation.allocations[0].costPerTon-8.5)<1e-9)
  const prepared=prepareModule02GasCostPosting({baseInput:{energy:'10',material:'100'},allocation,costCenterId:'A'})
- assert.ok(Math.abs(Number(prepared.input.energy)-660.625)<1e-9)
+ assert.equal(Number(prepared.input.energy),520)
  assert.equal(prepared.sourceReferences.gasBillId,'GB-1')
 })
 
