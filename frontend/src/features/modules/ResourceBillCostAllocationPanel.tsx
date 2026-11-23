@@ -18,11 +18,11 @@ export default function ResourceBillCostAllocationPanel({resource,language='fa'}
   const volume=allocate(values.volumeCharge,centers,'consumption')
   const sewer=gas?centers.map(()=>0):allocate(values.sewerCharge,centers,'wastewater')
   const fixed=allocate(values.fixedCharge,centers,'consumption',true)
-  const preTax=centers.map((_,i)=>volume[i]+sewer[i]+fixed[i])
-  const tax=allocate(values.taxCharge,centers,'consumption') // replaced below by proportional pre-tax weights
-  const taxWeights=preTax.map(x=>String(x)) as any
-  const taxByCenter=values.taxCharge>0&&preTax.reduce((s,x)=>s+x,0)>0?preTax.map((x,i,arr)=>i===arr.length-1?values.taxCharge-arr.slice(0,i).reduce((s,v)=>s+values.taxCharge*v/arr.reduce((a,b)=>a+b,0),0):values.taxCharge*x/arr.reduce((a,b)=>a+b,0)):tax
   const other=allocate(values.otherCharges+Math.max(0,amount-known),centers,'consumption')
+  const preTax=centers.map((_,i)=>volume[i]+sewer[i]+fixed[i]+other[i])
+  const tax=allocate(values.taxCharge,centers,'consumption')
+  const taxTotal=preTax.reduce((s,x)=>s+x,0)
+  const taxByCenter=values.taxCharge>0&&taxTotal>0?preTax.map((x,i,arr)=>i===arr.length-1?values.taxCharge-arr.slice(0,i).reduce((s,v)=>s+values.taxCharge*v/taxTotal,0):values.taxCharge*x/taxTotal):tax
   const rows=centers.map((x,i)=>{const total=volume[i]+sewer[i]+fixed[i]+taxByCenter[i]+other[i];const production=Number(x.production)||0;return {costCenterId:x.id,name:x.name,volumeCharge:volume[i],sewerCharge:sewer[i],fixedCharge:fixed[i],taxCharge:taxByCenter[i],otherCharges:other[i],totalCost:total,productionTon:production,costPerTon:production>0?total/production:null}})
   const allocatedTotal=rows.reduce((s,x)=>s+x.totalCost,0)
   if(Math.abs(allocatedTotal-amount)>Math.max(.0001,amount*1e-10))return null
