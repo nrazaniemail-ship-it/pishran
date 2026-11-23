@@ -7,7 +7,7 @@ import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConv
 import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
-import { buildAbnormalWasteAccountingPostings, reconcileInventoryThreeWay, reconcileInventoryReference, reconcileStageInventoryMovements } from './inventoryControlLedgers'
+import { buildAbnormalWasteAccountingPostings, canPersistStageAccountingPostings, reconcileInventoryThreeWay, reconcileInventoryReference, reconcileStageInventoryMovements } from './inventoryControlLedgers'
 import { loadStageInventoryAccountingPostings, persistStageInventoryAccountingPostings, type PersistedStageInventoryAccountingPosting } from './stageInventoryAccountingStore'
 import StageInventoryCorrectionsPanel from './StageInventoryCorrectionsPanel'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
@@ -747,7 +747,7 @@ export default function AdvancedFinancePanel(props: Props) {
   ]
   const stagePostingSignature=JSON.stringify(combinedStageAccountingPostings)
   useEffect(()=>{
-    if(!stageJournalLoaded||!stageInventoryReconciliation?.valid||!abnormalWasteAccounting.valid||!props.projectId)return
+    if(!canPersistStageAccountingPostings(stageJournalLoaded,stageInventoryReconciliation,abnormalWasteAccounting.valid,props.projectId))return
     const postings=combinedStageAccountingPostings
     if(!postings.length){setStagePostingPersistence({status:'idle',count:0,error:''});return}
     let active=true
