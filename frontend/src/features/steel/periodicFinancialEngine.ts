@@ -1648,7 +1648,7 @@ export type PeriodicFinancialStatement = {
   endDate: string
   openingBalances: Required<PeriodicStatementOpeningBalances>
   incomeStatement: {
-    revenue: number; shortTermDepositInterest: number; cashOperatingCosts: number; ebitda: number; depreciation: number
+    revenue: number; shortTermDepositInterest: number; cashOperatingCosts: number; abnormalWasteExpense: number; ebitda: number; depreciation: number
     assetDisposalGainLoss: number; ebit: number; interest: number
     cashInterestExpense: number; financingFeeExpense: number; commitmentFeeExpense: number
     profitBeforeTax: number; foreignExchangeGainLoss: number; taxableDeductions: number; taxCredits: number; taxBeforeCredits: number; tax: number; netIncome: number
@@ -1836,7 +1836,7 @@ export function buildPeriodicThreeFinancialStatements(
     if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance +
         automaticFunding.automaticOverdraftBalance)) > tolerance) return []
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, rawMaterialsInventory, workInProgressInventory, finishedGoodsInventory, deferredPreOperatingAssets, paidInCapital, retainedEarnings, grants }
-    const cashOperatingCosts = row.variableCost + row.fixedCost
+    const cashOperatingCosts = row.variableCost + row.fixedCost + row.abnormalWasteExpense
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
     const ebitda = row.revenue - cashOperatingCosts
     const ebit = ebitda - row.depreciation + assetDisposalGainLoss
@@ -1887,7 +1887,7 @@ export function buildPeriodicThreeFinancialStatements(
     }
     statements.push({
       period: row.period, startDate: row.startDate, endDate: row.endDate, openingBalances,
-      incomeStatement: { revenue: row.revenue, shortTermDepositInterest: row.shortTermDepositInterest, cashOperatingCosts, ebitda, depreciation: row.depreciation,
+      incomeStatement: { revenue: row.revenue, shortTermDepositInterest: row.shortTermDepositInterest, cashOperatingCosts, abnormalWasteExpense: row.abnormalWasteExpense, ebitda, depreciation: row.depreciation,
         assetDisposalGainLoss, ebit, interest: row.interestExpense,
         cashInterestExpense: row.cashInterestExpense, financingFeeExpense: row.financingFeeExpense,
         commitmentFeeExpense: row.commitmentFeeExpense,
