@@ -9,6 +9,7 @@ const flowSource=await readFile(new URL('../src/features/projects/inventoryProdu
 const flowUrl='data:text/javascript;base64,'+Buffer.from(transpile(flowSource)).toString('base64')
 const controlSource=transpile(await readFile(new URL('../src/features/projects/inventoryControlLedgers.ts',import.meta.url),'utf8'))
 const controlUrl='data:text/javascript;base64,'+Buffer.from(controlSource).toString('base64')
+const controlModule=await import(controlUrl)
 const integrationSource=await readFile(new URL('../src/features/projects/cppCpsScheduleIntegration.ts',import.meta.url),'utf8')
 const integrationModule=await import('data:text/javascript;base64,'+Buffer.from(transpile(integrationSource)).toString('base64'))
 const source=await readFile(new URL('../src/features/projects/productOperatingSchedule.ts',import.meta.url),'utf8')
