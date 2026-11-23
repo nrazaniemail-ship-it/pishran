@@ -9,6 +9,27 @@ trap capture_diagnostics EXIT
 
 adb devices -l
 adb shell getprop sys.boot_completed
+
+# The emulator runner can report boot-complete before Android framework
+# services are registered. Wait for ActivityManager and PackageManager before
+# issuing settings/install/launch commands; otherwise adb may return exit 224
+# with "Can't find service: activity" even though the app has not started.
+services_ready=0
+for attempt in $(seq 1 60); do
+  activity_service="$(adb shell service check activity 2>/dev/null || true)"
+  package_service="$(adb shell service check package 2>/dev/null || true)"
+  if grep -qi "found" <<< "$activity_service" && grep -qi "found" <<< "$package_service"; then
+    services_ready=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$services_ready" -ne 1 ]]; then
+  echo "Android framework ActivityManager/PackageManager services did not become ready after boot." >&2
+  adb shell service list 2>&1 | grep -E "activity|package" >&2 || true
+  exit 1
+fi
+
 adb shell settings put global package_verifier_enable 0
 adb shell settings put global verifier_verify_adb_installs 0
 adb logcat -c
