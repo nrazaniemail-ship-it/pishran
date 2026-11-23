@@ -661,6 +661,8 @@ export type PeriodicProjectFinanceInput = {
   annualShortTermDepositInterest?: number[]
   annualVariableCost: number[]
   annualFixedCost: number[]
+  /** Separately expensed abnormal waste; kept outside fixed/variable cost behaviour buckets. */
+  periodAbnormalWasteExpense?: number[]
   annualDepreciation: number[]
   annualFixedInvestment: number[]
   annualPreOperatingCost: number[]
@@ -728,6 +730,8 @@ export type PeriodicProjectFinanceRow = {
   shortTermDepositInterest: number
   variableCost: number
   fixedCost: number
+  /** Separately expensed abnormal waste; not presumed fixed or variable. */
+  abnormalWasteExpense: number
   depreciation: number
   ebit: number
   assetSaleProceeds: number
@@ -1065,9 +1069,9 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Period subsidy income must contain one finite non-negative amount for every project period.')
     return empty()
   }
-  const periodOperatingOverrides = [input.periodRevenue, input.periodVariableCost]
+  const periodOperatingOverrides = [input.periodRevenue, input.periodVariableCost, input.periodAbnormalWasteExpense]
   if (periodOperatingOverrides.some(series => series != null && (series.length !== periods.length || series.some(value => !validFinite(value) || value < 0)))) {
-    warnings.push('Product-led period revenue and cost-of-sales overrides must contain one finite non-negative amount for every project period.')
+    warnings.push('Period revenue, cost-of-sales and separately expensed abnormal-waste schedules must contain one finite non-negative amount for every project period.')
     return empty()
   }
   const revenue = input.periodRevenue ? [...input.periodRevenue] : allocatedRevenue
@@ -1209,7 +1213,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const terminalSalvage = index === periods.length - 1 ? Math.max(0,input.salvageValue ?? 0) : 0
     const salvageBookValueDisposed = index === periods.length - 1 ? Math.max(0,input.salvageBookValue ?? 0) : 0
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
-    const ebit = revenue[index] - variableCost[index] - fixedCost[index] - depreciation[index] +
+    const abnormalWasteExpense=input.periodAbnormalWasteExpense?.[index]??0
+    const ebit = revenue[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
     const currentFiscalYearIndex=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
     const taxableDeduction=input.taxableDeductionsByPeriod?.[index]??0
@@ -1246,7 +1251,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       warnings.push('Shareholder working-capital funding must be finite and non-negative (period ' + (index + 1) + ').')
       return empty()
     }
-    const cfads = revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - periodTax.tax
+    const cfads = revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - periodTax.tax
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
@@ -1256,10 +1261,10 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const projectFreeCashFlow = ebit + shortTermDepositInterest[index] - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
-    const equityFreeCashFlow = -equityContribution[index] + revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index]
+    const equityFreeCashFlow = -equityContribution[index] + revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
-    const periodCashChange = revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - periodTax.tax
+    const periodCashChange = revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - periodTax.tax
       - interestExpense - principal - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage + debtDrawdown
       + equityContribution[index] + equityWorkingCapitalContributionAmount
@@ -1269,7 +1274,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     if (fundingGap > 0.01) warnings.push('Funding shortfall at the end of project period ' + (index + 1) + ': ' + fundingGap.toFixed(2) + '.')
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
-      revenue:revenue[index],subsidyIncome:input.periodSubsidyIncome?.[index]??0,shortTermDepositInterest:shortTermDepositInterest[index],variableCost:variableCost[index],fixedCost:fixedCost[index],depreciation:depreciation[index],ebit,
+      revenue:revenue[index],subsidyIncome:input.periodSubsidyIncome?.[index]??0,shortTermDepositInterest:shortTermDepositInterest[index],variableCost:variableCost[index],fixedCost:fixedCost[index],abnormalWasteExpense,depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
