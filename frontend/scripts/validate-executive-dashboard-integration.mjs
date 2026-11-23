@@ -73,7 +73,7 @@ test('incomplete or invalid source input is rejected without writing a report',a
 
 test('OEE above 100 percent remains visible with an explicit data-quality warning',async()=>{
  const store=memoryStore()
- const report=await executeModuleAnalysis('MOD-03',{...productionInput,totalCount:'1000'},store,at(8))
+ const report=await executeModuleAnalysis('MOD-03',{...productionInput,totalCount:'1000',goodCount:'1000'},store,at(8))
  assert.ok(report.metrics.performance>100)
  assert.ok(report.metrics.oee>100)
  assert.equal(report.warnings.length,1)
