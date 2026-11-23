@@ -8,8 +8,8 @@ test('multi-period series never compares different sites or significant energy u
  const result=buildEnergySeries(data,{resource:'electricity'})
  assert.equal(result.series.length,3)
  const rolling=result.series.find(x=>x.site==='Plant'&&x.seu==='Rolling')
- assert.equal(rolling.points[1].intensityChangePercent,-10)
- assert.equal(rolling.points[1].periodChangePercent,-10)
+ assert.ok(Math.abs(rolling.points[1].intensityChangePercent+10)<1e-9)
+ assert.ok(Math.abs(rolling.points[1].periodChangePercent+10)<1e-9)
 })
 
 test('gas trend uses one consistent thermal basis across the whole series or falls back entirely to volume',()=>{
