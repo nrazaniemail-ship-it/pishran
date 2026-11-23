@@ -1792,3 +1792,175 @@ input,select,textarea{color:var(--text)}
     width: 100%;
   }
 }
+
+
+/* Mobile/tablet layout correction: remove the desktop side-rail reservation
+   and keep every dashboard section inside the actual viewport width. */
+@media (max-width: 1024px) {
+  html, body, #root {
+    width: 100%;
+    max-width: 100%;
+    min-width: 320px;
+  }
+  body {
+    overflow-x: clip;
+  }
+  .app-shell {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+    padding: 0 14px 28px;
+    overflow-x: clip;
+  }
+  .app-shell > :not(.topbar):not(.floating-calculator):not(footer),
+  .app-shell > footer {
+    margin-inline: 0 !important;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1001;
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    gap: 8px 12px;
+    padding: 10px 0;
+  }
+  .topbar .brand {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .page-language-switch {
+    position: static;
+    inset: auto;
+    transform: none;
+    flex: 0 0 auto;
+  }
+  .main-nav {
+    position: static;
+    inset: auto;
+    order: 3;
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 5px 1px 8px;
+    border-radius: 10px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .main-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .main-nav .nav-item,
+  .main-nav .nav-dropdown {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: max-content;
+  }
+  .main-nav .nav-item {
+    white-space: nowrap;
+    justify-content: center;
+    padding: 9px 11px;
+  }
+  .main-nav .nav-dropdown > summary {
+    width: auto;
+    white-space: nowrap;
+  }
+  .main-nav .nav-dropdown[open] > .nav-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    inset-inline-start: 0;
+    width: min(360px, calc(100vw - 28px));
+    max-height: min(60vh, 340px);
+    overflow: auto;
+  }
+  .hero,
+  .section-head,
+  .kpis,
+  .analytics,
+  .page-heading,
+  .projects-page,
+  .steel-group-page {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .hero {
+    width: 100%;
+    margin-inline: 0;
+  }
+  .dashboard-image-art,
+  .dashboard-diagram-stage {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 650px) {
+  .app-shell {
+    padding: 0 12px 24px;
+  }
+  .topbar {
+    gap: 8px;
+    padding: 9px 0;
+  }
+  .topbar .brand b {
+    font-size: 18px;
+  }
+  .main-nav {
+    margin-inline: 0;
+    gap: 5px;
+  }
+  .main-nav .nav-item {
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .hero {
+    padding: 20px 16px;
+    margin-top: 14px;
+  }
+  .hero-copy {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+  .hero h1 {
+    font-size: clamp(21px, 6vw, 27px);
+    overflow-wrap: anywhere;
+  }
+  .hero p {
+    overflow-wrap: anywhere;
+  }
+  .dashboard-image-art {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 auto;
+  }
+  .dashboard-diagram-stage {
+    width: 100%;
+    max-width: 520px;
+  }
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .kpi {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
