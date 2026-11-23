@@ -31,6 +31,13 @@ export function createBlankProductionCostFormDraft(id=''):ProductionCostFormDraf
  standardQuantity:null,standardUnitPrice:null,standardTotal:null,nominalCapacity:null,fixedPercent:null,variablePercent:null,adjustments:[]
 }}
 
+export type ProductionBridgeLinkFormDraft={sourceProductId:string;destinationProductId:string;sourceCostCentreId:string;destinationCostCentreId:string;sourceUnit:string;destinationUnit:string;conversionFactor:number|null}
+export type ProductionBridgeEvidenceFormDraft={sourceReference:string;sourceVerified:boolean;rawMaterialsToWip:ProductionBridgeLinkFormDraft;wipToFinishedGoods:ProductionBridgeLinkFormDraft}
+export function createBlankProductionBridgeEvidenceFormDraft():ProductionBridgeEvidenceFormDraft {
+ const blankLink=():ProductionBridgeLinkFormDraft=>({sourceProductId:'',destinationProductId:'',sourceCostCentreId:'',destinationCostCentreId:'',sourceUnit:'',destinationUnit:'',conversionFactor:null})
+ return {sourceReference:'',sourceVerified:false,rawMaterialsToWip:blankLink(),wipToFinishedGoods:blankLink()}
+}
+
 export type SalesProductFormDraft={
  productId:string
  unitOfMeasure?:string
@@ -38,7 +45,7 @@ export type SalesProductFormDraft={
  finishedGoodsDaysCoverage:number|null
  productionStartPeriod:number|null
  productionEndPeriod:number|null
- periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;salesTaxSourceReference?:string;salesTaxSourceVerified?:boolean;subsidyPercent:number|null;subsidyAmount:number|null;openingFinishedGoodsQuantity:number|null;openingFinishedGoodsValue:number|null;finishedGoodsClosingQuantity:number|null;rawMaterialPurchasesQuantity:number|null;rawMaterialPurchasesValue:number|null;rawMaterialConsumptionQuantity:number|null;normalRawMaterialWasteQuantity:number|null;abnormalRawMaterialWasteQuantity:number|null;unitsStarted:number|null;unitsCompleted:number|null;closingWipQuantity:number|null;materialCompletionPercent:number|null;conversionCompletionPercent:number|null;conversionCost:number|null;openingRawMaterialQuantity:number|null;openingRawMaterialValue:number|null;openingWipQuantity:number|null;openingWipMaterialValue:number|null;openingWipConversionValue:number|null}[]
+ periods:{period:string;salesQuantity:number|null;netUnitPrice:number|null;salesTaxPercent:number|null;salesTaxSourceReference?:string;salesTaxSourceVerified?:boolean;subsidyPercent:number|null;subsidyAmount:number|null;openingFinishedGoodsQuantity:number|null;openingFinishedGoodsValue:number|null;finishedGoodsClosingQuantity:number|null;rawMaterialPurchasesQuantity:number|null;rawMaterialPurchasesValue:number|null;rawMaterialConsumptionQuantity:number|null;normalRawMaterialWasteQuantity:number|null;abnormalRawMaterialWasteQuantity:number|null;unitsStarted:number|null;unitsCompleted:number|null;closingWipQuantity:number|null;materialCompletionPercent:number|null;conversionCompletionPercent:number|null;conversionCost:number|null;openingRawMaterialQuantity:number|null;openingRawMaterialValue:number|null;openingWipQuantity:number|null;openingWipMaterialValue:number|null;openingWipConversionValue:number|null;productionBridgeEvidence?:ProductionBridgeEvidenceFormDraft}[]
 }
 export function createBlankSalesProductFormDraft(productId=''):SalesProductFormDraft{return{productId,unitOfMeasure:'',inventoryPolicy:null,finishedGoodsDaysCoverage:null,productionStartPeriod:null,productionEndPeriod:null,periods:[]}}
 
