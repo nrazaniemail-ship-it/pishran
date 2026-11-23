@@ -26,7 +26,7 @@ test('Excel export includes module metadata, rendered report content, tables and
 })
 
 test('module navigation uses an accessible real button and controlled menu',()=>{
- assert.match(app,/<button type="button" className=\{moduleDropdownOpen \? 'nav-item nav-module-toggle active' : 'nav-item nav-module-toggle'\}/)
+ assert.match(app,/<button type="button" className=\{page === 'module' \? 'nav-item nav-module-toggle active' : 'nav-item nav-module-toggle'\}/)
  assert.match(app,/aria-expanded=\{moduleDropdownOpen\}/)
  assert.match(app,/role="menu"/)
  assert.match(app,/role="menuitem"/)
