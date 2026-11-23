@@ -40,6 +40,8 @@ const near=(a:number,b:number,t:number)=>Math.abs(a-b)<=t*Math.max(1,Math.abs(a)
 
 export function validateWasteLedger(entries:WasteLedgerEntry[],periodCount:number,tolerance=0.01):WasteLedgerResult{
  const issues:string[]=[],ids=new Set<string>(),normal=Array(periodCount).fill(0) as number[],abnormal=Array(periodCount).fill(0) as number[]
+ if(!Number.isFinite(tolerance)||tolerance<0)
+  return {valid:false,issues:['Waste ledger tolerance must be a finite non-negative percentage.'],normalWasteAbsorbedByPeriod:[],abnormalWasteExpenseByPeriod:[],totalNormalWaste:0,totalAbnormalWaste:0}
  for(const e of entries){
   if(!e.id||ids.has(e.id))issues.push('Waste entries require unique non-empty identifiers.')
   ids.add(e.id)
@@ -124,6 +126,8 @@ export function buildAbnormalWasteAccountingPostings(
 export function validateProductionTransfers(entries:ProductionTransferEntry[],periodCount:number,tolerance=0.01):TransferLedgerResult{
  const issues:string[]=[],ids=new Set<string>(),qty:Record<string,number>={},value:Record<string,number>={},unitByProduct:Record<string,string>={}
  let source=0,destination=0
+ if(!Number.isFinite(tolerance)||tolerance<0)
+  return {valid:false,issues:['Production transfer tolerance must be a finite non-negative percentage.'],netQuantityByProductCentre:{},netValueByProductCentre:{},totalSourceValue:0,totalDestinationValue:0}
  for(const e of entries){
   if(!e.id||ids.has(e.id))issues.push('Transfer entries require unique non-empty identifiers.')
   ids.add(e.id)
