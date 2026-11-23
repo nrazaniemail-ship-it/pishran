@@ -1,5 +1,5 @@
 export type EnergyResource='electricity'|'gas'|'water'
-export type EnergyRecordInput={resource:EnergyResource;period:string;site:string;seu:string;meterId?:string;consumption:string|number;production:string|number;cost:string|number;startReading?:string|number;endReading?:string|number;calorificValue?:string|number;note?:string;dataQuality?:'measured'|'estimated'}
+export type EnergyRecordInput={resource:EnergyResource;period:string;site:string;seu:string;meterId?:string;consumption:string|number;production:string|number;cost:string|number;startReading?:string|number;endReading?:string|number;calorificValue?:string|number;sourceBillId?:string;sourceBillNumber?:string;note?:string;dataQuality?:'measured'|'estimated'}
 export type EnergyBaselineInput={resource:EnergyResource;period:string;site:string;seu:string;consumption:string|number;production:string|number}
 export type EnergyActionInput={title:string;resource:EnergyResource;owner:string;dueDate:string;expectedSavings:string|number;status?:string}
 export type EnergyStore={get<T>(key:string):Promise<T|undefined>;set<T>(key:string,value:T):Promise<void>;update<T>(key:string,fn:(old:T|undefined)=>T):Promise<T>}
