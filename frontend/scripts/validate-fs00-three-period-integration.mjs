@@ -705,4 +705,47 @@ const duplicatedLinkedTransferCheck = inventoryControlModule.reconcileStageInven
 assert.equal(duplicatedLinkedTransferCheck.valid, false,
   'The shared product/centre ledger must reject posting A→B transfer again as an external receipt')
 
+
+const abnormalWasteInput = {
+  periods, fiscalYearStartMonth: 1, dayCountBasis: 365, cashFlowTiming: 'period-end',
+  annualRevenue: [1000, 1000, 1000], annualVariableCost: [100, 100, 100],
+  annualFixedCost: [50, 50, 50], periodAbnormalWasteExpense: [10, 20, 30],
+  annualDepreciation: [0, 0, 0], annualFixedInvestment: [0, 0, 0],
+  annualPreOperatingCost: [0, 0, 0], annualMaintenanceCapex: [0, 0, 0],
+  annualTaxRates: [0, 0, 0], annualEquityContributions: [0, 0, 0],
+  workingCapitalByPeriod: [0, 0, 0], openingCash: 0, loans: [],
+  discountRatePercent: 10,
+}
+const abnormalWasteResult = engine.calculateIntegratedPeriodicFinance(abnormalWasteInput)
+assert.equal(abnormalWasteResult.valid, true, abnormalWasteResult.warnings.join('; '))
+assert.deepEqual(abnormalWasteResult.rows.map(row => row.fixedCost), [50, 50, 50],
+  'Abnormal waste must never be classified as fixed cost without cost-behaviour evidence')
+assert.deepEqual(abnormalWasteResult.rows.map(row => row.abnormalWasteExpense), [10, 20, 30],
+  'Abnormal waste must remain separately visible by period')
+assert.deepEqual(abnormalWasteResult.rows.map(row => row.ebit), [840, 830, 820],
+  'Abnormal waste must reduce EBIT exactly once')
+assert.deepEqual(abnormalWasteResult.rows.map(row => row.cfads), [840, 830, 820],
+  'Abnormal waste must reduce CFADS exactly once')
+assert.deepEqual(abnormalWasteResult.rows.map(row => row.projectFreeCashFlow), [840, 830, 820],
+  'Abnormal waste must reduce project free cash flow exactly once')
+assert.deepEqual(abnormalWasteResult.rows.map(row => row.closingCash), [840, 1670, 2490],
+  'Abnormal waste must reduce period cash balances without being capitalized into inventory')
+const abnormalWasteStatements = engine.buildPeriodicThreeFinancialStatements(abnormalWasteResult, {
+  cash: 0, debt: 0, netFixedAssets: 0, netWorkingCapital: 0,
+  paidInCapital: 0, retainedEarnings: 0, grants: 0,
+})
+assert.equal(abnormalWasteStatements.length, 3)
+assert.ok(abnormalWasteStatements.every(row => row.balanceSheet.reconciled),
+  'Separately expensed abnormal waste must preserve three-statement balance-sheet reconciliation')
+const invalidAbnormalWaste = engine.calculateIntegratedPeriodicFinance({
+  ...abnormalWasteInput, periodAbnormalWasteExpense: [10, -1, 30],
+})
+assert.equal(invalidAbnormalWaste.valid, false,
+  'Negative abnormal-waste expense must be rejected rather than silently accepted')
+const missingAbnormalWastePeriod = engine.calculateIntegratedPeriodicFinance({
+  ...abnormalWasteInput, periodAbnormalWasteExpense: [10, 20],
+})
+assert.equal(missingAbnormalWastePeriod.valid, false,
+  'Abnormal-waste schedule must cover every project period')
+
 console.log('PASS: FS-00 three-period product + A→B/B→A transfer round-trip → CPP/CPS → COGS/WIP/FG → working capital → income statement/cash flow/balance sheet integration.')
