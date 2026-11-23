@@ -204,7 +204,7 @@ export default function App() {
         <details className="nav-dropdown" open={moduleDropdownOpen}>
           <summary className={page === 'module' ? 'nav-item active' : 'nav-item'} onClick={event => { event.preventDefault(); setModuleDropdownOpen(current => !current) }}><Boxes size={17}/> {isEn ? 'Modules' : 'ماژولها'}</summary>
           <div className="nav-dropdown-menu">
-            {modules.map(item => <button type="button" key={item.id} className={page === 'module' && activeModuleId === item.id ? 'dropdown-module active' : 'dropdown-module'} onClick={() => openModule(item.id)}><span>{item.id}</span>{isEn ? item.enTitle : item.title}</button>)}
+            {modules.map(item => <button type="button" key={item.id} className={page === 'module' && activeModuleId === item.id ? 'dropdown-module active' : 'dropdown-module'} onClick={() => openModule(item.id)}>{isEn ? item.enTitle : item.title}</button>)}
           </div>
         </details>
         <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
