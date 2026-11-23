@@ -4,12 +4,12 @@ name: Frontend build and financial validation
 
 on:
   push:
-    branches: [feature/raw-template-comfar-financial-integration, feature/integrated-dri-steelmaking-comfar, feat/valuation-date-discounting-rebased, feat/periodic-loan-rate-resets-and-fees, feature/mod05-water-gas-bill-analysis, feature/pishran-module-exports-nav, feature/pishran-module-launcher-redesign]
+    branches: [feature/raw-template-comfar-financial-integration, feature/integrated-dri-steelmaking-comfar, feat/valuation-date-discounting-rebased, feat/periodic-loan-rate-resets-and-fees, feature/mod05-water-gas-bill-analysis, feature/pishran-module-exports-nav, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-validation.yml'
   pull_request:
-    branches: [main]
+    branches: [main, feature/pishran-module-launcher-redesign]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-validation.yml'
