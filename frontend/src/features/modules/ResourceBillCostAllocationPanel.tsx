@@ -1,5 +1,6 @@
 import {useMemo,useState} from 'react'
 import {localStore} from '../../core/storage/localStore'
+import './ResourceBillCostAllocationPanel.css'
 type Resource='gas'|'water'
 type Center={id:string;name:string;consumption:string;wastewater:string;production:string}
 type Bill={id:string;billNumber:string;period:string;amount:string;volumeCharge:string;sewerCharge:string;fixedCharge:string;taxCharge:string;otherCharges:string}
