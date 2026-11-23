@@ -31,7 +31,7 @@ const abnormalWasteBaseSchedule = {
   ...schedule,
   periodRawMaterialInventoryValue: [100, 100],
   periodWipInventoryValue: [0, 0],
-  rows: schedule.rows.map(row => ({ ...row, rawMaterialInventoryValue: 50, wipInventoryValue: 0 })),
+  rows: schedule.rows.map(row => ({ ...row, rawMaterialInventoryValue: 100, wipInventoryValue: 0 })),
 }
 const abnormalWasteAdjustment = integrationModule.applyStageJournalCorrectionsToProductSchedule(
   abnormalWasteBaseSchedule,
