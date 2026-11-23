@@ -66,3 +66,55 @@ export async function saveWaterBalance(input,store,createdAt=new Date().toISOStr
  await store.update(WATER_BALANCE_KEY,old=>[row,...(Array.isArray(old)?old:[])].slice(0,300))
  return row
 }
+
+export function analyzeEnergyTrends(records,{resource,site,seu}={}) {
+ const selected=(Array.isArray(records)?records:[]).filter(x=>
+  (!resource||x.resource===resource)&&(!site||x.site===site)&&(!seu||x.seu===seu)
+ ).slice().sort((a,b)=>String(a.period).localeCompare(String(b.period),'en',{numeric:true}))
+ const points=selected.map((x,index)=>{
+  const prior=index?selected[index-1]:null
+  const thermalComparable=x.resource==='gas'&&Number(x.gasEnergyKwh)>0&&prior&&Number(prior.gasEnergyKwh)>0&&
+   ['gross','net'].includes(x.calorificBasis)&&x.calorificBasis===prior.calorificBasis&&
+   String(x.gasReferenceConditions??'').trim()!==''&&String(x.gasReferenceConditions??'').trim()===String(prior.gasReferenceConditions??'').trim()
+  const value=thermalComparable?Number(x.gasEnergyKwh):Number(x.consumption)
+  const priorValue=prior?(thermalComparable?Number(prior.gasEnergyKwh):Number(prior.consumption)):null
+  const intensity=value/Number(x.production)
+  const priorIntensity=prior&&Number(prior.production)>0?priorValue/Number(prior.production):null
+  return {id:x.id,period:x.period,resource:x.resource,site:x.site,seu:x.seu,consumption:Number(x.consumption),production:Number(x.production),cost:Number(x.cost),intensity,costPerOutput:Number(x.cost)/Number(x.production),comparisonUnit:thermalComparable?'kWh/t':x.resource==='electricity'?'kWh/t':x.resource==='gas'?'Nm³/t':'m³/t',comparisonBasis:thermalComparable?'thermal-energy':'volume-or-resource',periodChangePercent:priorValue>0?(value/priorValue-1)*100:null,intensityChangePercent:priorIntensity>0?(intensity/priorIntensity-1)*100:null,costPerOutputChangePercent:prior&&Number(prior.cost)/Number(prior.production)>0?(Number(x.cost)/Number(x.production)/(Number(prior.cost)/Number(prior.production))-1)*100:null}
+ })
+ return {count:points.length,points,warnings:selected.some(x=>x.resource==='gas')?['مقایسه روند حرارتی گاز فقط در صورت یکسان بودن مبنای HHV/LHV و شرایط مرجع انجام می‌شود؛ در غیر این صورت شاخص حجمی گزارش می‌شود.']:[]}
+}
+function splitCost(amount,consumers,weightKey){
+ const total=consumers.reduce((s,x)=>s+Math.max(0,Number(x[weightKey])||0),0)
+ if(!Number.isFinite(amount)||amount<0)throw new Error('مبلغ جزء قبض معتبر نیست.')
+ if(amount===0)return consumers.map(()=>0)
+ if(total<=0)throw new Error('برای تخصیص جزء قبض، مبنای مصرف/دیماند/راکتیو معتبر ثبت نشده است: '+weightKey)
+ let assigned=0
+ return consumers.map((x,i)=>{const share=i===consumers.length-1?amount-assigned:amount*Math.max(0,Number(x[weightKey])||0)/total;assigned+=share;return share})
+}
+export function allocateElectricityBillCost({bill,consumers}){
+ if(!bill||!Array.isArray(consumers)||!consumers.length)throw new Error('قبض و حداقل یک مرکز هزینه برای تخصیص لازم است.')
+ const amount=Number(bill.amount)
+ if(!Number.isFinite(amount)||amount<0)throw new Error('مبلغ نهایی قبض معتبر نیست.')
+ const parts=['energyCharge','demandCharge','reactiveCharge','taxCharge']
+ const values=Object.fromEntries(parts.map(k=>[k,bill[k]===null||bill[k]===undefined||bill[k]===''?0:Number(bill[k])]))
+ if(parts.some(k=>!Number.isFinite(values[k])||values[k]<0))throw new Error('اجزای مبلغ قبض باید اعداد غیرمنفی باشند.')
+ const componentTotal=parts.reduce((s,k)=>s+values[k],0)
+ if(componentTotal>amount+Math.max(1,amount*.001))throw new Error('جمع اجزای قبض از مبلغ نهایی بیشتر است؛ ابتدا قبض را تطبیق دهید.')
+ const residual=Math.max(0,amount-componentTotal)
+ const energy=splitCost(values.energyCharge,consumers,'consumptionKwh')
+ const demand=splitCost(values.demandCharge,consumers,'peakDemandKw')
+ const reactive=splitCost(values.reactiveCharge,consumers,'reactiveKvarh')
+ const preTax=consumers.map((_,i)=>energy[i]+demand[i]+reactive[i])
+ const tax=splitCost(values.taxCharge,consumers.map((x,i)=>({...x,taxWeight:preTax[i]})),'taxWeight')
+ const other=splitCost(residual,consumers,'consumptionKwh')
+ const allocations=consumers.map((x,i)=>{
+  const allocatedEnergy=energy[i],allocatedDemand=demand[i],allocatedReactive=reactive[i],allocatedTax=tax[i],allocatedOther=other[i]
+  const total=allocatedEnergy+allocatedDemand+allocatedReactive+allocatedTax+allocatedOther
+  const production=Number(x.productionTon)||0
+  return {costCenterId:String(x.id??x.name??i+1),name:String(x.name??x.id??'مرکز هزینه '+(i+1)),energyCharge:allocatedEnergy,demandCharge:allocatedDemand,reactiveCharge:allocatedReactive,taxCharge:allocatedTax,otherCharges:allocatedOther,totalCost:total,productionTon:production,costPerTon:production>0?total/production:null}
+ })
+ const allocatedTotal=allocations.reduce((s,x)=>s+x.totalCost,0)
+ if(Math.abs(allocatedTotal-amount)>Math.max(.0001,amount*1e-10))throw new Error('تخصیص اجزای قبض با مبلغ نهایی تطبیق ندارد.')
+ return {billId:String(bill.id??''),billNumber:String(bill.billNumber??''),period:String(bill.period??''),currencyUnit:'واحد پول قبض',billAmount:amount,componentTotal,residual,allocatedTotal,allocations,sourceReference:{type:'MOD-05-electricity-bill',billId:String(bill.id??''),billNumber:String(bill.billNumber??''),period:String(bill.period??'')},duplicatePostingGuard:'MOD-02 must post this source reference once; do not add bill total again if component allocations are already posted.'}
+}
