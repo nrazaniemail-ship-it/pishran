@@ -54,8 +54,9 @@ assert.deepEqual(adaptedBridge,bridge,
  'The form-to-bridge adapter must preserve weighted-average material and equivalent-unit transfer values')
 const thirdPeriodInput={...input,
  rawMaterialPurchasesQuantity:[100,50,0],rawMaterialPurchasesValue:[1200,650,0],
- rawMaterialConsumptionQuantity:[120,80,50],unitsStarted:[120,80,50],unitsCompleted:[100,100,50],
- closingWipQuantity:[20,0,0],conversionCompletionPercent:[50,100,100],conversionCost:[500,600,300],
+ rawMaterialConsumptionQuantity:[120,80,50],normalRawMaterialWasteQuantity:[0,0,0],abnormalRawMaterialWasteQuantity:[0,0,0],
+ unitsStarted:[120,80,50],unitsCompleted:[100,100,50],closingWipQuantity:[20,0,0],
+ materialCompletionPercent:[100,100,100],conversionCompletionPercent:[50,100,100],conversionCost:[500,600,300],
 }
 const thirdPeriodSchedule=mod.buildInventoryFlowSchedule(thirdPeriodInput)
 assert.equal(thirdPeriodSchedule.valid,true,thirdPeriodSchedule.issues.join('; '))
