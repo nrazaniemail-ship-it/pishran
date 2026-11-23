@@ -1,5 +1,5 @@
 export type ElectricityBillRecord = {
- period?:string;billNumber?:string;accountNumber?:string;meterNumber?:string;
+ period?:string;billNumber?:string;accountNumber?:string;paymentId?:string;meterNumber?:string;
  previousReading?:number|null;currentReading?:number|null;consumption?:number|null;billingDays?:number|null;
  demand?:number|null;contractDemand?:number|null;reactiveEnergy?:number|null;powerFactor?:number|null;
  peakConsumption?:number|null;midConsumption?:number|null;offPeakConsumption?:number|null;
