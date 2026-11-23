@@ -1715,3 +1715,13 @@ input,select,textarea{color:var(--text)}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:850px){.dashboard-image-art{width:69%;max-height:none}.dashboard-diagram-stage{width:100%}}
 @media(max-width:650px){.dashboard-image-art{width:100%;max-height:none;margin:12px auto 0}.dashboard-diagram-stage{width:min(100%,520px)}.dashboard-diagram-tooltip{max-width:min(195px,68vw);font-size:11px}.dashboard-diagram-tooltip img{width:24px;height:24px}}
+
+
+/* Keep the module menu as an overlay so opening it never reflows the header. */
+.nav-dropdown{position:relative;align-self:center}
+.nav-dropdown-menu{position:absolute;top:calc(100% + 9px);inset-inline-start:0;z-index:1300;width:min(360px,88vw);max-height:min(70vh,560px);margin:0;box-shadow:0 16px 36px rgba(20,35,55,.18)}
+@media(max-width:900px){
+  .nav-dropdown{width:auto;flex:0 0 auto}
+  .nav-dropdown>summary{width:auto}
+  .nav-dropdown-menu{position:absolute;top:calc(100% + 5px);inset-inline-start:0;width:min(360px,88vw);max-height:min(60vh,340px);margin:0;box-shadow:0 16px 36px rgba(20,35,55,.18)}
+}
