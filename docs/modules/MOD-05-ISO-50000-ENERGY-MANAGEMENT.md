@@ -34,3 +34,21 @@ All records are stored locally through the Pishran localStore.
 
 
 Implementation scope in this increment: separate electricity, natural-gas and water ledgers; meter-reading reconciliation when readings are provided; data-quality labels; site/SEU boundaries; production-intensity baselines; normalized comparisons; and improvement-action registers. Advanced regression normalization, multi-variable adjustment, audit trails for calibration, and formal M&V evidence packs remain follow-on work.
+
+## Electricity bill OCR and analytical controls
+
+The electricity area includes a local-image OCR workflow. The user selects or captures a bill image; Tesseract.js recognizes Persian and English text in the browser and a deterministic parser proposes values for the editable bill form. OCR confidence is shown as a review signal, not as a field-level guarantee. No bill is committed until the user confirms it. The source image is previewed locally and is not persisted by this workflow; OCR language assets may be fetched by the browser at runtime.
+
+The bill register captures billing period, account and meter identifiers, opening/closing readings, billed kWh, billing days, peak/mid/off-peak quantities, maximum and contracted demand, reactive energy, power factor, meter multiplier, tariff and voltage descriptors, and available bill-charge components. The parser is deliberately conservative and leaves unknown fields blank for manual review.
+
+Analytical controls include:
+- opening/closing meter delta against billed consumption (2% review tolerance);
+- daily consumption comparison only against the most recent saved bill for the same meter or account, never an unrelated account;
+- kWh per tonne when period production is supplied;
+- demand-to-contract ratio and power-factor review;
+- reconciliation of time-of-use quantities to total kWh (2% review tolerance);
+- reconciliation of extracted charge components to payable total (3% review tolerance).
+
+These are screening rules, not a tariff engine or an assertion that a bill is legally correct. Actual tariff calculation requires the applicable tariff schedule, voltage level, billing dates, contract demand, seasonal rules, tax/fee treatment, reactive-energy rules, and any credits or adjustments. A low power factor or demand above contract is a review flag; the module does not assume a penalty amount. OCR output and derived warnings remain subject to human validation.
+
+Pure parsing and analytical logic is covered by frontend/scripts/validate-electricity-bill-analysis.mjs, included in npm run test:modules.
