@@ -67,6 +67,22 @@ assert.deepEqual(restored.entries.map(row => row.id), postings.map(row => row.id
 assert.equal((await restoredModule.loadStageInventoryAccountingPostings('OTHER-PROJECT')).entries.length, 0,
   'Project ledgers must remain isolated')
 
+const abnormalWasteProject='FS00-ABNORMAL-WASTE-JOURNAL'
+const abnormalWastePosting={
+ id:'abnormal-waste:1:P1:CC-A:INC-001',period:1,kind:'abnormal-waste',productId:'P1',
+ sourceReference:'INC-001',debitAccount:'Abnormal Waste Expense',
+ creditAccount:'Inventory:raw-materials',amount:110,
+}
+const wasteJournalSaved=await restoredModule.persistStageInventoryAccountingPostings(abnormalWasteProject,[abnormalWastePosting])
+assert.equal(wasteJournalSaved.insertedCount,1)
+assert.equal(wasteJournalSaved.debitTotal,110)
+assert.equal(wasteJournalSaved.creditTotal,110)
+const wasteJournalReplay=await restoredModule.persistStageInventoryAccountingPostings(abnormalWasteProject,[abnormalWastePosting])
+assert.equal(wasteJournalReplay.insertedCount,0,'Replaying the same abnormal-waste journal must not duplicate the expense')
+assert.equal(wasteJournalReplay.existingCount,1)
+assert.equal(wasteJournalReplay.entries.length,1)
+assert.equal(wasteJournalReplay.entries[0].creditAccount,'Inventory:raw-materials')
+
 const engineSource = await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts', import.meta.url), 'utf8')
 const engine = await import(dataUrl(transpile(engineSource), 'financial-engine'))
 const periods = [
