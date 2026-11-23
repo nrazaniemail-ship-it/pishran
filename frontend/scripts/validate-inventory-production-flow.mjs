@@ -24,6 +24,38 @@ const bridgeEvidence=[1,2].map(period=>({
  wipToFinishedGoods:{sourceProductId:'DRI',destinationProductId:'SLAB',sourceCostCentreId:'DRI-01',destinationCostCentreId:'CAST-01',sourceUnit:'tonne',destinationUnit:'tonne',conversionFactor:1},
 }))
 const bridge=mod.buildProductionStageTransferDrafts(result,bridgeEvidence)
+const salesProduct = {
+ productId:'SLAB', unitOfMeasure:'tonne',
+ periods:[1,2].map((period,index)=>({
+  period:String(period),
+  rawMaterialPurchasesQuantity:input.rawMaterialPurchasesQuantity[index],
+  rawMaterialPurchasesValue:input.rawMaterialPurchasesValue[index],
+  rawMaterialConsumptionQuantity:input.rawMaterialConsumptionQuantity[index],
+  normalRawMaterialWasteQuantity:input.normalRawMaterialWasteQuantity[index],
+  abnormalRawMaterialWasteQuantity:input.abnormalRawMaterialWasteQuantity[index],
+  unitsStarted:input.unitsStarted[index],unitsCompleted:input.unitsCompleted[index],
+  closingWipQuantity:input.closingWipQuantity[index],
+  materialCompletionPercent:input.materialCompletionPercent[index],
+  conversionCompletionPercent:input.conversionCompletionPercent[index],
+  conversionCost:input.conversionCost[index],
+  openingRawMaterialQuantity:index===0?input.openingRawMaterialQuantity:null,
+  openingRawMaterialValue:index===0?input.openingRawMaterialValue:null,
+  openingWipQuantity:index===0?input.openingWipQuantity:null,
+  openingWipMaterialValue:index===0?input.openingWipMaterialValue:null,
+  openingWipConversionValue:index===0?input.openingWipConversionValue:null,
+ })),
+}
+const adaptedBridge=mod.buildProductionBridgeDraftsFromSalesProduct(salesProduct,bridgeEvidence)
+assert.deepEqual(adaptedBridge,bridge,
+ 'The form-to-bridge adapter must preserve weighted-average material and equivalent-unit transfer values')
+assert.throws(()=>mod.buildProductionBridgeDraftsFromSalesProduct({
+ ...salesProduct,periods:salesProduct.periods.map((row,index)=>index===1?{...row,conversionCost:null}:row),
+},bridgeEvidence),/period 2 is incomplete/,
+ 'Missing period inputs must block bridge generation rather than default to zero')
+assert.throws(()=>mod.buildProductionBridgeDraftsFromSalesProduct(salesProduct,bridgeEvidence.map(row=>({
+ ...row,wipToFinishedGoods:{...row.wipToFinishedGoods,destinationProductId:'WRONG-PRODUCT'},
+}))),/must target the selected saleable product/,
+ 'WIP-to-finished-goods drafts must not be routed to a different saleable product')
 assert.equal(bridge.length,4,'Each period must produce at most one raw-to-WIP and one WIP-to-finished-goods transfer.')
 assert.deepEqual(bridge.map(row=>row.id),mod.buildProductionStageTransferDrafts(result,bridgeEvidence).map(row=>row.id),
  'Generated transfer identifiers must be deterministic for safe replay.')
