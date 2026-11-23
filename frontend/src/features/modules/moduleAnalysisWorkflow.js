@@ -25,9 +25,12 @@ export async function executeModuleAnalysis(moduleId, input, store, createdAt = 
     const quality=x.goodCount/x.totalCount*100
     metrics={availability,performance,quality,oee:availability/100*performance/100*quality/100*100}
   }
+  const warnings = moduleId === 'MOD-03' && (metrics.performance > 100 || metrics.oee > 100)
+    ? ['OEE یا عملکرد از ۱۰۰٪ بیشتر است؛ مقدار خام حفظ شده و باید زمان سیکل مرجع، شمارش تولید و زمان کارکرد بررسی شود.']
+    : []
   const key=moduleId==='MOD-02'?COST_KEY:OEE_KEY
   const previous=await store.get(key), history=Array.isArray(previous)?previous:[]
-  const saved={id:`${moduleId}-${Date.parse(createdAt)}`,moduleId,createdAt,inputs:{...input},metrics}
+  const saved={id:`${moduleId}-${Date.parse(createdAt)}`,moduleId,createdAt,inputs:{...input},metrics,warnings}
   await store.set(key,[saved,...history].slice(0,30))
   return saved
 }
