@@ -9,6 +9,7 @@ import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriod
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
 import { reconcileInventoryThreeWay, reconcileInventoryReference, reconcileStageInventoryMovements } from './inventoryControlLedgers'
 import { loadStageInventoryAccountingPostings, persistStageInventoryAccountingPostings, type PersistedStageInventoryAccountingPosting } from './stageInventoryAccountingStore'
+import StageInventoryCorrectionsPanel from './StageInventoryCorrectionsPanel'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
 import { applyStageJournalCorrectionsToProductSchedule, bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
 import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft, SalesTaxLedgerFormDraft, ValueAddedPeriodFormDraft } from './projectModelFormDrafts'
@@ -1115,6 +1116,7 @@ export default function AdvancedFinancePanel(props: Props) {
          {stagePostingPersistence.status==='saving'&&<p>{t('در حال ذخیره اسناد مرحله‌ای…','Persisting stage documents…')}</p>}
          {stagePostingPersistence.status==='error'&&<p role="alert">{t('ذخیره اسناد مرحله‌ای ناموفق بود: ','Stage document persistence failed: ')}{stagePostingPersistence.error}</p>}
         <p>{t('انتقال بین مراحل فقط بدهکار کردن موجودی مرحله مقصد و بستانکار کردن موجودی مرحله مبدأ است؛ جمع موجودی و CPP/CPS را افزایش نمی‌دهد. بهای تمام‌شده فروش در این پیش‌نمایش با دفتر کالای ساخته‌شده تطبیق می‌شود، اما قبلاً در هزینه متغیر و صورت سود و زیان موتور مالی منظور شده و دوباره به آن افزوده نمی‌شود. این خروجی پیش‌نمایش ثبت است و هنوز به دفتر کل پایدار/ERP ارسال نمی‌شود.','Inter-stage transfers debit the destination inventory account and credit the source inventory account only; they do not increase total inventory or CPP/CPS. COGS is tied to the finished-goods subledger in this preview but is already included in the finance engine variable cost and income statement, so it is not added again. This is a posting preview, not a persistent general-ledger or ERP write.')}</p>
+        {stageJournalLoaded&&<StageInventoryCorrectionsPanel projectId={props.projectId} entries={stageJournalEntries} periodCount={projectPeriods.length} en={en} onUpdated={entries=>{setStageJournalEntries(entries);setStagePostingPersistence({status:'saved',count:entries.length,error:''})}}/>}
       </div>}
       {inventoryReferenceReconciliation&&<div className={inventoryReferenceReconciliation.valid?'fw-result':'fw-validation'} role={inventoryReferenceReconciliation.valid?'status':'alert'}>
         <b>{t('تطبیق تاریخی با خروجی مرجع','Historical reconciliation against reference output')}</b>
