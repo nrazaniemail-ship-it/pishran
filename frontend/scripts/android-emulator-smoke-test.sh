@@ -7,14 +7,6 @@ capture_diagnostics() {
 }
 trap capture_diagnostics EXIT
 
-app_activity_record() {
-  adb shell dumpsys activity activities | awk '
-    /ActivityRecord.*com\\.pishran\\.app\\/\\.MainActivity/ { capture=1 }
-    capture { print }
-    capture && /mIsExiting=/ { exit }
-  '
-}
-
 adb devices -l
 adb shell getprop sys.boot_completed
 adb shell settings put global package_verifier_enable 0
@@ -46,19 +38,19 @@ ui_drawn=0
 # as resumed while its splash-screen starting window is still covering the UI.
 for attempt in $(seq 1 60); do
   activity_dump="$(adb shell dumpsys activity activities)"
-  if printf '%s\\n' "$activity_dump" | grep -E "mResumedActivity|topResumedActivity" | grep -Fq "com.pishran.app/.MainActivity"; then
+  if grep -E "mResumedActivity|topResumedActivity" <<< "$activity_dump" | grep -F "com.pishran.app/.MainActivity" >/dev/null; then
     resumed=1
   fi
 
-  app_record="$(printf '%s\\n' "$activity_dump" | awk '
-    /ActivityRecord.*com\\.pishran\\.app\\/\\.MainActivity/ { capture=1 }
+  app_record="$(awk '
+    index($0, "ActivityRecord") && index($0, "com.pishran.app/.MainActivity") { capture=1 }
     capture { print }
     capture && /mIsExiting=/ { exit }
-  ')"
+  ' <<< "$activity_dump")"
   if [[ "$resumed" -eq 1 ]] &&
-     printf '%s\\n' "$app_record" | grep -q "firstWindowDrawn=true" &&
-     printf '%s\\n' "$app_record" | grep -q "reportedDrawn=true" &&
-     ! printf '%s\\n' "$activity_dump" | grep -q "mTopFullscreenOpaqueWindowState=Window.*Splash Screen com.pishran.app"; then
+     grep -q "firstWindowDrawn=true" <<< "$app_record" &&
+     grep -q "reportedDrawn=true" <<< "$app_record" &&
+     ! grep -q "mTopFullscreenOpaqueWindowState=Window.*Splash Screen com.pishran.app" <<< "$activity_dump"; then
     ui_drawn=1
     break
   fi
