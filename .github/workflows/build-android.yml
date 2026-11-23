@@ -109,13 +109,17 @@ jobs:
             adb shell settings put global verifier_verify_adb_installs 0
             adb install --no-streaming -r "$GITHUB_WORKSPACE/frontend/android/app/build/outputs/apk/debug/app-debug.apk"
             adb logcat -c
-            adb shell am start -W -n com.pishran.app/.MainActivity
-            sleep 10
+            # Do not use am start -W: on the x86_64 hosted emulator it can time out
+            # while the Activity is still launched successfully.
+            adb shell am start -n com.pishran.app/.MainActivity | tee "$RUNNER_TEMP/pishran-launch.txt"
+            # Poll foreground state for up to 60 seconds; fail only if MainActivity never resumes.
+            for i in $(seq 1 30); do adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity" | grep -F "com.pishran.app/.MainActivity" && break; sleep 2; done
+            sleep 3
             adb shell dumpsys activity activities | tee "$RUNNER_TEMP/pishran-activity.txt"
             adb logcat -d -v time > "$RUNNER_TEMP/pishran-logcat.txt"
-            # Keep this as a single shell assertion: the emulator action executes
-            # script lines individually, so multiline if/fi blocks are not portable.
+            # Capture diagnostics before assertions; system/emulator ANRs are not app ANRs.
             ! grep -q "FATAL EXCEPTION" "$RUNNER_TEMP/pishran-logcat.txt"
+            ! grep -E "ANR in com.pishran.app|am_anr.*com.pishran.app|Input dispatching timed out.*com.pishran.app" "$RUNNER_TEMP/pishran-logcat.txt"
             grep -E "mResumedActivity|topResumedActivity" "$RUNNER_TEMP/pishran-activity.txt" | grep -F "com.pishran.app/.MainActivity"
 
       - name: Upload emulator diagnostics
@@ -125,6 +129,7 @@ jobs:
           name: Pishran-Android-Emulator-Diagnostics
           path: |
             ${{ runner.temp }}/pishran-activity.txt
+            ${{ runner.temp }}/pishran-launch.txt
             ${{ runner.temp }}/pishran-logcat.txt
           if-no-files-found: warn
           retention-days: 7
