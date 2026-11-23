@@ -50,6 +50,23 @@ export default function App() {
   const navigationStackRef = useRef<NavigationEntry[]>([{ page: 'dashboard', project: null, moduleId: 'MOD-01' }])
   const [moduleDropdownOpen, setModuleDropdownOpen] = useState(false)
 
+  useEffect(() => {
+    const closeModuleDropdownOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Element && target.closest('.nav-dropdown')) return
+      setModuleDropdownOpen(false)
+    }
+    const closeModuleDropdownOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setModuleDropdownOpen(false)
+    }
+    document.addEventListener('pointerdown', closeModuleDropdownOnOutsidePointer)
+    document.addEventListener('keydown', closeModuleDropdownOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeModuleDropdownOnOutsidePointer)
+      document.removeEventListener('keydown', closeModuleDropdownOnEscape)
+    }
+  }, [])
+
   function navigateTo(nextPage: Page, nextProject: FeasibilityProject | null = activeProject, nextModuleId = activeModuleId) {
     const current = navigationStackRef.current[navigationStackRef.current.length - 1]
     if (current.page === nextPage && current.project?.id === nextProject?.id && current.moduleId === nextModuleId) return
