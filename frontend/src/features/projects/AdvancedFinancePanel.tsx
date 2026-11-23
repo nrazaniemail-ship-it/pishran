@@ -738,8 +738,9 @@ export default function AdvancedFinancePanel(props: Props) {
     return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length,0.01,stageTransfers,expectedByProductPeriod)
   },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),periodicFinanceResult,productOperatingSchedule,baseIntegratedProductOperatingSchedule])
   const abnormalWasteAccounting=useMemo(()=>buildAbnormalWasteAccountingPostings(
-    props.productFinancialDrafts?.wasteLedgerEntries??[],props.projectPeriods?.length??0
-  ),[JSON.stringify(props.productFinancialDrafts?.wasteLedgerEntries??[]),props.projectPeriods?.length])
+    props.productFinancialDrafts?.wasteLedgerEntries??[],props.projectPeriods?.length??0,
+    baseIntegratedProductOperatingSchedule?.rows??[]
+  ),[JSON.stringify(props.productFinancialDrafts?.wasteLedgerEntries??[]),baseIntegratedProductOperatingSchedule,props.projectPeriods?.length])
   const combinedStageAccountingPostings=[
     ...(stageInventoryReconciliation?.accountingPostings??[]),
     ...(abnormalWasteAccounting.valid?abnormalWasteAccounting.postings:[]),
