@@ -1491,6 +1491,7 @@ input,select,textarea{color:var(--text)}
 .module-intelligence-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:18px}
 .module-intelligence-actions small{color:var(--muted,#64748b)}
 .module-intelligence-error{color:#b42318;background:#fff1f0;padding:10px 12px;border-radius:9px}
+.module-intelligence-warning{color:#854d0e;background:#fff7e6;border:1px solid #f2d49a;padding:10px 12px;border-radius:9px;line-height:1.7}
 .module-analysis-report{margin-top:20px;padding:18px;border:1px solid #a8c9b8;background:#f4faf6;border-radius:14px}
 .module-analysis-report h3,.module-analysis-history h3{margin:0 0 14px}
 .module-analysis-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:12px}
