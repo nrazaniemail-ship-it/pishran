@@ -7,7 +7,7 @@ type Bill={id:string;billNumber:string;period:string;amount:string;volumeCharge:
 const KEY='module-intelligence:MOD-05:resource-cost-allocations:v1'
 const emptyBill:Bill={id:'',billNumber:'',period:'',amount:'',volumeCharge:'',sewerCharge:'',fixedCharge:'',taxCharge:'',otherCharges:''}
 const center=():Center=>({id:'RC-'+Math.random().toString(36).slice(2,8),name:'',consumption:'',wastewater:'',production:''})
-function allocate(amount:number,rows:Center[],key:keyof Center,equal=false){const weights=rows.map(x=>equal?1:Math.max(0,Number(x[key])||0)),total=weights.reduce((s,x)=>s+x,0);if(amount>0&&total<=0)throw new Error('برای جزء هزینه، مبنای تخصیص معتبر وارد کنید.');let used=0;return weights.map((w,i)=>{const v=i===rows.length-1?amount-used:amount*w/total;used+=v;return v})}
+function allocate(amount:number,rows:Center[],key:keyof Center,equal=false){if(amount===0)return rows.map(()=>0);const weights=rows.map(x=>equal?1:Math.max(0,Number(x[key])||0)),total=weights.reduce((s,x)=>s+x,0);if(amount>0&&total<=0)throw new Error('برای جزء هزینه، مبنای تخصیص معتبر وارد کنید.');let used=0;return weights.map((w,i)=>{const v=i===rows.length-1?amount-used:amount*w/total;used+=v;return v})}
 export default function ResourceBillCostAllocationPanel({resource,language='fa'}:{resource:Resource;language?:'fa'|'en'}){
  const en=language==='en',gas=resource==='gas',[bill,setBill]=useState<Bill>(emptyBill),[centers,setCenters]=useState<Center[]>([center(),center()]),[error,setError]=useState(''),[notice,setNotice]=useState('')
  const allocation=useMemo(()=>{try{
