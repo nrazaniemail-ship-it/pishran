@@ -41,3 +41,47 @@ test('freshwater sources are itemized and reconciled without double counting',as
  assert.deepEqual(result.freshwaterSources,{municipalWaterM3:40,groundwaterM3:30,surfaceWaterM3:20,otherFreshwaterM3:10})
  assert.equal(result.internalRecirculationM3,150)
 })
+
+test('multi-period energy trends calculate production-normalized and cost intensity deltas',async()=>{
+ const {analyzeEnergyTrends}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const result=analyzeEnergyTrends([
+  {id:'e1',resource:'electricity',period:'1405/01',site:'Plant',seu:'Rolling',consumption:1000,production:100,cost:500},
+  {id:'e2',resource:'electricity',period:'1405/02',site:'Plant',seu:'Rolling',consumption:900,production:100,cost:540}
+ ],{resource:'electricity',site:'Plant',seu:'Rolling'})
+ assert.equal(result.count,2)
+ assert.equal(result.points[1].intensity,9)
+ assert.equal(result.points[1].intensityChangePercent,-10)
+ assert.equal(result.points[1].costPerOutputChangePercent,8)
+})
+test('gas trend uses thermal basis only for adjacent periods with matching HHV/LHV and reference conditions',async()=>{
+ const {analyzeEnergyTrends}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const records=[
+  {id:'g1',resource:'gas',period:'1405/01',site:'Plant',seu:'Furnace',consumption:100,production:10,cost:30,gasEnergyKwh:1000,calorificBasis:'net',gasReferenceConditions:'15C/101.325kPa'},
+  {id:'g2',resource:'gas',period:'1405/02',site:'Plant',seu:'Furnace',consumption:110,production:10,cost:33,gasEnergyKwh:990,calorificBasis:'net',gasReferenceConditions:'15C/101.325kPa'},
+  {id:'g3',resource:'gas',period:'1405/03',site:'Plant',seu:'Furnace',consumption:105,production:10,cost:32,gasEnergyKwh:1050,calorificBasis:'gross',gasReferenceConditions:'15C/101.325kPa'}
+ ]
+ const result=analyzeEnergyTrends(records,{resource:'gas'})
+ assert.equal(result.points[1].comparisonBasis,'thermal-energy')
+ assert.equal(result.points[1].intensity,99)
+ assert.equal(result.points[2].comparisonBasis,'volume-or-resource')
+ assert.equal(result.points[2].intensity,10.5)
+})
+test('electricity bill cost allocation reconciles every charge component to the invoice total',async()=>{
+ const {allocateElectricityBillCost}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const result=allocateElectricityBillCost({bill:{id:'EB-1',billNumber:'B-1',period:'1405/07',amount:1000,energyCharge:600,demandCharge:150,reactiveCharge:50,taxCharge:100},consumers:[
+  {id:'CC-A',name:'Rolling',consumptionKwh:600,peakDemandKw:30,reactiveKvarh:20,productionTon:60},
+  {id:'CC-B',name:'Melting',consumptionKwh:400,peakDemandKw:70,reactiveKvarh:80,productionTon:40}
+ ]})
+ assert.equal(result.allocatedTotal,1000)
+ assert.equal(result.allocations.reduce((s,x)=>s+x.energyCharge,0),600)
+ assert.equal(result.allocations.reduce((s,x)=>s+x.demandCharge,0),150)
+ assert.equal(result.allocations.reduce((s,x)=>s+x.reactiveCharge,0),50)
+ assert.equal(result.allocations.reduce((s,x)=>s+x.taxCharge,0),100)
+ assert.equal(result.allocations[0].costPerTon,8)
+ assert.equal(result.sourceReference.billId,'EB-1')
+})
+test('electricity bill allocation rejects missing cost drivers and non-reconciled invoice components',async()=>{
+ const {allocateElectricityBillCost}=await import('../src/features/modules/energyManagementWorkflow.js')
+ assert.throws(()=>allocateElectricityBillCost({bill:{amount:100,energyCharge:100,demandCharge:10},consumers:[{id:'A',consumptionKwh:10}]}),/جمع اجزای قبض/)
+ assert.throws(()=>allocateElectricityBillCost({bill:{amount:100,demandCharge:50},consumers:[{id:'A',consumptionKwh:10}]}),/peakDemandKw/)
+})
