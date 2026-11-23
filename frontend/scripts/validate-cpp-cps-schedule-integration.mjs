@@ -27,6 +27,48 @@ const schedule = {
       subsidyIncome: 0, grossProfit: 1080, hasInventoryFlow: false, wipQuantity: 0, materialEquivalentUnits: 0, conversionEquivalentUnits: 0, materialCompletionPercent: 0, conversionCompletionPercent: 0 },
   ],
 }
+const abnormalWasteBaseSchedule = {
+  ...schedule,
+  periodRawMaterialInventoryValue: [100, 100],
+  periodWipInventoryValue: [0, 0],
+  rows: schedule.rows.map(row => ({ ...row, rawMaterialInventoryValue: 50, wipInventoryValue: 0 })),
+}
+const abnormalWasteAdjustment = integrationModule.applyStageJournalCorrectionsToProductSchedule(
+  abnormalWasteBaseSchedule,
+  [
+    { id: 'AW-ORIGINAL', period: 1, kind: 'abnormal-waste', productId: 'P1',
+      debitAccount: 'Abnormal Waste Expense', creditAccount: 'Inventory:raw-materials', amount: 110 },
+    { id: 'AW-ADJ', period: 1, kind: 'abnormal-waste', productId: 'P1',
+      debitAccount: 'Abnormal Waste Expense', creditAccount: 'Inventory:raw-materials', amount: 30,
+      documentType: 'adjustment', adjustmentOfDocumentId: 'AW-ORIGINAL' },
+  ],
+  [0, 0],
+)
+assert.equal(abnormalWasteAdjustment.valid, true, abnormalWasteAdjustment.issues.join('; '))
+assert.deepEqual(abnormalWasteAdjustment.appliedDocumentIds, ['AW-ADJ'])
+assert.deepEqual(abnormalWasteAdjustment.schedule.periodRawMaterialInventoryValue, [70, 70],
+  'An abnormal-waste adjustment must reduce raw inventory once and carry the corrected balance forward')
+close(abnormalWasteAdjustment.schedule.rows[0].rawMaterialInventoryValue, 35)
+close(abnormalWasteAdjustment.schedule.rows[1].rawMaterialInventoryValue, 35)
+assert.deepEqual(abnormalWasteAdjustment.schedule.periodCostOfSales, schedule.periodCostOfSales,
+  'Abnormal waste must not be reclassified as COGS')
+
+const abnormalWasteReversal = integrationModule.applyStageJournalCorrectionsToProductSchedule(
+  abnormalWasteBaseSchedule,
+  [
+    { id: 'AW-ORIGINAL-REV', period: 1, kind: 'abnormal-waste', productId: 'P1',
+      debitAccount: 'Abnormal Waste Expense', creditAccount: 'Inventory:raw-materials', amount: 110 },
+    { id: 'AW-REV', period: 1, kind: 'abnormal-waste', productId: 'P1',
+      debitAccount: 'Inventory:raw-materials', creditAccount: 'Abnormal Waste Expense', amount: 110,
+      documentType: 'reversal', originalDocumentId: 'AW-ORIGINAL-REV' },
+  ],
+  [0, 0],
+)
+assert.equal(abnormalWasteReversal.valid, true, abnormalWasteReversal.issues.join('; '))
+assert.deepEqual(abnormalWasteReversal.schedule.periodRawMaterialInventoryValue, [210, 210],
+  'Reversing an abnormal-waste write-off must restore raw inventory without touching COGS')
+assert.deepEqual(abnormalWasteReversal.schedule.periodCostOfSales, schedule.periodCostOfSales)
+
 const verifiedItem = {
   id: 'energy-01', label: 'Incremental energy', category: 'energy',
   basis: 'period-total', behaviour: 'variable', fixedPercent: 0, variablePercent: 100,
