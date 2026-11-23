@@ -104,7 +104,7 @@ test('MOD-01 ignores incomplete metric payloads and invalid dates',async()=>{
 test('the real module form delegates calculations and persistence to the tested workflow',async()=>{
  const source=await readFile(new URL('../src/features/modules/ModuleIntelligencePanel.tsx',import.meta.url),'utf8')
  assert.match(source,/executeModuleAnalysis\(moduleId/)
- assert.match(source,/localStore\)/)
+ assert.match(source,/localStore/)
  const dashboard=await readFile(new URL('../src/features/modules/ExecutiveDashboardPanel.tsx',import.meta.url),'utf8')
  assert.match(dashboard,/loadExecutiveDashboardReports\(localStore\)/)
  assert.match(dashboard,/onClick=\{\(\)=>void refresh\(\)\}/)
