@@ -14,6 +14,7 @@ import ModuleIntelligencePanel from './features/modules/ModuleIntelligencePanel'
 import ModuleKpiPanel from './features/modules/ModuleKpiPanel'
 import ModuleEnergyPanel from './features/modules/ModuleEnergyPanel'
 import ExecutiveDashboardPanel from './features/modules/ExecutiveDashboardPanel'
+import ModuleExportActions from './features/modules/ModuleExportActions'
 
 type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wizard' | 'guide' | 'module'
 
@@ -310,12 +311,12 @@ export default function App() {
         <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
         <button className={page === 'steel-group' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('steel-group')}><Factory size={17}/> {isEn ? "Steel Group" : "گروه فولاد"}</button>
-        <details className="nav-dropdown" open={moduleDropdownOpen}>
-          <summary className={page === 'module' ? 'nav-item active' : 'nav-item'} onClick={event => { event.preventDefault(); setModuleDropdownOpen(current => !current) }}><Boxes size={17}/> {isEn ? 'Modules' : 'ماژولها'}</summary>
-          <div className="nav-dropdown-menu">
-            {modules.map(item => <button type="button" key={item.id} className={page === 'module' && activeModuleId === item.id ? 'dropdown-module active' : 'dropdown-module'} onClick={() => openModule(item.id)}>{isEn ? item.enTitle : item.title}</button>)}
-          </div>
-        </details>
+        <div className={moduleDropdownOpen ? 'nav-dropdown is-open' : 'nav-dropdown'}>
+          <button type="button" className={page === 'module' ? 'nav-item nav-module-toggle active' : 'nav-item nav-module-toggle'} aria-haspopup="menu" aria-expanded={moduleDropdownOpen} onClick={() => setModuleDropdownOpen(current => !current)}><Boxes size={17}/> {isEn ? 'Modules' : 'ماژولها'} <span className="nav-caret" aria-hidden="true">{moduleDropdownOpen ? '▴' : '▾'}</span></button>
+          {moduleDropdownOpen && <div className="nav-dropdown-menu" role="menu">
+            {modules.map(item => <button type="button" role="menuitem" key={item.id} className={page === 'module' && activeModuleId === item.id ? 'dropdown-module active' : 'dropdown-module'} onClick={() => openModule(item.id)}><span>{item.id}</span>{isEn ? item.enTitle : item.title}</button>)}
+          </div>}
+        </div>
         <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
         <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('settings')}><Settings size={17}/> {isEn ? "Settings" : "تنظیمات"}</button>
       </nav>
@@ -387,8 +388,9 @@ export default function App() {
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => navigateBack('projects')}/>}
-    {page === 'module' && <section className="module-workspace-page">
+    {page === 'module' && <section className="module-workspace-page" data-module-export-root="true">
       <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => navigateBack('dashboard')}>{isEn ? 'Back to dashboard' : 'بازگشت به داشبورد'}</button><span className="module-id">{activeModule.id}</span></div>
+      <ModuleExportActions moduleId={activeModule.id} moduleTitle={isEn ? activeModule.enTitle : activeModule.title} language={settings.language}/>
       <div className="module-workspace-hero"><div className="module-icon"><ActiveModuleIcon size={26}/></div><div><h1>{isEn ? activeModule.enTitle : activeModule.title}</h1><p>{isEn ? activeModule.enSub : activeModule.sub}</p><small>{isEn ? activeModule.enGroup : activeModule.group}</small></div></div>
       {activeModule.id === 'MOD-01' && <ExecutiveDashboardPanel language={settings.language} onOpenModule={openModule}/>}
       {(activeModule.id === 'MOD-02' || activeModule.id === 'MOD-03') && <ModuleIntelligencePanel moduleId={activeModule.id} language={settings.language}/>}
