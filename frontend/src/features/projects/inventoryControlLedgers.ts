@@ -67,20 +67,41 @@ export type AbnormalWasteAccountingResult={
  * trace only and must never be added again to CPP/CPS, COGS, WC or cash flow.
  */
 export function buildAbnormalWasteAccountingPostings(
- entries:WasteLedgerEntry[],periodCount:number
+ entries:WasteLedgerEntry[],periodCount:number,
+ productionFlowRows:{period:number;productId:string;abnormalWasteValue:number;abnormalWasteSourceReference:string;abnormalWasteSourceVerified:boolean}[]=[]
 ):AbnormalWasteAccountingResult{
  const waste=validateWasteLedger(entries,periodCount)
  if(!waste.valid)return {valid:false,issues:waste.issues,postings:[],debitTotal:0,creditTotal:0}
- const postings:StageInventoryAccountingPosting[]=entries
-  .filter(entry=>entry.classification==='abnormal'&&entry.amount>0)
-  .map(entry=>({
+ const issues:string[]=[]
+ const ledgerAbnormal=entries.filter(entry=>entry.classification==='abnormal'&&entry.amount>0)
+ const flowAbnormal=productionFlowRows.filter(row=>row.abnormalWasteValue>0)
+ for(const row of productionFlowRows){
+  if(!Number.isInteger(row.period)||row.period<1||row.period>periodCount||
+     !row.productId?.trim()||!Number.isFinite(row.abnormalWasteValue)||row.abnormalWasteValue<0)
+   issues.push('Production-flow abnormal waste requires a valid period, product and finite non-negative value.')
+  if(row.abnormalWasteValue>0&&(!row.abnormalWasteSourceReference?.trim()||row.abnormalWasteSourceVerified!==true))
+   issues.push('Production-flow abnormal waste requires a verified incident source reference before journal creation.')
+ }
+ const ledgerKeys=new Set(ledgerAbnormal.map(entry=>entry.period+':'+entry.productId.trim()))
+ for(const row of flowAbnormal){
+  if(ledgerKeys.has(row.period+':'+row.productId.trim()))
+   issues.push('Abnormal waste for product '+row.productId+' in period '+row.period+' is present in both the waste ledger and production flow.')
+ }
+ if(issues.length)return {valid:false,issues,postings:[],debitTotal:0,creditTotal:0}
+ const postings:StageInventoryAccountingPosting[]=[
+  ...ledgerAbnormal.map(entry=>({
    id:'abnormal-waste:'+entry.period+':'+entry.productId.trim()+':'+entry.costCentreId.trim()+':'+entry.id,
-   period:entry.period,kind:'abnormal-waste',productId:entry.productId.trim(),
-   sourceReference:entry.sourceReference.trim(),
-   debitAccount:'Abnormal Waste Expense',
-   creditAccount:'Inventory:raw-materials',
-   amount:entry.amount,
-  }))
+   period:entry.period,kind:'abnormal-waste' as const,productId:entry.productId.trim(),
+   sourceReference:entry.sourceReference.trim(),debitAccount:'Abnormal Waste Expense',
+   creditAccount:'Inventory:raw-materials',amount:entry.amount,
+  })),
+  ...flowAbnormal.map(row=>({
+   id:'abnormal-waste-flow:'+row.period+':'+row.productId.trim(),
+   period:row.period,kind:'abnormal-waste' as const,productId:row.productId.trim(),
+   sourceReference:row.abnormalWasteSourceReference.trim(),debitAccount:'Abnormal Waste Expense',
+   creditAccount:'Inventory:raw-materials',amount:row.abnormalWasteValue,
+  })),
+ ]
  const total=postings.reduce((sum,posting)=>sum+posting.amount,0)
  return {valid:true,issues:[],postings,debitTotal:total,creditTotal:total}
 }
