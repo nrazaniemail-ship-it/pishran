@@ -223,7 +223,7 @@ export default function App() {
         </div>
         <div className="hero-art dashboard-image-art">
           <div className="dashboard-diagram-stage" aria-label={isEn ? "Interactive Pishran module diagram" : "نمودار تعاملی ماژول‌های پیشران"}>
-            <img className="dashboard-module-image" src={`${import.meta.env.BASE_URL}modules/diagram-3d-light.svg`} alt={isEn ? "Three-dimensional twelve-module Pishran dashboard diagram" : "نمودار سه‌بعدی روشن دوازده ماژول پیشران"} />
+            <img className="dashboard-module-image" src={`${import.meta.env.BASE_URL}modules/diagram-3d-light.svg?v=20261123-2`} alt={isEn ? "Three-dimensional twelve-module Pishran dashboard diagram" : "نمودار سه‌بعدی روشن دوازده ماژول پیشران"} />
             {modules.map((item, index) => {
               const spots = [
                 { left:'40.54%', top:'1%', width:'18.92%', height:'19.62%' },
@@ -244,7 +244,7 @@ export default function App() {
                 onClick={() => openModule(item.id)}
                 aria-label={`${item.id}: ${isEn ? item.enTitle : item.title}. ${isEn ? item.enSub : item.sub}`}>
                 <span className="dashboard-diagram-tooltip">
-                  <img src={`${import.meta.env.BASE_URL}modules/icons/${moduleIconFiles[index]}`} alt="" />
+                  <img src={`${import.meta.env.BASE_URL}modules/icons/${moduleIconFiles[index]}?v=20261123-2`} alt="" />
                   <span>{isEn ? item.enSub : item.sub}</span>
                 </span>
                 <span className="visually-hidden">{isEn ? item.enTitle : item.title}</span>
