@@ -2,6 +2,7 @@ import {useEffect,useMemo,useState} from 'react'
 import {Camera,FileImage,LoaderCircle,ScanLine,ShieldCheck,Trash2} from 'lucide-react'
 import {createWorker} from 'tesseract.js'
 import {localStore} from '../../core/storage/localStore'
+import './ResourceBillAnalysis.css'
 
 type Resource='gas'|'water'
 type Bill=Record<string,string|number|null>&{id:string;period:string;billNumber:string;accountNumber:string;meterNumber:string;previousReading:number|null;currentReading:number|null;consumption:number|null;billingDays:number|null;multiplier:number|null;amount:number|null;dueDate:string;production:number|null;ocrConfidence:number;sourceText:string;createdAt:string}
@@ -38,7 +39,7 @@ export default function ResourceBillAnalysis({resource,onUseBill,language='fa'}:
   if(readingDelta!==null&&consumption>0&&Math.abs(readingDelta-consumption)>Math.max(1,consumption*.02))warnings.push('اختلاف قرائت تعدیل‌شده با مصرف درج‌شده بیش از تلورانس ۲٪ است.')
   if(daily!==null&&priorDaily!==null&&Math.abs(daily/priorDaily-1)>.2)warnings.push('مصرف روزانه نسبت به قبض قبلی بیش از ۲۰٪ تغییر کرده است؛ علت عملیاتی یا خطای قرائت بررسی شود.')
   if(componentTotal!==null&&num('amount')>0&&Math.abs(componentTotal-num('amount'))>Math.max(1,num('amount')*.01))warnings.push('جمع اجزای تفکیک‌شده با مبلغ نهایی قبض بیش از تلورانس ۱٪ اختلاف دارد.')
-  if(gas&&thermal!==null&&bill.calorificBasis!=='gross'&&bill.calorificBasis!=='net')warnings.push('مبنای ارزش حرارتی HHV/LHV مشخص نشده؛ مقایسه انرژی حرارتی بین دوره‌ها تأییدپذیر نیست.')
+  if(gas&&thermal!==null&&bill.calorificBasis!=='gross'&&bill.calorificBasis!=='net')warnings.push('مبنای ارزش حرارتی HHV/LHV مشخص نشده؛ مقایسه انرژی حرارتی بین دوره‌ها تأییدپذیر نیست.')\n  if(gas&&thermal!==null&&num('energyGJ')>0&&Math.abs(thermal*.0036-num('energyGJ'))>Math.max(.01,num('energyGJ')*.01))warnings.push('انرژی محاسبه‌شده از حجم و ارزش حرارتی با GJ درج‌شده در قبض تطبیق ندارد.')
   return {daily,priorDaily,dailyChange:priorDaily&&daily!==null?(daily/priorDaily-1)*100:null,unitCost:consumption>0&&num('amount')>0?num('amount')/consumption:null,intensity:production>0?consumption/production:null,thermalKwh:thermal,thermalGJ:thermal===null?null:thermal*.0036,thermalIntensity:thermal!==null&&production>0?thermal/production:null,costPerGJ:thermal!==null&&thermal>0&&num('amount')>0?num('amount')/(thermal*.0036):null,componentTotal,warnings}
  },[bill,history,readingDelta,gas])
  async function scan(file:File){setError('');setNotice('');if(!file.type.startsWith('image/')){setError('فقط تصویر قبض قابل پردازش است.');return}if(file.size>15*1024*1024){setError('حجم تصویر باید کمتر از ۱۵ مگابایت باشد.');return}setBusy(true);setImage(URL.createObjectURL(file));try{const worker=await createWorker('fas+eng');try{const result=await worker.recognize(file);setBill({...blank(resource),...parseOcr(result.data.text,resource),ocrConfidence:Math.round(result.data.confidence),sourceText:result.data.text});setNotice('اطلاعات اولیه از تصویر استخراج شد؛ تمام فیلدها را با قبض اصلی بازبینی و اصلاح کنید.')}finally{await worker.terminate()}}catch{setError('استخراج تصویر ناموفق بود؛ تصویر واضح‌تر انتخاب کنید یا اطلاعات را دستی وارد کنید.')}finally{setBusy(false)}}
@@ -47,7 +48,7 @@ export default function ResourceBillAnalysis({resource,onUseBill,language='fa'}:
   const row={...bill,id:(gas?'GB-':'WB-')+Date.now(),createdAt:new Date().toISOString()};try{await localStore.update<Bill[]>(KEYS[resource],old=>[row,...(Array.isArray(old)?old:[])].slice(0,120));setHistory(old=>[row,...old]);setBill(blank(resource));setImage('');setNotice('قبض تأییدشده ذخیره شد.');}catch{setError('ذخیره قبض با خطا مواجه شد.')}
  }
  const fmt=(v:number|null)=>v===null?'—':v.toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})
- const numericFields=Object.keys(labels).filter(k=>numericKeys.has(k)),textFields=Object.keys(labels).filter(k=>!numericKeys.has(k))
+ const numericFields=Object.keys(labels).filter(k=>numericKeys.has(k)),textFields=Object.keys(labels).filter(k=>!numericKeys.has(k)&&!(gas&&k==='calorificBasis'))
  return <section className="utility-bill-card">
   <header className="utility-bill-heading"><div><span className="utility-bill-kicker">{gas?'NATURAL GAS':'WATER'} · BILL INTELLIGENCE</span><h3>{gas?'تحلیل قبض مصرفی گاز':'تحلیل قبض مصرفی آب'}</h3><p>تصویر قبض را بارگذاری کنید؛ OCR اطلاعات اولیه را استخراج می‌کند و پس از بازبینی انسانی، کنترل و تحلیل انجام می‌شود.</p></div><FileImage size={23}/></header>
   <div className="utility-bill-upload"><label className="utility-bill-drop"><input type="file" accept="image/*" capture="environment" onChange={e=>{const f=e.target.files?.[0];if(f)void scan(f)}}/><Camera size={22}/><b>بارگذاری یا تصویربرداری از قبض</b><small>JPG / PNG · پردازش محلی روی دستگاه</small></label>{image&&<img src={image} alt="پیش‌نمایش قبض" className="utility-bill-preview"/>}<button type="button" className="utility-bill-secondary" onClick={()=>setShowRaw(x=>!x)}>{showRaw?'بستن متن OCR':'نمایش متن استخراج‌شده'}</button></div>
