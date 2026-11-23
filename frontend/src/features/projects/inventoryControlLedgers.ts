@@ -320,7 +320,7 @@ export function reconcileStageInventoryMovements(
   const amounts=[row.openingQuantity,row.openingValue,row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,
    row.transfersOutQuantity,row.transfersOutValue,row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,row.salesQuantity,row.salesCostValue,
    row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue]
-  if(amounts.some(value=>value===null||!finite(value as number)))
+  if(amounts.some(value=>value===null||!finite(value as number)||(value as number)<0))
    issues.push('Stage inventory movement requires every quantity and value to be explicitly entered as a finite non-negative amount.')
   if(row.inventoryStage!=='finished-goods'&&((row.salesQuantity??0)>tolerance/100||(row.salesCostValue??0)>tolerance/100))
    issues.push('Sales quantity and cost of sales may only be recorded against finished-goods inventory.')
@@ -399,7 +399,7 @@ export function reconcileStageInventoryMovements(
  for(const row of expectedByPeriod){
   if(!Number.isInteger(row.period)||row.period<1||row.period>periodCount||expected.has(row.period))
    issues.push('Stage inventory engine values contain an invalid or duplicate period.')
-  if([row.rawMaterials,row.workInProgress,row.finishedGoods].some(value=>!finite(value)))
+  if([row.rawMaterials,row.workInProgress,row.finishedGoods].some(value=>!finite(value)||value<0))
    issues.push('Stage inventory engine values must be finite and non-negative.')
   expected.set(row.period,{rawMaterials:row.rawMaterials,workInProgress:row.workInProgress,finishedGoods:row.finishedGoods})
  }
