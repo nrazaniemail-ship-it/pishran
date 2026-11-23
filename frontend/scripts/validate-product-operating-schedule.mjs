@@ -285,7 +285,7 @@ const flowProduct={
   openingRawMaterialQuantity:100,openingRawMaterialValue:1000,openingWipQuantity:0,openingWipMaterialValue:0,openingWipConversionValue:0,
   rawMaterialPurchasesQuantity:100,rawMaterialPurchasesValue:1200,rawMaterialConsumptionQuantity:120,normalRawMaterialWasteQuantity:5,abnormalRawMaterialWasteQuantity:2,
   unitsStarted:120,unitsCompleted:100,closingWipQuantity:20,materialCompletionPercent:100,
-  conversionCompletionPercent:50,conversionCost:500,
+  conversionCompletionPercent:50,conversionCost:500,abnormalWasteSourceReference:'incident-report-page-3',abnormalWasteSourceVerified:true,
  }]}],
  productionCosts:[],
 }
@@ -298,6 +298,12 @@ assert.ok(Math.abs(flowSchedule.rows[0].productionCost-flowSchedule.rows[0].unit
 assert.equal(flowSchedule.periodRawMaterialInventoryValue[0],803)
 assert.equal(flowSchedule.periodNormalWasteAbsorbed[0],55,'normal waste valued from raw-material WAC must be disclosed as absorbed CPP')
 assert.equal(flowSchedule.periodAbnormalWasteExpense[0],22,'abnormal waste must be expensed at weighted-average raw-material cost, not capitalized into WIP or finished goods')
+const missingAbnormalWasteEvidence=module.buildProductOperatingSchedule({...flowProduct,sales:[{...flowProduct.sales[0],periods:[{...flowProduct.sales[0].periods[0],abnormalWasteSourceVerified:false}]}]},[periods[0]],1,'IRR')
+assert.equal(missingAbnormalWasteEvidence.valid,false,'positive abnormal-waste quantity without verified incident evidence must block the product schedule')
+assert.ok(missingAbnormalWasteEvidence.issues.some(issue=>issue.includes('verified abnormal-waste incident source reference')))
+const duplicatedAbnormalWaste=module.buildProductOperatingSchedule({...flowProduct,wasteLedgerEntries:[{id:'ABN-DUP',period:1,productId:'FLOW-1',costCentreId:'CC-WASTE',classification:'abnormal',quantity:2,unitCost:11,amount:22,sourceReference:'incident-report-page-3',sourceVerified:true}]},[periods[0]],1,'IRR')
+assert.equal(duplicatedAbnormalWaste.valid,false,'abnormal waste represented in both production flow and waste ledger must be rejected instead of expensed twice')
+assert.ok(duplicatedAbnormalWaste.issues.some(issue=>issue.includes('duplicate expense is blocked')))
 assert.equal(flowSchedule.rows[0].rawMaterialInventoryValue,803)
 assert.ok(flowSchedule.periodWipInventoryValue[0]>0)
 assert.equal(flowSchedule.rows[0].costOfSales,flowSchedule.rows[0].weightedAverageUnitCost*80)
