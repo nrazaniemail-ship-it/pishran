@@ -25,7 +25,7 @@ function extract(lines,patterns,{numeric=false,nextLine=true}={}){
  return numeric?null:''
 }
 const patterns={
- period:[/(?:دوره\s*(?:مصرف|قرائت)?|بازه\s*مصرف|صورتحساب\s*دوره)\s*[:：-]?\s*(.{4,45})/i,/(?:billing\s*period|period)\s*[:：-]?\s*(.{4,45})/i],
+ period:[/(?:دوره\s*(?:مصرف|قرائت)?|بازه\s*مصرف|صورتحساب\s*دوره)\s*[:：-]?\s*(.{4,45})?/i,/(?:billing\s*period|period)\s*[:：-]?\s*(.{4,45})?/i],
  billNumber:[/(?:شناسه\s*قبض|شماره\s*قبض|شماره\s*صورتحساب|bill\s*(?:id|no|number))\s*[:：-]?\s*([\w/-]+)/i],
  accountNumber:[/(?:شناسه\s*پرداخت|شماره\s*اشتراک|شناسه\s*مشترک|شماره\s*پرونده|account\s*(?:no|number))\s*[:：-]?\s*([\w/-]+)/i],
  meterNumber:[/(?:شماره\s*کنتور|شناسه\s*کنتور|meter\s*(?:no|number))\s*[:：-]?\s*([\w/-]+)/i],
