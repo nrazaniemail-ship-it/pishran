@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {buildEnergySeries,detectEnergyAnomalies,forecastEnergyIntensity,allocateGasBillCost,prepareModule02GasCostPosting} from '../src/features/modules/energyIntelligenceEngine.js'
+import {buildEnergySeries,detectEnergyAnomalies,detectForecastDeviations,forecastEnergyIntensity,allocateGasBillCost,prepareModule02GasCostPosting} from '../src/features/modules/energyIntelligenceEngine.js'
 const row=(id,period,consumption,production=100,cost=consumption*.5,extra={})=>({id,resource:'electricity',period,site:'Plant',seu:'Rolling',consumption,production,cost,...extra})
 
 test('multi-period series never compares different sites or significant energy uses',()=>{
@@ -52,4 +52,13 @@ test('gas invoice allocation reconciles volume, thermal, transport, fixed and ta
 test('gas allocation rejects missing volume and thermal drivers rather than inventing shares',()=>{
  assert.throws(()=>allocateGasBillCost({bill:{amount:100,volumeCharge:100},consumers:[{id:'A',gasNm3:0}]}),/حجم گاز/)
  assert.throws(()=>allocateGasBillCost({bill:{amount:100,thermalCharge:100},consumers:[{id:'A',gasNm3:10}]}),/انرژی حرارتی/)
+})
+
+test('rolling-origin forecast deviation compares latest actual with a forecast built only from prior periods',()=>{
+ const stable=[100,101,99,102,160].map((v,i)=>row('fd'+i,'1405/0'+(i+1),v*100))
+ const result=detectForecastDeviations(stable,{resource:'electricity'})
+ assert.equal(result.deviations.length,1)
+ assert.equal(result.deviations[0].period,'1405/05')
+ assert.ok(result.deviations[0].actualIntensity>result.deviations[0].predictedIntensity)
+ assert.deepEqual(result.deviations[0].trainingPeriods,['1405/01','1405/02','1405/03','1405/04'])
 })

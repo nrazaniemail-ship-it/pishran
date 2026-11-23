@@ -109,3 +109,26 @@ export function prepareModule02GasCostPosting({baseInput,allocation,costCenterId
  if(!Number.isFinite(Number(selected.totalCost))||Number(selected.totalCost)<0)throw new Error('مبلغ تخصیص‌یافته گاز معتبر نیست.')
  return {input:{...baseInput,energy:String(Number(baseInput.energy??0)+Number(selected.totalCost))},sourceReferences:{gasBillId:String(allocation.billId??''),billNumber:String(allocation.billNumber??''),billingPeriod:String(allocation.period??''),gasAllocationCost:Number(selected.totalCost),gasAllocationCenter:selected.costCenterId,gasAllocationBasis:JSON.stringify(allocation.allocationRules)},duplicatePostingGuard:'اگر فیلد انرژی قبلاً شامل همین قبض است، آن را دوباره اضافه نکنید؛ ثبت باید با مرجع قبض یکتا کنترل شود.'}
 }
+
+export function detectForecastDeviations(records,{resource,site,seu,minimumDeviationPercent=20}={}) {
+ const built=buildEnergySeries(records,{resource,site,seu}),deviations=[]
+ for(const series of built.series){
+  const points=series.points
+  if(points.length<4)continue
+  const training=points.slice(0,-1),actual=points[points.length-1],n=training.length
+  const xMean=(n-1)/2,yMean=training.reduce((sum,p)=>sum+p.intensity,0)/n
+  const denominator=training.reduce((sum,p,i)=>sum+(i-xMean)**2,0)
+  if(!denominator||yMean<=0)continue
+  const slope=training.reduce((sum,p,i)=>sum+(i-xMean)*(p.intensity-yMean),0)/denominator
+  const intercept=yMean-slope*xMean
+  const predicted=Math.max(0,intercept+slope*n)
+  const residuals=training.map((p,i)=>p.intensity-(intercept+slope*i))
+  const rmse=Math.sqrt(residuals.reduce((sum,x)=>sum+x*x,0)/n)
+  const threshold=Math.max(1.96*rmse,predicted*(Math.max(0,minimumDeviationPercent)/100))
+  const delta=actual.intensity-predicted
+  if(Math.abs(delta)>threshold){
+   deviations.push({seriesKey:series.key,resource:series.resource,site:series.site,seu:series.seu,period:actual.period,actualIntensity:actual.intensity,predictedIntensity:predicted,delta,deltaPercent:predicted>0?delta/predicted*100:null,direction:delta>0?'above':'below',rmse,threshold,method:'rolling-origin-linear-forecast-with-rmse-screen',trainingPeriods:training.map(p=>p.period)})
+  }
+ }
+ return {deviations,warnings:built.warnings,method:'آخرین دوره به‌صورت خارج از نمونه با روند خطی دوره‌های قبل پیش‌بینی می‌شود؛ انحراف فقط وقتی هشدار می‌شود که هم از ۲۰٪ پیش‌بینی و هم از ۱٫۹۶ برابر RMSE بزرگ‌تر باشد. این دامنه تشخیصی فاصله اطمینان کالیبره‌شده نیست.'}
+}
