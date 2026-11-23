@@ -48,6 +48,34 @@ const salesProduct = {
 const adaptedBridge=mod.buildProductionBridgeDraftsFromSalesProduct(salesProduct,bridgeEvidence)
 assert.deepEqual(adaptedBridge,bridge,
  'The form-to-bridge adapter must preserve weighted-average material and equivalent-unit transfer values')
+const thirdPeriodInput={...input,
+ rawMaterialPurchasesQuantity:[100,50,0],rawMaterialPurchasesValue:[1200,650,0],
+ rawMaterialConsumptionQuantity:[120,80,50],unitsStarted:[120,80,50],unitsCompleted:[100,100,50],
+ closingWipQuantity:[20,0,0],conversionCompletionPercent:[50,100,100],conversionCost:[500,600,300],
+}
+const thirdPeriodSchedule=mod.buildInventoryFlowSchedule(thirdPeriodInput)
+assert.equal(thirdPeriodSchedule.valid,true,thirdPeriodSchedule.issues.join('; '))
+const thirdPeriodSale={...salesProduct,periods:[...salesProduct.periods,{...salesProduct.periods[1],period:'3',
+ rawMaterialPurchasesQuantity:0,rawMaterialPurchasesValue:0,rawMaterialConsumptionQuantity:50,
+ unitsStarted:50,unitsCompleted:50,closingWipQuantity:0,conversionCompletionPercent:100,conversionCost:300,
+ openingRawMaterialQuantity:null,openingRawMaterialValue:null,openingWipQuantity:null,openingWipMaterialValue:null,openingWipConversionValue:null}]}
+const threePeriodEvidence=[...bridgeEvidence,{...bridgeEvidence[1],period:3,sourceReference:'PRODUCTION-ORDER-3'}]
+const threePeriodBridge=mod.buildProductionBridgeDraftsFromSalesProduct(thirdPeriodSale,threePeriodEvidence)
+assert.equal(threePeriodBridge.length,6,'Three periods must generate exactly two stage transfers per period.')
+const threePeriodLedger=threePeriodBridge.map(toLedgerTransfer)
+assert.equal(ledger.validateProductionTransfers(threePeriodLedger,3).valid,true,
+ 'Three-period bridge transfers must reconcile in the inventory transfer ledger.')
+const preservedManual={id:'manual-transfer',period:1}
+const upserted=mod.upsertProductionBridgeTransferDrafts([preservedManual,...threePeriodBridge],threePeriodBridge)
+assert.equal(upserted.length,7,'Regeneration must not duplicate generated rows and must preserve unrelated manual rows.')
+assert.equal(upserted[0].id,'manual-transfer')
+assert.deepEqual(upserted.slice(1).map(row=>row.id),threePeriodBridge.map(row=>row.id))
+const formSource=await readFile(new URL('../src/features/projects/ProjectModelFinancialFormsPanel.tsx',import.meta.url),'utf8')
+assert.ok(formSource.includes('productionBridgeEvidence?.sourceReference'),'The form must capture a source reference per production period.')
+assert.ok(formSource.includes('generateProductionBridge(i)'),'The sales form must expose automatic bridge generation.')
+assert.ok(formSource.includes('upsertProductionBridgeTransferDrafts'),'The form must prevent duplicate generated transfers.')
+assert.deepEqual(adaptedBridge,bridge,
+ 'The form-to-bridge adapter must preserve weighted-average material and equivalent-unit transfer values')
 assert.throws(()=>mod.buildProductionBridgeDraftsFromSalesProduct({
  ...salesProduct,periods:salesProduct.periods.map((row,index)=>index===1?{...row,conversionCost:null}:row),
 },bridgeEvidence),/period 2 is incomplete/,
