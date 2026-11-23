@@ -66,6 +66,7 @@ const baseRows = [
 const schedule = {
   valid: true, issues: [], periodRevenue: [1600, 1980, 1760],
   periodCostOfSales: [800, 900, 800], periodSubsidyIncome: [0, 0, 0],
+  periodAbnormalWasteExpense: [0, 0, 0],
   annualRevenue: [1600, 1980, 1760], annualCostOfSales: [800, 900, 800],
   totalProductionQuantity: 250, totalSalesQuantity: 250, totalClosingInventoryValue: 600,
   periodRawMaterialInventoryValue: [500, 450, 400],
