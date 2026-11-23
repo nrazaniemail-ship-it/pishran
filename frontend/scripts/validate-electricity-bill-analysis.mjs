@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {normalizeBillDigits,parseElectricityBillText,analyzeElectricityBill} from '../src/features/modules/electricityBillAnalysis.js'
+import {normalizeBillDigits,parseElectricityBillText,analyzeElectricityBill} from '../src/features/modules/electricityBillMath.js'
 
 test('normalizes Persian and Arabic numerals and separators',()=>{
  assert.equal(normalizeBillDigits('۱۲٬۳۴۵٫۶'), '12345.6')
