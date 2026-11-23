@@ -20,3 +20,4 @@ export function saveWaterBalance(input:Parameters<typeof analyzeWaterBalance>[0]
 
 export function analyzeEnergyTrends(records:any[],filters?:{resource?:EnergyResource;site?:string;seu?:string}):{count:number;points:any[];warnings:string[]}
 export function allocateElectricityBillCost(input:{bill:{id?:string;billNumber?:string;period?:string;amount:number|string;energyCharge?:number|string|null;demandCharge?:number|string|null;reactiveCharge?:number|string|null;taxCharge?:number|string|null};consumers:Array<{id?:string;name?:string;consumptionKwh:number|string;peakDemandKw?:number|string;reactiveKvarh?:number|string;productionTon?:number|string}>}):any
+export function prepareModule02EnergyCostPosting(input:{baseInput:Record<string,string|number>;allocation:any;costCenterId:string}):{input:Record<string,string|number>;sourceReferences:Record<string,string|number>;duplicatePostingGuard:string}
