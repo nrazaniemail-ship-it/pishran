@@ -1,0 +1,146 @@
+# FS-00 — CPP/CPS component traceability and posting controls
+
+## Purpose and status
+
+This register defines the evidence and posting contract for the five production-cost families used by FS-00: materials, direct labour, energy, maintenance, and overhead. It is source-first: a missing source amount is **unknown**, never zero. The CRC200 example is not a source of numeric defaults. Until an identifiable primary document, audited report, or other accepted evidence is attached and verified, its amount, base-cost coverage, and uncovered portion remain blank/null.
+
+The implementation is on the FS-00 feature branch. This document describes the implemented data contract and calculation path; it does not claim independent parity with a COMFAR report unless a period-by-period reference schedule and matching units/currency are available.
+
+## Component register
+
+| Component | CPP/CPS treatment | Required calculation basis | Fixed/variable classification | Base-cost coverage test | Source evidence | Posting destination |
+|---|---|---|---|---|---|---|
+| Raw and auxiliary materials | Material component of CPP; material value follows stock issues and WIP | Per-unit output, nominal capacity, period total, or period adjustments — explicitly selected per item | Fixed, variable, or mixed; mixed split must total 100% | Compare gross evidenced material cost with the portion already included in the product's base CPP; only the evidenced uncovered balance is incremental | Purchase/invoice records, consumption norms, stock records, approved cost sheets, or audited schedules | Raw-material inventory → WIP → finished goods → CPS on sale; raw-material and WIP balances enter working capital |
+| Direct labour | Conversion component of CPP | Explicit selected basis; payroll period and production period must align | Fixed, variable, or mixed with explicit percentages | Reconcile payroll amount against labour already included in base CPP; do not add fully covered payroll again | Payroll register, approved staffing/pay-rate schedule, time sheets, audited cost-centre report | Production cost/WIP → finished goods → CPS on sale → gross profit; unpaid payroll may be a working-capital liability only when separately evidenced |
+| Energy | Conversion component of CPP | Explicit selected basis (e.g. metered consumption × tariff, nominal capacity, or period total) | Fixed, variable, or mixed | Compare the evidenced energy charge with energy embedded in base CPP; add only the uncovered part | Meter readings, utility invoices, tariff schedule, or audited energy-cost report | Production cost/WIP → finished goods → CPS on sale; accrued unpaid utility amounts affect working capital only through a separately sourced payable |
+| Maintenance | Production conversion cost when attributable to manufacturing | Explicit selected basis; period adjustments require a documented amount and allocation | Fixed, variable, or mixed | Distinguish maintenance already included in base CPP from separately evidenced incremental maintenance; capital expenditure is not an operating maintenance charge | Work orders, maintenance ledger, service invoices, approved maintenance budget, asset register for capitalization decision | Expense portion → production cost/WIP → finished goods → CPS; capitalized replacement/improvement is routed to fixed assets, not CPP |
+| Production overhead | Indirect production cost; allocation requires an explicit cost-centre driver | Explicit selected basis and cost-centre allocation driver | Fixed, variable, or mixed | Compare the source overhead pool with overhead embedded in base CPP; only the verified uncovered pool can be allocated | Cost-centre ledger, audited overhead schedule, allocation policy, driver quantities/revenue, or approved period records | Cost centre → product allocation → production cost/WIP → finished goods → CPS; only separately evidenced accrued balances enter working capital |
+
+## Required fields for every item
+
+Each item must have a stable unique ID and label, one of the five categories, a calculation basis, fixed/variable behaviour, a fixed and variable percentage, cost-centre ID, allocation method, base-cost coverage status, period amounts, base-covered period amounts, and source metadata.
+
+Accepted allocation methods are:
+
+- **Direct product:** requires a product ID.
+- **Production quantity:** allocates across products by period production quantity.
+- **Revenue:** allocates across products by period net sales revenue.
+- **Cost-centre driver:** requires a cost centre with a configured production-quantity, sales-revenue, or complete manual period driver.
+- **Not allocated:** may remain descriptive/zero-incremental; a positive uncovered amount cannot be posted using this method.
+
+A fixed item must be 100% fixed; a variable item must be 100% variable. A mixed item must have non-negative fixed and variable percentages summing to exactly 100% (within the engine's numeric tolerance). This classification describes cost behaviour; it does not replace the allocation driver.
+
+## Calculation and anti-double-counting rule
+
+For each verified item and period:
+
+`Incremental CPP = Gross evidenced cost - Base-covered amount`
+
+Coverage treatment:
+
+- **Fully included:** base-covered amount equals gross cost; incremental CPP is zero.
+- **Excluded:** base-covered amount is zero; the evidenced gross amount is incremental.
+- **Partially included:** the user must provide an evidenced base-covered amount between zero and gross cost.
+- **Unverified:** period gross and covered amounts must both remain null; the item cannot be posted.
+
+The engine retains known incremental subtotals separately from complete totals. If any item is unverified, the complete period total is null and the posting gate remains closed. An unverified cost-centre item also makes that centre's complete total unavailable; an unallocated unverified item prevents complete centre totals from being represented as complete. No missing value is silently replaced with zero.
+
+## CPP → CPS → profit and loss
+
+1. Verified incremental material cost is allocated to products and follows raw-material stock issue into WIP.
+2. Raw-material issues are valued at weighted-average cost. Normal waste is absorbed once into good production; abnormal waste is removed from raw-material stock and expensed separately, never capitalized into WIP. Both quantities must be explicitly classified by period. Any positive abnormal-waste quantity in the production flow requires a period-specific incident/source reference and explicit verification. Waste-ledger entries likewise require a verified source reference; the same abnormal-waste incident cannot be entered both in the production-flow quantity and the separate waste ledger. Verified incremental labour, energy, maintenance, and overhead are conversion cost. Where inventory-flow data exist, conversion cost is assigned between completed units and closing WIP using equivalent units.
+3. Completed production cost is transferred to finished goods. Opening/closing finished-goods quantity and value are rolled forward by product and period.
+4. Cost of sales is recognized when the corresponding finished goods are sold. Unsold production remains in finished-goods inventory; it is not expensed prematurely.
+5. CPS is deducted from net sales revenue to derive gross profit. The base CPP remains in the product schedule; the adapter posts only the uncovered incremental amount, preventing a second charge for costs already included in the base.
+6. Normal waste is absorbed once at weighted-average raw-material cost. Abnormal waste is separately expensed and must not be reintroduced as normal material consumption. A duplicate guard rejects an abnormal event recorded in both the product production-flow schedule and the standalone waste ledger.
+
+**Abnormal-waste journal control (implemented):** each verified abnormal-waste ledger entry produces one balanced, non-cash accounting posting: debit `Abnormal Waste Expense`, credit `Inventory:raw-materials`. Normal waste does not create this separate journal. The posting is a subledger trace only; it must not be added again to CPP/CPS, COGS, working capital, or cash flow. When the inventory write-off is reflected as a reduction in closing inventory/net working capital, that working-capital movement offsets the non-cash expense in operating cash flow. A cash reduction is appropriate only where a separate, evidenced cash payment exists; do not infer one from the inventory write-off itself.
+
+**Classification control (implemented):** period abnormal-waste expense is passed through the dedicated `periodAbnormalWasteExpense` schedule in the periodic finance engine. It remains separate from `annualFixedCost` and `annualVariableCost`, reduces EBIT, tax base, CFADS, project/equity free cash flow and cash once, and is never capitalized into inventory. The schedule must contain one finite, non-negative amount per project period; invalid or incomplete schedules block the finance result. Abnormal waste is deliberately not assigned fixed/variable behaviour without source evidence. Consequently it is not silently included in either fixed- or variable-cost behaviour buckets for break-even or sensitivity classification; any break-even result that depends on cost-behaviour splits must disclose this unclassified amount rather than imply a verified split.
+
+## Working-capital connection
+
+Raw-material closing stock, WIP, and finished-goods stock are current-asset components. They must be connected to the working-capital schedule once, with matching inventory subledgers and balance-sheet controls. Cost of sales is not itself an additional working-capital asset. Trade payables, accrued payroll, utility creditors, and other operating liabilities are included only when a distinct balance and source are provided; do not infer a payable merely because an expense exists.
+
+Inventory control compares, by period, the project model, balance sheet, and CPP/CPS inventory totals. The raw-material, WIP, and finished-goods detail must reconcile to the reported total inventory. Transfer-ledger quantity and value deltas are keyed by period, product, and cost centre (`period:product@costCentre`), so opposite movements in different periods cannot cancel each other in the audit totals. Transfers between products/cost centres preserve total group cost and must balance at source and destination. The current transfer ledger is a movement register, not a full cost-centre stock subledger: source-centre availability against its own opening stock, receipts, issues, and closing balance remains unverified until those centre-level stock movements are entered and reconciled separately.
+
+The calculation layer now exposes a cost-centre inventory roll-forward validator. For each explicit period/product/cost-centre row it requires opening quantity/value, receipts, production, consumption, waste, and closing quantity/value. It applies the signed transfer register to the location balance and tests:
+
+- Closing quantity = opening quantity + receipts + production + transfer-in − transfer-out − consumption − waste.
+- Closing value = opening value + receipts value + production value + transfer-in value − transfer-out value − consumption value − waste value.
+- Each next-period opening quantity/value must equal the prior period's closing quantity/value when consecutive rows are supplied.
+- Every transfer endpoint must have a matching centre movement row; transfer-only or incomplete rows cannot silently pass.
+
+The project financial-forms panel now exposes separate raw-material, WIP, and finished-goods movement rows, including internal same-stage centre transfers, finished-goods sales quantity/cost, source reference, and source-verification status. A separate inter-stage transfer form records source/destination stage, product, cost centre, quantity, units, conversion factor, transfer value, and evidence. Draft rows are kept blank until entered; partially started or verification-only rows are rejected. The project wizard persists these collections with the financial-form draft and restores them on reload; hydration regression tests cover round-trip preservation, legacy projects without the fields, and malformed null collections. The advanced finance panel invokes this validator against period-level inventory values from the periodic finance engine and product-level inventory, production quantity/value, sales quantity and cost-of-sales values from the product operating schedule. Product-ID matching is applied to finished goods, where the product operating schedule defines the saleable product identity. Raw-material and WIP subledgers retain their own material/intermediate product IDs and reconcile to their stage totals; those IDs are not incorrectly forced to match finished-product IDs. Finished-goods production quantity and transferred/produced value must reconcile to the product schedule; sales quantity and cost of sales are checked independently. Entered rows therefore act as a reconciliation gate, not as an additional posting: the validator does not add inventory a second time to CPP/CPS, the income statement, or working capital. A new evidence-gated production bridge builder can create deterministic raw-materials→WIP and WIP→finished-goods transfer drafts from a valid inventory-flow schedule. It requires explicit source/destination product IDs, cost-centre IDs, units, conversion factors, and a verified source reference for every period; it never infers a bill of materials, centre, unit conversion, or evidence. Raw-to-WIP value is limited to weighted-average material issues plus normal waste absorbed once; abnormal waste is excluded. WIP-to-finished-goods value is the completed-production cost allocated by equivalent units. Drafts are internal inventory reclassifications and must not be added again to CPP/CPS, COGS, working capital, or the financial statements. The builder is covered by deterministic-ID, per-period value/quantity, missing-evidence, duplicate-period, and invalid-conversion tests. It is not yet wired to auto-populate the project forms or persist documents automatically, and independently verified centre balances are not yet posted to the core stock engine; those connections must not be assumed complete.
+
+## Evidence and completion gates
+
+A source is verified only when its reference, description, and reliability classification are populated and the item is explicitly marked verified. A source change that removes verification resets its amount/coverage evidence. The final CPP/CPS posting gate requires a valid and complete source ledger, aligned project periods, a valid product operating schedule, and a valid allocation driver wherever allocation is needed.
+
+The following CRC200 entries are intentionally **not populated** until supporting source evidence is available:
+
+- Gross period amounts for all five cost families.
+- Amounts already included in the base CPP.
+- Incremental uncovered amounts.
+- Fixed/variable splits where no reliable cost-behaviour evidence exists.
+- Allocation drivers and any working-capital payable/creditor balances not explicitly documented.
+
+## Verification scope and known limits
+
+The automated regression scripts cover ledger validation, verified waste-source gating, duplicate abnormal-waste rejection across the production-flow and standalone-ledger paths, null preservation, base-coverage arithmetic, allocation, CPP/CPS schedule integration, inventory flow and reconciliation, and sales-tax working-capital binding. A green build/test run proves those code paths pass their internal tests on the tested commit. It does not establish that CRC200 inputs are factually correct or that all reported periods match COMFAR. External parity still requires source-backed, same-currency, same-period reference values; aggregate COMFAR inventory cannot validate a detailed raw-material/WIP/finished-goods split when the reference does not publish that split.
+
+## Cost-centre inventory movement form (FS-00 implementation boundary)
+
+The project financial-form draft now persists a separate `costCentreInventoryMovements` collection. Each row is stage-specific (`raw-materials`, `work-in-progress`, or `finished-goods`) and identifies period, product and cost centre. It captures opening quantity/value, receipts, production/completion, consumption/issues, waste and closing quantity/value, plus a source reference and explicit verification flag.
+
+- New rows initialize all quantities and values as `null`; the form never converts unknown amounts into zero.
+- A row with entered data must contain all twelve finite non-negative amount fields, a valid period, product and cost-centre identifiers, a stage, and a verified source reference before the form validator accepts it.
+- Duplicate period/stage/product/cost-centre keys are rejected.
+- Partially entered rows and completed rows remain listed as unintegrated report blockers. This is deliberate: the current stage adds persistence, bilingual data entry and input validation only; it does **not** yet post the three inventory stages into the raw-material/WIP/finished-goods accounting engine or the balance sheet / working-capital schedules.
+- The existing cost-centre roll-forward calculation contract still handles product/cost-centre movements and transfers, but it must not be reused indiscriminately for raw materials and WIP. The next integration step must define stage-specific posting semantics and reconcile inter-stage transfers without duplicating inventory value or CPP/CPS.
+
+This boundary prevents an entered register from being mistaken for an integrated and tested financial calculation.
+
+## Stage inventory cross-check (raw materials / WIP / finished goods)
+
+The saved cost-centre movement rows are now passed into the financial panel. When at least one stage is entered, the panel runs a separate reconciliation for each populated stage:
+
+- Each populated stage must have at least one row in every model period.
+- Every row must have an explicit verified source reference and complete non-negative quantity/value fields.
+- Product/cost-centre roll-forward is checked independently inside each stage, including period opening-to-closing carry-forward. Internal transfer-in and transfer-out quantities and values are captured separately and must balance within each stage and period; these transfers relocate inventory and do not increase total stage value.
+- The sum of stage closing values by period is compared with the corresponding periodic finance-engine inventory balance (raw materials, work in progress, or finished goods). When the product operating schedule is valid, each stage is also reconciled by product and period against that product's raw-material, WIP and finished-goods closing values; matching stage totals cannot conceal balances assigned to the wrong product.
+- A mismatch, missing stage-period, invalid movement, or unverified source makes this cross-check fail visibly.
+
+
+Regression coverage proves that two products whose stage totals match but whose individual balances are swapped fail the product-level reconciliation, and that omitting a product with a non-zero engine balance is rejected.
+
+A stage with no subledger rows is accepted only when the finance engine reports zero closing inventory for that stage in every period. A non-zero engine balance with no stage/cost-centre movement rows is a visible reconciliation failure; it is never silently omitted.
+
+Inter-stage transfer drafts are now also sent through the reconciliation gate even when no cost-centre movement rows have yet been entered. A completely untouched blank transfer row is ignored, but any partially or fully entered transfer must resolve to both a source-stage and destination-stage movement row; otherwise the reconciliation fails visibly. The transfer identifier itself and an explicit source-verification flag also count as started data: an identified-but-incomplete transfer or a verified-but-empty movement row is rejected rather than silently skipped. Generated row IDs are treated as form identity only and do not make a blank transfer count as entered data; switching the source-verification flag to true does count as an explicit entry and keeps the row visible as an incomplete report blocker until all evidence and movement values are supplied. This is a **cross-check only**. It does not add the ledger closing value to inventory, CPP/CPS, or working capital a second time. The entered rows remain unintegrated report blockers until stage-specific receipts, issues, WIP conversion, finished-goods completion and inter-stage transfer posting are connected to the underlying accounting schedules. In particular, production quantity/value is not treated as a raw-material receipt without an explicit stage transition record.
+
+## Inter-stage inventory transfers
+
+A separate persisted transfer register now records movement between raw materials, work in progress and finished goods. Each transfer requires period, distinct source/destination stages, product and cost-centre endpoints, source quantity/unit, destination unit and conversion factor, transferred value, and a verified document reference.
+
+- Both source-stage and destination-stage movement rows must exist for the same period and matching product/cost-centre endpoints.
+- The source stage is relieved by the source quantity and transferred value; the destination stage receives the converted quantity and the same transferred value.
+- Conversion or processing costs added at the destination remain separate production costs; the transfer itself does not create a second inventory value.
+- Same-stage centre movements remain in the separate internal transfer-in/out fields and must balance by stage and period.
+- Invalid, incomplete or unverified transfers fail reconciliation and remain report blockers.
+
+Finished-goods movement rows now distinguish product sales quantity and cost-of-goods-sold value from other consumption/issues. These amounts are checked product-by-product against the product operating schedule; revenue is not substituted for COGS. A non-zero finished-goods sale cannot be omitted merely because closing inventory is zero, and sales fields are prohibited on raw-material and WIP rows. Regression coverage now includes the complete raw-materials → WIP → finished-goods chain with unit conversion in both transfers, proving that the transferred value is relocated across all three stages without increasing total inventory value. The current bridge validates these movements against the existing engine balances. It does not yet create or post the underlying production conversion entries, nor does it automatically infer transfers from CPP/CPS source lines.
+
+## Append-only correction documents in the periodic finance bridge
+
+The stage journal remains a local append-only subledger, not an ERP/general-ledger integration. The periodic finance panel now recovers that journal before calculating the product schedule and applies only persisted `reversal` and `adjustment` documents. `original` documents are deliberately excluded from the correction overlay because their operational values are already represented by the product/inventory schedules.
+
+- A reversal row is applied using its own recorded debit/credit direction. The reversal writer has already swapped the original accounts; the schedule adapter must not invert it a second time.
+- An adjustment row represents only the incremental difference to post, not a replacement total. It is applied once in its own period.
+- `Inventory:raw-materials`, `Inventory:work-in-progress` and `Inventory:finished-goods` are mapped to the matching stage balances. Stage-to-stage movements reclassify value and preserve consolidated inventory, CPP/CPS and net working capital.
+- `Cost of Sales` paired with `Inventory:finished-goods` updates period COGS and finished-goods inventory once. That feeds the periodic finance engine's variable cost, working-capital schedule, income statement, cash flow and balance sheet; the journal is not added again to those outputs.
+- Inventory value deltas carry forward from their effective period to subsequent period closing balances. COGS corrections in a period with no finished-goods sales are rejected. A prior-period COGS correction is also blocked when later-period sales exist, until a weighted-average revaluation path is available; this avoids silently leaving later COGS understated or overstated.
+- Unsupported account combinations, missing product-period rows, missing original references, invalid periods and negative resulting balances block the schedule rather than being guessed or plugged.
+
+The three-period regression fixture proves a period-2 raw-material/WIP reversal reclassifies stage values without changing consolidated inventory or WC, and a period-3 incremental COGS adjustment increases COGS by the difference and reduces finished goods/WC by the same amount. The resulting periodic engine and all three statements are checked for the same period-specific effects and balance-sheet reconciliation.
+
+IndexedDB transaction/recovery and localStorage fallback tests remain separate persistence tests. The current IndexedDB test uses a transaction simulator and module reload; it is not a browser/device IndexedDB acceptance test. This bridge still does not create a general ledger, post to ERP, or infer unsupported cost-account semantics.

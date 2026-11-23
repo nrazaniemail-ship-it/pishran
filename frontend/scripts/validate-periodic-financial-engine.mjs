@@ -16,11 +16,26 @@ const loadFinancialModel = async () => {
   const output = transpile(source).replace("'../projects/projectModelFormulaRules'", JSON.stringify(formulaRulesUrl))
   return asDataModule(output)
 }
+const advancedFinancePanelSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+assert.match(advancedFinancePanelSource,
+  /workingCapitalByPeriod:periodicWorkingCapitalByPeriod,rawMaterialsInventoryByPeriod,workInProgressInventoryByPeriod,finishedGoodsInventoryByPeriod/,
+  'Product finished-goods closing values must be passed into the periodic finance engine for balance-sheet disclosure')
 const [engine, foundation, financialModel] = await Promise.all([
   load('../src/features/steel/periodicFinancialEngine.ts'),
   load('../src/features/projects/projectFoundation.ts'),
   loadFinancialModel()
 ])
+const automaticInventoryValuation=financialModel.calculateOperatingCycleWorkingCapital({
+  dayBasis:360,rawMaterialDays:30,workInProgressDays:15,
+  workInProgressMaterialCompletionPercent:100,workInProgressConversionCompletionPercent:50,
+  finishedGoodsDays:0,receivableDays:0,cashDays:0,payableDays:0,
+  annualRawMaterialCost:3600,annualConversionCost:7200,annualFinishedGoodsCost:0,
+  annualRevenue:0,annualCashOperatingCost:0
+},1)
+assert.equal(automaticInventoryValuation.rawMaterials,300,
+  'Raw-material inventory must be automatically valued from evidenced annual consumption cost and coverage days')
+assert.equal(automaticInventoryValuation.workInProgress,300,
+  'WIP must automatically combine material and conversion cost using separate completion percentages')
 const periods=foundation.buildProjectCalendarPeriods('2025-01-01','2027-12-31','annual',1)
 assert.equal(periods.length,3)
 const detailedOpeningAccounts={
@@ -139,6 +154,50 @@ assert.equal(openingBalanceSheetStatements[0].balanceSheet.grants,100)
 assert.ok(openingBalanceSheetStatements.every(row=>Math.abs(row.movementChecks.grants)<=0.01))
 assert.deepEqual(openingBalanceSheetStatements.map(row=>row.balanceSheet.cash),[100,110,150],
   'Opening cash and terminal working-capital recovery must roll forward through the statements')
+// Gross raw-material and WIP balances are separately disclosed inside net working capital.
+const inventoryBalanceSheetCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,0],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[0,0,0],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[140,200,0],
+  rawMaterialsInventoryByPeriod:[100,120,0],
+  workInProgressInventoryByPeriod:[40,50,0],
+  finishedGoodsInventoryByPeriod:[0,30,0],
+  openingWorkingCapital:110,openingCash:0,loans:[],discountRatePercent:10
+})
+assert.equal(inventoryBalanceSheetCase.valid,true,inventoryBalanceSheetCase.warnings.join('; '))
+const inventoryStatements=engine.buildPeriodicThreeFinancialStatements(inventoryBalanceSheetCase,{
+  cash:0,debt:0,netFixedAssets:0,netWorkingCapital:110,
+  rawMaterialsInventory:80,workInProgressInventory:30,finishedGoodsInventory:0,paidInCapital:110
+})
+assert.equal(inventoryStatements.length,periods.length)
+assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.rawMaterialsInventory),[100,120,0])
+assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.workInProgressInventory),[40,50,0])
+assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.finishedGoodsInventory),[0,30,0])
+assert.deepEqual(inventoryStatements.map(row=>row.balanceSheet.otherNetWorkingCapital),[0,0,0])
+assert.ok(inventoryStatements.every(row=>
+  Math.abs(row.balanceSheet.totalAssets-(row.balanceSheet.cash+row.balanceSheet.netWorkingCapital))<0.01),
+  'Gross raw-material and WIP sub-ledgers must not be added a second time on top of net working capital')
+assert.ok(inventoryStatements.every(row=>
+  Math.abs(row.balanceSheet.rawMaterialsInventory+row.balanceSheet.workInProgressInventory+
+    row.balanceSheet.finishedGoodsInventory+row.balanceSheet.otherNetWorkingCapital-row.balanceSheet.netWorkingCapital)<0.01),
+  'Gross inventory accounts plus residual other net current accounts must exactly equal net working capital')
+assert.ok(inventoryStatements.every(row=>row.balanceSheet.reconciled&&
+  Math.abs(row.movementChecks.netWorkingCapital)<=0.01),
+  'Raw-material and WIP inventory detail must preserve the net working-capital roll-forward and balance-sheet reconciliation')
+const invalidInventoryDetail=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,0],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],annualPreOperatingCost:[0,0,0],
+  annualMaintenanceCapex:[0,0,0],annualTaxRates:[0,0,0],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],rawMaterialsInventoryByPeriod:[0,-1,0],
+  workInProgressInventoryByPeriod:[0,0,0],finishedGoodsInventoryByPeriod:[0,-1,0],loans:[]
+})
+assert.equal(invalidInventoryDetail.valid,false,
+  'Negative raw-material or finished-goods inventory values must be rejected instead of entering the balance sheet')
+console.log('PASS: raw-material and WIP inventory sub-ledgers reconcile within net working capital without double counting')
+
 const loan=engine.calculatePeriodicLoanSchedule({
   annualRatePercent:10,drawdowns:[1000,0,0],repaymentMethod:'annuity',
   repaymentStartPeriod:2,gracePeriods:0,termPeriods:2,capitalizeInterest:false,
@@ -442,3 +501,64 @@ assert.equal(mismatchedProductPeriodTotals.valid,false,
 console.log('PASS: exact-period product revenue and cost-of-sales overrides reconcile to fiscal-year totals')
 
 console.log('PASS: fixed-investment and pre-production timing cannot be verified when acquisitions fall outside the modeled horizon')
+
+
+
+// Abnormal waste is a period expense, never inventory/COGS, and must hit tax, CFADS,
+// project/equity cash flow and retained earnings exactly once.
+const abnormalWasteFinanceCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,0],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  periodAbnormalWasteExpense:[110,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],
+  annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
+  annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[390,390,390],openingWorkingCapital:500,openingCash:500,
+  rawMaterialsInventoryByPeriod:[390,390,390],
+  loans:[],discountRatePercent:10,
+});
+assert.equal(abnormalWasteFinanceCase.valid,true,abnormalWasteFinanceCase.warnings.join('; '));
+const abnormalWastePeriod=abnormalWasteFinanceCase.rows[0];
+assert.equal(abnormalWastePeriod.abnormalWasteExpense,110);
+assert.equal(abnormalWastePeriod.ebit,-110,
+  'Abnormal waste must reduce EBIT once and must not be included in variable/fixed cost buckets');
+assert.equal(abnormalWastePeriod.variableCost,0);
+assert.equal(abnormalWastePeriod.fixedCost,0);
+assert.equal(abnormalWastePeriod.tax,0,
+  'A loss caused by abnormal waste must not create an unsupported immediate tax refund');
+assert.equal(abnormalWastePeriod.taxLossCarryForward,110,
+  'Abnormal-waste expense must reduce taxable profit and increase the tax-loss carry-forward');
+assert.equal(abnormalWastePeriod.cfads,0,
+  'The inventory reduction in working capital offsets the non-cash write-off in CFADS');
+assert.equal(abnormalWastePeriod.projectFreeCashFlow,0,
+  'The non-cash write-off must not create a second project cash outflow when inventory reduction is included in working capital');
+assert.equal(abnormalWastePeriod.equityFreeCashFlow,0,
+  'The non-cash write-off must not create a second equity cash outflow when inventory reduction is included in working capital');
+assert.equal(abnormalWastePeriod.closingCash,500,
+  'Cash remains unchanged for an inventory write-off whose purchase cash flow was already recognized');
+assert.equal(abnormalWasteFinanceCase.rows[1].taxLossCarryForward,110,
+  'Tax loss from abnormal waste must roll forward to the next period');
+const abnormalWasteStatements=engine.buildPeriodicThreeFinancialStatements(abnormalWasteFinanceCase,{
+  cash:500,debt:0,netFixedAssets:0,netWorkingCapital:500,rawMaterialsInventory:500,paidInCapital:1000,retainedEarnings:0,
+});
+assert.equal(abnormalWasteStatements.length,periods.length);
+assert.equal(abnormalWasteStatements[0].incomeStatement.ebit,-110);
+assert.equal(abnormalWasteStatements[0].incomeStatement.netIncome,-110);
+assert.equal(abnormalWasteStatements[0].cashFlowStatement.closingCash,500);
+assert.equal(abnormalWasteStatements[0].balanceSheet.rawMaterialsInventory,390);
+assert.equal(abnormalWasteStatements[0].balanceSheet.netWorkingCapital,390);
+assert.equal(abnormalWasteStatements[0].balanceSheet.retainedEarnings,-110);
+assert.ok(abnormalWasteStatements.every(row=>row.balanceSheet.reconciled),
+  'Abnormal-waste expense must reconcile through retained earnings and the balance sheet without a plug');
+const incompleteAbnormalWasteSchedule=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,0],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  periodAbnormalWasteExpense:[110,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],
+  annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
+  annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],
+});
+assert.equal(incompleteAbnormalWasteSchedule.valid,false,
+  'An incomplete abnormal-waste schedule must block finance results');
+console.log('PASS: abnormal waste is expensed once through EBIT, tax losses, CFADS, project/equity cash flow and reconciled three statements');

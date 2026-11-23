@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Calculator, X } from 'lucide-react'
+import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Zap, Wrench, Boxes, Target, BriefcaseBusiness } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
 import { createProject, deleteProject, purgeRemovedCaseProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
@@ -10,59 +10,29 @@ import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
 import FeasibilityWizard from './features/projects/FeasibilityWizard'
 import Guide from './features/guide/Guide'
 import BackupScheduler from './features/settings/BackupScheduler'
+import ModuleIntelligencePanel from './features/modules/ModuleIntelligencePanel'
+import ExecutiveDashboardPanel from './features/modules/ExecutiveDashboardPanel'
 
-type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wizard' | 'guide'
+type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wizard' | 'guide' | 'module'
+
+type ModuleWorkspace = { id: string; moduleId: string; name: string; createdAt: string }
 
 const modules = [
-  { icon: Factory, title: 'مهندسی و طراحی فرآیند', enTitle: 'Process Engineering & Design', sub: 'ظرفیت، توازن مواد، انرژی و تجهیزات', enSub: 'Capacity, material balance, energy and equipment', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: Globe2, title: 'هوشمندی بازار', enTitle: 'Market Intelligence', sub: 'عرضه، تقاضا، قیمت و رقبا', enSub: 'Supply, demand, pricing and competitors', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: TrendingUp, title: 'مدل مالی و اقتصادی', enTitle: 'Financial & Economic Model', sub: 'NPV، IRR، جریان نقدی و تأمین مالی', enSub: 'NPV, IRR, cash flow and financing', status: 'نمونه اولیه', enStatus: 'Prototype' },
-  { icon: Activity, title: 'ریسک و سناریو', enTitle: 'Risk & Scenarios', sub: 'حساسیت، سناریو و مونت‌کارلو', enSub: 'Sensitivity, scenarios and Monte Carlo', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: Bot, title: 'دستیار هوش مصنوعی', enTitle: 'AI Assistant', sub: 'تحلیل مستند و پاسخ‌گویی به سرمایه‌گذار', enSub: 'Evidence-based analysis for investors', status: 'در نقشه راه', enStatus: 'Roadmap' },
-  { icon: FileChartColumn, title: 'گزارش سرمایه‌گذاری', enTitle: 'Investment Reports', sub: 'گزارش مدیریتی، بانکی و سرمایه‌گذار', enSub: 'Management, banking and investor reports', status: 'در نقشه راه', enStatus: 'Roadmap' },
+  { id: 'MOD-01', icon: LayoutDashboard, title: 'داشبورد هوشمند مدیرعامل', enTitle: 'Executive Intelligence Dashboard', sub: 'نمای یکپارچه وضعیت و استثناهای مدیریتی', enSub: 'Unified business status and management exceptions', group: 'دید مدیریتی و سودآوری', enGroup: 'Management & Profitability' },
+  { id: 'MOD-02', icon: TrendingUp, title: 'مدیریت اقتصادی و بهای تمام‌شده', enTitle: 'Steel Cost & Profitability Intelligence', sub: 'هزینه، حاشیه سود و انحراف بهای تمام‌شده', enSub: 'Cost, margin and cost variance analysis', group: 'دید مدیریتی و سودآوری', enGroup: 'Management & Profitability' },
+  { id: 'MOD-03', icon: Gauge, title: 'هوشمندی تولید و بهره‌وری', enTitle: 'Production & OEE Intelligence', sub: 'تولید، ظرفیت، توقفات و راندمان', enSub: 'Output, capacity, downtime and OEE', group: 'دید مدیریتی و سودآوری', enGroup: 'Management & Profitability' },
+  { id: 'MOD-04', icon: Target, title: 'مدیریت عملکرد و شاخص‌ها', enTitle: 'Enterprise Performance Management', sub: 'اهداف، KPI و تحلیل انحراف عملکرد', enSub: 'Goals, KPIs and performance variance', group: 'دید مدیریتی و سودآوری', enGroup: 'Management & Profitability' },
+  { id: 'MOD-05', icon: Zap, title: 'مدیریت انرژی', enTitle: 'Energy Intelligence & Optimization', sub: 'مصرف ویژه، هزینه و فرصت‌های بهینه‌سازی', enSub: 'Specific consumption, cost and optimization', group: 'بهره‌وری و تعالی عملیات', enGroup: 'Operational Excellence' },
+  { id: 'MOD-06', icon: Wrench, title: 'تعمیرات و قابلیت اطمینان', enTitle: 'Maintenance & Asset Reliability', sub: 'خرابی، توقف و قابلیت اطمینان تجهیزات', enSub: 'Failures, downtime and asset reliability', group: 'بهره‌وری و تعالی عملیات', enGroup: 'Operational Excellence' },
+  { id: 'MOD-07', icon: Factory, title: 'مهندسی فرآیند و تعالی عملیاتی', enTitle: 'Process Engineering & Operational Excellence', sub: 'توازن مواد و انرژی، گلوگاه و بهبود', enSub: 'Material and energy balance, bottlenecks and improvement', group: 'بهره‌وری و تعالی عملیات', enGroup: 'Operational Excellence' },
+  { id: 'MOD-08', icon: Boxes, title: 'زنجیره تأمین و موجودی', enTitle: 'Supply Chain & Inventory Intelligence', sub: 'تأمین، گردش موجودی و سرمایه در گردش', enSub: 'Procurement, inventory turnover and working capital', group: 'بهره‌وری و تعالی عملیات', enGroup: 'Operational Excellence' },
+  { id: 'MOD-09', icon: Globe2, title: 'هوشمندی بازار و سودآوری محصول', enTitle: 'Steel Market & Product Profitability', sub: 'بازار، قیمت، رقبا و ترکیب سودآور محصول', enSub: 'Markets, pricing, competitors and product mix', group: 'بازار و رشد سودآور', enGroup: 'Market & Profitable Growth' },
+  { id: 'MOD-10', icon: ShieldCheck, title: 'رتبه‌بندی و هوشمندی تصمیم', enTitle: 'Ranking & Decision Intelligence', sub: 'مقایسه گزینه‌ها با معیار و شواهد شفاف', enSub: 'Evidence-based comparison and ranking', group: 'تصمیم‌گیری و تاب‌آوری', enGroup: 'Decision & Resilience' },
+  { id: 'MOD-11', icon: FolderKanban, title: 'مدیریت پروژه و سرمایه‌گذاری', enTitle: 'Capital Project & Portfolio Management', sub: 'بودجه، پیشرفت، زمان و منافع پروژه', enSub: 'Project budget, progress, schedule and benefits', group: 'تصمیم‌گیری و تاب‌آوری', enGroup: 'Decision & Resilience' },
+  { id: 'MOD-12', icon: Activity, title: 'مدیریت ریسک و تاب‌آوری', enTitle: 'Enterprise Risk & Resilience', sub: 'ریسک‌های عملیاتی، مالی و استمرار کسب‌وکار', enSub: 'Operational, financial and continuity risks', group: 'تصمیم‌گیری و تاب‌آوری', enGroup: 'Decision & Resilience' },
 ]
 
-
-function calculateExpression(expression: string): number {
-  const tokens = expression.replace(/×/g, '*').replace(/÷/g, '/').match(/(?:\d+\.?\d*|\.\d+)|[()+\-*/%]/g) ?? []
-  let index = 0
-  const parsePrimary = (): number => {
-    const token = tokens[index++]
-    if (token === '(') {
-      const value = parseSum()
-      if (tokens[index++] !== ')') throw new Error('پرانتز نامعتبر')
-      return value
-    }
-    if (token === '-') return -parsePrimary()
-    if (token === '+') return parsePrimary()
-    const value = Number(token)
-    if (!Number.isFinite(value)) throw new Error('عبارت نامعتبر')
-    return value
-  }
-  const parseProduct = (): number => {
-    let value = parsePrimary()
-    while (tokens[index] === '*' || tokens[index] === '/' || tokens[index] === '%') {
-      const op = tokens[index++]
-      const next = parsePrimary()
-      if ((op === '/' || op === '%') && next === 0) throw new Error('تقسیم بر صفر')
-      value = op === '*' ? value * next : op === '/' ? value / next : value % next
-    }
-    return value
-  }
-  const parseSum = (): number => {
-    let value = parseProduct()
-    while (tokens[index] === '+' || tokens[index] === '-') {
-      const op = tokens[index++]
-      const next = parseProduct()
-      value = op === '+' ? value + next : value - next
-    }
-    return value
-  }
-  if (!tokens.length) return 0
-  const result = parseSum()
-  if (index !== tokens.length || !Number.isFinite(result)) throw new Error('عبارت نامعتبر')
-  return result
-}
+const moduleIconFiles = ['01-dashboard.svg','02-economics.svg','03-production.svg','04-kpi.svg','05-energy.svg','06-maintenance.svg','07-process.svg','08-supply-chain.svg','09-market.svg','10-decision.svg','11-project-investment.svg','12-risk.svg']
 
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
@@ -71,11 +41,64 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<FeasibilityProject | null>(null)
   const [storageInfo, setStorageInfo] = useState({ backend: 'در حال بررسی', items: 0 })
   const [ready, setReady] = useState(false)
-  const [calculatorOpen, setCalculatorOpen] = useState(false)
-  const [calculatorExpression, setCalculatorExpression] = useState('')
-  const [calculatorError, setCalculatorError] = useState('')
+  const [activeModuleId, setActiveModuleId] = useState('MOD-01')
+  const [moduleWorkspaces, setModuleWorkspaces] = useState<ModuleWorkspace[]>([])
+  const [moduleWorkspaceName, setModuleWorkspaceName] = useState('')
   const isEn = settings.language === 'en'
   const toggleLanguage = () => setSettings(current => ({ ...current, language: current.language === 'fa' ? 'en' : 'fa' }))
+  type NavigationEntry = { page: Page; project: FeasibilityProject | null; moduleId: string }
+  const navigationStackRef = useRef<NavigationEntry[]>([{ page: 'dashboard', project: null, moduleId: 'MOD-01' }])
+  const [moduleDropdownOpen, setModuleDropdownOpen] = useState(false)
+
+  useEffect(() => {
+    const closeModuleDropdownOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Element && target.closest('.nav-dropdown')) return
+      setModuleDropdownOpen(false)
+    }
+    const closeModuleDropdownOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setModuleDropdownOpen(false)
+    }
+    document.addEventListener('pointerdown', closeModuleDropdownOnOutsidePointer)
+    document.addEventListener('keydown', closeModuleDropdownOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeModuleDropdownOnOutsidePointer)
+      document.removeEventListener('keydown', closeModuleDropdownOnEscape)
+    }
+  }, [])
+
+  function navigateTo(nextPage: Page, nextProject: FeasibilityProject | null = activeProject, nextModuleId = activeModuleId) {
+    const current = navigationStackRef.current[navigationStackRef.current.length - 1]
+    if (current.page === nextPage && current.project?.id === nextProject?.id && current.moduleId === nextModuleId) return
+    navigationStackRef.current.push({ page: nextPage, project: nextProject, moduleId: nextModuleId })
+    window.history.pushState({ pishranNavigation: true }, '', window.location.href)
+    setActiveProject(nextProject)
+    setActiveModuleId(nextModuleId)
+    setPage(nextPage)
+  }
+
+  function navigateBack(fallbackPage: Page) {
+    if (navigationStackRef.current.length > 1) window.history.back()
+    else navigateTo(fallbackPage)
+  }
+
+  useEffect(() => {
+    // Each in-app navigation adds one history entry. Android's Back key
+    // therefore unwinds nested screens first; at the dashboard, native
+    // back is left untouched so the user can exit normally.
+    const handlePopState = () => {
+      if (navigationStackRef.current.length > 1) {
+        navigationStackRef.current.pop()
+        const previous = navigationStackRef.current[navigationStackRef.current.length - 1]
+        setPage(previous.page)
+        setActiveProject(previous.project)
+        setActiveModuleId(previous.moduleId)
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
 
   useEffect(() => {
     let alive = true
@@ -89,6 +112,14 @@ export default function App() {
         setStorageInfo(info)
         setReady(true)
       }).catch(() => setReady(true))
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    localStore.get<ModuleWorkspace[]>('module-workspaces:v1').then(items => {
+      if (alive) setModuleWorkspaces(Array.isArray(items) ? items : [])
+    }).catch(() => undefined)
     return () => { alive = false }
   }, [])
 
@@ -137,20 +168,47 @@ export default function App() {
     await purgeRemovedCaseProjects()
     setSettings(await loadSettings())
     setProjects(await listProjects())
+    setModuleWorkspaces(await localStore.get<ModuleWorkspace[]>('module-workspaces:v1') ?? [])
     await refreshStorage()
   }
+
+  function openModule(moduleId: string) {
+    setModuleDropdownOpen(false)
+    navigateTo('module', activeProject, moduleId)
+  }
+
+  async function createModuleWorkspace() {
+    const name = moduleWorkspaceName.trim()
+    if (!name) return
+    const record: ModuleWorkspace = { id: `${activeModuleId}-${Date.now()}`, moduleId: activeModuleId, name, createdAt: new Date().toISOString() }
+    const next = [record, ...moduleWorkspaces]
+    await localStore.set('module-workspaces:v1', next)
+    setModuleWorkspaces(next)
+    setModuleWorkspaceName('')
+    await refreshStorage()
+  }
+
+  const activeModule = modules.find(item => item.id === activeModuleId) ?? modules[0]
+  const ActiveModuleIcon = activeModule.icon
+  const activeModuleWorkspaces = moduleWorkspaces.filter(item => item.moduleId === activeModule.id)
 
   return <main className={`app-shell app-page-${page}`} dir={isEn?"ltr":"rtl"}>
     <BackupScheduler/>
     <header className="topbar">
       <button className="language-switch page-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button>
-      <div className="brand"><button className="brand-title" type="button" onClick={() => setPage('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
+      <div className="brand"><button className="brand-title" type="button" onClick={() => navigateTo('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
       <nav className="main-nav" aria-label={isEn?"Primary navigation":"ناوبری اصلی"}>
-        <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
-        <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
-        <button className={page === 'steel-group' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('steel-group')}><Factory size={17}/> {isEn ? "Steel Group" : "گروه فولاد"}</button>
-        <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
-        <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('settings')}><Settings size={17}/> {isEn ? "Settings" : "تنظیمات"}</button>
+        <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
+        <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
+        <button className={page === 'steel-group' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('steel-group')}><Factory size={17}/> {isEn ? "Steel Group" : "گروه فولاد"}</button>
+        <details className="nav-dropdown" open={moduleDropdownOpen}>
+          <summary className={page === 'module' ? 'nav-item active' : 'nav-item'} onClick={event => { event.preventDefault(); setModuleDropdownOpen(current => !current) }}><Boxes size={17}/> {isEn ? 'Modules' : 'ماژولها'}</summary>
+          <div className="nav-dropdown-menu">
+            {modules.map(item => <button type="button" key={item.id} className={page === 'module' && activeModuleId === item.id ? 'dropdown-module active' : 'dropdown-module'} onClick={() => openModule(item.id)}>{isEn ? item.enTitle : item.title}</button>)}
+          </div>
+        </details>
+        <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
+        <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('settings')}><Settings size={17}/> {isEn ? "Settings" : "تنظیمات"}</button>
       </nav>
       <div className="top-actions"></div>
     </header>
@@ -161,22 +219,42 @@ export default function App() {
           
           <h1>{isEn ? <>From idea to investment decision, <em>with greater confidence.</em></> : <><em> ... با اطمینان بیشتر.</em></>}</h1>
           <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
-          <div className="hero-actions"><button className="primary" onClick={() => setPage('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
+          <div className="hero-actions"><button className="primary" onClick={() => navigateTo('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
         </div>
-        <div className="hero-art honeycomb-art" aria-label={isEn ? "Pishran capabilities" : "قابلیت‌های پیشران"}>
-          <div className="honeycomb-row">
-            <div className="honeycomb-cell honeycomb-yellow"><TrendingUp/><span>{isEn ? 'Financial Analysis' : 'تحلیل مالی'}</span></div>
-            <div className="honeycomb-cell honeycomb-red"><ShieldCheck/><span>{isEn ? 'Risk Assessment' : 'ارزیابی ریسک'}</span></div>
-            <div className="honeycomb-cell honeycomb-yellow"><Gauge/><span>{isEn ? 'Feasibility' : 'امکان‌سنجی'}</span></div>
-          </div>
-          <div className="honeycomb-row honeycomb-row-middle">
-            <div className="honeycomb-cell honeycomb-red"><Globe2/><span>{isEn ? 'Market Analysis' : 'تحلیل بازار'}</span></div>
-            <div className="honeycomb-cell honeycomb-yellow"><Factory/><span>{isEn ? 'Process Design' : 'طراحی فرآیند'}</span></div>
-          </div>
-          <div className="honeycomb-row">
-            <div className="honeycomb-cell honeycomb-yellow"><FolderKanban/><span>{isEn ? 'Project Control' : 'مدیریت پروژه'}</span></div>
-            <div className="honeycomb-cell honeycomb-red"><FileChartColumn/><span>{isEn ? 'Reports' : 'گزارش‌گیری'}</span></div>
-            <div className="honeycomb-cell honeycomb-yellow"><Bot/><span>{isEn ? 'AI Assistant' : 'دستیار هوشمند'}</span></div>
+        <div className="hero-art dashboard-image-art">
+          <div className="dashboard-diagram-stage" aria-label={isEn ? "Interactive Pishran module diagram" : "نمودار تعاملی ماژول‌های پیشران"}>
+            <img className="dashboard-module-image" src="/modules/diagram-3d-light.svg" alt={isEn ? "Three-dimensional twelve-module Pishran dashboard diagram" : "نمودار سه‌بعدی روشن دوازده ماژول پیشران"} />
+            {modules.map((item, index) => {
+              const spots = [
+                { left:'40.54%', top:'1%', width:'18.92%', height:'19.62%' },
+                { left:'60.14%', top:'6.26%', width:'18.92%', height:'19.62%' },
+                { left:'74.47%', top:'20.59%', width:'18.92%', height:'19.62%' },
+                { left:'79.73%', top:'40.19%', width:'18.92%', height:'19.62%' },
+                { left:'74.47%', top:'59.79%', width:'18.92%', height:'19.62%' },
+                { left:'60.14%', top:'74.12%', width:'18.92%', height:'19.62%' },
+                { left:'40.54%', top:'79.73%', width:'18.92%', height:'19.62%' },
+                { left:'20.94%', top:'74.12%', width:'18.92%', height:'19.62%' },
+                { left:'6.61%', top:'59.79%', width:'18.92%', height:'19.62%' },
+                { left:'1.35%', top:'40.19%', width:'18.92%', height:'19.62%' },
+                { left:'6.61%', top:'20.59%', width:'18.92%', height:'19.62%' },
+                { left:'20.94%', top:'6.26%', width:'18.92%', height:'19.62%' },
+              ]
+              return <button key={item.id} type="button" className="dashboard-diagram-hotspot" style={spots[index]}
+                title={isEn ? item.enSub : item.sub}
+                onClick={() => openModule(item.id)}
+                aria-label={`${item.id}: ${isEn ? item.enTitle : item.title}. ${isEn ? item.enSub : item.sub}`}>
+                <span className="dashboard-diagram-tooltip">
+                  <img src={`/modules/icons/${moduleIconFiles[index]}`} alt="" />
+                  <span>{isEn ? item.enSub : item.sub}</span>
+                </span>
+                <span className="visually-hidden">{isEn ? item.enTitle : item.title}</span>
+              </button>
+            })}
+            <button type="button" className="dashboard-diagram-core-hotspot"
+              data-tooltip={isEn ? "Open project feasibility and investment assessment" : "ورود به ارزیابی فنی و اقتصادی پروژه‌ها"}
+              title={isEn ? "Open project assessment" : "ورود به ارزیابی پروژه‌ها"}
+              onClick={() => navigateTo('projects')}
+              aria-label={isEn ? "Open project assessment" : "ورود به ارزیابی فنی و اقتصادی پروژه‌ها"} />
           </div>
         </div>
       </section>
@@ -189,44 +267,29 @@ export default function App() {
         <article className="kpi"><span>{isEn ? 'Storage status' : 'وضعیت ذخیره‌سازی'}</span><b className="live">{isEn&&storageInfo.backend==='در حال بررسی'?'Checking...':storageInfo.backend}</b><small>{isEn ? 'Data is kept on this device' : 'اطلاعات روی دستگاه نگهداری می‌شود'}</small></article>
       </section>
 
-      <section className="section-head"><div><h2>{isEn ? "Pishran Modules" : "ماژول‌های پیشران"}</h2></div><span className="muted">{isEn ? 'Layered and extensible architecture' : 'معماری لایه‌ای و توسعه‌پذیر'}</span></section>
-      <section className="module-grid">{modules.map(({icon: Icon,title,sub,status,enTitle,enSub,enStatus})=><article className="module" key={title}><div className="module-icon"><Icon size={21}/></div><div className="module-text"><b>{isEn ? enTitle : title}</b><p>{isEn ? enSub : sub}</p><small>{isEn ? enStatus : status}</small></div></article>)}</section>
-
       <section className="analytics">
         <article className="chart-card"><div className="card-heading"><div><h3>{isEn ? "Illustrative return trend" : "نمای نمونه روند بازده"}</h3></div><span className="tag">{isEn ? "Sample data" : "داده نمایشی"}</span></div><ReactECharts option={chart} style={{height:250}}/></article>
         <article className="insight-card"><div className="module-icon gold"><Bot size={23}/></div><h3>{isEn ? "Investment Decision Assistant" : "دستیار تصمیم‌یار سرمایه‌گذاری"}</h3><p>{isEn ? 'Future versions of Pishran will review assumptions, explain risks and analyse results with references to source data.' : 'در نسخه‌های بعدی، پیشران می‌تواند مفروضات را بررسی کند، ریسک‌ها را توضیح دهد و نتایج را با ارجاع به منابع داده تحلیل کند.'}</p><div className="notice">{isEn ? 'This version contains illustrative outputs. Do not use them as the basis for actual investment decisions.' : 'خروجی‌های این نسخه نمایشی هستند و مبنای تصمیم واقعی سرمایه‌گذاری نیستند.'}</div></article>
       </section>
     </>}
 
-    {page === 'projects' && <ProjectsView language={settings.language} projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => { setActiveProject(project); setPage('project-wizard') }}/>}
+    {page === 'projects' && <ProjectsView language={settings.language} projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => navigateTo('project-wizard', project)}/>}
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
-    {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => setPage('projects')}/>}
+    {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => navigateBack('projects')}/>}
+    {page === 'module' && <section className="module-workspace-page">
+      <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => navigateBack('dashboard')}>{isEn ? 'Back to dashboard' : 'بازگشت به داشبورد'}</button><span className="module-id">{activeModule.id}</span></div>
+      <div className="module-workspace-hero"><div className="module-icon"><ActiveModuleIcon size={26}/></div><div><h1>{isEn ? activeModule.enTitle : activeModule.title}</h1><p>{isEn ? activeModule.enSub : activeModule.sub}</p><small>{isEn ? activeModule.enGroup : activeModule.group}</small></div></div>
+      {activeModule.id === 'MOD-01' && <ExecutiveDashboardPanel language={settings.language} onOpenModule={openModule}/>}
+      {(activeModule.id === 'MOD-02' || activeModule.id === 'MOD-03') && <ModuleIntelligencePanel moduleId={activeModule.id} language={settings.language}/>}
+      <section className="module-workspace-card"><div className="section-head"><div><h2>{isEn ? 'Module workspaces' : 'پرونده‌های این ماژول'}</h2><p>{isEn ? 'Create and manage workspaces dedicated to this module.' : 'برای ثبت پروژه‌ها، تحلیل‌ها و اطلاعات اختصاصی این ماژول پرونده ایجاد کنید.'}</p></div><span className="muted">{activeModuleWorkspaces.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
+        <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createModuleWorkspace() }}><label htmlFor="module-workspace-name">{isEn ? 'New module workspace name' : 'نام پرونده جدید ماژول'}</label><div><input id="module-workspace-name" value={moduleWorkspaceName} onChange={event => setModuleWorkspaceName(event.target.value)} placeholder={isEn ? 'Enter a name' : 'نام پروژه یا پرونده را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!moduleWorkspaceName.trim()}><Plus size={17}/>{isEn ? 'Create' : 'ایجاد پرونده'}</button></div></form>
+        {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></div><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پرونده‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پرونده، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
+      </section>
+    </section>}
 
 
-    <div className="floating-calculator" dir="ltr">
-      {calculatorOpen && <section className="calculator-panel" aria-label={isEn ? 'Calculator' : 'ماشین حساب'}>
-        <div className="calculator-heading"><b>{isEn ? 'Calculator' : 'ماشین حساب'}</b><button type="button" aria-label={isEn ? 'Close calculator' : 'بستن ماشین حساب'} onClick={() => setCalculatorOpen(false)}><X size={18}/></button></div>
-        <div className="calculator-display" aria-live="polite"><span>{calculatorExpression || '0'}</span>{calculatorError && <small>{calculatorError}</small>}</div>
-        <div className="calculator-keys">
-          {['C','(',')','⌫','7','8','9','÷','4','5','6','×','1','2','3','−','0','.','%','+','='].map(key => <button key={key} type="button" className={['÷','×','−','+','='].includes(key) ? 'operator' : key === 'C' ? 'clear' : ''} onClick={() => {
-            setCalculatorError('')
-            if (key === 'C') { setCalculatorExpression(''); return }
-            if (key === '⌫') { setCalculatorExpression(value => value.slice(0, -1)); return }
-            if (key === '=') {
-              try { setCalculatorExpression(String(Number(calculateExpression(calculatorExpression).toPrecision(12)))) }
-              catch (error) { setCalculatorError(error instanceof Error ? error.message : (isEn ? 'Invalid expression' : 'عبارت نامعتبر')) }
-              return
-            }
-            setCalculatorExpression(value => value + key)
-          }}>{key}</button>)}
-        </div>
-      </section>}
-      <button className="calculator-launcher" type="button" onClick={() => setCalculatorOpen(value => !value)} aria-label={isEn ? 'Open calculator' : 'باز کردن ماشین حساب'} aria-expanded={calculatorOpen}>
-        {calculatorOpen ? <X size={21}/> : <Calculator size={21}/>}<span>{isEn ? 'Calculator' : 'ماشین حساب'}</span>
-      </button>
-    </div>
     <footer>{isEn ? "Pishran · Intelligent Feasibility & Investment Assessment Platform" : "پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری"} <span>{isEn ? "Version 1.0.1 · No sign-in required" : "نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری"}</span></footer>
   </main>
 }

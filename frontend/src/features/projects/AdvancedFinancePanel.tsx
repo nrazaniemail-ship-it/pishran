@@ -7,12 +7,19 @@ import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConv
 import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
-import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft } from './projectModelFormDrafts'
+import { buildAbnormalWasteAccountingPostings, canPersistStageAccountingPostings, reconcileInventoryThreeWay, reconcileInventoryReference, reconcileStageInventoryMovements } from './inventoryControlLedgers'
+import { loadStageInventoryAccountingPostings, persistStageInventoryAccountingPostings, type PersistedStageInventoryAccountingPosting } from './stageInventoryAccountingStore'
+import StageInventoryCorrectionsPanel from './StageInventoryCorrectionsPanel'
+import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
+import { applyStageJournalCorrectionsToProductSchedule, bindCppCpsTraceLedgerToProductSchedule, bindFinishedGoodsInventoryToWorkingCapital } from './cppCpsScheduleIntegration'
+import type { ProjectModelFinancialFormDrafts, ProjectTaxFormDraft, SalesTaxLedgerFormDraft, ValueAddedPeriodFormDraft } from './projectModelFormDrafts'
+import { buildComfarValueAddedAnalysis, type ValueAddedAnalysisResult, type ValueAddedInputItem, type ValueAddedInvestmentItem } from './projectValueAddedAnalysis'
+import { buildSalesTaxLedger, bindSalesTaxLedgerToWorkingCapital, type SalesTaxInputCreditEntry, type SalesTaxOutputEntry, type SalesTaxSettlementEntry, type SalesTaxLedgerResult } from './salesTaxLedger'
 import { buildProjectTaxDraftSchedule } from './projectTaxDraftIntegration'
 import { buildProjectLoanDraftIntegration } from './projectLoanDraftIntegration'
 import type { LoanFacilityFormDraft } from './projectModelFormDrafts'
 import { calculateOperatingCycleWorkingCapital, calculateWorkingCapitalTurnoverCoefficient, calculateWorkingCapitalDaysCoverageFromTurnover } from '../steel/financialModel'
-import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, calculatePeriodicSensitivityMatrix, calculatePeriodicFinancialScenarios, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput, type PeriodicFinancialScenarioSet, type PeriodicSensitivityCell } from '../steel/periodicFinancialEngine'
+import { allocateAnnualFlowsToPeriods, calculateIntegratedPeriodicFinance, buildPeriodicThreeFinancialStatements, fiscalYearIndexForPeriod, calculatePeriodicNpv, calculatePeriodicSensitivityMatrix, calculatePeriodicFinancialScenarios, type PeriodicProjectFinanceResult, type PeriodicProjectFinanceInput, type PeriodicLoanInput, type PeriodicFinancialScenarioSet, type PeriodicSensitivityCell } from '../steel/periodicFinancialEngine'
 import {
   calculateIntegratedFinance, calculateAssetDepreciationSchedule,
   calculateOneWaySensitivity, buildThreeFinancialStatements, type SensitivityCell, calculateComfarAssetLifecycle,
@@ -67,8 +74,19 @@ type Props = {
   openingGrants?: number
   openingCurrentAccounts?: OpeningCurrentAccounts
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
-  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'>
+  productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers' | 'inventoryReferenceBenchmarks' | 'costCentres' | 'costCentreInventoryMovements' | 'inventoryStageTransfers'>>
+  cppCpsTraceItems?: CppCpsTraceItem[]
+  onCppCpsTraceLedger?: (ledger: CppCpsTraceLedger) => void
+  onEditFinancialForms?: () => void
   taxDraft?: ProjectTaxFormDraft
+  salesTaxLedgerDraft?: SalesTaxLedgerFormDraft
+  onSalesTaxLedgerResult?: (result:SalesTaxLedgerResult|null)=>void
+  valueAddedAnalysisEnabled?: boolean
+  valueAddedPeriodDrafts?: ValueAddedPeriodFormDraft[]
+  economicDiscountRatePercent?: number | null
+  economicDiscountRateSourceReference?: string
+  economicDiscountRateSourceVerified?: boolean
+  onValueAddedAnalysisResult?: (result:ValueAddedAnalysisResult|null)=>void
   loanDrafts?: LoanFacilityFormDraft[]
   projectFoundation?: ProjectFoundation
   initialWorkingCapitalEquityContribution?: number
@@ -140,7 +158,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const en=props.language==='en'
   const projectPeriods=props.projectPeriods??[]
   const t=(fa:string,english:string)=>en?english:fa
- const labelEn:Record<string,string>={"عنوان تسهیلات":"Loan Name","نرخ سالانه":"Annual Interest Rate","دوره تنفس اصل (سال)":"Principal Grace Period (Years)","مدت بازپرداخت (سال)":"Repayment Term (Years)","شروع بازپرداخت اصل (سال مدل)":"Principal Repayment Start (Model Year)","روش اقساط":"Repayment Method","سرمایه‌ای شدن بهره تا شروع بازپرداخت":"Capitalise interest until repayment starts","برداشت سالانه (واحد پول پایه)":"Annual Drawdown (Base Currency)","برنامه بازپرداخت همین تسهیلات":"Repayment Schedule for This Loan","حذف تسهیلات":"Remove Loan","افزودن وام":"Add Loan","آورده نقدی سهامدار به تفکیک سال":"Annual Shareholder Equity Contributions","روز موجودی مواد اولیه":"Raw Material Inventory Days","روز موجودی ملزومات کارخانه":"Factory Supplies Inventory Days","روز موجودی اقلام خدماتی":"Utilities Inventory Days","روز موجودی/پوشش هزینه انرژی":"Energy Inventory / Coverage Days","روز موجودی قطعات یدکی":"Spare Parts Inventory Days","مبنای سالانه هزینه انرژی":"Annual Energy Cost Basis","مبنای سالانه قطعات یدکی":"Annual Spare Parts Cost Basis","روز کالای در جریان ساخت":"Work-in-Progress Days","روز محصول نهایی":"Finished Goods Days","روز وصول مطالبات":"Receivable Days","روز حداقل نقد عملیاتی":"Minimum Operating Cash Days","سهم سپرده کوتاه‌مدت از نقدینگی (%)":"Short-term deposits as share of cash (%)","نرخ سود سپرده کوتاه‌مدت (%)":"Short-term deposit interest rate (%)","روز پرداخت بدهی تجاری":"Trade Payables Days","مبنای سالانه مواد اولیه":"Annual Raw Material Cost Basis","مبنای سالانه ملزومات کارخانه":"Annual Factory Supplies Cost Basis","مبنای سالانه اقلام خدماتی":"Annual Utilities Cost Basis","مبنای سالانه هزینه تبدیل":"Annual Conversion Cost Basis","بهای سالانه محصول ساخته‌شده":"Annual Cost of Finished Goods","هزینه نقدی سالانه برای حداقل نقد":"Annual Cash Cost for Minimum Cash","مبنای سالانه بدهی تجاری":"Annual Trade Payables Cost Basis","تکمیل مواد در جریان ساخت (%)":"WIP Material Completion (%)","تکمیل تبدیل در جریان ساخت (%)":"WIP Conversion Completion (%)","دارایی":"Asset","بهای تمام‌شده":"Asset Cost","ارزش اسقاط":"Residual Value","عمر مفید (سال)":"Useful Life (Years)","شروع استهلاک (سال مدل)":"Depreciation Start (Model Year)","روش":"Method","خط مستقیم":"Straight Line","مانده نزولی":"Declining Balance","نرخ نزولی (%)":"Declining-Balance Rate (%)","نرخ تنزیل":"Discount Rate","نرخ تنزیل دستی (%)":"Manual Discount Rate (%)","CAPEX نگهداری سالانه (% هزینه نقدی)":"Annual Maintenance CAPEX (% of Cash Cost)","سال":"Year","بهره":"Interest","اصل":"Principal","مانده بدهی":"Debt Balance","فروش":"Revenue","زیان انتقالی پایان سال":"Closing Tax Loss Carryforward","سود خالص":"Net Income","جریان نقد پایان سال":"Closing Cash","جمع دارایی‌ها":"Total Assets","بدهی + حقوق مالکانه":"Liabilities + Equity","اختلاف تراز":"Balance Difference","تسهیلات اصلی":"Primary Loan","تسهیلات جدید":"New Loan","دارایی جدید":"New Asset","زمین":"Land","اصل مساوی":"Equal Principal","اقساط مساوی":"Equal Instalments","یکجا در سررسید":"Bullet at Maturity","ساخت":"Construction","بهره‌برداری":"Operation","افزودن دارایی":"Add Asset","حذف دارایی":"Remove Asset","دارایی‌ها و استهلاک":"Assets & Depreciation","برنامه تسهیلات و بدهی":"Loans & Debt Schedule","سرمایه در گردش عملیاتی":"Operating Working Capital","مفروضات مالیاتی سالانه":"Annual Tax Assumptions","تحلیل حساسیت":"Sensitivity Analysis","سناریوهای مالی":"Financial Scenarios","صورت‌های مالی سه‌گانه":"Three Financial Statements","برنامه سالانه جریان نقدی":"Annual Cash Flow Schedule","جریان نقدی در دسترس برای خدمت بدهی":"Cash Flow Available for Debt Service","نسبت پوشش خدمت بدهی":"Debt Service Coverage Ratio","روش استهلاک":"Depreciation Method","موجودی مواد اولیه":"Raw Material Inventory","کالای در جریان ساخت":"Work in Progress","محصول نهایی":"Finished Goods","مطالبات":"Receivables","نقد عملیاتی":"Operating Cash","بدهی تجاری":"Trade Payables","جمع بدهی‌ها و حقوق مالکانه":"Total Liabilities & Equity","درآمد":"Revenue","سود عملیاتی":"Operating Profit","مالیات":"Tax","مانده نقد":"Cash Balance","موجودی نقد":"Cash Balance","بهره نقدی":"Cash Interest","بهره سرمایه‌ای":"Capitalised Interest","اصل بدهی":"Principal","مانده پایان":"Closing Balance","مانده اول":"Opening Balance","برداشت":"Drawdown","سرمایه‌گذاری مجدد":"Reinvestment","سال مدل":"Model Year","هزینه سرمایه‌گذاری ثابت":"Fixed Investment Cost","هزینه نقدی عملیاتی":"Cash Operating Cost","درصد":"Percent","روز":"Days","آورده سال ساخت":"Construction-Year Equity","آورده سرمایه در گردش سال بهره‌برداری":"Operating-Year Shareholder Working-Capital Contribution","آورده سهامدار را جدا از برداشت وام وارد کنید. کسری منابع، در خروجی هشدار داده می‌شود.":"Enter shareholder equity separately from loan drawdowns. Any funding gap is flagged in the results.","مبنای روز ۳۶۰ روز است. روزهای نگهداری/وصول/پرداخت را از چرخه واقعی پروژه وارد کنید؛ مقدار صفر یعنی برای آن قلم سرمایه در گردش منظور نمی‌شود.":"The day-count basis is 360 days. Enter inventory, collection and payment days from the actual operating cycle. A zero value means no working capital is assigned to that item.","اوج نیاز سرمایه در گردش":"Peak Working Capital Requirement","کسری منابع":"Funding Gap","مبنای هزینه‌های سرمایه در گردش عمداً از OPEX کل به‌صورت خودکار تفکیک نمی‌شود؛ ارقام واقعی مواد، تبدیل، محصول، نقد و خرید اعتباری را وارد کنید تا تقسیم‌بندی فرضی در مدل ایجاد نشود.":"Working-capital cost bases are intentionally not auto-allocated from total OPEX. Enter actual raw-material, conversion, finished-goods, cash and credit-purchase bases to avoid arbitrary assumptions.","اوج نیاز سرمایه در گردش: ":"Peak Working Capital Requirement: ","همگام‌سازی دارایی‌ها از CAPEX":"Sync Assets from CAPEX","جمع استهلاک سالانه (به ترتیب سال مدل)":"Total Annual Depreciation (by Model Year)","دستی":"Manual","نرخ مالیات سال":"Tax Rate — Year","NPV پروژه":"Project NPV","IRR پروژه":"Project IRR","NPV سهامدار":"Equity NPV","IRR سهامدار":"Equity IRR","اوج سرمایه در گردش":"Peak Working Capital","کل برداشت وام":"Total Loan Drawdown","کل آورده":"Total Equity Contribution","جدول سالانه خدمت بدهی":"Annual Debt Service Schedule","CFADS":"CFADS","ردیف‌ها تغییر حجم/ظرفیت و ستون‌ها تغییر قیمت فروش را نشان می‌دهند. مقادیر NPV پروژه با همان برنامه وام، مالیات و سرمایه در گردش دوباره محاسبه می‌شوند.":"Rows represent volume/capacity changes and columns represent selling-price changes. Project NPV is recalculated using the same loan, tax and working-capital schedules.","حجم \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ قیمت":"Volume \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ Price","بدبینانه":"Downside","مبنا":"Base Case","خوش‌بینانه":"Upside","ترازهای منطبق: ":"Balanced Statements: ","از":"of","دوره":"Period","صورت‌ها از یک مجموعه جریان نقدی و برنامه دارایی/بدهی ساخته می‌شوند؛ هیچ رقم ترازکنندهٔ مصنوعی به حقوق مالکانه اضافه نمی‌شود. اگر اختلاف تراز صفر نباشد، خروجی به‌عنوان عدم تطبیق علامت می‌خورد و باید طبقه‌بندی CAPEX، آورده، بدهی یا سرمایه در گردش بررسی شود. این نسخه هنوز اقلام حسابداری تفصیلی مانند مالیات بر ارزش افزوده، سود تقسیمی، مطالبات/بدهی مالیاتی، تجدید ارزیابی و ثبت‌های چندارزی را پوشش نمی‌دهد.":"The statements are built from one cash-flow set and the asset/debt schedules; no artificial balancing plug is added to equity. Any balance difference is flagged for review of CAPEX, equity, debt or working-capital classification. This version does not yet cover detailed accounting items such as VAT, dividends, tax receivables/payables, revaluation or multi-currency postings.","دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.":"Sync assets from CAPEX. Land is not depreciated by default. Depreciation method (straight-line or declining-balance), useful life, residual value and start year are set independently for each asset. Tax-loss carry-forward is applied by the calculation engine.","جدول دوره‌ای سرمایه در گردش":"Periodic Working Capital Schedule","سرمایه در گردش خالص":"Net Working Capital","چرخه تبدیل وجه نقد":"Cash Conversion Cycle","سال اول":"Year 1","سال آخر":"Final Year","سناریوهای خوش‌بینانه و بدبینانه":"Upside & Downside Scenarios","سناریوی پایه":"Base Case","سناریوی بدبینانه":"Downside Case","سناریوی خوش‌بینانه":"Upside Case","سه صورت مالی":"Three Financial Statements","ترازنامه":"Balance Sheet","صورت سود و زیان":"Income Statement","صورت جریان وجوه نقد":"Cash Flow Statement","ترازهای منطبق":"Balanced Periods","مالیات و انتقال زیان":"Tax & Loss Carryforward","زیان انتقالی":"Tax Loss Carryforward","جمع دارایی‌های ثابت":"Total Fixed Assets","سرمایه‌گذاری در دارایی":"Asset Investment","سرمایه در گردش اوج":"Peak Working Capital","سال اوج نیاز":"Peak Requirement Year","برداشت سالانه":"Annual Drawdown","آورده نقدی سهامدار":"Shareholder Cash Contribution","واحد پول پایه":"Base Currency","هزینه‌های سرمایه‌ای":"Capital Expenditure","هزینه‌های عملیاتی":"Operating Expenditure","هزینه خدمت بدهی":"Debt Service Cost","عمر مفید":"Useful Life","سرمایه در گردش":"Working Capital","مواد اولیه":"Raw Materials","هزینه تبدیل":"Conversion Cost","محصول ساخته‌شده":"Finished Goods","حداقل نقد عملیاتی":"Minimum Operating Cash","نرخ مالیات":"Tax Rate","مواد":"Materials","محصول":"Finished Goods","پرداختنی":"Payables","نیاز":"Requirement","تکمیل اولیه":"Initially Complete","نیازمند تکمیل":"Completion Required","نامعتبر":"Invalid","کسری نقدینگی":"Funding Shortfall","جمع‌بندی سه صورت مالی":"Three-Statement Reconciliation"}
+ const labelEn:Record<string,string>={"عنوان تسهیلات":"Loan Name","نرخ سالانه":"Annual Interest Rate","دوره تنفس اصل (سال)":"Principal Grace Period (Years)","مدت بازپرداخت (سال)":"Repayment Term (Years)","شروع بازپرداخت اصل (سال مدل)":"Principal Repayment Start (Model Year)","روش اقساط":"Repayment Method","سرمایه‌ای شدن بهره تا شروع بازپرداخت":"Capitalise interest until repayment starts","برداشت سالانه (واحد پول پایه)":"Annual Drawdown (Base Currency)","برنامه بازپرداخت همین تسهیلات":"Repayment Schedule for This Loan","حذف تسهیلات":"Remove Loan","افزودن وام":"Add Loan","آورده نقدی سهامدار به تفکیک سال":"Annual Shareholder Equity Contributions","روز موجودی مواد اولیه":"Raw Material Inventory Days","روز موجودی ملزومات کارخانه":"Factory Supplies Inventory Days","روز موجودی اقلام خدماتی":"Utilities Inventory Days","روز موجودی/پوشش هزینه انرژی":"Energy Inventory / Coverage Days","روز موجودی قطعات یدکی":"Spare Parts Inventory Days","مبنای سالانه هزینه انرژی":"Annual Energy Cost Basis","مبنای سالانه قطعات یدکی":"Annual Spare Parts Cost Basis","روز کالای در جریان ساخت":"Work-in-Progress Days","روز محصول نهایی":"Finished Goods Days","روز وصول مطالبات":"Receivable Days","روز حداقل نقد عملیاتی":"Minimum Operating Cash Days","سهم سپرده کوتاه‌مدت از نقدینگی (%)":"Short-term deposits as share of cash (%)","نرخ سود سپرده کوتاه‌مدت (%)":"Short-term deposit interest rate (%)","روز پرداخت بدهی تجاری":"Trade Payables Days","مبنای سالانه مواد اولیه":"Annual Raw Material Cost Basis","مبنای سالانه ملزومات کارخانه":"Annual Factory Supplies Cost Basis","مبنای سالانه اقلام خدماتی":"Annual Utilities Cost Basis","مبنای سالانه هزینه تبدیل":"Annual Conversion Cost Basis","بهای سالانه محصول ساخته‌شده":"Annual Cost of Finished Goods","هزینه نقدی سالانه برای حداقل نقد":"Annual Cash Cost for Minimum Cash","مبنای سالانه بدهی تجاری":"Annual Trade Payables Cost Basis","تکمیل مواد در جریان ساخت (%)":"WIP Material Completion (%)","تکمیل تبدیل در جریان ساخت (%)":"WIP Conversion Completion (%)","دارایی":"Asset","بهای تمام‌شده":"Asset Cost","ارزش اسقاط":"Residual Value","عمر مفید (سال)":"Useful Life (Years)","شروع استهلاک (سال مدل)":"Depreciation Start (Model Year)","روش":"Method","خط مستقیم":"Straight Line","مانده نزولی":"Declining Balance","نرخ نزولی (%)":"Declining-Balance Rate (%)","نرخ تنزیل":"Discount Rate","نرخ تنزیل دستی (%)":"Manual Discount Rate (%)","CAPEX نگهداری سالانه (% هزینه نقدی)":"Annual Maintenance CAPEX (% of Cash Cost)","سال":"Year","بهره":"Interest","اصل":"Principal","مانده بدهی":"Debt Balance","فروش":"Revenue","زیان انتقالی پایان سال":"Closing Tax Loss Carryforward","سود خالص":"Net Income","جریان نقد پایان سال":"Closing Cash","جمع دارایی‌ها":"Total Assets","بدهی + حقوق مالکانه":"Liabilities + Equity","اختلاف تراز":"Balance Difference","تسهیلات اصلی":"Primary Loan","تسهیلات جدید":"New Loan","دارایی جدید":"New Asset","زمین":"Land","اصل مساوی":"Equal Principal","اقساط مساوی":"Equal Instalments","یکجا در سررسید":"Bullet at Maturity","ساخت":"Construction","بهره‌برداری":"Operation","افزودن دارایی":"Add Asset","حذف دارایی":"Remove Asset","دارایی‌ها و استهلاک":"Assets & Depreciation","برنامه تسهیلات و بدهی":"Loans & Debt Schedule","سرمایه در گردش عملیاتی":"Operating Working Capital","مفروضات مالیاتی سالانه":"Annual Tax Assumptions","تحلیل حساسیت":"Sensitivity Analysis","سناریوهای مالی":"Financial Scenarios","صورت‌های مالی سه‌گانه":"Three Financial Statements","برنامه سالانه جریان نقدی":"Annual Cash Flow Schedule","جریان نقدی در دسترس برای خدمت بدهی":"Cash Flow Available for Debt Service","نسبت پوشش خدمت بدهی":"Debt Service Coverage Ratio","روش استهلاک":"Depreciation Method","موجودی مواد اولیه":"Raw Material Inventory","کالای در جریان ساخت":"Work in Progress","محصول نهایی":"Finished Goods","مطالبات":"Receivables","نقد عملیاتی":"Operating Cash","بدهی تجاری":"Trade Payables","جمع بدهی‌ها و حقوق مالکانه":"Total Liabilities & Equity","درآمد":"Revenue","سود عملیاتی":"Operating Profit","مالیات":"Tax","مانده نقد":"Cash Balance","موجودی نقد":"Cash Balance","بهره نقدی":"Cash Interest","بهره سرمایه‌ای":"Capitalised Interest","اصل بدهی":"Principal","مانده پایان":"Closing Balance","مانده اول":"Opening Balance","برداشت":"Drawdown","سرمایه‌گذاری مجدد":"Reinvestment","سال مدل":"Model Year","هزینه سرمایه‌گذاری ثابت":"Fixed Investment Cost","هزینه نقدی عملیاتی":"Cash Operating Cost","درصد":"Percent","روز":"Days","آورده سال ساخت":"Construction-Year Equity","آورده سرمایه در گردش سال بهره‌برداری":"Operating-Year Shareholder Working-Capital Contribution","آورده سهامدار را جدا از برداشت وام وارد کنید. کسری منابع، در خروجی هشدار داده می‌شود.":"Enter shareholder equity separately from loan drawdowns. Any funding gap is flagged in the results.","مبنای روز ۳۶۰ روز است. روزهای نگهداری/وصول/پرداخت را از چرخه واقعی پروژه وارد کنید؛ مقدار صفر یعنی برای آن قلم سرمایه در گردش منظور نمی‌شود.":"The day-count basis is 360 days. Enter inventory, collection and payment days from the actual operating cycle. A zero value means no working capital is assigned to that item.","اوج نیاز سرمایه در گردش":"Peak Working Capital Requirement","کسری منابع":"Funding Gap","مبنای هزینه‌های سرمایه در گردش عمداً از OPEX کل به‌صورت خودکار تفکیک نمی‌شود؛ ارقام واقعی مواد، تبدیل، محصول، نقد و خرید اعتباری را وارد کنید تا تقسیم‌بندی فرضی در مدل ایجاد نشود.":"Working-capital cost bases are intentionally not auto-allocated from total OPEX. Enter actual raw-material, conversion, finished-goods, cash and credit-purchase bases to avoid arbitrary assumptions.","اوج نیاز سرمایه در گردش: ":"Peak Working Capital Requirement: ","همگام‌سازی دارایی‌ها از CAPEX":"Sync Assets from CAPEX","جمع استهلاک سالانه (به ترتیب سال مدل)":"Total Annual Depreciation (by Model Year)","دستی":"Manual","نرخ مالیات سال":"Tax Rate — Year","NPV پروژه":"Project NPV","IRR پروژه":"Project IRR","NPV سهامدار":"Equity NPV","IRR سهامدار":"Equity IRR","اوج سرمایه در گردش":"Peak Working Capital","کل برداشت وام":"Total Loan Drawdown","کل آورده":"Total Equity Contribution","جدول سالانه خدمت بدهی":"Annual Debt Service Schedule","CFADS":"CFADS","ردیف‌ها تغییر حجم/ظرفیت و ستون‌ها تغییر قیمت فروش را نشان می‌دهند. مقادیر NPV پروژه با همان برنامه وام، مالیات و سرمایه در گردش دوباره محاسبه می‌شوند.":"Rows represent volume/capacity changes and columns represent selling-price changes. Project NPV is recalculated using the same loan, tax and working-capital schedules.","حجم \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ قیمت":"Volume \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ Price","بدبینانه":"Downside","مبنا":"Base Case","خوش‌بینانه":"Upside","ترازهای منطبق: ":"Balanced Statements: ","از":"of","دوره":"Period","صورت‌ها از یک مجموعه جریان نقدی و برنامه دارایی/بدهی ساخته می‌شوند؛ هیچ رقم ترازکنندهٔ مصنوعی به حقوق مالکانه اضافه نمی‌شود. مانده خالص مالیات غیرمستقیم در سرمایه در گردش لحاظ و در دفتر جداگانه افشا می‌شود؛ تفکیک کامل سایر مطالبات/بدهی‌های مالیاتی، سود تقسیمی، تجدید ارزیابی و ثبت‌های چندارزی همچنان خارج از پوشش است.":"The statements are built from one cash-flow set and the asset/debt schedules; no artificial balancing plug is added to equity. The net indirect-tax balance is included in working capital and disclosed in a separate ledger. Other detailed tax receivables/payables, dividends, revaluation and multi-currency postings remain outside current coverage.","دارایی‌ها را از CAPEX همگام کنید؛ زمین به‌طور پیش‌فرض مستهلک نمی‌شود. روش خط مستقیم یا نزولی، عمر مفید، ارزش اسقاط و سال شروع هر دارایی مستقل است. انتقال زیان مالیاتی در موتور محاسباتی اعمال می‌شود.":"Sync assets from CAPEX. Land is not depreciated by default. Depreciation method (straight-line or declining-balance), useful life, residual value and start year are set independently for each asset. Tax-loss carry-forward is applied by the calculation engine.","جدول دوره‌ای سرمایه در گردش":"Periodic Working Capital Schedule","سرمایه در گردش خالص":"Net Working Capital","چرخه تبدیل وجه نقد":"Cash Conversion Cycle","سال اول":"Year 1","سال آخر":"Final Year","سناریوهای خوش‌بینانه و بدبینانه":"Upside & Downside Scenarios","سناریوی پایه":"Base Case","سناریوی بدبینانه":"Downside Case","سناریوی خوش‌بینانه":"Upside Case","سه صورت مالی":"Three Financial Statements","ترازنامه":"Balance Sheet","صورت سود و زیان":"Income Statement","صورت جریان وجوه نقد":"Cash Flow Statement","ترازهای منطبق":"Balanced Periods","مالیات و انتقال زیان":"Tax & Loss Carryforward","زیان انتقالی":"Tax Loss Carryforward","جمع دارایی‌های ثابت":"Total Fixed Assets","سرمایه‌گذاری در دارایی":"Asset Investment","سرمایه در گردش اوج":"Peak Working Capital","سال اوج نیاز":"Peak Requirement Year","برداشت سالانه":"Annual Drawdown","آورده نقدی سهامدار":"Shareholder Cash Contribution","واحد پول پایه":"Base Currency","هزینه‌های سرمایه‌ای":"Capital Expenditure","هزینه‌های عملیاتی":"Operating Expenditure","هزینه خدمت بدهی":"Debt Service Cost","عمر مفید":"Useful Life","سرمایه در گردش":"Working Capital","مواد اولیه":"Raw Materials","هزینه تبدیل":"Conversion Cost","محصول ساخته‌شده":"Finished Goods","حداقل نقد عملیاتی":"Minimum Operating Cash","نرخ مالیات":"Tax Rate","مواد":"Materials","محصول":"Finished Goods","پرداختنی":"Payables","نیاز":"Requirement","تکمیل اولیه":"Initially Complete","نیازمند تکمیل":"Completion Required","نامعتبر":"Invalid","کسری نقدینگی":"Funding Shortfall","جمع‌بندی سه صورت مالی":"Three-Statement Reconciliation"}
   const tr=(v:string, english?:string)=>en?(english??labelEn[v]??v):v
   const loanMethodEn:Record<string,string>={'equal-principal':'Equal Principal','annuity':'Equal Instalments','bullet':'Bullet at Maturity'}
   const years = Math.max(1, Math.min(60, Math.ceil(props.constructionYears) + Math.ceil(props.operatingYears)))
@@ -163,6 +181,18 @@ export default function AdvancedFinancePanel(props: Props) {
     discountMode:props.initialDiscountMode??'wacc',manualRate:props.initialManualRate??props.costOfEquity,maintenancePercent:0,salesEscalationPercent:0,opexEscalationPercent:0
   }))
   const [loaded,setLoaded]=useState(false)
+  const [stagePostingPersistence,setStagePostingPersistence]=useState<{status:'idle'|'saving'|'saved'|'error';count:number;error:string}>({status:'idle',count:0,error:''})
+  const [stageJournalEntries,setStageJournalEntries]=useState<PersistedStageInventoryAccountingPosting[]>([])
+  const [stageJournalLoaded,setStageJournalLoaded]=useState(false)
+  useEffect(()=>{
+    let active=true
+    setStageJournalLoaded(false)
+    loadStageInventoryAccountingPostings(props.projectId)
+      .then(store=>{if(active){setStageJournalEntries(store.entries);setStageJournalLoaded(true)}})
+      .catch(error=>{if(active){setStagePostingPersistence({status:'error',count:0,error:error instanceof Error?error.message:String(error)})}})
+    return()=>{active=false}
+  },[props.projectId])
+
   useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved,workingCapitalDays:{...state.workingCapitalDays,...saved.workingCapitalDays},workingCapitalBases:{...state.workingCapitalBases,...saved.workingCapitalBases}};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const matchesLegacyDefault=Math.abs(legacyContribution-legacyWorkingCapitalEquity)<0.01;restored.equityWorkingCapitalContributions=Array(years).fill(0);if(matchesLegacyDefault){restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-legacyWorkingCapitalEquity):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??legacyWorkingCapitalEquity):0)}}if((saved.fundingStructureVersion??0)<2){const legacyDrawdowns=initialCapexSchedule.map((value,index)=>value*initialDebtShare+(index===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0));restored.loans=restored.loans.map(loan=>{const untouchedLegacyDefault=loan.label==='تسهیلات اصلی و سرمایه در گردش'&&loan.drawdowns.length===years&&loan.drawdowns.every((value,index)=>Math.abs(value-legacyDrawdowns[index])<0.01)&&Math.abs(loan.annualRate-props.costOfDebt)<0.0001&&loan.repaymentMethod==='equal-principal';return untouchedLegacyDefault?{...loan,label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(value=>value*initialDebtShare),annualRate:props.initialLoanRatePercent??props.costOfDebt,repaymentMethod:props.initialRepaymentMethod??'equal-principal'}:loan});if(props.initialWorkingCapitalEquityContribution&&restored.equityWorkingCapitalContributions.every(value=>value===0)){restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?props.initialWorkingCapitalEquityContribution!:0)}restored.fundingStructureVersion=2}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
@@ -286,13 +316,108 @@ export default function AdvancedFinancePanel(props: Props) {
   const workingCapitalDraftSchedule=useMemo(()=>props.workingCapitalDrafts?.length
     ?buildWorkingCapitalScheduleFromDrafts({workingCapital:props.workingCapitalDrafts},projectPeriods,props.openingWorkingCapitalBalance??0)
     :null,[JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods),props.openingWorkingCapitalBalance])
-  const productOperatingSchedule=useMemo(()=>props.productFinancialDrafts&&(props.productFinancialDrafts.sales.length||props.productFinancialDrafts.productionCosts.length)
+  const baseProductOperatingSchedule=useMemo(()=>props.productFinancialDrafts&&(props.productFinancialDrafts.sales.length||props.productFinancialDrafts.productionCosts.length)
     ?buildProductOperatingSchedule(props.productFinancialDrafts,projectPeriods,props.fiscalYearStartMonth??1,props.currency)
     :null,[JSON.stringify(props.productFinancialDrafts??null),JSON.stringify(projectPeriods),props.fiscalYearStartMonth,props.currency])
+  const cppCpsTraceLedger=useMemo(()=>buildCppCpsTraceLedger(props.cppCpsTraceItems??[],projectPeriods.length),
+    [JSON.stringify(props.cppCpsTraceItems??[]),projectPeriods.length])
+  useEffect(()=>{props.onCppCpsTraceLedger?.(cppCpsTraceLedger)},[props.onCppCpsTraceLedger,cppCpsTraceLedger])
+  const cppCpsScheduleBinding=useMemo(()=>{
+    if(!(props.cppCpsTraceItems?.length))return null
+    if(!baseProductOperatingSchedule?.valid)return {valid:false,issues:baseProductOperatingSchedule?.issues??['A product-by-product sales and production schedule is required before CPP/CPS posting.'],schedule:null,incrementalCppByPeriod:[]}
+    return bindCppCpsTraceLedgerToProductSchedule(baseProductOperatingSchedule,cppCpsTraceLedger,
+      projectPeriods.map(period=>fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth??1)),props.productFinancialDrafts?.costCentres??[])
+  },[JSON.stringify(props.cppCpsTraceItems??[]),baseProductOperatingSchedule,cppCpsTraceLedger,JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
+  const baseIntegratedProductOperatingSchedule=useMemo(()=>{
+    if(!props.cppCpsTraceItems?.length)return baseProductOperatingSchedule
+    if(!baseProductOperatingSchedule?.valid||!cppCpsScheduleBinding?.valid||!cppCpsScheduleBinding.schedule){
+      return {valid:false,issues:[...(baseProductOperatingSchedule?.issues??[]),...(cppCpsScheduleBinding?.issues??[])],rows:[],periodRevenue:[],periodCostOfSales:[],periodSubsidyIncome:[],periodOutputSalesTax:[],annualRevenue:[],annualCostOfSales:[],totalProductionQuantity:0,totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:[],periodWipInventoryValue:[],periodAbnormalWasteExpense:[],periodNormalWasteAbsorbed:[],hasInventoryFlow:false}
+    }
+    return cppCpsScheduleBinding.schedule
+  },[JSON.stringify(props.cppCpsTraceItems??[]),baseProductOperatingSchedule,cppCpsScheduleBinding])
+
+  const productOperatingSchedule=useMemo(()=>{
+    if(!baseIntegratedProductOperatingSchedule){
+      const hasCorrections=stageJournalEntries.some(entry=>entry.documentType==='reversal'||entry.documentType==='adjustment')
+      if(!hasCorrections)return null
+      return {valid:false,issues:['Persisted stage journal corrections require a valid product-by-product operating schedule; no correction has been silently skipped.'],rows:[],periodRevenue:Array(projectPeriods.length).fill(Number.NaN),periodCostOfSales:Array(projectPeriods.length).fill(Number.NaN),periodSubsidyIncome:[],periodOutputSalesTax:[],annualRevenue:Array(years).fill(Number.NaN),annualCostOfSales:Array(years).fill(Number.NaN),totalProductionQuantity:0,totalSalesQuantity:0,totalClosingInventoryValue:0,periodRawMaterialInventoryValue:Array(projectPeriods.length).fill(Number.NaN),periodWipInventoryValue:Array(projectPeriods.length).fill(Number.NaN),periodAbnormalWasteExpense:[],periodNormalWasteAbsorbed:[],hasInventoryFlow:false}
+    }
+    if(!baseIntegratedProductOperatingSchedule.valid)return baseIntegratedProductOperatingSchedule
+    if(!stageJournalLoaded)return {...baseIntegratedProductOperatingSchedule,valid:false,issues:[...baseIntegratedProductOperatingSchedule.issues,'Stage accounting journal recovery is still in progress.']}
+    const binding=applyStageJournalCorrectionsToProductSchedule(
+      baseIntegratedProductOperatingSchedule,
+      stageJournalEntries,
+      projectPeriods.map(period=>fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth??1)),
+    )
+    if(!binding.valid||!binding.schedule)return {...baseIntegratedProductOperatingSchedule,valid:false,issues:[...baseIntegratedProductOperatingSchedule.issues,...binding.issues]}
+    return binding.schedule
+  },[baseIntegratedProductOperatingSchedule,stageJournalEntries,stageJournalLoaded,JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
   const projectTaxSchedule=useMemo(()=>props.taxDraft?buildProjectTaxDraftSchedule(props.taxDraft,projectPeriods,props.fiscalYearStartMonth??1):null,[JSON.stringify(props.taxDraft??null),JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
+  const salesTaxLedgerActive=Boolean(
+    baseProductOperatingSchedule?.rows.some(row=>row.salesTaxPercent>0)||
+    (props.salesTaxLedgerDraft?.inputCredits?.length??0)>0||
+    (props.salesTaxLedgerDraft?.settlements?.length??0)>0||
+    props.salesTaxLedgerDraft?.openingBalance!=null
+  )
+  const salesTaxLedgerResult=useMemo<SalesTaxLedgerResult|null>(()=>{
+    if(!salesTaxLedgerActive)return null
+    if(!baseProductOperatingSchedule?.valid)return {valid:false,issues:baseProductOperatingSchedule?.issues??['A valid product sales schedule is required for sales-tax posting.'],rows:[],totalOutputTax:0,totalRecoverableInputTax:0,totalSettlements:0,closingBalance:Number.NaN}
+    const draft=props.salesTaxLedgerDraft
+    const separatelyEnteredVat=props.workingCapitalDrafts?.some(item=>/\bvat\b|sales\s*tax|مالیات\s*فروش|ارزش\s*افزوده/i.test(item.name))??false
+    if(separatelyEnteredVat)return {valid:false,issues:['Sales-tax payable / recoverable balances must not also be entered as working-capital components; they are posted from this ledger.'],rows:[],totalOutputTax:0,totalRecoverableInputTax:0,totalSettlements:0,closingBalance:Number.NaN}
+    if(draft?.openingBalance==null)return {valid:false,issues:['An explicit opening sales-tax payable / recoverable balance is required.'],rows:[],totalOutputTax:0,totalRecoverableInputTax:0,totalSettlements:0,closingBalance:Number.NaN}
+    const outputEntries:SalesTaxOutputEntry[]=baseProductOperatingSchedule.rows
+      .filter(row=>row.salesTaxPercent>0)
+      .map(row=>({productId:row.productId,period:row.period,taxableSales:row.taxableSales,ratePercent:row.salesTaxPercent,sourceReference:row.salesTaxSourceReference,sourceVerified:row.salesTaxSourceVerified}))
+    const inputCredits:SalesTaxInputCreditEntry[]=(draft.inputCredits??[]).map(row=>({
+      id:row.id,period:row.period??Number.NaN,taxAmount:row.taxAmount??Number.NaN,
+      sourceReference:row.sourceReference,sourceVerified:row.sourceVerified,
+    }))
+    const settlements:SalesTaxSettlementEntry[]=(draft.settlements??[]).map(row=>({
+      period:row.period??Number.NaN,amount:row.amount??Number.NaN,sourceReference:row.sourceReference,sourceVerified:row.sourceVerified,
+    }))
+    return buildSalesTaxLedger(projectPeriods.length,outputEntries,inputCredits,settlements,draft.openingBalance)
+  },[salesTaxLedgerActive,baseProductOperatingSchedule,JSON.stringify(props.salesTaxLedgerDraft??null),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(projectPeriods)])
+  useEffect(()=>{props.onSalesTaxLedgerResult?.(salesTaxLedgerResult)},[props.onSalesTaxLedgerResult,salesTaxLedgerResult])
+
   const loanDraftIntegration=useMemo(()=>props.loanDrafts?.length&&props.projectFoundation&&props.dayCountBasis!==null&&props.dayCountBasis!==undefined
     ?buildProjectLoanDraftIntegration(props.loanDrafts,projectPeriods,props.dayCountBasis,props.periodFrequency??'unspecified',props.projectFoundation)
     :null,[JSON.stringify(props.loanDrafts??[]),JSON.stringify(projectPeriods),props.dayCountBasis,props.periodFrequency,JSON.stringify(props.projectFoundation??null)])
+  const stageInventoryPreflight=useMemo(()=>{
+    const movements=props.productFinancialDrafts?.costCentreInventoryMovements??[]
+    const stageTransfers=props.productFinancialDrafts?.inventoryStageTransfers??[]
+    const hasData=movements.some(row=>[
+      row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
+      row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,
+      row.transfersOutQuantity,row.transfersOutValue,row.productionQuantity,row.productionValue,
+      row.consumptionQuantity,row.consumptionValue,row.salesQuantity,row.salesCostValue,
+      row.wasteQuantity,row.wasteValue,row.closingQuantity,row.closingValue,row.sourceReference,
+      row.sourceVerified===true,
+    ].some(value=>value!==null&&value!==undefined&&value!==''))||stageTransfers.some(row=>[
+      row.period,row.sourceStage,row.destinationStage,row.sourceProductId,row.destinationProductId,
+      row.sourceCostCentreId,row.destinationCostCentreId,row.quantity,row.sourceUnit,row.destinationUnit,
+      row.conversionFactor,row.transferValue,row.sourceReference,row.sourceVerified===true,
+    ].some(value=>value!==null&&value!==undefined&&value!==''))
+    if(!hasData)return null
+    if(!productOperatingSchedule?.valid)return {valid:false,issues:['A valid product operating schedule is required before detailed stage inventory can be reconciled.'],rows:[]}
+    const expectedByPeriod=(props.projectPeriods??[]).map((_,index)=>({
+      period:index+1,
+      rawMaterials:productOperatingSchedule.periodRawMaterialInventoryValue[index]??0,
+      workInProgress:productOperatingSchedule.periodWipInventoryValue[index]??0,
+      finishedGoods:productOperatingSchedule.rows.filter(row=>row.period===index+1).reduce((sum,row)=>sum+row.closingInventoryValue,0),
+    }))
+    const expectedByProductPeriod=productOperatingSchedule.rows.map(row=>({
+      period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,
+      workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,
+      finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales,
+      productionQuantity:row.productionQuantity,productionCost:row.productionCost,
+    }))
+    return reconcileStageInventoryMovements(movements,expectedByPeriod,props.projectPeriods?.length??0,0.01,stageTransfers,expectedByProductPeriod)
+  },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),
+    JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),productOperatingSchedule,JSON.stringify(props.projectPeriods??[])])
+  const hasUnpostedStageInventoryData=Boolean(
+    stageInventoryPreflight&&stageInventoryPreflight.valid!==true
+  )
   const periodicFinanceBundle=useMemo<{result:PeriodicProjectFinanceResult;input:PeriodicProjectFinanceInput}|null>(()=>{
     const periods=props.projectPeriods??[]
     if(!periods.length||props.fiscalYearStartMonth==null||props.dayCountBasis==null||!props.cashFlowTiming||props.cashFlowTiming==='unspecified') return null
@@ -333,20 +458,59 @@ export default function AdvancedFinancePanel(props: Props) {
     const estimatedWorkingCapitalByPeriod=workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:row.netWorkingCapital)
     const cashInHandByPeriod=workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:Math.max(0,row.minimumCash-(row.shortTermDeposits??0)))
     const shortTermDepositsByPeriod=workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:row.shortTermDeposits??0)
-    const periodicWorkingCapitalByPeriod=workingCapitalDraftSchedule?.valid?[...workingCapitalDraftSchedule.closingWorkingCapital]:[...estimatedWorkingCapitalByPeriod]
+    let periodicWorkingCapitalByPeriod=workingCapitalDraftSchedule?.valid?[...workingCapitalDraftSchedule.closingWorkingCapital]:[...estimatedWorkingCapitalByPeriod]
     if(periodicWorkingCapitalByPeriod.length) periodicWorkingCapitalByPeriod[periodicWorkingCapitalByPeriod.length-1]=0
+    const inventoryDetailByCategory=(category:'inventory'|'work-in-progress',fallback:number[])=>{
+      if(props.workingCapitalDrafts?.length&&!workingCapitalDraftSchedule?.valid)return Array(periods.length).fill(Number.NaN)
+      if(!props.workingCapitalDrafts?.length&&!productOperatingSchedule?.hasInventoryFlow&&category==='inventory'&&state.workingCapitalDays.raw>0&&state.workingCapitalBases.rawMaterials<=0)
+        return Array(periods.length).fill(Number.NaN)
+      if(!props.workingCapitalDrafts?.length&&!productOperatingSchedule?.hasInventoryFlow&&category==='work-in-progress'&&state.workingCapitalDays.wip>0&&
+        (state.wipCompletion.material+state.wipCompletion.conversion<=0||
+         (state.wipCompletion.material>0&&state.workingCapitalBases.rawMaterials<=0)||
+         (state.wipCompletion.conversion>0&&state.workingCapitalBases.conversion<=0)))
+        return Array(periods.length).fill(Number.NaN)
+      const hasExplicit=workingCapitalDraftSchedule?.componentRows.some(row=>row.category===category)??false
+      return periods.map((_,index)=>{
+        if(index===periods.length-1&&!(productOperatingSchedule?.valid&&productOperatingSchedule.hasInventoryFlow))return 0
+        if(hasExplicit)return workingCapitalDraftSchedule!.componentRows.filter(row=>row.category===category&&row.period===index+1).reduce((sum,row)=>sum+row.amount,0)
+        if(props.workingCapitalDrafts?.length)return 0
+        return fallback[index]??0
+      })
+    }
+    const rawMaterialsInventoryByPeriod=inventoryDetailByCategory('inventory',productOperatingSchedule?.valid&&productOperatingSchedule.hasInventoryFlow?productOperatingSchedule.periodRawMaterialInventoryValue:workingCapitalBreakdownByPeriod.map(row=>row.rawMaterials))
+    const workInProgressInventoryByPeriod=inventoryDetailByCategory('work-in-progress',productOperatingSchedule?.valid&&productOperatingSchedule.hasInventoryFlow?productOperatingSchedule.periodWipInventoryValue:workingCapitalBreakdownByPeriod.map(row=>row.workInProgress))
+    if(productOperatingSchedule?.valid&&productOperatingSchedule.hasInventoryFlow){
+      if(props.workingCapitalDrafts?.length){
+        const mismatches=periods.some((_,index)=>
+          Math.abs((rawMaterialsInventoryByPeriod[index]??Number.NaN)-(productOperatingSchedule.periodRawMaterialInventoryValue[index]??Number.NaN))>0.01||
+          Math.abs((workInProgressInventoryByPeriod[index]??Number.NaN)-(productOperatingSchedule.periodWipInventoryValue[index]??Number.NaN))>0.01)
+        if(mismatches)periodicWorkingCapitalByPeriod=Array(periods.length).fill(Number.NaN)
+      }else{
+        periodicWorkingCapitalByPeriod=periodicWorkingCapitalByPeriod.map((balance,index)=>{
+          const actualInventory=(productOperatingSchedule.periodRawMaterialInventoryValue[index]??0)+(productOperatingSchedule.periodWipInventoryValue[index]??0)
+          if(index===periods.length-1)return actualInventory
+          return balance+actualInventory-(workingCapitalBreakdownByPeriod[index]?.rawMaterials??0)-(workingCapitalBreakdownByPeriod[index]?.workInProgress??0)
+        })
+      }
+    }
+    const finishedGoodsInventoryByPeriod=productOperatingSchedule?.valid?periods.map((_,index)=>productOperatingSchedule.rows.filter(row=>row.period===index+1).reduce((sum,row)=>sum+row.closingInventoryValue,0)):undefined
+    const explicitFinishedGoods=workingCapitalDraftSchedule?.componentRows.some(row=>row.category==='finished-goods')??false
+    if(explicitFinishedGoods&&finishedGoodsInventoryByPeriod){
+      const mismatch=periods.some((_,index)=>Math.abs(workingCapitalDraftSchedule!.componentRows.filter(row=>row.category==='finished-goods'&&row.period===index+1).reduce((sum,row)=>sum+row.amount,0)-finishedGoodsInventoryByPeriod[index])>0.01)
+      if(mismatch)periodicWorkingCapitalByPeriod=Array(periods.length).fill(Number.NaN)
+    }
     const periodicInput:PeriodicProjectFinanceInput={
       periods,fiscalYearStartMonth:fiscalMonth,constructionPeriodCount:periods.filter(period=>fiscalYearIndexForPeriod(period,periods,fiscalMonth)<construction).length,dayCountBasis:props.dayCountBasis,cashFlowTiming:props.cashFlowTiming,
       minimumDscr:state.minimumDscr,
       annualRevenue:productOperatingSchedule?.valid?productOperatingSchedule.annualRevenue:productOperatingSchedule?Array(years).fill(Number.NaN):result.years.map(row=>row.revenue),periodRevenue:productOperatingSchedule?.valid?productOperatingSchedule.periodRevenue:undefined,periodSubsidyIncome:productOperatingSchedule?.valid?productOperatingSchedule.periodSubsidyIncome:undefined,annualVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.annualCostOfSales:productOperatingSchedule?Array(years).fill(Number.NaN):result.years.map(row=>row.variableCashCost),periodVariableCost:productOperatingSchedule?.valid?productOperatingSchedule.periodCostOfSales:undefined,
-      annualFixedCost:result.years.map(row=>row.fixedCashCost),annualDepreciation:depreciationValues,
+      annualFixedCost:result.years.map(row=>row.fixedCashCost),periodAbnormalWasteExpense:productOperatingSchedule?.valid?productOperatingSchedule.periodAbnormalWasteExpense:undefined,annualDepreciation:depreciationValues,
       annualFixedInvestment:fixedInvestmentSchedule,annualPreOperatingCost:activePreOperatingSchedule,
       annualMaintenanceCapex:maintenanceCapexSchedule,annualTaxRates:projectTaxSchedule?.active?(projectTaxSchedule.valid?projectTaxSchedule.annualTaxRates:Array(years).fill(Number.NaN)):taxRates,annualEquityContributions:equityContributions,
       annualEquityWorkingCapitalContributions:equityWorkingCapitalContributions,
       annualShortTermDepositInterest:result.years.map(row=>row.shortTermDepositInterest),
       annualAssetSaleSchedule:assetSaleSchedule,
       periodDepreciationSchedule,periodAssetSaleSchedule,
-      workingCapitalByPeriod:periodicWorkingCapitalByPeriod,
+      workingCapitalByPeriod:periodicWorkingCapitalByPeriod,rawMaterialsInventoryByPeriod,workInProgressInventoryByPeriod,finishedGoodsInventoryByPeriod,
       cashInHandByPeriod,shortTermDepositsByPeriod,
       openingWorkingCapital:props.openingWorkingCapitalBalance??0,openingCash:props.openingCashBalance??0,loans:periodLoans,loanScheduleOverrides:loanDraftIntegration?.valid?loanDraftIntegration.loanScheduleOverrides:undefined,foreignExchangeLossByPeriod:loanDraftIntegration?.valid?loanDraftIntegration.foreignExchangeLossByPeriod:undefined,
       taxRatesByPeriod:projectTaxSchedule?.active?(projectTaxSchedule.valid?projectTaxSchedule.taxRatesByPeriod:Array(periods.length).fill(Number.NaN)):(periodTaxRateDatesMatch()?state.periodTaxRates:undefined),taxableDeductionsByPeriod:projectTaxSchedule?.active?(projectTaxSchedule.valid?projectTaxSchedule.taxableDeductionsByPeriod:Array(periods.length).fill(Number.NaN)):undefined,taxCreditsByPeriod:projectTaxSchedule?.active?(projectTaxSchedule.valid?projectTaxSchedule.taxCreditsByPeriod:Array(periods.length).fill(Number.NaN)):undefined,openingTaxLoss:projectTaxSchedule?.active&&projectTaxSchedule.valid?projectTaxSchedule.openingTaxLoss:undefined,openingTaxLossVintages:projectTaxSchedule?.active&&projectTaxSchedule.valid?projectTaxSchedule.openingTaxLossVintages:undefined,taxLossCarryForwardEnabled:projectTaxSchedule?.active&&projectTaxSchedule.valid?projectTaxSchedule.taxLossCarryForwardEnabled:undefined,taxLossCarryForwardYears:projectTaxSchedule?.active&&projectTaxSchedule.valid?projectTaxSchedule.taxLossCarryForwardYears:undefined,
@@ -361,6 +525,30 @@ export default function AdvancedFinancePanel(props: Props) {
       const invalidInput={...periodicInput,annualTaxRates:Array(years).fill(Number.NaN)}
       return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
     }
+    const bindFinishedGoods=(financeInput:PeriodicProjectFinanceInput):PeriodicProjectFinanceInput|null=>{
+      let boundInput=financeInput
+      if(productOperatingSchedule?.valid){
+        const hasExplicitFinishedGoods=props.workingCapitalDrafts?.some(item=>item.category==='finished-goods')??false
+        const estimatedFinishedGoodsByPeriod=!props.workingCapitalDrafts?.length
+          ?workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:row.finishedGoods)
+          :[]
+        const binding=bindFinishedGoodsInventoryToWorkingCapital(
+          financeInput.workingCapitalByPeriod??[],productOperatingSchedule,hasExplicitFinishedGoods,estimatedFinishedGoodsByPeriod
+        )
+        if(!binding.valid)return null
+        boundInput={...financeInput,workingCapitalByPeriod:binding.closingWorkingCapitalByPeriod}
+      }
+      if(salesTaxLedgerActive&&!salesTaxLedgerResult?.valid)return null
+      if(salesTaxLedgerResult?.valid){
+        const binding=bindSalesTaxLedgerToWorkingCapital(
+          boundInput.workingCapitalByPeriod,boundInput.openingWorkingCapital??0,salesTaxLedgerResult)
+        if(!binding.valid)return null
+        // Tax settlements are reflected through the change in the net tax balance, not deducted twice.
+        boundInput={...boundInput,workingCapitalByPeriod:binding.closingWorkingCapitalByPeriod,
+          openingWorkingCapital:binding.openingWorkingCapital}
+      }
+      return boundInput
+    }
     if(props.workingCapitalDrafts?.length){
       const binding=bindWorkingCapitalDraftsToPeriodicFinance(
         periodicInput,{workingCapital:props.workingCapitalDrafts??[]},props.openingWorkingCapitalBalance??0
@@ -369,29 +557,216 @@ export default function AdvancedFinancePanel(props: Props) {
         const invalidInput={...periodicInput,workingCapitalByPeriod:Array(periods.length).fill(Number.NaN)}
         return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
       }
-      return {result:calculateIntegratedPeriodicFinance(binding.financeInput),input:binding.financeInput}
+      const withFinishedGoods=bindFinishedGoods(binding.financeInput)
+      if(!withFinishedGoods){
+        const invalidInput={...binding.financeInput,workingCapitalByPeriod:Array(periods.length).fill(Number.NaN)}
+        return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
+      }
+      return {result:calculateIntegratedPeriodicFinance(withFinishedGoods),input:withFinishedGoods}
     }
-    return {result:calculateIntegratedPeriodicFinance(periodicInput),input:periodicInput}
-  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),productOperatingSchedule,projectTaxSchedule,loanDraftIntegration,props.openingWorkingCapitalBalance,props.openingCashBalance])
+    const withFinishedGoods=bindFinishedGoods(periodicInput)
+    if(!withFinishedGoods){
+      const invalidInput={...periodicInput,workingCapitalByPeriod:Array(periods.length).fill(Number.NaN)}
+      return {result:calculateIntegratedPeriodicFinance(invalidInput),input:invalidInput}
+    }
+    return {result:calculateIntegratedPeriodicFinance(withFinishedGoods),input:withFinishedGoods}
+  },[JSON.stringify(input),JSON.stringify(props.projectPeriods??[]),props.fiscalYearStartMonth,props.dayCountBasis,props.cashFlowTiming,props.periodFrequency,props.valuationDate,props.discountConvention,JSON.stringify(state.loans),JSON.stringify(state.periodTaxRates),JSON.stringify(state.periodTaxRateDates),JSON.stringify(workingCapitalPolicy),JSON.stringify(equityContributions),JSON.stringify(equityWorkingCapitalContributions),JSON.stringify(taxRates),JSON.stringify(maintenanceCapexSchedule),JSON.stringify(fixedInvestmentSchedule),JSON.stringify(activePreOperatingSchedule),JSON.stringify(assetSaleSchedule),JSON.stringify(periodDepreciationSchedule),JSON.stringify(periodAssetSaleSchedule),JSON.stringify(props.workingCapitalDrafts??[]),JSON.stringify(props.productFinancialDrafts??null),JSON.stringify(props.cppCpsTraceItems??[]),productOperatingSchedule,projectTaxSchedule,loanDraftIntegration,salesTaxLedgerActive,salesTaxLedgerResult,props.openingWorkingCapitalBalance,props.openingCashBalance,JSON.stringify(props.salesTaxLedgerDraft??null)])
   const periodicFinanceResult=periodicFinanceBundle?.result??null
   const periodicFinanceInput=periodicFinanceBundle?.input??null
+  const valueAddedAnalysisResult=useMemo<ValueAddedAnalysisResult|null>(()=>{
+    if(!props.valueAddedAnalysisEnabled)return null
+    const invalid=(issues:string[])=>({...buildComfarValueAddedAnalysis([]),issues})
+    if(!periodicFinanceResult?.valid)return invalid(['A valid periodic financial model is required for value-added analysis.'])
+    if(!productOperatingSchedule?.valid)return invalid(['A valid product-by-product sales schedule is required for value-added analysis.'])
+    if(!cppCpsTraceLedger.valid||!cppCpsTraceLedger.complete)return invalid(['The CPP/CPS trace ledger must be complete and source-verified before value-added inputs can be reconciled.'])
+    if(props.economicDiscountRatePercent===null||props.economicDiscountRatePercent===undefined||!Number.isFinite(props.economicDiscountRatePercent)||props.economicDiscountRatePercent<=-100)
+      return invalid(['An explicit economic discount rate greater than -100% is required.'])
+    if(!props.economicDiscountRateSourceReference?.trim()||props.economicDiscountRateSourceVerified!==true)
+      return invalid(['The economic discount rate requires an independently verified source reference.'])
+    if(!props.dayCountBasis||!props.cashFlowTiming||props.cashFlowTiming==='unspecified')
+      return invalid(['Economic discount timing and day-count basis must be defined.'])
+    if(props.valueAddedPeriodDrafts?.length!==projectPeriods.length)
+      return invalid(['Value-added inputs must be initialized for every project period.'])
+    const issues:string[]=[]
+    const rows=projectPeriods.map((period,index)=>{
+      const periodNo=index+1
+      const draft=props.valueAddedPeriodDrafts?.find(item=>item.period===periodNo)
+      const financeRow=periodicFinanceResult.rows[index]
+      if(!draft){issues.push('Missing value-added input for period '+periodNo+'.');return null}
+      const traceRows=cppCpsTraceLedger.rows.filter(item=>item.period===periodNo)
+      if(traceRows.some(item=>item.grossCost===null)){
+        issues.push('CPP/CPS contains an unverified gross cost in period '+periodNo+'.')
+      }
+      const expectedIntermediate=traceRows.filter(item=>item.category!=='labour').reduce((sum,item)=>sum+(item.grossCost??0),0)
+      const expectedLabour=traceRows.filter(item=>item.category==='labour').reduce((sum,item)=>sum+(item.grossCost??0),0)
+      const enteredIntermediate=draft.intermediateInputs.reduce((sum,item)=>sum+(item.amount??Number.NaN),0)
+      const enteredLabour=(draft.domesticWages??Number.NaN)+(draft.repatriatedWages??Number.NaN)
+      if(!Number.isFinite(enteredIntermediate)||Math.abs(enteredIntermediate-expectedIntermediate)>0.01)
+        issues.push('Intermediate-input gross amounts in period '+periodNo+' must reconcile to non-labour CPP/CPS trace costs.')
+      if(!Number.isFinite(enteredLabour)||Math.abs(enteredLabour-expectedLabour)>0.01)
+        issues.push('Domestic plus repatriated wages in period '+periodNo+' must reconcile to the CPP/CPS labour cost.')
+      const currentInventory=financeRow.rawMaterialsInventory+financeRow.workInProgressInventory+financeRow.finishedGoodsInventory
+      const previousInventory=index===0
+        ?(props.openingCurrentAccounts?.rawMaterials??0)+(props.openingCurrentAccounts?.workInProgress??0)+(props.openingCurrentAccounts?.finishedGoods??0)
+        :periodicFinanceResult.rows[index-1].rawMaterialsInventory+periodicFinanceResult.rows[index-1].workInProgressInventory+periodicFinanceResult.rows[index-1].finishedGoodsInventory
+      const expectedInventoryIncrease=currentInventory-previousInventory
+      const expectedInvestmentByKind={
+        'fixed-investment':financeRow.fixedInvestment,
+        'pre-production-net-of-interest':financeRow.preOperatingCost,
+        'inventory-increase':expectedInventoryIncrease,
+      }
+      for(const [kind,expected] of Object.entries(expectedInvestmentByKind)){
+        const entered=draft.investmentInputs.filter(item=>item.kind===kind).reduce((sum,item)=>sum+(item.amount??Number.NaN),0)
+        if(!Number.isFinite(entered)||Math.abs(entered-expected)>0.01)
+          issues.push('Value-added investment item '+kind+' in period '+periodNo+' must reconcile to the periodic financial model.')
+      }
+      const presentValueFactor=calculatePeriodicNpv(
+        projectPeriods.map((_,periodIndex)=>periodIndex===index?1:0),projectPeriods,
+        props.economicDiscountRatePercent as number,props.dayCountBasis as 360|365,
+        props.cashFlowTiming as 'period-end'|'mid-period',props.valuationDate,
+        props.discountConvention??'actual-days',periodsPerYear)
+      const outputSalesTax=salesTaxLedgerActive?(salesTaxLedgerResult?.rows[index]?.outputTax??Number.NaN):0
+      const salesRevenue=(productOperatingSchedule.periodRevenue[index]??Number.NaN)-(productOperatingSchedule.periodSubsidyIncome[index]??0)
+      const intermediateInputs:ValueAddedInputItem[]=draft.intermediateInputs.map(item=>({
+        id:item.id,period:periodNo,description:item.description,amount:item.amount??Number.NaN,
+        marketOrigin:item.marketOrigin as 'local'|'foreign',
+        taxesDutiesIncludedPercent:item.taxesDutiesIncludedPercent??Number.NaN,
+        valueAddedIncludedPercentages:item.valueAddedIncludedPercentages.map(value=>value??Number.NaN) as [number,number,number],
+        sourceReference:item.sourceReference,sourceVerified:item.sourceVerified,
+      }))
+      const investmentInputs:ValueAddedInvestmentItem[]=draft.investmentInputs.map(item=>({
+        id:item.id,period:periodNo,description:item.description,amount:item.amount??Number.NaN,
+        marketOrigin:item.marketOrigin as 'local'|'foreign',
+        taxesDutiesIncludedPercent:item.taxesDutiesIncludedPercent??Number.NaN,
+        valueAddedIncludedPercentages:item.valueAddedIncludedPercentages.map(value=>value??Number.NaN) as [number,number,number],
+        sourceReference:item.sourceReference,sourceVerified:item.sourceVerified,
+        kind:item.kind as 'fixed-investment'|'pre-production-net-of-interest'|'inventory-increase',
+      }))
+      return {
+        period:periodNo,salesRevenue,outputSalesTax,otherIncome:draft.otherIncome??Number.NaN,otherValueAdded:draft.otherValueAdded??Number.NaN,
+        subsidiesOnOutput:productOperatingSchedule.periodSubsidyIncome[index]??0,
+        intermediateInputs,investmentInputs,
+        repatriatedWages:draft.repatriatedWages??Number.NaN,
+        repatriatedProfitDividends:draft.repatriatedProfitDividends??Number.NaN,
+        repatriatedInterest:draft.repatriatedInterest??Number.NaN,repatriatedOther:draft.repatriatedOther??Number.NaN,
+        domesticWages:draft.domesticWages??Number.NaN,
+        domesticDividendsAndInterest:draft.domesticDividendsAndInterest??Number.NaN,
+        corporateTax:financeRow.tax,subsidiesOnInput:draft.subsidiesOnInput??Number.NaN,
+        subsidiesOnInvestment:draft.subsidiesOnInvestment??Number.NaN,
+        skilledDomesticLabour:draft.skilledDomesticLabour??Number.NaN,
+        totalDomesticLabour:draft.totalDomesticLabour??Number.NaN,
+        foreignExchangeOutflow:draft.foreignExchangeOutflow??Number.NaN,
+        presentValueFactor,sourceReference:draft.sourceReference,sourceVerified:draft.sourceVerified,
+      }
+    })
+    if(issues.length)return invalid(issues)
+    return buildComfarValueAddedAnalysis(rows.filter((row):row is NonNullable<typeof row>=>row!==null))
+  },[props.valueAddedAnalysisEnabled,periodicFinanceResult,productOperatingSchedule,cppCpsTraceLedger,
+    props.economicDiscountRatePercent,props.economicDiscountRateSourceReference,props.economicDiscountRateSourceVerified,props.dayCountBasis,props.cashFlowTiming,props.valuationDate,props.discountConvention,
+    props.valueAddedPeriodDrafts,JSON.stringify(props.valueAddedPeriodDrafts??[]),JSON.stringify(projectPeriods),
+    JSON.stringify(props.openingCurrentAccounts??null),salesTaxLedgerActive,salesTaxLedgerResult,periodsPerYear])
+  useEffect(()=>{props.onValueAddedAnalysisResult?.(valueAddedAnalysisResult)},[props.onValueAddedAnalysisResult,valueAddedAnalysisResult])
   const partnerFinanceResult=useMemo(()=>props.jointVenture&&periodicFinanceResult?.valid
     ?allocateJointVentureCashFlows(periodicFinanceResult,props.partners??[],props.partnerDistributionPercent??100)
     :null,[props.jointVenture,props.partnerDistributionPercent,JSON.stringify(props.partners??[]),periodicFinanceResult])
   useEffect(()=>{props.onPeriodicResult?.(periodicFinanceResult)},[periodicFinanceResult,props.onPeriodicResult])
   useEffect(()=>{props.onPartnerFinanceResult?.(partnerFinanceResult)},[partnerFinanceResult,props.onPartnerFinanceResult])
+
   useEffect(()=>{props.onResult?.(result)},[result,props.onResult])
   const oneWaySensitivity=useMemo(()=>calculateOneWaySensitivity(input,20),[JSON.stringify(input)])
   useEffect(()=>{props.onSensitivity?.(oneWaySensitivity)},[oneWaySensitivity,props.onSensitivity])
   const statements=useMemo(()=>buildThreeFinancialStatements(result.years),[result.years])
-  const periodicStatements=useMemo(()=>periodicFinanceResult?.valid?buildPeriodicThreeFinancialStatements(periodicFinanceResult,{
+  const rawMaterialInventoryStatus=props.workingCapitalDrafts?.length
+    ?(props.workingCapitalDrafts.some(item=>item.category==='inventory')?'manual':'not-configured')
+    :state.workingCapitalDays.raw===0?'not-configured'
+    :state.workingCapitalBases.rawMaterials>0?'automatic':'missing-cost-basis'
+  const workInProgressInventoryStatus=props.workingCapitalDrafts?.length
+    ?(props.workingCapitalDrafts.some(item=>item.category==='work-in-progress')?'manual':'not-configured')
+    :state.workingCapitalDays.wip===0?'not-configured'
+    :(state.wipCompletion.material+state.wipCompletion.conversion<=0||
+      (state.wipCompletion.material>0&&state.workingCapitalBases.rawMaterials<=0)||
+      (state.wipCompletion.conversion>0&&state.workingCapitalBases.conversion<=0))
+      ?'missing-cost-or-completion-basis':'automatic'
+  const periodicStatements=useMemo(()=>periodicFinanceResult?.valid&&!hasUnpostedStageInventoryData?buildPeriodicThreeFinancialStatements(periodicFinanceResult,{
     cash:props.openingCashBalance??0,debt:props.openingDebtBalance??0,
     netFixedAssets:props.openingFixedAssetsNetBookValue??0,
     netWorkingCapital:props.openingWorkingCapitalBalance??0,
+    rawMaterialsInventory:props.openingCurrentAccounts?.rawMaterials??0,
+    workInProgressInventory:props.openingCurrentAccounts?.workInProgress??0,
+    finishedGoodsInventory:props.openingCurrentAccounts?.finishedGoods??0,
     paidInCapital:props.openingPaidInCapital??0,
     retainedEarnings:props.openingRetainedEarnings??0,grants:props.openingGrants??0,
   }):[],[periodicFinanceResult,props.openingCashBalance,props.openingDebtBalance,props.openingFixedAssetsNetBookValue,
-    props.openingWorkingCapitalBalance,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants])
+    props.openingWorkingCapitalBalance,props.openingCurrentAccounts?.rawMaterials,props.openingCurrentAccounts?.workInProgress,props.openingCurrentAccounts?.finishedGoods,props.openingPaidInCapital,props.openingRetainedEarnings,props.openingGrants,hasUnpostedStageInventoryData])
+  const inventoryThreeWayReconciliation=useMemo(()=>{
+    if(!periodicFinanceResult?.valid||!productOperatingSchedule?.valid||periodicStatements.length!==periodicFinanceResult.rows.length)return null
+    return reconcileInventoryThreeWay(periodicFinanceResult.rows.map((row,index)=>{
+      const statement=periodicStatements[index]
+      const finishedGoods=productOperatingSchedule.rows.filter(item=>item.period===row.period).reduce((sum,item)=>sum+item.closingInventoryValue,0)
+      const raw=productOperatingSchedule.periodRawMaterialInventoryValue[index]??0
+      const wip=productOperatingSchedule.periodWipInventoryValue[index]??0
+      const inventory=raw+wip+finishedGoods
+      return {
+        period:row.period,
+        model:{rawMaterials:row.rawMaterialsInventory,workInProgress:row.workInProgressInventory,finishedGoods:row.finishedGoodsInventory,otherCurrentAssets:row.closingWorkingCapital-inventory,currentLiabilities:0,netWorkingCapital:row.closingWorkingCapital},
+        balanceSheet:{rawMaterials:statement.balanceSheet.rawMaterialsInventory,workInProgress:statement.balanceSheet.workInProgressInventory,finishedGoods:statement.balanceSheet.finishedGoodsInventory,otherCurrentAssets:statement.balanceSheet.otherNetWorkingCapital,currentLiabilities:0,netWorkingCapital:statement.balanceSheet.netWorkingCapital},
+        cppCps:{rawMaterials:raw,workInProgress:wip,finishedGoods,totalInventory:inventory},
+      }
+    }))
+  },[periodicFinanceResult,productOperatingSchedule,periodicStatements])
+  const stageInventoryReconciliation=useMemo(()=>{
+    const movements=props.productFinancialDrafts?.costCentreInventoryMovements??[]
+    const stageTransfers=props.productFinancialDrafts?.inventoryStageTransfers??[]
+    const hasMovementData=movements.some(row=>[row.period,row.inventoryStage,row.productId,row.costCentreId,row.openingQuantity,row.openingValue,
+      row.receiptsQuantity,row.receiptsValue,row.transfersInQuantity,row.transfersInValue,row.transfersOutQuantity,row.transfersOutValue,
+      row.productionQuantity,row.productionValue,row.consumptionQuantity,row.consumptionValue,row.wasteQuantity,row.wasteValue,
+      row.closingQuantity,row.closingValue,row.sourceReference,row.sourceVerified===true].some(value=>value!==null&&value!==undefined&&value!==''))
+    const hasStageTransferData=stageTransfers.some(row=>[row.period,row.sourceStage,row.destinationStage,row.sourceProductId,row.destinationProductId,
+      row.sourceCostCentreId,row.destinationCostCentreId,row.quantity,row.sourceUnit,row.destinationUnit,row.conversionFactor,row.transferValue,row.sourceReference,row.sourceVerified===true]
+      .some(value=>value!==null&&value!==undefined&&value!==''))
+    if(!hasMovementData&&!hasStageTransferData)return null
+    if(!periodicFinanceResult?.valid)return {valid:false,issues:['A valid periodic finance result is required before stage inventory reconciliation.'],rows:[]}
+    const expected=baseIntegratedProductOperatingSchedule?.valid
+      ?Array.from({length:periodicFinanceResult.rows.length},(_,index)=>({
+        period:index+1,
+        rawMaterials:baseIntegratedProductOperatingSchedule.periodRawMaterialInventoryValue[index]??0,
+        workInProgress:baseIntegratedProductOperatingSchedule.periodWipInventoryValue[index]??0,
+        finishedGoods:baseIntegratedProductOperatingSchedule.rows.filter(item=>item.period===index+1).reduce((sum,item)=>sum+item.closingInventoryValue,0),
+      }))
+      :periodicFinanceResult.rows.map(row=>({period:row.period,rawMaterials:row.rawMaterialsInventory,workInProgress:row.workInProgressInventory,finishedGoods:row.finishedGoodsInventory}))
+    const expectedByProductPeriod=baseIntegratedProductOperatingSchedule?.valid?baseIntegratedProductOperatingSchedule.rows.map(row=>({period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales,productionQuantity:row.productionQuantity,productionCost:row.productionCost})):undefined
+    return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length,0.01,stageTransfers,expectedByProductPeriod)
+  },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),periodicFinanceResult,productOperatingSchedule,baseIntegratedProductOperatingSchedule])
+  const abnormalWasteAccounting=useMemo(()=>buildAbnormalWasteAccountingPostings(
+    props.productFinancialDrafts?.wasteLedgerEntries??[],props.projectPeriods?.length??0,
+    baseIntegratedProductOperatingSchedule?.rows??[]
+  ),[JSON.stringify(props.productFinancialDrafts?.wasteLedgerEntries??[]),baseIntegratedProductOperatingSchedule,props.projectPeriods?.length])
+  const combinedStageAccountingPostings=[
+    ...(stageInventoryReconciliation?.accountingPostings??[]),
+    ...(abnormalWasteAccounting.valid?abnormalWasteAccounting.postings:[]),
+  ]
+  const stagePostingSignature=JSON.stringify(combinedStageAccountingPostings)
+  useEffect(()=>{
+    if(!canPersistStageAccountingPostings(stageJournalLoaded,stageInventoryReconciliation,abnormalWasteAccounting.valid,props.projectId))return
+    const postings=combinedStageAccountingPostings
+    if(!postings.length){setStagePostingPersistence({status:'idle',count:0,error:''});return}
+    let active=true
+    setStagePostingPersistence(previous=>({...previous,status:'saving',error:''}))
+    persistStageInventoryAccountingPostings(props.projectId,postings)
+      .then(result=>{if(active){setStageJournalEntries(result.entries);setStagePostingPersistence({status:'saved',count:result.entries.length,error:''})}})
+      .catch(error=>{if(active)setStagePostingPersistence({status:'error',count:0,error:error instanceof Error?error.message:String(error)})})
+    return()=>{active=false}
+  },[props.projectId,stageInventoryReconciliation?.valid,abnormalWasteAccounting.valid,stagePostingSignature,stageJournalLoaded])
+  const inventoryReferenceReconciliation=useMemo(()=>{
+    const benchmarks=props.productFinancialDrafts?.inventoryReferenceBenchmarks??[]
+    if(!benchmarks.length||!periodicFinanceResult?.valid||!productOperatingSchedule?.valid)return null
+    return reconcileInventoryReference(benchmarks,periodicFinanceResult.rows.map(row=>{
+      const productRows=productOperatingSchedule.rows.filter(item=>item.period===row.period)
+      const raw=row.rawMaterialsInventory,wip=row.workInProgressInventory,finished=row.finishedGoodsInventory
+      return {period:row.period,rawMaterials:raw,workInProgress:wip,finishedGoods:finished,totalInventory:raw+wip+finished,
+        cpp:productRows.reduce((sum,item)=>sum+item.productionCost,0),cps:productOperatingSchedule.periodCostOfSales[row.period-1]??0}
+    }),0.01,props.currency)
+  },[props.productFinancialDrafts?.inventoryReferenceBenchmarks,props.currency,periodicFinanceResult,productOperatingSchedule])
   const scheduledOpeningDebt=useMemo(()=>periodicFinanceResult?.valid
     ?Object.values(periodicFinanceResult.loanSchedules??{}).reduce((sum,schedule)=>sum+(schedule[0]?.openingBalance??0),0)
     :0,[periodicFinanceResult])
@@ -410,8 +785,8 @@ export default function AdvancedFinancePanel(props: Props) {
       Math.abs(cashTotal-(props.openingCashBalance??0))<=0.01
     return {valid,assetTotal,liabilityTotal,netWorkingCapital,cashTotal}
   },[props.openingCurrentAccounts,props.openingWorkingCapitalBalance,props.openingCashBalance])
-  const sensitivity=useMemo(()=>periodicFinanceInput?calculatePeriodicSensitivityMatrix(periodicFinanceInput,[-20,-10,0,10,20],[-20,-10,0,10,20]):[],[periodicFinanceInput])
-  const scenarios=useMemo(()=>periodicFinanceInput&&periodicFinanceResult?.valid?calculatePeriodicFinancialScenarios(periodicFinanceInput):null,[periodicFinanceInput,periodicFinanceResult?.valid])
+  const sensitivity=useMemo(()=>periodicFinanceInput&&!salesTaxLedgerActive&&!hasUnpostedStageInventoryData?calculatePeriodicSensitivityMatrix(periodicFinanceInput,[-20,-10,0,10,20],[-20,-10,0,10,20]):[],[periodicFinanceInput,salesTaxLedgerActive,hasUnpostedStageInventoryData])
+  const scenarios=useMemo(()=>periodicFinanceInput&&periodicFinanceResult?.valid&&!salesTaxLedgerActive&&!hasUnpostedStageInventoryData?calculatePeriodicFinancialScenarios(periodicFinanceInput):null,[periodicFinanceInput,periodicFinanceResult?.valid,salesTaxLedgerActive,hasUnpostedStageInventoryData])
   useEffect(()=>{props.onScenarioAnalysis?.(sensitivity,scenarios)},[sensitivity,scenarios,props.onScenarioAnalysis])
   const updateAsset=(id:string,patch:Partial<Asset>)=>setState(s=>({...s,assets:s.assets.map(a=>a.id===id?{...a,...patch}:a)}))
   const updateDay=(key:keyof SavedState['workingCapitalDays'],value:number)=>setState(s=>({...s,workingCapitalDays:{...s.workingCapitalDays,[key]:Math.max(0,value)}}))
@@ -424,8 +799,16 @@ export default function AdvancedFinancePanel(props: Props) {
 
   return <div className="fw-card" style={{marginTop:18}}>
     <h3>{t('موتور مالی یکپارچه و کنترل‌های مالی','Integrated Financial Engine & Financial Controls')}</h3>
+    {hasUnpostedStageInventoryData&&<div className="fw-validation" role="alert">
+      <b>{t('دفتر تفصیلی موجودی با برنامه تولید/موجودی محصول‌به‌محصول تطبیق ندارد؛ گزارش‌های دوره‌ای، سه صورت مالی، حساسیت و سناریو متوقف شده‌اند.','The detailed inventory ledger does not reconcile to the product operating schedule; periodic reports, three statements, sensitivity and scenarios are blocked.')}</b>
+      {(stageInventoryPreflight?.issues??[]).map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}
+      <p>{t('دفتر تفصیلی مبلغ جدیدی به CPP/CPS اضافه نمی‌کند. پس از تطبیق، موتور مالی از برنامه محصول‌به‌محصول به‌عنوان مبنای یکتای ارزش موجودی و بهای فروش استفاده می‌کند و دفتر مراکز هزینه/انتقال به‌عنوان کنترل مستقل ثبت می‌ماند؛ بنابراین انتقال داخلی دوباره‌شماری نمی‌شود.','The detailed ledger does not add a second CPP/CPS charge. Once reconciled, the finance engine uses the product schedule as the single source for inventory values and cost of sales; the cost-centre / transfer ledger remains an independent control, preventing internal-transfer double counting.')}</p>
+    </div>}
     {loanDraftIntegration&&!loanDraftIntegration.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه تسهیلات از فرم‌های تفصیلی معتبر نیست؛ صورت‌های مالی دوره‌ای متوقف شده‌اند.','Detailed loan facilities are invalid; periodic financial statements are blocked.')}</b>{loanDraftIntegration.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {projectTaxSchedule?.active&&!projectTaxSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه مالیات و انتقال زیان ناقص یا نامعتبر است؛ محاسبه دوره‌ای متوقف شده است.','The tax and loss carry-forward schedule is incomplete or invalid; periodic calculation is blocked.')}</b>{projectTaxSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
+    {salesTaxLedgerActive&&!salesTaxLedgerResult?.valid&&<div className="fw-validation" role="alert"><b>{t('دفتر مالیات غیرمستقیم ناقص یا نامعتبر است؛ محاسبه دوره‌ای متوقف شده است.','The indirect sales-tax ledger is incomplete or invalid; periodic calculations are blocked.')}</b>{(salesTaxLedgerResult?.issues??['Complete opening balance, verified purchase-tax credits and period settlements.']).map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
+    {props.valueAddedAnalysisEnabled&&valueAddedAnalysisResult?.valid!==true&&<div className="fw-validation" role="alert"><b>{t('دفتر ارزش افزوده COMFAR هنوز آماده تأیید نیست.','The COMFAR value-added ledger is not ready for validation.')}</b>{(valueAddedAnalysisResult?.issues??['Complete all period inputs, source references and CPP/CPS / investment reconciliations.']).map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
+    {props.valueAddedAnalysisEnabled&&valueAddedAnalysisResult?.valid&&<div className="fw-result"><b>{t('ارزش افزوده خالص ملی (NNVA)','Net national value added (NNVA)')}: {money(valueAddedAnalysisResult.totals.netNationalValueAdded)} {props.currency}</b> · {t('نسبت کارایی مطلق','Absolute efficiency')}: {valueAddedAnalysisResult.totals.absoluteEfficiencyRatio===null?'—':money(valueAddedAnalysisResult.totals.absoluteEfficiencyRatio)}</div>}
     {productOperatingSchedule&&!productOperatingSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه تولید، موجودی و فروش محصول‌به‌محصول کامل یا معتبر نیست؛ گزارش مالی دوره‌ای متوقف شده است.','Product-by-product production, inventory and sales schedules are incomplete or invalid; periodic financial reporting is blocked.')}</b>{productOperatingSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {workingCapitalDraftSchedule&&!workingCapitalDraftSchedule.valid&&<div className="fw-validation" role="alert"><b>{t('برنامه سرمایه در گردش از فرم‌های تفصیلی معتبر نیست؛ محاسبات دوره‌ای متوقف شده است.','The detailed working-capital schedule is invalid; periodic calculations are blocked.')}</b>{workingCapitalDraftSchedule.issues.map((issue,index)=><p className="fw-hint" key={index}>{issue}</p>)}</div>}
     {workingCapitalDraftSchedule?.valid&&<>
@@ -632,6 +1015,7 @@ export default function AdvancedFinancePanel(props: Props) {
 
     <h4>{t('۵. تحلیل حساسیت چندمتغیره','5. Multivariable Sensitivity Analysis')}</h4>
     <p className="fw-hint">{tr('ردیف‌ها تغییر حجم/ظرفیت و ستون‌ها تغییر قیمت فروش را نشان می‌دهند. مقادیر NPV پروژه با همان برنامه وام، مالیات و سرمایه در گردش دوباره محاسبه می‌شوند.')}</p>
+    {salesTaxLedgerActive&&<p className="fw-hint" role="status">{t('تحلیل حساسیت و سناریوها موقتاً غیرفعال است؛ تغییر قیمت/حجم باید دفتر مالیات خروجی، اعتبار ورودی و پرداخت‌ها را دوباره محاسبه کند تا نتایج نادرست تولید نشود.','Sensitivity and scenarios are temporarily disabled: price/volume changes must recalculate output tax, input credits and remittances before producing valid results.')}</p>}
     <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('حجم \\ قیمت')}</th>{[-20,-10,0,10,20].map(v=><th key={v}>{v}%</th>)}</tr></thead><tbody>{sensitivity.map((row,i)=><tr key={i}><th>{[-20,-10,0,10,20][i]}%</th>{row.map((cell,j)=><td key={j}>{cell.npv==null?'—':money(cell.npv)}</td>)}</tr>)}</tbody></table></div>
     <h4>{t('۶. سناریوهای خوش‌بینانه و بدبینانه','6. Optimistic & Pessimistic Scenarios')}</h4>
     {scenarios?<div className="fw-grid">
@@ -644,7 +1028,7 @@ export default function AdvancedFinancePanel(props: Props) {
     <div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{tr('سال')}</th><th>{tr('فروش')}</th><th>EBIT</th><th>{tr('درآمد سپرده کوتاه‌مدت')}</th><th>{tr('سود خالص')}</th><th>{tr('وجه نقد ابتدای دوره')}</th><th>{tr('جریان عملیاتی')}</th><th>{tr('جریان سرمایه‌گذاری')}</th><th>{tr('جریان تأمین مالی')}</th><th>{tr('وجه نقد پایان دوره')}</th><th>{tr('وجه نقد در دست')}</th><th>{tr('سپرده کوتاه‌مدت')}</th><th>{tr('جمع دارایی‌ها')}</th><th>{tr('بدهی + حقوق مالکانه')}</th><th>{tr('اختلاف تراز')}</th></tr></thead><tbody>{statements.map(r=><tr key={r.year}><td>{r.year}</td><td>{money(r.incomeStatement.revenue)}</td><td>{money(r.incomeStatement.ebit)}</td><td>{money(r.incomeStatement.shortTermDepositInterest)}</td><td>{money(r.incomeStatement.netIncome)}</td><td>{money(r.openingBalances.cash)}</td><td>{money(r.cashFlowStatement.operatingCashFlow)}</td><td>{money(r.cashFlowStatement.investingCashFlow)}</td><td>{money(r.cashFlowStatement.financingCashFlow)}</td><td>{money(r.cashFlowStatement.closingCash)}</td><td>{money(r.balanceSheet.cashInHand)}</td><td>{money(r.balanceSheet.shortTermDeposits)}</td><td>{money(r.balanceSheet.totalAssets)}</td><td>{money(r.balanceSheet.totalLiabilitiesAndEquity)}</td><td>{money(r.balanceSheet.balanceDifference)} {r.balanceSheet.reconciled?'✓':'⚠'}</td></tr>)}</tbody></table></div>
     <p className="fw-hint">{tr('صورت‌ها از یک مجموعه جریان نقدی و برنامه دارایی/بدهی ساخته می‌شوند؛ هیچ رقم ترازکنندهٔ مصنوعی به حقوق مالکانه اضافه نمی‌شود. اگر اختلاف تراز صفر نباشد، خروجی به‌عنوان عدم تطبیق علامت می‌خورد و باید طبقه‌بندی CAPEX، آورده، بدهی یا سرمایه در گردش بررسی شود. این نسخه هنوز اقلام حسابداری تفصیلی مانند مالیات بر ارزش افزوده، سود تقسیمی، مطالبات/بدهی مالیاتی، تجدید ارزیابی و ثبت‌های چندارزی را پوشش نمی‌دهد.')}</p>
     <h4>{t('۸. موتور یکپارچه جریان نقدی ماهانه/فصلی','8. Integrated Monthly / Quarterly Cash-Flow Engine')}</h4>
-    {periodicFinanceResult?.valid?<div className="fw-card">
+    {periodicFinanceResult?.valid&&!hasUnpostedStageInventoryData?<div className="fw-card">
       <p className="fw-hint">{t('جریان‌های عملیاتی سالانه با تعداد روز واقعی به دوره‌های پروژه تخصیص یافته‌اند. برداشت وام می‌تواند روزشمار از مبالغ سالانه توزیع شود یا برای هر دوره مستقلاً ثبت شود. نرخ مالیات قابل تنظیم در هر دوره است و زیان انتقالی، بهره، اصل بدهی و سرمایه در گردش در سطح هر دوره محاسبه می‌شوند. در صورت وجود تاریخ‌های مستند دفتر دارایی، استهلاک و واگذاری دارایی‌به‌دارایی در سطح ماه/فصل اعمال می‌شود. مانده افتتاحیه نقد، سرمایه در گردش، دارایی ثابت، بدهی، آورده، سود انباشته و کمک‌ها از دفتر مانده‌های افتتاحیه به صورت‌های مالی منتقل می‌شود؛ برای پروژه جدید این مانده‌ها صفر هستند.','Annual operating flows are allocated to project periods by actual day counts. Loan drawdowns can be day-weighted from annual amounts or entered directly by period. Tax rates can be set for each period, and loss carry-forward, interest, principal and working capital are calculated period by period. Dated asset-level depreciation and disposals feed the monthly/quarterly model. Opening cash, net working capital, fixed assets, debt, paid-in capital, retained earnings and grants are carried into the statements; these balances default to zero for greenfield projects.')}</p>
       {props.openingCurrentAccounts&&openingCurrentAccountControl&&<div className="fw-card">
         <h4>{t('تفکیک مانده‌های افتتاحیه دارایی‌ها و بدهی‌های جاری','Opening Current Assets & Liabilities Breakdown')}</h4>
@@ -686,6 +1070,30 @@ export default function AdvancedFinancePanel(props: Props) {
          <article><small>{t('آورده خودکار ساخت','Automatic construction equity')}</small><b>{money(periodicFinanceResult.totalAutomaticEquity)}</b></article>
          <article><small>{t('اوج اضافه‌برداشت خودکار','Peak automatic overdraft')}</small><b>{money(periodicFinanceResult.peakAutomaticOverdraft)}</b></article>
       </div>
+      {(props.cppCpsTraceItems?.length??0)>0&&<div className="fw-card">
+        <h4>{t('دفتر ردیابی CPP/CPS و کنترل منبع','CPP/CPS Traceability & Source Control')}</h4>
+        <div className="fw-result">{t('وضعیت دفتر','Ledger status')}: <b>{cppCpsTraceLedger.readyForCppPosting?t('آماده ثبت','Ready to post'):t('نیازمند تکمیل / تأیید','Completion / verification required')}</b></div>
+        <div className="fw-result">{t('اقلام فاقد منبع معتبر','Items without verified source')}: <b>{cppCpsTraceLedger.unverifiedItemIds.length}</b> · {t('جمع افزایشی مستند (به تفکیک دوره)','Known incremental cost by period')}: <b>{cppCpsTraceLedger.knownIncrementalByPeriod.map(value=>value===null?'—':money(value)).join(' · ')}</b></div>
+        {Object.keys({...cppCpsTraceLedger.knownIncrementalByCostCentre,...cppCpsTraceLedger.completeIncrementalByCostCentre}).length>0&&<div style={{overflowX:'auto',marginTop:10}}>
+         <h5>{t('هزینه افزایشی مستند به تفکیک مرکز هزینه','Known incremental cost by cost centre')}</h5>
+         <table className="fw-table"><thead><tr><th>{t('مرکز هزینه','Cost centre')}</th><th>{t('مبنای تخصیص','Allocation basis')}</th><th>{t('محرک و واحد','Driver and unit')}</th><th>{t('مواد','Materials')}</th><th>{t('نیروی انسانی','Labour')}</th><th>{t('انرژی','Energy')}</th><th>{t('تعمیرات','Maintenance')}</th><th>{t('سربار','Overhead')}</th><th>{t('جمع کامل','Complete total')}</th><th>{t('جمع دوره‌ای کامل','Complete by period')}</th></tr></thead><tbody>{Object.keys({...cppCpsTraceLedger.knownIncrementalByCostCentre,...cppCpsTraceLedger.completeIncrementalByCostCentre}).map(centre=>{const total=cppCpsTraceLedger.knownIncrementalByCostCentre[centre]??0;const definition=props.productFinancialDrafts?.costCentres?.find(item=>item.id===centre);const basis=definition?.allocationBasis==='production-quantity'?t('مقدار تولید','Production quantity'):definition?.allocationBasis==='sales-revenue'?t('درآمد فروش','Sales revenue'):definition?.allocationBasis==='manual'?t('محرک دستی','Manual driver'):'—';const driver=definition?.allocationBasis==='manual'?[definition.manualDriverName,definition.manualDriverUnit].filter(Boolean).join(' · '):basis;return <tr key={centre}><td>{definition?.name??centre}</td><td>{basis}</td><td>{driver}</td>{(['materials','labour','energy','maintenance','overhead'] as const).map(category=>{const categoryRows=cppCpsTraceLedger.rows.filter(row=>row.category===category&&(row.costCentreId===centre||row.costCentreId===null));const categoryIncomplete=categoryRows.length===0||categoryRows.some(row=>row.sourceStatus!=='verified');return <td key={category}>{categoryIncomplete?'—':money(cppCpsTraceLedger.knownIncrementalByCostCentreAndCategory[centre]?.[category]??0)}</td>})}<td>{cppCpsTraceLedger.completeIncrementalByCostCentre[centre]===null?'—':money(cppCpsTraceLedger.completeIncrementalByCostCentre[centre]??total)}</td><td>{(cppCpsTraceLedger.completeIncrementalByCostCentreByPeriod[centre]??[]).map((amount,index)=><span key={index}>{t('دوره','P')} {index+1}: {amount===null?'—':money(amount)}{index<(cppCpsTraceLedger.completeIncrementalByCostCentreByPeriod[centre]?.length??0)-1?' · ':''}</span>)}</td></tr>})}</tbody></table>
+         <p className="fw-hint">{t('«جمع کامل» فقط وقتی نمایش عددی دارد که هیچ قلم تأییدنشده یا فاقد مرکز هزینه در آن مرکز/دفتر باقی نمانده باشد.','A numeric complete total is shown only when no unverified or unallocated cost item can affect that centre or ledger.')}</p>
+        </div>}{cppCpsTraceLedger.issues.length>0&&<ul className="fw-checklist">{cppCpsTraceLedger.issues.map((issue,index)=><li key={index}>{issue}</li>)}</ul>}
+        {cppCpsTraceLedger.unverifiedItemIds.length>0&&<p className="fw-hint" role="alert">{t('مبالغ اقلام تأییدنشده خالی مانده‌اند و جمع کامل هزینه قابل ثبت نیست. هیچ مقدار جایگزین یا صفر فرض نشده است.','Unverified item amounts remain blank; complete costs cannot be posted. No substitute or zero values have been assumed.')}</p>}
+        {cppCpsScheduleBinding?.issues.map((issue,index)=><p className="fw-hint" key={'binding-'+index} role="alert">{issue}</p>)}
+        {props.workingCapitalDrafts?.some(item=>item.category==='finished-goods')&&<p className="fw-hint">{t('جزء محصول نهایی در سرمایه در گردش به‌صورت دستی ثبت شده است؛ ارزش مانده آن را با موجودی پایان دوره پس از تخصیص CPP تطبیق دهید تا دوباره‌شماری رخ ندهد.','Finished-goods working capital is manually entered; reconcile it to the revalued closing inventory after CPP allocation to avoid double counting.')}</p>}
+      </div>}
+      {salesTaxLedgerActive&&<div className={salesTaxLedgerResult?.valid?'fw-card':'fw-validation'} role={salesTaxLedgerResult?.valid?'status':'alert'}>
+        <h4>{t('دفتر مالیات غیرمستقیم فروش و مانده مالیاتی','Indirect Sales-Tax Ledger & Tax Balance')}</h4>
+        {salesTaxLedgerResult?.valid?<><div className="fw-kpis">
+          <article><small>{t('مالیات خروجی فروش','Output sales tax')}</small><b>{money(salesTaxLedgerResult.totalOutputTax)}</b></article>
+          <article><small>{t('اعتبار مالیات خرید مستند','Verified input-tax credits')}</small><b>{money(salesTaxLedgerResult.totalRecoverableInputTax)}</b></article>
+          <article><small>{t('پرداخت / تهاتر','Settlements')}</small><b>{money(salesTaxLedgerResult.totalSettlements)}</b></article>
+          <article><small>{salesTaxLedgerResult.closingBalance>=0?t('مالیات پرداختنی پایان','Closing tax payable'):t('مالیات دریافتنی پایان','Closing tax recoverable')}</small><b>{money(Math.abs(salesTaxLedgerResult.closingBalance))}</b></article>
+        </div><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('مانده اول','Opening balance')}</th><th>{t('مالیات خروجی','Output tax')}</th><th>{t('اعتبار ورودی','Input credit')}</th><th>{t('خالص تعهد دوره','Net accrued')}</th><th>{t('پرداخت / تهاتر','Settlement')}</th><th>{t('مانده پایان (+پرداختنی / −دریافتنی)','Closing (+payable / −recoverable)')}</th></tr></thead><tbody>{salesTaxLedgerResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{money(row.openingBalance)}</td><td>{money(row.outputTax)}</td><td>{money(row.recoverableInputTax)}</td><td>{money(row.netTaxAccrued)}</td><td>{money(row.settlement)}</td><td>{money(row.closingBalance)}</td></tr>)}</tbody></table></div>
+        <p className="fw-hint">{t('مانده مالیات پرداختنی/دریافتنی در سرمایه در گردش خالص منظور شده است؛ بنابراین اثر پرداخت در تغییر مانده منعکس می‌شود و پرداخت نقدی دوباره از جریان نقدی کسر نمی‌شود. سناریو و حساسیت تا زمان بازسازی دفتر مالیات در هر سناریو غیرفعال است.','The net payable / recoverable tax balance is included in net working capital. Remittances therefore flow through the change in that balance and are not deducted from cash flow a second time. Sensitivity and scenarios are disabled until the tax ledger is recalculated for each scenario.')}</p>
+        </>:<><b>{t('دفتر مالیات برای ثبت در مدل آماده نیست.','Sales-tax ledger is not ready for posting.')}</b><ul>{(salesTaxLedgerResult?.issues??['Sales-tax ledger inputs are incomplete.']).map((issue,index)=><li key={index}>{issue}</li>)}</ul></>}
+      </div>}
       {productOperatingSchedule?.valid&&<div className="fw-card"><h4>{t('برنامه تولید، فروش و بهای تمام‌شده به تفکیک محصول','Product-by-product production, sales and cost-of-sales schedule')}</h4><div style={{overflowX:'auto',maxHeight:320}}><table className="fw-table"><thead><tr><th>{t('محصول','Product')}</th><th>{t('دوره','Period')}</th><th>{t('مقدار فروش','Sales quantity')}</th><th>{t('مقدار تولید','Production quantity')}</th><th>{t('موجودی پایان','Closing stock')}</th><th>{t('ارزش موجودی پایان','Closing stock value')}</th><th>{t('بهای واحد میانگین','Weighted unit cost')}</th><th>{t('بهای کالای فروش‌رفته','Cost of sales')}</th><th>{t('درآمد خالص فروش','Net sales revenue')}</th><th>{t('سود ناخالص محصول','Product gross profit')}</th></tr></thead><tbody>{productOperatingSchedule.rows.map(row=><tr key={row.productId+'-'+row.period}><td>{row.productId}</td><td>{row.period}</td><td>{money(row.salesQuantity)}</td><td>{money(row.productionQuantity)}</td><td>{money(row.closingInventoryQuantity)}</td><td>{money(row.closingInventoryValue)}</td><td>{money(row.weightedAverageUnitCost)}</td><td>{money(row.costOfSales)}</td><td>{money(row.netSalesRevenue)}</td><td>{money(row.grossProfit)}</td></tr>)}</tbody></table></div><p className="fw-hint">{t('روش ارزش‌گذاری موجودی: میانگین موزون؛ تولید با روش انتخاب‌شده در فرم محصول (ورود دستی یا روز پوشش COMFAR) محاسبه می‌شود.','Inventory valuation uses weighted-average cost; production follows the selected product form policy (manual or COMFAR days coverage).')}</p></div>}
       <h4>{t('منابع خودکار پوشش کسری طبق COMFAR XI.N','COMFAR XI.N Automatic Deficit Funding')}</h4>
       <p className="fw-hint">{t('آورده خودکار در دوره ساخت و اضافه‌برداشت بدون بهره در دوره تولید محاسبه می‌شود؛ اضافه‌برداشت با مازاد نقدی در اولین فرصت بازپرداخت می‌شود. هر دو در جریان تأمین مالی، سرمایه پرداخت‌شده و بدهی ترازنامه دوره‌ای ثبت و با کنترل گردش مستقل تطبیق داده می‌شوند؛ این اضافه‌برداشت خودکار جایگزین تسهیلات قراردادی با نرخ و سررسید نیست.','Automatic equity covers construction deficits; a non-interest-bearing overdraft covers production deficits and is repaid as early as possible from surplus cash. Both are posted to financing cash flow, paid-in capital and periodic balance-sheet debt with independent roll-forward checks. This automatic overdraft does not replace contractual facilities with rates and maturities.')}</p>
@@ -696,20 +1104,51 @@ export default function AdvancedFinancePanel(props: Props) {
       </div>
       <h4>{t('صورت‌های مالی یکپارچه در سطح هر دوره','Linked Three Financial Statements by Period')}</h4>
       <div className="fw-result">{t('ترازهای منطبق','Reconciled periods')}: <b>{periodicStatements.filter(row=>row.balanceSheet.reconciled).length} / {periodicStatements.length}</b></div>
+      <div className="fw-validation">
+        <b>{t('وضعیت ارزش‌گذاری موجودی‌ها','Inventory valuation status')}</b>
+        <p>{t('مواد اولیه','Raw materials')}: {rawMaterialInventoryStatus==='automatic'?t('خودکار بر مبنای بهای مصرف و روز پوشش','Automatic: annual consumption cost × coverage days'):rawMaterialInventoryStatus==='manual'?t('بر اساس مانده‌های دوره‌ای ثبت‌شده','From entered period balances'):rawMaterialInventoryStatus==='not-configured'?t('روز پوشش صفر است؛ موجودی در مدل منظور نشده','Zero coverage days; no stock modeled'):t('مبنای هزینه وارد نشده؛ ارزش قابل تأیید نیست','Cost basis missing; valuation is unverified')}</p>
+        <p>{t('کالای در جریان ساخت','Work in progress')}: {workInProgressInventoryStatus==='automatic'?t('خودکار با تفکیک درصد تکمیل مواد و تبدیل','Automatic: separate material and conversion completion'):workInProgressInventoryStatus==='manual'?t('بر اساس مانده‌های دوره‌ای ثبت‌شده','From entered period balances'):workInProgressInventoryStatus==='not-configured'?t('روز پوشش صفر است؛ WIP در مدل منظور نشده','Zero coverage days; no WIP modeled'):t('مبنای هزینه یا درصد تکمیل ناقص است؛ ارزش قابل تأیید نیست','Cost or completion basis is incomplete; valuation is unverified')}</p>
+      </div>
+      {inventoryThreeWayReconciliation&&<div className={inventoryThreeWayReconciliation.valid?'fw-result':'fw-validation'} role={inventoryThreeWayReconciliation.valid?'status':'alert'}>
+        <b>{t('تطبیق سه‌طرفه موجودی: دفتر تولید، ترازنامه و CPP/CPS','Three-way inventory reconciliation: production ledger, balance sheet and CPP/CPS')}</b>
+        <p>{t('دوره‌های منطبق: ','Reconciled periods: ')}{inventoryThreeWayReconciliation.rows.filter(row=>Math.abs(row.inventoryVariance)<=0.01&&Math.abs(row.cppCpsVariance)<=0.01&&Math.abs(row.workingCapitalVariance)<=0.01).length} / {inventoryThreeWayReconciliation.rows.length}</p>
+        {!inventoryThreeWayReconciliation.valid&&inventoryThreeWayReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
+        <p>{t('این کنترل، تطبیق داخلی داده‌های ثبت‌شده را نشان می‌دهد؛ تا زمان ورود ارقام تفکیکی مستقل از گزارش مرجع، تطبیق تاریخی با COMFAR تأییدشده محسوب نمی‌شود.','This checks internal model consistency. Historical COMFAR reconciliation remains unverified until independent detailed reference figures are entered.')}</p>
+      </div>}
+      {stageInventoryReconciliation&&<div className={stageInventoryReconciliation.valid?'fw-result':'fw-validation'} role={stageInventoryReconciliation.valid?'status':'alert'}>
+        <b>{t('تطبیق دفتر موجودی تفکیکی با موتور مالی','Stage inventory register vs finance-engine reconciliation')}</b>
+        <p>{t('تطبیق‌های مرحله/دوره: ','Matched stage-period balances: ')}{stageInventoryReconciliation.rows.length} / {new Set((props.productFinancialDrafts?.costCentreInventoryMovements??[]).map(row=>String(row.inventoryStage)+':'+String(row.period))).size}</p>
+        {!stageInventoryReconciliation.valid&&stageInventoryReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
+        {!abnormalWasteAccounting.valid&&abnormalWasteAccounting.issues.map((issue,index)=><p key={'waste-'+index}>{issue}</p>)}
+        {abnormalWasteAccounting.valid&&abnormalWasteAccounting.postings.length>0&&<p>{t('اسناد ضایعات غیرعادی: ','Abnormal-waste journals: ')}{abnormalWasteAccounting.postings.length} · {t('بدهکار هزینه','Debit expense')} {money(abnormalWasteAccounting.debitTotal)} · {t('بستانکار موجودی مواد','Credit raw-material inventory')} {money(abnormalWasteAccounting.creditTotal)}</p>}
+        {stageInventoryReconciliation.valid&&<p>{t('پیش‌نمایش ثبت‌های متوازن: ','Balanced accounting posting preview: ')}{stageInventoryReconciliation.accountingPostings?.length??0} {t('سند','entries')} · {t('بدهکار','Debit')} {money(stageInventoryReconciliation.accountingDebitTotal??0)} · {t('بستانکار','Credit')} {money(stageInventoryReconciliation.accountingCreditTotal??0)}</p>}
+         {stagePostingPersistence.status==='saved'&&<p>{t('اسناد یکتا در ذخیره‌ساز محلی ثبت شده: ','Unique documents persisted locally: ')}{stagePostingPersistence.count}</p>}
+         {stagePostingPersistence.status==='saving'&&<p>{t('در حال ذخیره اسناد مرحله‌ای…','Persisting stage documents…')}</p>}
+         {stagePostingPersistence.status==='error'&&<p role="alert">{t('ذخیره اسناد مرحله‌ای ناموفق بود: ','Stage document persistence failed: ')}{stagePostingPersistence.error}</p>}
+        <p>{t('انتقال بین مراحل فقط بدهکار کردن موجودی مرحله مقصد و بستانکار کردن موجودی مرحله مبدأ است؛ جمع موجودی و CPP/CPS را افزایش نمی‌دهد. بهای تمام‌شده فروش در این پیش‌نمایش با دفتر کالای ساخته‌شده تطبیق می‌شود، اما قبلاً در هزینه متغیر و صورت سود و زیان موتور مالی منظور شده و دوباره به آن افزوده نمی‌شود. این خروجی پیش‌نمایش ثبت است و هنوز به دفتر کل پایدار/ERP ارسال نمی‌شود.','Inter-stage transfers debit the destination inventory account and credit the source inventory account only; they do not increase total inventory or CPP/CPS. COGS is tied to the finished-goods subledger in this preview but is already included in the finance engine variable cost and income statement, so it is not added again. This is a posting preview, not a persistent general-ledger or ERP write.')}</p>
+        {stageJournalLoaded&&<StageInventoryCorrectionsPanel projectId={props.projectId} entries={stageJournalEntries} periodCount={projectPeriods.length} en={en} onUpdated={entries=>{setStageJournalEntries(entries);setStagePostingPersistence({status:'saved',count:entries.length,error:''})}}/>}
+      </div>}
+      {inventoryReferenceReconciliation&&<div className={inventoryReferenceReconciliation.valid?'fw-result':'fw-validation'} role={inventoryReferenceReconciliation.valid?'status':'alert'}>
+        <b>{t('تطبیق تاریخی با خروجی مرجع','Historical reconciliation against reference output')}</b>
+        <p>{t('دوره‌های کاملاً منطبق: ','Fully matched periods: ')}{inventoryReferenceReconciliation.rows.filter(row=>row.status==='matched').length} / {inventoryReferenceReconciliation.rows.length}</p>
+        {inventoryReferenceReconciliation.rows.map(row=><p key={row.period}>{t('دوره ','Period ')}{row.period}: {row.status==='matched'?t('منطبق','Matched'):row.status==='mismatch'?t('دارای اختلاف','Mismatch'):t('ناقص؛ داده مرجع کافی نیست','Incomplete; insufficient reference evidence')} · {t('اقلام منطبق: ','Matched fields: ')}{row.matchedFields.join(', ')||'—'} · {t('اقلام فاقد شاهد: ','Missing evidence: ')}{row.missingFields.join(', ')||t('هیچ','None')} · {t('اختلاف‌ها: ','Variances: ')}{Object.entries(row.variances).map(([key,value])=>key+': '+money(value)).join(' | ')||'—'}</p>)}
+        {inventoryReferenceReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
+      </div>}
       {periodicUnreconciledStatements.length>0&&<div className="fw-validation" role="alert">
         <b>{t('هشدار: صورت‌های مالی دوره‌ای هنوز کاملاً تطبیق ندارند.','Warning: periodic financial statements are not fully reconciled.')}</b>
         <p>{t('تعداد دوره‌های دارای اختلاف: ','Periods with differences: ')}{periodicUnreconciledStatements.length} / {periodicStatements.length} · {t('بیشترین قدرمطلق اختلاف تراز: ','Maximum absolute balance difference: ')}{money(maximumPeriodicBalanceDifference)} {props.currency}</p>
         <p>{t('هیچ رقم ترازکننده‌ای به حقوق مالکانه یا سود انباشته اضافه نشده است. مانده افتتاحیه، طبقه‌بندی سرمایه در گردش، آورده، بدهی و دارایی‌ها را بررسی کنید؛ تا رفع اختلاف، این صورت‌ها تأییدشده تلقی نمی‌شوند.','No balancing plug has been added to equity or retained earnings. Review opening balances, working-capital classification, contributions, debt and assets. These statements must not be treated as validated until the differences are resolved.')}</p>
       </div>}
       <div style={{overflowX:'auto',maxHeight:420}}>
-        <table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ پایان','Period end')}</th><th>EBIT</th><th>{t('درآمد سپرده کوتاه‌مدت','Short-term deposit interest')}</th><th>{t('سود قبل از مالیات','Profit before tax')}</th><th>{t('سود/زیان تسعیر ارز','FX gain/loss')}</th><th>{t('کسورات مشمول مالیات','Taxable deductions')}</th><th>{t('مالیات قبل از اعتبار','Tax before credits')}</th><th>{t('اعتبار مالیاتی','Tax credits')}</th><th>{t('مالیات پرداختنی','Tax payable')}</th><th>{t('سود خالص','Net income')}</th><th>{t('جریان عملیاتی','Operating CF')}</th><th>{t('جریان سرمایه‌گذاری','Investing CF')}</th><th>{t('جریان تأمین مالی','Financing CF')}</th><th>{t('وجه نقد پایان','Closing cash')}</th><th>{t('وجه نقد در دست','Cash-in-hand')}</th><th>{t('سپرده کوتاه‌مدت','Short-term deposits')}</th><th>{t('بدهی پایان','Closing debt')}</th><th>{t('سرمایه در گردش خالص','Net working capital')}</th><th>{t('سرمایه پرداخت‌شده','Paid-in capital')}</th><th>{t('سود انباشته','Retained earnings')}</th><th>{t('کمک‌ها و بلاعوض','Grants')}</th><th>{t('جمع دارایی‌ها','Total assets')}</th><th>{t('جمع بدهی و حقوق مالکانه','Total liabilities & equity')}</th><th>{t('دارایی خالص ثابت','Net fixed assets')}</th><th>{t('اختلاف تراز','Balance difference')}</th></tr></thead>
-          <tbody>{periodicStatements.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.endDate}</td><td>{money(row.incomeStatement.ebit)}</td><td>{money(row.incomeStatement.shortTermDepositInterest)}</td><td>{money(row.incomeStatement.profitBeforeTax)}</td><td>{money(row.incomeStatement.foreignExchangeGainLoss)}</td><td>{money(row.incomeStatement.taxableDeductions)}</td><td>{money(row.incomeStatement.taxBeforeCredits)}</td><td>{money(row.incomeStatement.taxCredits)}</td><td>{money(row.incomeStatement.tax)}</td><td>{money(row.incomeStatement.netIncome)}</td><td>{money(row.cashFlowStatement.operatingCashFlow)}</td><td>{money(row.cashFlowStatement.investingCashFlow)}</td><td>{money(row.cashFlowStatement.financingCashFlow)}</td><td>{money(row.cashFlowStatement.closingCash)}</td><td>{money(row.balanceSheet.cashInHand)}</td><td>{money(row.balanceSheet.shortTermDeposits)}</td><td>{money(row.balanceSheet.debt)}</td><td>{money(row.balanceSheet.netWorkingCapital)}</td><td>{money(row.balanceSheet.paidInCapital)}</td><td>{money(row.balanceSheet.retainedEarnings)}</td><td>{money(row.balanceSheet.grants)}</td><td>{money(row.balanceSheet.totalAssets)}</td><td>{money(row.balanceSheet.totalLiabilitiesAndEquity)}</td><td>{money(row.balanceSheet.netFixedAssets)}</td><td>{money(row.balanceSheet.balanceDifference)} {row.balanceSheet.reconciled?'✓':'⚠'}</td></tr>)}</tbody>
+        <table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ پایان','Period end')}</th><th>EBIT</th><th>{t('درآمد سپرده کوتاه‌مدت','Short-term deposit interest')}</th><th>{t('سود قبل از مالیات','Profit before tax')}</th><th>{t('سود/زیان تسعیر ارز','FX gain/loss')}</th><th>{t('کسورات مشمول مالیات','Taxable deductions')}</th><th>{t('مالیات قبل از اعتبار','Tax before credits')}</th><th>{t('اعتبار مالیاتی','Tax credits')}</th><th>{t('مالیات پرداختنی','Tax payable')}</th><th>{t('سود خالص','Net income')}</th><th>{t('جریان عملیاتی','Operating CF')}</th><th>{t('جریان سرمایه‌گذاری','Investing CF')}</th><th>{t('جریان تأمین مالی','Financing CF')}</th><th>{t('وجه نقد پایان','Closing cash')}</th><th>{t('وجه نقد در دست','Cash-in-hand')}</th><th>{t('سپرده کوتاه‌مدت','Short-term deposits')}</th><th>{t('بدهی پایان','Closing debt')}</th><th>{t('سرمایه در گردش خالص','Net working capital')}</th><th>{t('موجودی مواد اولیه','Raw materials inventory')}</th><th>{t('کالای در جریان ساخت','Work in progress')}</th><th>{t('سایر خالص اقلام جاری','Other net current accounts')}</th><th>{t('سرمایه پرداخت‌شده','Paid-in capital')}</th><th>{t('سود انباشته','Retained earnings')}</th><th>{t('کمک‌ها و بلاعوض','Grants')}</th><th>{t('جمع دارایی‌ها','Total assets')}</th><th>{t('جمع بدهی و حقوق مالکانه','Total liabilities & equity')}</th><th>{t('دارایی خالص ثابت','Net fixed assets')}</th><th>{t('اختلاف تراز','Balance difference')}</th></tr></thead>
+          <tbody>{periodicStatements.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.endDate}</td><td>{money(row.incomeStatement.ebit)}</td><td>{money(row.incomeStatement.shortTermDepositInterest)}</td><td>{money(row.incomeStatement.profitBeforeTax)}</td><td>{money(row.incomeStatement.foreignExchangeGainLoss)}</td><td>{money(row.incomeStatement.taxableDeductions)}</td><td>{money(row.incomeStatement.taxBeforeCredits)}</td><td>{money(row.incomeStatement.taxCredits)}</td><td>{money(row.incomeStatement.tax)}</td><td>{money(row.incomeStatement.netIncome)}</td><td>{money(row.cashFlowStatement.operatingCashFlow)}</td><td>{money(row.cashFlowStatement.investingCashFlow)}</td><td>{money(row.cashFlowStatement.financingCashFlow)}</td><td>{money(row.cashFlowStatement.closingCash)}</td><td>{money(row.balanceSheet.cashInHand)}</td><td>{money(row.balanceSheet.shortTermDeposits)}</td><td>{money(row.balanceSheet.debt)}</td><td>{money(row.balanceSheet.netWorkingCapital)}</td><td>{money(row.balanceSheet.rawMaterialsInventory)}</td><td>{money(row.balanceSheet.workInProgressInventory)}</td><td>{money(row.balanceSheet.otherNetWorkingCapital)}</td><td>{money(row.balanceSheet.paidInCapital)}</td><td>{money(row.balanceSheet.retainedEarnings)}</td><td>{money(row.balanceSheet.grants)}</td><td>{money(row.balanceSheet.totalAssets)}</td><td>{money(row.balanceSheet.totalLiabilitiesAndEquity)}</td><td>{money(row.balanceSheet.netFixedAssets)}</td><td>{money(row.balanceSheet.balanceDifference)} {row.balanceSheet.reconciled?'✓':'⚠'}</td></tr>)}</tbody>
         </table>
       </div>
-      <p className="fw-hint">{t('سرمایه در گردش به‌صورت خالص (دارایی‌های جاری منهای بدهی‌های عملیاتی) نمایش داده می‌شود؛ تفکیک ناخالص اقلام جاری بدون داده تفصیلی ساخته نمی‌شود. بهره سرمایه‌ای‌شده هم‌زمان به دارایی‌های قبل از بهره‌برداری و بدهی افزوده می‌شود.','Working capital is shown net of operating payables. Cash-in-hand and short-term deposits are split from explicit policy inputs; other gross current-asset details are not inferred without data. Capitalized interest increases both deferred pre-operating assets and debt.')}</p>
+      <p className="fw-hint">{t('سرمایه در گردش به‌صورت خالص (دارایی‌های جاری منهای بدهی‌های عملیاتی) نمایش داده می‌شود؛ تفکیک ناخالص اقلام جاری بدون داده تفصیلی ساخته نمی‌شود. بهره سرمایه‌ای‌شده هم‌زمان به دارایی‌های قبل از بهره‌برداری و بدهی افزوده می‌شود.','Working capital remains the net total. Raw-material and WIP balances are separately disclosed from explicit component balances or the operating-cycle cost/day and completion assumptions; the residual other-net-current-accounts line offsets these sub-ledgers so inventory is never counted twice. Capitalized interest increases both deferred pre-operating assets and debt.')}</p>
+      <p className="fw-hint">{t('ضایعات غیرعادی به‌صورت هزینه جداگانه در EBIT، مالیات و جریان نقدی منظور می‌شود؛ چون رفتار ثابت/متغیر آن بدون شاهد مستقل مشخص نیست، در دو سبد هزینه ثابت و متغیر یا ضرایب سناریو پخش نمی‌شود. تحلیل نقطه سربه‌سر مبتنی بر تفکیک ثابت/متغیر باید این مبلغ تفکیک‌نشده را جداگانه افشا کند.','Abnormal waste is expensed separately through EBIT, tax and cash flow. Without independent cost-behaviour evidence it is not assigned to fixed/variable buckets or scaled by scenario cost factors. Any break-even analysis based on fixed/variable splits must disclose this unclassified amount separately.')}</p>
       <div style={{overflowX:'auto',maxHeight:480}}>
-        <table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ','Dates')}</th><th>{t('روز','Days')}</th><th>{t('فروش','Revenue')}</th><th>{t('هزینه متغیر','Variable cost')}</th><th>{t('هزینه ثابت','Fixed cost')}</th><th>{t('استهلاک','Depreciation')}</th><th>{t('بهره','Interest')}</th><th>{t('زیان تسعیر ارز','FX loss')}</th><th>{t('کسورات مالیاتی','Tax deductions')}</th><th>{t('اعتبار مالیاتی','Tax credits')}</th><th>{t('مالیات','Tax')}</th><th>{t('تغییر سرمایه در گردش','Change in WC')}</th><th>{t('آورده سهامدار برای سرمایه در گردش','Shareholder WC Equity')}</th><th>CFADS</th><th>{t('درآمد سپرده کوتاه‌مدت','Deposit interest')}</th><th>DSCR</th><th>{t('وجه نقد پایان دوره','Closing cash')}</th><th>{t('کسری تأمین مالی','Funding gap')}</th><th>{t('جریان نقدی پروژه','Project FCF')}</th></tr></thead>
-          <tbody>{periodicFinanceResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.startDate} – {row.endDate}</td><td>{row.days}</td><td>{money(row.revenue)}</td><td>{money(row.variableCost)}</td><td>{money(row.fixedCost)}</td><td>{money(row.depreciation)}</td><td>{money(row.interestExpense)}</td><td>{money(row.foreignExchangeLoss??0)}</td><td>{money(row.taxableDeduction??0)}</td><td>{money(row.taxCredit??0)}</td><td>{money(row.tax)}</td><td>{money(row.changeInWorkingCapital)}</td><td>{money(row.equityWorkingCapitalContribution)}</td><td>{money(row.cfads)}</td><td>{money(row.shortTermDepositInterest)}</td><td>{row.dscr==null?'—':money(row.dscr)+'x'}</td><td>{money(row.closingCash)}</td><td>{money(row.fundingGap)}</td><td>{money(row.projectFreeCashFlow)}</td></tr>)}</tbody>
+        <table className="fw-table"><thead><tr><th>{t('دوره','Period')}</th><th>{t('تاریخ','Dates')}</th><th>{t('روز','Days')}</th><th>{t('فروش','Revenue')}</th><th>{t('هزینه متغیر','Variable cost')}</th><th>{t('هزینه ثابت','Fixed cost')}</th><th>{t('ضایعات غیرعادی (هزینه جداگانه)','Abnormal waste (separate expense)')}</th><th>{t('استهلاک','Depreciation')}</th><th>{t('بهره','Interest')}</th><th>{t('زیان تسعیر ارز','FX loss')}</th><th>{t('کسورات مالیاتی','Tax deductions')}</th><th>{t('اعتبار مالیاتی','Tax credits')}</th><th>{t('مالیات','Tax')}</th><th>{t('تغییر سرمایه در گردش','Change in WC')}</th><th>{t('آورده سهامدار برای سرمایه در گردش','Shareholder WC Equity')}</th><th>CFADS</th><th>{t('درآمد سپرده کوتاه‌مدت','Deposit interest')}</th><th>DSCR</th><th>{t('وجه نقد پایان دوره','Closing cash')}</th><th>{t('کسری تأمین مالی','Funding gap')}</th><th>{t('جریان نقدی پروژه','Project FCF')}</th></tr></thead>
+          <tbody>{periodicFinanceResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{row.startDate} – {row.endDate}</td><td>{row.days}</td><td>{money(row.revenue)}</td><td>{money(row.variableCost)}</td><td>{money(row.fixedCost)}</td><td>{money(row.abnormalWasteExpense)}</td><td>{money(row.depreciation)}</td><td>{money(row.interestExpense)}</td><td>{money(row.foreignExchangeLoss??0)}</td><td>{money(row.taxableDeduction??0)}</td><td>{money(row.taxCredit??0)}</td><td>{money(row.tax)}</td><td>{money(row.changeInWorkingCapital)}</td><td>{money(row.equityWorkingCapitalContribution)}</td><td>{money(row.cfads)}</td><td>{money(row.shortTermDepositInterest)}</td><td>{row.dscr==null?'—':money(row.dscr)+'x'}</td><td>{money(row.closingCash)}</td><td>{money(row.fundingGap)}</td><td>{money(row.projectFreeCashFlow)}</td></tr>)}</tbody>
         </table>
       </div>
       {periodicFinanceResult.warnings.length>0&&<ul className="fw-checklist">{periodicFinanceResult.warnings.map((warning,i)=><li key={i}>{tr(warning)}</li>)}</ul>}
@@ -745,5 +1184,8 @@ export default function AdvancedFinancePanel(props: Props) {
       </>:<ul className="fw-checklist">{(partnerFinanceResult?.warnings??[t('برای تخصیص جریان نقدی شرکا، ابتدا موتور دوره‌ای معتبر را فعال کنید.','Activate a valid periodic finance schedule before allocating partner cash flows.')]).map((warning,index)=><li key={index}>{tr(warning)}</li>)}</ul>}
     </div>}
 
+    {props.onEditFinancialForms&&<div className="fw-result" style={{display:'flex',justifyContent:'flex-end',marginTop:16}}>
+      <button type="button" className="primary" onClick={props.onEditFinancialForms}>{t('انجام بده','Do it')}</button>
+    </div>}
   </div>
 }
