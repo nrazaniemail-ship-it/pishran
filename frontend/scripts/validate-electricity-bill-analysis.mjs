@@ -25,7 +25,7 @@ test('extracts Iranian electricity bill fields and normalizes percent power fact
 هزینه راکتیو: 0
 مالیات و عوارض: 12000
 مبلغ قابل پرداخت: 132000`)
- assert.equal(parsed.accountNumber,'778899')
+ assert.equal(parsed.accountNumber,'778899')\n assert.equal(parsed.paymentId,'991122')
  assert.equal(parsed.meterNumber,'M-100')
  assert.equal(parsed.consumption,2500)
  assert.equal(parsed.powerFactor,.92)
