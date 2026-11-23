@@ -2,7 +2,7 @@ const COST_KEY = 'module-intelligence:MOD-02:v1'
 const OEE_KEY = 'module-intelligence:MOD-03:v1'
 const numberValue = value => String(value ?? '').trim() === '' ? Number.NaN : Number(value)
 
-export async function executeModuleAnalysis(moduleId, input, store, createdAt = new Date().toISOString()) {
+export async function executeModuleAnalysis(moduleId, input, store, createdAt = new Date().toISOString(), sourceReferences = {}) {
   if (moduleId !== 'MOD-02' && moduleId !== 'MOD-03') throw new Error('Unsupported module')
   const values = Object.fromEntries(Object.entries(input).map(([key, value]) => [key, numberValue(value)]))
   if (Object.values(values).some(value => !Number.isFinite(value) || value < 0)) throw new Error('همه فیلدها باید با اعداد معتبر و غیرمنفی تکمیل شوند.')
@@ -30,7 +30,7 @@ export async function executeModuleAnalysis(moduleId, input, store, createdAt = 
     : []
   const key=moduleId==='MOD-02'?COST_KEY:OEE_KEY
   const previous=await store.get(key), history=Array.isArray(previous)?previous:[]
-  const saved={id:`${moduleId}-${Date.parse(createdAt)}`,moduleId,createdAt,inputs:{...input},metrics,warnings}
+  const saved={id:`${moduleId}-${Date.parse(createdAt)}`,moduleId,createdAt,inputs:{...input},metrics,warnings,sourceReferences:{...sourceReferences}}
   await store.set(key,[saved,...history].slice(0,30))
   return saved
 }

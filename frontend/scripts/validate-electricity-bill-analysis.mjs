@@ -10,6 +10,7 @@ test('extracts Iranian electricity bill fields and normalizes percent power fact
  const parsed=parseElectricityBillText(`شماره اشتراک: 778899
 شماره کنتور: M-100
 دوره مصرف: 1405/07
+شناسه پرداخت: 991122
 قرائت قبلی: 12000
 قرائت فعلی: 14500
 انرژی مصرفی: 2500

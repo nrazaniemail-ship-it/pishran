@@ -38,7 +38,7 @@ export function analyzeGasUtility({consumptionNm3,calorificValueKwhPerNm3,produc
  if(!volume||!calorific||!production)throw new Error('حجم گاز، ارزش حرارتی و تولید باید بزرگ‌تر از صفر باشند.')
  const energyKwh=volume*calorific
  const costValue=cost===null||cost===undefined||cost===''?null:number(cost,'هزینه گاز',0)
- return {volumeNm3:volume,energyKwh,energyGJ:energyKwh/277.7777777778,specificVolumeNm3PerTon:volume/production,specificEnergyKwhPerTon:energyKwh/production,costPerGJ:costValue===null?null:costValue/(energyKwh/277.7777777778)}
+ return {volumeNm3:volume,energyKwh,energyGJ:energyKwh*0.0036,specificVolumeNm3PerTon:volume/production,specificEnergyKwhPerTon:energyKwh/production,costPerGJ:costValue===null?null:costValue/(energyKwh*0.0036)}
 }
 export function analyzeWaterBalance(input){
  const value=(key)=>{const raw=input[key]??0;const n=Number(raw);if(!Number.isFinite(n)||n<0)throw new Error('مقدار '+key+' باید عددی غیرمنفی باشد.');return n}
