@@ -39,6 +39,10 @@ jobs:
         run: npm run build
       - name: Install Chromium for native IndexedDB browser test
         run: npx playwright install --with-deps chromium
+      - name: Build relative-base preview for browser smoke test
+        env:
+          VITE_PREVIEW_BUILD: 'true'
+        run: npm run build
       - name: Native browser IndexedDB regression test
         run: npm run test:indexeddb:browser
       - name: Financial model regression tests
