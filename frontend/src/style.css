@@ -1725,3 +1725,20 @@ input,select,textarea{color:var(--text)}
   .nav-dropdown>summary{width:auto}
   .nav-dropdown-menu{position:absolute;top:calc(100% + 5px);inset-inline-start:0;width:min(360px,88vw);max-height:min(60vh,340px);margin:0;box-shadow:0 16px 36px rgba(20,35,55,.18)}
 }
+
+
+/* Reliable controlled module dropdown: overlay only, never resize the header. */
+.topbar,.main-nav{overflow:visible}
+.main-nav{position:relative;z-index:30}
+.nav-dropdown{position:relative;z-index:31;flex:0 0 auto}
+.nav-dropdown[open]{z-index:1400}
+.nav-dropdown>summary{list-style:none;cursor:pointer}
+.nav-dropdown>summary::marker{content:""}
+.nav-dropdown>summary::-webkit-details-marker{display:none}
+.nav-dropdown:not([open])>.nav-dropdown-menu{display:none}
+.nav-dropdown[open]>.nav-dropdown-menu{display:grid;position:absolute;top:calc(100% + 7px);inset-inline-start:0;z-index:1401;width:min(360px,88vw);max-height:min(65vh,520px);overflow:auto;margin:0;padding:8px;border:1px solid var(--workspace-border,var(--line));border-radius:14px;background:var(--workspace-surface,var(--surface));box-shadow:0 16px 36px rgba(20,35,55,.2);gap:4px}
+@media(max-width:900px){
+  .nav-dropdown{width:auto;flex:0 0 auto}
+  .nav-dropdown>summary{width:auto}
+  .nav-dropdown[open]>.nav-dropdown-menu{position:absolute;top:calc(100% + 6px);inset-inline-start:0;width:min(360px,88vw);max-height:min(60vh,340px);margin:0;box-shadow:0 16px 36px rgba(20,35,55,.2)}
+}
