@@ -100,8 +100,8 @@ test('bill upload exposes independent gallery/files and camera inputs for all ut
  for(const source of [electricity,resource]){
   assert.match(source,/انتخاب از گالری یا فایل‌ها/)
   assert.match(source,/عکاسی مستقیم از قبض/)
-  assert.match(source,/<input type="file" accept="image\\/\\*" disabled=\{busy\}/)
+  assert.ok(source.includes('<input type="file" accept="image/*" disabled={busy}'))
   assert.match(source,/capture="environment"/)
-  assert.match(source,/e\\.currentTarget\\.value=""/)
+  assert.ok(source.includes('e.currentTarget.value=""'))
  }
 })
