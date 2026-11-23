@@ -103,21 +103,48 @@ jobs:
           # exited before preserving logcat when it returned no PID.
           script: |
             set -e
+            capture_diagnostics() {
+              adb shell dumpsys activity activities > "$RUNNER_TEMP/pishran-activity.txt" 2>&1 || true
+              adb logcat -d -v time > "$RUNNER_TEMP/pishran-logcat.txt" 2>&1 || true
+            }
+            # Preserve diagnostics even when install or launch fails.
+            trap capture_diagnostics EXIT
             adb devices -l
             adb shell getprop sys.boot_completed
             adb shell settings put global package_verifier_enable 0
             adb shell settings put global verifier_verify_adb_installs 0
-            adb install --no-streaming -r "$GITHUB_WORKSPACE/frontend/android/app/build/outputs/apk/debug/app-debug.apk"
             adb logcat -c
-            # Do not use am start -W: on the x86_64 hosted emulator it can time out
+            APK="$GITHUB_WORKSPACE/frontend/android/app/build/outputs/apk/debug/app-debug.apk"
+            installed=0
+            # Hosted API 34 emulators can transiently time out during package integrity
+            # verification. Retry installation and retain the final failure evidence.
+            for attempt in 1 2 3; do
+              if adb install -r "$APK"; then
+                installed=1
+                break
+              fi
+              echo "APK install attempt $attempt failed; retrying after verifier recheck." | tee -a "$RUNNER_TEMP/pishran-launch.txt"
+              adb shell settings put global package_verifier_enable 0 || true
+              adb shell settings put global verifier_verify_adb_installs 0 || true
+              sleep 10
+            done
+            test "$installed" -eq 1
+            # Do not use am start -W: on the x86_64 hosted emulator; it can time out
             # while the Activity is still launched successfully.
-            adb shell am start -n com.pishran.app/.MainActivity | tee "$RUNNER_TEMP/pishran-launch.txt"
+            adb shell am start -n com.pishran.app/.MainActivity 2>&1 | tee -a "$RUNNER_TEMP/pishran-launch.txt"
             # Poll foreground state for up to 60 seconds; fail only if MainActivity never resumes.
-            for i in $(seq 1 30); do adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity" | grep -F "com.pishran.app/.MainActivity" && break; sleep 2; done
+            resumed=0
+            for i in $(seq 1 30); do
+              if adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity" | grep -F "com.pishran.app/.MainActivity"; then
+                resumed=1
+                break
+              fi
+              sleep 2
+            done
             sleep 3
-            adb shell dumpsys activity activities | tee "$RUNNER_TEMP/pishran-activity.txt"
-            adb logcat -d -v time > "$RUNNER_TEMP/pishran-logcat.txt"
-            # Capture diagnostics before assertions; system/emulator ANRs are not app ANRs.
+            capture_diagnostics
+            # Fail if MainActivity never reaches foreground, or the app itself crashes/ANRs.
+            test "$resumed" -eq 1
             ! grep -q "FATAL EXCEPTION" "$RUNNER_TEMP/pishran-logcat.txt"
             ! grep -E "ANR in com.pishran.app|am_anr.*com.pishran.app|Input dispatching timed out.*com.pishran.app" "$RUNNER_TEMP/pishran-logcat.txt"
             grep -E "mResumedActivity|topResumedActivity" "$RUNNER_TEMP/pishran-activity.txt" | grep -F "com.pishran.app/.MainActivity"
