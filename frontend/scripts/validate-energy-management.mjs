@@ -85,3 +85,16 @@ test('electricity bill allocation rejects missing cost drivers and non-reconcile
  assert.throws(()=>allocateElectricityBillCost({bill:{amount:100,energyCharge:100,demandCharge:10},consumers:[{id:'A',consumptionKwh:10}]}),/جمع اجزای قبض/)
  assert.throws(()=>allocateElectricityBillCost({bill:{amount:100,demandCharge:50},consumers:[{id:'A',consumptionKwh:10}]}),/peakDemandKw/)
 })
+
+test('MOD-02 handoff uses only the selected cost-center allocation and preserves bill provenance',async()=>{
+ const {allocateElectricityBillCost,prepareModule02EnergyCostPosting}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const allocation=allocateElectricityBillCost({bill:{id:'EB-22',billNumber:'INV-22',period:'1405/08',amount:300,energyCharge:200},consumers:[
+  {id:'CC-1',name:'Rolling',consumptionKwh:75,productionTon:10},
+  {id:'CC-2',name:'Casting',consumptionKwh:25,productionTon:5}
+ ]})
+ const prepared=prepareModule02EnergyCostPosting({baseInput:{outputTon:'10',material:'100',labor:'20',energy:'0',maintenance:'10',overhead:'20',sellingPrice:'30'},allocation,costCenterId:'CC-1'})
+ assert.equal(prepared.input.energy,'225')
+ assert.equal(prepared.sourceReferences.energyBillId,'EB-22')
+ assert.equal(prepared.sourceReferences.energyAllocationCenter,'CC-1')
+ assert.match(prepared.duplicatePostingGuard,/full bill total separately/)
+})
