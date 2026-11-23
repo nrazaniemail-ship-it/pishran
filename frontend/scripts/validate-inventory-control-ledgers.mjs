@@ -31,6 +31,24 @@ const waste=module.validateWasteLedger([
 assert.equal(waste.valid,true,waste.issues.join('; '))
 assert.deepEqual(waste.normalWasteAbsorbedByPeriod,[20,0])
 assert.deepEqual(waste.abnormalWasteExpenseByPeriod,[10,0])
+
+const abnormalWasteJournal=module.buildAbnormalWasteAccountingPostings([
+ {id:'N1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:2,unitCost:10,amount:20,sourceReference:'waste-register-p1',sourceVerified:true},
+ {id:'A1',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:1,unitCost:10,amount:10,sourceReference:'incident-report-p1',sourceVerified:true},
+],2)
+assert.equal(abnormalWasteJournal.valid,true,abnormalWasteJournal.issues.join('; '))
+assert.equal(abnormalWasteJournal.postings.length,1,'Normal waste is absorbed into production cost and must not create a separate expense journal')
+assert.deepEqual(abnormalWasteJournal.postings[0],{
+ id:'abnormal-waste:1:P1:CC-A:A1',period:1,kind:'abnormal-waste',productId:'P1',
+ sourceReference:'incident-report-p1',debitAccount:'Abnormal Waste Expense',
+ creditAccount:'Inventory:raw-materials',amount:10,
+})
+assert.equal(abnormalWasteJournal.debitTotal,10)
+assert.equal(abnormalWasteJournal.creditTotal,10)
+assert.equal(module.buildAbnormalWasteAccountingPostings([
+ {id:'A2',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:1,unitCost:10,amount:10,sourceReference:'incident-report-p1',sourceVerified:false},
+],1).valid,false,'Unverified abnormal waste must not generate a journal')
+
 assert.equal(module.validateWasteLedger([{id:'bad',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:2,unitCost:10,amount:19,sourceReference:'waste-doc',sourceVerified:true}],1).valid,false)
 assert.equal(module.validateWasteLedger([{id:'unverified',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:1,unitCost:10,amount:10,sourceReference:'incident-report',sourceVerified:false}],1).valid,false,'abnormal waste without source verification must be rejected')
 assert.equal(module.validateWasteLedger([{id:'missing-source',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:1,unitCost:10,amount:10,sourceReference:'',sourceVerified:true}],1).valid,false,'verification without a source reference must be rejected')
