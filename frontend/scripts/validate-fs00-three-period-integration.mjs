@@ -745,6 +745,14 @@ assert.deepEqual(abnormalWasteStatements.map(row => row.cashFlowStatement.operat
   'Operating cash flow must include the separately expensed abnormal waste exactly once')
 assert.ok(abnormalWasteStatements.every(row => row.balanceSheet.reconciled),
   'Separately expensed abnormal waste must preserve three-statement balance-sheet reconciliation')
+const abnormalWasteScenarios = engine.calculatePeriodicFinancialScenarios(abnormalWasteInput)
+assert.deepEqual(abnormalWasteScenarios.pessimistic.rows.map(row => row.abnormalWasteExpense), [10, 20, 30],
+  'Pessimistic scenarios must retain unclassified abnormal waste without scaling it into variable cost')
+assert.deepEqual(abnormalWasteScenarios.optimistic.rows.map(row => row.abnormalWasteExpense), [10, 20, 30],
+  'Optimistic scenarios must retain unclassified abnormal waste without scaling it into fixed cost')
+const abnormalWasteSensitivity = engine.calculatePeriodicSensitivityMatrix(abnormalWasteInput, [0, 10], [0, 10])
+assert.equal(abnormalWasteSensitivity[0][0].npv, abnormalWasteResult.npvProject,
+  'The zero-change sensitivity cell must equal the validated base case including abnormal waste')
 const invalidAbnormalWaste = engine.calculateIntegratedPeriodicFinance({
   ...abnormalWasteInput, periodAbnormalWasteExpense: [10, -1, 30],
 })
