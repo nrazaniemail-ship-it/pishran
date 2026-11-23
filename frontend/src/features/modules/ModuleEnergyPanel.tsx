@@ -9,7 +9,7 @@ type Baseline={id:string;resource:Resource;period:string;site:string;seu:string;
 type Action={id:string;resource:Resource;title:string;owner:string;dueDate:string;expectedSavings:number;status:string}
 const names={electricity:['برق','Electricity'],gas:['گاز','Natural gas'],water:['آب','Water']}
 const icons={electricity:Zap,gas:Flame,water:Droplets}
-const blank={period:'',site:'',seu:'',meterId:'',consumption:'',production:'',cost:'',startReading:'',endReading:'',calorificValue:'',note:'',dataQuality:'measured'}
+const blank={period:'',site:'',seu:'',meterId:'',consumption:'',production:'',cost:'',startReading:'',endReading:'',calorificValue:'',note:'',dataQuality:'measured' as 'measured'|'estimated'}
 export default function ModuleEnergyPanel({language='fa'}:{language?:Lang}){
  const en=language==='en',[resource,setResource]=useState<Resource>('electricity'),[tab,setTab]=useState('monitor')
  const [form,setForm]=useState({...blank}),[baseForm,setBaseForm]=useState({period:'',site:'',seu:'',consumption:'',production:''}),[actionForm,setActionForm]=useState({title:'',owner:'',dueDate:'',expectedSavings:''})
