@@ -32,6 +32,7 @@ const modules = [
   { id: 'MOD-12', icon: Activity, title: 'مدیریت ریسک و تاب‌آوری', enTitle: 'Enterprise Risk & Resilience', sub: 'ریسک‌های عملیاتی، مالی و استمرار کسب‌وکار', enSub: 'Operational, financial and continuity risks', group: 'تصمیم‌گیری و تاب‌آوری', enGroup: 'Decision & Resilience' },
 ]
 
+const moduleIconFiles = ['01-dashboard.svg','02-economics.svg','03-production.svg','04-kpi.svg','05-energy.svg','06-maintenance.svg','07-process.svg','08-supply-chain.svg','09-market.svg','10-decision.svg','11-project-investment.svg','12-risk.svg']
 
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
@@ -220,10 +221,13 @@ export default function App() {
                 { left:'20.94%', top:'6.26%', width:'18.92%', height:'19.62%' },
               ]
               return <button key={item.id} type="button" className="dashboard-diagram-hotspot" style={spots[index]}
-                data-tooltip={isEn ? item.enSub : item.sub}
                 title={isEn ? item.enSub : item.sub}
                 onClick={() => openModule(item.id)}
                 aria-label={`${item.id}: ${isEn ? item.enTitle : item.title}. ${isEn ? item.enSub : item.sub}`}>
+                <span className="dashboard-diagram-tooltip">
+                  <img src={`/modules/icons/${moduleIconFiles[index]}`} alt="" />
+                  <span>{isEn ? item.enSub : item.sub}</span>
+                </span>
                 <span className="visually-hidden">{isEn ? item.enTitle : item.title}</span>
               </button>
             })}
