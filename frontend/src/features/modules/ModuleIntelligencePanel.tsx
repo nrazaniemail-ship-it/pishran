@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { localStore } from '../../core/storage/localStore'
 import { executeModuleAnalysis } from './moduleAnalysisWorkflow'
-import { ELECTRICITY_BILLS_KEY } from './ElectricityBillAnalysis'
 
 type Language = 'fa' | 'en'
 type CostInput = { outputTon: string; material: string; labor: string; energy: string; maintenance: string; overhead: string; sellingPrice: string }
 type ProductionInput = { plannedMinutes: string; downtimeMinutes: string; idealCycleSeconds: string; totalCount: string; goodCount: string }
-type SavedRun = { id: string; moduleId: 'MOD-02'|'MOD-03'; createdAt: string; inputs: CostInput|ProductionInput; metrics: Record<string, number>; warnings?: string[]; sourceReferences?:Record<string,string> }
-type ElectricityBillSource={id:string;period:string;billNumber:string;accountNumber:string;meterNumber:string;amount:number|null;consumption:number|null}
+type SavedRun = { id: string; moduleId: 'MOD-02'|'MOD-03'; createdAt: string; inputs: CostInput|ProductionInput; metrics: Record<string, number>; warnings?: string[] }
 const COST_KEY = 'module-intelligence:MOD-02:v1'
 const OEE_KEY = 'module-intelligence:MOD-03:v1'
 const initialCost: CostInput = { outputTon:'', material:'', labor:'', energy:'', maintenance:'', overhead:'', sellingPrice:'' }
@@ -20,16 +18,13 @@ export default function ModuleIntelligencePanel({ moduleId, language='fa' }: { m
   const [cost,setCost] = useState<CostInput>(initialCost)
   const [production,setProduction] = useState<ProductionInput>(initialProduction)
   const [history,setHistory] = useState<SavedRun[]>([])
-  const [electricityBills,setElectricityBills] = useState<ElectricityBillSource[]>([])
-  const [selectedBillId,setSelectedBillId] = useState('')
-  const selectedBill=electricityBills.find(item=>item.id===selectedBillId)
   const [report,setReport] = useState<SavedRun|null>(null)
   const [error,setError] = useState('')
   const [busy,setBusy] = useState(false)
   const isCost = moduleId === 'MOD-02'
   useEffect(() => {
     let alive=true
-    Promise.all([localStore.get<SavedRun[]>(isCost?COST_KEY:OEE_KEY),localStore.get<ElectricityBillSource[]>(ELECTRICITY_BILLS_KEY)]).then(([rows,bills])=>{if(alive){setHistory(Array.isArray(rows)?rows:[]);setElectricityBills(Array.isArray(bills)?bills:[])}})
+    localStore.get<SavedRun[]>(isCost?COST_KEY:OEE_KEY).then(rows=>{if(alive)setHistory(Array.isArray(rows)?rows:[])})
     return ()=>{alive=false}
   },[isCost,moduleId])
   const fields = useMemo(()=>isCost?[
@@ -40,7 +35,7 @@ export default function ModuleIntelligencePanel({ moduleId, language='fa' }: { m
   async function runAnalysis() {
     setError(''); setReport(null); setBusy(true)
     try {
-      const saved = await executeModuleAnalysis(moduleId as 'MOD-02'|'MOD-03', isCost ? cost : production, localStore, undefined, selectedBill?{energyBillId:selectedBill.id,billingPeriod:selectedBill.period,billNumber:selectedBill.billNumber||'',accountNumber:selectedBill.accountNumber||'',meterNumber:selectedBill.meterNumber||''}:{})
+      const saved = await executeModuleAnalysis(moduleId as 'MOD-02'|'MOD-03', isCost ? cost : production, localStore)
       const rows = await localStore.get<SavedRun[]>(isCost ? COST_KEY : OEE_KEY)
       setHistory(Array.isArray(rows) ? rows : [])
       setReport(saved as SavedRun)
@@ -52,7 +47,7 @@ export default function ModuleIntelligencePanel({ moduleId, language='fa' }: { m
   const metricLabels = isCost ? (en?{totalCost:'Total production cost',unitCost:'Cost per ton',sellingPrice:'Selling price / ton',grossMarginPerTon:'Price less production cost / ton',grossMarginPercent:'Unit price-cost spread (%)'}:{totalCost:'کل هزینه تولید',unitCost:'بهای تمام‌شده هر تن',sellingPrice:'قیمت فروش هر تن',grossMarginPerTon:'فاصله قیمت فروش و بهای تولید هر تن',grossMarginPercent:'نسبت فاصله قیمت و بهای تولید (%)'}) : (en?{availability:'Availability (%)',performance:'Performance (%)',quality:'Quality (%)',oee:'OEE (%)'}:{availability:'دسترس‌پذیری (%)',performance:'عملکرد (%)',quality:'کیفیت (%)',oee:'اثربخشی کلی تجهیزات OEE (%)'})
   return <section className="module-intelligence">
     <div className="module-intelligence-intro"><b>{isCost?(en?'Cost and gross margin analysis':'تحلیل بهای تمام‌شده و حاشیه سود'):(en?'Production effectiveness analysis':'تحلیل اثربخشی تولید و OEE')}</b><p>{isCost?(en?'Enter actual or approved period data. No missing cost is assumed to be zero.':'اطلاعات واقعی یا تأییدشده یک دوره را وارد کنید؛ داده ناقص به‌صورت صفر فرض نمی‌شود.'):(en?'Enter one consistent production shift or period. OEE is calculated from availability, performance and quality.':'اطلاعات یک شیفت یا دوره همگن را وارد کنید؛ OEE از دسترس‌پذیری، عملکرد و کیفیت محاسبه می‌شود.')}</p></div>
-    {isCost&&<section className="module-energy-bill-link"><b>{en?'Import verified electricity bill cost':'انتقال هزینه قبض برق به بهای انرژی'}</b><p>{en?'Choose a saved bill. Its payable amount replaces the Energy cost field; it is not added to the existing value. Review taxes, credits and accounting treatment before approval.':'یک قبض ذخیره‌شده را انتخاب کنید. مبلغ قابل پرداخت جایگزین فیلد انرژی می‌شود و به مبلغ قبلی اضافه نمی‌شود؛ مالیات، عوارض، تخفیف‌ها و نحوه ثبت حسابداری را پیش از تأیید بررسی کنید.'}</p><label>{en?'Saved electricity bill':'قبض برق ثبت‌شده'}<select value={selectedBillId} onChange={event=>setSelectedBillId(event.target.value)}><option value="">{en?'Select bill':'انتخاب قبض'}</option>{electricityBills.map(item=><option key={item.id} value={item.id}>{item.period} · {item.billNumber||item.accountNumber||item.meterNumber||item.id} · {item.amount??'—'}</option>)}</select></label><button type="button" disabled={!selectedBill||selectedBill.amount===null} onClick={()=>setCost(current=>({...current,energy:String(selectedBill?.amount??'')}))}>{en?'Replace energy cost with bill amount':'جایگزینی مبلغ انرژی با مبلغ قبض'}</button>{selectedBill&&<small>{en?'Bill consumption: ':'مصرف قبض: '}{selectedBill.consumption??'—'} kWh · {en?'Payable amount: ':'مبلغ قابل پرداخت: '}{selectedBill.amount??'—'}</small>}</section>}<div className="module-intelligence-fields">{fields.map(([key,faLabel,enLabel])=><label key={key}>{en?enLabel:faLabel}<input type="number" min="0" step="any" value={isCost?(cost as unknown as Record<string,string>)[key]:(production as unknown as Record<string,string>)[key]} onChange={event=>{const value=event.target.value;if(isCost)setCost(current=>({...current,[key]:value}));else setProduction(current=>({...current,[key]:value}))}} /></label>)}</div>
+    <div className="module-intelligence-fields">{fields.map(([key,faLabel,enLabel])=><label key={key}>{en?enLabel:faLabel}<input type="number" min="0" step="any" value={isCost?(cost as unknown as Record<string,string>)[key]:(production as unknown as Record<string,string>)[key]} onChange={event=>{const value=event.target.value;if(isCost)setCost(current=>({...current,[key]:value}));else setProduction(current=>({...current,[key]:value}))}} /></label>)}</div>
     {error&&<p className="module-intelligence-error" role="alert">{error}</p>}
     <div className="module-intelligence-actions"><button className="primary" type="button" onClick={()=>void runAnalysis()} disabled={busy}>{busy?(en?'Saving…':'در حال ذخیره…'):(en?'انجام بده':'انجام بده')}</button><small>{en?'The calculation and report are saved locally.':'محاسبه و گزارش روی همین دستگاه ذخیره می‌شود.'}</small></div>
     {report&&<section className="module-analysis-report"><h3>{en?'Analysis report':'گزارش تحلیل'}</h3>{report.warnings?.map((warning,index)=><p className="module-intelligence-warning" role="status" key={`${report.id}-warning-${index}`}>{en?'Warning: ':'هشدار: '}{warning}</p>)}<div className="module-analysis-metrics">{Object.entries(report.metrics).map(([key,value])=><article key={key}><small>{metricLabels[key as keyof typeof metricLabels]}</small><b>{fmt(value)}{key==='grossMarginPercent'||['availability','performance','quality','oee'].includes(key)?'٪':''}</b></article>)}</div><small>{en?'Saved at ':'زمان ثبت: '}{new Date(report.createdAt).toLocaleString(en?'en-US':'fa-IR')}</small></section>}

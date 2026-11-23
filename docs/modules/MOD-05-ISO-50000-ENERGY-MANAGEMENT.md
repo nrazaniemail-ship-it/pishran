@@ -52,3 +52,9 @@ Analytical controls include:
 These are screening rules, not a tariff engine or an assertion that a bill is legally correct. Actual tariff calculation requires the applicable tariff schedule, voltage level, billing dates, contract demand, seasonal rules, tax/fee treatment, reactive-energy rules, and any credits or adjustments. A low power factor or demand above contract is a review flag; the module does not assume a penalty amount. OCR output and derived warnings remain subject to human validation.
 
 Pure parsing and analytical logic is covered by frontend/scripts/validate-electricity-bill-analysis.mjs, included in npm run test:modules.
+
+## Advanced gas and water analysis
+
+Gas records may optionally include a documented calorific value in kWh/Nm³. Only when supplied and positive is volume converted to kWh and GJ; the module also reports Nm³/t, kWh/t and cost/GJ. No default calorific value or standard-condition correction is assumed. If the source calorific value is reported in MJ/Nm³, it must be converted explicitly before entry (1 kWh = 3.6 MJ).
+
+Water balance is maintained separately from energy totals. The boundary accounts for freshwater withdrawal and external reclaimed-water inflow against discharge, evaporation/losses, water incorporated in product and storage increase. Internal recirculation is shown as a separate circulation indicator and is not double-counted as external supply. The module reports boundary closure, freshwater withdrawal intensity, net consumption intensity, external reuse share and internal recirculation intensity. A 5% closure warning is a screening threshold, not a universal ISO acceptance criterion; define site-specific measurement uncertainty and boundary rules for formal reporting.

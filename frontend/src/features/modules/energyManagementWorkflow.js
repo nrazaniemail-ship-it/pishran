@@ -1,6 +1,7 @@
 export const ENERGY_DATA_KEY = 'module-intelligence:MOD-05:records:v1'
 export const ENERGY_BASELINES_KEY = 'module-intelligence:MOD-05:baselines:v1'
 export const ENERGY_ACTIONS_KEY = 'module-intelligence:MOD-05:actions:v1'
+export const WATER_BALANCE_KEY = 'module-intelligence:MOD-05:water-balances:v1'
 export const RESOURCE_CONFIG = {
  electricity:{unit:'kWh',factorUnit:'kWh/t'}, gas:{unit:'Nm³',factorUnit:'Nm³/t'}, water:{unit:'m³',factorUnit:'m³/t'}
 }
@@ -31,3 +32,27 @@ export async function saveEnergyBaseline(i,store,createdAt=new Date().toISOStrin
  await store.update(ENERGY_BASELINES_KEY,old=>[b,...(Array.isArray(old)?old.filter(x=>!(x.resource===b.resource&&x.site===b.site&&x.seu===b.seu)):[])].slice(0,100));return b
 }
 export async function saveEnergyAction(i,store,createdAt=new Date().toISOString()){const a={id:'MOD-05-ACT-'+Date.parse(createdAt),title:required(i.title,'عنوان اقدام'),resource:i.resource,owner:required(i.owner,'مسئول'),dueDate:required(i.dueDate,'موعد اجرا'),expectedSavings:number(i.expectedSavings,'صرفه‌جویی مورد انتظار',0),status:['planned','in-progress','verified','cancelled'].includes(i.status)?i.status:'planned',createdAt};await store.update(ENERGY_ACTIONS_KEY,old=>[a,...(Array.isArray(old)?old:[])].slice(0,200));return a}
+
+export function analyzeGasUtility({consumptionNm3,calorificValueKwhPerNm3,productionTon,cost}){
+ const volume=number(consumptionNm3,'حجم گاز',0),calorific=number(calorificValueKwhPerNm3,'ارزش حرارتی گاز',0),production=number(productionTon,'تولید',0)
+ if(!volume||!calorific||!production)throw new Error('حجم گاز، ارزش حرارتی و تولید باید بزرگ‌تر از صفر باشند.')
+ const energyKwh=volume*calorific
+ const costValue=cost===null||cost===undefined||cost===''?null:number(cost,'هزینه گاز',0)
+ return {volumeNm3:volume,energyKwh,energyGJ:energyKwh/277.7777777778,specificVolumeNm3PerTon:volume/production,specificEnergyKwhPerTon:energyKwh/production,costPerGJ:costValue===null?null:costValue/(energyKwh/277.7777777778)}
+}
+export function analyzeWaterBalance(input){
+ const value=(key)=>{const raw=input[key]??0;const n=Number(raw);if(!Number.isFinite(n)||n<0)throw new Error('مقدار '+key+' باید عددی غیرمنفی باشد.');return n}
+ const freshwaterM3=value('freshwaterM3'),externalReuseM3=value('externalReuseM3'),internalRecirculationM3=value('internalRecirculationM3'),dischargeM3=value('dischargeM3'),evaporationM3=value('evaporationM3'),productIncorporationM3=value('productIncorporationM3'),inventoryIncreaseM3=value('inventoryIncreaseM3'),productionTon=number(input.productionTon,'تولید',0)
+ if(!productionTon)throw new Error('تولید باید بزرگ‌تر از صفر باشد.')
+ const boundaryInput=freshwaterM3+externalReuseM3
+ if(!boundaryInput)throw new Error('آب ورودی تازه یا بازیافتی بیرونی باید بزرگ‌تر از صفر باشد.')
+ const accountedOutput=dischargeM3+evaporationM3+productIncorporationM3+inventoryIncreaseM3
+ const gap=boundaryInput-accountedOutput
+ return {boundaryInput,accountedOutput,balanceGap:gap,balanceClosurePercent:accountedOutput/boundaryInput*100,withdrawalIntensity:freshwaterM3/productionTon,netConsumption:boundaryInput-dischargeM3,netConsumptionIntensity:(boundaryInput-dischargeM3)/productionTon,externalReuseSharePercent:externalReuseM3/boundaryInput*100,internalRecirculationM3,internalRecirculationIntensity:internalRecirculationM3/productionTon,warnings:Math.abs(gap)>Math.max(.1,boundaryInput*.05)?['تراز آب بیش از تلورانس ۵٪ اختلاف دارد؛ مرز اندازه‌گیری، تخلیه، تبخیر و تغییر موجودی را بررسی کنید.']:[]}
+}
+export async function saveWaterBalance(input,store,createdAt=new Date().toISOString()){
+ const analysis=analyzeWaterBalance(input)
+ const row={id:'MOD-05-WATER-'+Date.parse(createdAt),createdAt,...input,...analysis}
+ await store.update(WATER_BALANCE_KEY,old=>[row,...(Array.isArray(old)?old:[])].slice(0,300))
+ return row
+}
