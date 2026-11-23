@@ -1,0 +1,18 @@
+import {useMemo} from 'react'
+import {buildEnergySeries,detectEnergyAnomalies,forecastEnergyIntensity} from './energyIntelligenceEngine'
+import './EnergyIntelligenceInsights.css'
+type Props={records:any[];resource:'electricity'|'gas'|'water';language?:'fa'|'en'}
+export default function EnergyIntelligenceInsights({records,resource,language='fa'}:Props){
+ const en=language==='en'
+ const series=useMemo(()=>buildEnergySeries(records,{resource}),[records,resource])
+ const anomalies=useMemo(()=>detectEnergyAnomalies(records,{resource}),[records,resource])
+ const forecast=useMemo(()=>forecastEnergyIntensity(records,{resource,horizon:3}),[records,resource])
+ const fmt=(v:number)=>Number(v).toLocaleString(en?'en-US':'fa-IR',{maximumFractionDigits:2})
+ return <section className="energy-intelligence-insights">
+  <header><h3>{en?'Advanced energy intelligence':'هوشمندی پیشرفته انرژی'}</h3><p>{en?'Site- and process-separated trends, statistical screening and transparent forecasts.':'روند تفکیک‌شده سایت و مصرف‌کننده، غربال آماری انحراف و پیش‌بینی شفاف.'}</p></header>
+  <div className="eii-series">{series.series.map(s=><article key={s.key}><b>{s.site} · {s.seu}</b><small>{s.comparisonBasis==='thermal-energy'?'مبنای حرارتی یکسان':'مبنای حجمی / منبع'}</small><div className="eii-points">{s.points.slice(-6).map(p=><span key={p.id??p.period}><strong>{p.period}</strong>{fmt(p.intensity)} {p.unit}<small>{en?'Cost/t':'هزینه/تن'}: {fmt(p.costPerTon)}</small></span>)}</div></article>)}</div>
+  <div className="eii-columns"><article><h4>{en?'Detected deviations':'انحراف‌های شناسایی‌شده'}</h4>{anomalies.anomalies.length?anomalies.anomalies.map((a,i)=><p key={i} className="eii-alert"><b>{a.site} · {a.seu} · {a.period}</b><span>{a.metric==='intensity'?(en?'Energy intensity':'شدت انرژی'):(en?'Energy cost/t':'هزینه انرژی/تن')} {a.direction==='above'?'↑':'↓'} {fmt(a.deltaPercent)}٪</span></p>):<p>{en?'No statistically screened deviations in the available history.':'با داده‌های موجود انحرافی از آستانه غربال آماری عبور نکرده است.'}</p>}</article>
+   <article><h4>{en?'Next-period outlook':'چشم‌انداز دوره‌های آینده'}</h4>{forecast.forecasts.length?forecast.forecasts.map(s=><div key={s.seriesKey}><b>{s.site} · {s.seu}</b>{s.forecast.map(p=><p key={p.step}>{en?'Horizon':'افق'} {p.step}: {fmt(p.predictedIntensity)} {s.unit} · {fmt(p.predictedConsumption)} {s.comparisonBasis==='thermal-energy'?'kWh':'واحد مصرف'}</p>)}</div>):<p>{en?'At least three valid periods are required.':'برای پیش‌بینی حداقل سه دوره معتبر لازم است.'}</p>}</article></div>
+  <small className="eii-note">{en?'Forecasts are indicative linear-trend estimates, not guarantees or calibrated confidence intervals. Anomaly flags require operational review.':'پیش‌بینی‌ها برآورد روند خطی هستند، نه تضمین مصرف یا فاصله اطمینان کالیبره‌شده. هشدار انحراف نیازمند بررسی عملیاتی است.'}</small>
+ </section>
+}
