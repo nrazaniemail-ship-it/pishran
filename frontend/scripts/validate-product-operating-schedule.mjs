@@ -454,6 +454,45 @@ const multiPeriodFlowProduct={
 const multiPeriodSchedule=module.buildProductOperatingSchedule(multiPeriodFlowProduct,periods,1,'IRR')
 assert.equal(multiPeriodSchedule.valid,true,multiPeriodSchedule.issues.join('; '))
 assert.deepEqual(multiPeriodSchedule.rows.map(row=>row.productionQuantity),[100,90])
+const multiPeriodWasteOriginal=controlModule.buildAbnormalWasteAccountingPostings([],2,multiPeriodSchedule.rows.map(row=>({
+ period:row.period,productId:row.productId,abnormalWasteValue:row.abnormalWasteValue,
+ abnormalWasteSourceReference:row.abnormalWasteSourceReference,
+ abnormalWasteSourceVerified:row.abnormalWasteSourceVerified,
+}))).postings[0]
+assert.ok(multiPeriodWasteOriginal,'The period-1 abnormal-waste source must create one original journal document.')
+const multiPeriodWasteReversal={
+ id:'REV-ABNORMAL-WASTE-P1-P2',period:2,kind:'abnormal-waste',productId:'FLOW-1',
+ sourceReference:'REVERSAL:'+multiPeriodWasteOriginal.id,
+ debitAccount:multiPeriodWasteOriginal.creditAccount,
+ creditAccount:multiPeriodWasteOriginal.debitAccount,
+ amount:multiPeriodWasteOriginal.amount,documentType:'reversal',
+ originalDocumentId:multiPeriodWasteOriginal.id,
+}
+const reversedWasteSchedule=integrationModule.applyStageJournalCorrectionsToProductSchedule(
+ multiPeriodSchedule,[{...multiPeriodWasteOriginal,documentType:'original'},multiPeriodWasteReversal],[0,0])
+assert.equal(reversedWasteSchedule.valid,true,reversedWasteSchedule.issues.join('; '))
+assert.deepEqual(reversedWasteSchedule.schedule.periodAbnormalWasteExpense,[22,-22],
+ 'A reversal must credit abnormal-waste expense only in its own posting period, leaving the original period unchanged.')
+assert.equal(reversedWasteSchedule.schedule.periodRawMaterialInventoryValue[0],multiPeriodSchedule.periodRawMaterialInventoryValue[0])
+assert.equal(reversedWasteSchedule.schedule.periodRawMaterialInventoryValue[1],
+ multiPeriodSchedule.periodRawMaterialInventoryValue[1]+22,
+ 'A later reversal must restore raw-material inventory from its own period onward.')
+assert.equal(reversedWasteSchedule.schedule.rows.find(row=>row.period===2).abnormalWasteValue,-22)
+const incrementalWasteAdjustment={
+ id:'ADJ-ABNORMAL-WASTE-P2',period:2,kind:'abnormal-waste',productId:'FLOW-1',
+ sourceReference:'ADJUST:'+multiPeriodWasteOriginal.id,
+ debitAccount:multiPeriodWasteOriginal.debitAccount,
+ creditAccount:multiPeriodWasteOriginal.creditAccount,
+ amount:5,documentType:'adjustment',adjustmentOfDocumentId:multiPeriodWasteOriginal.id,
+}
+const adjustedWasteSchedule=integrationModule.applyStageJournalCorrectionsToProductSchedule(
+ multiPeriodSchedule,[{...multiPeriodWasteOriginal,documentType:'original'},incrementalWasteAdjustment],[0,0])
+assert.equal(adjustedWasteSchedule.valid,true,adjustedWasteSchedule.issues.join('; '))
+assert.deepEqual(adjustedWasteSchedule.schedule.periodAbnormalWasteExpense,[22,5],
+ 'An adjustment must add only its incremental expense in its own period.')
+assert.equal(adjustedWasteSchedule.schedule.periodRawMaterialInventoryValue[1],
+ multiPeriodSchedule.periodRawMaterialInventoryValue[1]-5,
+ 'An incremental abnormal-waste adjustment must reduce raw-material inventory once from its posting period onward.')
 assert.ok(Math.abs(multiPeriodSchedule.rows[1].openingInventoryValue-multiPeriodSchedule.rows[0].closingInventoryValue)<1e-8,
  'Finished-goods opening value must carry forward from prior-period closing value')
 assert.ok(Math.abs(multiPeriodSchedule.rows[1].openingInventoryQuantity-multiPeriodSchedule.rows[0].closingInventoryQuantity)<1e-8,
