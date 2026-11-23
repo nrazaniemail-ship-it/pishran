@@ -7,6 +7,8 @@ const financialForms=await readFile(new URL('../src/features/projects/ProjectMod
 assert.match(financePanel,/row\.sourceVerified===true/,'verified-only stage movement rows must enter the reconciliation gate')
 assert.match(financePanel,/const hasUnpostedStageInventoryData=Boolean/,'populated stage inventory ledgers must be detected before reporting')
 assert.match(financePanel,/const stageInventoryPreflight=useMemo/,'detailed stage ledgers must be reconciled before periodic finance calculation')
+assert.match(financePanel,/baseIntegratedProductOperatingSchedule\?\.rows\?\?\[\]/,
+  'production-flow abnormal waste must retain product-period evidence for journal generation')
 assert.match(financePanel,/buildAbnormalWasteAccountingPostings/,
   'verified abnormal waste must produce an accounting journal in the finance workflow')
 assert.match(financePanel,/combinedStageAccountingPostings/,
@@ -51,6 +53,22 @@ assert.deepEqual(abnormalWasteJournal.postings[0],{
 })
 assert.equal(abnormalWasteJournal.debitTotal,10)
 assert.equal(abnormalWasteJournal.creditTotal,10)
+
+const productionFlowWasteJournal=module.buildAbnormalWasteAccountingPostings([],2,[
+ {period:2,productId:'P2',abnormalWasteValue:30,abnormalWasteSourceReference:'FLOW-INCIDENT-2',abnormalWasteSourceVerified:true},
+])
+assert.equal(productionFlowWasteJournal.valid,true,productionFlowWasteJournal.issues.join('; '))
+assert.equal(productionFlowWasteJournal.postings.length,1)
+assert.deepEqual(productionFlowWasteJournal.postings[0],{
+ id:'abnormal-waste-flow:2:P2',period:2,kind:'abnormal-waste',productId:'P2',
+ sourceReference:'FLOW-INCIDENT-2',debitAccount:'Abnormal Waste Expense',
+ creditAccount:'Inventory:raw-materials',amount:30,
+})
+const duplicatedWasteSources=module.buildAbnormalWasteAccountingPostings([
+ {id:'A1',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:1,unitCost:10,amount:10,sourceReference:'incident-report-p1',sourceVerified:true},
+],2,[{period:1,productId:'P1',abnormalWasteValue:10,abnormalWasteSourceReference:'incident-report-p1',abnormalWasteSourceVerified:true}])
+assert.equal(duplicatedWasteSources.valid,false,'The same product-period abnormal waste cannot post from both the waste ledger and production flow')
+
 assert.equal(module.buildAbnormalWasteAccountingPostings([
  {id:'A2',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:1,unitCost:10,amount:10,sourceReference:'incident-report-p1',sourceVerified:false},
 ],1).valid,false,'Unverified abnormal waste must not generate a journal')
