@@ -429,7 +429,8 @@ export function applyStageJournalCorrectionsToProductSchedule(
     if (supportedAbnormalWasteWriteOff) {
       abnormalWasteExpense[periodIndex] += abnormalWasteExpenseDelta
       const matching = rows.filter(row => row.productId === document.productId && row.period === document.period)
-      for (const row of matching) row.abnormalWasteValue += abnormalWasteExpenseDelta / matching.length
+      for (const row of matching)
+        row.abnormalWasteValue = (row.abnormalWasteValue ?? 0) + abnormalWasteExpenseDelta / matching.length
     }
     appliedDocumentIds.push(document.id)
   }
