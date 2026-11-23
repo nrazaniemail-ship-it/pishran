@@ -1,6 +1,6 @@
 name: Frontend build and financial validation
 
-# Keep this workflow active on pushes to the periodic financing feature branch.
+# Validate feature branch changes before they are promoted to main.
 
 on:
   push:
