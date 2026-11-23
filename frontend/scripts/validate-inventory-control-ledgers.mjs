@@ -25,13 +25,15 @@ assert.match(financialForms,/Transferred value/,'inter-stage transfer form must 
 const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 const module=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
 const waste=module.validateWasteLedger([
- {id:'N1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:2,unitCost:10,amount:20},
- {id:'A1',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:1,unitCost:10,amount:10},
+ {id:'N1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:2,unitCost:10,amount:20,sourceReference:'waste-register-p1',sourceVerified:true},
+ {id:'A1',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:1,unitCost:10,amount:10,sourceReference:'incident-report-p1',sourceVerified:true},
 ],2)
 assert.equal(waste.valid,true,waste.issues.join('; '))
 assert.deepEqual(waste.normalWasteAbsorbedByPeriod,[20,0])
 assert.deepEqual(waste.abnormalWasteExpenseByPeriod,[10,0])
-assert.equal(module.validateWasteLedger([{id:'bad',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:2,unitCost:10,amount:19}],1).valid,false)
+assert.equal(module.validateWasteLedger([{id:'bad',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:2,unitCost:10,amount:19,sourceReference:'waste-doc',sourceVerified:true}],1).valid,false)
+assert.equal(module.validateWasteLedger([{id:'unverified',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:1,unitCost:10,amount:10,sourceReference:'incident-report',sourceVerified:false}],1).valid,false,'abnormal waste without source verification must be rejected')
+assert.equal(module.validateWasteLedger([{id:'missing-source',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:1,unitCost:10,amount:10,sourceReference:'',sourceVerified:true}],1).valid,false,'verification without a source reference must be rejected')
 const transfers=module.validateProductionTransfers([
  {id:'T1',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'MELT',destinationCostCentreId:'CAST',quantity:50,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:500},
 ],1)
