@@ -324,48 +324,48 @@ export default function App() {
     </header>
 
     {page === 'dashboard' && <>
-      <section className="hero">
+      <section className="hero dashboard-hero">
         <div className="hero-copy">
-          
           <h1>{isEn ? <>From idea to investment decision, <em>with greater confidence.</em></> : <><em> ... با اطمینان بیشتر.</em></>}</h1>
           <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
           <div className="hero-actions"><button className="primary" onClick={() => navigateTo('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
         </div>
-        <div className="hero-art dashboard-image-art">
-          <div className="dashboard-diagram-stage" aria-label={isEn ? "Interactive Pishran module diagram" : "نمودار تعاملی ماژول‌های پیشران"}>
-            <img className="dashboard-module-image" src={`${import.meta.env.BASE_URL}modules/diagram-3d-light.svg?v=20261123-2`} alt={isEn ? "Three-dimensional twelve-module Pishran dashboard diagram" : "نمودار سه‌بعدی روشن دوازده ماژول پیشران"} />
-            {modules.map((item, index) => {
-              const spots = [
-                { left:'40.54%', top:'1%', width:'18.92%', height:'19.62%' },
-                { left:'60.14%', top:'6.26%', width:'18.92%', height:'19.62%' },
-                { left:'74.47%', top:'20.59%', width:'18.92%', height:'19.62%' },
-                { left:'79.73%', top:'40.19%', width:'18.92%', height:'19.62%' },
-                { left:'74.47%', top:'59.79%', width:'18.92%', height:'19.62%' },
-                { left:'60.14%', top:'74.12%', width:'18.92%', height:'19.62%' },
-                { left:'40.54%', top:'79.73%', width:'18.92%', height:'19.62%' },
-                { left:'20.94%', top:'74.12%', width:'18.92%', height:'19.62%' },
-                { left:'6.61%', top:'59.79%', width:'18.92%', height:'19.62%' },
-                { left:'1.35%', top:'40.19%', width:'18.92%', height:'19.62%' },
-                { left:'6.61%', top:'20.59%', width:'18.92%', height:'19.62%' },
-                { left:'20.94%', top:'6.26%', width:'18.92%', height:'19.62%' },
-              ]
-              return <button key={item.id} type="button" className="dashboard-diagram-hotspot" style={spots[index]}
-                title={isEn ? item.enSub : item.sub}
-                onClick={() => openModule(item.id)}
-                aria-label={`${item.id}: ${isEn ? item.enTitle : item.title}. ${isEn ? item.enSub : item.sub}`}>
-                <span className="dashboard-diagram-tooltip">
-                  <img src={`${import.meta.env.BASE_URL}modules/icons/${moduleIconFiles[index]}?v=20261123-2`} alt="" />
-                  <span>{isEn ? item.enSub : item.sub}</span>
-                </span>
-                <span className="visually-hidden">{isEn ? item.enTitle : item.title}</span>
-              </button>
-            })}
-            <button type="button" className="dashboard-diagram-core-hotspot"
-              data-tooltip={isEn ? "Open project feasibility and investment assessment" : "ورود به ارزیابی فنی و اقتصادی پروژه‌ها"}
-              title={isEn ? "Open project assessment" : "ورود به ارزیابی پروژه‌ها"}
-              onClick={() => navigateTo('projects')}
-              aria-label={isEn ? "Open project assessment" : "ورود به ارزیابی فنی و اقتصادی پروژه‌ها"} />
+      </section>
+
+      <section className="module-launcher" aria-labelledby="module-launcher-title">
+        <div className="module-launcher-heading">
+          <div>
+            <span className="module-launcher-eyebrow">{isEn ? 'PISHRAN WORKSPACE' : 'محیط یکپارچه پیشران'}</span>
+            <h2 id="module-launcher-title">{isEn ? 'Explore the 12 intelligence modules' : 'ورود به ۱۲ ماژول هوشمند پیشران'}</h2>
+            <p>{isEn ? 'Choose a workspace to review performance, investigate exceptions and take action.' : 'برای مشاهده عملکرد، بررسی انحراف‌ها و پیگیری اقدامات، ماژول موردنظر را انتخاب کنید.'}</p>
           </div>
+          <span className="module-launcher-count"><b>12</b><small>{isEn ? 'MODULES' : 'ماژول'}</small></span>
+        </div>
+        <div className="module-launcher-groups">
+          {Array.from(new Set(modules.map(item => item.group))).map(group => {
+            const groupModules = modules.filter(item => item.group === group)
+            return <section className="module-launcher-group" key={group}>
+              <div className="module-launcher-group-heading">
+                <h3>{isEn ? groupModules[0].enGroup : group}</h3>
+                <span>{String(groupModules.length).padStart(2, '0')} {isEn ? 'workspaces' : 'ماژول'}</span>
+              </div>
+              <div className="module-launcher-grid">
+                {groupModules.map(item => {
+                  const Icon = item.icon
+                  return <button type="button" key={item.id} className="module-launcher-card" onClick={() => openModule(item.id)}
+                    aria-label={`${item.id}: ${isEn ? item.enTitle : item.title}`}>
+                    <span className="module-launcher-icon"><Icon size={23} strokeWidth={1.9}/></span>
+                    <span className="module-launcher-copy">
+                      <small>{item.id}</small>
+                      <strong>{isEn ? item.enTitle : item.title}</strong>
+                      <span>{isEn ? item.enSub : item.sub}</span>
+                    </span>
+                    <span className="module-launcher-open">{isEn ? 'Open' : 'ورود'} <span aria-hidden="true">↗</span></span>
+                  </button>
+                })}
+              </div>
+            </section>
+          })}
         </div>
       </section>
 
