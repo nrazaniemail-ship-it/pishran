@@ -14,6 +14,7 @@ export function saveEnergyBaseline(i:EnergyBaselineInput,s:EnergyStore,d?:string
 export function saveEnergyAction(i:EnergyActionInput,s:EnergyStore,d?:string):Promise<any>
 
 export const WATER_BALANCE_KEY:string
+export const ENERGY_COST_ALLOCATIONS_KEY:string
 export function analyzeGasUtility(input:{consumptionNm3:string|number;calorificValueKwhPerNm3:string|number;productionTon:string|number;cost?:string|number|null}):{volumeNm3:number;energyKwh:number;energyGJ:number;specificVolumeNm3PerTon:number;specificEnergyKwhPerTon:number;costPerGJ:number|null}
 export function analyzeWaterBalance(input:{freshwaterM3?:string|number;municipalWaterM3?:string|number;groundwaterM3?:string|number;surfaceWaterM3?:string|number;otherFreshwaterM3?:string|number;externalReuseM3?:string|number;internalRecirculationM3?:string|number;dischargeM3?:string|number;evaporationM3?:string|number;productIncorporationM3?:string|number;inventoryIncreaseM3?:string|number;productionTon:string|number}):any
 export function saveWaterBalance(input:Parameters<typeof analyzeWaterBalance>[0],store:EnergyStore,createdAt?:string):Promise<any>

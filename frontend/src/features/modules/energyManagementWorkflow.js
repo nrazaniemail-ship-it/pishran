@@ -2,6 +2,7 @@ export const ENERGY_DATA_KEY = 'module-intelligence:MOD-05:records:v1'
 export const ENERGY_BASELINES_KEY = 'module-intelligence:MOD-05:baselines:v1'
 export const ENERGY_ACTIONS_KEY = 'module-intelligence:MOD-05:actions:v1'
 export const WATER_BALANCE_KEY = 'module-intelligence:MOD-05:water-balances:v1'
+export const ENERGY_COST_ALLOCATIONS_KEY = 'module-intelligence:MOD-05:cost-allocations:v1'
 export const RESOURCE_CONFIG = {
  electricity:{unit:'kWh',factorUnit:'kWh/t'}, gas:{unit:'Nm³',factorUnit:'Nm³/t'}, water:{unit:'m³',factorUnit:'m³/t'}
 }
