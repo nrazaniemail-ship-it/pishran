@@ -11,6 +11,6 @@ export function normalizeBillDigits(value?:string):string
 export function parseElectricityBillText(sourceText?:string):Partial<ElectricityBillRecord>
 export function analyzeElectricityBill(bill:ElectricityBillRecord,history?:ElectricityBillRecord[]):{
  daily:number|null;previousDaily:number|null;dailyChange:number|null;previousBill:ElectricityBillRecord|null;
- readingDelta:number|null;specificConsumption:number|null;amountPerKwh:number|null;demandRatio:number|null;
+ readingDelta:number|null;meterDerivedConsumption:number|null;specificConsumption:number|null;amountPerKwh:number|null;demandRatio:number|null;
  componentTotal:number|null;warnings:string[]
 }
