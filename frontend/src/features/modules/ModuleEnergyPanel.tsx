@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useState} from 'react'
 import ElectricityBillAnalysis from './ElectricityBillAnalysis'
 import ResourceBillAnalysis from './ResourceBillAnalysis'
+import ResourceBillCostAllocationPanel from './ResourceBillCostAllocationPanel'
 import EnergyIntelligenceInsights from './EnergyIntelligenceInsights'
 import EnergyCostAllocationPanel from './EnergyCostAllocationPanel'
 import {Droplets,Flame,Zap} from 'lucide-react'
@@ -41,6 +42,7 @@ export default function ModuleEnergyPanel({language='fa'}:{language?:Lang}){
   <section className="energy-form-card energy-trend-panel"><h3>{en?'Multi-period performance trend':'روند عملکرد چنددوره‌ای'}</h3><p>{en?'Period-over-period consumption, production-normalized intensity and unit cost.':'تغییرات دوره‌به‌دوره مصرف، شدت مصرف نرمال‌شده با تولید و هزینه به‌ازای هر تن.'}</p>{trends.points.length?<div className="energy-history">{trends.points.slice(-8).reverse().map(p=><article key={p.id}><b>{p.period} · {fmt(p.intensity)} {p.comparisonUnit}</b><span>{en?'Consumption':'مصرف'}: {fmt(p.consumption)} · {en?'Cost/t':'هزینه/تن'}: {fmt(p.costPerOutput)} · {en?'Intensity change':'تغییر شدت'}: {p.intensityChangePercent===null?'—':fmt(p.intensityChangePercent)+'٪'} · {en?'Consumption change':'تغییر مصرف'}: {p.periodChangePercent===null?'—':fmt(p.periodChangePercent)+'٪'}</span></article>)}</div>:<div className="energy-empty">{en?'Add records across multiple periods to see trends.':'برای نمایش روند، داده‌های حداقل دو دوره را ثبت کنید.'}</div>}{trends.warnings.map((w:string)=><small className="energy-message">{w}</small>)}</section>
   <EnergyIntelligenceInsights records={rows} resource={resource} language={language}/>
   {resource==='electricity'&&<EnergyCostAllocationPanel language={language}/>}
+  {(resource==='gas'||resource==='water')&&<ResourceBillCostAllocationPanel resource={resource} language={language}/>}
   <div className="energy-resource-summary"><article><small>{en?'Consumption':'مصرف ثبت‌شده'}</small><b>{fmt(totals[resource].consumption)} {unit}</b></article><article><small>{en?'Cost':'هزینه'}</small><b>{fmt(totals[resource].cost)}</b></article><article><small>{en?'Average EnPI':'میانگین مصرف ویژه'}</small><b>{current.length?fmt(current.reduce((s,x)=>s+x.intensity,0)/current.length):'—'} {factor}</b></article><article><small>{en?'Actions':'اقدامات بهبود'}</small><b>{actionList.length}</b></article></div>
   <nav className="energy-work-tabs"><button className={tab==='monitor'?'active':''} onClick={()=>setTab('monitor')}>{en?'Monitoring & EnPI':'پایش و شاخص عملکرد'}</button><button className={tab==='baseline'?'active':''} onClick={()=>setTab('baseline')}>{en?'Baseline':'خط مبنا'}</button><button className={tab==='actions'?'active':''} onClick={()=>setTab('actions')}>{en?'Improvement plan':'برنامه بهبود'}</button></nav>
   {error&&<p className="energy-message error" role="alert">{error}</p>}{notice&&<p className="energy-message success" role="status">{notice}</p>}
