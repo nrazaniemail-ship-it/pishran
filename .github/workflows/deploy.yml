@@ -2,7 +2,7 @@ name: Deploy Pishran PWA to GitHub Pages
 
 on:
   push:
-    branches: [main, feature/pishran-module-exports-nav]
+    branches: [main, feature/pishran-module-exports-nav, feature/pishran-module-launcher-redesign]
   workflow_dispatch:
 
 permissions:
