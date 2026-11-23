@@ -16,6 +16,7 @@ const backupSource = (await readFile(new URL('../src/core/storage/backupService.
   .replace("from './localStore'", `from '${localStoreUrl}'`)
 const backupUrl = toDataUrl(backupSource)
 
+const previewUrl = 'http://127.0.0.1:4179/pishran/preview/'
 const server = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', '4179', '--strictPort'], {
   stdio: 'ignore',
   env: { ...process.env, VITE_PREVIEW_BUILD: 'true' }
@@ -25,7 +26,7 @@ try {
   let ready = false
   for (let attempt = 0; attempt < 40; attempt += 1) {
     try {
-      const response = await fetch('http://127.0.0.1:4179/')
+      const response = await fetch(previewUrl)
       if (response.ok) { ready = true; break }
     } catch {}
     await delay(500)
@@ -34,7 +35,7 @@ try {
 
   browser = await chromium.launch({ headless: true })
   const page = await browser.newPage()
-  await page.goto('http://127.0.0.1:4179/')
+  await page.goto(previewUrl)
   const moduleMenuButton = page.locator('.nav-module-toggle')
   await moduleMenuButton.waitFor({ state: 'visible' })
   await moduleMenuButton.click()
