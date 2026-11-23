@@ -7,7 +7,7 @@ import type { ProjectCalendarPeriod, ProjectPeriodFrequency, ProjectDiscountConv
 import type { WorkingCapitalComponentFormDraft } from './projectModelFormDrafts'
 import { buildWorkingCapitalScheduleFromDrafts, bindWorkingCapitalDraftsToPeriodicFinance } from './workingCapitalDraftIntegration'
 import { buildProductOperatingSchedule } from './productOperatingSchedule'
-import { reconcileInventoryThreeWay, reconcileInventoryReference, reconcileStageInventoryMovements } from './inventoryControlLedgers'
+import { buildAbnormalWasteAccountingPostings, reconcileInventoryThreeWay, reconcileInventoryReference, reconcileStageInventoryMovements } from './inventoryControlLedgers'
 import { loadStageInventoryAccountingPostings, persistStageInventoryAccountingPostings, type PersistedStageInventoryAccountingPosting } from './stageInventoryAccountingStore'
 import StageInventoryCorrectionsPanel from './StageInventoryCorrectionsPanel'
 import { buildCppCpsTraceLedger, type CppCpsTraceItem, type CppCpsTraceLedger } from './cppCpsCostTraceability'
@@ -737,10 +737,17 @@ export default function AdvancedFinancePanel(props: Props) {
     const expectedByProductPeriod=baseIntegratedProductOperatingSchedule?.valid?baseIntegratedProductOperatingSchedule.rows.map(row=>({period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales,productionQuantity:row.productionQuantity,productionCost:row.productionCost})):undefined
     return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length,0.01,stageTransfers,expectedByProductPeriod)
   },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),periodicFinanceResult,productOperatingSchedule,baseIntegratedProductOperatingSchedule])
-  const stagePostingSignature=JSON.stringify(stageInventoryReconciliation?.accountingPostings??[])
+  const abnormalWasteAccounting=useMemo(()=>buildAbnormalWasteAccountingPostings(
+    props.productFinancialDrafts?.wasteLedgerEntries??[],props.projectPeriods?.length??0
+  ),[JSON.stringify(props.productFinancialDrafts?.wasteLedgerEntries??[]),props.projectPeriods?.length])
+  const combinedStageAccountingPostings=[
+    ...(stageInventoryReconciliation?.accountingPostings??[]),
+    ...(abnormalWasteAccounting.valid?abnormalWasteAccounting.postings:[]),
+  ]
+  const stagePostingSignature=JSON.stringify(combinedStageAccountingPostings)
   useEffect(()=>{
-    if(!stageJournalLoaded||!stageInventoryReconciliation?.valid||!props.projectId)return
-    const postings=stageInventoryReconciliation.accountingPostings??[]
+    if(!stageJournalLoaded||!stageInventoryReconciliation?.valid||!abnormalWasteAccounting.valid||!props.projectId)return
+    const postings=combinedStageAccountingPostings
     if(!postings.length){setStagePostingPersistence({status:'idle',count:0,error:''});return}
     let active=true
     setStagePostingPersistence(previous=>({...previous,status:'saving',error:''}))
@@ -748,7 +755,7 @@ export default function AdvancedFinancePanel(props: Props) {
       .then(result=>{if(active){setStageJournalEntries(result.entries);setStagePostingPersistence({status:'saved',count:result.entries.length,error:''})}})
       .catch(error=>{if(active)setStagePostingPersistence({status:'error',count:0,error:error instanceof Error?error.message:String(error)})})
     return()=>{active=false}
-  },[props.projectId,stageInventoryReconciliation?.valid,stagePostingSignature,stageJournalLoaded])
+  },[props.projectId,stageInventoryReconciliation?.valid,abnormalWasteAccounting.valid,stagePostingSignature,stageJournalLoaded])
   const inventoryReferenceReconciliation=useMemo(()=>{
     const benchmarks=props.productFinancialDrafts?.inventoryReferenceBenchmarks??[]
     if(!benchmarks.length||!periodicFinanceResult?.valid||!productOperatingSchedule?.valid)return null
@@ -1111,6 +1118,8 @@ export default function AdvancedFinancePanel(props: Props) {
         <b>{t('تطبیق دفتر موجودی تفکیکی با موتور مالی','Stage inventory register vs finance-engine reconciliation')}</b>
         <p>{t('تطبیق‌های مرحله/دوره: ','Matched stage-period balances: ')}{stageInventoryReconciliation.rows.length} / {new Set((props.productFinancialDrafts?.costCentreInventoryMovements??[]).map(row=>String(row.inventoryStage)+':'+String(row.period))).size}</p>
         {!stageInventoryReconciliation.valid&&stageInventoryReconciliation.issues.map((issue,index)=><p key={index}>{issue}</p>)}
+        {!abnormalWasteAccounting.valid&&abnormalWasteAccounting.issues.map((issue,index)=><p key={'waste-'+index}>{issue}</p>)}
+        {abnormalWasteAccounting.valid&&abnormalWasteAccounting.postings.length>0&&<p>{t('اسناد ضایعات غیرعادی: ','Abnormal-waste journals: ')}{abnormalWasteAccounting.postings.length} · {t('بدهکار هزینه','Debit expense')} {money(abnormalWasteAccounting.debitTotal)} · {t('بستانکار موجودی مواد','Credit raw-material inventory')} {money(abnormalWasteAccounting.creditTotal)}</p>}
         {stageInventoryReconciliation.valid&&<p>{t('پیش‌نمایش ثبت‌های متوازن: ','Balanced accounting posting preview: ')}{stageInventoryReconciliation.accountingPostings?.length??0} {t('سند','entries')} · {t('بدهکار','Debit')} {money(stageInventoryReconciliation.accountingDebitTotal??0)} · {t('بستانکار','Credit')} {money(stageInventoryReconciliation.accountingCreditTotal??0)}</p>}
          {stagePostingPersistence.status==='saved'&&<p>{t('اسناد یکتا در ذخیره‌ساز محلی ثبت شده: ','Unique documents persisted locally: ')}{stagePostingPersistence.count}</p>}
          {stagePostingPersistence.status==='saving'&&<p>{t('در حال ذخیره اسناد مرحله‌ای…','Persisting stage documents…')}</p>}
