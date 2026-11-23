@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Camera, FileImage, LoaderCircle, ScanLine, ShieldCheck, Trash2 } from 'lucide-react'
 import { createWorker } from 'tesseract.js'
 import { localStore } from '../../core/storage/localStore'
-import { analyzeElectricityBill, parseElectricityBillText } from './electricityBillAnalysis'
+import { analyzeElectricityBill, parseElectricityBillText } from './electricityBillAnalysis.js'
 import './ElectricityBillAnalysis.css'
 
 export type ElectricityBillRecordUI = { id:string; period:string; billNumber:string; accountNumber:string; paymentId:string; meterNumber:string; previousReading:number|null; currentReading:number|null; consumption:number|null; billingDays:number|null; demand:number|null; contractDemand:number|null; reactiveEnergy:number|null; powerFactor:number|null; peakConsumption:number|null; midConsumption:number|null; offPeakConsumption:number|null; energyCharge:number|null; demandCharge:number|null; reactiveCharge:number|null; taxCharge:number|null; multiplier:number|null; tariff:string; voltage:string; amount:number|null; dueDate:string; production:number|null; ocrConfidence:number; sourceText:string; createdAt:string }
