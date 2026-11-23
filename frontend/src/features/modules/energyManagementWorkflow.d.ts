@@ -1,0 +1,14 @@
+export type EnergyResource='electricity'|'gas'|'water'
+export type EnergyRecordInput={resource:EnergyResource;period:string;site:string;seu:string;meterId?:string;consumption:string|number;production:string|number;cost:string|number;startReading?:string|number;endReading?:string|number;calorificValue?:string|number;note?:string;dataQuality?:'measured'|'estimated'}
+export type EnergyBaselineInput={resource:EnergyResource;period:string;site:string;seu:string;consumption:string|number;production:string|number}
+export type EnergyActionInput={title:string;resource:EnergyResource;owner:string;dueDate:string;expectedSavings:string|number;status?:string}
+export type EnergyStore={get<T>(key:string):Promise<T|undefined>;set<T>(key:string,value:T):Promise<void>;update<T>(key:string,fn:(old:T|undefined)=>T):Promise<T>}
+export const ENERGY_DATA_KEY:string
+export const ENERGY_BASELINES_KEY:string
+export const ENERGY_ACTIONS_KEY:string
+export const RESOURCE_CONFIG:Record<EnergyResource,{unit:string;factorUnit:string}>
+export function validateEnergyRecord(i:EnergyRecordInput):any
+export function calculateEnergyPerformance(i:{resource:EnergyResource;baseline:{consumption:number;production:number};actual:{consumption:number;production:number}}):any
+export function saveEnergyRecord(i:EnergyRecordInput,s:EnergyStore,d?:string):Promise<any>
+export function saveEnergyBaseline(i:EnergyBaselineInput,s:EnergyStore,d?:string):Promise<any>
+export function saveEnergyAction(i:EnergyActionInput,s:EnergyStore,d?:string):Promise<any>
