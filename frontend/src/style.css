@@ -1416,9 +1416,9 @@ input,select,textarea{color:var(--text)}
 /* Module navigation and central technical-economic honeycomb */
 .nav-dropdown{position:relative;display:block;flex:0 0 auto}
 .nav-dropdown>.nav-module-toggle{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px}
-.nav-dropdown>.nav-module-toggle::-webkit-details-marker{display:none}
+
 .nav-caret{font-size:11px;opacity:.7;margin-inline-start:2px}
-.nav-dropdown.is-open>summary{background:var(--workspace-panel,#e2e9f0)}
+.nav-dropdown.is-open>.nav-module-toggle{background:var(--workspace-panel,#e2e9f0)}
 .nav-dropdown-menu{position:absolute;top:calc(100% + 9px);inset-inline-start:0;z-index:1300;width:min(360px,88vw);max-height:min(70vh,560px);overflow:auto;padding:8px;border:1px solid var(--workspace-border,var(--line));border-radius:14px;background:var(--workspace-surface,var(--surface));box-shadow:0 16px 36px rgba(20,35,55,.18);display:grid;gap:4px}
 .dropdown-module{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-radius:9px;background:transparent;color:var(--text);text-align:start;font:inherit;font-size:12px;cursor:pointer}
 .dropdown-module:hover,.dropdown-module.active{background:var(--workspace-panel,#e2e9f0)}
@@ -1736,8 +1736,8 @@ input,select,textarea{color:var(--text)}
 .nav-dropdown{position:relative;z-index:31;flex:0 0 auto}
 .nav-dropdown.is-open{z-index:1400}
 .nav-dropdown>.nav-module-toggle{list-style:none;cursor:pointer}
-.nav-dropdown>.nav-module-toggle::marker{content:""}
-.nav-dropdown>.nav-module-toggle::-webkit-details-marker{display:none}
+
+
 .nav-dropdown:not(.is-open)>.nav-dropdown-menu{display:none}
 .nav-dropdown.is-open>.nav-dropdown-menu{display:grid;position:absolute;top:calc(100% + 7px);inset-inline-start:0;z-index:1401;width:min(360px,88vw);max-height:min(65vh,520px);overflow:auto;margin:0;padding:8px;border:1px solid var(--workspace-border,var(--line));border-radius:14px;background:var(--workspace-surface,var(--surface));box-shadow:0 16px 36px rgba(20,35,55,.2);gap:4px}
 @media(max-width:900px){
