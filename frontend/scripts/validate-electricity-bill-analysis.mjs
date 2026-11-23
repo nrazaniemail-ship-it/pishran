@@ -79,3 +79,13 @@ M-900
  assert.equal(parsed.billingDays,30)
  assert.equal(parsed.amount,450000)
 })
+
+test('reconciles meter readings using the meter multiplier',()=>{
+ const result=analyzeElectricityBill({previousReading:1000,currentReading:1500,multiplier:5,consumption:2500},[])
+ assert.equal(result.meterDerivedConsumption,2500)
+ assert.ok(!result.warnings.some(x=>x.includes('ضریب‌در')))
+})
+test('flags a one-sided meter reading instead of silently skipping reconciliation',()=>{
+ const result=analyzeElectricityBill({previousReading:1000,currentReading:null,consumption:250},[])
+ assert.ok(result.warnings.some(x=>x.includes('هر دو')))
+})
