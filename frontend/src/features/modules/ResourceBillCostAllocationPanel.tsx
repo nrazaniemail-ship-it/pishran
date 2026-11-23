@@ -26,7 +26,8 @@ export default function ResourceBillCostAllocationPanel({resource,language='fa'}
   const rows=centers.map((x,i)=>{const total=volume[i]+sewer[i]+fixed[i]+taxByCenter[i]+other[i];const production=Number(x.production)||0;return {costCenterId:x.id,name:x.name,volumeCharge:volume[i],sewerCharge:sewer[i],fixedCharge:fixed[i],taxCharge:taxByCenter[i],otherCharges:other[i],totalCost:total,productionTon:production,costPerTon:production>0?total/production:null}})
   const allocatedTotal=rows.reduce((s,x)=>s+x.totalCost,0)
   if(Math.abs(allocatedTotal-amount)>Math.max(.0001,amount*1e-10))return null
-  const residual=Math.max(0,amount-known)\n  return {billId:bill.id,billNumber:bill.billNumber,period:bill.period,resource,billAmount:amount,allocatedTotal,residual,allocations:rows,allocationRules:{volumeCharge:'consumption',sewerCharge:'wastewater',fixedCharge:'equal-share',taxCharge:'pre-tax cost share',otherCharges:'consumption',residual:'consumption'},warnings:residual>0?['باقیمانده تفکیک‌نشده قبض در سهم هزینه سایر منظور و بر مبنای مصرف تخصیص یافته است؛ اجزای قبض را تکمیل کنید.']:[]}
+  const residual=Math.max(0,amount-known)
+  return {billId:bill.id,billNumber:bill.billNumber,period:bill.period,resource,billAmount:amount,allocatedTotal,residual,allocations:rows,allocationRules:{volumeCharge:'consumption',sewerCharge:'wastewater',fixedCharge:'equal-share',taxCharge:'pre-tax cost share',otherCharges:'consumption',residual:'consumption'},warnings:residual>0?['باقیمانده تفکیک‌نشده قبض در سهم هزینه سایر منظور و بر مبنای مصرف تخصیص یافته است؛ اجزای قبض را تکمیل کنید.']:[]}
  }catch{return null}},[bill,centers,resource,gas])
  const setBillField=(k:keyof Bill,v:string)=>setBill(x=>({...x,[k]:v}))
  const setCenterField=(id:string,k:keyof Center,v:string)=>setCenters(x=>x.map(c=>c.id===id?{...c,[k]:v}:c))
