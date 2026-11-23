@@ -16,7 +16,7 @@ const backupSource = (await readFile(new URL('../src/core/storage/backupService.
   .replace("from './localStore'", `from '${localStoreUrl}'`)
 const backupUrl = toDataUrl(backupSource)
 
-const previewUrl = 'http://127.0.0.1:4179/pishran/preview/'
+const previewUrl = 'http://127.0.0.1:4179/'
 const server = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', '4179', '--strictPort'], {
   stdio: 'ignore',
   env: { ...process.env, VITE_PREVIEW_BUILD: 'true' }
