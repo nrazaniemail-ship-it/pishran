@@ -64,6 +64,7 @@ export function analyzeElectricityBill(bill,history=[]){
  const n=k=>typeof bill[k]==='number'&&Number.isFinite(bill[k])?bill[k]:null
  const consumption=n('consumption'),days=n('billingDays'),production=n('production'),amount=n('amount')
  const readingDelta=n('previousReading')!==null&&n('currentReading')!==null?n('currentReading')-n('previousReading'):null
+ const meterDerivedConsumption=readingDelta===null?null:readingDelta*(n('multiplier')&&n('multiplier')>0?n('multiplier'):1)
  const daily=days&&consumption!==null?consumption/days:null
  const specificConsumption=production&&consumption!==null?consumption/production:null
  const amountPerKwh=amount!==null&&consumption?amount/consumption:null
@@ -77,8 +78,10 @@ export function analyzeElectricityBill(bill,history=[]){
  const previousDaily=previous?previous.consumption/previous.billingDays:null
  const dailyChange=previousDaily&&daily!==null?(daily/previousDaily-1)*100:null
  const warnings=[]
+ if((n('previousReading')===null)!==(n('currentReading')===null))warnings.push('برای کنترل کنتور باید قرائت قبلی و فعلی هر دو ثبت شوند.')
  if(readingDelta!==null&&readingDelta<0)warnings.push('قرائت فعلی از قرائت قبلی کمتر است.')
- if(readingDelta!==null&&consumption!==null&&Math.abs(readingDelta-consumption)>Math.max(1,consumption*.02))warnings.push('مصرف درج‌شده با اختلاف قرائت کنتور بیش از تلورانس ۲٪ اختلاف دارد.')
+ if(n('multiplier')!==null&&n('multiplier')<=0)warnings.push('ضریب کنتور باید بزرگ‌تر از صفر باشد.')
+ if(meterDerivedConsumption!==null&&consumption!==null&&Math.abs(meterDerivedConsumption-consumption)>Math.max(1,consumption*.02))warnings.push('مصرف قبض با اختلاف قرائت ضرب‌در ضریب کنتور بیش از تلورانس ۲٪ اختلاف دارد.')
  if(n('powerFactor')!==null&&(n('powerFactor')<0||n('powerFactor')>1))warnings.push('ضریب قدرت خارج از بازه معتبر صفر تا یک است؛ مقدار قبض را بازبینی کنید.')
  else if(n('powerFactor')!==null&&n('powerFactor')<.9)warnings.push('ضریب قدرت کمتر از ۰٫۹ است؛ هزینه یا جریمه راکتیو را بررسی کنید.')
  if(n('ocrConfidence')>0&&n('ocrConfidence')<65)warnings.push('اطمینان OCR پایین است؛ همه ارقام را با تصویر اصلی تطبیق دهید.')
@@ -90,5 +93,5 @@ export function analyzeElectricityBill(bill,history=[]){
  const charges=[n('energyCharge'),n('demandCharge'),n('reactiveCharge'),n('taxCharge')]
  const componentTotal=charges.every(x=>x!==null)?charges.reduce((a,b)=>a+b,0):null
  if(componentTotal!==null&&amount!==null&&Math.abs(componentTotal-amount)>Math.max(1,amount*.03))warnings.push('جمع اجزای مبلغ استخراج‌شده با مبلغ نهایی بیش از تلورانس ۳٪ اختلاف دارد؛ سایر اقلام و بستانکاری‌ها را بررسی کنید.')
- return {daily,previousDaily,dailyChange,previousBill:previous??null,readingDelta,specificConsumption,amountPerKwh,demandRatio,componentTotal,warnings}
+ return {daily,previousDaily,dailyChange,previousBill:previous??null,readingDelta,meterDerivedConsumption,specificConsumption,amountPerKwh,demandRatio,componentTotal,warnings}
 }
