@@ -58,3 +58,24 @@ test('flags negative meter delta and invalid power factor',()=>{
  assert.ok(result.warnings.some(x=>x.includes('کمتر')))
  assert.ok(result.warnings.some(x=>x.includes('ضریب قدرت')))
 })
+
+test('extracts values when OCR puts labels and values on separate lines',()=>{
+ const parsed=parseElectricityBillText(`شماره کنتور
+M-900
+قرائت قبلی
+5000
+قرائت فعلی
+6500
+انرژی مصرفی
+1500
+تعداد روز دوره
+30
+مبلغ قابل پرداخت
+450000`)
+ assert.equal(parsed.meterNumber,'M-900')
+ assert.equal(parsed.previousReading,5000)
+ assert.equal(parsed.currentReading,6500)
+ assert.equal(parsed.consumption,1500)
+ assert.equal(parsed.billingDays,30)
+ assert.equal(parsed.amount,450000)
+})
