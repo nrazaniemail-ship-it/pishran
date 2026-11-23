@@ -30,6 +30,12 @@ const [ledgerModule, integrationModule, productScheduleModule, engine, inventory
   load('../src/features/steel/periodicFinancialEngine.ts'),
   load('../src/features/projects/inventoryControlLedgers.ts'),
 ])
+const advancedFinancePanelSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+assert.match(advancedFinancePanelSource, /Abnormal waste \(separate expense\)/,
+  'Periodic finance report must display abnormal waste as a separate expense column')
+assert.match(advancedFinancePanelSource, /Any break-even analysis based on fixed\/variable splits must disclose this unclassified amount separately/,
+  'The report must disclose unclassified abnormal waste when fixed/variable break-even analysis is interpreted')
+
 const close = (actual, expected, message) => assert.ok(
   Math.abs(actual - expected) < 1e-7 * Math.max(1, Math.abs(expected)),
   (message ?? 'Expected ' + expected + ', received ' + actual)
