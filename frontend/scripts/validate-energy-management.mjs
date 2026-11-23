@@ -51,7 +51,7 @@ test('multi-period energy trends calculate production-normalized and cost intens
  assert.equal(result.count,2)
  assert.equal(result.points[1].intensity,9)
  assert.ok(Math.abs(result.points[1].intensityChangePercent+10)<1e-9)
- assert.equal(result.points[1].costPerOutputChangePercent,8)
+ assert.ok(Math.abs(result.points[1].costPerOutputChangePercent-8)<1e-9)
 })
 test('gas trend uses thermal basis only for adjacent periods with matching HHV/LHV and reference conditions',async()=>{
  const {analyzeEnergyTrends}=await import('../src/features/modules/energyManagementWorkflow.js')
