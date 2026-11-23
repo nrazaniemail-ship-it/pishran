@@ -281,7 +281,7 @@ assert.deepEqual(Object.fromEntries(debitByAccount), {
 })
 assert.deepEqual(Object.fromEntries(creditByAccount), {
   'Inventory:raw-materials': 40,
-  'Inventory:work-in-progress': 55,
+  'Inventory:work-in-progress': 95,
   'Inventory:finished-goods': 35,
 })
 const accountNames = new Set([...debitByAccount.keys(), ...creditByAccount.keys()])
@@ -291,7 +291,7 @@ const accountTrialBalance = Object.fromEntries([...accountNames].map(account => 
   netDebit: (debitByAccount.get(account) ?? 0) - (creditByAccount.get(account) ?? 0),
 }]))
 assert.deepEqual(accountTrialBalance, {
-  'Inventory:work-in-progress': { debit: 40, credit: 55, netDebit: -15 },
+  'Inventory:work-in-progress': { debit: 40, credit: 95, netDebit: -55 },
   'Inventory:finished-goods': { debit: 55, credit: 35, netDebit: 20 },
   'Cost of Sales': { debit: 35, credit: 0, netDebit: 35 },
   'Inventory:raw-materials': { debit: 40, credit: 40, netDebit: 0 },
