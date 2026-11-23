@@ -77,6 +77,18 @@ const wasteJournalSaved=await restoredModule.persistStageInventoryAccountingPost
 assert.equal(wasteJournalSaved.insertedCount,1)
 assert.equal(wasteJournalSaved.debitTotal,110)
 assert.equal(wasteJournalSaved.creditTotal,110)
+const wasteDebitByAccount = wasteJournalSaved.entries.reduce((totals, row) => {
+  totals[row.debitAccount] = (totals[row.debitAccount] ?? 0) + row.amount
+  return totals
+}, {})
+const wasteCreditByAccount = wasteJournalSaved.entries.reduce((totals, row) => {
+  totals[row.creditAccount] = (totals[row.creditAccount] ?? 0) + row.amount
+  return totals
+}, {})
+assert.deepEqual(wasteDebitByAccount, { 'Abnormal Waste Expense': 110 })
+assert.deepEqual(wasteCreditByAccount, { 'Inventory:raw-materials': 110 })
+assert.equal(wasteJournalSaved.entries.filter(row => row.period === 1).reduce((sum, row) => sum + row.amount, 0), 110,
+  'The incident document must debit the abnormal-waste expense and credit raw-material inventory in its own period.')
 const wasteJournalReplay=await restoredModule.persistStageInventoryAccountingPostings(abnormalWasteProject,[abnormalWastePosting])
 assert.equal(wasteJournalReplay.insertedCount,0,'Replaying the same abnormal-waste journal must not duplicate the expense')
 assert.equal(wasteJournalReplay.existingCount,1)
@@ -232,6 +244,58 @@ const cogsByPeriod = [1, 2, 3].map(period => adjusted.entries
   .filter(row => row.period === period && row.debitAccount === 'Cost of Sales')
   .reduce((sum, row) => sum + row.amount, 0))
 assert.deepEqual(cogsByPeriod, [0, 0, 35])
+
+// Independent trial-balance reconstruction: derive debit and credit sides
+// separately from the append-only documents, grouped by document, account and period.
+const debitByAccount = new Map()
+const creditByAccount = new Map()
+const debitByPeriod = new Map()
+const creditByPeriod = new Map()
+const documentSides = new Map()
+for (const row of adjusted.entries) {
+  debitByAccount.set(row.debitAccount, (debitByAccount.get(row.debitAccount) ?? 0) + row.amount)
+  creditByAccount.set(row.creditAccount, (creditByAccount.get(row.creditAccount) ?? 0) + row.amount)
+  debitByPeriod.set(row.period, (debitByPeriod.get(row.period) ?? 0) + row.amount)
+  creditByPeriod.set(row.period, (creditByPeriod.get(row.period) ?? 0) + row.amount)
+  const sides = documentSides.get(row.id) ?? { debit: 0, credit: 0, debitAccount: row.debitAccount, creditAccount: row.creditAccount, period: row.period }
+  sides.debit += row.amount
+  sides.credit += row.amount
+  documentSides.set(row.id, sides)
+}
+assert.equal(documentSides.size, 5, 'Original, reversal and adjustment documents must all remain separately traceable.')
+for (const [documentId, sides] of documentSides) {
+  assert.equal(sides.debit, sides.credit, 'Document ' + documentId + ' must balance independently.')
+  assert.equal(sides.debitAccount === sides.creditAccount, false)
+}
+for (const period of [1, 2, 3]) {
+  assert.equal(debitByPeriod.get(period), creditByPeriod.get(period),
+    'Period ' + period + ' must independently balance after period-scoped reversal/adjustment posting.')
+}
+assert.deepEqual([1, 2, 3].map(period => debitByPeriod.get(period)), [40, 95, 35])
+assert.deepEqual([1, 2, 3].map(period => creditByPeriod.get(period)), [40, 95, 35])
+assert.deepEqual(Object.fromEntries(debitByAccount), {
+  'Inventory:work-in-progress': 40,
+  'Inventory:finished-goods': 55,
+  'Cost of Sales': 35,
+  'Inventory:raw-materials': 40,
+})
+assert.deepEqual(Object.fromEntries(creditByAccount), {
+  'Inventory:raw-materials': 40,
+  'Inventory:work-in-progress': 55,
+  'Inventory:finished-goods': 35,
+})
+const accountNames = new Set([...debitByAccount.keys(), ...creditByAccount.keys()])
+const accountTrialBalance = Object.fromEntries([...accountNames].map(account => [account, {
+  debit: debitByAccount.get(account) ?? 0,
+  credit: creditByAccount.get(account) ?? 0,
+  netDebit: (debitByAccount.get(account) ?? 0) - (creditByAccount.get(account) ?? 0),
+}]))
+assert.deepEqual(accountTrialBalance, {
+  'Inventory:work-in-progress': { debit: 40, credit: 55, netDebit: -15 },
+  'Inventory:finished-goods': { debit: 55, credit: 35, netDebit: 20 },
+  'Cost of Sales': { debit: 35, credit: 0, netDebit: 35 },
+  'Inventory:raw-materials': { debit: 40, credit: 40, netDebit: 0 },
+}, 'Each account must show independently derived debit, credit and net movement totals.')
 const rawMaterialAndWipNet = adjusted.entries
   .filter(row => row.debitAccount.includes('raw-materials') || row.creditAccount.includes('raw-materials') ||
     row.debitAccount.includes('work-in-progress') || row.creditAccount.includes('work-in-progress'))
