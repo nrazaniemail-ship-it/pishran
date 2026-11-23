@@ -27,6 +27,9 @@ export type ProductOperatingPeriodRow = {
   grossProfit: number
   rawMaterialInventoryValue: number
   wipInventoryValue: number
+  abnormalWasteValue: number
+  abnormalWasteSourceReference: string
+  abnormalWasteSourceVerified: boolean
   completedUnits: number
   hasInventoryFlow: boolean
   wipQuantity: number
@@ -375,6 +378,9 @@ export function buildProductOperatingSchedule(
         grossProfit:netSalesRevenue-costOfSales,
         rawMaterialInventoryValue:flowRow?.closingRawMaterialValue??0,
         wipInventoryValue:flowRow?.closingWipValue??0,
+        abnormalWasteValue:flowRow?.abnormalWasteValue??0,
+        abnormalWasteSourceReference:source.abnormalWasteSourceReference??'',
+        abnormalWasteSourceVerified:source.abnormalWasteSourceVerified===true,
         completedUnits:flowRow?.unitsCompleted??productionQuantity,
         hasInventoryFlow:!!flowRow,
         wipQuantity:flowRow?.closingWipQuantity??0,
