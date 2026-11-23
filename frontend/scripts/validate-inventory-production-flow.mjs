@@ -45,6 +45,10 @@ const salesProduct = {
   openingWipConversionValue:index===0?input.openingWipConversionValue:null,
  })),
 }
+const toLedgerTransfer=draft=>({id:draft.id,period:draft.period,sourceProductId:draft.sourceProductId,
+ destinationProductId:draft.destinationProductId,sourceCostCentreId:draft.sourceCostCentreId,
+ destinationCostCentreId:draft.destinationCostCentreId,quantity:draft.quantity,sourceUnit:draft.sourceUnit,
+ destinationUnit:draft.destinationUnit,conversionFactor:draft.conversionFactor,costAmount:draft.transferValue})
 const adaptedBridge=mod.buildProductionBridgeDraftsFromSalesProduct(salesProduct,bridgeEvidence)
 assert.deepEqual(adaptedBridge,bridge,
  'The form-to-bridge adapter must preserve weighted-average material and equivalent-unit transfer values')
@@ -112,10 +116,6 @@ close(abnormalRawTransfer.quantity,abnormalBridgeSchedule.rows[0].consumptionQua
 close(abnormalRawTransfer.transferValue,abnormalBridgeSchedule.rows[0].consumptionValue+abnormalBridgeSchedule.rows[0].normalWasteValue,
  'Abnormal waste value must be excluded from the WIP transfer.')
 assert.ok(abnormalBridgeSchedule.rows[0].abnormalWasteValue>0)
-const toLedgerTransfer=draft=>({id:draft.id,period:draft.period,sourceProductId:draft.sourceProductId,
- destinationProductId:draft.destinationProductId,sourceCostCentreId:draft.sourceCostCentreId,
- destinationCostCentreId:draft.destinationCostCentreId,quantity:draft.quantity,sourceUnit:draft.sourceUnit,
- destinationUnit:draft.destinationUnit,conversionFactor:draft.conversionFactor,costAmount:draft.transferValue})
 const ledgerDrafts=bridge.map(toLedgerTransfer)
 assert.equal(ledger.validateProductionTransfers(ledgerDrafts,result.rows.length).valid,true,
  'Generated raw-to-WIP and WIP-to-finished-goods drafts must balance in the transfer ledger.')
