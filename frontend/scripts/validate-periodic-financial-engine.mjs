@@ -513,7 +513,8 @@ const abnormalWasteFinanceCase=engine.calculateIntegratedPeriodicFinance({
   annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],
   annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
   annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
-  workingCapitalByPeriod:[0,0,0],openingWorkingCapital:0,openingCash:500,
+  workingCapitalByPeriod:[390,390,390],openingWorkingCapital:500,openingCash:500,
+  rawMaterialsInventoryByPeriod:[390,390,390],
   loans:[],discountRatePercent:10,
 });
 assert.equal(abnormalWasteFinanceCase.valid,true,abnormalWasteFinanceCase.warnings.join('; '));
@@ -538,12 +539,12 @@ assert.equal(abnormalWastePeriod.closingCash,390,
 assert.equal(abnormalWasteFinanceCase.rows[1].taxLossCarryForward,110,
   'Tax loss from abnormal waste must roll forward to the next period');
 const abnormalWasteStatements=engine.buildPeriodicThreeFinancialStatements(abnormalWasteFinanceCase,{
-  cash:500,debt:0,netFixedAssets:0,netWorkingCapital:0,paidInCapital:500,retainedEarnings:0,
+  cash:500,debt:0,netFixedAssets:0,netWorkingCapital:500,rawMaterialsInventory:500,paidInCapital:1000,retainedEarnings:0,
 });
 assert.equal(abnormalWasteStatements.length,periods.length);
 assert.equal(abnormalWasteStatements[0].incomeStatement.ebit,-110);
 assert.equal(abnormalWasteStatements[0].incomeStatement.netIncome,-110);
-assert.equal(abnormalWasteStatements[0].cashFlowStatement.closingCash,390);
+assert.equal(abnormalWasteStatements[0].cashFlowStatement.closingCash,500);\nassert.equal(abnormalWasteStatements[0].balanceSheet.rawMaterialsInventory,390);\nassert.equal(abnormalWasteStatements[0].balanceSheet.netWorkingCapital,390);
 assert.equal(abnormalWasteStatements[0].balanceSheet.retainedEarnings,-110);
 assert.ok(abnormalWasteStatements.every(row=>row.balanceSheet.reconciled),
   'Abnormal-waste expense must reconcile through retained earnings and the balance sheet without a plug');
