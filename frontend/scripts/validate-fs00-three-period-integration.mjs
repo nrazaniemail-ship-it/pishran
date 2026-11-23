@@ -735,6 +735,14 @@ const abnormalWasteStatements = engine.buildPeriodicThreeFinancialStatements(abn
   paidInCapital: 0, retainedEarnings: 0, grants: 0,
 })
 assert.equal(abnormalWasteStatements.length, 3)
+assert.deepEqual(abnormalWasteStatements.map(row => row.incomeStatement.abnormalWasteExpense), [10, 20, 30],
+  'The linked income statement must disclose abnormal waste separately in each period')
+assert.deepEqual(abnormalWasteStatements.map(row => row.incomeStatement.cashOperatingCosts), [160, 170, 180],
+  'Abnormal waste must be included once in total cash operating costs')
+assert.deepEqual(abnormalWasteStatements.map(row => row.incomeStatement.ebit), [840, 830, 820],
+  'The linked income statement EBIT must reconcile to periodic-engine EBIT after abnormal waste')
+assert.deepEqual(abnormalWasteStatements.map(row => row.cashFlowStatement.operatingCashFlow), [840, 830, 820],
+  'Operating cash flow must include the separately expensed abnormal waste exactly once')
 assert.ok(abnormalWasteStatements.every(row => row.balanceSheet.reconciled),
   'Separately expensed abnormal waste must preserve three-statement balance-sheet reconciliation')
 const invalidAbnormalWaste = engine.calculateIntegratedPeriodicFinance({
