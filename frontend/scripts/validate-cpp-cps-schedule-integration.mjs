@@ -48,8 +48,8 @@ assert.equal(abnormalWasteAdjustment.valid, true, abnormalWasteAdjustment.issues
 assert.deepEqual(abnormalWasteAdjustment.appliedDocumentIds, ['AW-ADJ'])
 assert.deepEqual(abnormalWasteAdjustment.schedule.periodRawMaterialInventoryValue, [70, 70],
   'An abnormal-waste adjustment must reduce raw inventory once and carry the corrected balance forward')
-assert.equal(abnormalWasteAdjustment.schedule.rows[0].rawMaterialInventoryValue, 20)
-assert.equal(abnormalWasteAdjustment.schedule.rows[1].rawMaterialInventoryValue, 20)
+assert.equal(abnormalWasteAdjustment.schedule.rows[0].rawMaterialInventoryValue, 70)
+assert.equal(abnormalWasteAdjustment.schedule.rows[1].rawMaterialInventoryValue, 70)
 assert.deepEqual(abnormalWasteAdjustment.schedule.periodCostOfSales, schedule.periodCostOfSales,
   'Abnormal waste must not be reclassified as COGS')
 
