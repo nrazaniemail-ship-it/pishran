@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 
 // Capacitor serves bundled assets from the app's local origin; GitHub Pages uses the repository subpath.
 const isPreviewBuild = process.env.VITE_PREVIEW_BUILD === 'true'
-const appBase = process.env.CAPACITOR_BUILD === 'true' ? './' : isPreviewBuild ? '/pishran/preview/' : '/pishran/'
+const appBase = process.env.CAPACITOR_BUILD === 'true' || isPreviewBuild ? './' : '/pishran/'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
