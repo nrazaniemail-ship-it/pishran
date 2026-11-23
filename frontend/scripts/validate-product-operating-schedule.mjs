@@ -292,6 +292,17 @@ const flowProduct={
 const flowSchedule=module.buildProductOperatingSchedule(flowProduct,[periods[0]],1,'IRR')
 assert.equal(flowSchedule.valid,true,flowSchedule.issues.join('; '))
 assert.equal(flowSchedule.hasInventoryFlow,true)
+const abnormalWasteJournal=controlModule.buildAbnormalWasteAccountingPostings([],1,flowSchedule.rows.map(row=>({
+ period:row.period,productId:row.productId,abnormalWasteValue:row.abnormalWasteValue,
+ abnormalWasteSourceReference:row.abnormalWasteSourceReference,
+ abnormalWasteSourceVerified:row.abnormalWasteSourceVerified,
+})))
+assert.equal(abnormalWasteJournal.valid,true,abnormalWasteJournal.issues.join('; '))
+assert.equal(abnormalWasteJournal.postings.length,1)
+assert.equal(abnormalWasteJournal.postings[0].period,1)
+assert.equal(abnormalWasteJournal.postings[0].amount,22)
+assert.equal(abnormalWasteJournal.postings[0].sourceReference,'incident-report-page-3',
+ 'The append-only journal trace must retain the exact verified incident source used by the production flow.')
 assert.equal(flowSchedule.rows[0].productionQuantity,100)
 assert.equal(flowSchedule.rows[0].completedUnits,100)
 assert.ok(Math.abs(flowSchedule.rows[0].productionCost-flowSchedule.rows[0].unitProductionCost*100)<1e-7)
@@ -330,6 +341,7 @@ const integrated=financialEngine.calculateIntegratedPeriodicFinance({
  periodRevenue:[flowSchedule.periodRevenue[0]],
  annualVariableCost:[flowSchedule.annualCostOfSales[0]],
  periodVariableCost:[flowSchedule.periodCostOfSales[0]],
+ periodAbnormalWasteExpense:flowSchedule.periodAbnormalWasteExpense,
  annualFixedCost:[0],annualDepreciation:[0],annualFixedInvestment:[0],
  annualPreOperatingCost:[0],annualMaintenanceCapex:[0],annualTaxRates:[0],
  annualEquityContributions:[0],
@@ -343,6 +355,9 @@ assert.equal(integrated.valid,true,integrated.warnings.join('; '))
 assert.equal(integrated.rows.length,1)
 close(integrated.rows[0].revenue,flowSchedule.periodRevenue[0])
 close(integrated.rows[0].variableCost,flowSchedule.periodCostOfSales[0])
+close(integrated.rows[0].abnormalWasteExpense,flowSchedule.periodAbnormalWasteExpense[0])
+close(integrated.rows[0].ebit,flowSchedule.periodRevenue[0]-flowSchedule.periodCostOfSales[0]-flowSchedule.periodAbnormalWasteExpense[0],
+ 'The period engine must receive abnormal waste from the product schedule as a separate expense, outside COGS.')
 close(integrated.rows[0].rawMaterialsInventory,flowSchedule.periodRawMaterialInventoryValue[0])
 close(integrated.rows[0].workInProgressInventory,flowSchedule.periodWipInventoryValue[0])
 close(integrated.rows[0].finishedGoodsInventory,closingFinishedGoods)
@@ -365,7 +380,44 @@ close(integratedBalanceSheet.rawMaterialsInventory+integratedBalanceSheet.workIn
   integratedBalanceSheet.finishedGoodsInventory+integratedBalanceSheet.otherNetWorkingCapital,
   integratedBalanceSheet.netWorkingCapital)
 close(integratedStatements[0].movementChecks.netWorkingCapital,0)
-console.log('End-to-end product inventory, COGS, working-capital and three-statement reconciliation passed.')
+close(integratedStatements[0].incomeStatement.abnormalWasteExpense,22)
+close(integratedStatements[0].incomeStatement.netIncome,integrated.rows[0].ebit,
+ 'The abnormal-waste expense must flow into net income exactly once.')
+close(integratedStatements[0].balanceSheet.retainedEarnings,-integratedStatements[0].incomeStatement.netIncome*-1,
+ 'Retained earnings must reflect the actual period net income without a balancing plug.')
+const noWasteInventory=closingInventory+flowSchedule.periodAbnormalWasteExpense[0]
+const integratedWithoutAbnormalWaste=financialEngine.calculateIntegratedPeriodicFinance({
+ periods:[periods[0]],fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+ annualRevenue:[flowSchedule.annualRevenue[0]],periodRevenue:[flowSchedule.periodRevenue[0]],
+ annualVariableCost:[flowSchedule.annualCostOfSales[0]],periodVariableCost:[flowSchedule.periodCostOfSales[0]],
+ annualFixedCost:[0],annualDepreciation:[0],annualFixedInvestment:[0],
+ annualPreOperatingCost:[0],annualMaintenanceCapex:[0],annualTaxRates:[0],
+ annualEquityContributions:[0],workingCapitalByPeriod:[noWasteInventory],
+ rawMaterialsInventoryByPeriod:[flowSchedule.periodRawMaterialInventoryValue[0]+flowSchedule.periodAbnormalWasteExpense[0]],
+ workInProgressInventoryByPeriod:[flowSchedule.periodWipInventoryValue[0]],
+ finishedGoodsInventoryByPeriod:[closingFinishedGoods],
+ openingWorkingCapital:openingInventory,openingCash:0,loans:[],discountRatePercent:10,
+})
+assert.equal(integratedWithoutAbnormalWaste.valid,true,integratedWithoutAbnormalWaste.warnings.join('; '))
+close(integratedWithoutAbnormalWaste.rows[0].variableCost,integrated.rows[0].variableCost,
+ 'Abnormal waste must not be reclassified into COGS.')
+close(integratedWithoutAbnormalWaste.rows[0].ebit-integrated.rows[0].ebit,22,
+ 'The verified abnormal-waste event must reduce EBIT exactly once.')
+close(integratedWithoutAbnormalWaste.rows[0].changeInWorkingCapital-integrated.rows[0].changeInWorkingCapital,22,
+ 'The raw-material write-off must reduce closing working capital once.')
+close(integratedWithoutAbnormalWaste.rows[0].closingCash,integrated.rows[0].closingCash,
+ 'The non-cash inventory write-off must not create a second cash outflow.')
+const noWasteStatements=financialEngine.buildPeriodicThreeFinancialStatements(integratedWithoutAbnormalWaste,{
+ cash:0,debt:0,netFixedAssets:0,netWorkingCapital:openingInventory,
+ rawMaterialsInventory:1000,workInProgressInventory:0,finishedGoodsInventory:100,
+ paidInCapital:openingInventory,
+})
+assert.equal(noWasteStatements[0].balanceSheet.reconciled,true)
+close(noWasteStatements[0].incomeStatement.netIncome-integratedStatements[0].incomeStatement.netIncome,22)
+close(noWasteStatements[0].balanceSheet.rawMaterialsInventory-integratedStatements[0].balanceSheet.rawMaterialsInventory,22)
+close(noWasteStatements[0].balanceSheet.netWorkingCapital-integratedStatements[0].balanceSheet.netWorkingCapital,22)
+close(noWasteStatements[0].cashFlowStatement.closingCash-integratedStatements[0].cashFlowStatement.closingCash,0)
+console.log('End-to-end abnormal-waste journal trace -> raw-material inventory -> CPP/CPS/WIP/FG -> COGS -> working capital -> income, cash-flow and balance-sheet statements passed.')
 
  
 // Two-period end-to-end roll-forward: raw materials -> WIP -> finished goods -> sales/COGS.
