@@ -1694,3 +1694,18 @@ input,select,textarea{color:var(--text)}
   .dashboard-honeycomb-core{left:30%;top:32.7%;width:40%;padding:5% 7%}
   .dashboard-honeycomb-core strong{font-size:clamp(11px,3.2vw,17px)}
 }
+
+
+/* Supplied 3D light module diagram with accessible interactive hotspots. */
+.dashboard-image-art{width:62%;max-height:none;overflow:visible;display:flex;align-items:center;justify-content:center;padding:4px;flex-shrink:1}
+.dashboard-diagram-stage{position:relative;width:min(100%,690px);aspect-ratio:1/1;flex:0 1 auto;overflow:visible}
+.dashboard-module-image{display:block;width:100%;height:100%;object-fit:contain;border-radius:0}
+.dashboard-diagram-hotspot,.dashboard-diagram-core-hotspot{position:absolute;display:block;padding:0;border:0;background:transparent;cursor:pointer;clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);z-index:1}
+.dashboard-diagram-hotspot:hover,.dashboard-diagram-hotspot:focus-visible,.dashboard-diagram-core-hotspot:hover,.dashboard-diagram-core-hotspot:focus-visible{z-index:5;outline:2px solid rgba(35,79,104,.75);outline-offset:-5px;background:rgba(255,255,255,.09)}
+.dashboard-diagram-hotspot::after,.dashboard-diagram-core-hotspot::after{content:attr(data-tooltip);position:absolute;left:50%;bottom:calc(100% + 9px);transform:translate(-50%,4px);width:max-content;max-width:min(240px,70vw);padding:9px 12px;border:1px solid rgba(93,116,130,.22);border-radius:10px;background:rgba(255,255,255,.97);box-shadow:0 8px 24px rgba(35,54,68,.18);color:#263b49;font:600 12px/1.7 inherit;text-align:center;direction:inherit;white-space:normal;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease,transform .14s ease}
+.dashboard-diagram-hotspot:hover::after,.dashboard-diagram-hotspot:focus-visible::after,.dashboard-diagram-core-hotspot:hover::after,.dashboard-diagram-core-hotspot:focus-visible::after{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.dashboard-diagram-core-hotspot{left:32.08%;top:32.6%;width:35.84%;height:34.73%;clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%)}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:850px){.dashboard-image-art{width:69%;max-height:none}.dashboard-diagram-stage{width:100%}}
+@media(max-width:650px){.dashboard-image-art{width:100%;max-height:none;margin:12px auto 0}.dashboard-diagram-stage{width:min(100%,520px)}.dashboard-diagram-hotspot::after,.dashboard-diagram-core-hotspot::after{max-width:min(190px,68vw);font-size:11px}}
+@media(hover:none){.dashboard-diagram-hotspot:active::after,.dashboard-diagram-core-hotspot:active::after{opacity:1;visibility:visible;transform:translate(-50%,0)}}

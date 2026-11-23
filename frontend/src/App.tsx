@@ -201,19 +201,37 @@ export default function App() {
           <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
           <div className="hero-actions"><button className="primary" onClick={() => navigateTo('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
         </div>
-        <div className="hero-art dashboard-image-art" role="img" aria-label={isEn ? "Pishran technical and economic assessment dashboard with its honeycomb module layout" : "نمای لانه‌زنبوری ماژول‌های داشبورد ارزیابی فنی و اقتصادی پیشران"}>
-          <div className="dashboard-honeycomb-grid" aria-label={isEn ? "Pishran modules" : "ماژول‌های پیشران"}>
+        <div className="hero-art dashboard-image-art">
+          <div className="dashboard-diagram-stage" aria-label={isEn ? "Interactive Pishran module diagram" : "نمودار تعاملی ماژول‌های پیشران"}>
+            <img className="dashboard-module-image" src="/modules/diagram-3d-light.svg" alt={isEn ? "Three-dimensional twelve-module Pishran dashboard diagram" : "نمودار سه‌بعدی روشن دوازده ماژول پیشران"} />
             {modules.map((item, index) => {
-              const ModuleIcon = item.icon
-              return <button key={item.id} type="button" className={`dashboard-module-hex dashboard-module-hex-${index}`} onClick={() => openModule(item.id)} aria-label={`${item.id} ${isEn ? item.enTitle : item.title}`}>
-                <ModuleIcon aria-hidden="true" />
-                <span>{isEn ? item.enTitle : item.title}</span>
+              const spots = [
+                { left:'40.54%', top:'1%', width:'18.92%', height:'19.62%' },
+                { left:'60.14%', top:'6.26%', width:'18.92%', height:'19.62%' },
+                { left:'74.47%', top:'20.59%', width:'18.92%', height:'19.62%' },
+                { left:'79.73%', top:'40.19%', width:'18.92%', height:'19.62%' },
+                { left:'74.47%', top:'59.79%', width:'18.92%', height:'19.62%' },
+                { left:'60.14%', top:'74.12%', width:'18.92%', height:'19.62%' },
+                { left:'40.54%', top:'79.73%', width:'18.92%', height:'19.62%' },
+                { left:'20.94%', top:'74.12%', width:'18.92%', height:'19.62%' },
+                { left:'6.61%', top:'59.79%', width:'18.92%', height:'19.62%' },
+                { left:'1.35%', top:'40.19%', width:'18.92%', height:'19.62%' },
+                { left:'6.61%', top:'20.59%', width:'18.92%', height:'19.62%' },
+                { left:'20.94%', top:'6.26%', width:'18.92%', height:'19.62%' },
+              ]
+              return <button key={item.id} type="button" className="dashboard-diagram-hotspot" style={spots[index]}
+                data-tooltip={isEn ? item.enSub : item.sub}
+                title={isEn ? item.enSub : item.sub}
+                onClick={() => openModule(item.id)}
+                aria-label={`${item.id}: ${isEn ? item.enTitle : item.title}. ${isEn ? item.enSub : item.sub}`}>
+                <span className="visually-hidden">{isEn ? item.enTitle : item.title}</span>
               </button>
             })}
-            <button className="dashboard-honeycomb-core" type="button" onClick={() => navigateTo('projects')} aria-label={isEn ? "Open project assessment" : "ورود به ارزیابی فنی و اقتصادی پروژه‌ها"}>
-              <FileChartColumn aria-hidden="true" />
-              <strong>{isEn ? "Technical & Economic Project Assessment" : "ارزیابی فنی و اقتصادی پروژه‌ها"}</strong>
-            </button>
+            <button type="button" className="dashboard-diagram-core-hotspot"
+              data-tooltip={isEn ? "Open project feasibility and investment assessment" : "ورود به ارزیابی فنی و اقتصادی پروژه‌ها"}
+              title={isEn ? "Open project assessment" : "ورود به ارزیابی پروژه‌ها"}
+              onClick={() => navigateTo('projects')}
+              aria-label={isEn ? "Open project assessment" : "ورود به ارزیابی فنی و اقتصادی پروژه‌ها"} />
           </div>
         </div>
       </section>
