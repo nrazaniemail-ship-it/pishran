@@ -113,10 +113,9 @@ jobs:
             sleep 10
             adb shell dumpsys activity activities | tee "$RUNNER_TEMP/pishran-activity.txt"
             adb logcat -d -v time > "$RUNNER_TEMP/pishran-logcat.txt"
-            if grep -q "FATAL EXCEPTION" "$RUNNER_TEMP/pishran-logcat.txt"; then
-              grep -A 25 -B 5 "FATAL EXCEPTION" "$RUNNER_TEMP/pishran-logcat.txt"
-              exit 1
-            fi
+            # Keep this as a single shell assertion: the emulator action executes
+            # script lines individually, so multiline if/fi blocks are not portable.
+            ! grep -q "FATAL EXCEPTION" "$RUNNER_TEMP/pishran-logcat.txt"
             grep -E "mResumedActivity|topResumedActivity" "$RUNNER_TEMP/pishran-activity.txt" | grep -F "com.pishran.app/.MainActivity"
 
       - name: Upload emulator diagnostics
