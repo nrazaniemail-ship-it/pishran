@@ -290,6 +290,14 @@ export function buildProductionBridgeDraftsFromSalesProduct(
   return buildProductionStageTransferDrafts(schedule, evidenceByPeriod)
 }
 
+/** Idempotently replace generated bridge rows by deterministic ID while preserving unrelated/manual transfers. */
+export function upsertProductionBridgeTransferDrafts<T extends { id: string }>(
+ existing: T[], generated: T[],
+): T[] {
+ const generatedIds = new Set(generated.map(row => row.id))
+ return [...existing.filter(row => !generatedIds.has(row.id)), ...generated]
+}
+
 export type ProductionStageTransferLink = {
   sourceProductId: string
   destinationProductId: string
