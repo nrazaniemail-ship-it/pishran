@@ -62,6 +62,32 @@ try {
   assert.equal(await moduleMenuButton.getAttribute('aria-expanded'), 'false', 'Escape must close the module menu')
   console.log('PASS: module menu navigation and XLSX/PDF export controls')
 
+  await moduleMenuButton.click()
+  await moduleMenu.getByRole('menuitem').filter({ hasText: 'MOD-01' }).click()
+  const expectedModuleIds = Array.from({ length: 12 }, (_, index) => `MOD-${String(index + 1).padStart(2, '0')}`)
+  for (const [index, expectedId] of expectedModuleIds.entries()) {
+    await page.waitForFunction(id => document.querySelector('[data-module-export-root] .module-id')?.textContent?.trim() === id, expectedId)
+    assert.equal(await page.locator('[data-module-export-root] .module-id').innerText(), expectedId,
+      `Continue sequence must display ${expectedId} at step ${index + 1}`)
+    const continueButton = page.locator('.module-continue-actions button')
+    const expectedLabel = index === expectedModuleIds.length - 1 ? 'پایان مرور ماژول‌ها' : 'ادامه بده'
+    assert.equal((await continueButton.innerText()).trim(), expectedLabel,
+      `Continue control label must be correct on ${expectedId}`)
+    await continueButton.click()
+    if (index < expectedModuleIds.length - 1) {
+      await page.waitForFunction(id => document.querySelector('[data-module-export-root] .module-id')?.textContent?.trim() === id,
+        expectedModuleIds[index + 1])
+    }
+  }
+  await page.waitForFunction(() => document.querySelector('.app-page-dashboard .hero') !== null &&
+    document.querySelector('[data-module-export-root]') === null)
+  assert.equal(await page.locator('.app-page-dashboard .hero').count(), 1,
+    'finishing MOD-12 must return to the dashboard')
+  assert.equal(await page.locator('[data-module-export-root]').count(), 0,
+    'module workspace must be unmounted after finishing MOD-12')
+  assert.deepEqual(pageErrors, [], 'module sequence must not produce browser runtime errors')
+  console.log('PASS: real browser Continue navigation MOD-01 through MOD-12 and dashboard return')
+
   const result = await page.evaluate(async ({ storeUrl, projectsUrl, backupUrl }) => {
     const { localStore } = await import(storeUrl)
     const projects = await import(projectsUrl)
