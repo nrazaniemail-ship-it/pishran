@@ -203,6 +203,93 @@ function empty(issues: string[]): InventoryFlowSchedule {
 }
 
 
+export type ProductionSalesProductInput = {
+  productId: string
+  unitOfMeasure?: string
+  periods: {
+    period: string
+    rawMaterialPurchasesQuantity: number | null
+    rawMaterialPurchasesValue: number | null
+    rawMaterialConsumptionQuantity: number | null
+    normalRawMaterialWasteQuantity: number | null
+    abnormalRawMaterialWasteQuantity: number | null
+    unitsStarted: number | null
+    unitsCompleted: number | null
+    closingWipQuantity: number | null
+    materialCompletionPercent: number | null
+    conversionCompletionPercent: number | null
+    conversionCost: number | null
+    openingRawMaterialQuantity: number | null
+    openingRawMaterialValue: number | null
+    openingWipQuantity: number | null
+    openingWipMaterialValue: number | null
+    openingWipConversionValue: number | null
+  }[]
+}
+
+/**
+ * Adapts one product's explicitly entered production-period form into the
+ * validated inventory-flow bridge. No missing amount is defaulted to zero;
+ * opening balances come only from the first period and all period inputs are
+ * required. The WIP-to-finished-goods destination must be the selected saleable
+ * product so a valid flow cannot be routed to another product by accident.
+ */
+export function buildProductionBridgeDraftsFromSalesProduct(
+  salesProduct: ProductionSalesProductInput,
+  evidenceByPeriod: ProductionStageTransferEvidence[],
+): InventoryStageTransfer[] {
+  if (!salesProduct.productId?.trim() || !Array.isArray(salesProduct.periods) || !salesProduct.periods.length)
+    throw new Error('A saleable product and at least one production period are required for the production bridge.')
+  const fields = [
+    'rawMaterialPurchasesQuantity','rawMaterialPurchasesValue','rawMaterialConsumptionQuantity',
+    'normalRawMaterialWasteQuantity','abnormalRawMaterialWasteQuantity','unitsStarted','unitsCompleted',
+    'closingWipQuantity','materialCompletionPercent','conversionCompletionPercent','conversionCost',
+  ] as const
+  const first = salesProduct.periods[0]
+  const openingFields = [
+    'openingRawMaterialQuantity','openingRawMaterialValue','openingWipQuantity',
+    'openingWipMaterialValue','openingWipConversionValue',
+  ] as const
+  const opening = openingFields.map(key => first[key])
+  if (opening.some(value => value === null || !finiteNonNegative(value)))
+    throw new Error('The first production period requires explicit raw-material and WIP opening quantities and values.')
+  const periodRows = salesProduct.periods
+  for (let index = 0; index < periodRows.length; index++) {
+    const row = periodRows[index]
+    if (!row.period?.trim() || fields.some(key => row[key] === null || !finiteNonNegative(row[key] as number)))
+      throw new Error('Production period ' + (index + 1) + ' is incomplete; every inventory-flow quantity, value and completion rate must be explicitly entered.')
+    if ((row.materialCompletionPercent as number) > 100 || (row.conversionCompletionPercent as number) > 100)
+      throw new Error('Production period ' + (index + 1) + ' WIP completion percentages must be between 0 and 100.')
+    if (index > 0 && periodRows[index - 1].period === row.period)
+      throw new Error('Production period labels must be unique.')
+  }
+  if (evidenceByPeriod.length !== periodRows.length ||
+      evidenceByPeriod.some((evidence, index) => evidence.period !== index + 1))
+    throw new Error('Explicit production bridge evidence must match every production period in order.')
+  if (evidenceByPeriod.some(evidence => evidence.wipToFinishedGoods.destinationProductId !== salesProduct.productId))
+    throw new Error('Every WIP-to-finished-goods bridge must target the selected saleable product.')
+  const schedule = buildInventoryFlowSchedule({
+    openingRawMaterialQuantity: first.openingRawMaterialQuantity as number,
+    openingRawMaterialValue: first.openingRawMaterialValue as number,
+    openingWipQuantity: first.openingWipQuantity as number,
+    openingWipMaterialValue: first.openingWipMaterialValue as number,
+    openingWipConversionValue: first.openingWipConversionValue as number,
+    rawMaterialPurchasesQuantity: periodRows.map(row => row.rawMaterialPurchasesQuantity as number),
+    rawMaterialPurchasesValue: periodRows.map(row => row.rawMaterialPurchasesValue as number),
+    rawMaterialConsumptionQuantity: periodRows.map(row => row.rawMaterialConsumptionQuantity as number),
+    normalRawMaterialWasteQuantity: periodRows.map(row => row.normalRawMaterialWasteQuantity as number),
+    abnormalRawMaterialWasteQuantity: periodRows.map(row => row.abnormalRawMaterialWasteQuantity as number),
+    unitsStarted: periodRows.map(row => row.unitsStarted as number),
+    unitsCompleted: periodRows.map(row => row.unitsCompleted as number),
+    closingWipQuantity: periodRows.map(row => row.closingWipQuantity as number),
+    materialCompletionPercent: periodRows.map(row => row.materialCompletionPercent as number),
+    conversionCompletionPercent: periodRows.map(row => row.conversionCompletionPercent as number),
+    conversionCost: periodRows.map(row => row.conversionCost as number),
+  })
+  if (!schedule.valid) throw new Error(schedule.issues.join(' '))
+  return buildProductionStageTransferDrafts(schedule, evidenceByPeriod)
+}
+
 export type ProductionStageTransferLink = {
   sourceProductId: string
   destinationProductId: string
