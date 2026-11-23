@@ -110,8 +110,8 @@ const controlledDraft={
  sales:[{...base.sales[0],unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:20,openingFinishedGoodsValue:1150*20/110}:({...row}))},{...base.sales[0],productId:'P2',unitOfMeasure:'kg',periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsQuantity:40,openingFinishedGoodsValue:(100+1000+1150*10/110)*40/120}:({...row}))}],
  productionCosts:[...base.productionCosts,{...base.productionCosts[0],id:'cost-p2',productId:'P2'}],
  wasteLedgerEntries:[
-  {id:'WN-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:5,unitCost:10,amount:50},
-  {id:'WA-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:2,unitCost:10,amount:20},
+  {id:'WN-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'normal',quantity:5,unitCost:10,amount:50,sourceReference:'normal-waste-report-p1',sourceVerified:true},
+  {id:'WA-1',period:1,productId:'P1',costCentreId:'CC-A',classification:'abnormal',quantity:2,unitCost:10,amount:20,sourceReference:'abnormal-incident-report-p1',sourceVerified:true},
  ],
  productionTransfers:[
   {id:'TR-1',period:1,sourceProductId:'P1',destinationProductId:'P2',sourceCostCentreId:'CC-A',destinationCostCentreId:'CC-B',quantity:10,sourceUnit:'kg',destinationUnit:'kg',conversionFactor:1,costAmount:1150*10/110},
