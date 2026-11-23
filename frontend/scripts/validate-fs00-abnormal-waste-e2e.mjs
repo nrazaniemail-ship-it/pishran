@@ -192,3 +192,115 @@ assert.ok(statements.every(row => row.balanceSheet.reconciled),
 assert.deepEqual(statements.map(row => row.balanceSheet.netWorkingCapital), [200, 220, 215])
 
 console.log('PASS: FS-00 end-to-end abnormal-waste source → append-only journal → reload → P2 reversal/P3 adjustment → CPP/CPS/COGS/WC → three statements, with no duplicate posting and period-scoped effects.')
+
+
+// Combined CPP/CPS + abnormal-waste correction scenario: the verified CPP trace is
+// allocated through production/WIP/finished goods first; append-only waste documents
+// then correct only the raw-material and abnormal-expense ledgers.
+const cppTraceSource = await readFile(new URL('../src/features/projects/cppCpsCostTraceability.ts', import.meta.url), 'utf8')
+const cppTrace = await import(dataUrl(transpile(cppTraceSource)))
+const combinedCppLedger = cppTrace.buildCppCpsTraceLedger([{
+  id: 'FS00-E2E-ENERGY-CPP', label: 'Verified incremental conversion energy',
+  category: 'energy', basis: 'period-total', behaviour: 'variable',
+  fixedPercent: 0, variablePercent: 100, productId: 'P1',
+  costCentreId: 'CC-ENERGY', allocationMethod: 'direct-product',
+  baseCostCoverage: 'excluded', periodAmounts: [100, 50, 25],
+  baseCoveredAmounts: [0, 0, 0],
+  source: { status: 'verified', reference: 'ENERGY-INVOICES-P1-P3',
+    description: 'Verified supplier invoices', reliability: 'primary-document' },
+}], 3)
+assert.equal(combinedCppLedger.valid, true, combinedCppLedger.issues.join('; '))
+assert.deepEqual(combinedCppLedger.completeIncrementalByPeriod, [100, 50, 25])
+const cppBound = integration.bindCppCpsTraceLedgerToProductSchedule(
+  sourceSchedule, combinedCppLedger, [0, 1, 2],
+)
+assert.equal(cppBound.valid, true, cppBound.issues.join('; '))
+assert.deepEqual(cppBound.incrementalCppByPeriod, [100, 50, 25])
+assert.deepEqual(cppBound.schedule.rows.map(row => row.productionCost), [1100, 850, 825],
+  'Verified incremental CPP must enter completed production once in its own period.')
+assert.deepEqual(cppBound.schedule.periodWipInventoryValue, [0, 0, 0])
+const combinedOriginals = control.buildAbnormalWasteAccountingPostings([], 3, cppBound.schedule.rows)
+assert.equal(combinedOriginals.valid, true, combinedOriginals.issues.join('; '))
+assert.deepEqual(combinedOriginals.postings.map(row => row.amount), [20, 10],
+  'The abnormal-waste journal must retain the source weighted-average raw-material valuation, not absorb CPP again.')
+const combinedProjectId = 'FS00-E2E-CPP-CPS-ABNORMAL-WASTE-3P'
+const combinedSaved = await store.persistStageInventoryAccountingPostings(combinedProjectId, combinedOriginals.postings)
+assert.equal(combinedSaved.insertedCount, 2)
+const combinedReplay = await store.persistStageInventoryAccountingPostings(combinedProjectId, combinedOriginals.postings)
+assert.equal(combinedReplay.insertedCount, 0)
+const combinedReversal = await store.appendStageInventoryAccountingReversal(
+  combinedProjectId, combinedOriginals.postings[0].id, 'REV-COMBINED-AW-P1-IN-P2', 2,
+)
+assert.equal(combinedReversal.insertedCount, 1)
+const combinedAdjustment = await store.appendStageInventoryAccountingAdjustment(
+  combinedProjectId, combinedOriginals.postings[1].id, {
+    ...combinedOriginals.postings[1], id: 'ADJ-COMBINED-AW-P2-IN-P3',
+    period: 3, sourceReference: 'COMBINED-AW-ADJUSTMENT-P3', amount: 5,
+  },
+)
+assert.equal(combinedAdjustment.insertedCount, 1)
+const combinedReload = await store.loadStageInventoryAccountingPostings(combinedProjectId)
+assert.equal(combinedReload.entries.length, 4)
+const combinedCorrected = integration.applyStageJournalCorrectionsToProductSchedule(
+  cppBound.schedule, combinedReload.entries, [0, 1, 2],
+)
+assert.equal(combinedCorrected.valid, true, combinedCorrected.issues.join('; '))
+assert.deepEqual(combinedCorrected.schedule.periodAbnormalWasteExpense, [20, -10, 5])
+assert.deepEqual(combinedCorrected.schedule.periodRawMaterialInventoryValue, [0, 20, 15])
+assert.deepEqual(combinedCorrected.schedule.rows.map(row => row.productionCost), [1100, 850, 825],
+  'Abnormal-waste journal corrections must never alter CPP/CPS production cost.')
+assert.deepEqual(combinedCorrected.schedule.periodWipInventoryValue, cppBound.schedule.periodWipInventoryValue)
+assert.deepEqual(combinedCorrected.schedule.periodCostOfSales, cppBound.schedule.periodCostOfSales,
+  'Abnormal-waste correction documents must not change COGS.')
+const combinedWorkingCapital = schedule => schedule.rows.map((row, index) =>
+  schedule.periodRawMaterialInventoryValue[index] +
+  schedule.periodWipInventoryValue[index] + row.closingInventoryValue)
+const combinedBaseFinance = engine.calculateIntegratedPeriodicFinance(
+  makeFinanceInput(cppBound.schedule),
+)
+const combinedCorrectedFinance = engine.calculateIntegratedPeriodicFinance(
+  makeFinanceInput(combinedCorrected.schedule),
+)
+assert.equal(combinedBaseFinance.valid, true, combinedBaseFinance.warnings.join('; '))
+assert.equal(combinedCorrectedFinance.valid, true, combinedCorrectedFinance.warnings.join('; '))
+const closeCombined = (actual, expected, message) => assert.ok(
+  Math.abs(actual - expected) < 1e-7 * Math.max(1, Math.abs(expected)),
+  (message ?? 'Expected ' + expected + ', received ' + actual),
+)
+for (let index = 0; index < 3; index++) {
+  closeCombined(combinedBaseFinance.rows[index].variableCost, cppBound.schedule.periodCostOfSales[index],
+    'Periodic COGS must equal the CPP-revalued product schedule in period ' + (index + 1))
+  closeCombined(combinedCorrectedFinance.rows[index].variableCost, combinedBaseFinance.rows[index].variableCost,
+    'Abnormal-waste correction must not reclassify COGS in period ' + (index + 1))
+  closeCombined(combinedCorrectedFinance.rows[index].closingWorkingCapital,
+    combinedWorkingCapital(combinedCorrected.schedule)[index],
+    'Raw materials, WIP and finished goods must enter net working capital once in period ' + (index + 1))
+}
+assert.deepEqual(combinedBaseFinance.rows.map(row => row.ebit), [700, 734, 768.8])
+assert.deepEqual(combinedCorrectedFinance.rows.map(row => row.ebit), [700, 754, 763.8])
+assert.deepEqual(combinedCorrectedFinance.rows.map(row => row.projectFreeCashFlow),
+  combinedBaseFinance.rows.map(row => row.projectFreeCashFlow),
+  'Each abnormal-waste correction is non-cash and is offset by the corresponding same-period inventory/WC movement.')
+assert.deepEqual(combinedCorrectedFinance.rows.map(row => row.cfads),
+  combinedBaseFinance.rows.map(row => row.cfads))
+assert.deepEqual(combinedCorrectedFinance.rows.map(row => row.closingCash),
+  combinedBaseFinance.rows.map(row => row.closingCash))
+const combinedOpening = {
+  cash: 0, debt: 0, netFixedAssets: 0, netWorkingCapital: 200,
+  rawMaterialsInventory: 0, workInProgressInventory: 0, finishedGoodsInventory: 200,
+  paidInCapital: 200, retainedEarnings: 0, grants: 0,
+}
+const combinedBaseStatements = engine.buildPeriodicThreeFinancialStatements(combinedBaseFinance, combinedOpening)
+const combinedStatements = engine.buildPeriodicThreeFinancialStatements(combinedCorrectedFinance, combinedOpening)
+assert.equal(combinedStatements.length, 3)
+assert.deepEqual(combinedStatements.map(row => row.incomeStatement.abnormalWasteExpense), [20, -10, 5])
+assert.deepEqual(combinedStatements.map(row => row.balanceSheet.rawMaterialsInventory), [0, 20, 15])
+assert.deepEqual(combinedStatements.map(row => row.cashFlowStatement.operatingCashFlow),
+  combinedBaseStatements.map(row => row.cashFlowStatement.operatingCashFlow))
+assert.ok(combinedStatements.every(row => row.balanceSheet.reconciled),
+  'The combined CPP/CPS + waste correction scenario must reconcile all three statements in all periods.')
+assert.deepEqual(combinedStatements.map(row => row.balanceSheet.netWorkingCapital),
+  combinedWorkingCapital(combinedCorrected.schedule))
+assert.deepEqual(combinedReload.entries.map(row => row.documentType),
+  ['original', 'original', 'reversal', 'adjustment'])
+console.log('PASS: combined three-period CPP/CPS + persisted abnormal-waste originals/reversal/adjustment → inventory/COGS/WC → reconciled income statement, cash flow and balance sheet; no duplicate posting.')
