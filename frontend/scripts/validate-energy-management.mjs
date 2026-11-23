@@ -16,3 +16,28 @@ test('MOD-02 stores the selected electricity bill as an auditable energy-cost so
 test('water balance history is persisted separately from energy totals',async()=>{const {saveWaterBalance,WATER_BALANCE_KEY}=await import('../src/features/modules/energyManagementWorkflow.js');const m=new Map(),s={get:async k=>m.get(k),set:async(k,v)=>m.set(k,v),update:async(k,f)=>{const v=f(m.get(k));m.set(k,v);return v}};const saved=await saveWaterBalance({freshwaterM3:'90',externalReuseM3:'10',internalRecirculationM3:'150',dischargeM3:'40',evaporationM3:'30',productIncorporationM3:'20',inventoryIncreaseM3:'10',productionTon:'10'},s,'2026-11-23T14:00:00Z');assert.equal(saved.boundaryInput,100);assert.equal(m.get(WATER_BALANCE_KEY).length,1);assert.equal(m.has(ENERGY_DATA_KEY),false)})
 
 test('electricity bill provenance follows the bill into the energy performance record',()=>{const row=validateEnergyRecord({resource:'electricity',period:'1405/07',site:'Plant',seu:'Rolling mill',consumption:'12000',production:'1000',cost:'500000',sourceBillId:'EB-99',sourceBillNumber:'B-2026-07'});assert.equal(row.sourceBillId,'EB-99');assert.equal(row.sourceBillNumber,'B-2026-07');assert.equal(row.intensity,12)})
+
+test('gas baseline EnPI compares thermal energy when both periods have calorific values',()=>{
+ const base={consumption:1000,production:10,calorificValue:10,gasEnergyKwh:10000}
+ const actual={consumption:1100,production:10,gasEnergyKwh:9900}
+ const result=calculateEnergyPerformance({resource:'gas',baseline:base,actual})
+ assert.equal(result.comparisonBasis,'thermal-energy')
+ assert.equal(result.baselineIntensity,1000)
+ assert.equal(result.actualIntensity,990)
+ assert.equal(result.savings,100)
+ assert.equal(result.comparisonUnit,'kWh')
+})
+test('gas EnPI warns and falls back to Nm3 when either calorific value is unavailable',()=>{
+ const result=calculateEnergyPerformance({resource:'gas',baseline:{consumption:1000,production:10},actual:{consumption:900,production:10}})
+ assert.equal(result.comparisonBasis,'gas-volume-fallback')
+ assert.equal(result.savings,100)
+ assert.equal(result.warnings.length,1)
+})
+test('freshwater sources are itemized and reconciled without double counting',async()=>{
+ const {analyzeWaterBalance}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const result=analyzeWaterBalance({municipalWaterM3:40,groundwaterM3:30,surfaceWaterM3:20,otherFreshwaterM3:10,externalReuseM3:25,internalRecirculationM3:150,dischargeM3:50,evaporationM3:30,productIncorporationM3:20,inventoryIncreaseM3:15,productionTon:10})
+ assert.equal(result.freshwaterM3,100)
+ assert.equal(result.boundaryInput,125)
+ assert.deepEqual(result.freshwaterSources,{municipalWaterM3:40,groundwaterM3:30,surfaceWaterM3:20,otherFreshwaterM3:10})
+ assert.equal(result.internalRecirculationM3,150)
+})
