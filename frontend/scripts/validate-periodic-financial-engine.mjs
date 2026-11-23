@@ -501,3 +501,61 @@ assert.equal(mismatchedProductPeriodTotals.valid,false,
 console.log('PASS: exact-period product revenue and cost-of-sales overrides reconcile to fiscal-year totals')
 
 console.log('PASS: fixed-investment and pre-production timing cannot be verified when acquisitions fall outside the modeled horizon')
+
+
+
+// Abnormal waste is a period expense, never inventory/COGS, and must hit tax, CFADS,
+// project/equity cash flow and retained earnings exactly once.
+const abnormalWasteFinanceCase=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,0],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  periodAbnormalWasteExpense:[110,0,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],
+  annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
+  annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],openingWorkingCapital:0,openingCash:500,
+  loans:[],discountRatePercent:10,
+});
+assert.equal(abnormalWasteFinanceCase.valid,true,abnormalWasteFinanceCase.warnings.join('; '));
+const abnormalWastePeriod=abnormalWasteFinanceCase.rows[0];
+assert.equal(abnormalWastePeriod.abnormalWasteExpense,110);
+assert.equal(abnormalWastePeriod.ebit,-110,
+  'Abnormal waste must reduce EBIT once and must not be included in variable/fixed cost buckets');
+assert.equal(abnormalWastePeriod.variableCost,0);
+assert.equal(abnormalWastePeriod.fixedCost,0);
+assert.equal(abnormalWastePeriod.tax,0,
+  'A loss caused by abnormal waste must not create an unsupported immediate tax refund');
+assert.equal(abnormalWastePeriod.taxLossCarryForward,110,
+  'Abnormal-waste expense must reduce taxable profit and increase the tax-loss carry-forward');
+assert.equal(abnormalWastePeriod.cfads,-110,
+  'Abnormal waste must reduce CFADS exactly once');
+assert.equal(abnormalWastePeriod.projectFreeCashFlow,-110,
+  'Abnormal waste must reduce project free cash flow exactly once');
+assert.equal(abnormalWastePeriod.equityFreeCashFlow,-110,
+  'Abnormal waste must reduce equity free cash flow exactly once');
+assert.equal(abnormalWastePeriod.closingCash,390,
+  'Abnormal waste cash payment must reduce closing cash exactly once');
+assert.equal(abnormalWasteFinanceCase.rows[1].taxLossCarryForward,110,
+  'Tax loss from abnormal waste must roll forward to the next period');
+const abnormalWasteStatements=engine.buildPeriodicThreeFinancialStatements(abnormalWasteFinanceCase,{
+  cash:500,debt:0,netFixedAssets:0,netWorkingCapital:0,paidInCapital:500,retainedEarnings:0,
+});
+assert.equal(abnormalWasteStatements.length,periods.length);
+assert.equal(abnormalWasteStatements[0].incomeStatement.ebit,-110);
+assert.equal(abnormalWasteStatements[0].incomeStatement.netIncome,-110);
+assert.equal(abnormalWasteStatements[0].cashFlowStatement.closingCash,390);
+assert.equal(abnormalWasteStatements[0].balanceSheet.retainedEarnings,-110);
+assert.ok(abnormalWasteStatements.every(row=>row.balanceSheet.reconciled),
+  'Abnormal-waste expense must reconcile through retained earnings and the balance sheet without a plug');
+const incompleteAbnormalWasteSchedule=engine.calculateIntegratedPeriodicFinance({
+  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+  annualRevenue:[0,0,0],annualVariableCost:[0,0,0],annualFixedCost:[0,0,0],
+  periodAbnormalWasteExpense:[110,0],
+  annualDepreciation:[0,0,0],annualFixedInvestment:[0,0,0],
+  annualPreOperatingCost:[0,0,0],annualMaintenanceCapex:[0,0,0],
+  annualTaxRates:[25,25,25],annualEquityContributions:[0,0,0],
+  workingCapitalByPeriod:[0,0,0],loans:[],
+});
+assert.equal(incompleteAbnormalWasteSchedule.valid,false,
+  'An incomplete abnormal-waste schedule must block finance results');
+console.log('PASS: abnormal waste is expensed once through EBIT, tax losses, CFADS, project/equity cash flow and reconciled three statements');
