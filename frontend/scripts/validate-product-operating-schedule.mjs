@@ -514,6 +514,7 @@ const multiPeriodIntegrated=financialEngine.calculateIntegratedPeriodicFinance({
  periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
  annualRevenue:multiPeriodSchedule.annualRevenue,periodRevenue:multiPeriodSchedule.periodRevenue,
  annualVariableCost:multiPeriodSchedule.annualCostOfSales,periodVariableCost:multiPeriodSchedule.periodCostOfSales,
+ periodAbnormalWasteExpense:multiPeriodSchedule.periodAbnormalWasteExpense,
  annualFixedCost:[0],annualDepreciation:[0],annualFixedInvestment:[0],
  annualPreOperatingCost:[0],annualMaintenanceCapex:[0],annualTaxRates:[0],
  annualEquityContributions:[0],workingCapitalByPeriod:multiPeriodInventory,
@@ -549,4 +550,48 @@ for(let index=0;index<periods.length;index++){
  close(bs.netWorkingCapital,multiPeriodInventory[index])
  close(multiPeriodStatements[index].movementChecks.netWorkingCapital,0)
 }
+const reversedWasteFinishedGoods=multiPeriodFinishedGoods
+const reversedWasteInventory=periods.map((_,index)=>
+ reversedWasteSchedule.schedule.periodRawMaterialInventoryValue[index]+
+ reversedWasteSchedule.schedule.periodWipInventoryValue[index]+reversedWasteFinishedGoods[index])
+const reversedWasteFinance=financialEngine.calculateIntegratedPeriodicFinance({
+ periods,fiscalYearStartMonth:1,dayCountBasis:365,cashFlowTiming:'period-end',
+ annualRevenue:reversedWasteSchedule.schedule.annualRevenue,
+ periodRevenue:reversedWasteSchedule.schedule.periodRevenue,
+ annualVariableCost:reversedWasteSchedule.schedule.annualCostOfSales,
+ periodVariableCost:reversedWasteSchedule.schedule.periodCostOfSales,
+ periodAbnormalWasteExpense:reversedWasteSchedule.schedule.periodAbnormalWasteExpense,
+ annualFixedCost:[0],annualDepreciation:[0],annualFixedInvestment:[0],
+ annualPreOperatingCost:[0],annualMaintenanceCapex:[0],annualTaxRates:[0],
+ annualEquityContributions:[0],workingCapitalByPeriod:reversedWasteInventory,
+ rawMaterialsInventoryByPeriod:reversedWasteSchedule.schedule.periodRawMaterialInventoryValue,
+ workInProgressInventoryByPeriod:reversedWasteSchedule.schedule.periodWipInventoryValue,
+ finishedGoodsInventoryByPeriod:reversedWasteFinishedGoods,
+ openingWorkingCapital:multiPeriodOpeningInventory,openingCash:0,loans:[],discountRatePercent:10,
+})
+assert.equal(reversedWasteFinance.valid,true,reversedWasteFinance.warnings.join('; '))
+assert.deepEqual(reversedWasteFinance.rows.map(row=>row.abnormalWasteExpense),[22,-22])
+close(reversedWasteFinance.rows[0].ebit,multiPeriodIntegrated.rows[0].ebit,
+ 'The later reversal must not rewrite the original posting-period EBIT.')
+close(reversedWasteFinance.rows[1].ebit-multiPeriodIntegrated.rows[1].ebit,22,
+ 'The reversal credit must increase EBIT only in its own period.')
+close(reversedWasteFinance.rows[1].changeInWorkingCapital-multiPeriodIntegrated.rows[1].changeInWorkingCapital,22,
+ 'The restored raw-material balance must enter working capital only from the reversal period.')
+close(reversedWasteFinance.rows[1].projectFreeCashFlow,multiPeriodIntegrated.rows[1].projectFreeCashFlow,
+ 'The non-cash reversal must not create a cash inflow when the matching inventory increase is already in working capital.')
+close(reversedWasteFinance.rows[1].closingCash,multiPeriodIntegrated.rows[1].closingCash)
+const reversedWasteStatements=financialEngine.buildPeriodicThreeFinancialStatements(reversedWasteFinance,{
+ cash:0,debt:0,netFixedAssets:0,netWorkingCapital:multiPeriodOpeningInventory,
+ rawMaterialsInventory:1000,workInProgressInventory:0,finishedGoodsInventory:100,
+ paidInCapital:multiPeriodOpeningInventory,
+})
+assert.equal(reversedWasteStatements.length,2)
+assert.ok(reversedWasteStatements.every(row=>row.balanceSheet.reconciled),
+ 'The abnormal-waste reversal must reconcile through all three statements without a balance-sheet plug.')
+close(reversedWasteStatements[0].incomeStatement.netIncome,multiPeriodStatements[0].incomeStatement.netIncome)
+close(reversedWasteStatements[1].incomeStatement.netIncome-multiPeriodStatements[1].incomeStatement.netIncome,22)
+close(reversedWasteStatements[1].balanceSheet.rawMaterialsInventory-multiPeriodStatements[1].balanceSheet.rawMaterialsInventory,22)
+close(reversedWasteStatements[1].balanceSheet.netWorkingCapital-multiPeriodStatements[1].balanceSheet.netWorkingCapital,22)
+close(reversedWasteStatements[1].balanceSheet.retainedEarnings-multiPeriodStatements[1].balanceSheet.retainedEarnings,22)
+close(reversedWasteStatements[1].cashFlowStatement.closingCash-multiPeriodStatements[1].cashFlowStatement.closingCash,0)
 console.log('PASS: two-period raw materials, WIP, finished goods, single-post COGS, working capital and three statements reconcile.')
