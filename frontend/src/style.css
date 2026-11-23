@@ -1448,6 +1448,8 @@ input,select,textarea{color:var(--text)}
 .module-workspace-hero p{margin:0 0 7px;color:var(--muted)}
 .module-workspace-hero small{color:var(--muted)}
 .module-workspace-card{padding:22px;border:1px solid var(--workspace-border,var(--line));border-radius:18px;background:var(--workspace-surface,var(--surface))}
+.module-continue-actions{display:flex;justify-content:center;margin:22px 0 8px;padding:0 12px}.module-continue-actions button{min-width:160px;min-height:46px;font-weight:800}
+@media(max-width:560px){.module-continue-actions button{width:100%;min-height:48px}}
 .module-workspace-card .section-head{align-items:flex-start}
 .module-workspace-card .section-head p{margin:6px 0 0;color:var(--muted);font-size:12px}
 .module-create-form{display:grid;gap:9px;margin:20px 0}
