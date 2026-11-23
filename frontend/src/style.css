@@ -1699,7 +1699,7 @@ input,select,textarea{color:var(--text)}
 /* Supplied 3D light module diagram with accessible interactive hotspots. */
 .dashboard-image-art{width:62%;max-height:none;overflow:visible;display:flex;align-items:center;justify-content:center;padding:4px;flex-shrink:1}
 .dashboard-diagram-stage{position:relative;width:min(100%,690px);aspect-ratio:1/1;flex:0 1 auto;overflow:visible}
-.dashboard-module-image{display:block;width:100%;height:100%;object-fit:contain;border-radius:0}
+.dashboard-module-image{display:block;width:100%;height:100%;max-height:none;object-fit:contain;border-radius:0}
 .dashboard-diagram-hotspot,.dashboard-diagram-core-hotspot{position:absolute;display:block;padding:0;border:0;background:transparent;overflow:visible;cursor:pointer;z-index:1}
 .dashboard-diagram-hotspot::before,.dashboard-diagram-core-hotspot::before{content:"";position:absolute;inset:0;pointer-events:none;clip-path:polygon(100% 50%,75% 91.7%,25% 91.7%,0 50%,25% 8.3%,75% 8.3%);background:transparent;transition:background .14s ease,filter .14s ease}
 .dashboard-diagram-hotspot:hover::before,.dashboard-diagram-hotspot:focus-visible::before,.dashboard-diagram-core-hotspot:hover::before,.dashboard-diagram-core-hotspot:focus-visible::before{background:rgba(255,255,255,.13);filter:drop-shadow(0 0 5px rgba(35,79,104,.65))}
