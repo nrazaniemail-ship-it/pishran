@@ -5,7 +5,8 @@ export interface BackupPreferences { enabled: boolean; interval: BackupInterval;
 const PREF_KEY='pishran_backup_preferences_v1'
 const HANDLE_DB='pishran_backup_handles'
 const HANDLE_STORE='handles'
-const UNDO_KEY='pishran_restore_undo_v1'
+const UNDO_KEY='pishran-restore-undo-v1'
+const LEGACY_UNDO_KEY='pishran_restore_undo_v1'
 const INTERVALS:Record<BackupInterval,number>={ '15m':900000,'1h':3600000,'6h':21600000,'12h':43200000,'1d':86400000,'1w':604800000 }
 const DEFAULTS:BackupPreferences={enabled:false,interval:'1d',lastAt:'',lastSize:0,lastKind:'',folderName:''}
 type BackupRecord={key:string;value:unknown}
@@ -86,14 +87,14 @@ export async function restoreBackup(payload:PishranBackup):Promise<number>{
  const previousPreferences=await getBackupPreferences()
  localStorage.setItem(UNDO_KEY,JSON.stringify({at:new Date().toISOString(),snapshot:current,backupPreferences:previousPreferences}))
  await localStore.replaceAll(payload.records)
- if(payload.backupPreferences)await saveBackupPreferences({...previousPreferences,enabled:payload.backupPreferences.enabled,interval:payload.backupPreferences.interval,lastAt:'',lastSize:0,lastKind:''})
+ await saveBackupPreferences(payload.backupPreferences ? {...previousPreferences,enabled:payload.backupPreferences.enabled,interval:payload.backupPreferences.interval,lastAt:'',lastSize:0,lastKind:''} : previousPreferences)
  return payload.records.length
 }
-export async function canUndoRestore():Promise<boolean>{try{return Array.isArray(JSON.parse(localStorage.getItem(UNDO_KEY)||'null')?.snapshot?.records)}catch{return false}}
+export async function canUndoRestore():Promise<boolean>{try{const raw=localStorage.getItem(UNDO_KEY)??localStorage.getItem(LEGACY_UNDO_KEY);return Array.isArray(JSON.parse(raw||'null')?.snapshot?.records)}catch{return false}}
 export async function undoLastRestore():Promise<number>{
- const raw=localStorage.getItem(UNDO_KEY);if(!raw)throw new Error('نسخه قبل از بازیابی در دسترس نیست.')
+ const raw=localStorage.getItem(UNDO_KEY)??localStorage.getItem(LEGACY_UNDO_KEY);if(!raw)throw new Error('نسخه قبل از بازیابی در دسترس نیست.')
  const saved=JSON.parse(raw);if(!Array.isArray(saved.snapshot?.records))throw new Error('نسخه اضطراری معتبر نیست.')
- await localStore.replaceAll(saved.snapshot.records);if(saved.backupPreferences)await saveBackupPreferences(saved.backupPreferences);localStorage.removeItem(UNDO_KEY);return saved.snapshot.records.length
+ await localStore.replaceAll(saved.snapshot.records);if(saved.backupPreferences)await saveBackupPreferences(saved.backupPreferences);localStorage.removeItem(UNDO_KEY);localStorage.removeItem(LEGACY_UNDO_KEY);return saved.snapshot.records.length
 }
 export async function updateBackupMeta(kind:'manual'|'automatic',size:number){
  const p=await getBackupPreferences();await saveBackupPreferences({...p,lastAt:new Date().toISOString(),lastSize:size,lastKind:kind})
