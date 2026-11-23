@@ -1069,9 +1069,15 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Period subsidy income must contain one finite non-negative amount for every project period.')
     return empty()
   }
-  const periodOperatingOverrides = [input.periodRevenue, input.periodVariableCost, input.periodAbnormalWasteExpense]
+  const periodOperatingOverrides = [input.periodRevenue, input.periodVariableCost]
   if (periodOperatingOverrides.some(series => series != null && (series.length !== periods.length || series.some(value => !validFinite(value) || value < 0)))) {
-    warnings.push('Period revenue, cost-of-sales and separately expensed abnormal-waste schedules must contain one finite non-negative amount for every project period.')
+    warnings.push('Period revenue and cost-of-sales schedules must contain one finite non-negative amount for every project period.')
+    return empty()
+  }
+  if (input.periodAbnormalWasteExpense != null &&
+      (input.periodAbnormalWasteExpense.length !== periods.length ||
+       input.periodAbnormalWasteExpense.some(value => !validFinite(value)))) {
+    warnings.push('Period abnormal-waste expense adjustments must contain one finite signed amount for every project period.')
     return empty()
   }
   const revenue = input.periodRevenue ? [...input.periodRevenue] : allocatedRevenue
