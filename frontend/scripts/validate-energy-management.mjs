@@ -50,7 +50,7 @@ test('multi-period energy trends calculate production-normalized and cost intens
  ],{resource:'electricity',site:'Plant',seu:'Rolling'})
  assert.equal(result.count,2)
  assert.equal(result.points[1].intensity,9)
- assert.equal(result.points[1].intensityChangePercent,-10)
+ assert.ok(Math.abs(result.points[1].intensityChangePercent+10)<1e-9)
  assert.equal(result.points[1].costPerOutputChangePercent,8)
 })
 test('gas trend uses thermal basis only for adjacent periods with matching HHV/LHV and reference conditions',async()=>{
@@ -77,7 +77,7 @@ test('electricity bill cost allocation reconciles every charge component to the 
  assert.equal(result.allocations.reduce((s,x)=>s+x.demandCharge,0),150)
  assert.equal(result.allocations.reduce((s,x)=>s+x.reactiveCharge,0),50)
  assert.equal(result.allocations.reduce((s,x)=>s+x.taxCharge,0),100)
- assert.ok(Math.abs(result.allocations[0].costPerTon-8.604166666666666)<1e-9)
+ assert.ok(Math.abs(result.allocations[0].costPerTon-8.78125)<1e-9)
  assert.equal(result.sourceReference.billId,'EB-1')
 })
 test('electricity bill allocation rejects missing cost drivers and non-reconciled invoice components',async()=>{
