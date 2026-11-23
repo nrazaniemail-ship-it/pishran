@@ -33,7 +33,7 @@ const integration = await import(dataUrl(transpile(integrationSource)))
 const storeSource = await readFile(new URL('../src/features/projects/stageInventoryAccountingStore.ts', import.meta.url), 'utf8')
 const localStoreSource = await readFile(new URL('../src/core/storage/localStore.ts', import.meta.url), 'utf8')
 const storeLinked = transpile(storeSource).replace(
-  '"../../core/storage/localStore"',
+  "'../../core/storage/localStore'",
   JSON.stringify(dataUrl(transpile(localStoreSource))),
 )
 const store = await import(dataUrl(storeLinked))
