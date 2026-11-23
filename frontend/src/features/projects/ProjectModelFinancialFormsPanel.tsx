@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import {
  createBlankFixedAssetFormDraft, createBlankProductionCostFormDraft,
  createBlankSalesProductFormDraft, createBlankWorkingCapitalComponentFormDraft,
- createBlankLoanFacilityFormDraft, createBlankCppCpsTraceItem, createBlankSalesTaxLedgerFormDraft, createBlankValueAddedPeriodFormDraft, createBlankValueAddedInputFormDraft, createBlankValueAddedInvestmentFormDraft, createBlankCostCentreInventoryMovementFormDraft, createBlankInventoryStageTransferFormDraft, type ProjectModelFinancialFormDrafts,
+ createBlankLoanFacilityFormDraft, createBlankCppCpsTraceItem, createBlankSalesTaxLedgerFormDraft, createBlankValueAddedPeriodFormDraft, createBlankValueAddedInputFormDraft, createBlankValueAddedInvestmentFormDraft, createBlankCostCentreInventoryMovementFormDraft, createBlankInventoryStageTransferFormDraft, createBlankProductionBridgeEvidenceFormDraft, type ProductionBridgeEvidenceFormDraft, type ProductionBridgeLinkFormDraft, type ProjectModelFinancialFormDrafts,
  type FixedAssetFormDraft, type ProductionCostFormDraft,
  type WorkingCapitalComponentFormDraft, type LoanFacilityFormDraft, type CostCentreFormDraft, type ValueAddedPeriodFormDraft, type ValueAddedInputFormDraft, type ValueAddedInvestmentFormDraft,
  validateProjectModelFinancialFormDrafts
@@ -11,6 +12,7 @@ import ProjectModelHelpCoveragePanel from './ProjectModelHelpCoveragePanel'
 import type { ProjectFoundation, ProjectCalendarPeriod } from './projectFoundation'
 import type { CppCpsTraceItem } from './cppCpsCostTraceability'
 import { resolveLoanFacilityCurrency } from '../steel/foreignCurrencyTranslation'
+import { buildProductionBridgeDraftsFromSalesProduct, upsertProductionBridgeTransferDrafts, type ProductionStageTransferEvidence } from './inventoryProductionFlow'
 
 type Props={value:ProjectModelFinancialFormDrafts;onChange:(value:ProjectModelFinancialFormDrafts)=>void;language?:'fa'|'en';foundation?:ProjectFoundation;projectPeriods?:ProjectCalendarPeriod[]}
 const parseNumber=(value:string):number|null=>value.trim()===''?null:Number.isFinite(Number(value))?Number(value):null
@@ -32,6 +34,21 @@ function MetadataFields({metadata,onChange,language}:{metadata:CommonFinancialIt
  </div>
 }
 
+function ProductionBridgeLinkFields({label,value,onChange,language}:{label:string;value:ProductionBridgeLinkFormDraft;onChange:(value:ProductionBridgeLinkFormDraft)=>void;language:'fa'|'en'}) {
+ const t=(fa:string,en:string)=>language==='en'?en:fa
+ return <div className="fw-validation" style={{padding:10,marginTop:8}}>
+  <strong>{label}</strong>
+  <div className="fw-grid">
+   <TextField label={t('شناسه محصول مبدأ','Source product ID')} value={value.sourceProductId} onChange={v=>onChange({...value,sourceProductId:v})}/>
+   <TextField label={t('شناسه محصول مقصد','Destination product ID')} value={value.destinationProductId} onChange={v=>onChange({...value,destinationProductId:v})}/>
+   <TextField label={t('مرکز هزینه مبدأ','Source cost centre')} value={value.sourceCostCentreId} onChange={v=>onChange({...value,sourceCostCentreId:v})}/>
+   <TextField label={t('مرکز هزینه مقصد','Destination cost centre')} value={value.destinationCostCentreId} onChange={v=>onChange({...value,destinationCostCentreId:v})}/>
+   <TextField label={t('واحد مبدأ','Source unit')} value={value.sourceUnit} onChange={v=>onChange({...value,sourceUnit:v})}/>
+   <TextField label={t('واحد مقصد','Destination unit')} value={value.destinationUnit} onChange={v=>onChange({...value,destinationUnit:v})}/>
+   <NumberField label={t('ضریب تبدیل','Conversion factor')} value={value.conversionFactor} onChange={v=>onChange({...value,conversionFactor:v})}/>
+  </div>
+ </div>
+}
 export default function ProjectModelFinancialFormsPanel({value,onChange,language='fa',foundation,projectPeriods=[]}:Props) {
  const en=language==='en'
  const t=(fa:string,english:string)=>en?english:fa
@@ -39,6 +56,25 @@ export default function ProjectModelFinancialFormsPanel({value,onChange,language
  const patchAsset=(id:string,patch:Partial<FixedAssetFormDraft>)=>onChange({...value,assets:value.assets.map(x=>x.id===id?{...x,...patch}:x)})
  const patchCost=(id:string,patch:Partial<ProductionCostFormDraft>)=>onChange({...value,productionCosts:value.productionCosts.map(x=>x.id===id?{...x,...patch}:x)})
  const patchSales=(index:number,patch:Partial<(typeof value.sales)[number]>)=>onChange({...value,sales:value.sales.map((x,i)=>i===index?{...x,...patch}:x)})
+
+ const [productionBridgeErrors,setProductionBridgeErrors]=useState<Record<number,string>>({})
+ const patchProductionBridgeEvidence=(salesIndex:number,periodIndex:number,patch:Partial<ProductionBridgeEvidenceFormDraft>)=>{
+  const sale=value.sales[salesIndex];if(!sale)return
+  const periods=sale.periods.map((period,index)=>index===periodIndex?{...period,productionBridgeEvidence:{...createBlankProductionBridgeEvidenceFormDraft(),...period.productionBridgeEvidence,...patch}}:period)
+  patchSales(salesIndex,{periods})
+ }
+ const generateProductionBridge=(salesIndex:number)=>{
+  const sale=value.sales[salesIndex];if(!sale)return
+  try{
+   const evidence=sale.periods.map((period,index)=>({...period.productionBridgeEvidence,period:index+1})) as ProductionStageTransferEvidence[]
+   const generated=buildProductionBridgeDraftsFromSalesProduct(sale,evidence)
+   const existing=value.inventoryStageTransfers??[]
+   onChange({...value,inventoryStageTransfers:upsertProductionBridgeTransferDrafts(existing,generated)})
+   setProductionBridgeErrors(current=>({...current,[salesIndex]:''}))
+  }catch(error){
+   setProductionBridgeErrors(current=>({...current,[salesIndex]:error instanceof Error?error.message:String(error)}))
+  }
+ }
  const patchWorking=(id:string,patch:Partial<WorkingCapitalComponentFormDraft>)=>onChange({...value,workingCapital:value.workingCapital.map(x=>x.id===id?{...x,...patch}:x)})
  const salesTaxLedger=value.salesTaxLedger??createBlankSalesTaxLedgerFormDraft()
  const patchSalesTaxLedger=(patch:Partial<typeof salesTaxLedger>)=>onChange({...value,salesTaxLedger:{...salesTaxLedger,...patch}})
