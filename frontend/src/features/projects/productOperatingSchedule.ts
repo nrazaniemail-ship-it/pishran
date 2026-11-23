@@ -108,7 +108,13 @@ export function buildProductOperatingSchedule(
       if(periodRow?.normalRawMaterialWasteQuantity!=null&&periodRow.normalRawMaterialWasteQuantity>0)
         issues.push('Normal waste '+entry.id+' is already represented in the production-flow waste quantity; duplicate absorption is blocked.')
       periodNormalWasteAbsorbed[index]+=entry.amount
-    }else if(entry.classification==='abnormal')periodAbnormalWasteExpense[index]+=entry.amount
+    }else if(entry.classification==='abnormal'){
+      const sale=drafts.sales.find(item=>item.productId===entry.productId)
+      const periodRow=sale?.periods.find(row=>row.period===String(entry.period)||row.period===String(periods[index]?.index)||row.period===periods[index]?.startDate||row.period===periods[index]?.endDate)
+      if(periodRow?.abnormalRawMaterialWasteQuantity!=null&&periodRow.abnormalRawMaterialWasteQuantity>0)
+        issues.push('Abnormal waste '+entry.id+' is already represented in the production-flow waste quantity; duplicate expense is blocked.')
+      periodAbnormalWasteExpense[index]+=entry.amount
+    }
   }
   const unitCostByProduct = new Map<string,number>()
   const periodAdjustmentByProduct = new Map<string,Map<number,number>>()
@@ -213,6 +219,10 @@ export function buildProductOperatingSchedule(
       const flowRows=periods.map((_,index)=>mapped.get(index))
       if(flowRows.some(row=>!row||flowKeys.some(key=>row[key]===null||row[key]===undefined||!Number.isFinite(row[key] as number)))){
         issues.push('Product '+sale.productId+' requires complete purchase, consumption, production, WIP and conversion-cost inputs for every period.')
+        continue
+      }
+      if(flowRows.some(row=>(row!.abnormalRawMaterialWasteQuantity as number)>0&&(!row!.abnormalWasteSourceReference?.trim()||row!.abnormalWasteSourceVerified!==true))){
+        issues.push('Product '+sale.productId+' requires a verified abnormal-waste incident source reference for every period with abnormal waste.')
         continue
       }
       const first=mapped.get(0)
