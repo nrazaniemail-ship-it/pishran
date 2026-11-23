@@ -259,7 +259,7 @@ export function bindFinishedGoodsInventoryToWorkingCapital(
 export type StageJournalCorrection = {
   id: string
   period: number
-  kind: 'stage-transfer' | 'cost-of-sales'
+  kind: 'stage-transfer' | 'cost-of-sales' | 'abnormal-waste'
   productId: string
   debitAccount: string
   creditAccount: string
