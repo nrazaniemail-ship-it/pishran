@@ -1708,10 +1708,9 @@ input,select,textarea{color:var(--text)}
 .dashboard-diagram-tooltip{position:absolute;left:50%;bottom:calc(100% + 9px);transform:translate(-50%,4px);display:flex;align-items:center;gap:8px;width:max-content;max-width:min(250px,72vw);padding:9px 12px;border:1px solid rgba(93,116,130,.22);border-radius:10px;background:rgba(255,255,255,.98);box-shadow:0 8px 24px rgba(35,54,68,.18);color:#263b49;font-family:inherit;font-size:12px;font-weight:600;line-height:1.7;text-align:start;direction:inherit;white-space:normal;opacity:0;visibility:hidden;pointer-events:none;z-index:9;transition:opacity .14s ease,transform .14s ease}
 .dashboard-diagram-tooltip img{width:28px;height:28px;object-fit:contain;flex:none}
 .dashboard-diagram-hotspot:hover .dashboard-diagram-tooltip,.dashboard-diagram-hotspot:focus-visible .dashboard-diagram-tooltip{opacity:1;visibility:visible;transform:translate(-50%,0)}
-.dashboard-diagram-hotspot:nth-of-type(2) .dashboard-diagram-tooltip{bottom:auto;top:calc(100% + 9px)}
 .dashboard-diagram-core-hotspot{left:32.08%;top:34.49%;width:35.84%;height:31.03%}
 .dashboard-diagram-core-hotspot::before{clip-path:polygon(100% 50%,75% 100%,25% 100%,0 50%,25% 0,75% 0)}
-.dashboard-diagram-core-hotspot::after{content:attr(title);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);width:max-content;max-width:min(240px,70vw);padding:8px 11px;border-radius:9px;background:#fff;color:#263b49;box-shadow:0 8px 24px rgba(35,54,68,.18);font:600 12px/1.7 inherit;opacity:0;visibility:hidden;pointer-events:none}
+.dashboard-diagram-core-hotspot::after{content:attr(title);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);width:max-content;max-width:min(240px,70vw);padding:8px 11px;border-radius:9px;background:#fff;color:#263b49;box-shadow:0 8px 24px rgba(35,54,68,.18);font-family:inherit;font-size:12px;font-weight:600;line-height:1.7;opacity:0;visibility:hidden;pointer-events:none}
 .dashboard-diagram-core-hotspot:hover::after,.dashboard-diagram-core-hotspot:focus-visible::after{opacity:1;visibility:visible;transform:translate(-50%,0)}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:850px){.dashboard-image-art{width:69%;max-height:none}.dashboard-diagram-stage{width:100%}}
