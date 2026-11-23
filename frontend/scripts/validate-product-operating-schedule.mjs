@@ -304,6 +304,19 @@ assert.equal(abnormalWasteJournal.postings[0].period,1)
 assert.equal(abnormalWasteJournal.postings[0].amount,22)
 assert.equal(abnormalWasteJournal.postings[0].sourceReference,'incident-report-page-3',
  'The append-only journal trace must retain the exact verified incident source used by the production flow.')
+assert.equal(controlModule.canPersistStageAccountingPostings(true,null,true,'FS00-PROJECT'),true,
+ 'A valid abnormal-waste journal must persist even when no optional cost-centre inventory ledger is supplied.')
+assert.equal(controlModule.canPersistStageAccountingPostings(true,{valid:true},true,'FS00-PROJECT'),true)
+assert.equal(controlModule.canPersistStageAccountingPostings(true,{valid:false},true,'FS00-PROJECT'),false,
+ 'An explicitly supplied but invalid cost-centre inventory ledger must still block journal persistence.')
+assert.equal(controlModule.canPersistStageAccountingPostings(false,null,true,'FS00-PROJECT'),false)
+assert.equal(controlModule.canPersistStageAccountingPostings(true,null,false,'FS00-PROJECT'),false)
+assert.equal(controlModule.canPersistStageAccountingPostings(true,null,true,''),false)
+const advancedFinancePanelSource=await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx',import.meta.url),'utf8')
+assert.ok(advancedFinancePanelSource.includes('periodAbnormalWasteExpense:productOperatingSchedule?.valid?productOperatingSchedule.periodAbnormalWasteExpense:undefined'),
+ 'The live finance panel must pass the product schedule abnormal-waste expense into the periodic engine.')
+assert.ok(advancedFinancePanelSource.includes('canPersistStageAccountingPostings(stageJournalLoaded,stageInventoryReconciliation,abnormalWasteAccounting.valid,props.projectId)'),
+ 'The live persistence effect must permit abnormal-waste-only journals while retaining invalid-ledger blocking.')
 assert.equal(flowSchedule.rows[0].productionQuantity,100)
 assert.equal(flowSchedule.rows[0].completedUnits,100)
 assert.ok(Math.abs(flowSchedule.rows[0].productionCost-flowSchedule.rows[0].unitProductionCost*100)<1e-7)
