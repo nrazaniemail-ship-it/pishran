@@ -735,6 +735,44 @@ const incompleteLinkedReturnCheck = inventoryControlModule.reconcileStageInvento
 assert.equal(incompleteLinkedReturnCheck.valid, false,
   'The shared product/centre ledger must reject an incomplete B→A return at the destination centre')
 
+const missingCentrePeriodRow = linkedStageMovements.filter(row =>
+  !(row.period === 2 && row.inventoryStage === 'finished-goods' && row.costCentreId === 'CC-A'))
+const missingCentrePeriodCheck = inventoryControlModule.reconcileStageInventoryMovements(
+  missingCentrePeriodRow, linkedExpectedByPeriod, 3, 0.01, [], linkedExpectedByProductPeriod)
+assert.equal(missingCentrePeriodCheck.valid, false,
+  'A centre with stock on hand cannot disappear for an intermediate period and silently reappear later')
+assert.ok(missingCentrePeriodCheck.issues.some(issue =>
+  issue.includes('missing one or more intervening period movement rows') ||
+  issue.includes('missing cost-centre inventory rows') ||
+  issue.includes('opening balance does not equal')),
+  'Missing centre-period rows must identify the stock continuity break')
+
+const brokenCentreOpeningCarryForward = linkedStageMovements.map(row =>
+  row.period === 3 && row.inventoryStage === 'finished-goods' && row.costCentreId === 'CC-A'
+    ? { ...row, openingValue: row.openingValue + 1 } : row)
+const brokenCentreOpeningCheck = inventoryControlModule.reconcileStageInventoryMovements(
+  brokenCentreOpeningCarryForward, linkedExpectedByPeriod, 3, 0.01, [], linkedExpectedByProductPeriod)
+assert.equal(brokenCentreOpeningCheck.valid, false,
+  'Opening inventory value must equal the prior period closing value at each cost centre')
+assert.ok(brokenCentreOpeningCheck.issues.some(issue =>
+  issue.includes('opening value does not equal prior-period closing value') ||
+  issue.includes('opening balance does not equal the prior-period product closing balance')),
+  'The broken carry-forward must be reported at the cost-centre or product roll-forward boundary')
+
+const overdrawnFinishedGoodsSales = linkedStageMovements.map(row =>
+  row.period === 3 && row.inventoryStage === 'finished-goods' && row.costCentreId === 'CC-A'
+    ? { ...row, salesQuantity: row.salesQuantity + 1000, salesCostValue: row.salesCostValue + 1000 } : row)
+const overdrawnFinishedGoodsCheck = inventoryControlModule.reconcileStageInventoryMovements(
+  overdrawnFinishedGoodsSales, linkedExpectedByPeriod, 3, 0.01, [], linkedExpectedByProductPeriod)
+assert.equal(overdrawnFinishedGoodsCheck.valid, false,
+  'Finished-goods sales and COGS cannot exceed the available inventory at the selling centre')
+assert.ok(overdrawnFinishedGoodsCheck.issues.some(issue =>
+  issue.includes('negative expected closing quantity') || issue.includes('closing quantity does not reconcile')) &&
+  overdrawnFinishedGoodsCheck.issues.some(issue =>
+    issue.includes('sales quantity does not match the product operating schedule') ||
+    issue.includes('cost of sales does not match the product operating schedule')),
+  'Overdrawn finished-goods sales must fail both stock availability and product schedule reconciliation')
+
 const duplicatedLinkedTransfer = linkedStageMovements.map(row =>
   row.period === 1 && row.inventoryStage === 'finished-goods' && row.costCentreId === 'CC-B'
     ? { ...row, receiptsQuantity: 10, receiptsValue: 100 } : row)
