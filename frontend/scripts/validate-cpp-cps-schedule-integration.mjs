@@ -12,19 +12,20 @@ const integrationModule = await import('data:text/javascript;base64,' + Buffer.f
 
 const schedule = {
   valid: true, issues: [], periodRevenue: [1600, 1980], periodCostOfSales: [800, 900],
-  periodSubsidyIncome: [0, 0], annualRevenue: [3580], annualCostOfSales: [1700],
+  periodSubsidyIncome: [0, 0], periodAbnormalWasteExpense: [110, 0],
+  annualRevenue: [3580], annualCostOfSales: [1700],
   totalProductionQuantity: 180, totalSalesQuantity: 170, totalClosingInventoryValue: 500,
   rows: [
     { productId: 'P1', period: 1, openingInventoryQuantity: 10, openingInventoryValue: 100,
       salesQuantity: 80, productionQuantity: 100, closingInventoryQuantity: 30,
       closingInventoryValue: 300, unitProductionCost: 10, productionCost: 1000,
       weightedAverageUnitCost: 10, costOfSales: 800, netSalesRevenue: 1600,
-      subsidyIncome: 0, grossProfit: 800, hasInventoryFlow: false, wipQuantity: 0, materialEquivalentUnits: 0, conversionEquivalentUnits: 0, materialCompletionPercent: 0, conversionCompletionPercent: 0 },
+      subsidyIncome: 0, grossProfit: 800, abnormalWasteValue: 110, hasInventoryFlow: false, wipQuantity: 0, materialEquivalentUnits: 0, conversionEquivalentUnits: 0, materialCompletionPercent: 0, conversionCompletionPercent: 0 },
     { productId: 'P1', period: 2, openingInventoryQuantity: 30, openingInventoryValue: 300,
       salesQuantity: 90, productionQuantity: 80, closingInventoryQuantity: 20,
       closingInventoryValue: 200, unitProductionCost: 10, productionCost: 800,
       weightedAverageUnitCost: 10, costOfSales: 900, netSalesRevenue: 1980,
-      subsidyIncome: 0, grossProfit: 1080, hasInventoryFlow: false, wipQuantity: 0, materialEquivalentUnits: 0, conversionEquivalentUnits: 0, materialCompletionPercent: 0, conversionCompletionPercent: 0 },
+      subsidyIncome: 0, grossProfit: 1080, abnormalWasteValue: 0, hasInventoryFlow: false, wipQuantity: 0, materialEquivalentUnits: 0, conversionEquivalentUnits: 0, materialCompletionPercent: 0, conversionCompletionPercent: 0 },
   ],
 }
 const abnormalWasteBaseSchedule = {
@@ -52,6 +53,8 @@ assert.equal(abnormalWasteAdjustment.schedule.rows[0].rawMaterialInventoryValue,
 assert.equal(abnormalWasteAdjustment.schedule.rows[1].rawMaterialInventoryValue, 70)
 assert.deepEqual(abnormalWasteAdjustment.schedule.periodCostOfSales, schedule.periodCostOfSales,
   'Abnormal waste must not be reclassified as COGS')
+assert.deepEqual(abnormalWasteAdjustment.schedule.periodAbnormalWasteExpense,[140,0],
+  'An incremental abnormal-waste adjustment must affect only its registered period.')
 
 const abnormalWasteReversal = integrationModule.applyStageJournalCorrectionsToProductSchedule(
   abnormalWasteBaseSchedule,
@@ -68,6 +71,8 @@ assert.equal(abnormalWasteReversal.valid, true, abnormalWasteReversal.issues.joi
 assert.deepEqual(abnormalWasteReversal.schedule.periodRawMaterialInventoryValue, [210, 210],
   'Reversing an abnormal-waste write-off must restore raw inventory without touching COGS')
 assert.deepEqual(abnormalWasteReversal.schedule.periodCostOfSales, schedule.periodCostOfSales)
+assert.deepEqual(abnormalWasteReversal.schedule.periodAbnormalWasteExpense,[0,0],
+  'A same-period reversal must cancel the original abnormal-waste expense without changing COGS.')
 
 const verifiedItem = {
   id: 'energy-01', label: 'Incremental energy', category: 'energy',
