@@ -18,8 +18,8 @@ test('water balance history is persisted separately from energy totals',async()=
 test('electricity bill provenance follows the bill into the energy performance record',()=>{const row=validateEnergyRecord({resource:'electricity',period:'1405/07',site:'Plant',seu:'Rolling mill',consumption:'12000',production:'1000',cost:'500000',sourceBillId:'EB-99',sourceBillNumber:'B-2026-07'});assert.equal(row.sourceBillId,'EB-99');assert.equal(row.sourceBillNumber,'B-2026-07');assert.equal(row.intensity,12)})
 
 test('gas baseline EnPI compares thermal energy when both periods have calorific values',()=>{
- const base={consumption:1000,production:10,calorificValue:10,gasEnergyKwh:10000}
- const actual={consumption:1100,production:10,gasEnergyKwh:9900}
+ const base={consumption:1000,production:10,calorificValue:10,gasEnergyKwh:10000,calorificBasis:'net',gasReferenceConditions:'15C/101.325kPa'}
+ const actual={consumption:1100,production:10,gasEnergyKwh:9900,calorificBasis:'net',gasReferenceConditions:'15C/101.325kPa'}
  const result=calculateEnergyPerformance({resource:'gas',baseline:base,actual})
  assert.equal(result.comparisonBasis,'thermal-energy')
  assert.equal(result.baselineIntensity,1000)
@@ -27,8 +27,8 @@ test('gas baseline EnPI compares thermal energy when both periods have calorific
  assert.equal(result.savings,100)
  assert.equal(result.comparisonUnit,'kWh')
 })
-test('gas EnPI warns and falls back to Nm3 when either calorific value is unavailable',()=>{
- const result=calculateEnergyPerformance({resource:'gas',baseline:{consumption:1000,production:10},actual:{consumption:900,production:10}})
+test('gas EnPI warns and falls back to Nm3 when calorific basis or reference conditions do not match',()=>{
+ const result=calculateEnergyPerformance({resource:'gas',baseline:{consumption:1000,production:10,gasEnergyKwh:10000,calorificBasis:'gross',gasReferenceConditions:'15C/101.325kPa'},actual:{consumption:900,production:10,gasEnergyKwh:9000,calorificBasis:'net',gasReferenceConditions:'15C/101.325kPa'}})
  assert.equal(result.comparisonBasis,'gas-volume-fallback')
  assert.equal(result.savings,100)
  assert.equal(result.warnings.length,1)
