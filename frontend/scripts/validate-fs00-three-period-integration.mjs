@@ -766,8 +766,8 @@ const reversedAbnormalWaste = engine.calculateIntegratedPeriodicFinance({
 assert.equal(reversedAbnormalWaste.valid, true, reversedAbnormalWaste.warnings.join('; '))
 assert.deepEqual(reversedAbnormalWaste.rows.map(row => row.abnormalWasteExpense), [10, -10, 30],
   'A signed abnormal-waste expense must preserve a reversal credit in its own registered period.')
-assert.deepEqual(reversedAbnormalWaste.rows.map(row => row.ebit), [840, 850, 820],
-  'A reversal credit must increase EBIT only in its posting period.')
+assert.deepEqual(reversedAbnormalWaste.rows.map(row => row.ebit), [840, 860, 820],
+  'A 30-unit reversal credit against the 20-unit period expense must increase EBIT by 30 only in its posting period.')
 const missingAbnormalWastePeriod = engine.calculateIntegratedPeriodicFinance({
   ...abnormalWasteInput, periodAbnormalWasteExpense: [10, 20],
 })
