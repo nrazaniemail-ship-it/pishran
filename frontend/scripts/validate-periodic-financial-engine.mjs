@@ -528,14 +528,14 @@ assert.equal(abnormalWastePeriod.tax,0,
   'A loss caused by abnormal waste must not create an unsupported immediate tax refund');
 assert.equal(abnormalWastePeriod.taxLossCarryForward,110,
   'Abnormal-waste expense must reduce taxable profit and increase the tax-loss carry-forward');
-assert.equal(abnormalWastePeriod.cfads,-110,
-  'Abnormal waste must reduce CFADS exactly once');
-assert.equal(abnormalWastePeriod.projectFreeCashFlow,-110,
-  'Abnormal waste must reduce project free cash flow exactly once');
-assert.equal(abnormalWastePeriod.equityFreeCashFlow,-110,
-  'Abnormal waste must reduce equity free cash flow exactly once');
-assert.equal(abnormalWastePeriod.closingCash,390,
-  'Abnormal waste cash payment must reduce closing cash exactly once');
+assert.equal(abnormalWastePeriod.cfads,0,
+  'The inventory reduction in working capital offsets the non-cash write-off in CFADS');
+assert.equal(abnormalWastePeriod.projectFreeCashFlow,0,
+  'The non-cash write-off must not create a second project cash outflow when inventory reduction is included in working capital');
+assert.equal(abnormalWastePeriod.equityFreeCashFlow,0,
+  'The non-cash write-off must not create a second equity cash outflow when inventory reduction is included in working capital');
+assert.equal(abnormalWastePeriod.closingCash,500,
+  'Cash remains unchanged for an inventory write-off whose purchase cash flow was already recognized');
 assert.equal(abnormalWasteFinanceCase.rows[1].taxLossCarryForward,110,
   'Tax loss from abnormal waste must roll forward to the next period');
 const abnormalWasteStatements=engine.buildPeriodicThreeFinancialStatements(abnormalWasteFinanceCase,{
