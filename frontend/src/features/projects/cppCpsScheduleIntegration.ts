@@ -362,8 +362,11 @@ export function applyStageJournalCorrectionsToProductSchedule(
     const supportedStageTransfer = document.kind === 'stage-transfer' && Boolean(debitStage && creditStage)
     const supportedCogsCorrection = document.kind === 'cost-of-sales' && Boolean(debitCogs !== creditCogs) &&
       ((debitCogs && creditStage === 'fg') || (creditCogs && debitStage === 'fg'))
-    if (!supportedStageTransfer && !supportedCogsCorrection) {
-      issues.push('Stage journal correction ' + document.id + ' uses unsupported accounts; only inventory-stage and Cost of Sales accounts can affect the product schedule.')
+    const supportedAbnormalWasteWriteOff = document.kind === 'abnormal-waste' &&
+      ((document.debitAccount === 'Abnormal Waste Expense' && creditStage === 'raw') ||
+       (debitStage === 'raw' && document.creditAccount === 'Abnormal Waste Expense'))
+    if (!supportedStageTransfer && !supportedCogsCorrection && !supportedAbnormalWasteWriteOff) {
+      issues.push('Stage journal correction ' + document.id + ' uses unsupported accounts; only inventory-stage, Cost of Sales, and abnormal-waste/raw-material write-off accounts can affect the product schedule.')
       continue
     }
     const deltas = new Map<'raw' | 'wip' | 'fg', number>()
