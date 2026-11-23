@@ -843,4 +843,48 @@ const missingAbnormalWastePeriod = engine.calculateIntegratedPeriodicFinance({
 assert.equal(missingAbnormalWastePeriod.valid, false,
   'Abnormal-waste schedule must cover every project period')
 
+
+const duplicateStageMovementBoundary = inventoryControlModule.reconcileStageInventoryMovements(
+  [...linkedStageMovements, { ...linkedStageMovements[0] }],
+  linkedExpectedByPeriod, 3, 0.01, [], linkedExpectedByProductPeriod)
+assert.equal(duplicateStageMovementBoundary.valid, false,
+  'A stage/product/cost-centre/period key must have exactly one movement row')
+assert.ok(duplicateStageMovementBoundary.issues.some(issue => issue.includes('Duplicate stage inventory movement')),
+  'Duplicate stage movement rows must be identified explicitly')
+
+const negativeStageMovementBoundary = inventoryControlModule.reconcileStageInventoryMovements(
+  linkedStageMovements.map((row, index) => index === 0 ? { ...row, openingValue: -1 } : row),
+  linkedExpectedByPeriod, 3, 0.01, [], linkedExpectedByProductPeriod)
+assert.equal(negativeStageMovementBoundary.valid, false,
+  'Inventory movement quantities and values must never be negative')
+assert.ok(negativeStageMovementBoundary.issues.some(issue =>
+  issue.includes('finite non-negative amount')),
+  'Negative stage movement amounts must fail the input boundary')
+
+const negativeEngineInventoryBoundary = inventoryControlModule.reconcileStageInventoryMovements(
+  linkedStageMovements,
+  linkedExpectedByPeriod.map((row, index) => index === 1 ? { ...row, rawMaterials: -1 } : row),
+  3, 0.01, [], linkedExpectedByProductPeriod)
+assert.equal(negativeEngineInventoryBoundary.valid, false,
+  'Finance-engine inventory benchmarks must be non-negative')
+assert.ok(negativeEngineInventoryBoundary.issues.some(issue =>
+  issue.includes('engine values must be finite and non-negative')),
+  'Negative finance-engine inventory values must fail before reconciliation')
+
+const identicalUnitConversionBoundary = inventoryControlModule.reconcileStageInventoryMovements(
+  linkedStageMovements, linkedExpectedByPeriod, 3, 0.01, [{
+    id: 'IDENTICAL-UNIT-FACTOR-BOUNDARY', period: 1,
+    sourceStage: 'raw-materials', destinationStage: 'work-in-progress',
+    sourceProductId: 'P1', destinationProductId: 'P1',
+    sourceCostCentreId: 'CC-RAW', destinationCostCentreId: 'CC-WIP',
+    quantity: 1, sourceUnit: 'ton', destinationUnit: 'ton',
+    conversionFactor: 1.1, transferValue: 1,
+    sourceReference: 'verified-identical-unit-transfer', sourceVerified: true,
+  }], linkedExpectedByProductPeriod)
+assert.equal(identicalUnitConversionBoundary.valid, false,
+  'Identical source and destination units must not accept a non-unit conversion factor')
+assert.ok(identicalUnitConversionBoundary.issues.some(issue =>
+  issue.includes('identical units and must use conversion factor 1')),
+  'Identical-unit conversion mismatch must be reported explicitly')
+
 console.log('PASS: FS-00 three-period product + A→B/B→A transfer round-trip → CPP/CPS → COGS/WIP/FG → working capital → income statement/cash flow/balance sheet integration.')
