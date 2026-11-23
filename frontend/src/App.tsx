@@ -177,6 +177,13 @@ export default function App() {
     navigateTo('module', activeProject, moduleId)
   }
 
+  function continueToNextModule() {
+    const currentIndex = modules.findIndex(item => item.id === activeModuleId)
+    const nextModule = modules[currentIndex + 1]
+    if (nextModule) openModule(nextModule.id)
+    else navigateTo('dashboard')
+  }
+
   async function createModuleWorkspace() {
     const name = moduleWorkspaceName.trim()
     if (!name) return
@@ -287,6 +294,7 @@ export default function App() {
         <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createModuleWorkspace() }}><label htmlFor="module-workspace-name">{isEn ? 'New module workspace name' : 'نام پرونده جدید ماژول'}</label><div><input id="module-workspace-name" value={moduleWorkspaceName} onChange={event => setModuleWorkspaceName(event.target.value)} placeholder={isEn ? 'Enter a name' : 'نام پروژه یا پرونده را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!moduleWorkspaceName.trim()}><Plus size={17}/>{isEn ? 'Create' : 'ایجاد پرونده'}</button></div></form>
         {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></div><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پرونده‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پرونده، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
       </section>
+      <div className="module-continue-actions"><button className="primary" type="button" onClick={continueToNextModule}>{isEn ? (activeModule.id === 'MOD-12' ? 'Finish modules' : 'Continue') : (activeModule.id === 'MOD-12' ? 'پایان مرور ماژول‌ها' : 'ادامه بده')}</button></div>
     </section>}
 
 
