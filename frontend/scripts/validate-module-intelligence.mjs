@@ -43,6 +43,6 @@ test('MOD-02 UI reads saved gas and water allocations and replaces energy cost w
  assert.match(source,/module-intelligence:MOD-05:resource-cost-allocations:v1/)
  assert.match(source,/localStore\.get<SavedResourceAllocation\[]>\(RESOURCE_COST_ALLOCATIONS_KEY\)/)
  assert.match(source,/setCost\(x=>\(\{\.\.\.x,energy:String\(selectedResourceCenter\.totalCost\)\}\)\)/)
- assert.match(source,/appliedResourceAllocation\?\?Number\(cost\.energy\)===appliedResourceAllocation\.totalCost/)
+ assert.match(source,/appliedResourceAllocation&&Number\(cost\.energy\)===appliedResourceAllocation\.totalCost/)
  assert.match(source,/energyAllocationBasis:'MOD-05 '\+appliedResourceAllocation\.resource\+' resource allocation'/)
 })
