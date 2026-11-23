@@ -345,6 +345,10 @@ export function applyStageJournalCorrectionsToProductSchedule(
   const raw = [...source.periodRawMaterialInventoryValue]
   const wip = [...source.periodWipInventoryValue]
   const cogs = [...source.periodCostOfSales]
+  const abnormalWasteExpense = [...source.periodAbnormalWasteExpense]
+  if (abnormalWasteExpense.length !== source.periodRevenue.length ||
+      abnormalWasteExpense.some(value => !Number.isFinite(value)))
+    issues.push('The product schedule must contain a finite abnormal-waste expense amount for every period.')
   const appliedDocumentIds: string[] = []
   const stageField = (account: string): 'raw' | 'wip' | 'fg' | null => {
     if (account === 'Inventory:raw-materials') return 'raw'
@@ -374,6 +378,9 @@ export function applyStageJournalCorrectionsToProductSchedule(
     if (creditStage) deltas.set(creditStage, (deltas.get(creditStage) ?? 0) - sign * document.amount)
     const cogsDelta = (debitCogs ? sign * document.amount : 0) -
       (creditCogs ? sign * document.amount : 0)
+    const abnormalWasteExpenseDelta =
+      (document.debitAccount === 'Abnormal Waste Expense' ? sign * document.amount : 0) -
+      (document.creditAccount === 'Abnormal Waste Expense' ? sign * document.amount : 0)
     const productRows = rows.filter(row => row.productId === document.productId)
     if (!productRows.some(row => row.period === document.period)) {
       issues.push('Stage journal correction ' + document.id + ' has no matching product schedule row.')
@@ -419,6 +426,11 @@ export function applyStageJournalCorrectionsToProductSchedule(
         row.weightedAverageUnitCost += cogsDelta / Math.max(1, matching.reduce((sum, item) => sum + item.salesQuantity, 0))
       }
     }
+    if (supportedAbnormalWasteWriteOff) {
+      abnormalWasteExpense[periodIndex] += abnormalWasteExpenseDelta
+      const matching = rows.filter(row => row.productId === document.productId && row.period === document.period)
+      for (const row of matching) row.abnormalWasteValue += abnormalWasteExpenseDelta / matching.length
+    }
     appliedDocumentIds.push(document.id)
   }
   if (issues.length) return { valid: false, issues, schedule: null, appliedDocumentIds: [] }
@@ -440,6 +452,7 @@ export function applyStageJournalCorrectionsToProductSchedule(
     schedule: {
       ...source, rows, periodCostOfSales: cogs, annualCostOfSales,
       periodRawMaterialInventoryValue: raw, periodWipInventoryValue: wip,
+      periodAbnormalWasteExpense: abnormalWasteExpense,
       totalClosingInventoryValue: rows.reduce((sum, row) => sum + row.closingInventoryValue, 0),
     },
     appliedDocumentIds,
