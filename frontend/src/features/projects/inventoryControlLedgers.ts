@@ -62,6 +62,21 @@ export type AbnormalWasteAccountingResult={
  debitTotal:number
  creditTotal:number
 }
+
+/** Persistence may proceed without an optional cost-centre inventory ledger,
+ * but an explicitly supplied ledger must reconcile before any journal is saved.
+ */
+export function canPersistStageAccountingPostings(
+ stageJournalLoaded:boolean,
+ stageInventoryReconciliation:{valid:boolean}|null|undefined,
+ abnormalWasteValid:boolean,
+ projectId:string,
+):boolean{
+ return stageJournalLoaded&&
+  (stageInventoryReconciliation==null||stageInventoryReconciliation.valid)&&
+  abnormalWasteValid&&Boolean(projectId.trim())
+}
+
 /** Builds a non-cash inventory write-off journal. The financial engine already
  * carries the expense and working-capital movement; these postings are a ledger
  * trace only and must never be added again to CPP/CPS, COGS, WC or cash flow.
