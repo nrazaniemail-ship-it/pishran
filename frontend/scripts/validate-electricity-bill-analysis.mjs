@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {normalizeBillDigits,parseElectricityBillText,analyzeElectricityBill} from '../src/features/modules/electricityBillMath.js'
 
 test('normalizes Persian and Arabic numerals and separators',()=>{
@@ -90,4 +91,17 @@ test('reconciles meter readings using the meter multiplier',()=>{
 test('flags a one-sided meter reading instead of silently skipping reconciliation',()=>{
  const result=analyzeElectricityBill({previousReading:1000,currentReading:null,consumption:250},[])
  assert.ok(result.warnings.some(x=>x.includes('هر دو')))
+})
+
+
+test('bill upload exposes independent gallery/files and camera inputs for all utilities',()=>{
+ const electricity=readFileSync(new URL('../src/features/modules/ElectricityBillAnalysis.tsx',import.meta.url),'utf8')
+ const resource=readFileSync(new URL('../src/features/modules/ResourceBillAnalysis.tsx',import.meta.url),'utf8')
+ for(const source of [electricity,resource]){
+  assert.match(source,/انتخاب از گالری یا فایل‌ها/)
+  assert.match(source,/عکاسی مستقیم از قبض/)
+  assert.match(source,/<input type="file" accept="image\\/\\*" disabled=\{busy\}/)
+  assert.match(source,/capture="environment"/)
+  assert.match(source,/e\\.currentTarget\\.value=""/)
+ }
 })
