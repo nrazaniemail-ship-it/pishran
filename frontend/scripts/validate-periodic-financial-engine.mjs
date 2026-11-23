@@ -544,7 +544,9 @@ const abnormalWasteStatements=engine.buildPeriodicThreeFinancialStatements(abnor
 assert.equal(abnormalWasteStatements.length,periods.length);
 assert.equal(abnormalWasteStatements[0].incomeStatement.ebit,-110);
 assert.equal(abnormalWasteStatements[0].incomeStatement.netIncome,-110);
-assert.equal(abnormalWasteStatements[0].cashFlowStatement.closingCash,500);\nassert.equal(abnormalWasteStatements[0].balanceSheet.rawMaterialsInventory,390);\nassert.equal(abnormalWasteStatements[0].balanceSheet.netWorkingCapital,390);
+assert.equal(abnormalWasteStatements[0].cashFlowStatement.closingCash,500);
+assert.equal(abnormalWasteStatements[0].balanceSheet.rawMaterialsInventory,390);
+assert.equal(abnormalWasteStatements[0].balanceSheet.netWorkingCapital,390);
 assert.equal(abnormalWasteStatements[0].balanceSheet.retainedEarnings,-110);
 assert.ok(abnormalWasteStatements.every(row=>row.balanceSheet.reconciled),
   'Abnormal-waste expense must reconcile through retained earnings and the balance sheet without a plug');
