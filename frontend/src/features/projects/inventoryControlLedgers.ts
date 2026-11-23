@@ -55,6 +55,36 @@ export function validateWasteLedger(entries:WasteLedgerEntry[],periodCount:numbe
  return {valid:!issues.length,issues,normalWasteAbsorbedByPeriod:issues.length?[]:normal,abnormalWasteExpenseByPeriod:issues.length?[]:abnormal,totalNormalWaste:normal.reduce((a,b)=>a+b,0),totalAbnormalWaste:abnormal.reduce((a,b)=>a+b,0)}
 }
 
+export type AbnormalWasteAccountingResult={
+ valid:boolean
+ issues:string[]
+ postings:StageInventoryAccountingPosting[]
+ debitTotal:number
+ creditTotal:number
+}
+/** Builds a non-cash inventory write-off journal. The financial engine already
+ * carries the expense and working-capital movement; these postings are a ledger
+ * trace only and must never be added again to CPP/CPS, COGS, WC or cash flow.
+ */
+export function buildAbnormalWasteAccountingPostings(
+ entries:WasteLedgerEntry[],periodCount:number
+):AbnormalWasteAccountingResult{
+ const waste=validateWasteLedger(entries,periodCount)
+ if(!waste.valid)return {valid:false,issues:waste.issues,postings:[],debitTotal:0,creditTotal:0}
+ const postings:StageInventoryAccountingPosting[]=entries
+  .filter(entry=>entry.classification==='abnormal'&&entry.amount>0)
+  .map(entry=>({
+   id:'abnormal-waste:'+entry.period+':'+entry.productId.trim()+':'+entry.costCentreId.trim()+':'+entry.id,
+   period:entry.period,kind:'abnormal-waste',productId:entry.productId.trim(),
+   sourceReference:entry.sourceReference.trim(),
+   debitAccount:'Abnormal Waste Expense',
+   creditAccount:'Inventory:raw-materials',
+   amount:entry.amount,
+  }))
+ const total=postings.reduce((sum,posting)=>sum+posting.amount,0)
+ return {valid:true,issues:[],postings,debitTotal:total,creditTotal:total}
+}
+
 export function validateProductionTransfers(entries:ProductionTransferEntry[],periodCount:number,tolerance=0.01):TransferLedgerResult{
  const issues:string[]=[],ids=new Set<string>(),qty:Record<string,number>={},value:Record<string,number>={},unitByProduct:Record<string,string>={}
  let source=0,destination=0
@@ -212,7 +242,7 @@ export type StageInventoryMovementDraft={
 export type StageInventoryAccountingPosting={
  id:string
  period:number
- kind:'stage-transfer'|'cost-of-sales'
+ kind:'stage-transfer'|'cost-of-sales'|'abnormal-waste'
  productId:string
  sourceReference:string
  debitAccount:string
