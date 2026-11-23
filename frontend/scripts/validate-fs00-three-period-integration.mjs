@@ -673,6 +673,25 @@ assert.deepEqual(rawToWipPostingPreview.accountingPostings?.map(row => [
 assert.equal(rawToWipPostingPreview.accountingDebitTotal, 10)
 assert.equal(rawToWipPostingPreview.accountingCreditTotal, 10)
 
+const invalidStageTransferBoundary = inventoryControlModule.reconcileStageInventoryMovements(
+  [], [], 1, 0.01, [
+    { id: 'INVALID-STAGE-XFER', period: 1, sourceStage: 'raw-materials', destinationStage: 'raw-materials',
+      sourceProductId: 'ORE', destinationProductId: 'ORE', sourceCostCentreId: 'MINE',
+      destinationCostCentreId: 'MINE', quantity: 10, sourceUnit: 'ton', destinationUnit: 'ton',
+      conversionFactor: 0, transferValue: 10, sourceReference: 'UNVERIFIED', sourceVerified: false },
+    { id: 'INVALID-STAGE-XFER', period: 1, sourceStage: 'raw-materials', destinationStage: 'work-in-progress',
+      sourceProductId: 'ORE', destinationProductId: 'ORE-WIP', sourceCostCentreId: 'MINE',
+      destinationCostCentreId: 'DRI', quantity: 10, sourceUnit: 'ton', destinationUnit: 'ton',
+      conversionFactor: 1, transferValue: 10, sourceReference: 'UNVERIFIED', sourceVerified: false },
+  ])
+assert.equal(invalidStageTransferBoundary.valid, false,
+  'Inter-stage transfer boundaries must reject malformed stage movement before ledger reconciliation')
+assert.ok(invalidStageTransferBoundary.issues.some(issue => issue.includes('unique non-empty identifiers')) &&
+  invalidStageTransferBoundary.issues.some(issue => issue.includes('two distinct inventory stages')) &&
+  invalidStageTransferBoundary.issues.some(issue => issue.includes('positive quantity and conversion factor')) &&
+  invalidStageTransferBoundary.issues.some(issue => issue.includes('verified source reference')),
+  'Inter-stage transfer validation must report duplicate IDs, same-stage transfer, zero conversion and unverified source evidence')
+
 
 const linkedCostCentreMovements = linkedStageMovements
   .filter(row => row.inventoryStage === 'finished-goods')
