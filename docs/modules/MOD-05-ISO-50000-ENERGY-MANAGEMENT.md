@@ -31,3 +31,6 @@ Opportunities are registered with a responsible owner, due date, resource, and e
 - `module-intelligence:MOD-05:actions:v1`
 
 All records are stored locally through the Pishran localStore.
+
+
+Implementation scope in this increment: separate electricity, natural-gas and water ledgers; meter-reading reconciliation when readings are provided; data-quality labels; site/SEU boundaries; production-intensity baselines; normalized comparisons; and improvement-action registers. Advanced regression normalization, multi-variable adjustment, audit trails for calibration, and formal M&V evidence packs remain follow-on work.
