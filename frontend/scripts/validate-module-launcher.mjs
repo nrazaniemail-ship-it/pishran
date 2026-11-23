@@ -25,7 +25,7 @@ test('launcher has responsive desktop, tablet and phone layouts with keyboard fo
 })
 
 test('launcher preserves the twelve-module catalogue and four operational groupings', () => {
-  const ids = [...app.matchAll(/id: 'MOD-\\d{2}'/g)].map(match => match[0])
+  const ids = [...app.matchAll(/id: 'MOD-[0-9]{2}'/g)].map(match => match[0])
   const groups = [...app.matchAll(/group: '([^']+)'/g)].map(match => match[1])
   assert.equal(ids.length, 12)
   assert.equal(new Set(groups).size, 4)
