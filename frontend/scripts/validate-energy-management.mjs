@@ -1,8 +1,23 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {calculateEnergyPerformance,validateEnergyRecord,saveEnergyBaseline,saveEnergyRecord,saveEnergyAction,updateEnergyActionStatus,ENERGY_DATA_KEY,ENERGY_BASELINES_KEY,ENERGY_ACTIONS_KEY} from '../src/features/modules/energyManagementWorkflow.js'
+import {calculateEnergyPerformance,validateEnergyRecord,saveEnergyBaseline,saveEnergyRecord,saveEnergyAction,updateEnergyActionStatus,analyzeEnergyTrends,ENERGY_DATA_KEY,ENERGY_BASELINES_KEY,ENERGY_ACTIONS_KEY} from '../src/features/modules/energyManagementWorkflow.js'
 test('electricity gas and water retain distinct units',()=>{for(const [resource,unit] of [['electricity','kWh'],['gas','Nm³'],['water','m³']])assert.equal(validateEnergyRecord({resource,period:'P1',site:'Plant',seu:'Main',consumption:'100',production:'10',cost:'5'}).unit,unit)})
 test('meter readings must reconcile to recorded consumption',()=>assert.throws(()=>validateEnergyRecord({resource:'electricity',period:'P1',site:'Plant',seu:'Mill',consumption:'20',production:'1',cost:'1',startReading:'100',endReading:'119'})))
+test('visible energy trends compare only within the same site and significant-use boundary',()=>{
+ const data=[
+  {resource:'electricity',id:'a1',period:'1405/01',site:'Plant A',seu:'Rolling',consumption:1000,production:10,cost:100},
+  {resource:'electricity',id:'b1',period:'1405/01',site:'Plant B',seu:'Furnace',consumption:5000,production:10,cost:500},
+  {resource:'electricity',id:'a2',period:'1405/02',site:'Plant A',seu:'Rolling',consumption:900,production:10,cost:90}
+ ]
+ const result=analyzeEnergyTrends(data,{resource:'electricity'})
+ assert.equal(result.series.length,2)
+ const rolling=result.series.find(x=>x.site==='Plant A')
+ assert.equal(rolling.points[1].periodChangePercent,-10)
+ assert.equal(rolling.points[1].intensityChangePercent,-10)
+ assert.equal(rolling.points[0].periodChangePercent,null)
+ assert.equal(result.points.length,3)
+})
+
 test('baseline is normalized to actual production',()=>{const x=calculateEnergyPerformance({resource:'electricity',baseline:{consumption:1000,production:10},actual:{consumption:900,production:10}});assert.equal(x.baselineIntensity,100);assert.equal(x.normalizedBaseline,1000);assert.equal(x.savings,100);assert.equal(x.status,'improved')})
 test('baseline comparison rejects different sites, significant uses and resources',()=>{
  assert.throws(()=>calculateEnergyPerformance({resource:'electricity',baseline:{resource:'electricity',site:'Plant A',seu:'Rolling',consumption:1000,production:10},actual:{resource:'electricity',site:'Plant B',seu:'Rolling',consumption:900,production:10}}),/سایت و مصرف‌کننده/)
