@@ -10,3 +10,4 @@ export function validateMaintenanceOrder(input: Record<string, unknown>, assets?
 export function saveMaintenanceOrder(input: Record<string, unknown>, store: any, now?: string): Promise<any>
 export function calculateAssetReliability(input: {asset:any;workOrders?:any[];operatingHours:number|string;startDate:string;endDate:string}): any
 export function saveReliabilitySnapshot(input: {assetId:string;operatingHours:number|string;startDate:string;endDate:string}, store:any, now?:string): Promise<any>
+export function updateMaintenanceOrderStatus(orderId:string,status:MaintenanceStatus,store:any,now?:string):Promise<any>
