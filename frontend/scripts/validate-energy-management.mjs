@@ -178,7 +178,7 @@ test('water balance save requires a reporting period and measurement boundary',a
 
 
 test('multivariable energy normalization holds out the latest period and adjusts for production and operating hours',()=>{
- const records=Array.from({length:7},(_,i)=>({id:'mv'+i,resource:'electricity',period:'1405/0'+(i+1),site:'Plant',seu:'Rolling',production:100+i*10,operatingHours:100+i*5,consumption:20+2*(100+i*10)+.5*(100+i*5)+(i===6?30:0),dataQuality:'measured'}))
+ const records=Array.from({length:7},(_,i)=>({id:'mv'+i,resource:'electricity',period:'1405/0'+(i+1),site:'Plant',seu:'Rolling',production:100+i*10,operatingHours:[80,91,87,104,96,112,103][i],consumption:20+2*(100+i*10)+.5*[80,91,87,104,96,112,103][i]+(i===6?30:0),dataQuality:'measured'}))
  const result=analyzeMultivariableEnergyNormalization(records,{resource:'electricity'})
  assert.equal(result.results.length,1)
  const model=result.results[0]
