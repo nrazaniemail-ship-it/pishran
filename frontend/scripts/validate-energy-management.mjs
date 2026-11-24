@@ -219,7 +219,7 @@ test('multivariable normalization uses complete measured operational drivers and
 })
 test('multivariable driver selection does not use held-out period variation',async()=>{
   const {analyzeMultivariableEnergyNormalization,validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
-  const production=[100,110,120,130,140,150],hours=[8,9,10,11,12,13],mix=[40,40,40,40,40,55]
+  const production=[100,110,120,130,140,150],hours=[8,10,9,13,11,16],mix=[40,40,40,40,40,55]
   const records=Array.from({length:6},(_,i)=>validateEnergyRecord({resource:'electricity',period:'P'+(i+1),site:'Plant',seu:'Mill',consumption:100+i*7,cost:10,production:production[i],operatingHours:hours[i],productMixIndex:mix[i],dataQuality:'measured'}))
   const result=analyzeMultivariableEnergyNormalization(records,{resource:'electricity'})
   assert.equal(result.results.length,1)
