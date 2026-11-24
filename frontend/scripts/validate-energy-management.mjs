@@ -224,7 +224,7 @@ test('multivariable driver selection does not use held-out period variation',asy
   const result=analyzeMultivariableEnergyNormalization(records,{resource:'electricity'})
   assert.equal(result.results.length,1)
   assert.ok(!result.results[0].predictors.includes('productMixIndex'))
-  assert.ok(result.results[0].warnings.some(x=>x.includes('بدون تغییر')))
+  assert.ok(result.warnings.some(x=>x.includes('بدون تغییر')))
 })
 test('multivariable normalization excludes incomplete optional drivers and warns instead of imputing',async()=>{
  const {analyzeMultivariableEnergyNormalization,validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
