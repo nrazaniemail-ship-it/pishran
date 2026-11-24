@@ -2132,14 +2132,14 @@ input,select,textarea{color:var(--text)}
 @media(max-width:460px){.energy-export-actions{display:grid;grid-template-columns:1fr 1fr}.energy-export-actions button{font-size:11px;padding:8px}}
 @media print{
  @page{size:A4;margin:14mm}
- body *{visibility:hidden!important}
- .energy-print-report,.energy-print-report *{visibility:visible!important}
- .energy-print-report{display:block!important;position:absolute!important;inset:0 auto auto 0;width:100%;padding:0;color:#111;background:#fff;font-family:Arial,sans-serif;direction:rtl}
- .energy-print-report h1{font-size:18pt;margin:0 0 8mm}
- .energy-print-report h2{font-size:13pt;margin:7mm 0 3mm;break-after:avoid}
- .energy-print-report p{font-size:9pt}
- .energy-print-report table{width:100%;border-collapse:collapse;font-size:8pt;break-inside:auto}
- .energy-print-report tr{break-inside:avoid}
- .energy-print-report th,.energy-print-report td{border:1px solid #9aa6b2;padding:5px;text-align:right}
- .energy-print-report th{background:#eaf0f4!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ body.energy-report-printing *{visibility:hidden!important}
+ body.energy-report-printing .energy-print-report,body.energy-report-printing .energy-print-report *{visibility:visible!important}
+ body.energy-report-printing .energy-print-report{display:block!important;position:absolute!important;inset:0 auto auto 0;width:100%;padding:0;color:#111;background:#fff;font-family:Arial,sans-serif;direction:rtl}
+ body.energy-report-printing .energy-print-report h1{font-size:18pt;margin:0 0 8mm}
+ body.energy-report-printing .energy-print-report h2{font-size:13pt;margin:7mm 0 3mm;break-after:avoid}
+ body.energy-report-printing .energy-print-report p{font-size:9pt}
+ body.energy-report-printing .energy-print-report table{width:100%;border-collapse:collapse;font-size:8pt;break-inside:auto}
+ body.energy-report-printing .energy-print-report tr{break-inside:avoid}
+ body.energy-report-printing .energy-print-report th,body.energy-report-printing .energy-print-report td{border:1px solid #9aa6b2;padding:5px;text-align:right}
+ body.energy-report-printing .energy-print-report th{background:#eaf0f4!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
