@@ -124,5 +124,7 @@ test('MOD-05 provides a complete Excel workbook and print-to-PDF report path',as
  assert.ok(app.includes('تراز آب'))
  assert.ok(app.includes('تخصیص هزینه به مراکز'))
  assert.ok(css.includes('@media print'))
+ assert.ok(css.includes('body.energy-report-printing'))
+ assert.ok(app.includes("document.body.classList.add('energy-report-printing')"))
  assert.ok(app.includes('updateEnergyActionStatus'))
 })
