@@ -94,14 +94,18 @@ test('flags a one-sided meter reading instead of silently skipping reconciliatio
 })
 
 
-test('bill upload exposes independent gallery/files and camera inputs for all utilities',()=>{
+test('bill upload opens three explicit file, gallery and camera choices for all utilities',()=>{
  const electricity=readFileSync(new URL('../src/features/modules/ElectricityBillAnalysis.tsx',import.meta.url),'utf8')
  const resource=readFileSync(new URL('../src/features/modules/ResourceBillAnalysis.tsx',import.meta.url),'utf8')
  for(const source of [electricity,resource]){
-  assert.match(source,/انتخاب از گالری یا فایل‌ها/)
-  assert.match(source,/عکاسی مستقیم از قبض/)
+  assert.match(source,/<Upload size={19}\\/> بارگذاری/)
+  assert.match(source,/<b>فایل<\\/b>/)
+  assert.match(source,/<b>گالری<\\/b>/)
+  assert.match(source,/<b>دوربین<\\/b>/)
+  assert.match(source,/aria-expanded={showSources}/)
   assert.ok(source.includes('<input type="file" accept="image/*" disabled={busy}'))
   assert.match(source,/capture="environment"/)
   assert.ok(source.includes('e.currentTarget.value=""'))
+  assert.ok(source.includes('setShowSources(false)'))
  }
 })
