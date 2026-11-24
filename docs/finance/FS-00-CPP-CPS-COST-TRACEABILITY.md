@@ -130,6 +130,22 @@ A separate persisted transfer register now records movement between raw material
 
 Finished-goods movement rows now distinguish product sales quantity and cost-of-goods-sold value from other consumption/issues. These amounts are checked product-by-product against the product operating schedule; revenue is not substituted for COGS. A non-zero finished-goods sale cannot be omitted merely because closing inventory is zero, and sales fields are prohibited on raw-material and WIP rows. Regression coverage now includes the complete raw-materials → WIP → finished-goods chain with unit conversion in both transfers, proving that the transferred value is relocated across all three stages without increasing total inventory value. The current bridge validates these movements against the existing engine balances. It does not yet create or post the underlying production conversion entries, nor does it automatically infer transfers from CPP/CPS source lines.
 
+## Item-level CPP → WIP → finished-goods → CPS roll-forward
+
+The CPP/CPS adapter now retains an item/product-period trace instead of exposing only aggregate schedule deltas. For each verified cost item, the report records gross cost, base-covered cost, incremental CPP, opening WIP carry, completed production cost, closing WIP, opening finished-goods carry, CPS, closing finished-goods value, gross-profit effect, and the resulting WIP plus finished-goods working-capital effect. Items fully covered by the base CPP remain visible as `base-covered` with zero incremental posting; they are not charged a second time.
+
+**WIP carry-forward control (weighted-average equivalent units):** an item's prior-period closing WIP value is added to its current-period incremental cost before the current period's material or conversion equivalent-unit rate is calculated. That pool is split between completed production and closing WIP. Therefore:
+
+`Opening WIP item value + current incremental CPP = completed production CPP + closing WIP item value`
+
+The item's completed production cost is then pooled with its opening finished-goods carry and allocated by the product schedule's weighted-average unit cost:
+
+`Opening finished-goods item value + completed production CPP = CPS item value + closing finished-goods item value`
+
+The item-level working-capital effect is closing WIP plus closing finished-goods value. CPS is the item's cost-of-sales contribution and reduces gross profit by the same amount. The panel exposes these period/product/item values in the CPP/CPS trace table. Three-period regression coverage checks WIP carry from period 1 to 2 to 3, finished-goods carry, CPS, gross-profit effect and working-capital attribution; base-covered items are separately shown without a second posting.
+
+This is a cost-attribution bridge, not a claim that the project has a general ledger or ERP posting integration. Raw-material stock movements remain separately source-backed in the production-flow and stage-inventory ledgers and must reconcile through the existing inventory controls; the item trace does not manufacture raw-material receipts or issues.
+
 ## Append-only correction documents in the periodic finance bridge
 
 The stage journal remains a local append-only subledger, not an ERP/general-ledger integration. The periodic finance panel now recovers that journal before calculating the product schedule and applies only persisted `reversal` and `adjustment` documents. `original` documents are deliberately excluded from the correction overlay because their operational values are already represented by the product/inventory schedules.
