@@ -74,18 +74,21 @@ test('multi-period energy trends calculate production-normalized and cost intens
  assert.ok(Math.abs(result.points[1].intensityChangePercent+10)<1e-9)
  assert.ok(Math.abs(result.points[1].costPerOutputChangePercent-8)<1e-9)
 })
-test('gas trend uses thermal basis only for adjacent periods with matching HHV/LHV and reference conditions',async()=>{
+test('gas trend uses thermal basis only when the complete series shares HHV/LHV and reference conditions',async()=>{
  const {analyzeEnergyTrends}=await import('../src/features/modules/energyManagementWorkflow.js')
  const records=[
   {id:'g1',resource:'gas',period:'1405/01',site:'Plant',seu:'Furnace',consumption:100,production:10,cost:30,gasEnergyKwh:1000,calorificBasis:'net',gasReferenceConditions:'15C/101.325kPa'},
   {id:'g2',resource:'gas',period:'1405/02',site:'Plant',seu:'Furnace',consumption:110,production:10,cost:33,gasEnergyKwh:990,calorificBasis:'net',gasReferenceConditions:'15C/101.325kPa'},
   {id:'g3',resource:'gas',period:'1405/03',site:'Plant',seu:'Furnace',consumption:105,production:10,cost:32,gasEnergyKwh:1050,calorificBasis:'gross',gasReferenceConditions:'15C/101.325kPa'}
  ]
- const result=analyzeEnergyTrends(records,{resource:'gas'})
- assert.equal(result.points[1].comparisonBasis,'thermal-energy')
- assert.equal(result.points[1].intensity,99)
- assert.equal(result.points[2].comparisonBasis,'volume-or-resource')
- assert.equal(result.points[2].intensity,10.5)
+ const comparable=analyzeEnergyTrends(records.slice(0,2),{resource:'gas'})
+ assert.equal(comparable.points[1].comparisonBasis,'thermal-energy')
+ assert.equal(comparable.points[1].intensity,99)
+ const mixed=analyzeEnergyTrends(records,{resource:'gas'})
+ assert.ok(mixed.series.every(x=>x.comparisonBasis==='volume-or-resource'))
+ assert.equal(mixed.points[1].intensity,11)
+ assert.equal(mixed.points[2].intensity,10.5)
+ assert.ok(mixed.warnings.some(x=>x.includes('HHV/LHV')))
 })
 test('electricity bill cost allocation reconciles every charge component to the invoice total',async()=>{
  const {allocateElectricityBillCost}=await import('../src/features/modules/energyManagementWorkflow.js')
