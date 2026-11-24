@@ -200,3 +200,29 @@ test('multivariable normalization excludes estimated periods and reports insuffi
  assert.equal(result.results.length,1)
  assert.equal(result.results[0].trainingPeriods.length,5)
 })
+
+test('multivariable normalization uses complete measured operational drivers and holds out the latest period',()=>{
+ const {analyzeMultivariableEnergyNormalization,validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const records=Array.from({length:9},(_,i)=>validateEnergyRecord({resource:'electricity',period:'1405/'+String(i+1).padStart(2,'0'),site:'Plant',seu:'Furnace',consumption:100+10*i+2*i+3*(i%3)+i,cost:50,production:100+i*10,operatingHours:20+i,productMixIndex:30+i*2,ambientTemperatureC:10+i,feedQualityIndex:70+i,shutdownHours:i%2,dataQuality:'measured'}))
+ const result=analyzeMultivariableEnergyNormalization(records,{resource:'electricity'})
+ assert.equal(result.results.length,1)
+ assert.deepEqual(result.results[0].predictors,['production','operatingHours','productMixIndex','ambientTemperatureC','feedQualityIndex','shutdownHours'])
+ assert.deepEqual(result.results[0].trainingPeriods,records.slice(0,-1).map(x=>x.period))
+ assert.ok(Number.isFinite(result.results[0].normalizedConsumption))
+})
+test('multivariable normalization excludes incomplete optional drivers and warns instead of imputing',async()=>{
+ const {analyzeMultivariableEnergyNormalization,validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const records=Array.from({length:6},(_,i)=>validateEnergyRecord({resource:'electricity',period:'P'+(i+1),site:'Plant',seu:'Mill',consumption:100+i*4,cost:10,production:10+i,operatingHours:8+i,productMixIndex:i===2?'':20+i}))
+ const result=analyzeMultivariableEnergyNormalization(records,{resource:'electricity'})
+ assert.equal(result.results.length,1)
+ assert.ok(!result.results[0].predictors.includes('productMixIndex'))
+ assert.ok(result.warnings.some(x=>x.includes('داده ناقص')))
+})
+test('energy driver validation enforces bounded indices and permits below-zero ambient temperatures',async()=>{
+ const {validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const base={resource:'electricity',period:'P1',site:'Plant',seu:'Mill',consumption:100,production:10,cost:20,operatingHours:8}
+ assert.equal(validateEnergyRecord({...base,ambientTemperatureC:-5}).ambientTemperatureC,-5)
+ assert.throws(()=>validateEnergyRecord({...base,productMixIndex:101}),/شاخص ترکیب محصول/)
+ assert.throws(()=>validateEnergyRecord({...base,feedQualityIndex:-1}),/شاخص کیفیت خوراک/)
+ assert.throws(()=>validateEnergyRecord({...base,shutdownHours:-1}),/ساعات توقف/)
+})
