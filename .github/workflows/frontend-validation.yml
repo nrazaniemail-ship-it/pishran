@@ -1,6 +1,6 @@
 name: Frontend build and financial validation
 
-# Keep frontend validation active on Pishran feature branches, including utility bill upload work.
+# Validate feature branch changes before they are promoted to main.
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - 'frontend/**'
       - '.github/workflows/frontend-validation.yml'
   pull_request:
-    branches: [main, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard, feature/mod05-bill-gallery-picker]
+    branches: [main, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-validation.yml'
