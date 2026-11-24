@@ -167,3 +167,22 @@ test('MOD-05 provides a complete Excel workbook and print-to-PDF report path',as
 
 
 test('water balance save requires a reporting period and measurement boundary',async()=>{const {saveWaterBalance}=await import('../src/features/modules/energyManagementWorkflow.js');const store={update:async()=>{}};await assert.rejects(()=>saveWaterBalance({freshwaterM3:10,productionTon:1},store),/دوره تراز آب/);await assert.rejects(()=>saveWaterBalance({period:'1405/07',freshwaterM3:10,productionTon:1},store),/سایت\/فرآیند/)})
+
+
+test('multivariable energy normalization holds out the latest period and adjusts for production and operating hours',()=>{
+ const records=Array.from({length:7},(_,i)=>({id:'mv'+i,resource:'electricity',period:'1405/0'+(i+1),site:'Plant',seu:'Rolling',production:100+i*10,operatingHours:100+i*5,consumption:20+2*(100+i*10)+.5*(100+i*5)+(i===6?30:0),dataQuality:'measured'}))
+ const result=analyzeMultivariableEnergyNormalization(records,{resource:'electricity'})
+ assert.equal(result.results.length,1)
+ const model=result.results[0]
+ assert.deepEqual(model.trainingPeriods,records.slice(0,6).map(x=>x.period))
+ assert.equal(model.actualPeriod,'1405/07')
+ assert.ok(model.adjustedSavings<0)
+ assert.ok(model.rSquared>0.99)
+ assert.equal(analyzeMultivariableEnergyNormalization(records.slice(0,5),{resource:'electricity'}).results.length,0)
+})
+test('multivariable normalization excludes estimated periods and reports insufficient measured history',()=>{
+ const records=Array.from({length:7},(_,i)=>({id:'mve'+i,resource:'water',period:'P'+i,site:'Plant',seu:'Cooling',production:100+i,operatingHours:80+i,consumption:200+i*3,dataQuality:i===0?'estimated':'measured'}))
+ const result=analyzeMultivariableEnergyNormalization(records,{resource:'water'})
+ assert.equal(result.results.length,1)
+ assert.equal(result.results[0].trainingPeriods.length,5)
+})
