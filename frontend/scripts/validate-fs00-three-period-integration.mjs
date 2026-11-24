@@ -31,6 +31,14 @@ const [ledgerModule, integrationModule, productScheduleModule, engine, inventory
   load('../src/features/projects/inventoryControlLedgers.ts'),
 ])
 const advancedFinancePanelSource = await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx', import.meta.url), 'utf8')
+const stageInventoryReconciliationSource = advancedFinancePanelSource.slice(
+  advancedFinancePanelSource.indexOf('const stageInventoryReconciliation=useMemo'),
+  advancedFinancePanelSource.indexOf('const abnormalWasteAccounting=useMemo'),
+)
+assert.match(stageInventoryReconciliationSource, /const expected=productOperatingSchedule\?\.valid/,
+  'Stage inventory reconciliation must use the corrected product schedule that feeds finance and statements')
+assert.doesNotMatch(stageInventoryReconciliationSource, /baseIntegratedProductOperatingSchedule/,
+  'The stage journal preview must not reconcile against a stale pre-correction product schedule')
 assert.match(advancedFinancePanelSource, /Abnormal waste \(separate expense\)/,
   'Periodic finance report must display abnormal waste as a separate expense column')
 assert.match(advancedFinancePanelSource, /Any break-even analysis based on fixed\/variable splits must disclose this unclassified amount separately/,
@@ -322,6 +330,77 @@ close(correctedStatements[2].cashFlowStatement.netChangeInCash, statements[2].ca
 close(correctedStatements[2].cashFlowStatement.closingCash, statements[2].cashFlowStatement.closingCash)
 assert.ok(correctedStatements.every(row => row.balanceSheet.reconciled),
   'Reversal and adjustment effects must reconcile through all three statements')
+
+// The detailed stage ledger must reconcile against the corrected schedule, not
+// the pre-correction CPP/CPS schedule. This reproduces the panel's exact bridge.
+const correctedStageMovements = []
+let correctedRawOpening = 0
+let correctedWipOpening = 0
+for (const row of correctedSchedule.rows) {
+  const rawClosing = correctedSchedule.periodRawMaterialInventoryValue[row.period - 1]
+  const wipClosing = correctedSchedule.periodWipInventoryValue[row.period - 1]
+  correctedStageMovements.push(stageMovement(
+    row.period, 'raw-materials', 'CC-RAW-CORRECTED',
+    0, correctedRawOpening, 0, Math.max(0, rawClosing - correctedRawOpening),
+    0, 0, 0, 0, 0, 0, 0, Math.max(0, correctedRawOpening - rawClosing),
+    0, 0, 0, rawClosing,
+  ))
+  correctedStageMovements.push(stageMovement(
+    row.period, 'work-in-progress', 'CC-WIP-CORRECTED',
+    0, correctedWipOpening, 0, Math.max(0, wipClosing - correctedWipOpening),
+    0, 0, 0, 0, 0, 0, 0, Math.max(0, correctedWipOpening - wipClosing),
+    0, 0, 0, wipClosing,
+  ))
+  correctedStageMovements.push(stageMovement(
+    row.period, 'finished-goods', 'CC-FG-CORRECTED',
+    row.openingInventoryQuantity, row.openingInventoryValue, 0, 0, 0, 0, 0, 0,
+    row.productionQuantity, row.productionCost, 0, 0, row.salesQuantity, row.costOfSales,
+    row.closingInventoryQuantity, row.closingInventoryValue,
+  ))
+  correctedRawOpening = rawClosing
+  correctedWipOpening = wipClosing
+}
+const correctedStageExpectedByPeriod = correctedSchedule.rows.map(row => ({
+  period: row.period,
+  rawMaterials: correctedSchedule.periodRawMaterialInventoryValue[row.period - 1],
+  workInProgress: correctedSchedule.periodWipInventoryValue[row.period - 1],
+  finishedGoods: row.closingInventoryValue,
+}))
+const correctedStageExpectedByProductPeriod = correctedSchedule.rows.map(row => ({
+  period: row.period, productId: row.productId,
+  rawMaterials: row.rawMaterialInventoryValue, workInProgress: row.wipInventoryValue,
+  finishedGoods: row.closingInventoryValue, finishedGoodsSalesQuantity: row.salesQuantity,
+  finishedGoodsCostOfSales: row.costOfSales, productionQuantity: row.productionQuantity,
+  productionCost: row.productionCost,
+}))
+const correctedStageReconciliation = inventoryControlModule.reconcileStageInventoryMovements(
+  correctedStageMovements, correctedStageExpectedByPeriod, 3, 0.01, [],
+  correctedStageExpectedByProductPeriod,
+)
+assert.equal(correctedStageReconciliation.valid, true, correctedStageReconciliation.issues.join('; '))
+const staleStageReconciliation = inventoryControlModule.reconcileStageInventoryMovements(
+  correctedStageMovements,
+  bound.schedule.rows.map(row => ({
+    period: row.period,
+    rawMaterials: bound.schedule.periodRawMaterialInventoryValue[row.period - 1],
+    workInProgress: bound.schedule.periodWipInventoryValue[row.period - 1],
+    finishedGoods: row.closingInventoryValue,
+  })),
+  3, 0.01, [],
+  bound.schedule.rows.map(row => ({
+    period: row.period, productId: row.productId,
+    rawMaterials: row.rawMaterialInventoryValue, workInProgress: row.wipInventoryValue,
+    finishedGoods: row.closingInventoryValue, finishedGoodsSalesQuantity: row.salesQuantity,
+    finishedGoodsCostOfSales: row.costOfSales, productionQuantity: row.productionQuantity,
+    productionCost: row.productionCost,
+  })),
+)
+assert.equal(staleStageReconciliation.valid, false,
+  'A corrected subledger must not reconcile to the stale pre-correction schedule')
+assert.ok(staleStageReconciliation.issues.some(issue =>
+  issue.includes('does not match the finance engine') || issue.includes('does not match the product operating schedule')),
+  'The stale-schedule regression must identify the inventory/production mismatch')
+
 const priorSalesCorrection = integrationModule.applyStageJournalCorrectionsToProductSchedule(
   bound.schedule,
   [...journalDocuments,
