@@ -2159,7 +2159,7 @@ input,select,textarea{color:var(--text)}
 @media(max-width:620px){.project-create-launcher{grid-template-columns:auto minmax(0,1fr);gap:12px;margin:17px 0 22px;padding:15px;border-radius:17px}.project-create-icon{width:46px;height:46px;border-radius:13px}.project-create-icon svg{width:21px;height:21px}.project-create-copy h1{font-size:16px}.project-create-copy p{font-size:10px;line-height:1.7}.project-create-action{grid-column:1/-1;justify-self:stretch;min-height:45px;padding:10px 14px;font-size:12px}}
 
 /* Feasibility and technical/economic assessment launcher: aligned with module cards. */
-.feasibility-launcher-card{position:relative;isolation:isolate;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:16px;margin:24px 0 30px;padding:clamp(18px,2.4vw,27px);border:1px solid #d5e0e7;border-radius:20px;background:linear-gradient(150deg,#fff 0%,#f8fafc 72%,#f1f5f8 100%);box-shadow:0 7px 18px rgba(36,58,76,.07),inset 0 1px 0 rgba(255,255,255,.9);color:#263d50;overflow:hidden}
+.feasibility-launcher-card{position:relative;isolation:isolate;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:16px;margin:24px 0 30px;padding:clamp(18px,2.4vw,27px);border:1px solid #d5e0e7;border-radius:20px;background:linear-gradient(150deg,#fff 0%,#f8fafc 72%,#f1f5f8 100%);box-shadow:0 7px 18px rgba(36,58,76,.07),inset 0 1px 0 rgba(255,255,255,.9);color:#263d50;overflow:hidden}
 .feasibility-launcher-card::before{content:"";position:absolute;inset-inline-end:-24px;top:-34px;width:130px;height:130px;z-index:-1;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);background:linear-gradient(145deg,rgba(238,190,73,.22),rgba(213,91,57,.09));transform:rotate(15deg)}
 .feasibility-launcher-card::after{content:"";position:absolute;inset-inline-start:0;top:18px;bottom:18px;width:3px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,#e9bd4d,#d97948);opacity:.8}
 .feasibility-launcher-icon{display:grid;place-items:center;width:54px;height:54px;border:1px solid #dce5eb;border-radius:15px;background:linear-gradient(145deg,#fff,#eaf0f4);color:#426d86;box-shadow:0 4px 10px rgba(39,65,83,.08)}
@@ -2225,4 +2225,37 @@ input,select,textarea{color:var(--text)}
 }
 @media(prefers-reduced-motion:reduce){
   .module-launcher-icon,.feasibility-launcher-icon{animation:none}
+}
+
+
+/* Mobile header alignment: language control on the left, Pishran brand on the right. */
+@media(max-width:900px){
+  .topbar{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    align-items:center;
+    gap:10px 12px;
+  }
+  .topbar .page-language-switch{
+    position:static;
+    grid-column:1;
+    grid-row:1;
+    justify-self:start;
+    align-self:center;
+    transform:none;
+    margin:0;
+  }
+  .topbar .brand{
+    grid-column:2;
+    grid-row:1;
+    justify-self:end;
+    margin:0;
+    text-align:right;
+  }
+  .topbar .main-nav{
+    grid-column:1 / -1;
+    grid-row:2;
+    order:initial;
+    width:100%;
+  }
 }
