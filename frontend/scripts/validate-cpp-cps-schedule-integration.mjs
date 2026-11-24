@@ -255,6 +255,10 @@ const coveredBound = integrationModule.bindCppCpsTraceLedgerToProductSchedule(sc
 assert.equal(coveredBound.valid, true)
 assert.deepEqual(coveredBound.incrementalCppByPeriod, [0, 0])
 assert.deepEqual(coveredBound.schedule.periodCostOfSales, schedule.periodCostOfSales)
+assert.equal(coveredBound.tracePathRows.length, 2,
+  'Fully base-covered items remain visible in the item trace without incremental posting')
+assert.ok(coveredBound.tracePathRows.every(row => row.postingStatus === 'base-covered' &&
+  row.incrementalCpp === 0 && row.costOfSalesCpp === 0 && row.workingCapitalImpact === 0))
 
 // CRC200 without evidence is explicitly null and blocks final posting, not treated as zero.
 const unverifiedLedger = ledgerModule.buildCppCpsTraceLedger([{
