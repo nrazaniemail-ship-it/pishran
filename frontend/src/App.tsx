@@ -331,17 +331,11 @@ export default function App() {
           <h1 id="feasibility-launcher-title">{isEn ? 'Technical & Economic Assessment – Feasibility Study' : 'ارزیابی فنی و اقتصادی-امکان سنجی'}</h1>
           <p>{isEn ? 'Integrated technical, engineering, market and financial assessment, with project risk analysis.' : 'محیط یکپارچه برای ارزیابی فنی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و بررسی ریسک پروژه‌ها.'}</p>
         </div>
-        <div className="feasibility-project-count" aria-label={isEn ? `${projects.length} registered projects` : `${projects.length} پروژه ثبت‌شده`}>
-          <b>{projects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</b>
-          <span>{isEn ? 'PROJECTS' : 'پروژه ثبت‌شده'}</span>
-        </div>
+
       </section>
 
       <section className="module-launcher" aria-labelledby="module-launcher-title">
-        <div className="module-launcher-heading">
-          <h2 id="module-launcher-title">{isEn ? 'Pishran Intelligence Modules' : 'ماژولهای هوشمند پیشران'}</h2>
-          <span className="module-launcher-count"><b>12</b><small>{isEn ? 'MODULES' : 'ماژول'}</small></span>
-        </div>
+
         <div className="module-launcher-groups">
           {Array.from(new Set(modules.map(item => item.group))).map(group => {
             const groupModules = modules.filter(item => item.group === group)
@@ -352,8 +346,8 @@ export default function App() {
                   return <button type="button" key={item.id} className="module-launcher-card" onClick={() => openModule(item.id)}
                     aria-label={`${item.id}: ${isEn ? item.enTitle : item.title}`}>
                     <span className="module-launcher-icon" data-module={item.id}><Icon size={23} strokeWidth={2}/></span>
+                    <span className="module-launcher-code" aria-hidden="true">{item.id}</span>
                     <span className="module-launcher-copy">
-                      <small>{item.id}</small>
                       <strong>{isEn ? item.enTitle : item.title}</strong>
                       <span>{isEn ? item.enSub : item.sub}</span>
                     </span>
