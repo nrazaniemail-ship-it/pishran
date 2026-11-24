@@ -1,6 +1,6 @@
 import {useMemo,useState} from 'react'
 import {localStore} from '../../core/storage/localStore'
-import {allocateGasBillCost} from './energyIntelligenceEngine'
+import {allocateGasBillCost,allocateWaterBillCost} from './energyIntelligenceEngine'
 import './ResourceBillCostAllocationPanel.css'
 
 type Resource='gas'|'water'
@@ -29,26 +29,7 @@ export default function ResourceBillCostAllocationPanel({resource,language='fa'}
    if(gas){
     return allocateGasBillCost({bill:{id:bill.id,billNumber:bill.billNumber,period:bill.period,amount,volumeCharge:numeric(bill.volumeCharge),thermalCharge:numeric(bill.thermalCharge),transportCharge:numeric(bill.transportCharge),fixedCharge:numeric(bill.fixedCharge),taxCharge:numeric(bill.taxCharge),otherCharges:numeric(bill.otherCharges)},consumers:centers.map(x=>({id:x.id,name:x.name,gasNm3:numeric(x.consumption),gasGJ:numeric(x.thermalEnergyGJ),fixedCapacityShare:numeric(x.fixedCapacityShare),productionTon:numeric(x.production)}))})
    }
-   const allocate=(value:number,key:'consumption'|'wastewater'|'production',equal=false)=>{
-    if(value===0)return centers.map(()=>0)
-    const weights=centers.map(x=>equal?1:numeric(x[key])),total=weights.reduce((sum,x)=>sum+x,0)
-    if(total<=0)throw new Error('برای جزء هزینه، محرک تخصیص معتبر لازم است.')
-    let used=0
-    return weights.map((weight,index)=>{const share=index===centers.length-1?value-used:value*weight/total;used+=share;return share})
-   }
-   const volume=allocate(numeric(bill.volumeCharge),'consumption')
-   const sewer=allocate(numeric(bill.sewerCharge),'wastewater')
-   const fixed=allocate(numeric(bill.fixedCharge),'consumption',true)
-   const other=allocate(numeric(bill.otherCharges)+Math.max(0,amount-known),'consumption')
-   const preTax=centers.map((_,i)=>volume[i]+sewer[i]+fixed[i]+other[i])
-   const preTaxTotal=preTax.reduce((sum,x)=>sum+x,0)
-   const tax=preTaxTotal>0?preTax.map((x,i)=>i===preTax.length-1?numeric(bill.taxCharge)-preTax.slice(0,i).reduce((sum,v)=>sum+numeric(bill.taxCharge)*v/preTaxTotal,0):numeric(bill.taxCharge)*x/preTaxTotal):centers.map(()=>0)
-   if(numeric(bill.taxCharge)>0&&preTaxTotal<=0)throw new Error('برای تخصیص مالیات، اجزای پیش از مالیات باید مبنای مثبت داشته باشند.')
-   const rows=centers.map((x,i)=>{const totalCost=volume[i]+sewer[i]+fixed[i]+tax[i]+other[i],production=numeric(x.production);return {costCenterId:x.id,name:x.name,volumeCharge:volume[i],sewerCharge:sewer[i],fixedCharge:fixed[i],taxCharge:tax[i],otherCharges:other[i],totalCost,productionTon:production,costPerTon:production>0?totalCost/production:null}})
-   const allocatedTotal=rows.reduce((sum,x)=>sum+x.totalCost,0)
-   if(Math.abs(allocatedTotal-amount)>Math.max(.0001,amount*1e-10))throw new Error('جمع تخصیص قبض آب با مبلغ نهایی تطبیق ندارد.')
-   const residual=Math.max(0,amount-known)
-   return {billId:bill.id,billNumber:bill.billNumber,period:bill.period,resource,billAmount:amount,allocatedTotal,residual,allocations:rows,allocationRules:{volumeCharge:'consumption-m3',sewerCharge:'wastewater-m3',fixedCharge:'equal-share',taxCharge:'pre-tax-cost-share',otherCharges:'consumption-m3',residual:'consumption-m3'},warnings:[...(residual>0?['باقیمانده تفکیک‌نشده قبض آب در سایر هزینه‌ها منظور و بر مبنای مصرف آب تخصیص یافت؛ اجزای قبض را تکمیل کنید.']:[]),...(numeric(bill.fixedCharge)>0?['هزینه ثابت آب به‌صورت مساوی بین مراکز هزینه توزیع شده است؛ در صورت وجود ظرفیت یا قرارداد اختصاصی، مبنای مناسب را بررسی کنید.']:[])]}
+   return allocateWaterBillCost({bill:{id:bill.id,billNumber:bill.billNumber,period:bill.period,amount,volumeCharge:numeric(bill.volumeCharge),sewerCharge:numeric(bill.sewerCharge),fixedCharge:numeric(bill.fixedCharge),taxCharge:numeric(bill.taxCharge),otherCharges:numeric(bill.otherCharges)},consumers:centers.map(x=>({id:x.id,name:x.name,waterM3:numeric(x.consumption),wastewaterM3:numeric(x.wastewater),productionTon:numeric(x.production)}))})
   }catch{return null}
  },[bill,centers,resource,gas])
  const setBillField=(key:keyof Bill,value:string)=>setBill(old=>({...old,[key]:value}))
