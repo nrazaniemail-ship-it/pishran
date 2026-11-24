@@ -126,8 +126,16 @@ const wipLedger = ledgerModule.buildCppCpsTraceLedger([
 const wipBound = integrationModule.bindCppCpsTraceLedgerToProductSchedule(wipSchedule, wipLedger, [0]);
 assert.equal(wipBound.valid, true, wipBound.issues.join('; '));
 const wipRow = wipBound.schedule.rows[0];
+assert.equal(wipBound.tracePathRows.length, 2);
+const materialWipPath = wipBound.tracePathRows.find(row => row.itemId === 'materials-01');
+const energyWipPath = wipBound.tracePathRows.find(row => row.itemId === 'energy-01');
+assert.ok(materialWipPath && energyWipPath);
 const completedMaterialCpp = 200 * 100 / 110;
 const completedConversionCpp = 100 * 100 / 105;
+close(materialWipPath.completedProductionCpp, completedMaterialCpp);
+close(materialWipPath.closingWipCpp, 200 - completedMaterialCpp);
+close(energyWipPath.completedProductionCpp, completedConversionCpp);
+close(energyWipPath.closingWipCpp, 100 - completedConversionCpp);
 const closingWipCpp = 200 * 10 / 110 + 100 * 5 / 105;
 close(wipRow.productionCost, 1000 + completedMaterialCpp + completedConversionCpp);
 close(wipRow.wipInventoryValue, 200 + closingWipCpp);
@@ -169,10 +177,23 @@ close(materialP1.productionCost, 1000 + 200 * 100 / 110);
 close(materialP1.wipInventoryValue, 200 + 200 * 10 / 110);
 close(materialP2.openingInventoryValue, materialP1.closingInventoryValue,
   'Finished-goods opening value must carry forward from the prior period after CPP allocation');
-close(materialP2.productionCost, 800 + 100 * 80 / 85);
-close(materialP2.wipInventoryValue, 250 + 100 * 5 / 85);
+const materialP2Pool = materialP1.closingWipCpp + 100;
+close(materialP2.productionCost, 800 + materialP2Pool * 80 / 85);
+close(materialP2.wipInventoryValue, 250 + materialP2Pool * 5 / 85);
 close(twoPeriodMaterialBound.schedule.periodRawMaterialInventoryValue[0], 500);
 close(twoPeriodMaterialBound.schedule.periodRawMaterialInventoryValue[1], 400);
+const materialPathP1 = twoPeriodMaterialBound.tracePathRows.find(row => row.period === 1);
+const materialPathP2 = twoPeriodMaterialBound.tracePathRows.find(row => row.period === 2);
+assert.ok(materialPathP1 && materialPathP2);
+close(materialPathP1.openingWipCarry, 0);
+close(materialPathP1.completedProductionCpp + materialPathP1.closingWipCpp, 200);
+close(materialPathP2.openingWipCarry, materialPathP1.closingWipCpp,
+  'Prior-period material CPP held in WIP must carry into the next production period');
+close(materialPathP2.openingWipCarry + materialPathP2.incrementalCpp,
+  materialPathP2.completedProductionCpp + materialPathP2.closingWipCpp,
+  'Opening WIP plus current material CPP must reconcile to completed output and closing WIP');
+close(materialPathP2.workingCapitalImpact,
+  materialPathP2.closingWipCpp + materialPathP2.closingFinishedGoodsCpp);
 close(twoPeriodMaterialBound.schedule.periodWipInventoryValue[0], materialP1.wipInventoryValue);
 close(twoPeriodMaterialBound.schedule.periodWipInventoryValue[1], materialP2.wipInventoryValue);
 close(twoPeriodMaterialBound.schedule.periodCostOfSales[0], materialP1.costOfSales);
