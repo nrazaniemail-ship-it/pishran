@@ -331,10 +331,6 @@ export default function App() {
           <h1 id="feasibility-launcher-title">{isEn ? 'Technical & Economic Assessment – Feasibility Study' : 'ارزیابی فنی و اقتصادی-امکان سنجی'}</h1>
           <p>{isEn ? 'Integrated technical, engineering, market and financial assessment, with project risk analysis.' : 'محیط یکپارچه برای ارزیابی فنی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و بررسی ریسک پروژه‌ها.'}</p>
         </div>
-        <div className="feasibility-project-count" aria-label={isEn ? `${projects.length} registered projects` : `${projects.length} پروژه ثبت‌شده`}>
-          <b>{projects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</b>
-          <span>{isEn ? 'PROJECTS' : 'پروژه ثبت‌شده'}</span>
-        </div>
       </section>
 
       <section className="module-launcher" aria-labelledby="module-launcher-title">
