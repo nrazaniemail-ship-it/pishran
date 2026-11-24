@@ -177,7 +177,7 @@ close(materialP1.productionCost, 1000 + 200 * 100 / 110);
 close(materialP1.wipInventoryValue, 200 + 200 * 10 / 110);
 close(materialP2.openingInventoryValue, materialP1.closingInventoryValue,
   'Finished-goods opening value must carry forward from the prior period after CPP allocation');
-const materialP2Pool = materialP1.closingWipCpp + 100;
+const materialP2Pool = (200 * 10 / 110) + 100;
 close(materialP2.productionCost, 800 + materialP2Pool * 80 / 85);
 close(materialP2.wipInventoryValue, 250 + materialP2Pool * 5 / 85);
 close(twoPeriodMaterialBound.schedule.periodRawMaterialInventoryValue[0], 500);
