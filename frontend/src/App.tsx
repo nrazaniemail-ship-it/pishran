@@ -309,17 +309,17 @@ export default function App() {
       <button className="language-switch page-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button>
       <div className="brand"><button className="brand-title" type="button" onClick={() => navigateTo('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
       <nav className="main-nav" aria-label={isEn?"Primary navigation":"ناوبری اصلی"}>
-        <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Home" : "پیشخوان"}</button>
-        <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
-        <button className={page === 'steel-group' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('steel-group')}><Factory size={17}/> {isEn ? "Steel Group" : "گروه فولاد"}</button>
+        <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}>{isEn ? "Home" : "پیشخوان"}</button>
+        <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('projects')}>{isEn ? "Projects" : "پروژه‌ها"}</button>
+        <button className={page === 'steel-group' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('steel-group')}>{isEn ? "Steel Group" : "گروه فولاد"}</button>
         <div className={moduleDropdownOpen ? 'nav-dropdown is-open' : 'nav-dropdown'}>
-          <button type="button" className={page === 'module' ? 'nav-item nav-module-toggle active' : 'nav-item nav-module-toggle'} aria-haspopup="menu" aria-expanded={moduleDropdownOpen} onClick={() => setModuleDropdownOpen(current => !current)}><Boxes size={17}/> {isEn ? 'Modules' : 'ماژولها'} <span className="nav-caret" aria-hidden="true">{moduleDropdownOpen ? '▴' : '▾'}</span></button>
+          <button type="button" className={page === 'module' ? 'nav-item nav-module-toggle active' : 'nav-item nav-module-toggle'} aria-haspopup="menu" aria-expanded={moduleDropdownOpen} onClick={() => setModuleDropdownOpen(current => !current)}>{isEn ? 'Modules' : 'ماژولها'} <span className="nav-caret" aria-hidden="true">{moduleDropdownOpen ? '▴' : '▾'}</span></button>
           {moduleDropdownOpen && <div className="nav-dropdown-menu" role="menu">
             {modules.map(item => <button type="button" role="menuitem" key={item.id} className={page === 'module' && activeModuleId === item.id ? 'dropdown-module active' : 'dropdown-module'} onClick={() => openModule(item.id)}><span>{item.id}</span>{isEn ? item.enTitle : item.title}</button>)}
           </div>}
         </div>
-        <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('guide')}><BookOpen size={17}/> {isEn ? "Guide" : "راهنما"}</button>
-        <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('settings')}><Settings size={17}/> {isEn ? "Settings" : "تنظیمات"}</button>
+        <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('guide')}>{isEn ? "Guide" : "راهنما"}</button>
+        <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('settings')}>{isEn ? "Settings" : "تنظیمات"}</button>
       </nav>
       <div className="top-actions"></div>
     </header>
