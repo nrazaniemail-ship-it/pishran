@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {calculateEnergyPerformance,validateEnergyRecord,saveEnergyBaseline,saveEnergyRecord,saveEnergyAction,ENERGY_DATA_KEY,ENERGY_BASELINES_KEY,ENERGY_ACTIONS_KEY} from '../src/features/modules/energyManagementWorkflow.js'
+import {calculateEnergyPerformance,validateEnergyRecord,saveEnergyBaseline,saveEnergyRecord,saveEnergyAction,updateEnergyActionStatus,ENERGY_DATA_KEY,ENERGY_BASELINES_KEY,ENERGY_ACTIONS_KEY} from '../src/features/modules/energyManagementWorkflow.js'
 test('electricity gas and water retain distinct units',()=>{for(const [resource,unit] of [['electricity','kWh'],['gas','Nm³'],['water','m³']])assert.equal(validateEnergyRecord({resource,period:'P1',site:'Plant',seu:'Main',consumption:'100',production:'10',cost:'5'}).unit,unit)})
 test('meter readings must reconcile to recorded consumption',()=>assert.throws(()=>validateEnergyRecord({resource:'electricity',period:'P1',site:'Plant',seu:'Mill',consumption:'20',production:'1',cost:'1',startReading:'100',endReading:'119'})))
 test('baseline is normalized to actual production',()=>{const x=calculateEnergyPerformance({resource:'electricity',baseline:{consumption:1000,production:10},actual:{consumption:900,production:10}});assert.equal(x.baselineIntensity,100);assert.equal(x.normalizedBaseline,1000);assert.equal(x.savings,100);assert.equal(x.status,'improved')})
@@ -101,3 +101,13 @@ test('MOD-02 handoff uses only the selected cost-center allocation and preserves
 
 
 test('MOD-05 presents an industrial dashboard hierarchy with record-backed resource KPIs', async()=>{const {readFile}=await import('node:fs/promises');const app=await readFile(new URL('../src/features/modules/ModuleEnergyPanel.tsx',import.meta.url),'utf8');const css=await readFile(new URL('../src/style.css',import.meta.url),'utf8');assert.ok(app.includes('energy-dashboard-hero'));assert.ok(app.includes('energy-resource-tabs'));assert.ok(app.includes('totals[resource].consumption'));assert.ok(app.includes('energy-resource-summary'));assert.ok(app.includes('EnergyIntelligenceInsights'));assert.ok(app.includes('ResourceBillAnalysis'));assert.ok(app.includes('ResourceBillCostAllocationPanel'));assert.ok(css.includes('.energy-dashboard-hero'));assert.ok(css.includes('@media(max-width:460px)'));assert.ok(css.includes('energy-resource-tab-icon'))})
+
+test('improvement actions support controlled lifecycle status updates',async()=>{
+ const m=new Map(),store={get:async k=>m.get(k),update:async(k,fn)=>{const next=fn(m.get(k));m.set(k,next);return next}}
+ const action=await saveEnergyAction({resource:'electricity',title:'Reduce idle load',owner:'Energy team',dueDate:'2026-12-01',expectedSavings:'100'},store,'2026-11-24T10:00:00Z')
+ await updateEnergyActionStatus(action.id,'in-progress',store)
+ assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].status,'in-progress')
+ await updateEnergyActionStatus(action.id,'verified',store)
+ assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].status,'verified')
+ await assert.rejects(()=>updateEnergyActionStatus(action.id,'unknown',store),/وضعیت اقدام/)
+})
