@@ -127,8 +127,7 @@ export async function updateMaintenanceOrderStatus(orderId, status, store, now =
   const index = rows.findIndex(row => row.id === orderId)
   if (index < 0) throw new Error('دستورکار موردنظر پیدا نشد.')
   const current = rows[index]
-  if (status === 'completed' && !current.completedAt) throw new Error('برای تکمیل دستورکار ابتدا تاریخ تکمیل را در فرم ثبت کنید.')
-  const updated = { ...current, status, updatedAt: now }
+  const updated = { ...current, status, completedAt: status === 'completed' ? (current.completedAt || now.slice(0, 10)) : current.completedAt, updatedAt: now }
   const next = [...rows]
   next[index] = updated
   await store.set(MAINTENANCE_ORDERS_KEY, next)
