@@ -104,6 +104,8 @@ test('gas cost allocation panel uses the tested thermal and contracted-capacity 
  assert.match(source,/gasGJ:numeric\(x\.thermalEnergyGJ\)/)
  assert.match(source,/fixedCapacityShare:numeric\(x\.fixedCapacityShare\)/)
  assert.match(source,/thermalCharge/)
+ assert.match(source,/allocateWaterBillCost/)
+ assert.match(source,/waterM3:numeric\(x\.consumption\)/)
  assert.match(source,/otherCharges:numeric\(bill\.otherCharges\)/)
  assert.match(source,/برای این قبض قبلاً تخصیص ثبت شده است/)
  assert.match(source,/هزینه ثابت آب به‌صورت مساوی بین مراکز هزینه توزیع شده است/)
