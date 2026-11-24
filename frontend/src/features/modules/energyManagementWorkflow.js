@@ -66,7 +66,7 @@ export function analyzeMultivariableEnergyNormalization(records,{resource,site,s
   for(const driver of optionalDrivers){
    const values=usable.map(r=>r[driver])
    const complete=values.every(v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v)))
-   const variable=complete&&values.some(v=>Number(v)!==Number(values[0]))
+   const variable=complete&&training.some(r=>Number(r[driver])!==Number(training[0][driver]))
    if(!complete){omittedDrivers.push(driverLabels[driver]+' (داده ناقص)');continue}
    if(!variable){omittedDrivers.push(driverLabels[driver]+' (بدون تغییر)');continue}
    if(training.length<predictorKeys.length+4){omittedDrivers.push(driverLabels[driver]+' (دوره کافی برای برازش مستقل وجود ندارد)');continue}
