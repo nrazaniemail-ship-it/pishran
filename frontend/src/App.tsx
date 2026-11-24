@@ -332,6 +332,19 @@ export default function App() {
         </div>
       </section>
 
+      <section className="feasibility-core" aria-labelledby="feasibility-core-title">
+        <button type="button" className="feasibility-core-card" onClick={() => navigateTo('projects')} aria-label={isEn ? 'Open feasibility projects' : 'ورود به هسته امکان‌سنجی پروژه‌ها'}>
+          <span className="feasibility-core-mark"><BriefcaseBusiness size={30} strokeWidth={1.8}/></span>
+          <span className="feasibility-core-copy">
+            <small>{isEn ? 'CORE WORKSPACE' : 'هسته اصلی پیشران'}</small>
+            <strong id="feasibility-core-title">{isEn ? 'Project Feasibility & Investment Assessment' : 'امکان‌سنجی و ارزیابی سرمایه‌گذاری پروژه‌ها'}</strong>
+            <span>{isEn ? 'Technical and economic feasibility · Financial modelling · Market and risk analysis · Investment scenarios' : 'امکان‌سنجی فنی و اقتصادی · مدل‌سازی مالی و جریان نقدی · تحلیل بازار و ریسک · سناریوسازی و ارزیابی سرمایه‌گذاری'}</span>
+            <span className="feasibility-core-open">{isEn ? 'Open feasibility workspace' : 'ورود به صفحه امکان‌سنجی'} <b aria-hidden="true">↗</b></span>
+          </span>
+          <span className="feasibility-core-stat"><b>{projects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</b><small>{isEn ? 'SAVED PROJECTS' : 'پروژه ثبت‌شده'}</small></span>
+        </button>
+      </section>
+
       <section className="module-launcher" aria-labelledby="module-launcher-title">
         <div className="module-launcher-heading">
           <div>
@@ -352,6 +365,9 @@ export default function App() {
               <div className="module-launcher-grid">
                 {groupModules.map(item => {
                   const Icon = item.icon
+                  const savedCount = moduleWorkspaces.filter(workspace => workspace.moduleId === item.id).length
+                  const profile = moduleCapabilityProfiles[item.id]
+                  const capabilityHighlights = (isEn ? profile.assessmentEn : profile.assessment).slice(0, 2)
                   return <button type="button" key={item.id} className="module-launcher-card" onClick={() => openModule(item.id)}
                     aria-label={`${item.id}: ${isEn ? item.enTitle : item.title}`}>
                     <span className="module-launcher-icon"><Icon size={23} strokeWidth={1.9}/></span>
@@ -359,8 +375,10 @@ export default function App() {
                       <small>{item.id}</small>
                       <strong>{isEn ? item.enTitle : item.title}</strong>
                       <span>{isEn ? item.enSub : item.sub}</span>
+                      <span className="module-launcher-capabilities">{capabilityHighlights.map((capability, index) => <span key={index}>{capability}</span>)}</span>
+                      <span className="module-launcher-saved-count">{savedCount.toLocaleString(isEn ? 'en-US' : 'fa-IR')} {isEn ? 'saved projects' : 'پروژه ثبت‌شده'}</span>
                     </span>
-                    <span className="module-launcher-open">{isEn ? 'Open' : 'ورود'} <span aria-hidden="true">↗</span></span>
+                    <span className="module-launcher-open">{isEn ? 'Open workspace' : 'ورود به ماژول'} <span aria-hidden="true">↗</span></span>
                   </button>
                 })}
               </div>
@@ -392,14 +410,15 @@ export default function App() {
       <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => navigateBack('dashboard')}>{isEn ? 'Back to dashboard' : 'بازگشت به داشبورد'}</button><span className="module-id">{activeModule.id}</span></div>
       <ModuleExportActions moduleId={activeModule.id} moduleTitle={isEn ? activeModule.enTitle : activeModule.title} language={settings.language}/>
       <div className="module-workspace-hero"><div className="module-icon"><ActiveModuleIcon size={26}/></div><div><h1>{isEn ? activeModule.enTitle : activeModule.title}</h1><p>{isEn ? activeModule.enSub : activeModule.sub}</p><small>{isEn ? activeModule.enGroup : activeModule.group}</small></div></div>
+      <section className="module-workspace-card"><div className="section-head"><div><h2>{isEn ? 'Projects completed in this module' : 'پروژه‌های ثبت‌شده در این ماژول'}</h2><p>{isEn ? 'Create a new project or reopen a saved module project.' : 'پروژه جدید ایجاد کنید یا سوابق ثبت‌شده این ماژول را دوباره باز کنید.'}</p></div><span className="muted">{activeModuleWorkspaces.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
+        <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createModuleWorkspace() }}><label htmlFor="module-workspace-name">{isEn ? 'New project name' : 'نام پروژه جدید'}</label><div><input id="module-workspace-name" value={moduleWorkspaceName} onChange={event => setModuleWorkspaceName(event.target.value)} placeholder={isEn ? 'Enter a name' : 'نام پروژه یا پرونده را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!moduleWorkspaceName.trim()}><Plus size={17}/>{isEn ? 'New project' : 'پروژه جدید'}</button></div></form>
+        {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></div><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No saved projects yet' : 'هنوز پروژه‌ای در این ماژول ثبت نشده است'}</b><p>{isEn ? 'Create the first project to start collecting module-specific information.' : 'با ایجاد اولین پروژه، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
+      </section>
       {activeModule.id === 'MOD-01' && <ExecutiveDashboardPanel language={settings.language} onOpenModule={openModule}/>}
       {(activeModule.id === 'MOD-02' || activeModule.id === 'MOD-03') && <ModuleIntelligencePanel moduleId={activeModule.id} language={settings.language}/>}
       {activeModule.id === 'MOD-04' && <ModuleKpiPanel language={settings.language}/>}
       {activeModule.id === 'MOD-05' && <ModuleEnergyPanel language={settings.language}/>}
-      <section className="module-workspace-card"><div className="section-head"><div><h2>{isEn ? 'Module workspaces' : 'پرونده‌های این ماژول'}</h2><p>{isEn ? 'Create and manage workspaces dedicated to this module.' : 'برای ثبت پروژه‌ها، تحلیل‌ها و اطلاعات اختصاصی این ماژول پرونده ایجاد کنید.'}</p></div><span className="muted">{activeModuleWorkspaces.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
-        <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createModuleWorkspace() }}><label htmlFor="module-workspace-name">{isEn ? 'New module workspace name' : 'نام پرونده جدید ماژول'}</label><div><input id="module-workspace-name" value={moduleWorkspaceName} onChange={event => setModuleWorkspaceName(event.target.value)} placeholder={isEn ? 'Enter a name' : 'نام پروژه یا پرونده را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!moduleWorkspaceName.trim()}><Plus size={17}/>{isEn ? 'Create' : 'ایجاد پرونده'}</button></div></form>
-        {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></div><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پرونده‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پرونده، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
-      </section>
+
       <section className="module-capabilities-card" aria-labelledby="module-capabilities-title">
         <div className="module-capabilities-heading">
           <span className="module-capabilities-eyebrow">{activeModule.id} · {isEn ? 'MARKET POSITION & BENCHMARKING' : 'ارزیابی تطبیقی و جایگاه بازار'}</span>
