@@ -324,7 +324,7 @@ export default function AdvancedFinancePanel(props: Props) {
   useEffect(()=>{props.onCppCpsTraceLedger?.(cppCpsTraceLedger)},[props.onCppCpsTraceLedger,cppCpsTraceLedger])
   const cppCpsScheduleBinding=useMemo(()=>{
     if(!(props.cppCpsTraceItems?.length))return null
-    if(!baseProductOperatingSchedule?.valid)return {valid:false,issues:baseProductOperatingSchedule?.issues??['A product-by-product sales and production schedule is required before CPP/CPS posting.'],schedule:null,incrementalCppByPeriod:[]}
+    if(!baseProductOperatingSchedule?.valid)return {valid:false,issues:baseProductOperatingSchedule?.issues??['A product-by-product sales and production schedule is required before CPP/CPS posting.'],schedule:null,incrementalCppByPeriod:[],tracePathRows:[]}
     return bindCppCpsTraceLedgerToProductSchedule(baseProductOperatingSchedule,cppCpsTraceLedger,
       projectPeriods.map(period=>fiscalYearIndexForPeriod(period,projectPeriods,props.fiscalYearStartMonth??1)),props.productFinancialDrafts?.costCentres??[])
   },[JSON.stringify(props.cppCpsTraceItems??[]),baseProductOperatingSchedule,cppCpsTraceLedger,JSON.stringify(projectPeriods),props.fiscalYearStartMonth])
@@ -1081,6 +1081,25 @@ export default function AdvancedFinancePanel(props: Props) {
         </div>}{cppCpsTraceLedger.issues.length>0&&<ul className="fw-checklist">{cppCpsTraceLedger.issues.map((issue,index)=><li key={index}>{issue}</li>)}</ul>}
         {cppCpsTraceLedger.unverifiedItemIds.length>0&&<p className="fw-hint" role="alert">{t('مبالغ اقلام تأییدنشده خالی مانده‌اند و جمع کامل هزینه قابل ثبت نیست. هیچ مقدار جایگزین یا صفر فرض نشده است.','Unverified item amounts remain blank; complete costs cannot be posted. No substitute or zero values have been assumed.')}</p>}
         {cppCpsScheduleBinding?.issues.map((issue,index)=><p className="fw-hint" key={'binding-'+index} role="alert">{issue}</p>)}
+        {cppCpsScheduleBinding?.valid&&cppCpsScheduleBinding.tracePathRows.length>0&&<div style={{overflowX:'auto',marginTop:12}}>
+          <h5>{t('ردیابی عددی هر قلم تا WIP، محصول نهایی، CPS و سرمایه در گردش','Per-item numeric trace through WIP, finished goods, COGS and working capital')}</h5>
+          <table className="fw-table"><thead><tr>
+            <th>{t('شناسه قلم','Cost item')}</th><th>{t('وضعیت ثبت','Posting status')}</th><th>{t('دوره','Period')}</th><th>{t('محصول','Product')}</th>
+            <th>{t('هزینه ناخالص','Gross cost')}</th><th>{t('پوشش پایه','Base covered')}</th><th>{t('CPP افزایشی','Incremental CPP')}</th>
+            <th>{t('WIP ابتدای دوره','Opening WIP')}</th><th>{t('تولید تکمیل‌شده','Completed CPP')}</th><th>{t('WIP پایان دوره','Closing WIP')}</th>
+            <th>{t('محصول نهایی ابتدای دوره','Opening finished goods')}</th><th>{t('CPS','COGS')}</th>
+            <th>{t('محصول نهایی پایان دوره','Closing finished goods')}</th><th>{t('اثر سود ناخالص','Gross-profit impact')}</th>
+            <th>{t('اثر سرمایه در گردش','Working-capital impact')}</th>
+          </tr></thead><tbody>{cppCpsScheduleBinding.tracePathRows.map((row,index)=><tr key={row.itemId+':'+row.productId+':'+row.period}>
+            <td>{row.itemId}</td><td>{row.postingStatus==='base-covered'?t('پوشش‌یافته در هزینه پایه','Already in base cost'):t('افزایشی','Incremental')}</td><td>{row.period}</td><td>{row.productId}</td>
+            <td>{money(row.grossCost)}</td><td>{money(row.baseCoveredCost)}</td><td>{money(row.incrementalCpp)}</td>
+            <td>{money(row.openingWipCarry)}</td><td>{money(row.completedProductionCpp)}</td><td>{money(row.closingWipCpp)}</td>
+            <td>{money(row.openingFinishedGoodsCarry)}</td><td>{money(row.costOfSalesCpp)}</td>
+            <td>{money(row.closingFinishedGoodsCpp)}</td><td>{money(row.grossProfitImpact)}</td>
+            <td>{money(row.workingCapitalImpact)}</td>
+          </tr>)}</tbody></table>
+          <p className="fw-hint">{t('کنترل هر قلم: WIP اول دوره به‌علاوه CPP افزایشی دوره برابر تولید تکمیل‌شده به‌علاوه WIP پایان دوره است؛ سپس محصول نهایی ابتدای دوره به‌علاوه تولید تکمیل‌شده به CPS و موجودی پایان محصول نهایی تخصیص می‌یابد. اثر سرمایه در گردش فقط مانده WIP و محصول نهایی همین قلم را نشان می‌دهد.','Per item, opening WIP plus current incremental CPP reconciles to completed production plus closing WIP. Opening finished goods plus completed production then reconciles to COGS and closing finished goods. Working-capital impact is the closing WIP and finished-goods balance attributable to this item.')}</p>
+        </div>}
         {props.workingCapitalDrafts?.some(item=>item.category==='finished-goods')&&<p className="fw-hint">{t('جزء محصول نهایی در سرمایه در گردش به‌صورت دستی ثبت شده است؛ ارزش مانده آن را با موجودی پایان دوره پس از تخصیص CPP تطبیق دهید تا دوباره‌شماری رخ ندهد.','Finished-goods working capital is manually entered; reconcile it to the revalued closing inventory after CPP allocation to avoid double counting.')}</p>}
       </div>}
       {salesTaxLedgerActive&&<div className={salesTaxLedgerResult?.valid?'fw-card':'fw-validation'} role={salesTaxLedgerResult?.valid?'status':'alert'}>
