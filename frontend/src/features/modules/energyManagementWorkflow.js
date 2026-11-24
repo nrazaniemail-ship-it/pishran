@@ -69,7 +69,7 @@ export function analyzeMultivariableEnergyNormalization(records,{resource,site,s
    const variable=complete&&values.some(v=>Number(v)!==Number(values[0]))
    if(!complete){omittedDrivers.push(driverLabels[driver]+' (داده ناقص)');continue}
    if(!variable){omittedDrivers.push(driverLabels[driver]+' (بدون تغییر)');continue}
-   if(training.length<predictorKeys.length+3){omittedDrivers.push(driverLabels[driver]+' (دوره کافی برای برازش مستقل وجود ندارد)');continue}
+   if(training.length<predictorKeys.length+4){omittedDrivers.push(driverLabels[driver]+' (دوره کافی برای برازش مستقل وجود ندارد)');continue}
    predictorKeys.push(driver)
   }
   if(omittedDrivers.length)warnings.push(key+': متغیرهای تعدیل‌گر کنار گذاشته شدند: '+omittedDrivers.join('، ')+'.')
