@@ -11,6 +11,8 @@ import FeasibilityWizard from './features/projects/FeasibilityWizard'
 import Guide from './features/guide/Guide'
 import BackupScheduler from './features/settings/BackupScheduler'
 import ModuleIntelligencePanel from './features/modules/ModuleIntelligencePanel'
+import ModuleKpiPanel from './features/modules/ModuleKpiPanel'
+import ModuleEnergyPanel from './features/modules/ModuleEnergyPanel'
 import ExecutiveDashboardPanel from './features/modules/ExecutiveDashboardPanel'
 
 type Page = 'dashboard' | 'projects' | 'settings' | 'steel-group' | 'project-wizard' | 'guide' | 'module'
@@ -33,6 +35,106 @@ const modules = [
 ]
 
 const moduleIconFiles = ['01-dashboard.svg','02-economics.svg','03-production.svg','04-kpi.svg','05-energy.svg','06-maintenance.svg','07-process.svg','08-supply-chain.svg','09-market.svg','10-decision.svg','11-project-investment.svg','12-risk.svg']
+
+const moduleCapabilityProfiles: Record<string, { assessment: string[]; benchmarks: string[]; learning: string[]; assessmentEn: string[]; benchmarksEn: string[]; learningEn: string[] }> = {
+  'MOD-01': {
+    assessment: ['پوشش شاخص‌های کلیدی مالی، تولید، فروش، انرژی و ریسک در یک نمای واحد','تشخیص انحراف از هدف، روندهای غیرعادی و استثناهای نیازمند اقدام','ردیابی هر هشدار تا شاخص، منبع داده، مسئول و اقدام اصلاحی'],
+    benchmarks: ['Microsoft Power BI و Fabric؛ SAP Analytics Cloud؛ Oracle Analytics Cloud — نمونه‌های بازار برای هوش تجاری و داشبورد مدیریتی'],
+    learning: ['نمای چندسطحی مدیرعامل، مدیر واحد و کارشناس با drill-down','کارت استثنا به‌جای انباشت نمودار؛ نمایش شدت، اثر مالی و فوریت','اتصال هر KPI به منشأ داده و امکان ردیابی تا جزئیات عملیاتی'],
+    assessmentEn: ['Unified coverage of finance, production, sales, energy and risk KPIs','Detection of target variance, abnormal trends and actionable exceptions','Traceability from each alert to its metric, source, owner and corrective action'],
+    benchmarksEn: ['Microsoft Power BI and Fabric; SAP Analytics Cloud; Oracle Analytics Cloud — market examples for BI and executive dashboards'],
+    learningEn: ['Role-based executive, business-unit and analyst views with drill-down','Prioritize actionable exceptions over chart volume','Link every KPI to its data lineage and operational detail']
+  },
+  'MOD-02': {
+    assessment: ['تطبیق بهای تمام‌شده با مصرف واقعی مواد، انرژی، نیروی انسانی، تعمیرات و سربار','تحلیل انحراف نرخ، مقدار و ترکیب؛ حاشیه سود محصول و مرکز هزینه','کنترل منشأ داده، دوره مالی، واحد سنجش و جلوگیری از دوباره‌شماری هزینه‌ها'],
+    benchmarks: ['SAP S/4HANA Product Costing و CO-PA؛ Oracle Cost Management؛ Infor CloudSuite Industrial — نمونه‌های مرجع هزینه‌یابی و سودآوری'],
+    learning: ['تفکیک هزینه استاندارد، واقعی و جذب‌شده و پل تطبیق بین آن‌ها','ردیابی هزینه تا قبض، کنتور، حواله مواد و مرکز هزینه','تحلیل سودآوری در سطح محصول، گرید، سفارش و مشتری'],
+    assessmentEn: ['Reconcile product cost to actual materials, energy, labor, maintenance and overhead','Analyze rate, usage and mix variances, product margin and cost centers','Control data provenance, fiscal periods and units to prevent double counting'],
+    benchmarksEn: ['SAP S/4HANA Product Costing and CO-PA; Oracle Cost Management; Infor CloudSuite Industrial'],
+    learningEn: ['Separate standard, actual and absorbed cost with a reconciliation bridge','Trace cost to bills, meters, material issues and cost centers','Analyze profitability by product, grade, order and customer']
+  },
+  'MOD-03': {
+    assessment: ['اندازه‌گیری تولید واقعی در برابر برنامه و ظرفیت قابل‌دسترس','تحلیل OEE از دسترس‌پذیری، عملکرد و کیفیت با تعریف روشن زمان برنامه‌ریزی‌شده','تفکیک توقف برنامه‌ریزی‌شده، خرابی، کمبود مواد، افت سرعت و ضایعات'],
+    benchmarks: ['Siemens Opcenter؛ AVEVA Manufacturing Execution System؛ Rockwell FactoryTalk — نمونه‌های بازار در MES و هوشمندی تولید'],
+    learning: ['ساختار خط تا تجهیز و کدبندی علل توقف','اتصال تولید، کیفیت و توقف برای تحلیل علت ریشه‌ای','نمای روزانه شیفت و روند چنددوره‌ای با تعریف یکسان مخرج OEE'],
+    assessmentEn: ['Measure actual output against plan and available capacity','Calculate OEE from availability, performance and quality with explicit planned-time rules','Separate planned stops, breakdowns, material shortages, speed loss and scrap'],
+    benchmarksEn: ['Siemens Opcenter; AVEVA MES; Rockwell FactoryTalk — market examples in MES and manufacturing intelligence'],
+    learningEn: ['Model line-to-asset hierarchy and standardized downtime codes','Connect output, quality and downtime for root-cause analysis','Provide shift-level and multi-period views with consistent OEE denominators']
+  },
+  'MOD-04': {
+    assessment: ['هم‌راستایی KPIها با اهداف راهبردی و مالک مشخص شاخص','کنترل تعریف، فرمول، واحد، تناوب، منبع و جهت مطلوب هر شاخص','تحلیل فاصله هدف تا عملکرد، روند و اقدامات اصلاحی'],
+    benchmarks: ['SAP Analytics Cloud Planning؛ Oracle Fusion Cloud EPM؛ IBM Planning Analytics — نمونه‌های مرجع مدیریت عملکرد و برنامه‌ریزی'],
+    learning: ['فرهنگ‌نامه KPI و مالکیت شاخص','کارت امتیازی متوازن و آبشاری‌سازی اهداف','ثبت نسخه هدف و توضیح تغییرات برای حفظ قابلیت حسابرسی'],
+    assessmentEn: ['Align KPIs with strategic objectives and named metric owners','Control definition, formula, unit, cadence, source and preferred direction','Analyze target gaps, trends and corrective actions'],
+    benchmarksEn: ['SAP Analytics Cloud Planning; Oracle Fusion Cloud EPM; IBM Planning Analytics'],
+    learningEn: ['KPI dictionary and metric ownership','Balanced scorecard and cascading objectives','Version targets and explain changes for auditability']
+  },
+  'MOD-05': {
+    assessment: ['روند چنددوره‌ای برق، گاز و آب؛ شدت مصرف و هزینه به‌ازای تن محصول','خط مبنای تعدیل‌شده، تحلیل انحراف، هشدار ناهنجاری و صحه‌گذاری صرفه‌جویی','کنترل کیفیت قبض و کنتور؛ تخصیص هزینه انرژی به مرکز هزینه و حفظ ردپای منبع','مقایسه حرارتی گاز فقط با مبنای ارزش حرارتی و شرایط مرجع یکسان؛ تفکیک آب تازه، بازچرخانی و بازاستفاده'],
+    benchmarks: ['Siemens SIMATIC Energy Manager؛ ABB Ability Energy Management؛ Schneider EcoStruxure Resource Advisor؛ EnergyCAP؛ Spacewell Energy؛ IBM Envizi؛ Honeywell Forge؛ AVEVA PI؛ Johnson Controls OpenBlue؛ GridPoint'],
+    learning: ['سلسله‌مراتب سازمان ← سایت ← واحد ← خط ← تجهیز ← کنتور','داشبورد چندسطحی مدیر، مدیر انرژی و اپراتور؛ قبض و کنتور همراه کنترل کیفیت','خط مبنای تعدیل‌شده، هشدار دارای مسئول و مهلت، اندازه‌گیری و صحه‌گذاری (M&V)','مقایسه چندسایتی و اتصال مصرف و هزینه به تولید و بهای تمام‌شده'],
+    assessmentEn: ['Multi-period electricity, gas and water trends; energy intensity and cost per tonne','Adjusted baselines, deviation analysis, anomaly alerts and savings verification','Utility-bill and meter quality controls; cost-center allocation with source lineage','Compare gas thermal energy only on matching calorific basis and reference conditions; separate freshwater, recirculation and reuse'],
+    benchmarksEn: ['Siemens SIMATIC Energy Manager; ABB Ability EMS; Schneider EcoStruxure Resource Advisor; EnergyCAP; Spacewell Energy; IBM Envizi; Honeywell Forge; AVEVA PI; Johnson Controls OpenBlue; GridPoint'],
+    learningEn: ['Organization → site → area → line → asset → meter hierarchy','Role-based executive, energy-manager and operator dashboards; bill and meter validation','Adjusted baselines, owned and time-bound alerts, measurement and verification (M&V)','Multi-site benchmarking and linkage of energy consumption and cost to production and product cost']
+  },
+  'MOD-06': {
+    assessment: ['تحلیل MTBF، MTTR، دسترس‌پذیری و هزینه چرخه عمر تجهیز','تفکیک خرابی تکراری، توقف اضطراری، تعمیر برنامه‌ریزی‌شده و backlog','ارزیابی اثربخشی PM و پیش‌بینی ریسک خرابی بر پایه تاریخچه معتبر'],
+    benchmarks: ['IBM Maximo؛ SAP Asset Performance Management؛ Siemens Senseye؛ Infor EAM — نمونه‌های بازار مدیریت دارایی و قابلیت اطمینان'],
+    learning: ['شناسنامه تجهیز و سلسله‌مراتب دارایی','اتصال دستورکار، قطعه یدکی، توقف تولید و هزینه تعمیر','اولویت‌بندی ریسک‌محور بر اساس بحرانی‌بودن تجهیز و پیامد توقف'],
+    assessmentEn: ['Analyze MTBF, MTTR, availability and asset lifecycle cost','Separate repeat failures, emergency downtime, planned maintenance and backlog','Assess PM effectiveness and failure risk using validated history'],
+    benchmarksEn: ['IBM Maximo; SAP Asset Performance Management; Siemens Senseye; Infor EAM'],
+    learningEn: ['Asset register and equipment hierarchy','Link work orders, spares, production downtime and maintenance cost','Risk-based prioritization by asset criticality and downtime consequence']
+  },
+  'MOD-07': {
+    assessment: ['تطبیق موازنه جرم و انرژی و شناسایی نقاط اتلاف','تحلیل ظرفیت طراحی، ظرفیت عملی و گلوگاه‌های فرآیندی','ارزیابی پایداری پارامترهای فرآیند، کیفیت محصول و فرصت بهبود'],
+    benchmarks: ['AVEVA Process Simulation و PI System؛ AspenTech Aspen Plus و IP.21؛ Siemens COMOS — نمونه‌های مرجع مهندسی فرآیند و داده عملیاتی'],
+    learning: ['مدل‌سازی جریان مواد و انرژی از ورودی تا محصول و پسماند','اتصال پارامتر فرآیند به کیفیت، مصرف و هزینه','ثبت فرضیات مهندسی، نسخه مدل و شواهد آزمون'],
+    assessmentEn: ['Reconcile mass and energy balances and identify losses','Analyze design capacity, operating capacity and process bottlenecks','Assess process stability, product quality and improvement opportunities'],
+    benchmarksEn: ['AVEVA Process Simulation and PI System; AspenTech Aspen Plus and IP.21; Siemens COMOS'],
+    learningEn: ['Model material and energy flows from input through product and waste','Link process parameters to quality, consumption and cost','Version engineering assumptions, models and test evidence']
+  },
+  'MOD-08': {
+    assessment: ['تحلیل موجودی مواد اولیه، نیمه‌ساخته، محصول و قطعات یدکی','پایش گردش موجودی، روزهای پوشش، نقطه سفارش و ریسک کمبود یا مازاد','ارزیابی عملکرد تأمین‌کننده، زمان تحویل و سرمایه در گردش درگیر'],
+    benchmarks: ['SAP Integrated Business Planning و EWM؛ Oracle Supply Chain Planning؛ Blue Yonder — نمونه‌های مرجع برنامه‌ریزی و زنجیره تأمین'],
+    learning: ['اتصال برنامه تولید، سفارش خرید، انبار و مصرف واقعی','طبقه‌بندی ABC/XYZ و سیاست موجودی متناسب با بحرانی‌بودن','نمای ریسک تأمین و اثر توقف مواد بر تولید و نقدینگی'],
+    assessmentEn: ['Analyze raw, work-in-process, finished-goods and spare-parts inventory','Monitor turns, days of cover, reorder points and shortage or excess risk','Assess supplier performance, lead time and working capital tied up'],
+    benchmarksEn: ['SAP Integrated Business Planning and EWM; Oracle Supply Chain Planning; Blue Yonder'],
+    learningEn: ['Connect production plans, purchase orders, warehouse and actual consumption','Apply ABC/XYZ segmentation and criticality-based inventory policies','Show supply risk and its impact on production and cash']
+  },
+  'MOD-09': {
+    assessment: ['تحلیل عرضه، تقاضا، قیمت، پریمیوم، هزینه حمل و روند بازار محصولات فولادی','مقایسه قیمت فروش و حاشیه سود بر اساس گرید، بازار، مقصد و مشتری','ارزیابی رقبا، ظرفیت‌های جدید، واردات و صادرات با تاریخ و منبع داده مشخص'],
+    benchmarks: ['CRU؛ S&P Global Commodity Insights؛ Fastmarkets؛ Argus — منابع شناخته‌شده داده و تحلیل بازار کالا و فولاد'],
+    learning: ['تفکیک داده واقعی معامله از قیمت شاخص و برآورد','مقایسه هم‌تراز محصول، کیفیت، شرایط تحویل، ارز و تاریخ قیمت','اتصال سناریوی بازار به ترکیب محصول و سودآوری'],
+    assessmentEn: ['Analyze steel supply, demand, prices, premiums, freight and market trends','Compare selling price and margin by grade, market, destination and customer','Assess competitors, new capacity, imports and exports with dated, sourced evidence'],
+    benchmarksEn: ['CRU; S&P Global Commodity Insights; Fastmarkets; Argus — established commodity and steel-market intelligence sources'],
+    learningEn: ['Separate transaction data from price assessments and estimates','Normalize product quality, delivery terms, currency and pricing date','Connect market scenarios to product mix and profitability']
+  },
+  'MOD-10': {
+    assessment: ['تعریف معیارها، وزن‌ها، محدودیت‌ها و آستانه‌های حذف گزینه','تحلیل حساسیت رتبه به تغییر وزن و کیفیت داده','قابلیت توضیح رتبه نهایی، منشأ امتیاز و عدم‌قطعیت'],
+    benchmarks: ['Decision Lens؛ Analytica؛ Hiview3 و روش‌های MCDA مانند AHP، TOPSIS و PROMETHEE — نمونه ابزار و روش تصمیم‌گیری چندمعیاره'],
+    learning: ['تفکیک معیارهای کمی و کیفی و نرمال‌سازی شفاف','نمایش وزن، امتیاز خام، امتیاز نهایی و تحلیل حساسیت','ثبت نظر خبرگان و جلوگیری از رتبه‌بندی با داده ناقص بدون هشدار'],
+    assessmentEn: ['Define criteria, weights, constraints and exclusion thresholds','Test ranking sensitivity to weight changes and data quality','Explain final ranks, score provenance and uncertainty'],
+    benchmarksEn: ['Decision Lens; Analytica; Hiview3; MCDA methods including AHP, TOPSIS and PROMETHEE'],
+    learningEn: ['Transparent normalization of quantitative and qualitative criteria','Show weights, raw scores, final scores and sensitivity','Capture expert judgment and flag incomplete evidence']
+  },
+  'MOD-11': {
+    assessment: ['کنترل CAPEX، تعهدات، پرداخت‌ها، پیشرفت فیزیکی و زمان‌بندی','تحلیل انحراف هزینه و زمان و پیش‌بینی هزینه نهایی','ارزیابی تحقق منافع، تغییرات دامنه و ریسک سبد پروژه‌ها'],
+    benchmarks: ['Oracle Primavera P6؛ Microsoft Project و Project Online؛ SAP Portfolio and Project Management — نمونه‌های بازار کنترل پروژه و سبد سرمایه‌گذاری'],
+    learning: ['ساختار شکست کار، خط مبنای مصوب و مدیریت تغییر','شاخص‌های ارزش کسب‌شده (EVM) و پیش‌بینی زمان/هزینه تکمیل','اتصال برنامه زمان‌بندی، قرارداد، پرداخت و منافع اقتصادی'],
+    assessmentEn: ['Control CAPEX, commitments, payments, physical progress and schedule','Analyze cost and schedule variance and estimate final cost','Assess benefit realization, scope changes and portfolio risk'],
+    benchmarksEn: ['Oracle Primavera P6; Microsoft Project and Project Online; SAP Portfolio and Project Management'],
+    learningEn: ['Work breakdown structure, approved baseline and change control','Earned value management and estimate-at-completion forecasting','Link schedule, contracts, payments and economic benefits']
+  },
+  'MOD-12': {
+    assessment: ['شناسایی ریسک عملیاتی، مالی، بازار، تأمین و استمرار کسب‌وکار','ارزیابی احتمال، پیامد، کنترل موجود و ریسک باقیمانده','پایش شاخص هشدار، مالک ریسک، برنامه پاسخ و آزمون اثربخشی کنترل'],
+    benchmarks: ['SAI360؛ Diligent; Archer؛ ServiceNow Integrated Risk Management — نمونه‌های بازار GRC و مدیریت ریسک سازمانی'],
+    learning: ['ثبت ریسک با علت، رویداد، پیامد و شواهد','ماتریس ریسک پویا و سناریوهای تنش','اتصال ریسک به اقدام، مسئول، مهلت و ریسک باقیمانده'],
+    assessmentEn: ['Identify operational, financial, market, supply and business-continuity risks','Assess likelihood, impact, existing controls and residual risk','Monitor leading indicators, risk owners, response plans and control effectiveness'],
+    benchmarksEn: ['SAI360; Diligent; Archer; ServiceNow Integrated Risk Management — market examples in GRC and enterprise risk'],
+    learningEn: ['Capture cause, event, consequence and evidence for each risk','Dynamic risk matrix and stress scenarios','Link risks to actions, owners, due dates and residual exposure']
+  }
+}
+
 
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
@@ -177,6 +279,13 @@ export default function App() {
     navigateTo('module', activeProject, moduleId)
   }
 
+  function continueToNextModule() {
+    const currentIndex = modules.findIndex(item => item.id === activeModuleId)
+    const nextModule = modules[currentIndex + 1]
+    if (nextModule) openModule(nextModule.id)
+    else navigateTo('dashboard')
+  }
+
   async function createModuleWorkspace() {
     const name = moduleWorkspaceName.trim()
     if (!name) return
@@ -283,10 +392,25 @@ export default function App() {
       <div className="module-workspace-hero"><div className="module-icon"><ActiveModuleIcon size={26}/></div><div><h1>{isEn ? activeModule.enTitle : activeModule.title}</h1><p>{isEn ? activeModule.enSub : activeModule.sub}</p><small>{isEn ? activeModule.enGroup : activeModule.group}</small></div></div>
       {activeModule.id === 'MOD-01' && <ExecutiveDashboardPanel language={settings.language} onOpenModule={openModule}/>}
       {(activeModule.id === 'MOD-02' || activeModule.id === 'MOD-03') && <ModuleIntelligencePanel moduleId={activeModule.id} language={settings.language}/>}
+      {activeModule.id === 'MOD-04' && <ModuleKpiPanel language={settings.language}/>}
+      {activeModule.id === 'MOD-05' && <ModuleEnergyPanel language={settings.language}/>}
       <section className="module-workspace-card"><div className="section-head"><div><h2>{isEn ? 'Module workspaces' : 'پرونده‌های این ماژول'}</h2><p>{isEn ? 'Create and manage workspaces dedicated to this module.' : 'برای ثبت پروژه‌ها، تحلیل‌ها و اطلاعات اختصاصی این ماژول پرونده ایجاد کنید.'}</p></div><span className="muted">{activeModuleWorkspaces.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
         <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createModuleWorkspace() }}><label htmlFor="module-workspace-name">{isEn ? 'New module workspace name' : 'نام پرونده جدید ماژول'}</label><div><input id="module-workspace-name" value={moduleWorkspaceName} onChange={event => setModuleWorkspaceName(event.target.value)} placeholder={isEn ? 'Enter a name' : 'نام پروژه یا پرونده را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!moduleWorkspaceName.trim()}><Plus size={17}/>{isEn ? 'Create' : 'ایجاد پرونده'}</button></div></form>
         {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></div><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پرونده‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پرونده، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
       </section>
+      <section className="module-capabilities-card" aria-labelledby="module-capabilities-title">
+        <div className="module-capabilities-heading">
+          <span className="module-capabilities-eyebrow">{activeModule.id} · {isEn ? 'MARKET POSITION & BENCHMARKING' : 'ارزیابی تطبیقی و جایگاه بازار'}</span>
+          <h2 id="module-capabilities-title">{isEn ? <>Capabilities & Differentiators of “{activeModule.enTitle}”</> : <>قابلیت‌ها و وجه تمایز ماژول «{activeModule.title}»</>}</h2>
+          <p>{isEn ? 'Evaluation dimensions, market reference solutions and the practices selected for Pishran. Listed products are reference examples, not a claim of identical scope.' : 'معیارهای ارزیابی، نمونه‌های بازار برای مقایسه و الگوهایی که در طراحی پیشران قابل اقتباس‌اند. نام محصولات، نمونه مرجع بازار است و به‌معنای یکسان‌بودن دامنه آن‌ها نیست.'}</p>
+        </div>
+        {(() => { const profile = moduleCapabilityProfiles[activeModule.id]; const assessment = isEn ? profile.assessmentEn : profile.assessment; const benchmarks = isEn ? profile.benchmarksEn : profile.benchmarks; const learning = isEn ? profile.learningEn : profile.learning; return <div className="module-capabilities-grid">
+          <article className="module-capability-column"><h3>{isEn ? 'Evaluation dimensions' : 'محورهای ارزیابی'}</h3><ul>{assessment.map((item,index)=><li key={index}>{item}</li>)}</ul></article>
+          <article className="module-capability-column"><h3>{isEn ? 'Competitors & market references' : 'رقبا و نمونه‌های مرجع بازار'}</h3><ul>{benchmarks.map((item,index)=><li key={index}>{item}</li>)}</ul></article>
+          <article className="module-capability-column"><h3>{isEn ? 'Benchmarking & adopted practices' : 'الگوبرداری و رویه‌های منتخب'}</h3><ul>{learning.map((item,index)=><li key={index}>{item}</li>)}</ul></article>
+        </div> })()}
+      </section>
+      <div className="module-continue-actions"><button className="primary" type="button" onClick={continueToNextModule}>{isEn ? (activeModule.id === 'MOD-12' ? 'Finish modules' : 'Continue') : (activeModule.id === 'MOD-12' ? 'پایان مرور ماژول‌ها' : 'ادامه بده')}</button></div>
     </section>}
 
 

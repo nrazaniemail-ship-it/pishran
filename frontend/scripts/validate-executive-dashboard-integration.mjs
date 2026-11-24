@@ -71,6 +71,17 @@ test('incomplete or invalid source input is rejected without writing a report',a
  assert.equal(store.values.has(productionKey),false)
 })
 
+test('OEE above 100 percent remains visible with an explicit data-quality warning',async()=>{
+ const store=memoryStore()
+ const report=await executeModuleAnalysis('MOD-03',{...productionInput,totalCount:'1000',goodCount:'1000'},store,at(8))
+ assert.ok(report.metrics.performance>100)
+ assert.ok(report.metrics.oee>100)
+ assert.equal(report.warnings.length,1)
+ assert.match(report.warnings[0],/۱۰۰٪/)
+ const dashboard=await loadExecutiveDashboardReports(store)
+ assert.equal(dashboard.production[0].metrics.oee,report.metrics.oee)
+})
+
 test('failed localStore write propagates and no dashboard report is fabricated',async()=>{
  const store=memoryStore()
  store.set=async()=>{throw new Error('quota exceeded')}
@@ -93,10 +104,17 @@ test('MOD-01 ignores incomplete metric payloads and invalid dates',async()=>{
 test('the real module form delegates calculations and persistence to the tested workflow',async()=>{
  const source=await readFile(new URL('../src/features/modules/ModuleIntelligencePanel.tsx',import.meta.url),'utf8')
  assert.match(source,/executeModuleAnalysis\(moduleId/)
- assert.match(source,/localStore\)/)
+ assert.match(source,/localStore/)
  const dashboard=await readFile(new URL('../src/features/modules/ExecutiveDashboardPanel.tsx',import.meta.url),'utf8')
  assert.match(dashboard,/loadExecutiveDashboardReports\(localStore\)/)
  assert.match(dashboard,/onClick=\{\(\)=>void refresh\(\)\}/)
+})
+
+test('module workspace exposes sequential Continue navigation through all twelve modules',async()=>{
+ const source=await readFile(new URL('../src/App.tsx',import.meta.url),'utf8')
+ assert.match(source,/function continueToNextModule\(\)/)
+ assert.match(source,/onClick=\{continueToNextModule\}/)
+ assert.match(source,/activeModule\.id === 'MOD-12' \? 'پایان مرور ماژول‌ها' : 'ادامه بده'/)
 })
 
 test('actual localStore fallback persists module executions and MOD-01 reads them',async()=>{
