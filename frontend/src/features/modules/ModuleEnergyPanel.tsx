@@ -44,7 +44,7 @@ export default function ModuleEnergyPanel({language='fa'}:{language?:Lang}){
   for(const [name,data] of sheets){const sheet=XLSX.utils.json_to_sheet(data.length?data:[{پیام:'داده‌ای برای این بخش ثبت نشده است'}]);XLSX.utils.book_append_sheet(book,sheet,name.slice(0,31))}
   XLSX.writeFile(book,'Pishran-MOD05-Energy-Report.xlsx',{compression:true})
  }
- function exportPdf(){window.print()}
+ function exportPdf(){document.body.classList.add('energy-report-printing');window.addEventListener('afterprint',()=>document.body.classList.remove('energy-report-printing'),{once:true});window.print()}
 
  return <section className="energy-management">
   <header className="energy-intro energy-dashboard-hero" data-resource={resource}>
