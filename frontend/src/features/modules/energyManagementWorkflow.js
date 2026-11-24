@@ -38,6 +38,18 @@ export async function saveEnergyBaseline(i,store,createdAt=new Date().toISOStrin
  const b={id:'MOD-05-BASE-'+i.resource+'-'+Date.parse(createdAt),resource:i.resource,period:required(i.period,'دوره خط مبنا'),site:required(i.site,'سایت'),seu:required(i.seu,'مصرف‌کننده عمده'),consumption,production,intensity:consumption/production,calorificValue,calorificBasis,gasReferenceConditions,gasEnergyKwh:calorificValue===null?null:consumption*calorificValue,method:calorificValue===null?'production-intensity':'thermal-energy-intensity',createdAt}
  await store.update(ENERGY_BASELINES_KEY,old=>[b,...(Array.isArray(old)?old.filter(x=>!(x.resource===b.resource&&x.site===b.site&&x.seu===b.seu)):[])].slice(0,100));return b
 }
+export async function updateEnergyActionStatus(id,status,store){
+ const allowed=['planned','in-progress','verified','cancelled']
+ if(!allowed.includes(status))throw new Error('وضعیت اقدام بهبود معتبر نیست.')
+ let found=false
+ await store.update(ENERGY_ACTIONS_KEY,old=>(Array.isArray(old)?old:[]).map(item=>{
+  if(item.id!==id)return item
+  found=true
+  return {...item,status,updatedAt:new Date().toISOString()}
+ }))
+ if(!found)throw new Error('اقدام موردنظر پیدا نشد.')
+ return true
+}
 export async function saveEnergyAction(i,store,createdAt=new Date().toISOString()){const a={id:'MOD-05-ACT-'+Date.parse(createdAt),title:required(i.title,'عنوان اقدام'),resource:i.resource,owner:required(i.owner,'مسئول'),dueDate:required(i.dueDate,'موعد اجرا'),expectedSavings:number(i.expectedSavings,'صرفه‌جویی مورد انتظار',0),status:['planned','in-progress','verified','cancelled'].includes(i.status)?i.status:'planned',createdAt};await store.update(ENERGY_ACTIONS_KEY,old=>[a,...(Array.isArray(old)?old:[])].slice(0,200));return a}
 
 export function analyzeGasUtility({consumptionNm3,calorificValueKwhPerNm3,productionTon,cost}){
