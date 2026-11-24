@@ -55,6 +55,17 @@ test('gas allocation rejects missing volume and thermal drivers rather than inve
  assert.throws(()=>allocateGasBillCost({bill:{amount:100,thermalCharge:100},consumers:[{id:'A',gasNm3:10}]}),/انرژی حرارتی/)
 })
 
+test('gas allocation keeps declared other charges separate from unclassified residual',()=>{
+ const result=allocateGasBillCost({bill:{id:'G-3',amount:150,volumeCharge:60,otherCharges:30},consumers:[{id:'A',gasNm3:60},{id:'B',gasNm3:40}]})
+ assert.equal(result.allocatedTotal,150)
+ assert.equal(result.componentTotal,90)
+ assert.equal(result.residual,60)
+ assert.equal(result.allocations.reduce((s,x)=>s+x.otherCharges,0),30)
+ assert.equal(result.allocations.reduce((s,x)=>s+x.unclassifiedCharges,0),60)
+ assert.equal(result.allocationRules.otherCharges,'gasNm3')
+ assert.ok(result.warnings.some(x=>x.includes('باقیمانده تفکیک‌نشده')))
+})
+
 test('gas allocation falls back to equal fixed-charge shares only with an explicit warning',()=>{
  const result=allocateGasBillCost({bill:{id:'G-2',amount:100,fixedCharge:20,volumeCharge:80},consumers:[{id:'A',gasNm3:60},{id:'B',gasNm3:40}]})
  assert.equal(result.allocatedTotal,100)
