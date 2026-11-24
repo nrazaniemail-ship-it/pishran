@@ -58,7 +58,7 @@ export default function SettingsView({ settings, storageInfo, onChange, onRestor
     <div className="local-only-note"><b>{en ? 'Privacy:' : 'حریم خصوصی:'}</b> {en ? 'In local mode, project data is not sent to an account or server.' : 'در حالت محلی، اطلاعات پروژه‌ها برای ورود به حساب یا سرور ارسال نمی‌شوند.'}</div>
     <article className="settings-card settings-support-card">
       <div className="settings-card-title"><span className="settings-symbol"><Mail size={18}/></span><div><b>{en ? 'Contact Support' : 'تماس با پشتیبان'}</b><small>{en ? 'Get help with Pishran' : 'برای دریافت راهنمایی و پشتیبانی پیشران'}</small></div></div>
-      <a className="setting-row" href="mailto:Namellotradingjournal@gmail.com"><span>{en ? 'Send an email' : 'ارسال ایمیل به پشتیبانی'}</span><b dir="ltr">Namellotradingjournal@gmail.com</b></a>
+      <a className="setting-row" href="mailto:pishranfeasibiltystudy@gmail.com"><span>{en ? 'Send an email' : 'ارسال ایمیل به پشتیبانی'}</span><b dir="ltr">pishranfeasibiltystudy@gmail.com</b></a>
     </article>
   </section>
 }
