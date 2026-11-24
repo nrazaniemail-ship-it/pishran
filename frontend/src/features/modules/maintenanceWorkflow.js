@@ -53,15 +53,18 @@ export function validateMaintenanceOrder(input, assets = []) {
   const status = String(input.status || 'planned')
   if (!['corrective', 'preventive', 'inspection'].includes(kind)) throw new Error('نوع دستورکار معتبر نیست.')
   if (!['planned', 'in-progress', 'completed', 'cancelled'].includes(status)) throw new Error('وضعیت دستورکار معتبر نیست.')
+  const priority = String(input.priority || asset.criticality || 'medium')
+  if (!['low', 'medium', 'high', 'critical'].includes(priority)) throw new Error('اولویت دستورکار معتبر نیست.')
   const openedAt = date(input.openedAt, 'تاریخ شروع')
   const dueAt = input.dueAt ? date(input.dueAt, 'سررسید') : null
   const completedAt = input.completedAt ? date(input.completedAt, 'تاریخ تکمیل') : null
+  if (kind === 'preventive' && !dueAt) throw new Error('سررسید دستورکار پیشگیرانه الزامی است.')
   if (completedAt && completedAt < openedAt) throw new Error('تاریخ تکمیل نمی‌تواند قبل از تاریخ شروع باشد.')
   if (status === 'completed' && !completedAt) throw new Error('برای دستورکار تکمیل‌شده، تاریخ تکمیل الزامی است.')
   return {
     assetId, assetTag: asset.assetTag, assetName: asset.name,
     orderNumber: required(input.orderNumber, 'شماره دستورکار'),
-    kind, status, openedAt, dueAt, completedAt,
+    kind, status, priority, openedAt, dueAt, completedAt,
     downtimeHours: number(input.downtimeHours || 0, 'ساعات توقف'),
     repairHours: number(input.repairHours || 0, 'ساعات تعمیر'),
     laborHours: number(input.laborHours || 0, 'ساعات نیروی انسانی'),
