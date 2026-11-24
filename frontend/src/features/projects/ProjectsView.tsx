@@ -77,13 +77,6 @@ export default function ProjectsView({ projects, storageInfo, onCreate, onDelete
 
   return <section className="projects-page">
     <div className="page-heading"><div><h1>{t('پروژه‌های امکان‌سنجی','Feasibility Projects')}</h1><p>{t('پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.','Manage your projects and investment studies on this device.')}</p></div><div className="projects-head-actions"><button className="primary projects-head-create" onClick={() => setShowForm(v => !v)}><Plus size={17}/> {t('پروژه جدید','New Project')}</button></div></div>
-    <section className="section-head"><div><h2>{t('مرکز کنترل سرمایه‌گذاری','Investment Control Center')}</h2></div><span className="muted">{t('نسخه ۱.۰.۱','Version 1.0.1')}</span></section>
-    <section className="kpis">
-      <article className="kpi"><span>{t('پروژه‌های ثبت‌شده','Registered projects')}</span><b>{projects.length.toLocaleString(en ? 'en-US' : 'fa-IR')}</b><small>{t('ذخیره‌شده روی این دستگاه','Stored on this device')}</small></article>
-      <article className="kpi"><span>{t('مدل‌های مالی','Financial models')}</span><b>{en ? '0' : '۰'}</b><small>{t('محاسبات قابل ثبت و نسخه‌بندی','Traceable and versioned calculations')}</small></article>
-      <article className="kpi"><span>{t('سناریوهای مقایسه‌شده','Compared scenarios')}</span><b>{en ? '0' : '۰'}</b><small>{t('پایه‌ای برای تحلیل عدم‌قطعیت','A foundation for uncertainty analysis')}</small></article>
-      <article className="kpi"><span>{t('وضعیت ذخیره‌سازی','Storage status')}</span><b className="live">{en && storageInfo.backend === 'در حال بررسی' ? 'Checking...' : storageInfo.backend}</b><small>{t('اطلاعات روی دستگاه نگهداری می‌شود','Data is kept on this device')}</small></article>
-    </section>
     {showForm && <form className="project-form" onSubmit={submit}>
       <h3>{t('تعریف پروژه جدید','Create New Project')}</h3>
       <div className="form-grid">
@@ -112,5 +105,14 @@ export default function ProjectsView({ projects, storageInfo, onCreate, onDelete
     </form>}
     {projects.length === 0 ? <div className="empty-state"><div className="empty-icon"><FolderOpen size={30}/></div><h3>{t('هنوز پروژه‌ای ثبت نشده است','No projects yet')}</h3><p>{t('اولین پروژه امکان‌سنجی خود را ایجاد کنید. اطلاعات فقط روی همین دستگاه ذخیره می‌شود.','Create your first feasibility project. Data is stored on this device only.')}</p><button className="primary" onClick={() => setShowForm(true)}><Plus size={17}/> {t('ایجاد اولین پروژه','Create First Project')}</button></div> :
       <div className="project-grid">{projects.map(project => <article className="project-card" key={project.id} onClick={() => onOpenProject(project)} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') onOpenProject(project) }}><div className="project-card-top"><div className="module-icon"><Factory size={21}/></div><button className="icon-button" title={t('حذف پروژه','Delete project')} onClick={event => { event.stopPropagation(); if (!confirmBeforeDelete || window.confirm(t('این پروژه حذف شود؟','Delete this project?'))) void onDelete(project.id) }}><Trash2 size={17}/></button></div><h3>{project.name}</h3><p>{project.steelStage ? `${en ? (industryNames[project.industry] ?? project.industry) : project.industry} · ${en ? (stageNames[project.steelStage] ?? project.steelStage) : project.steelStage}` : project.projectType ? `${en ? (industryNames[project.industry] ?? project.industry) : project.industry} · ${project.projectType}` : (en ? (industryNames[project.industry] ?? project.industry) : project.industry)}</p><small className="draft-pill">{project.templateId === 'raw' ? t('قالب خام','Blank Template') : t('پروژه قدیمی / بدون قالب','Legacy project / no template')}</small><div className="project-meta"><span>{project.capacity || t('ظرفیت ثبت نشده','Capacity not set')}</span><span>{project.location || t('موقعیت ثبت نشده','Location not set')}</span></div><div className="project-footer"><button type="button" className="draft-pill draft-action" onClick={event => { event.stopPropagation(); onOpenProject(project) }} aria-label={`${t('ادامه تکمیل پیش‌نویس','Continue draft')} ${project.name}`}>{t('ادامه تکمیل پیش‌نویس','Continue draft')} <span aria-hidden="true">←</span></button><small>{t('ایجاد شده در','Created')} {new Date(project.createdAt).toLocaleDateString(en ? 'en-US' : 'fa-IR')}</small></div></article>)}</div>}
+    <section className="investment-control-center">
+      <div className="section-head"><div><h2>{t('مرکز کنترل سرمایه‌گذاری','Investment Control Center')}</h2></div><span className="muted">{t('نسخه ۱.۰.۱','Version 1.0.1')}</span></div>
+      <div className="kpis">
+        <article className="kpi"><span>{t('پروژه‌های ثبت‌شده','Registered projects')}</span><b>{projects.length.toLocaleString(en ? 'en-US' : 'fa-IR')}</b><small>{t('ذخیره‌شده روی این دستگاه','Stored on this device')}</small></article>
+        <article className="kpi"><span>{t('مدل‌های مالی','Financial models')}</span><b>{en ? '0' : '۰'}</b><small>{t('محاسبات قابل ثبت و نسخه‌بندی','Traceable and versioned calculations')}</small></article>
+        <article className="kpi"><span>{t('سناریوهای مقایسه‌شده','Compared scenarios')}</span><b>{en ? '0' : '۰'}</b><small>{t('پایه‌ای برای تحلیل عدم‌قطعیت','A foundation for uncertainty analysis')}</small></article>
+        <article className="kpi"><span>{t('وضعیت ذخیره‌سازی','Storage status')}</span><b className="live">{en && storageInfo.backend === 'در حال بررسی' ? 'Checking...' : storageInfo.backend}</b><small>{t('اطلاعات روی دستگاه نگهداری می‌شود','Data is kept on this device')}</small></article>
+      </div>
+    </section>
   </section>
 }
