@@ -100,17 +100,36 @@ assert.deepEqual(bound.incrementalCppByPeriod, [200, 100, 50])
 
 const rows = bound.schedule.rows
 assert.equal(rows.length, 3)
+let openingWipCarry = 0
 for (let i = 0; i < 3; i++) {
   const original = baseRows[i]
-  const completedCpp = [200, 100, 50][i] * original.completedUnits / original.conversionEquivalentUnits
-  const wipCpp = [200, 100, 50][i] - completedCpp
+  const periodPool = openingWipCarry + [200, 100, 50][i]
+  const completedCpp = periodPool * original.completedUnits / original.conversionEquivalentUnits
+  const wipCpp = periodPool - completedCpp
   close(rows[i].productionCost - original.productionCost, completedCpp,
-    'Only completed-output CPP must enter product production cost in period ' + (i + 1))
+    'Completed CPP must include opening WIP carry and current-period cost in period ' + (i + 1))
   close(rows[i].wipInventoryValue - original.wipInventoryValue, wipCpp,
-    'Uncompleted conversion CPP must remain in WIP in period ' + (i + 1))
+    'Uncompleted CPP must remain in closing WIP in period ' + (i + 1))
   close((rows[i].productionCost - original.productionCost) +
-    (rows[i].wipInventoryValue - original.wipInventoryValue), [200, 100, 50][i],
-    'CPP must reconcile between completed output and WIP in period ' + (i + 1))
+    (rows[i].wipInventoryValue - original.wipInventoryValue), periodPool,
+    'Opening WIP plus current CPP must reconcile to completed output and closing WIP in period ' + (i + 1))
+  const trace = bound.tracePathRows.find(item => item.itemId === 'energy-three-period' &&
+    item.period === i + 1 && item.productId === 'P1')
+  assert.ok(trace, 'Every item-period must expose a downstream trace path.')
+  close(trace.openingWipCarry, openingWipCarry)
+  close(trace.incrementalCpp, [200, 100, 50][i])
+  close(trace.completedProductionCpp, completedCpp)
+  close(trace.closingWipCpp, wipCpp)
+  close(trace.openingWipCarry + trace.incrementalCpp,
+    trace.completedProductionCpp + trace.closingWipCpp)
+  close(trace.openingFinishedGoodsCarry + trace.completedProductionCpp,
+    trace.costOfSalesCpp + trace.closingFinishedGoodsCpp)
+  close(trace.workingCapitalImpact, trace.closingWipCpp + trace.closingFinishedGoodsCpp)
+  close(trace.grossProfitImpact, -trace.costOfSalesCpp)
+  close(trace.costOfSalesCpp,
+    bound.schedule.rows[i].costOfSales - schedule.rows[i].costOfSales,
+    'Per-item CPS trace must reconcile to the schedule in period ' + (i + 1))
+  openingWipCarry = wipCpp
 }
 close(bound.schedule.periodRawMaterialInventoryValue.reduce((a, b) => a + b, 0), 1350,
   'CPP/CPS conversion costs must not post raw-material purchases or consumption a second time')
