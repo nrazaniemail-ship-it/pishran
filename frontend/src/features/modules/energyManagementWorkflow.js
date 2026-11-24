@@ -36,12 +36,20 @@ function solveEnergyLinearSystem(matrix,vector){
  return a.map(row=>row[n])
 }
 function fitEnergyOls(rows,predictorKeys){
- const x=rows.map(r=>[1,...predictorKeys.map(key=>Number(r[key]))]),y=rows.map(r=>Number(r.analysisConsumption)),size=predictorKeys.length+1
+ const y=rows.map(r=>Number(r.analysisConsumption)),size=predictorKeys.length+1
+ const statistics=predictorKeys.map(key=>{
+  const values=rows.map(r=>Number(r[key])),mean=values.reduce((sum,value)=>sum+value,0)/values.length
+  const variance=values.reduce((sum,value)=>sum+(value-mean)**2,0)/values.length
+  const scale=Math.sqrt(variance)
+  return {mean,scale:Number.isFinite(scale)&&scale>1e-12?scale:1}
+ })
+ const x=rows.map(r=>[1,...predictorKeys.map((key,index)=>(Number(r[key])-statistics[index].mean)/statistics[index].scale)])
  const matrix=Array.from({length:size},()=>Array(size).fill(0)),vector=Array(size).fill(0)
  for(let i=0;i<x.length;i++)for(let j=0;j<size;j++){vector[j]+=x[i][j]*y[i];for(let k=0;k<size;k++)matrix[j][k]+=x[i][j]*x[i][k]}
- const coefficients=solveEnergyLinearSystem(matrix,vector)
- if(!coefficients)return null
- const predicted=x.map(row=>row.reduce((sum,value,index)=>sum+value*coefficients[index],0))
+ const standardized=solveEnergyLinearSystem(matrix,vector)
+ if(!standardized)return null
+ const predicted=x.map(row=>row.reduce((sum,value,index)=>sum+value*standardized[index],0))
+ const coefficients=[standardized[0]-statistics.reduce((sum,item,index)=>sum+standardized[index+1]*item.mean/item.scale,0),...statistics.map((item,index)=>standardized[index+1]/item.scale)]
  const mean=y.reduce((sum,value)=>sum+value,0)/y.length
  const sse=y.reduce((sum,value,index)=>sum+(value-predicted[index])**2,0)
  const sst=y.reduce((sum,value)=>sum+(value-mean)**2,0)
