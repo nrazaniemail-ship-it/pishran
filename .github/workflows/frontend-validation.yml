@@ -1,6 +1,7 @@
 name: Frontend build and financial validation
 
-# Validate feature branch changes before they are promoted to main.
+# Validate web changes before they are promoted to main. Mobile packaging is
+# intentionally separate and manual while APK/IPA builds are paused.
 
 on:
   push:
@@ -8,11 +9,13 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-validation.yml'
+      - '.github/workflows/build-android.yml'
   pull_request:
     branches: [main, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard, feature/mod05-bill-upload-source-menu]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-validation.yml'
+      - '.github/workflows/build-android.yml'
   workflow_dispatch:
 
 permissions:

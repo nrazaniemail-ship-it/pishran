@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import ReactECharts from 'echarts-for-react'
-import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Zap, Wrench, Boxes, Target, BriefcaseBusiness } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Activity, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Zap, Wrench, Boxes, Target, BriefcaseBusiness } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
 import { createProject, deleteProject, purgeRemovedCaseProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
@@ -238,14 +237,6 @@ export default function App() {
     void saveSettings(settings)
   }, [settings, ready])
 
-  const chart = useMemo(() => ({
-    tooltip: { trigger: 'axis' },
-    grid: { left: 12, right: 12, top: 24, bottom: 20, containLabel: true },
-    xAxis: { type: 'category', data: isEn ? ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'] : ['سال ۱', 'سال ۲', 'سال ۳', 'سال ۴', 'سال ۵'], axisLine: { lineStyle: { color: '#cbd5e1' } } },
-    yAxis: { type: 'value', axisLabel: { formatter: '{value}%' }, splitLine: { lineStyle: { color: '#edf0f4' } } },
-    series: [{ name: isEn ? 'Illustrative return' : 'بازده نمونه', type: 'line', smooth: true, data: [8, 12, 16, 19, 23], areaStyle: { opacity: .08 }, lineStyle: { width: 3 }, symbolSize: 8 }]
-  }), [isEn])
-
   async function refreshStorage() {
     setStorageInfo(await localStore.info())
   }
@@ -331,36 +322,23 @@ export default function App() {
           <h1 id="feasibility-launcher-title">{isEn ? 'Technical & Economic Assessment – Feasibility Study' : 'ارزیابی فنی و اقتصادی-امکان سنجی'}</h1>
           <p>{isEn ? 'Integrated technical, engineering, market and financial assessment, with project risk analysis.' : 'محیط یکپارچه برای ارزیابی فنی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و بررسی ریسک پروژه‌ها.'}</p>
         </div>
-        <div className="feasibility-project-count" aria-label={isEn ? `${projects.length} registered projects` : `${projects.length} پروژه ثبت‌شده`}>
-          <b>{projects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</b>
-          <span>{isEn ? 'PROJECTS' : 'پروژه ثبت‌شده'}</span>
-        </div>
+
       </section>
 
-      <section className="module-launcher" aria-labelledby="module-launcher-title">
-        <div className="module-launcher-heading">
-          <div>
-            <span className="module-launcher-eyebrow">{isEn ? 'PISHRAN WORKSPACE' : 'محیط یکپارچه پیشران'}</span>
-            <h2 id="module-launcher-title">{isEn ? 'Explore the 12 intelligence modules' : 'ورود به ۱۲ ماژول هوشمند پیشران'}</h2>
-            <p>{isEn ? 'Choose a workspace to review performance, investigate exceptions and take action.' : 'برای مشاهده عملکرد، بررسی انحراف‌ها و پیگیری اقدامات، ماژول موردنظر را انتخاب کنید.'}</p>
-          </div>
-          <span className="module-launcher-count"><b>12</b><small>{isEn ? 'MODULES' : 'ماژول'}</small></span>
-        </div>
+      <section className="module-launcher" aria-label={isEn ? "Pishran Intelligence Modules" : "ماژولهای هوشمند پیشران"}>
+
         <div className="module-launcher-groups">
           {Array.from(new Set(modules.map(item => item.group))).map(group => {
             const groupModules = modules.filter(item => item.group === group)
             return <section className="module-launcher-group" key={group}>
-              <div className="module-launcher-group-heading">
-                <h3>{isEn ? groupModules[0].enGroup : group}</h3>
-              </div>
               <div className="module-launcher-grid">
                 {groupModules.map(item => {
                   const Icon = item.icon
                   return <button type="button" key={item.id} className="module-launcher-card" onClick={() => openModule(item.id)}
                     aria-label={`${item.id}: ${isEn ? item.enTitle : item.title}`}>
                     <span className="module-launcher-icon" data-module={item.id}><Icon size={23} strokeWidth={2}/></span>
+                    <span className="module-launcher-code" aria-hidden="true">{item.id}</span>
                     <span className="module-launcher-copy">
-                      <small>{item.id}</small>
                       <strong>{isEn ? item.enTitle : item.title}</strong>
                       <span>{isEn ? item.enSub : item.sub}</span>
                     </span>
@@ -373,21 +351,10 @@ export default function App() {
         </div>
       </section>
 
-      <section className="section-head"><div><h2>{isEn ? "Investment Control Center" : "مرکز کنترل سرمایه‌گذاری"}</h2></div><span className="muted">{isEn ? 'Version 1.0.1' : 'نسخه ۱.۰.۱'}</span></section>
-      <section className="kpis">
-        <article className="kpi"><span>{isEn ? 'Registered projects' : 'پروژه‌های ثبت‌شده'}</span><b>{projects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</b><small>{isEn ? 'Stored on this device' : 'ذخیره‌شده روی این دستگاه'}</small></article>
-        <article className="kpi"><span>{isEn ? 'Financial models' : 'مدل‌های مالی'}</span><b>{isEn ? '0' : '۰'}</b><small>{isEn ? 'Traceable and versioned calculations' : 'محاسبات قابل ثبت و نسخه‌بندی'}</small></article>
-        <article className="kpi"><span>{isEn ? 'Compared scenarios' : 'سناریوهای مقایسه‌شده'}</span><b>{isEn?'0':'۰'}</b><small>{isEn ? 'A foundation for uncertainty analysis' : 'پایه‌ای برای تحلیل عدم‌قطعیت'}</small></article>
-        <article className="kpi"><span>{isEn ? 'Storage status' : 'وضعیت ذخیره‌سازی'}</span><b className="live">{isEn&&storageInfo.backend==='در حال بررسی'?'Checking...':storageInfo.backend}</b><small>{isEn ? 'Data is kept on this device' : 'اطلاعات روی دستگاه نگهداری می‌شود'}</small></article>
-      </section>
 
-      <section className="analytics">
-        <article className="chart-card"><div className="card-heading"><div><h3>{isEn ? "Illustrative return trend" : "نمای نمونه روند بازده"}</h3></div><span className="tag">{isEn ? "Sample data" : "داده نمایشی"}</span></div><ReactECharts option={chart} style={{height:250}}/></article>
-        <article className="insight-card"><div className="module-icon gold"><Bot size={23}/></div><h3>{isEn ? "Investment Decision Assistant" : "دستیار تصمیم‌یار سرمایه‌گذاری"}</h3><p>{isEn ? 'Future versions of Pishran will review assumptions, explain risks and analyse results with references to source data.' : 'در نسخه‌های بعدی، پیشران می‌تواند مفروضات را بررسی کند، ریسک‌ها را توضیح دهد و نتایج را با ارجاع به منابع داده تحلیل کند.'}</p><div className="notice">{isEn ? 'This version contains illustrative outputs. Do not use them as the basis for actual investment decisions.' : 'خروجی‌های این نسخه نمایشی هستند و مبنای تصمیم واقعی سرمایه‌گذاری نیستند.'}</div></article>
-      </section>
     </>}
 
-    {page === 'projects' && <ProjectsView language={settings.language} projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} onOpenProject={project => navigateTo('project-wizard', project)}/>}
+    {page === 'projects' && <ProjectsView language={settings.language} projects={projects} onCreate={handleCreateProject} onDelete={handleDeleteProject} confirmBeforeDelete={settings.confirmBeforeDelete} storageInfo={storageInfo} onOpenProject={project => navigateTo('project-wizard', project)}/>}
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
