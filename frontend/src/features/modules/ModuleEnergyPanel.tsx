@@ -30,7 +30,7 @@ export default function ModuleEnergyPanel({language='fa'}:{language?:Lang}){
  const gasAnalysis=resource==='gas'&&Number(form.consumption)>0&&Number(form.calorificValue)>0&&Number(form.production)>0?analyzeGasUtility({consumptionNm3:form.consumption,calorificValueKwhPerNm3:form.calorificValue,productionTon:form.production,cost:form.cost}):null
  const waterAnalysis=resource==='water'&&Number(waterForm.productionTon)>0?(()=>{try{return analyzeWaterBalance(waterForm)}catch{return null}})():null
  const trends=useMemo(()=>analyzeEnergyTrends(rows,{resource}),[rows,resource])
- const multivariableNormalization=useMemo(()=>analyzeMultivariableEnergyNormalization(rows,{resource}) as MultivariableAnalysis,[rows,resource])
+ const multivariableNormalization=useMemo(()=>analyzeMultivariableEnergyNormalization(rows,{resource}) as unknown as MultivariableAnalysis,[rows,resource])
  const current=rows.filter(x=>x.resource===resource),baseList=bases.filter(x=>x.resource===resource),actionList=actions.filter(x=>x.resource===resource)
  const baseline=baseList.find(x=>x.id===baseId)??baseList[0],compatibleCurrent=baseline?current.filter(x=>x.site===baseline.site&&x.seu===baseline.seu):current,actual=compatibleCurrent.find(x=>x.id===rowId)??compatibleCurrent[0]
  const result=baseline&&actual?calculateEnergyPerformance({resource,baseline,actual}):null
