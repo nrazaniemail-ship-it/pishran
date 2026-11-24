@@ -1084,14 +1084,14 @@ export default function AdvancedFinancePanel(props: Props) {
         {cppCpsScheduleBinding?.valid&&cppCpsScheduleBinding.tracePathRows.length>0&&<div style={{overflowX:'auto',marginTop:12}}>
           <h5>{t('ردیابی عددی هر قلم تا WIP، محصول نهایی، CPS و سرمایه در گردش','Per-item numeric trace through WIP, finished goods, COGS and working capital')}</h5>
           <table className="fw-table"><thead><tr>
-            <th>{t('شناسه قلم','Cost item')}</th><th>{t('دوره','Period')}</th><th>{t('محصول','Product')}</th>
+            <th>{t('شناسه قلم','Cost item')}</th><th>{t('وضعیت ثبت','Posting status')}</th><th>{t('دوره','Period')}</th><th>{t('محصول','Product')}</th>
             <th>{t('هزینه ناخالص','Gross cost')}</th><th>{t('پوشش پایه','Base covered')}</th><th>{t('CPP افزایشی','Incremental CPP')}</th>
             <th>{t('WIP ابتدای دوره','Opening WIP')}</th><th>{t('تولید تکمیل‌شده','Completed CPP')}</th><th>{t('WIP پایان دوره','Closing WIP')}</th>
             <th>{t('محصول نهایی ابتدای دوره','Opening finished goods')}</th><th>{t('CPS','COGS')}</th>
             <th>{t('محصول نهایی پایان دوره','Closing finished goods')}</th><th>{t('اثر سود ناخالص','Gross-profit impact')}</th>
             <th>{t('اثر سرمایه در گردش','Working-capital impact')}</th>
           </tr></thead><tbody>{cppCpsScheduleBinding.tracePathRows.map((row,index)=><tr key={row.itemId+':'+row.productId+':'+row.period}>
-            <td>{row.itemId}</td><td>{row.period}</td><td>{row.productId}</td>
+            <td>{row.itemId}</td><td>{row.postingStatus==='base-covered'?t('پوشش‌یافته در هزینه پایه','Already in base cost'):t('افزایشی','Incremental')}</td><td>{row.period}</td><td>{row.productId}</td>
             <td>{money(row.grossCost)}</td><td>{money(row.baseCoveredCost)}</td><td>{money(row.incrementalCpp)}</td>
             <td>{money(row.openingWipCarry)}</td><td>{money(row.completedProductionCpp)}</td><td>{money(row.closingWipCpp)}</td>
             <td>{money(row.openingFinishedGoodsCarry)}</td><td>{money(row.costOfSalesCpp)}</td>
