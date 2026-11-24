@@ -726,15 +726,19 @@ export default function AdvancedFinancePanel(props: Props) {
       .some(value=>value!==null&&value!==undefined&&value!==''))
     if(!hasMovementData&&!hasStageTransferData)return null
     if(!periodicFinanceResult?.valid)return {valid:false,issues:['A valid periodic finance result is required before stage inventory reconciliation.'],rows:[]}
-    const expected=baseIntegratedProductOperatingSchedule?.valid
+    // Reconcile the detailed subledger against the same corrected product schedule
+    // that feeds working capital and the periodic financial statements. Using the
+    // pre-correction schedule here would make reversals/adjustments disagree with
+    // the corrected finance-engine balances and could persist stale journal previews.
+    const expected=productOperatingSchedule?.valid
       ?Array.from({length:periodicFinanceResult.rows.length},(_,index)=>({
         period:index+1,
-        rawMaterials:baseIntegratedProductOperatingSchedule.periodRawMaterialInventoryValue[index]??0,
-        workInProgress:baseIntegratedProductOperatingSchedule.periodWipInventoryValue[index]??0,
-        finishedGoods:baseIntegratedProductOperatingSchedule.rows.filter(item=>item.period===index+1).reduce((sum,item)=>sum+item.closingInventoryValue,0),
+        rawMaterials:productOperatingSchedule.periodRawMaterialInventoryValue[index]??0,
+        workInProgress:productOperatingSchedule.periodWipInventoryValue[index]??0,
+        finishedGoods:productOperatingSchedule.rows.filter(item=>item.period===index+1).reduce((sum,item)=>sum+item.closingInventoryValue,0),
       }))
       :periodicFinanceResult.rows.map(row=>({period:row.period,rawMaterials:row.rawMaterialsInventory,workInProgress:row.workInProgressInventory,finishedGoods:row.finishedGoodsInventory}))
-    const expectedByProductPeriod=baseIntegratedProductOperatingSchedule?.valid?baseIntegratedProductOperatingSchedule.rows.map(row=>({period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales,productionQuantity:row.productionQuantity,productionCost:row.productionCost})):undefined
+    const expectedByProductPeriod=productOperatingSchedule?.valid?productOperatingSchedule.rows.map(row=>({period:row.period,productId:row.productId,rawMaterials:row.rawMaterialInventoryValue,workInProgress:row.wipInventoryValue,finishedGoods:row.closingInventoryValue,finishedGoodsSalesQuantity:row.salesQuantity,finishedGoodsCostOfSales:row.costOfSales,productionQuantity:row.productionQuantity,productionCost:row.productionCost})):undefined
     return reconcileStageInventoryMovements(movements,expected,periodicFinanceResult.rows.length,0.01,stageTransfers,expectedByProductPeriod)
   },[JSON.stringify(props.productFinancialDrafts?.costCentreInventoryMovements??[]),JSON.stringify(props.productFinancialDrafts?.inventoryStageTransfers??[]),periodicFinanceResult,productOperatingSchedule,baseIntegratedProductOperatingSchedule])
   const abnormalWasteAccounting=useMemo(()=>buildAbnormalWasteAccountingPostings(
