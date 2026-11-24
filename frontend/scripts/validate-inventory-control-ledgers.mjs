@@ -4,6 +4,7 @@ import ts from 'typescript'
 const source=await readFile(new URL('../src/features/projects/inventoryControlLedgers.ts',import.meta.url),'utf8')
 const financePanel=await readFile(new URL('../src/features/projects/AdvancedFinancePanel.tsx',import.meta.url),'utf8')
 const financialForms=await readFile(new URL('../src/features/projects/ProjectModelFinancialFormsPanel.tsx',import.meta.url),'utf8')
+const fs00Documentation=await readFile(new URL('../../docs/finance/FS-00-CPP-CPS-COST-TRACEABILITY.md',import.meta.url),'utf8')
 assert.match(financePanel,/row\.sourceVerified===true/,'verified-only stage movement rows must enter the reconciliation gate')
 assert.match(financePanel,/const hasUnpostedStageInventoryData=Boolean/,'populated stage inventory ledgers must be detected before reporting')
 assert.match(financePanel,/const stageInventoryPreflight=useMemo/,'detailed stage ledgers must be reconciled before periodic finance calculation')
@@ -29,6 +30,16 @@ assert.doesNotMatch(financePanel,/stageTransfers\.some\(row=>\[\s*row\.id/,'a ge
 assert.match(financialForms,/Internal transfer-in quantity/,'stage movement form must expose internal transfer-in quantity')
 assert.match(financialForms,/Internal transfer-out value/,'stage movement form must expose internal transfer-out value')
 assert.match(financialForms,/Transferred value/,'inter-stage transfer form must expose the transferred inventory value')
+
+assert.match(financialForms,/const generateProductionBridge/,'the evidence-gated production bridge must be wired to the project financial forms')
+assert.match(financialForms,/upsertProductionBridgeTransferDrafts/,'generated production transfers must be safely upserted into saved form drafts')
+assert.match(financePanel,/persistStageInventoryAccountingPostings/,'valid stage journals must persist to the local audit subledger')
+assert.match(financePanel,/canPersistStageAccountingPostings/,'stage journal persistence must remain gated by validated reconciliation')
+assert.match(fs00Documentation,/wired to the project financial-forms panel/,'FS-00 documentation must describe the implemented form-to-bridge connection')
+assert.match(fs00Documentation,/project-scoped local subledger/,'FS-00 documentation must describe local stage-journal persistence')
+assert.match(fs00Documentation,/not an ERP\/general-ledger posting/,'FS-00 documentation must not overstate local journals as ERP posting')
+assert.doesNotMatch(fs00Documentation,/not yet wired to auto-populate the project forms/,'stale bridge-integration limitation must be removed')
+assert.doesNotMatch(fs00Documentation,/does \*\*not\*\* yet post the three inventory stages/,'stale blanket statement about stage journal posting must be removed')
 
 const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 const module=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
