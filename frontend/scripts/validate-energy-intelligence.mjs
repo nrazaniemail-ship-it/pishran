@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {buildEnergySeries,detectEnergyAnomalies,detectForecastDeviations,forecastEnergyIntensity,allocateGasBillCost,prepareModule02GasCostPosting} from '../src/features/modules/energyIntelligenceEngine.js'
+import {buildEnergySeries,detectEnergyAnomalies,detectForecastDeviations,forecastEnergyIntensity,allocateGasBillCost,allocateWaterBillCost,prepareModule02GasCostPosting} from '../src/features/modules/energyIntelligenceEngine.js'
 const row=(id,period,consumption,production=100,cost=consumption*.5,extra={})=>({id,resource:'electricity',period,site:'Plant',seu:'Rolling',consumption,production,cost,...extra})
 
 test('multi-period series never compares different sites or significant energy uses',()=>{
@@ -48,6 +48,22 @@ test('gas invoice allocation reconciles volume, thermal, transport, fixed and ta
  const prepared=prepareModule02GasCostPosting({baseInput:{energy:'10',material:'100'},allocation,costCenterId:'A'})
  assert.ok(Math.abs(Number(prepared.input.energy)-660.625)<1e-9)
  assert.equal(prepared.sourceReferences.gasBillId,'GB-1')
+})
+
+test('water bill allocation reconciles separately declared charges, residual and physical drivers',()=>{
+ const result=allocateWaterBillCost({bill:{id:'W-1',billNumber:'W-10',period:'1405/07',amount:120,volumeCharge:60,sewerCharge:20,fixedCharge:10,taxCharge:10,otherCharges:5},consumers:[{id:'A',waterM3:60,wastewaterM3:20,productionTon:60},{id:'B',waterM3:40,wastewaterM3:10,productionTon:40}]})
+ assert.equal(result.allocatedTotal,120)
+ assert.equal(result.componentTotal,105)
+ assert.equal(result.residual,15)
+ assert.equal(result.allocations.reduce((s,x)=>s+x.otherCharges,0),5)
+ assert.equal(result.allocations.reduce((s,x)=>s+x.unclassifiedCharges,0),15)
+ assert.equal(result.allocations.reduce((s,x)=>s+x.fixedCharge,0),10)
+ assert.equal(result.sourceReference.type,'MOD-05-water-bill')
+ assert.ok(result.warnings.some(x=>x.includes('باقیمانده تفکیک‌نشده')))
+})
+test('water bill allocation rejects missing volume or wastewater drivers',()=>{
+ assert.throws(()=>allocateWaterBillCost({bill:{amount:100,volumeCharge:100},consumers:[{id:'A',waterM3:0}]}),/حجم آب/)
+ assert.throws(()=>allocateWaterBillCost({bill:{amount:100,sewerCharge:100},consumers:[{id:'A',waterM3:10,wastewaterM3:0}]}),/حجم فاضلاب/)
 })
 
 test('gas allocation rejects missing volume and thermal drivers rather than inventing shares',()=>{
