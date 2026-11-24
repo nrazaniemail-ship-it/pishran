@@ -325,7 +325,7 @@ export default function App() {
     </header>
 
     {page === 'dashboard' && <>
-      <section className="feasibility-launcher-card" aria-labelledby="feasibility-launcher-title">
+      <section className="feasibility-launcher-card" aria-labelledby="feasibility-launcher-title" role="link" tabIndex={0} onClick={() => navigateTo('projects')} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigateTo('projects') } }}>
         <div className="feasibility-launcher-icon"><BriefcaseBusiness size={24}/></div>
         <div className="feasibility-launcher-copy">
           <span className="feasibility-launcher-eyebrow">{isEn ? 'FEASIBILITY & INVESTMENT ASSESSMENT' : 'ارزیابی فنی و اقتصادی'}</span>
@@ -336,7 +336,6 @@ export default function App() {
           <b>{projects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</b>
           <span>{isEn ? 'PROJECTS' : 'پروژه ثبت‌شده'}</span>
         </div>
-        <button className="feasibility-launcher-action" type="button" onClick={() => navigateTo('projects')}><Plus size={19}/> {isEn ? 'Create new project' : 'ایجاد پروژه جدید'}</button>
       </section>
 
       <section className="module-launcher" aria-labelledby="module-launcher-title">
