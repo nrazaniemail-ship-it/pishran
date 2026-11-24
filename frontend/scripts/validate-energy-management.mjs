@@ -146,6 +146,7 @@ test('MOD-05 provides a complete Excel workbook and print-to-PDF report path',as
  assert.ok(app.includes("value={waterForm.period}"))
  assert.ok(app.includes("value={waterForm.site}"))
  assert.ok(app.includes("value={waterForm.seu}"))
+ assert.match(app,/<th>دوره<\/th><th>سایت<\/th><th>مصرف‌کننده عمده \/ مرز<\/th>/)
  assert.ok(app.includes("!waterForm.period.trim()"))
  assert.ok(app.includes('تخصیص هزینه به مراکز'))
  assert.ok(css.includes('@media print'))
