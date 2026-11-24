@@ -76,3 +76,8 @@ The MOD-05 interface now provides a bill-component allocation workspace. It pers
 ## Multivariable normalization (rolling-origin)
 
 Energy records can optionally include measured operating hours in addition to production/activity. The multivariable screening model uses production and operating hours as separate explanatory variables and estimates consumption with ordinary least squares. For each site and significant energy use, it trains only on earlier measured periods and holds out the latest period for comparison. Estimated-quality records and periods without valid operating hours are excluded. At least six usable periods are required (five training periods plus one held-out period). The output reports coefficients, training R² and RMSE, latest-period normalized consumption and adjusted variance. A low R², singular/collinear predictors or nonphysical prediction is flagged; this screening model is not causal proof, an ISO-compliant M&V plan, or a verified savings claim. Product mix, weather, feedstock quality, operating state and other material drivers may still need explicit modelling.
+
+
+## Improvement-action audit history
+
+Improvement actions retain a chronological status history (including the actor/verifier identity when a verification transition is made) and preserve superseded verification evidence when an action is reopened or re-verified. New actions cannot be created directly in the verified state. The Excel report exports the status and verification histories so the operational record can be reviewed outside the browser. This is a local application audit trail; it is not a tamper-proof or centrally governed records-management system.
