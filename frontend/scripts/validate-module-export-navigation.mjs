@@ -25,13 +25,11 @@ test('Excel export includes module metadata, rendered report content, tables and
  assert.match(exporter,/Generated at|زمان تهیه/)
 })
 
-test('module navigation uses an accessible real button and controlled menu',()=>{
- assert.match(app,/<button type="button" className=\{page === 'module' \? 'nav-item nav-module-toggle active' : 'nav-item nav-module-toggle'\}/)
- assert.match(app,/aria-expanded=\{moduleDropdownOpen\}/)
- assert.match(app,/role="menu"/)
- assert.match(app,/role="menuitem"/)
- assert.doesNotMatch(app,/<details className="nav-dropdown"/)
- assert.match(app,/setModuleDropdownOpen\(current => !current\)/)
+test('module navigation is provided by the twelve dashboard cards, not a primary-menu dropdown',()=>{
+ assert.match(app,/className="module-launcher-card" onClick=\{\(\) => openModule\(item\.id\)\}/)
+ assert.match(app,/aria-label=\{\x60\$\{item\.id\}: \$\{isEn \? item\.enTitle : item\.title\}\x60\}/)
+ assert.doesNotMatch(app,/nav-module-toggle|nav-dropdown-menu|role="menuitem"/)
+ assert.match(app,/dashboard renders all twelve module launcher cards with real module navigation|module-launcher-card/)
 })
 
 test('PDF print rules isolate the active module report and hide navigation/export controls',()=>{
