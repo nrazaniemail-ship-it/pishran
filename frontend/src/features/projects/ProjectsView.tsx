@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import ReactECharts from 'echarts-for-react'
+import { Bot } from 'lucide-react'
 import { Factory, Plus, Trash2 } from 'lucide-react'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
 
@@ -9,6 +11,7 @@ interface Props {
   confirmBeforeDelete: boolean
   onOpenProject: (project: FeasibilityProject) => void
   language?: 'fa' | 'en'
+  storageInfo: { backend: string; items: number }
 }
 
 const STEEL_INDUSTRY = 'فولاد و صنایع معدنی'
@@ -27,9 +30,16 @@ const STEEL_PROJECT_OPTIONS = [
   { name: 'سایر', stage: 'سایر' },
 ]
 
-export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenProject, language = 'fa' }: Props) {
+export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenProject, language = 'fa', storageInfo }: Props) {
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
+  const chart = useMemo(() => ({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 12, right: 12, top: 24, bottom: 20, containLabel: true },
+    xAxis: { type: 'category', data: en ? ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'] : ['سال ۱', 'سال ۲', 'سال ۳', 'سال ۴', 'سال ۵'], axisLine: { lineStyle: { color: '#cbd5e1' } } },
+    yAxis: { type: 'value', axisLabel: { formatter: '{value}%' }, splitLine: { lineStyle: { color: '#edf0f4' } } },
+    series: [{ name: en ? 'Illustrative return' : 'بازده نمونه', type: 'line', smooth: true, data: [8, 12, 16, 19, 23], areaStyle: { opacity: .08 }, lineStyle: { width: 3 }, symbolSize: 8 }]
+  }), [en])
   const projectNames: Record<string, string> = { 'معدن سنگ آهن':'Iron Ore Mining', 'کنستانتره':'Iron Ore Concentration', 'گندله سازی':'Pelletizing', 'احیاء':'Direct Reduction', 'ذوب و ریخته گری':'Steelmaking & Casting', 'نورد ورق گرم- تولید پلیت':'Hot-Rolled Plate', 'نورد ورق گرم- تولید کلاف':'Hot-Rolled Coil', 'نورد سرد ورق':'Cold Rolling', 'نورد میلگرد':'Rebar Rolling', 'نورد نبشی':'Angle Rolling', 'نورد تیرآهن':'Beam Rolling', 'سایر':'Other' }
   const industryNames: Record<string,string> = { [STEEL_INDUSTRY]:'Steel & Mining', 'انرژی و نیروگاه':'Energy & Power', 'نفت، گاز و پتروشیمی':'Oil, Gas & Petrochemicals', 'ساختمان و زیرساخت':'Construction & Infrastructure', 'سایر صنایع':'Other Industries' }
   const stageNames: Record<string,string> = { 'استخراج سنگ‌آهن':'Iron Ore Mining', 'فرآوری و کنسانتره':'Processing & Concentration', 'گندله‌سازی':'Pelletizing', 'احیای مستقیم':'Direct Reduction', 'فولادسازی و ریخته‌گری':'Steelmaking & Casting', 'نورد گرم ورق - تولید پلیت':'Hot-Rolled Plate', 'نورد گرم ورق - تولید کلاف':'Hot-Rolled Coil', 'نورد سرد و پوشش‌دهی':'Cold Rolling & Coating', 'نورد میلگرد':'Rebar Rolling', 'نورد نبشی':'Angle Rolling', 'نورد تیرآهن':'Beam Rolling', 'سایر':'Other' }
@@ -75,6 +85,19 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   }
 
   return <section className="projects-page">
+      <section className="section-head"><div><h2>{en ? "Investment Control Center" : "مرکز کنترل سرمایه‌گذاری"}</h2></div><span className="muted">{en ? 'Version 1.0.1' : 'نسخه ۱.۰.۱'}</span></section>
+      <section className="kpis">
+        <article className="kpi"><span>{en ? 'Registered projects' : 'پروژه‌های ثبت‌شده'}</span><b>{projects.length.toLocaleString(en ? 'en-US' : 'fa-IR')}</b><small>{en ? 'Stored on this device' : 'ذخیره‌شده روی این دستگاه'}</small></article>
+        <article className="kpi"><span>{en ? 'Financial models' : 'مدل‌های مالی'}</span><b>{en ? '0' : '۰'}</b><small>{en ? 'Traceable and versioned calculations' : 'محاسبات قابل ثبت و نسخه‌بندی'}</small></article>
+        <article className="kpi"><span>{en ? 'Compared scenarios' : 'سناریوهای مقایسه‌شده'}</span><b>{isEn?'0':'۰'}</b><small>{en ? 'A foundation for uncertainty analysis' : 'پایه‌ای برای تحلیل عدم‌قطعیت'}</small></article>
+        <article className="kpi"><span>{en ? 'Storage status' : 'وضعیت ذخیره‌سازی'}</span><b className="live">{en&&storageInfo.backend==='در حال بررسی'?'Checking...':storageInfo.backend}</b><small>{en ? 'Data is kept on this device' : 'اطلاعات روی دستگاه نگهداری می‌شود'}</small></article>
+      </section>
+
+      <section className="analytics">
+        <article className="chart-card"><div className="card-heading"><div><h3>{en ? "Illustrative return trend" : "نمای نمونه روند بازده"}</h3></div><span className="tag">{en ? "Sample data" : "داده نمایشی"}</span></div><ReactECharts option={chart} style={{height:250}}/></article>
+        <article className="insight-card"><div className="module-icon gold"><Bot size={23}/></div><h3>{en ? "Investment Decision Assistant" : "دستیار تصمیم‌یار سرمایه‌گذاری"}</h3><p>{en ? 'Future versions of Pishran will review assumptions, explain risks and analyse results with references to source data.' : 'در نسخه‌های بعدی، پیشران می‌تواند مفروضات را بررسی کند، ریسک‌ها را توضیح دهد و نتایج را با ارجاع به منابع داده تحلیل کند.'}</p><div className="notice">{en ? 'This version contains illustrative outputs. Do not use them as the basis for actual investment decisions.' : 'خروجی‌های این نسخه نمایشی هستند و مبنای تصمیم واقعی سرمایه‌گذاری نیستند.'}</div></article>
+      </section>
+    <div className="projects-workspace-divider" aria-hidden="true"></div>
     <div className="page-heading"><div><h1>{t('پروژه‌های امکان‌سنجی','Feasibility Projects')}</h1><p>{t('پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.','Manage your projects and investment studies on this device.')}</p></div><div className="projects-head-actions"><button className="primary projects-head-create" onClick={() => setShowForm(v => !v)}><Plus size={17}/> {t('پروژه جدید','New Project')}</button></div></div>
     {showForm && <form className="project-form" onSubmit={submit}>
       <h3>{t('تعریف پروژه جدید','Create New Project')}</h3>
