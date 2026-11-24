@@ -76,6 +76,7 @@ export function analyzeWaterBalance(input){
  return {freshwaterM3,boundaryInput,accountedOutput,balanceGap:gap,freshwaterSources:sourceBreakdown,balanceClosurePercent:accountedOutput/boundaryInput*100,withdrawalIntensity:freshwaterM3/productionTon,netConsumption:boundaryInput-dischargeM3,netConsumptionIntensity:(boundaryInput-dischargeM3)/productionTon,externalReuseSharePercent:externalReuseM3/boundaryInput*100,internalRecirculationM3,internalRecirculationIntensity:internalRecirculationM3/productionTon,warnings:Math.abs(gap)>Math.max(.1,boundaryInput*.05)?['تراز آب بیش از تلورانس ۵٪ اختلاف دارد؛ مرز اندازه‌گیری، تخلیه، تبخیر و تغییر موجودی را بررسی کنید.']:[]}
 }
 export async function saveWaterBalance(input,store,createdAt=new Date().toISOString()){
+ required(input.period,'دوره تراز آب');required(input.site,'سایت/فرآیند');required(input.seu,'مصرف‌کننده عمده/مرز اندازه‌گیری')
  const analysis=analyzeWaterBalance(input)
  const row={id:'MOD-05-WATER-'+Date.parse(createdAt),createdAt,...input,...analysis}
  await store.update(WATER_BALANCE_KEY,old=>[row,...(Array.isArray(old)?old:[])].slice(0,300))
