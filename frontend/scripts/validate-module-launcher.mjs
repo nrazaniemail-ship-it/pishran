@@ -27,6 +27,14 @@ test('investment control center is rendered on the feasibility projects page, no
   assert.ok(projects.includes('storageInfo.backend'))
 })
 
+test('empty feasibility projects page does not render an empty-state card, text or create-first-project button', () => {
+  assert.ok(!projects.includes('empty-state'))
+  assert.ok(!projects.includes('هنوز پروژه‌ای ثبت نشده است'))
+  assert.ok(!projects.includes('اولین پروژه امکان‌سنجی خود را ایجاد کنید'))
+  assert.ok(!projects.includes('ایجاد اولین پروژه'))
+  assert.ok(projects.includes('projects.length > 0'))
+})
+
 test('launcher has responsive desktop, tablet and phone layouts with keyboard focus styling', () => {
   assert.ok(style.includes('.module-launcher-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))'))
   assert.ok(style.includes('@media(max-width:1050px){.module-launcher-grid{grid-template-columns:repeat(3'))
