@@ -70,7 +70,7 @@ test('reliability indicators calculate MTBF, MTTR, availability, PM compliance a
   assert.ok(Math.abs(result.availabilityPercent-89.2857142857)<1e-8)
   assert.equal(result.pmDue,3)
   assert.equal(result.pmCompleted,1)
-  assert.equal(result.pmCompliancePercent,50)
+  assert.ok(Math.abs(result.pmCompliancePercent-(100/3))<1e-8) // 1 on-time completion across 3 PMs due in the selected period
   assert.equal(result.backlogCount,3)
   assert.equal(result.backlogEstimatedHours,9)
   assert.equal(result.maintenanceCost,2600)
@@ -87,7 +87,7 @@ test('reliability snapshots persist per-asset period and status updates stamp co
   await store.set(MAINTENANCE_ASSETS_KEY,[{id:'asset-1',assetTag:'PMP-101',name:'Pump'}])
   await store.set(MAINTENANCE_ORDERS_KEY,[{id:'wo-1',assetId:'asset-1',orderNumber:'WO-1',kind:'corrective',status:'in-progress',openedAt:'2026-11-02',downtimeHours:2,repairHours:1,laborCost:0,materialCost:0,estimatedHours:2}])
   const saved=await saveReliabilitySnapshot({assetId:'asset-1',operatingHours:'50',startDate:'2026-11-01',endDate:'2026-11-30'},store,'2026-11-24T08:00:00Z')
-  assert.equal(saved.mtbfHours,null)
+  assert.equal(saved.mtbfHours,50) // one open corrective failure is included in the MTBF denominator
   assert.equal((await store.get('maintenance:reliability:v1')).length,1)
   const updated=await updateMaintenanceOrderStatus('wo-1','completed',store,'2026-11-24T09:00:00Z')
   assert.equal(updated.status,'completed')
