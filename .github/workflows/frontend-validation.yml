@@ -45,6 +45,12 @@ jobs:
         run: npm run build
       - name: Native browser IndexedDB regression test
         run: npm run test:indexeddb:browser
+      - name: APK and PWA capability parity browser test (built preview)
+        run: npm run test:pwa-parity
+      - name: Published PWA capability parity browser test
+        env:
+          PISH_PWA_URL: https://nrazaniemail-ship-it.github.io/pishran/
+        run: npm run test:pwa-parity
       - name: Financial model regression tests
         run: npm run test:financial
       - name: Executive dashboard MOD-01 integration tests
