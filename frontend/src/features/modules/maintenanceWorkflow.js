@@ -93,9 +93,10 @@ export function calculateAssetReliability({ asset, workOrders = [], operatingHou
   const downtimeHours = actual.reduce((sum, row) => sum + row.downtimeHours, 0)
   const repairHours = failures.reduce((sum, row) => sum + row.repairHours, 0)
   const maintenanceCost = actual.reduce((sum, row) => sum + row.laborCost + row.materialCost, 0)
-  const pmDue = inPeriod.filter(row => row.kind === 'preventive' && row.dueAt && row.dueAt <= end).length
-  const pmCompleted = inPeriod.filter(row => row.kind === 'preventive' && row.status === 'completed' && row.dueAt && row.dueAt <= end).length
-  const backlog = inPeriod.filter(row => row.status === 'planned' || row.status === 'in-progress')
+  const pmOrders = workOrders.filter(row => row.assetId === asset.id && row.kind === 'preventive' && row.dueAt && row.dueAt >= start && row.dueAt <= end && row.status !== 'cancelled')
+  const pmDue = pmOrders.length
+  const pmCompleted = pmOrders.filter(row => row.status === 'completed' && row.completedAt && row.completedAt <= row.dueAt).length
+  const backlog = workOrders.filter(row => row.assetId === asset.id && row.openedAt <= end && (row.status === 'planned' || row.status === 'in-progress'))
   return {
     assetId: asset.id, assetTag: asset.assetTag, assetName: asset.name,
     startDate: start, endDate: end, operatingHours: hours,
