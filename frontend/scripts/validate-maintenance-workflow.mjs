@@ -56,6 +56,8 @@ test('reliability indicators calculate MTBF, MTTR, availability, PM compliance a
     {id:'5',assetId:'asset-1',kind:'inspection',status:'in-progress',openedAt:'2026-11-20',dueAt:null,downtimeHours:0,repairHours:0,laborCost:0,materialCost:0,estimatedHours:2},
     {id:'6',assetId:'asset-1',kind:'corrective',status:'cancelled',openedAt:'2026-11-21',downtimeHours:100,repairHours:100,laborCost:0,materialCost:0,estimatedHours:0},
     {id:'7',assetId:'other',kind:'corrective',status:'completed',openedAt:'2026-11-02',downtimeHours:99,repairHours:99,laborCost:0,materialCost:0,estimatedHours:0},
+    {id:'8',assetId:'asset-1',kind:'preventive',status:'completed',openedAt:'2026-10-20',dueAt:'2026-11-12',completedAt:'2026-11-20',downtimeHours:0,repairHours:0,laborCost:0,materialCost:0,estimatedHours:0},
+    {id:'9',assetId:'asset-1',kind:'preventive',status:'planned',openedAt:'2026-10-20',dueAt:'2026-10-25',downtimeHours:0,repairHours:0,laborCost:0,materialCost:0,estimatedHours:4},
   ]
   const result=calculateAssetReliability({asset,workOrders:orders,operatingHours:100,startDate:'2026-11-01',endDate:'2026-11-30'})
   assert.equal(result.failureCount,2)
@@ -63,11 +65,11 @@ test('reliability indicators calculate MTBF, MTTR, availability, PM compliance a
   assert.equal(result.mttrHours,5)
   assert.equal(result.downtimeHours,12)
   assert.ok(Math.abs(result.availabilityPercent-89.2857142857)<1e-8)
-  assert.equal(result.pmDue,2)
+  assert.equal(result.pmDue,3)
   assert.equal(result.pmCompleted,1)
   assert.equal(result.pmCompliancePercent,50)
-  assert.equal(result.backlogCount,2)
-  assert.equal(result.backlogEstimatedHours,5)
+  assert.equal(result.backlogCount,3)
+  assert.equal(result.backlogEstimatedHours,9)
   assert.equal(result.maintenanceCost,2600)
 })
 
