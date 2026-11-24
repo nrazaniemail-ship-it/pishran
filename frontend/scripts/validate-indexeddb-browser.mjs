@@ -90,9 +90,9 @@ try {
         expectedModuleIds[index + 1])
     }
   }
-  await page.waitForFunction(() => document.querySelector('.app-page-dashboard .project-create-launcher') !== null &&
+  await page.waitForFunction(() => document.querySelector('.app-page-dashboard .feasibility-launcher-card') !== null &&
     document.querySelector('[data-module-export-root]') === null)
-  assert.equal(await page.locator('.app-page-dashboard .project-create-launcher').count(), 1,
+  assert.equal(await page.locator('.app-page-dashboard .feasibility-launcher-card').count(), 1,
     'finishing MOD-12 must return to the dashboard')
   assert.equal(await page.locator('[data-module-export-root]').count(), 0,
     'module workspace must be unmounted after finishing MOD-12')

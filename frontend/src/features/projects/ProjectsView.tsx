@@ -75,7 +75,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
   }
 
   return <section className="projects-page">
-    <div className="page-heading"><div><h1>{t('پروژه‌های امکان‌سنجی','Feasibility Projects')}</h1><p>{t('پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.','Manage your projects and investment studies on this device.')}</p></div><div className="projects-head-actions"><button className="primary" onClick={() => setShowForm(v => !v)}><Plus size={17}/> {t('پروژه جدید','New Project')}</button></div></div>
+    <div className="page-heading"><div><h1>{t('پروژه‌های امکان‌سنجی','Feasibility Projects')}</h1><p>{t('پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.','Manage your projects and investment studies on this device.')}</p></div><div className="projects-head-actions"><button className="primary projects-head-create" onClick={() => setShowForm(v => !v)}><Plus size={17}/> {t('پروژه جدید','New Project')}</button></div></div>
     {showForm && <form className="project-form" onSubmit={submit}>
       <h3>{t('تعریف پروژه جدید','Create New Project')}</h3>
       <div className="form-grid">

@@ -2157,3 +2157,72 @@ input,select,textarea{color:var(--text)}
 .project-create-action:hover,.project-create-action:focus-visible{transform:translateY(-2px);border-color:#9db7c8;box-shadow:0 9px 18px rgba(36,58,76,.12);outline:none}
 .project-create-action:focus-visible{outline:3px solid rgba(59,125,162,.25);outline-offset:2px}
 @media(max-width:620px){.project-create-launcher{grid-template-columns:auto minmax(0,1fr);gap:12px;margin:17px 0 22px;padding:15px;border-radius:17px}.project-create-icon{width:46px;height:46px;border-radius:13px}.project-create-icon svg{width:21px;height:21px}.project-create-copy h1{font-size:16px}.project-create-copy p{font-size:10px;line-height:1.7}.project-create-action{grid-column:1/-1;justify-self:stretch;min-height:45px;padding:10px 14px;font-size:12px}}
+
+/* Feasibility and technical/economic assessment launcher: aligned with module cards. */
+.feasibility-launcher-card{position:relative;isolation:isolate;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:16px;margin:24px 0 30px;padding:clamp(18px,2.4vw,27px);border:1px solid #d5e0e7;border-radius:20px;background:linear-gradient(150deg,#fff 0%,#f8fafc 72%,#f1f5f8 100%);box-shadow:0 7px 18px rgba(36,58,76,.07),inset 0 1px 0 rgba(255,255,255,.9);color:#263d50;overflow:hidden}
+.feasibility-launcher-card::before{content:"";position:absolute;inset-inline-end:-24px;top:-34px;width:130px;height:130px;z-index:-1;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);background:linear-gradient(145deg,rgba(238,190,73,.22),rgba(213,91,57,.09));transform:rotate(15deg)}
+.feasibility-launcher-card::after{content:"";position:absolute;inset-inline-start:0;top:18px;bottom:18px;width:3px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,#e9bd4d,#d97948);opacity:.8}
+.feasibility-launcher-icon{display:grid;place-items:center;width:54px;height:54px;border:1px solid #dce5eb;border-radius:15px;background:linear-gradient(145deg,#fff,#eaf0f4);color:#426d86;box-shadow:0 4px 10px rgba(39,65,83,.08)}
+.feasibility-launcher-copy{min-width:0}
+.feasibility-launcher-eyebrow{display:block;margin-bottom:5px;color:#477b98;font-size:10px;font-weight:850;letter-spacing:.04em}
+.feasibility-launcher-copy h1{margin:0 0 5px;color:#263f52;font-size:clamp(16px,2vw,22px);line-height:1.55}
+.feasibility-launcher-copy p{margin:0;color:#708292;font-size:12px;line-height:1.8}
+.feasibility-project-count{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:82px;min-height:76px;padding:8px 12px;border:1px solid #d5e0e7;border-radius:15px;background:linear-gradient(145deg,#fff,#f1f5f8);box-shadow:0 4px 10px rgba(36,58,76,.06);color:#426d86}
+.feasibility-project-count b{font-size:25px;line-height:1.25;font-weight:850;font-variant-numeric:tabular-nums}
+.feasibility-project-count span{margin-top:3px;color:#708292;font-size:9px;font-weight:800;text-align:center}
+.feasibility-launcher-action{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:11px 17px;border:1px solid #d5e0e7;border-radius:13px;background:linear-gradient(145deg,#fff,#f1f5f8);box-shadow:0 4px 10px rgba(36,58,76,.07);color:#315f7d;font-size:13px;font-weight:850;white-space:nowrap;cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.feasibility-launcher-action:hover,.feasibility-launcher-action:focus-visible{transform:translateY(-2px);border-color:#9db7c8;box-shadow:0 9px 18px rgba(36,58,76,.12);outline:none}
+.feasibility-launcher-action:focus-visible{outline:3px solid rgba(59,125,162,.25);outline-offset:2px}
+@media(max-width:760px){.feasibility-launcher-card{grid-template-columns:auto minmax(0,1fr) auto;gap:12px;margin:17px 0 22px;padding:15px;border-radius:17px}.feasibility-launcher-icon{width:44px;height:44px}.feasibility-launcher-copy h1{font-size:15px}.feasibility-launcher-copy p{font-size:10px;line-height:1.7}.feasibility-project-count{grid-column:1;grid-row:2;min-width:0;min-height:58px;padding:5px 10px}.feasibility-project-count b{font-size:20px}.feasibility-project-count span{font-size:8px}.feasibility-launcher-action{grid-column:2/4;grid-row:2;min-height:44px;padding:9px 12px;font-size:12px}}
+@media(max-width:430px){.feasibility-launcher-card{grid-template-columns:auto minmax(0,1fr);gap:10px;padding:13px}.feasibility-launcher-icon{width:39px;height:39px}.feasibility-launcher-copy h1{font-size:13px}.feasibility-launcher-copy p{font-size:9px}.feasibility-project-count{grid-column:1;grid-row:2;min-width:76px}.feasibility-launcher-action{grid-column:2;grid-row:2;width:100%;font-size:11px}}
+
+/* Make the entire feasibility launcher a single clear navigation target. */
+.feasibility-launcher-card{cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.feasibility-launcher-card:hover{transform:translateY(-2px);border-color:#b7cbd8;box-shadow:0 12px 24px rgba(36,58,76,.11),inset 0 1px 0 rgba(255,255,255,.9)}
+.feasibility-launcher-card:focus-visible{outline:3px solid rgba(59,125,162,.3);outline-offset:3px}
+.projects-head-actions .projects-head-create{background:linear-gradient(135deg,#fff4c7 0%,#ffe7a0 100%);border:1px solid #e8cf7d;color:#70551b;box-shadow:0 3px 9px rgba(163,127,38,.12)}
+.projects-head-actions .projects-head-create:hover{background:linear-gradient(135deg,#ffefb3 0%,#ffdf82 100%);border-color:#d8bb5c;box-shadow:0 6px 14px rgba(163,127,38,.18)}
+
+
+/* Color-coded module marks with a restrained heartbeat pulse. */
+.module-launcher-icon{
+  --module-accent:#477b98;
+  display:grid;
+  place-items:center;
+  color:var(--module-accent);
+  background:linear-gradient(145deg,color-mix(in srgb,var(--module-accent) 10%,#fff),color-mix(in srgb,var(--module-accent) 18%,#fff));
+  border-color:color-mix(in srgb,var(--module-accent) 25%,#fff);
+  box-shadow:0 4px 11px color-mix(in srgb,var(--module-accent) 15%,transparent),inset 0 1px 0 rgba(255,255,255,.9);
+  animation:pishran-heartbeat 1.8s ease-in-out infinite;
+  transform-origin:center;
+}
+.module-launcher-icon[data-module="MOD-01"]{--module-accent:#3286c8}
+.module-launcher-icon[data-module="MOD-02"]{--module-accent:#1d9b79}
+.module-launcher-icon[data-module="MOD-03"]{--module-accent:#dc8b32}
+.module-launcher-icon[data-module="MOD-04"]{--module-accent:#8066c9}
+.module-launcher-icon[data-module="MOD-05"]{--module-accent:#d5a321}
+.module-launcher-icon[data-module="MOD-06"]{--module-accent:#3c8c9b}
+.module-launcher-icon[data-module="MOD-07"]{--module-accent:#bd7045}
+.module-launcher-icon[data-module="MOD-08"]{--module-accent:#4d83b5}
+.module-launcher-icon[data-module="MOD-09"]{--module-accent:#cf6b8d}
+.module-launcher-icon[data-module="MOD-10"]{--module-accent:#6474bd}
+.module-launcher-icon[data-module="MOD-11"]{--module-accent:#299c91}
+.module-launcher-icon[data-module="MOD-12"]{--module-accent:#c45e58}
+.feasibility-launcher-icon{
+  color:#d18b27;
+  background:linear-gradient(145deg,#fff8df 0%,#ffe8b5 100%);
+  border-color:#f0d18a;
+  box-shadow:0 5px 13px rgba(190,133,37,.18),inset 0 1px 0 rgba(255,255,255,.95);
+  animation:pishran-heartbeat 1.8s ease-in-out infinite;
+  transform-origin:center;
+}
+@keyframes pishran-heartbeat{
+  0%, 100%{transform:scale(1);filter:saturate(1)}
+  8%{transform:scale(1.08);filter:saturate(1.22)}
+  16%{transform:scale(1)}
+  24%{transform:scale(1.05);filter:saturate(1.12)}
+  34%{transform:scale(1)}
+}
+@media(prefers-reduced-motion:reduce){
+  .module-launcher-icon,.feasibility-launcher-icon{animation:none}
+}
