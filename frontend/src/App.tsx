@@ -307,7 +307,7 @@ export default function App() {
     <BackupScheduler/>
     <header className="topbar">
       <button className="language-switch page-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button>
-      <div className="brand"><button className="brand-title" type="button" onClick={() => navigateTo('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
+      <div className="brand"><button className="brand-title" type="button" onClick={() => navigateTo('dashboard')}><span className="brandmark" aria-hidden="true"><Factory size={22} strokeWidth={2}/></span><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
       <nav className="main-nav" aria-label={isEn?"Primary navigation":"ناوبری اصلی"}>
         <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}>{isEn ? "Home" : "پیشخوان"}</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('projects')}>{isEn ? "Projects" : "پروژه‌ها"}</button>
