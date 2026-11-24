@@ -158,6 +158,8 @@ test('MOD-05 provides a complete Excel workbook and print-to-PDF report path',as
  assert.ok(app.includes('updateEnergyActionStatus'))
  assert.ok(app.includes('ثبت صحه‌گذاری صرفه‌جویی'))
  assert.ok(app.includes('شواهد اندازه‌گیری / روش صحه‌گذاری'))
+ assert.ok(app.includes('verificationEvidence:verification?.evidenceNote'))
+ assert.ok(app.includes('<th>صرفه‌جویی اندازه‌گیری‌شده</th>'))
 })
 
 
