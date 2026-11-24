@@ -96,23 +96,33 @@ export async function saveEnergyBaseline(i,store,createdAt=new Date().toISOStrin
 export async function updateEnergyActionStatus(id,status,store,verification){
  const allowed=['planned','in-progress','verified','cancelled']
  if(!allowed.includes(status))throw new Error('وضعیت اقدام بهبود معتبر نیست.')
+ const changedAt=new Date().toISOString()
  const evidence=status==='verified'?{
   period:required(verification?.period,'دوره صحه‌گذاری'),
   measuredSavings:number(verification?.measuredSavings,'صرفه‌جویی اندازه‌گیری‌شده',0),
   verifier:required(verification?.verifier,'تأییدکننده'),
   evidenceNote:required(verification?.evidenceNote,'شواهد اندازه‌گیری و روش صحه‌گذاری'),
-  verifiedAt:new Date().toISOString()
+  verifiedAt:changedAt
  }:null
  let found=false
  await store.update(ENERGY_ACTIONS_KEY,old=>(Array.isArray(old)?old:[]).map(item=>{
   if(item.id!==id)return item
   found=true
-  return {...item,status,...(evidence?{verification:evidence}:{}),updatedAt:new Date().toISOString()}
+  const previousVerification=item.verification??null
+  const statusHistory=[...(Array.isArray(item.statusHistory)?item.statusHistory:[]),{from:item.status??'planned',to:status,changedAt,verifier:evidence?.verifier??null}]
+  const verificationHistory=[...(Array.isArray(item.verificationHistory)?item.verificationHistory:[]),...(previousVerification?[{...previousVerification,supersededAt:changedAt}]:[])]
+  return {...item,status,verification:evidence,statusHistory,verificationHistory,updatedAt:changedAt}
  }))
  if(!found)throw new Error('اقدام موردنظر پیدا نشد.')
  return true
 }
-export async function saveEnergyAction(i,store,createdAt=new Date().toISOString()){const a={id:'MOD-05-ACT-'+Date.parse(createdAt),title:required(i.title,'عنوان اقدام'),resource:i.resource,owner:required(i.owner,'مسئول'),dueDate:required(i.dueDate,'موعد اجرا'),expectedSavings:number(i.expectedSavings,'صرفه‌جویی مورد انتظار',0),status:['planned','in-progress','verified','cancelled'].includes(i.status)?i.status:'planned',createdAt};await store.update(ENERGY_ACTIONS_KEY,old=>[a,...(Array.isArray(old)?old:[])].slice(0,200));return a}
+export async function saveEnergyAction(i,store,createdAt=new Date().toISOString()){
+ if(!Object.hasOwn(RESOURCE_CONFIG,i.resource))throw new Error('نوع منبع اقدام معتبر نیست.')
+ const status=['planned','in-progress','verified','cancelled'].includes(i.status)?i.status:'planned'
+ if(status==='verified')throw new Error('اقدام جدید بدون شواهد صحه‌گذاری نمی‌تواند تأییدشده ثبت شود.')
+ const a={id:'MOD-05-ACT-'+Date.parse(createdAt),title:required(i.title,'عنوان اقدام'),resource:i.resource,owner:required(i.owner,'مسئول'),dueDate:required(i.dueDate,'موعد اجرا'),expectedSavings:number(i.expectedSavings,'صرفه‌جویی مورد انتظار',0),status,createdAt,statusHistory:[{from:null,to:status,changedAt:createdAt,verifier:null}],verificationHistory:[]}
+ await store.update(ENERGY_ACTIONS_KEY,old=>[a,...(Array.isArray(old)?old:[])].slice(0,200));return a
+}
 
 export function analyzeGasUtility({consumptionNm3,calorificValueKwhPerNm3,productionTon,cost}){
  const volume=number(consumptionNm3,'حجم گاز',0),calorific=number(calorificValueKwhPerNm3,'ارزش حرارتی گاز',0),production=number(productionTon,'تولید',0)
