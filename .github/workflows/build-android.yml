@@ -25,7 +25,7 @@ concurrency:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     defaults:
       run:
         working-directory: frontend
@@ -86,16 +86,33 @@ jobs:
 
       - name: Android emulator smoke test
         uses: reactivecircus/android-emulator-runner@v2
-        timeout-minutes: 20
+        timeout-minutes: 35
+        env:
+          # GitHub Ubuntu hosted VMs currently expose no KVM device. The emulator
+          # exits immediately with -accel off unless TCG is explicitly enabled.
+          ANDROID_I_WANT_MY_TCG: "yes"
         with:
           api-level: 34
           target: default
           arch: x86_64
           profile: pixel_2
-          emulator-boot-timeout: 600
+          emulator-boot-timeout: 1500
           ram-size: 2048M
           heap-size: 512M
           disable-animations: true
+          pre-emulator-launch-script: |
+            mkdir -p "$RUNNER_TEMP"
+            {
+              echo "UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              uname -a
+              echo "--- KVM ---"
+              ls -l /dev/kvm || true
+              echo "--- Android tools ---"
+              adb version || true
+              emulator -version || true
+              echo "--- TCG override ---"
+              printf "ANDROID_I_WANT_MY_TCG=%s\\n" "$ANDROID_I_WANT_MY_TCG"
+            } > "$RUNNER_TEMP/pishran-emulator-host.txt" 2>&1
           # Capture diagnostics before asserting the foreground activity. The
           # former pidof check was brittle on Android 14 emulator images and
           # exited before preserving logcat when it returned no PID.
@@ -107,6 +124,7 @@ jobs:
         with:
           name: Pishran-Android-Emulator-Diagnostics
           path: |
+            ${{ runner.temp }}/pishran-emulator-host.txt
             ${{ runner.temp }}/pishran-activity.txt
             ${{ runner.temp }}/pishran-launch.txt
             ${{ runner.temp }}/pishran-logcat.txt
@@ -114,14 +132,17 @@ jobs:
           retention-days: 7
 
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Pishran-Android-APK
           path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
   build-ipa:
+    # IPA packaging must not be skipped when the independent Android emulator job fails.
+    if: ${{ always() }}
     runs-on: macos-15
     timeout-minutes: 50
     defaults:
