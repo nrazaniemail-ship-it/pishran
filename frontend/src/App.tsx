@@ -328,8 +328,7 @@ export default function App() {
       <section className="feasibility-launcher-card" aria-labelledby="feasibility-launcher-title" role="link" tabIndex={0} onClick={() => navigateTo('projects')} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigateTo('projects') } }}>
         <div className="feasibility-launcher-icon"><BriefcaseBusiness size={24}/></div>
         <div className="feasibility-launcher-copy">
-          <span className="feasibility-launcher-eyebrow">{isEn ? 'FEASIBILITY & INVESTMENT ASSESSMENT' : 'ارزیابی فنی و اقتصادی'}</span>
-          <h1 id="feasibility-launcher-title">{isEn ? 'Feasibility – Technical & Economic Assessment' : 'امکان‌سنجی - ارزیابی فنی و اقتصادی'}</h1>
+          <h1 id="feasibility-launcher-title">{isEn ? 'Technical & Economic Assessment – Feasibility Study' : 'ارزیابی فنی و اقتصادی-امکان سنجی'}</h1>
           <p>{isEn ? 'Integrated technical, engineering, market and financial assessment, with project risk analysis.' : 'محیط یکپارچه برای ارزیابی فنی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و بررسی ریسک پروژه‌ها.'}</p>
         </div>
         <div className="feasibility-project-count" aria-label={isEn ? `${projects.length} registered projects` : `${projects.length} پروژه ثبت‌شده`}>
