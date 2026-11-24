@@ -158,7 +158,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
       itemAllocations.set(itemKey, currentItem)
     }
   }
-  if (issues.length) return { valid: false, issues, schedule: null, incrementalCppByPeriod: [] }
+  if (issues.length) return { valid: false, issues, schedule: null, incrementalCppByPeriod: [], tracePathRows: [] }
 
   const closingByProduct = new Map<string, { quantity: number; value: number; period: number }>()
   const openingWipByItemProduct = new Map<string, number>()
@@ -278,7 +278,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
       quantity: row.closingInventoryQuantity, value: closingInventoryValue, period: row.period,
     })
   }
-  if (issues.length) return { valid: false, issues, schedule: null, incrementalCppByPeriod: [] }
+  if (issues.length) return { valid: false, issues, schedule: null, incrementalCppByPeriod: [], tracePathRows: [] }
   const periodCostOfSales = Array(periodCount).fill(0) as number[]
   const periodWipInventoryValue = Array(periodCount).fill(0) as number[]
   let totalClosingInventoryValue = 0
