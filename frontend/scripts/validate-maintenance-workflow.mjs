@@ -31,10 +31,12 @@ test('asset register rejects duplicate asset tags and persists locally',async()=
 
 test('work orders require a registered asset, valid lifecycle and valid dates',()=>{
   assert.throws(()=>validateMaintenanceOrder(orderInput,[]),/شناسنامه دارایی/)
-  const asset={id:'asset-1',assetTag:'PMP-101',name:'Pump'}
+  const asset={id:'asset-1',assetTag:'PMP-101',name:'Pump',criticality:'high'}
   assert.throws(()=>validateMaintenanceOrder({...orderInput,completedAt:'2026-11-01'},[asset]),/قبل از تاریخ شروع/)
   assert.throws(()=>validateMaintenanceOrder({...orderInput,status:'completed',completedAt:''},[asset]),/تاریخ تکمیل الزامی/)
   assert.throws(()=>validateMaintenanceOrder({...orderInput,downtimeHours:'-2'},[asset]),/نامنفی/)
+  assert.throws(()=>validateMaintenanceOrder({...orderInput,kind:'preventive',dueAt:''},[asset]),/سررسید دستورکار پیشگیرانه/)
+  assert.equal(validateMaintenanceOrder(orderInput,[asset]).priority,'high')
 })
 
 test('work order creation stores asset lineage and prevents duplicate order numbers',async()=>{
