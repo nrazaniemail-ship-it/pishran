@@ -312,12 +312,6 @@ export default function App() {
         <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}>{isEn ? "Home" : "پیشخوان"}</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('projects')}>{isEn ? "Projects" : "پروژه‌ها"}</button>
         <button className={page === 'steel-group' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('steel-group')}>{isEn ? "Steel Group" : "گروه فولاد"}</button>
-        <div className={moduleDropdownOpen ? 'nav-dropdown is-open' : 'nav-dropdown'}>
-          <button type="button" className={page === 'module' ? 'nav-item nav-module-toggle active' : 'nav-item nav-module-toggle'} aria-haspopup="menu" aria-expanded={moduleDropdownOpen} onClick={() => setModuleDropdownOpen(current => !current)}>{isEn ? 'Modules' : 'ماژولها'} <span className="nav-caret" aria-hidden="true">{moduleDropdownOpen ? '▴' : '▾'}</span></button>
-          {moduleDropdownOpen && <div className="nav-dropdown-menu" role="menu">
-            {modules.map(item => <button type="button" role="menuitem" key={item.id} className={page === 'module' && activeModuleId === item.id ? 'dropdown-module active' : 'dropdown-module'} onClick={() => openModule(item.id)}><span>{item.id}</span>{isEn ? item.enTitle : item.title}</button>)}
-          </div>}
-        </div>
         <button className={page === 'guide' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('guide')}>{isEn ? "Guide" : "راهنما"}</button>
         <button className={page === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('settings')}>{isEn ? "Settings" : "تنظیمات"}</button>
       </nav>
