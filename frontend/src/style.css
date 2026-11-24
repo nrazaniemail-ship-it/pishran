@@ -2060,6 +2060,33 @@ input,select,textarea{color:var(--text)}
 
 
 
+
+/* Modern module-code badge: replace the decorative polygon with a refined rounded chip. */
+.module-launcher-card::before{
+  inset-inline-end:8px;
+  top:8px;
+  width:76px;
+  height:30px;
+  border-radius:10px;
+  clip-path:none;
+  background:linear-gradient(135deg,rgba(226,237,244,.95),rgba(241,246,249,.82));
+  border:1px solid rgba(176,197,210,.62);
+  transform:none;
+}
+.module-launcher-code{
+  top:17px;
+  inset-inline-end:17px;
+  color:#42677e;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.055em;
+  line-height:1;
+}
+@media(max-width:760px){
+  .module-launcher-card::before{width:68px;height:27px;inset-inline-end:7px;top:7px;border-radius:9px}
+  .module-launcher-code{top:15px;inset-inline-end:14px;font-size:8px}
+}
+
 /* MOD-05 industrial energy dashboard: inspired by EnergyCAP utility analytics and Siemens process monitoring. */
 .energy-management{background:linear-gradient(150deg,var(--surface,#fff) 0%,var(--page,#f3f5f8) 100%);border-color:var(--line,#dce3ea);box-shadow:0 12px 34px rgba(25,45,70,.065)}
 .energy-dashboard-hero{position:relative;align-items:center;min-height:164px;margin:-2px -2px 18px;padding:22px 24px;border:1px solid #d5e1e9;border-radius:17px;background:radial-gradient(circle at 9% 18%,rgba(220,181,101,.18),transparent 28%),linear-gradient(115deg,#f7fafc 0%,#edf3f7 56%,#f9fafb 100%);overflow:hidden}
