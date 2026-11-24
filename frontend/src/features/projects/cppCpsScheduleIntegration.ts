@@ -247,8 +247,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
           current.grossCost > 0 &&
           current.baseCoveredCost > 0 &&
           current.baseCoveredCost >= current.grossCost - 1e-8 &&
-          openingWipCarry <= 1e-8 &&
-          openingFinishedGoodsCarry <= 1e-8)
+          current.baseCoverage === 'fully-included')
         tracePathRows.push({
           itemId,
           category,
