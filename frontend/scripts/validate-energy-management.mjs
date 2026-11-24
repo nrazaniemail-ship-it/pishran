@@ -213,7 +213,8 @@ test('multivariable normalization uses complete measured operational drivers and
 })
 test('multivariable normalization excludes incomplete optional drivers and warns instead of imputing',async()=>{
  const {analyzeMultivariableEnergyNormalization,validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
- const operatingHours=[8,11,9,14,10,16];\n  const records=Array.from({length:6},(_,i)=>validateEnergyRecord({resource:'electricity',period:'P'+(i+1),site:'Plant',seu:'Mill',consumption:100+i*4+operatingHours[i],cost:10,production:10+i,operatingHours:operatingHours[i],productMixIndex:i===2?'':20+i,dataQuality:'measured'}))
+ const operatingHours=[8,11,9,14,10,16];
+  const records=Array.from({length:6},(_,i)=>validateEnergyRecord({resource:'electricity',period:'P'+(i+1),site:'Plant',seu:'Mill',consumption:100+i*4+operatingHours[i],cost:10,production:10+i,operatingHours:operatingHours[i],productMixIndex:i===2?'':20+i,dataQuality:'measured'}))
  const result=analyzeMultivariableEnergyNormalization(records,{resource:'electricity'})
  assert.equal(result.results.length,1)
  assert.ok(!result.results[0].predictors.includes('productMixIndex'))
