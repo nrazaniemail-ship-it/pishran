@@ -16,6 +16,7 @@ const backupSource = (await readFile(new URL('../src/core/storage/backupService.
   .replace("from './localStore'", `from '${localStoreUrl}'`)
 const backupUrl = toDataUrl(backupSource)
 
+const previewUrl = 'http://127.0.0.1:4179/'
 const server = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', '4179', '--strictPort'], {
   stdio: 'ignore',
   env: { ...process.env, VITE_PREVIEW_BUILD: 'true' }
@@ -25,7 +26,7 @@ try {
   let ready = false
   for (let attempt = 0; attempt < 40; attempt += 1) {
     try {
-      const response = await fetch('http://127.0.0.1:4179/')
+      const response = await fetch(previewUrl)
       if (response.ok) { ready = true; break }
     } catch {}
     await delay(500)
@@ -34,7 +35,59 @@ try {
 
   browser = await chromium.launch({ headless: true })
   const page = await browser.newPage()
-  await page.goto('http://127.0.0.1:4179/')
+  const pageErrors = []
+  page.on('pageerror', error => pageErrors.push(error.message))
+  const pageResponse = await page.goto(previewUrl)
+  await delay(1200)
+  console.log('Pishran UI smoke diagnostic:', JSON.stringify({ url: page.url(), status: pageResponse?.status(), title: await page.title(), body: (await page.locator('body').innerText()).slice(0, 1200), pageErrors }))
+  const moduleMenuButton = page.locator('.nav-module-toggle')
+  await moduleMenuButton.waitFor({ state: 'visible' })
+  await moduleMenuButton.click()
+  assert.equal(await moduleMenuButton.getAttribute('aria-expanded'), 'true', 'module header button must open the module menu')
+  const moduleMenu = page.locator('.nav-dropdown-menu')
+  assert.equal(await moduleMenu.isVisible(), true, 'module menu must be visible after tapping its header')
+  await moduleMenu.getByRole('menuitem').filter({ hasText: 'مدیریت انرژی' }).click()
+  await page.locator('[data-module-export-root]').waitFor({ state: 'visible' })
+  assert.equal(await page.locator('[data-module-export-root] .module-id').innerText(), 'MOD-05', 'menu item must navigate to the selected module')
+  const excelDownloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'خروجی Excel' }).click()
+  const excelDownload = await excelDownloadPromise
+  assert.match(excelDownload.suggestedFilename(), /\.xlsx$/, 'module Excel export must download an XLSX workbook')
+  await page.evaluate(() => { window.print = () => { document.documentElement.dataset.pishranPrintCalled = 'true' } })
+  await page.getByRole('button', { name: 'چاپ / ذخیره PDF' }).click()
+  assert.equal(await page.locator('html').getAttribute('data-pishran-print-called'), 'true', 'PDF action must open the browser print/save flow')
+  await moduleMenuButton.click()
+  assert.equal(await moduleMenuButton.getAttribute('aria-expanded'), 'true')
+  await page.keyboard.press('Escape')
+  assert.equal(await moduleMenuButton.getAttribute('aria-expanded'), 'false', 'Escape must close the module menu')
+  console.log('PASS: module menu navigation and XLSX/PDF export controls')
+
+  await moduleMenuButton.click()
+  await moduleMenu.getByRole('menuitem').filter({ hasText: 'MOD-01' }).click()
+  const expectedModuleIds = Array.from({ length: 12 }, (_, index) => `MOD-${String(index + 1).padStart(2, '0')}`)
+  for (const [index, expectedId] of expectedModuleIds.entries()) {
+    await page.waitForFunction(id => document.querySelector('[data-module-export-root] .module-id')?.textContent?.trim() === id, expectedId)
+    assert.equal(await page.locator('[data-module-export-root] .module-id').innerText(), expectedId,
+      `Continue sequence must display ${expectedId} at step ${index + 1}`)
+    const continueButton = page.locator('.module-continue-actions button')
+    const expectedLabel = index === expectedModuleIds.length - 1 ? 'پایان مرور ماژول‌ها' : 'ادامه بده'
+    assert.equal((await continueButton.innerText()).trim(), expectedLabel,
+      `Continue control label must be correct on ${expectedId}`)
+    await continueButton.click()
+    if (index < expectedModuleIds.length - 1) {
+      await page.waitForFunction(id => document.querySelector('[data-module-export-root] .module-id')?.textContent?.trim() === id,
+        expectedModuleIds[index + 1])
+    }
+  }
+  await page.waitForFunction(() => document.querySelector('.app-page-dashboard .hero') !== null &&
+    document.querySelector('[data-module-export-root]') === null)
+  assert.equal(await page.locator('.app-page-dashboard .hero').count(), 1,
+    'finishing MOD-12 must return to the dashboard')
+  assert.equal(await page.locator('[data-module-export-root]').count(), 0,
+    'module workspace must be unmounted after finishing MOD-12')
+  assert.deepEqual(pageErrors, [], 'module sequence must not produce browser runtime errors')
+  console.log('PASS: real browser Continue navigation MOD-01 through MOD-12 and dashboard return')
+
   const result = await page.evaluate(async ({ storeUrl, projectsUrl, backupUrl }) => {
     const { localStore } = await import(storeUrl)
     const projects = await import(projectsUrl)

@@ -24,3 +24,25 @@ test('MOD-02 records without an imported bill do not claim bill provenance',asyn
  const result=await executeModuleAnalysis('MOD-02',{outputTon:'10',material:'100',labor:'20',energy:'30',maintenance:'10',overhead:'40',sellingPrice:'30'},store,'2026-11-23T11:00:00.000Z')
  assert.deepEqual(result.sourceReferences,{})
 })
+
+test('MOD-02 accepts gas and water cost-center allocations with invoice provenance',async()=>{
+ const store=memoryStore()
+ for(const resource of ['gas','water']){
+  const source={energyAllocationId:'RCA-'+resource,energyBillId:'BILL-'+resource,billingPeriod:'1405/08',billNumber:'INV-'+resource,energyAllocationCenter:'CC-UTIL',energyAllocationCost:250,energyAllocationBasis:'MOD-05 '+resource+' resource allocation'}
+  const result=await executeModuleAnalysis('MOD-02',{outputTon:'10',material:'100',labor:'20',energy:'250',maintenance:'10',overhead:'20',sellingPrice:'50'},store,'2026-11-23T15:00:00.000Z',source)
+  assert.equal(result.metrics.totalCost,400)
+  assert.equal(result.sourceReferences.energyBillId,'BILL-'+resource)
+  assert.equal(result.sourceReferences.energyAllocationCenter,'CC-UTIL')
+  assert.equal(result.sourceReferences.energyAllocationBasis,'MOD-05 '+resource+' resource allocation')
+ }
+})
+
+test('MOD-02 UI reads saved gas and water allocations and replaces energy cost with selected center share',async()=>{
+ const {readFile}=await import('node:fs/promises')
+ const source=await readFile(new URL('../src/features/modules/ModuleIntelligencePanel.tsx',import.meta.url),'utf8')
+ assert.match(source,/module-intelligence:MOD-05:resource-cost-allocations:v1/)
+ assert.match(source,/localStore\.get<SavedResourceAllocation\[]>\(RESOURCE_COST_ALLOCATIONS_KEY\)/)
+ assert.match(source,/setCost\(x=>\(\{\.\.\.x,energy:String\(selectedResourceCenter\.totalCost\)\}\)\)/)
+ assert.match(source,/appliedResourceAllocation&&Number\(cost\.energy\)===appliedResourceAllocation\.totalCost/)
+ assert.match(source,/energyAllocationBasis:'MOD-05 '\+appliedResourceAllocation\.resource\+' resource allocation'/)
+})
