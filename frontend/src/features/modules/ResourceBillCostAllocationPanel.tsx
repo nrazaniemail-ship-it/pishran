@@ -27,7 +27,7 @@ export default function ResourceBillCostAllocationPanel({resource,language='fa'}
    const known=parts.reduce((sum,k)=>sum+numeric(bill[k]),0)
    if(known>amount+Math.max(1,amount*.001))return null
    if(gas){
-    return allocateGasBillCost({bill:{id:bill.id,billNumber:bill.billNumber,period:bill.period,amount,volumeCharge:numeric(bill.volumeCharge),thermalCharge:numeric(bill.thermalCharge),transportCharge:numeric(bill.transportCharge),fixedCharge:numeric(bill.fixedCharge),taxCharge:numeric(bill.taxCharge)},consumers:centers.map(x=>({id:x.id,name:x.name,gasNm3:numeric(x.consumption),gasGJ:numeric(x.thermalEnergyGJ),fixedCapacityShare:numeric(x.fixedCapacityShare),productionTon:numeric(x.production)}))})
+    return allocateGasBillCost({bill:{id:bill.id,billNumber:bill.billNumber,period:bill.period,amount,volumeCharge:numeric(bill.volumeCharge),thermalCharge:numeric(bill.thermalCharge),transportCharge:numeric(bill.transportCharge),fixedCharge:numeric(bill.fixedCharge),taxCharge:numeric(bill.taxCharge),otherCharges:numeric(bill.otherCharges)},consumers:centers.map(x=>({id:x.id,name:x.name,gasNm3:numeric(x.consumption),gasGJ:numeric(x.thermalEnergyGJ),fixedCapacityShare:numeric(x.fixedCapacityShare),productionTon:numeric(x.production)}))})
    }
    const allocate=(value:number,key:'consumption'|'wastewater'|'production',equal=false)=>{
     if(value===0)return centers.map(()=>0)
