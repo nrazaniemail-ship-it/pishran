@@ -120,3 +120,17 @@ export async function saveReliabilitySnapshot(input, store, now = new Date().toI
   await store.set(MAINTENANCE_RELIABILITY_KEY, [saved, ...rows].slice(0, 100))
   return saved
 }
+
+export async function updateMaintenanceOrderStatus(orderId, status, store, now = new Date().toISOString()) {
+  if (!['planned', 'in-progress', 'completed', 'cancelled'].includes(status)) throw new Error('وضعیت دستورکار معتبر نیست.')
+  const rows = await store.get(MAINTENANCE_ORDERS_KEY) || []
+  const index = rows.findIndex(row => row.id === orderId)
+  if (index < 0) throw new Error('دستورکار موردنظر پیدا نشد.')
+  const current = rows[index]
+  if (status === 'completed' && !current.completedAt) throw new Error('برای تکمیل دستورکار ابتدا تاریخ تکمیل را در فرم ثبت کنید.')
+  const updated = { ...current, status, updatedAt: now }
+  const next = [...rows]
+  next[index] = updated
+  await store.set(MAINTENANCE_ORDERS_KEY, next)
+  return updated
+}
