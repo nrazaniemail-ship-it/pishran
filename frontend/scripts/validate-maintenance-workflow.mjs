@@ -18,6 +18,7 @@ test('asset master validates required identity, criticality and replacement cost
   assert.throws(()=>validateMaintenanceAsset({...assetInput,assetTag:''}),/کد تجهیز الزامی/)
   assert.throws(()=>validateMaintenanceAsset({...assetInput,criticality:'urgent'}),/بحرانی‌بودن/)
   assert.throws(()=>validateMaintenanceAsset({...assetInput,replacementCost:'-1'}),/نامنفی/)
+  assert.throws(()=>validateMaintenanceAsset({...assetInput,commissionedAt:'2026-02-30'}),/تاریخ راه‌اندازی معتبر نیست/)
 })
 
 test('asset register rejects duplicate asset tags and persists locally',async()=>{
