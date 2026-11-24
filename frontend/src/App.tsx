@@ -307,7 +307,7 @@ export default function App() {
     <BackupScheduler/>
     <header className="topbar">
       <button className="language-switch page-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button>
-      <div className="brand"><button className="brand-title" type="button" onClick={() => navigateTo('dashboard')}><span className="brandmark" aria-hidden="true"><Factory size={22} strokeWidth={2}/></span><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
+      <div className="brand"><button className="brand-title" type="button" onClick={() => navigateTo('dashboard')}><span className="brandmark" aria-hidden="true"><Factory size={22} strokeWidth={2}/></span><span className="brand-name-wrap"><b>{isEn ? "Pishran" : "پیشران"}</b><sup className="brand-version" aria-label={isEn ? "Version 1.0.1" : "نسخه ۱.۰.۱"}>1.0.1</sup></span></button></div>
       <nav className="main-nav" aria-label={isEn?"Primary navigation":"ناوبری اصلی"}>
         <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}>{isEn ? "Home" : "پیشخوان"}</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('projects')}>{isEn ? "Projects" : "پروژه‌ها"}</button>
@@ -403,6 +403,6 @@ export default function App() {
     </section>}
 
 
-    <footer>{isEn ? "Pishran · Intelligent Feasibility & Investment Assessment Platform" : "پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری"} <span>{isEn ? "Version 1.0.1 · No sign-in required" : "نسخه ۱.۰.۱ · بدون نیاز به ورود یا حساب کاربری"}</span></footer>
+    <footer>{isEn ? "Pishran · Intelligent Feasibility & Investment Assessment Platform" : "پیشران · سامانه هوشمند امکان‌سنجی و ارزیابی سرمایه‌گذاری"} <span>{isEn ? "No sign-in required" : "بدون نیاز به ورود یا حساب کاربری"}</span></footer>
   </main>
 }
