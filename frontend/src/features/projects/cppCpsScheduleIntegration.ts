@@ -247,7 +247,8 @@ export function bindCppCpsTraceLedgerToProductSchedule(
           category,
           period: row.period,
           productId: row.productId,
-          postingStatus: 'incremental',
+          postingStatus: currentIncrementalCpp > 0 || openingWipCarry > 0 || openingFinishedGoodsCarry > 0
+            ? 'incremental' : 'base-covered',
           grossCost: current?.grossCost ?? 0,
           baseCoveredCost: current?.baseCoveredCost ?? 0,
           incrementalCpp: currentIncrementalCpp,
