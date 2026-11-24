@@ -1,5 +1,5 @@
 export type EnergyResource='electricity'|'gas'|'water'
-export type EnergyRecordInput={resource:EnergyResource;period:string;site:string;seu:string;meterId?:string;consumption:string|number;production:string|number;cost:string|number;startReading?:string|number;endReading?:string|number;calorificValue?:string|number;calorificBasis?:'gross'|'net';gasReferenceConditions?:string;sourceBillId?:string;sourceBillNumber?:string;note?:string;dataQuality?:'measured'|'estimated'}
+export type EnergyRecordInput={resource:EnergyResource;period:string;site:string;seu:string;meterId?:string;consumption:string|number;production:string|number;operatingHours?:string|number;cost:string|number;startReading?:string|number;endReading?:string|number;calorificValue?:string|number;calorificBasis?:'gross'|'net';gasReferenceConditions?:string;sourceBillId?:string;sourceBillNumber?:string;note?:string;dataQuality?:'measured'|'estimated'}
 export type EnergyBaselineInput={resource:EnergyResource;period:string;site:string;seu:string;consumption:string|number;production:string|number;calorificValue?:string|number;calorificBasis?:'gross'|'net';gasReferenceConditions?:string}
 export type EnergyActionInput={title:string;resource:EnergyResource;owner:string;dueDate:string;expectedSavings:string|number;status?:'planned'|'in-progress'|'cancelled'}
 export type EnergyStore={get<T>(key:string):Promise<T|undefined>;set<T>(key:string,value:T):Promise<void>;update<T>(key:string,fn:(old:T|undefined)=>T):Promise<T>}
@@ -27,3 +27,5 @@ export function prepareModule02EnergyCostPosting(input:{baseInput:Record<string,
 export type EnergyActionStatusHistory={from:string|null;to:'planned'|'in-progress'|'verified'|'cancelled';changedAt:string;verifier:string|null}
 export type EnergyVerificationEvidence={period:string;measuredSavings:number;verifier:string;evidenceNote:string;verifiedAt:string}
 export type EnergyActionAudit={statusHistory:EnergyActionStatusHistory[];verificationHistory:Array<EnergyVerificationEvidence&{supersededAt:string}>}
+
+export function analyzeMultivariableEnergyNormalization(records:any[],filters?:{resource:EnergyResource;site?:string;seu?:string}):{results:Array<{site:string;seu:string;resource:EnergyResource;comparisonBasis:string;comparisonUnit:string;trainingPeriods:string[];actualPeriod:string;actualConsumption:number;normalizedConsumption:number;adjustedSavings:number;adjustedSavingsPercent:number;rSquared:number|null;rmse:number;coefficients:{intercept:number;production:number;operatingHours:number};warnings:string[]}>;warnings:string[]}
