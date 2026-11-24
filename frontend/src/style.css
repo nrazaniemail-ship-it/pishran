@@ -2226,3 +2226,36 @@ input,select,textarea{color:var(--text)}
 @media(prefers-reduced-motion:reduce){
   .module-launcher-icon,.feasibility-launcher-icon{animation:none}
 }
+
+
+/* Mobile header alignment: language control on the left, Pishran brand on the right. */
+@media(max-width:900px){
+  .topbar{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    align-items:center;
+    gap:10px 12px;
+  }
+  .topbar .page-language-switch{
+    position:static;
+    grid-column:1;
+    grid-row:1;
+    justify-self:start;
+    align-self:center;
+    transform:none;
+    margin:0;
+  }
+  .topbar .brand{
+    grid-column:2;
+    grid-row:1;
+    justify-self:end;
+    margin:0;
+    text-align:right;
+  }
+  .topbar .main-nav{
+    grid-column:1 / -1;
+    grid-row:2;
+    order:initial;
+    width:100%;
+  }
+}
