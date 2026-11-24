@@ -64,6 +64,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
     grossCost: number
     baseCoveredCost: number
     incrementalCpp: number
+    baseCoverage: CppCpsTracePeriodRow['baseCoverage']
   }>()
   const incrementalCppByPeriod = ledger.completeIncrementalByPeriod as number[]
   const traceRowsByItemPeriod = new Map<string, CppCpsTracePeriodRow[]>()
@@ -153,6 +154,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
         grossCost: 0,
         baseCoveredCost: 0,
         incrementalCpp: 0,
+        baseCoverage: trace.baseCoverage,
       }
       currentItem.grossCost += (trace.grossCost ?? 0) * share
       currentItem.baseCoveredCost += (trace.baseCoveredCost ?? 0) * share
