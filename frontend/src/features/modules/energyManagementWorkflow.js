@@ -86,19 +86,29 @@ export async function saveWaterBalance(input,store,createdAt=new Date().toISOStr
 export function analyzeEnergyTrends(records,{resource,site,seu}={}) {
  const selected=(Array.isArray(records)?records:[]).filter(x=>
   (!resource||x.resource===resource)&&(!site||x.site===site)&&(!seu||x.seu===seu)
- ).slice().sort((a,b)=>String(a.period).localeCompare(String(b.period),'en',{numeric:true}))
- const points=selected.map((x,index)=>{
-  const prior=index?selected[index-1]:null
-  const thermalComparable=x.resource==='gas'&&Number(x.gasEnergyKwh)>0&&prior&&Number(prior.gasEnergyKwh)>0&&
-   ['gross','net'].includes(x.calorificBasis)&&x.calorificBasis===prior.calorificBasis&&
-   String(x.gasReferenceConditions??'').trim()!==''&&String(x.gasReferenceConditions??'').trim()===String(prior.gasReferenceConditions??'').trim()
-  const value=thermalComparable?Number(x.gasEnergyKwh):Number(x.consumption)
-  const priorValue=prior?(thermalComparable?Number(prior.gasEnergyKwh):Number(prior.consumption)):null
-  const intensity=value/Number(x.production)
-  const priorIntensity=prior&&Number(prior.production)>0?priorValue/Number(prior.production):null
-  return {id:x.id,period:x.period,resource:x.resource,site:x.site,seu:x.seu,consumption:Number(x.consumption),production:Number(x.production),cost:Number(x.cost),intensity,costPerOutput:Number(x.cost)/Number(x.production),comparisonUnit:thermalComparable?'kWh/t':x.resource==='electricity'?'kWh/t':x.resource==='gas'?'Nm³/t':'m³/t',comparisonBasis:thermalComparable?'thermal-energy':'volume-or-resource',periodChangePercent:priorValue>0?(value/priorValue-1)*100:null,intensityChangePercent:priorIntensity>0?(intensity/priorIntensity-1)*100:null,costPerOutputChangePercent:prior&&Number(prior.cost)/Number(prior.production)>0?(Number(x.cost)/Number(x.production)/(Number(prior.cost)/Number(prior.production))-1)*100:null}
- })
- return {count:points.length,points,warnings:selected.some(x=>x.resource==='gas')?['مقایسه روند حرارتی گاز فقط در صورت یکسان بودن مبنای HHV/LHV و شرایط مرجع انجام می‌شود؛ در غیر این صورت شاخص حجمی گزارش می‌شود.']:[]}
+ )
+ const groups=new Map()
+ for(const row of selected){const key=[row.resource,row.site,row.seu].map(v=>String(v??'')).join('::');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)}
+ const points=[],series=[],warnings=[]
+ for(const [key,items] of groups){
+  const sorted=items.slice().sort((a,b)=>String(a.period).localeCompare(String(b.period),'en',{numeric:true})||String(a.id??'').localeCompare(String(b.id??'')))
+  const first=sorted[0]
+  const gasThermal=first?.resource==='gas'&&sorted.every(x=>Number(x.gasEnergyKwh)>0&&['gross','net'].includes(x.calorificBasis)&&x.calorificBasis===first.calorificBasis&&String(x.gasReferenceConditions??'').trim()!==''&&String(x.gasReferenceConditions??'').trim()===String(first.gasReferenceConditions??'').trim())
+  if(first?.resource==='gas'&&!gasThermal)warnings.push('سری گاز '+String(first.site)+' / '+String(first.seu)+' به‌دلیل تفاوت یا فقدان مبنای HHV/LHV یا شرایط مرجع، فقط بر مبنای Nm³ تحلیل شده است.')
+  const groupPoints=sorted.map((x,index)=>{
+   const prior=index?sorted[index-1]:null
+   const value=gasThermal?Number(x.gasEnergyKwh):Number(x.consumption)
+   const priorValue=prior?(gasThermal?Number(prior.gasEnergyKwh):Number(prior.consumption)):null
+   const intensity=value/Number(x.production)
+   const priorIntensity=prior&&Number(prior.production)>0?priorValue/Number(prior.production):null
+   const costPerOutput=Number(x.cost)/Number(x.production)
+   const priorCostPerOutput=prior&&Number(prior.production)>0?Number(prior.cost)/Number(prior.production):null
+   return {id:x.id,period:x.period,resource:x.resource,site:x.site,seu:x.seu,consumption:Number(x.consumption),analysisConsumption:value,production:Number(x.production),cost:Number(x.cost),intensity,costPerOutput,comparisonUnit:gasThermal?'kWh/t':x.resource==='electricity'?'kWh/t':x.resource==='gas'?'Nm³/t':'m³/t',comparisonBasis:gasThermal?'thermal-energy':'volume-or-resource',periodChangePercent:priorValue>0?(value/priorValue-1)*100:null,intensityChangePercent:priorIntensity>0?(intensity/priorIntensity-1)*100:null,costPerOutputChangePercent:priorCostPerOutput>0?(costPerOutput/priorCostPerOutput-1)*100:null}
+  })
+  series.push({key,resource:first.resource,site:first.site,seu:first.seu,comparisonBasis:gasThermal?'thermal-energy':'volume-or-resource',points:groupPoints})
+  points.push(...groupPoints)
+ }
+ return {count:points.length,points,series,warnings}
 }
 function splitCost(amount,consumers,weightKey){
  const total=consumers.reduce((s,x)=>s+Math.max(0,Number(x[weightKey])||0),0)
