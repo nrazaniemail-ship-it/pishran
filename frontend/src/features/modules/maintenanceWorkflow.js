@@ -88,10 +88,11 @@ export function calculateAssetReliability({ asset, workOrders = [], operatingHou
   const end = date(endDate, 'پایان دوره')
   if (end < start) throw new Error('پایان دوره نمی‌تواند قبل از شروع آن باشد.')
   const inPeriod = workOrders.filter(row => row.assetId === asset.id && row.openedAt >= start && row.openedAt <= end && row.status !== 'cancelled')
-  const failures = inPeriod.filter(row => row.kind === 'corrective' && row.status === 'completed')
+  const failures = inPeriod.filter(row => row.kind === 'corrective')
+  const completedFailures = failures.filter(row => row.status === 'completed')
   const actual = inPeriod.filter(row => row.status === 'completed' || row.status === 'in-progress')
   const downtimeHours = actual.reduce((sum, row) => sum + row.downtimeHours, 0)
-  const repairHours = failures.reduce((sum, row) => sum + row.repairHours, 0)
+  const repairHours = completedFailures.reduce((sum, row) => sum + row.repairHours, 0)
   const maintenanceCost = actual.reduce((sum, row) => sum + row.laborCost + row.materialCost, 0)
   const pmOrders = workOrders.filter(row => row.assetId === asset.id && row.kind === 'preventive' && row.dueAt && row.dueAt >= start && row.dueAt <= end && row.status !== 'cancelled')
   const pmDue = pmOrders.length
@@ -102,7 +103,7 @@ export function calculateAssetReliability({ asset, workOrders = [], operatingHou
     startDate: start, endDate: end, operatingHours: hours,
     failureCount: failures.length, downtimeHours, repairHours,
     mtbfHours: failures.length ? hours / failures.length : null,
-    mttrHours: failures.length ? repairHours / failures.length : null,
+    mttrHours: completedFailures.length ? repairHours / completedFailures.length : null,
     availabilityPercent: hours / (hours + downtimeHours) * 100,
     maintenanceCost, pmDue, pmCompleted,
     pmCompliancePercent: pmDue ? pmCompleted / pmDue * 100 : null,
