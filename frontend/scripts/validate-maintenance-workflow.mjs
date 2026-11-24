@@ -105,3 +105,20 @@ test('open corrective failures affect MTBF while MTTR uses completed repairs onl
   assert.equal(result.mttrHours,3)
   assert.equal(result.downtimeHours,7)
 })
+
+
+test('reopening a completed work order clears its completion date and re-completion stamps a fresh date',async()=>{
+  const store=createStore()
+  await store.set(MAINTENANCE_ORDERS_KEY,[{
+    id:'wo-reopen',assetId:'asset-1',orderNumber:'WO-REOPEN',kind:'corrective',status:'completed',
+    openedAt:'2026-11-02',completedAt:'2026-11-10',downtimeHours:2,repairHours:1,
+    laborCost:0,materialCost:0,estimatedHours:0,
+  }])
+  const reopened=await updateMaintenanceOrderStatus('wo-reopen','in-progress',store,'2026-11-24T09:00:00Z')
+  assert.equal(reopened.status,'in-progress')
+  assert.equal(reopened.completedAt,null)
+  const rescheduled=await updateMaintenanceOrderStatus('wo-reopen','planned',store,'2026-11-25T09:00:00Z')
+  assert.equal(rescheduled.completedAt,null)
+  const completed=await updateMaintenanceOrderStatus('wo-reopen','completed',store,'2026-11-26T09:00:00Z')
+  assert.equal(completed.completedAt,'2026-11-26')
+})
