@@ -13,6 +13,7 @@ import BackupScheduler from './features/settings/BackupScheduler'
 import ModuleIntelligencePanel from './features/modules/ModuleIntelligencePanel'
 import ModuleKpiPanel from './features/modules/ModuleKpiPanel'
 import ModuleEnergyPanel from './features/modules/ModuleEnergyPanel'
+import MaintenancePanel from './features/modules/MaintenancePanel'
 import ExecutiveDashboardPanel from './features/modules/ExecutiveDashboardPanel'
 import ModuleExportActions from './features/modules/ModuleExportActions'
 
@@ -395,6 +396,7 @@ export default function App() {
       {(activeModule.id === 'MOD-02' || activeModule.id === 'MOD-03') && <ModuleIntelligencePanel moduleId={activeModule.id} language={settings.language}/>}
       {activeModule.id === 'MOD-04' && <ModuleKpiPanel language={settings.language}/>}
       {activeModule.id === 'MOD-05' && <ModuleEnergyPanel language={settings.language}/>}
+      {activeModule.id === 'MOD-06' && <MaintenancePanel language={settings.language}/>}
       <section className="module-workspace-card"><div className="section-head"><div><h2>{isEn ? 'Module workspaces' : 'پرونده‌های این ماژول'}</h2><p>{isEn ? 'Create and manage workspaces dedicated to this module.' : 'برای ثبت پروژه‌ها، تحلیل‌ها و اطلاعات اختصاصی این ماژول پرونده ایجاد کنید.'}</p></div><span className="muted">{activeModuleWorkspaces.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
         <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createModuleWorkspace() }}><label htmlFor="module-workspace-name">{isEn ? 'New module workspace name' : 'نام پرونده جدید ماژول'}</label><div><input id="module-workspace-name" value={moduleWorkspaceName} onChange={event => setModuleWorkspaceName(event.target.value)} placeholder={isEn ? 'Enter a name' : 'نام پروژه یا پرونده را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!moduleWorkspaceName.trim()}><Plus size={17}/>{isEn ? 'Create' : 'ایجاد پرونده'}</button></div></form>
         {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></div><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پرونده‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پرونده، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
