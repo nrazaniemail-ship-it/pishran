@@ -2327,3 +2327,6 @@ input,select,textarea{color:var(--text)}
   .module-launcher-card::before{display:none!important}
   .module-launcher-code{top:11px;inset-inline-end:11px;font-size:8px}
 }
+
+/* Compact green superscript version beside the Pishran wordmark. */
+.brand-title{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--text);padding:0;text-align:right}.brand-name-wrap{display:inline-flex;align-items:flex-start;gap:4px}.brand-name-wrap>b{display:block;font-size:19px;line-height:1.45}.brand-version{position:relative;top:-3px;color:#239765;font-size:9px;font-weight:800;line-height:1;direction:ltr;unicode-bidi:isolate}
