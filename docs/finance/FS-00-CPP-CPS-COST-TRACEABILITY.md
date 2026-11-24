@@ -145,3 +145,5 @@ The stage journal remains a local append-only subledger, not an ERP/general-ledg
 The three-period regression fixture proves a period-2 raw-material/WIP reversal reclassifies stage values without changing consolidated inventory or WC, and a period-3 incremental COGS adjustment increases COGS by the difference and reduces finished goods/WC by the same amount. The resulting periodic engine and all three statements are checked for the same period-specific effects and balance-sheet reconciliation.
 
 IndexedDB transaction/recovery and localStorage fallback tests remain separate persistence tests. The current IndexedDB test uses a transaction simulator and module reload; it is not a browser/device IndexedDB acceptance test. This bridge still does not create a general ledger, post to ERP, or infer unsupported cost-account semantics.
+
+The append-only journal is persisted as a **project-scoped local subledger** under a project-specific storage key. Original, reversal and adjustment documents remain local audit records; they are not transmitted to an ERP or external general ledger, and their correction overlay is applied only through the documented finance bridge.
