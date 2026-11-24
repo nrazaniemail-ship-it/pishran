@@ -53,7 +53,8 @@ export function bindCppCpsTraceLedgerToProductSchedule(
       continue
     }
     const amount = trace.incrementalCpp
-    if (amount === 0) continue
+    // Keep fully base-covered items in the item/product trace with a zero posting.
+    // They still need a product allocation path for visibility, but add no CPP.
     const periodRows = schedule.rows.filter(row => row.period === trace.period)
     if (!periodRows.length) {
       issues.push('No production schedule rows exist for cost item ' + key + '.')
