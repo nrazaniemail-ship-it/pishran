@@ -242,12 +242,18 @@ export function bindCppCpsTraceLedgerToProductSchedule(
       completedCpp += completedItemCpp
       wipCpp += closingWipItemCpp
       if (current || openingWipCarry > 0 || openingFinishedGoodsCarry > 0 || itemPool > 0) {
+        const fullyBaseCovered = Boolean(current &&
+          Math.abs(currentIncrementalCpp) <= 1e-8 &&
+          current.grossCost > 0 &&
+          current.baseCoveredCost > 0 &&
+          current.baseCoveredCost >= current.grossCost - 1e-8 &&
+          current.baseCoverage === 'fully-included')
         tracePathRows.push({
           itemId,
           category,
           period: row.period,
           productId: row.productId,
-          postingStatus: 'incremental',
+          postingStatus: fullyBaseCovered ? 'base-covered' : 'incremental',
           grossCost: current?.grossCost ?? 0,
           baseCoveredCost: current?.baseCoveredCost ?? 0,
           incrementalCpp: currentIncrementalCpp,
