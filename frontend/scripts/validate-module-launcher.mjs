@@ -2,8 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
-const [app,style] = await Promise.all([
+const [app,projects,style] = await Promise.all([
   readFile(new URL('../src/App.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('../src/features/projects/ProjectsView.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../src/style.css', import.meta.url), 'utf8'),
 ])
 
@@ -12,8 +13,18 @@ test('dashboard renders all twelve module launcher cards with real module naviga
   assert.ok(app.includes('modules.map(item => item.group)'))
   assert.ok(app.includes('groupModules.map(item =>'))
   assert.ok(app.includes('onClick={() => openModule(item.id)}'))
-  assert.ok(app.includes('module-launcher-count'))
+  assert.ok(app.includes('className="module-launcher-code"'))
+  assert.ok(!app.includes('module-launcher-heading'))
+  assert.ok(!app.includes('module-launcher-count'))
   assert.ok(!app.includes('dashboard-diagram-hotspot'))
+})
+
+test('investment control center is rendered on the feasibility projects page, not the dashboard', () => {
+  assert.ok(!app.includes('Investment Control Center'))
+  assert.ok(!app.includes('مرکز کنترل سرمایه‌گذاری'))
+  assert.ok(projects.includes('Investment Control Center'))
+  assert.ok(projects.includes('مرکز کنترل سرمایه‌گذاری'))
+  assert.ok(projects.includes('storageInfo.backend'))
 })
 
 test('launcher has responsive desktop, tablet and phone layouts with keyboard focus styling', () => {
