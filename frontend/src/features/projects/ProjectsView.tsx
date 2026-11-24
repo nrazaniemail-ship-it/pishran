@@ -4,6 +4,7 @@ import type { FeasibilityProject } from '../../core/projects/projectRepository'
 
 interface Props {
   projects: FeasibilityProject[]
+  storageInfo: { backend: string }
   onCreate: (input: Pick<FeasibilityProject, 'name' | 'industry' | 'projectType' | 'capacity' | 'location' | 'steelStage' | 'templateId'>) => Promise<void>
   onDelete: (id: string) => Promise<void>
   confirmBeforeDelete: boolean
@@ -27,7 +28,7 @@ const STEEL_PROJECT_OPTIONS = [
   { name: 'سایر', stage: 'سایر' },
 ]
 
-export default function ProjectsView({ projects, onCreate, onDelete, confirmBeforeDelete, onOpenProject, language = 'fa' }: Props) {
+export default function ProjectsView({ projects, storageInfo, onCreate, onDelete, confirmBeforeDelete, onOpenProject, language = 'fa' }: Props) {
   const en = language === 'en'
   const t = (fa: string, english: string) => en ? english : fa
   const projectNames: Record<string, string> = { 'معدن سنگ آهن':'Iron Ore Mining', 'کنستانتره':'Iron Ore Concentration', 'گندله سازی':'Pelletizing', 'احیاء':'Direct Reduction', 'ذوب و ریخته گری':'Steelmaking & Casting', 'نورد ورق گرم- تولید پلیت':'Hot-Rolled Plate', 'نورد ورق گرم- تولید کلاف':'Hot-Rolled Coil', 'نورد سرد ورق':'Cold Rolling', 'نورد میلگرد':'Rebar Rolling', 'نورد نبشی':'Angle Rolling', 'نورد تیرآهن':'Beam Rolling', 'سایر':'Other' }
@@ -76,6 +77,13 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
 
   return <section className="projects-page">
     <div className="page-heading"><div><h1>{t('پروژه‌های امکان‌سنجی','Feasibility Projects')}</h1><p>{t('پروژه‌ها و مطالعات سرمایه‌گذاری خود را روی همین دستگاه مدیریت کنید.','Manage your projects and investment studies on this device.')}</p></div><div className="projects-head-actions"><button className="primary projects-head-create" onClick={() => setShowForm(v => !v)}><Plus size={17}/> {t('پروژه جدید','New Project')}</button></div></div>
+    <section className="section-head"><div><h2>{t('مرکز کنترل سرمایه‌گذاری','Investment Control Center')}</h2></div><span className="muted">{t('نسخه ۱.۰.۱','Version 1.0.1')}</span></section>
+    <section className="kpis">
+      <article className="kpi"><span>{t('پروژه‌های ثبت‌شده','Registered projects')}</span><b>{projects.length.toLocaleString(en ? 'en-US' : 'fa-IR')}</b><small>{t('ذخیره‌شده روی این دستگاه','Stored on this device')}</small></article>
+      <article className="kpi"><span>{t('مدل‌های مالی','Financial models')}</span><b>{en ? '0' : '۰'}</b><small>{t('محاسبات قابل ثبت و نسخه‌بندی','Traceable and versioned calculations')}</small></article>
+      <article className="kpi"><span>{t('سناریوهای مقایسه‌شده','Compared scenarios')}</span><b>{en ? '0' : '۰'}</b><small>{t('پایه‌ای برای تحلیل عدم‌قطعیت','A foundation for uncertainty analysis')}</small></article>
+      <article className="kpi"><span>{t('وضعیت ذخیره‌سازی','Storage status')}</span><b className="live">{en && storageInfo.backend === 'در حال بررسی' ? 'Checking...' : storageInfo.backend}</b><small>{t('اطلاعات روی دستگاه نگهداری می‌شود','Data is kept on this device')}</small></article>
+    </section>
     {showForm && <form className="project-form" onSubmit={submit}>
       <h3>{t('تعریف پروژه جدید','Create New Project')}</h3>
       <div className="form-grid">
