@@ -128,8 +128,11 @@ test('improvement actions support controlled lifecycle status updates',async()=>
  const action=await saveEnergyAction({resource:'electricity',title:'Reduce idle load',owner:'Energy team',dueDate:'2026-12-01',expectedSavings:'100'},store,'2026-11-24T10:00:00Z')
  await updateEnergyActionStatus(action.id,'in-progress',store)
  assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].status,'in-progress')
- await updateEnergyActionStatus(action.id,'verified',store)
+ await assert.rejects(()=>updateEnergyActionStatus(action.id,'verified',store),/دوره صحه‌گذاری/)
+ await updateEnergyActionStatus(action.id,'verified',store,{period:'1405/09',measuredSavings:'85',verifier:'Energy Manager',evidenceNote:'Post-implementation meter readings normalized to production.'})
  assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].status,'verified')
+ assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].verification.measuredSavings,85)
+ assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].verification.period,'1405/09')
  await assert.rejects(()=>updateEnergyActionStatus(action.id,'unknown',store),/وضعیت اقدام/)
 })
 
@@ -153,6 +156,8 @@ test('MOD-05 provides a complete Excel workbook and print-to-PDF report path',as
  assert.ok(css.includes('body.energy-report-printing'))
  assert.ok(app.includes("document.body.classList.add('energy-report-printing')"))
  assert.ok(app.includes('updateEnergyActionStatus'))
+ assert.ok(app.includes('ثبت صحه‌گذاری صرفه‌جویی'))
+ assert.ok(app.includes('شواهد اندازه‌گیری / روش صحه‌گذاری'))
 })
 
 
