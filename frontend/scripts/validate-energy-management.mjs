@@ -121,6 +121,8 @@ test('MOD-05 provides a complete Excel workbook and print-to-PDF report path',as
  for(const sheet of ['پایش منابع','خطوط مبنا','قبوض برق','قبوض گاز','قبوض آب','تراز آب','تخصیص برق','تخصیص گاز و آب','اقدامات بهبود'])assert.ok(app.includes(sheet))
  assert.ok(app.includes('window.print()'))
  assert.ok(app.includes('energy-print-report'))
+ assert.ok(app.includes('تراز آب'))
+ assert.ok(app.includes('تخصیص هزینه به مراکز'))
  assert.ok(css.includes('@media print'))
  assert.ok(app.includes('updateEnergyActionStatus'))
 })
