@@ -339,20 +339,13 @@ export default function App() {
 
       <section className="module-launcher" aria-labelledby="module-launcher-title">
         <div className="module-launcher-heading">
-          <div>
-            <span className="module-launcher-eyebrow">{isEn ? 'PISHRAN WORKSPACE' : 'محیط یکپارچه پیشران'}</span>
-            <h2 id="module-launcher-title">{isEn ? 'Explore the 12 intelligence modules' : 'ورود به ۱۲ ماژول هوشمند پیشران'}</h2>
-            <p>{isEn ? 'Choose a workspace to review performance, investigate exceptions and take action.' : 'برای مشاهده عملکرد، بررسی انحراف‌ها و پیگیری اقدامات، ماژول موردنظر را انتخاب کنید.'}</p>
-          </div>
+          <h2 id="module-launcher-title">{isEn ? 'Pishran Intelligence Modules' : 'ماژولهای هوشمند پیشران'}</h2>
           <span className="module-launcher-count"><b>12</b><small>{isEn ? 'MODULES' : 'ماژول'}</small></span>
         </div>
         <div className="module-launcher-groups">
           {Array.from(new Set(modules.map(item => item.group))).map(group => {
             const groupModules = modules.filter(item => item.group === group)
             return <section className="module-launcher-group" key={group}>
-              <div className="module-launcher-group-heading">
-                <h3>{isEn ? groupModules[0].enGroup : group}</h3>
-              </div>
               <div className="module-launcher-grid">
                 {groupModules.map(item => {
                   const Icon = item.icon
