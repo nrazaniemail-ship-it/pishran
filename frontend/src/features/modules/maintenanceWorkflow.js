@@ -15,7 +15,10 @@ const required = (value, label) => {
 }
 const date = (value, label) => {
   const text = required(value, label)
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(text) || Number.isNaN(Date.parse(`${text}T00:00:00Z`))) throw new Error(`${label} معتبر نیست.`)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) throw new Error(`${label} معتبر نیست.`)
+  const [year, month, day] = text.split('-').map(Number)
+  const parsed = new Date(Date.UTC(year, month - 1, day))
+  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) throw new Error(`${label} معتبر نیست.`)
   return text
 }
 const id = (prefix, now) => `${prefix}-${Date.parse(now)}-${Math.random().toString(36).slice(2, 8)}`
