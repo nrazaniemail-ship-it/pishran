@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
 import {buildEnergySeries,detectEnergyAnomalies,detectForecastDeviations,forecastEnergyIntensity,allocateGasBillCost,prepareModule02GasCostPosting} from '../src/features/modules/energyIntelligenceEngine.js'
 const row=(id,period,consumption,production=100,cost=consumption*.5,extra={})=>({id,resource:'electricity',period,site:'Plant',seu:'Rolling',consumption,production,cost,...extra})
 
@@ -54,6 +55,13 @@ test('gas allocation rejects missing volume and thermal drivers rather than inve
  assert.throws(()=>allocateGasBillCost({bill:{amount:100,thermalCharge:100},consumers:[{id:'A',gasNm3:10}]}),/انرژی حرارتی/)
 })
 
+test('gas allocation falls back to equal fixed-charge shares only with an explicit warning',()=>{
+ const result=allocateGasBillCost({bill:{id:'G-2',amount:100,fixedCharge:20,volumeCharge:80},consumers:[{id:'A',gasNm3:60},{id:'B',gasNm3:40}]})
+ assert.equal(result.allocatedTotal,100)
+ assert.equal(result.allocations[0].fixedCharge,10)
+ assert.ok(result.warnings.some(x=>x.includes('ظرفیت قراردادی')))
+})
+
 test('rolling-origin forecast deviation compares latest actual with a forecast built only from prior periods',()=>{
  const stable=[100,101,99,102,160].map((v,i)=>row('fd'+i,'1405/0'+(i+1),v*100))
  const result=detectForecastDeviations(stable,{resource:'electricity'})
@@ -61,4 +69,13 @@ test('rolling-origin forecast deviation compares latest actual with a forecast b
  assert.equal(result.deviations[0].period,'1405/05')
  assert.ok(result.deviations[0].actualIntensity>result.deviations[0].predictedIntensity)
  assert.deepEqual(result.deviations[0].trainingPeriods,['1405/01','1405/02','1405/03','1405/04'])
+})
+
+test('gas cost allocation panel uses the tested thermal and contracted-capacity drivers and prevents duplicate invoice allocation',()=>{
+ const source=readFileSync(new URL('../src/features/modules/ResourceBillCostAllocationPanel.tsx',import.meta.url),'utf8')
+ assert.match(source,/allocateGasBillCost/)
+ assert.match(source,/gasGJ:numeric\(x\.thermalEnergyGJ\)/)
+ assert.match(source,/fixedCapacityShare:numeric\(x\.fixedCapacityShare\)/)
+ assert.match(source,/thermalCharge/)
+ assert.match(source,/برای این قبض قبلاً تخصیص ثبت شده است/)
 })
