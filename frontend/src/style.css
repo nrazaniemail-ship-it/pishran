@@ -2120,3 +2120,45 @@ input,select,textarea{color:var(--text)}
  .energy-work-tabs button{padding:9px 5px;font-size:10px;white-space:normal}
 }
 @media(prefers-reduced-motion:reduce){.energy-resource-tabs button{transition:none}.energy-resource-tabs button:hover{transform:none}}
+
+
+/* Feasibility core and richer module entry cards. */
+.feasibility-core{margin:20px 0 8px}
+.feasibility-core-card{position:relative;display:flex;align-items:center;gap:clamp(14px,2vw,24px);width:100%;min-height:176px;padding:clamp(18px,2.6vw,30px);border:1px solid #cbd9e3;border-radius:22px;background:radial-gradient(circle at 12% 18%,rgba(235,190,83,.22),transparent 25%),linear-gradient(118deg,#fdfefe 0%,#edf4f8 54%,#f8f7f2 100%);box-shadow:0 13px 32px rgba(32,57,76,.10),inset 0 1px 0 rgba(255,255,255,.95);color:#263e51;text-align:start;cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.feasibility-core-card:hover,.feasibility-core-card:focus-visible{transform:translateY(-3px);border-color:#8faec1;box-shadow:0 17px 36px rgba(32,57,76,.14),inset 0 1px 0 #fff;outline:none}
+.feasibility-core-card:focus-visible{outline:3px solid rgba(59,125,162,.28);outline-offset:3px}
+.feasibility-core-mark{display:grid;place-items:center;flex:none;width:68px;height:68px;border:1px solid #d7e2e9;border-radius:19px;background:linear-gradient(145deg,#fff,#e5eef4);color:#376d8b;box-shadow:0 6px 16px rgba(39,65,83,.09)}
+.feasibility-core-copy{display:flex;flex:1;flex-direction:column;gap:7px;min-width:0}
+.feasibility-core-copy>small{color:#8b6b2d;font-size:10px;font-weight:900;letter-spacing:.12em}
+.feasibility-core-copy>strong{color:#203c51;font-size:clamp(17px,2.1vw,24px);font-weight:900;line-height:1.6}
+.feasibility-core-copy>span:not(.feasibility-core-open){color:#60788a;font-size:12px;line-height:1.9}
+.feasibility-core-open{display:inline-flex;align-items:center;gap:7px;margin-top:2px;color:#3e708d;font-size:11px;font-weight:900}
+.feasibility-core-open b{font-size:17px;line-height:1}
+.feasibility-core-stat{display:flex;flex:none;flex-direction:column;align-items:center;justify-content:center;min-width:104px;min-height:104px;padding:12px;border:1px solid #d7e2e9;border-radius:20px;background:linear-gradient(145deg,#fff,#e8f0f5);box-shadow:0 5px 14px rgba(34,57,75,.07);color:#385e77}
+.feasibility-core-stat b{font-size:clamp(27px,3vw,36px);line-height:1.15;font-variant-numeric:tabular-nums}
+.feasibility-core-stat small{margin-top:7px;font-size:9px;font-weight:900;text-align:center}
+.module-launcher-card{min-height:194px}
+.module-launcher-copy{padding-bottom:18px}
+.module-launcher-capabilities{display:grid;gap:3px;margin-top:3px}
+.module-launcher-capabilities>span{position:relative;padding-inline-start:10px;color:#647b8d;font-size:9px;line-height:1.55}
+.module-launcher-capabilities>span::before{content:"";position:absolute;inset-inline-start:1px;top:.58em;width:4px;height:4px;border-radius:50%;background:#d4a84b}
+.module-launcher-copy>.module-launcher-saved-count{display:inline-flex;align-self:flex-start;margin-top:4px;padding:3px 7px;border:1px solid #dce6ec;border-radius:7px;background:#f7fafc;color:#52748a;font-size:9px;font-weight:800}
+@media(max-width:760px){
+ .feasibility-core-card{align-items:flex-start;gap:11px;min-height:0;padding:16px;border-radius:17px}
+ .feasibility-core-mark{width:47px;height:47px;border-radius:13px}
+ .feasibility-core-mark svg{width:23px;height:23px}
+ .feasibility-core-stat{min-width:68px;min-height:68px;padding:8px;border-radius:13px}
+ .feasibility-core-stat b{font-size:22px}
+ .feasibility-core-stat small{font-size:8px}
+ .feasibility-core-copy>strong{font-size:15px}
+ .feasibility-core-copy>span:not(.feasibility-core-open){font-size:10px}
+ .module-launcher-card{min-height:210px}
+}
+@media(max-width:430px){
+ .feasibility-core-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px}
+ .feasibility-core-stat{grid-column:1/-1;flex-direction:row;justify-content:flex-start;gap:9px;min-height:0;min-width:0;width:100%;padding:8px 11px}
+ .feasibility-core-stat b{font-size:20px}
+ .feasibility-core-stat small{margin:0}
+ .module-launcher-card{min-height:224px}
+}
+@media(prefers-reduced-motion:reduce){.feasibility-core-card{transition:none}.feasibility-core-card:hover{transform:none}}
