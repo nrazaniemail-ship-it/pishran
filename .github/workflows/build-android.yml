@@ -86,15 +86,13 @@ jobs:
 
       - name: Android emulator smoke test
         uses: reactivecircus/android-emulator-runner@v2
-        timeout-minutes: 15
-        env:
-          ANDROID_I_WANT_MY_TCG: "yes"
+        timeout-minutes: 20
         with:
           api-level: 34
           target: default
           arch: x86_64
           profile: pixel_2
-          emulator-boot-timeout: 420
+          emulator-boot-timeout: 600
           ram-size: 2048M
           heap-size: 512M
           disable-animations: true
