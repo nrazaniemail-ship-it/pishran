@@ -111,3 +111,16 @@ test('improvement actions support controlled lifecycle status updates',async()=>
  assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].status,'verified')
  await assert.rejects(()=>updateEnergyActionStatus(action.id,'unknown',store),/وضعیت اقدام/)
 })
+
+test('MOD-05 provides a complete Excel workbook and print-to-PDF report path',async()=>{
+ const {readFile}=await import('node:fs/promises')
+ const app=await readFile(new URL('../src/features/modules/ModuleEnergyPanel.tsx',import.meta.url),'utf8')
+ const css=await readFile(new URL('../src/style.css',import.meta.url),'utf8')
+ assert.ok(app.includes("import * as XLSX from 'xlsx'"))
+ assert.ok(app.includes('XLSX.writeFile'))
+ for(const sheet of ['پایش منابع','خطوط مبنا','قبوض برق','قبوض گاز','قبوض آب','تراز آب','تخصیص برق','تخصیص گاز و آب','اقدامات بهبود'])assert.ok(app.includes(sheet))
+ assert.ok(app.includes('window.print()'))
+ assert.ok(app.includes('energy-print-report'))
+ assert.ok(css.includes('@media print'))
+ assert.ok(app.includes('updateEnergyActionStatus'))
+})
