@@ -3,7 +3,7 @@ name: Build Pishran Android APK and iOS IPA
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/fs00-cpp-cps-traceability, feature/raw-template-comfar-financial-integration, feature/integrated-dri-steelmaking-comfar, feat/valuation-date-discounting-rebased, feat/periodic-loan-rate-resets-and-fees, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard, feature/mod05-bill-gallery-picker]
+    branches: [main, feature/fs00-cpp-cps-traceability, feature/raw-template-comfar-financial-integration, feature/integrated-dri-steelmaking-comfar, feat/valuation-date-discounting-rebased, feat/periodic-loan-rate-resets-and-fees, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard, feature/mod05-bill-gallery-picker, feature/mod05-energy-cost-allocation-thermal]
     paths:
       - "frontend/**"
       - ".github/workflows/build-android.yml"
@@ -84,6 +84,16 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
+      - name: Enable KVM access for Android emulator
+        run: |
+          if [[ ! -e /dev/kvm ]]; then
+            echo "KVM device /dev/kvm is unavailable on this runner." >&2
+            exit 1
+          fi
+          sudo chmod 666 /dev/kvm
+          ls -l /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+
       - name: Android emulator smoke test
         uses: reactivecircus/android-emulator-runner@v2
         timeout-minutes: 15
@@ -98,6 +108,7 @@ jobs:
           ram-size: 2048M
           heap-size: 512M
           disable-animations: true
+          disable-linux-hw-accel: false
           # Capture diagnostics before asserting the foreground activity. The
           # former pidof check was brittle on Android 14 emulator images and
           # exited before preserving logcat when it returned no PID.
@@ -116,11 +127,12 @@ jobs:
           retention-days: 7
 
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Pishran-Android-APK
           path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
   build-ipa:
