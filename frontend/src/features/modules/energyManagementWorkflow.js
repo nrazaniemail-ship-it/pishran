@@ -8,6 +8,7 @@ export const RESOURCE_CONFIG = {
 }
 const number=(v,label,min=0)=>{const n=Number(v);if(v===''||v===null||v===undefined||!Number.isFinite(n)||n<min)throw new Error('مقدار '+label+' معتبر نیست.');return n}
 const required=(v,label)=>{const s=String(v??'').trim();if(!s)throw new Error('فیلد '+label+' الزامی است.');return s}
+const optionalDriver=(v,label,{min=-Infinity,max=Infinity}={})=>{if(v===''||v===null||v===undefined)return null;const n=Number(v);if(!Number.isFinite(n)||n<min||n>max)throw new Error('مقدار '+label+' معتبر نیست.');return n}
 export function validateEnergyRecord(i){
  if(!Object.hasOwn(RESOURCE_CONFIG,i.resource))throw new Error('نوع منبع معتبر نیست.')
  const consumption=number(i.consumption,'مصرف',0),production=number(i.production,'تولید/فعالیت',0),cost=number(i.cost,'هزینه',0)
@@ -17,7 +18,7 @@ export function validateEnergyRecord(i){
  if((start===null)!==(end===null))throw new Error('هر دو قرائت کنتور باید ثبت شوند یا هر دو خالی باشند.')
  if(start!==null&&end<start)throw new Error('قرائت انتهای کنتور کمتر از قرائت ابتداست.')
  if(start!==null&&Math.abs(end-start-consumption)>Math.max(.01,consumption*.005))throw new Error('مصرف با اختلاف قرائت کنتور تطبیق ندارد.')
- return {resource:i.resource,period:required(i.period,'دوره'),site:required(i.site,'سایت/واحد'),seu:required(i.seu,'مصرف‌کننده عمده'),meterId:String(i.meterId??''),consumption,production,cost,unit:RESOURCE_CONFIG[i.resource].unit,intensity:consumption/production,costPerOutput:cost/production,operatingHours,startReading:start,endReading:end,calorificValue:(()=>{const supplied=i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined;if(i.resource!=='gas'||!supplied)return null;const value=number(i.calorificValue,'ارزش حرارتی گاز',0);if(value<=0)throw new Error('ارزش حرارتی گاز باید بزرگ‌تر از صفر باشد.');return value})(),calorificBasis:i.resource==='gas'&&['gross','net'].includes(i.calorificBasis)?i.calorificBasis:null,gasReferenceConditions:i.resource==='gas'?String(i.gasReferenceConditions??'').trim():null,gasEnergyKwh:i.resource==='gas'&&i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined?consumption*number(i.calorificValue,'ارزش حرارتی گاز',0):null,gasEnergyIntensityKwhPerTon:i.resource==='gas'&&i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined?consumption*number(i.calorificValue,'ارزش حرارتی گاز',0)/production:null,gasCostPerGJ:i.resource==='gas'&&i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined&&consumption>0?cost/(consumption*number(i.calorificValue,'ارزش حرارتی گاز',0)*0.0036):null,sourceBillId:String(i.sourceBillId??''),sourceBillNumber:String(i.sourceBillNumber??''),note:String(i.note??''),dataQuality:i.dataQuality==='measured'?'measured':'estimated'}
+ return {resource:i.resource,period:required(i.period,'دوره'),site:required(i.site,'سایت/واحد'),seu:required(i.seu,'مصرف‌کننده عمده'),meterId:String(i.meterId??''),consumption,production,cost,unit:RESOURCE_CONFIG[i.resource].unit,intensity:consumption/production,costPerOutput:cost/production,operatingHours,startReading:start,endReading:end,calorificValue:(()=>{const supplied=i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined;if(i.resource!=='gas'||!supplied)return null;const value=number(i.calorificValue,'ارزش حرارتی گاز',0);if(value<=0)throw new Error('ارزش حرارتی گاز باید بزرگ‌تر از صفر باشد.');return value})(),calorificBasis:i.resource==='gas'&&['gross','net'].includes(i.calorificBasis)?i.calorificBasis:null,gasReferenceConditions:i.resource==='gas'?String(i.gasReferenceConditions??'').trim():null,gasEnergyKwh:i.resource==='gas'&&i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined?consumption*number(i.calorificValue,'ارزش حرارتی گاز',0):null,gasEnergyIntensityKwhPerTon:i.resource==='gas'&&i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined?consumption*number(i.calorificValue,'ارزش حرارتی گاز',0)/production:null,gasCostPerGJ:i.resource==='gas'&&i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined&&consumption>0?cost/(consumption*number(i.calorificValue,'ارزش حرارتی گاز',0)*0.0036):null,productMixIndex:optionalDriver(i.productMixIndex,'شاخص ترکیب محصول',{min:0,max:100}),ambientTemperatureC:optionalDriver(i.ambientTemperatureC,'دمای محیط'),feedQualityIndex:optionalDriver(i.feedQualityIndex,'شاخص کیفیت خوراک',{min:0,max:100}),shutdownHours:optionalDriver(i.shutdownHours,'ساعات توقف'),sourceBillId:String(i.sourceBillId??''),sourceBillNumber:String(i.sourceBillNumber??''),note:String(i.note??''),dataQuality:i.dataQuality==='measured'?'measured':'estimated'}
 }
 
 function solveEnergyLinearSystem(matrix,vector){
@@ -34,10 +35,10 @@ function solveEnergyLinearSystem(matrix,vector){
  }
  return a.map(row=>row[n])
 }
-function fitEnergyOls(rows){
- const x=rows.map(r=>[1,Number(r.production),Number(r.operatingHours)]),y=rows.map(r=>Number(r.analysisConsumption))
- const matrix=Array.from({length:3},()=>[0,0,0]),vector=[0,0,0]
- for(let i=0;i<x.length;i++)for(let j=0;j<3;j++){vector[j]+=x[i][j]*y[i];for(let k=0;k<3;k++)matrix[j][k]+=x[i][j]*x[i][k]}
+function fitEnergyOls(rows,predictorKeys){
+ const x=rows.map(r=>[1,...predictorKeys.map(key=>Number(r[key]))]),y=rows.map(r=>Number(r.analysisConsumption)),size=predictorKeys.length+1
+ const matrix=Array.from({length:size},()=>Array(size).fill(0)),vector=Array(size).fill(0)
+ for(let i=0;i<x.length;i++)for(let j=0;j<size;j++){vector[j]+=x[i][j]*y[i];for(let k=0;k<size;k++)matrix[j][k]+=x[i][j]*x[i][k]}
  const coefficients=solveEnergyLinearSystem(matrix,vector)
  if(!coefficients)return null
  const predicted=x.map(row=>row.reduce((sum,value,index)=>sum+value*coefficients[index],0))
@@ -51,6 +52,8 @@ export function analyzeMultivariableEnergyNormalization(records,{resource,site,s
  const groups=new Map()
  for(const row of selected){const key=[row.site,row.seu].join('::');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)}
  const results=[],warnings=[]
+ const optionalDrivers=['productMixIndex','ambientTemperatureC','feedQualityIndex','shutdownHours']
+ const driverLabels={productMixIndex:'ترکیب محصول',ambientTemperatureC:'دمای محیط',feedQualityIndex:'کیفیت خوراک',shutdownHours:'ساعات توقف'}
  for(const [key,items] of groups){
   const sorted=items.slice().sort((a,b)=>String(a.period).localeCompare(String(b.period),'en',{numeric:true}))
   const gasThermal=resource==='gas'&&sorted.every(r=>Number(r.gasEnergyKwh)>0&&['gross','net'].includes(r.calorificBasis)&&r.calorificBasis===sorted[0]?.calorificBasis&&String(r.gasReferenceConditions??'').trim()!==''&&String(r.gasReferenceConditions??'').trim()===String(sorted[0]?.gasReferenceConditions??'').trim())
@@ -58,16 +61,29 @@ export function analyzeMultivariableEnergyNormalization(records,{resource,site,s
    .map(r=>({...r,analysisConsumption:Number(gasThermal?r.gasEnergyKwh:r.consumption)}))
   if(usable.length<6){if(usable.length)warnings.push(key+': برای نرمال‌سازی چندمتغیره حداقل ۶ دوره اندازه‌گیری‌شده با ساعت کارکرد معتبر لازم است.');continue}
   const training=usable.slice(0,-1),actual=usable[usable.length-1]
-  const model=fitEnergyOls(training)
-  if(!model){warnings.push(key+': مدل به‌دلیل هم‌خطی یا تنوع ناکافی متغیرهای ورودی قابل برازش نیست.');continue}
-  const [intercept,productionCoefficient,hoursCoefficient]=model.coefficients
-  const normalized=intercept+productionCoefficient*Number(actual.production)+hoursCoefficient*Number(actual.operatingHours)
+  const predictorKeys=['production','operatingHours']
+  const omittedDrivers=[]
+  for(const driver of optionalDrivers){
+   const values=usable.map(r=>r[driver])
+   const complete=values.every(v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v)))
+   const variable=complete&&values.some(v=>Number(v)!==Number(values[0]))
+   if(!complete){omittedDrivers.push(driverLabels[driver]+' (داده ناقص)');continue}
+   if(!variable){omittedDrivers.push(driverLabels[driver]+' (بدون تغییر)');continue}
+   if(training.length<predictorKeys.length+3){omittedDrivers.push(driverLabels[driver]+' (دوره کافی برای برازش مستقل وجود ندارد)');continue}
+   predictorKeys.push(driver)
+  }
+  if(omittedDrivers.length)warnings.push(key+': متغیرهای تعدیل‌گر کنار گذاشته شدند: '+omittedDrivers.join('، ')+'.')
+  const model=fitEnergyOls(training,predictorKeys)
+  if(!model){warnings.push(key+': مدل به‌دلیل هم‌خطی یا تنوع ناکافی متغیرهای ورودی قابل برازش نیست؛ نتیجه نرمال‌سازی تولید نشد.');continue}
+  const normalized=model.coefficients[0]+predictorKeys.reduce((sum,driver,index)=>sum+model.coefficients[index+1]*Number(actual[driver]),0)
   const residual=normalized-actual.analysisConsumption
   const percent=normalized!==0?residual/normalized*100:0
   const modelWarnings=[]
   if(model.rSquared===null||model.rSquared<0.5)modelWarnings.push('قدرت توضیح‌دهندگی مدل پایین است؛ نتیجه را مبنای ادعای صرفه‌جویی قرار ندهید.')
   if(model.coefficients.some(x=>!Number.isFinite(x))||normalized<=0)modelWarnings.push('ضرایب یا مقدار نرمال‌شده از نظر فیزیکی نیازمند بازبینی است.')
-  results.push({site:actual.site,seu:actual.seu,resource,comparisonBasis:gasThermal?'thermal-energy':'resource-volume',comparisonUnit:gasThermal?'kWh':RESOURCE_CONFIG[resource].unit,trainingPeriods:training.map(r=>r.period),actualPeriod:actual.period,actualConsumption:actual.analysisConsumption,normalizedConsumption:normalized,adjustedSavings:residual,adjustedSavingsPercent:percent,rSquared:model.rSquared,rmse:model.rmse,coefficients:{intercept,production:productionCoefficient,operatingHours:hoursCoefficient},warnings:modelWarnings})
+  if(training.length<=predictorKeys.length+1)modelWarnings.push('درجه آزادی باقیمانده مدل کم است؛ نتیجه صرفاً اکتشافی است.')
+  const coefficients=Object.fromEntries(predictorKeys.map((driver,index)=>[driver,model.coefficients[index+1]]))
+  results.push({site:actual.site,seu:actual.seu,resource,comparisonBasis:gasThermal?'thermal-energy':'resource-volume',comparisonUnit:gasThermal?'kWh':RESOURCE_CONFIG[resource].unit,trainingPeriods:training.map(r=>r.period),actualPeriod:actual.period,actualConsumption:actual.analysisConsumption,normalizedConsumption:normalized,adjustedSavings:residual,adjustedSavingsPercent:percent,rSquared:model.rSquared,rmse:model.rmse,predictors:predictorKeys,coefficients:{intercept:model.coefficients[0],...coefficients},warnings:modelWarnings})
   warnings.push(...modelWarnings.map(w=>key+': '+w))
  }
  return {results,warnings}
