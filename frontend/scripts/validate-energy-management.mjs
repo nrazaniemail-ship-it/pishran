@@ -136,6 +136,14 @@ test('improvement actions support controlled lifecycle status updates',async()=>
  assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].status,'verified')
  assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].verification.measuredSavings,85)
  assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].verification.period,'1405/09')
+ assert.equal(m.get(ENERGY_ACTIONS_KEY)[0].statusHistory.length,3)
+ await updateEnergyActionStatus(action.id,'in-progress',store)
+ const reopened=m.get(ENERGY_ACTIONS_KEY)[0]
+ assert.equal(reopened.status,'in-progress')
+ assert.equal(reopened.verification,null)
+ assert.equal(reopened.verificationHistory.length,1)
+ assert.equal(reopened.verificationHistory[0].period,'1405/09')
+ await assert.rejects(()=>saveEnergyAction({resource:'electricity',title:'Invalid verified action',owner:'Team',dueDate:'2026-12-01',expectedSavings:10,status:'verified'},store),/بدون شواهد صحه‌گذاری/)
  await assert.rejects(()=>updateEnergyActionStatus(action.id,'unknown',store),/وضعیت اقدام/)
 })
 
