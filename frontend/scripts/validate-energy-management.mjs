@@ -192,7 +192,7 @@ test('multivariable energy normalization holds out the latest period and adjusts
  assert.equal(analyzeMultivariableEnergyNormalization(records.slice(0,5),{resource:'electricity'}).results.length,0)
 })
 test('multivariable normalization excludes estimated periods and reports insufficient measured history',()=>{
- const records=Array.from({length:7},(_,i)=>({id:'mve'+i,resource:'water',period:'P'+i,site:'Plant',seu:'Cooling',production:100+i,operatingHours:80+i,consumption:200+i*3,dataQuality:i===0?'estimated':'measured'}))
+ const records=Array.from({length:7},(_,i)=>({id:'mve'+i,resource:'water',period:'P'+i,site:'Plant',seu:'Cooling',production:100+i*4,operatingHours:[80,91,86,102,94,111,99][i],consumption:30+1.5*(100+i*4)+.75*[80,91,86,102,94,111,99][i],dataQuality:i===0?'estimated':'measured'}))
  const result=analyzeMultivariableEnergyNormalization(records,{resource:'water'})
  assert.equal(result.results.length,1)
  assert.equal(result.results[0].trainingPeriods.length,5)
