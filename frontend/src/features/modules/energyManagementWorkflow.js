@@ -20,6 +20,8 @@ export function validateEnergyRecord(i){
 }
 export function calculateEnergyPerformance({resource,baseline,actual}){
  if(!Object.hasOwn(RESOURCE_CONFIG,resource))throw new Error('نوع منبع معتبر نیست.')
+ if(baseline.resource&&baseline.resource!==resource||actual.resource&&actual.resource!==resource)throw new Error('منبع خط مبنا و رکورد واقعی باید یکسان باشد.')
+ for(const key of ['site','seu'])if(String(baseline[key]??'').trim()&&String(actual[key]??'').trim()&&String(baseline[key]).trim()!==String(actual[key]).trim())throw new Error('سایت و مصرف‌کننده عمده خط مبنا و رکورد واقعی باید یکسان باشند.')
  const bc=number(baseline.consumption,'مصرف خط مبنا',0),bp=number(baseline.production,'تولید خط مبنا',0),ac=number(actual.consumption,'مصرف واقعی',0),ap=number(actual.production,'تولید واقعی',0)
  if(!bc||!bp||!ap)throw new Error('مصرف و تولید مرجع و تولید واقعی باید بزرگ‌تر از صفر باشند.')
  const useThermalGas=resource==='gas'&&Number(baseline.gasEnergyKwh)>0&&Number(actual.gasEnergyKwh)>0&&['gross','net'].includes(baseline.calorificBasis)&&baseline.calorificBasis===actual.calorificBasis&&String(baseline.gasReferenceConditions??'').trim()!==''&&String(baseline.gasReferenceConditions??'').trim()===String(actual.gasReferenceConditions??'').trim()
