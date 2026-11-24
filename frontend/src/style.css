@@ -2182,3 +2182,47 @@ input,select,textarea{color:var(--text)}
 .feasibility-launcher-card:focus-visible{outline:3px solid rgba(59,125,162,.3);outline-offset:3px}
 .projects-head-actions .projects-head-create{background:linear-gradient(135deg,#fff4c7 0%,#ffe7a0 100%);border:1px solid #e8cf7d;color:#70551b;box-shadow:0 3px 9px rgba(163,127,38,.12)}
 .projects-head-actions .projects-head-create:hover{background:linear-gradient(135deg,#ffefb3 0%,#ffdf82 100%);border-color:#d8bb5c;box-shadow:0 6px 14px rgba(163,127,38,.18)}
+
+
+/* Color-coded module marks with a restrained heartbeat pulse. */
+.module-launcher-icon{
+  --module-accent:#477b98;
+  display:grid;
+  place-items:center;
+  color:var(--module-accent);
+  background:linear-gradient(145deg,color-mix(in srgb,var(--module-accent) 10%,#fff),color-mix(in srgb,var(--module-accent) 18%,#fff));
+  border-color:color-mix(in srgb,var(--module-accent) 25%,#fff);
+  box-shadow:0 4px 11px color-mix(in srgb,var(--module-accent) 15%,transparent),inset 0 1px 0 rgba(255,255,255,.9);
+  animation:pishran-heartbeat 1.8s ease-in-out infinite;
+  transform-origin:center;
+}
+.module-launcher-icon[data-module="MOD-01"]{--module-accent:#3286c8}
+.module-launcher-icon[data-module="MOD-02"]{--module-accent:#1d9b79}
+.module-launcher-icon[data-module="MOD-03"]{--module-accent:#dc8b32}
+.module-launcher-icon[data-module="MOD-04"]{--module-accent:#8066c9}
+.module-launcher-icon[data-module="MOD-05"]{--module-accent:#d5a321}
+.module-launcher-icon[data-module="MOD-06"]{--module-accent:#3c8c9b}
+.module-launcher-icon[data-module="MOD-07"]{--module-accent:#bd7045}
+.module-launcher-icon[data-module="MOD-08"]{--module-accent:#4d83b5}
+.module-launcher-icon[data-module="MOD-09"]{--module-accent:#cf6b8d}
+.module-launcher-icon[data-module="MOD-10"]{--module-accent:#6474bd}
+.module-launcher-icon[data-module="MOD-11"]{--module-accent:#299c91}
+.module-launcher-icon[data-module="MOD-12"]{--module-accent:#c45e58}
+.feasibility-launcher-icon{
+  color:#d18b27;
+  background:linear-gradient(145deg,#fff8df 0%,#ffe8b5 100%);
+  border-color:#f0d18a;
+  box-shadow:0 5px 13px rgba(190,133,37,.18),inset 0 1px 0 rgba(255,255,255,.95);
+  animation:pishran-heartbeat 1.8s ease-in-out infinite;
+  transform-origin:center;
+}
+@keyframes pishran-heartbeat{
+  0%, 100%{transform:scale(1);filter:saturate(1)}
+  8%{transform:scale(1.08);filter:saturate(1.22)}
+  16%{transform:scale(1)}
+  24%{transform:scale(1.05);filter:saturate(1.12)}
+  34%{transform:scale(1)}
+}
+@media(prefers-reduced-motion:reduce){
+  .module-launcher-icon,.feasibility-launcher-icon{animation:none}
+}
