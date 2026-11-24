@@ -90,3 +90,15 @@ test('reliability snapshots persist per-asset period and status updates stamp co
   assert.equal(updated.status,'completed')
   assert.equal(updated.completedAt,'2026-11-24')
 })
+
+test('open corrective failures affect MTBF while MTTR uses completed repairs only',()=>{
+  const asset={id:'asset-1',assetTag:'PMP-101',name:'Pump'}
+  const result=calculateAssetReliability({asset,operatingHours:120,startDate:'2026-11-01',endDate:'2026-11-30',workOrders:[
+    {id:'done',assetId:'asset-1',kind:'corrective',status:'completed',openedAt:'2026-11-05',downtimeHours:5,repairHours:3,laborCost:0,materialCost:0},
+    {id:'open',assetId:'asset-1',kind:'corrective',status:'in-progress',openedAt:'2026-11-20',downtimeHours:2,repairHours:1,laborCost:0,materialCost:0},
+  ]})
+  assert.equal(result.failureCount,2)
+  assert.equal(result.mtbfHours,60)
+  assert.equal(result.mttrHours,3)
+  assert.equal(result.downtimeHours,7)
+})
