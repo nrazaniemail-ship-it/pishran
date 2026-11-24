@@ -325,14 +325,18 @@ export default function App() {
     </header>
 
     {page === 'dashboard' && <>
-      <section className="project-create-launcher" aria-label={isEn ? 'Feasibility project creation' : 'ایجاد پروژه امکان‌سنجی'}>
-        <div className="project-create-icon"><BriefcaseBusiness size={25}/></div>
-        <div className="project-create-copy">
-          <span className="project-create-eyebrow">{isEn ? 'FEASIBILITY WORKSPACE' : 'محیط امکان‌سنجی پیشران'}</span>
-          <h1>{isEn ? 'From idea to investment decision, with greater confidence.' : 'از ایده تا تصمیم سرمایه‌گذاری، با اطمینان بیشتر.'}</h1>
-          <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
+      <section className="feasibility-launcher-card" aria-labelledby="feasibility-launcher-title">
+        <div className="feasibility-launcher-icon"><BriefcaseBusiness size={24}/></div>
+        <div className="feasibility-launcher-copy">
+          <span className="feasibility-launcher-eyebrow">{isEn ? 'FEASIBILITY & INVESTMENT ASSESSMENT' : 'ارزیابی فنی و اقتصادی'}</span>
+          <h1 id="feasibility-launcher-title">{isEn ? 'Feasibility – Technical & Economic Assessment' : 'امکان‌سنجی - ارزیابی فنی و اقتصادی'}</h1>
+          <p>{isEn ? 'Integrated technical, engineering, market and financial assessment, with project risk analysis.' : 'محیط یکپارچه برای ارزیابی فنی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و بررسی ریسک پروژه‌ها.'}</p>
         </div>
-        <button className="project-create-action" type="button" onClick={() => navigateTo('projects')}><Plus size={19}/> {isEn ? 'Create new project' : 'ایجاد پروژه جدید'}</button>
+        <div className="feasibility-project-count" aria-label={isEn ? `${projects.length} registered projects` : `${projects.length} پروژه ثبت‌شده`}>
+          <b>{projects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</b>
+          <span>{isEn ? 'PROJECTS' : 'پروژه ثبت‌شده'}</span>
+        </div>
+        <button className="feasibility-launcher-action" type="button" onClick={() => navigateTo('projects')}><Plus size={19}/> {isEn ? 'Create new project' : 'ایجاد پروژه جدید'}</button>
       </section>
 
       <section className="module-launcher" aria-labelledby="module-launcher-title">
