@@ -203,7 +203,7 @@ test('multivariable normalization excludes estimated periods and reports insuffi
 
 test('multivariable normalization uses complete measured operational drivers and holds out the latest period',async()=>{
  const {analyzeMultivariableEnergyNormalization,validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
- const records=Array.from({length:10},(_,i)=>validateEnergyRecord({resource:'electricity',period:'1405/'+String(i+1).padStart(2,'0'),site:'Plant',seu:'Furnace',consumption:100+10*i+2*i+3*(i%3)+i,cost:50,production:100+i*10,operatingHours:20+i,productMixIndex:30+i*2,ambientTemperatureC:10+i,feedQualityIndex:70+i,shutdownHours:i%2,dataQuality:'measured'}))
+ const production=[100,118,109,135,121,151,132,164,143,177],hours=[20,25,19,31,23,35,28,39,30,44],mix=[20,45,25,60,35,70,40,80,55,65],temperature=[-5,10,0,15,3,20,8,25,12,30],feed=[65,80,72,90,60,85,75,95,68,88],shutdown=[0,1,0,2,3,0,1,4,2,1];\n  const records=Array.from({length:10},(_,i)=>validateEnergyRecord({resource:'electricity',period:'1405/'+String(i+1).padStart(2,'0'),site:'Plant',seu:'Furnace',consumption:100+0.7*production[i]+1.3*hours[i]+0.2*mix[i]-0.4*temperature[i]+0.8*feed[i]+2*shutdown[i],cost:50,production:production[i],operatingHours:hours[i],productMixIndex:mix[i],ambientTemperatureC:temperature[i],feedQualityIndex:feed[i],shutdownHours:shutdown[i],dataQuality:'measured'}))
  const result=analyzeMultivariableEnergyNormalization(records,{resource:'electricity'})
  assert.equal(result.results.length,1)
  assert.deepEqual(result.results[0].predictors,['production','operatingHours','productMixIndex','ambientTemperatureC','feedQualityIndex','shutdownHours'])
@@ -212,7 +212,7 @@ test('multivariable normalization uses complete measured operational drivers and
 })
 test('multivariable normalization excludes incomplete optional drivers and warns instead of imputing',async()=>{
  const {analyzeMultivariableEnergyNormalization,validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
- const records=Array.from({length:6},(_,i)=>validateEnergyRecord({resource:'electricity',period:'P'+(i+1),site:'Plant',seu:'Mill',consumption:100+i*4,cost:10,production:10+i,operatingHours:8+i,productMixIndex:i===2?'':20+i}))
+ const operatingHours=[8,11,9,14,10,16];\n  const records=Array.from({length:6},(_,i)=>validateEnergyRecord({resource:'electricity',period:'P'+(i+1),site:'Plant',seu:'Mill',consumption:100+i*4+operatingHours[i],cost:10,production:10+i,operatingHours:operatingHours[i],productMixIndex:i===2?'':20+i,dataQuality:'measured'}))
  const result=analyzeMultivariableEnergyNormalization(records,{resource:'electricity'})
  assert.equal(result.results.length,1)
  assert.ok(!result.results[0].predictors.includes('productMixIndex'))
