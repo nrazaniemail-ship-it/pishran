@@ -18,6 +18,59 @@ export function validateEnergyRecord(i){
  if(start!==null&&Math.abs(end-start-consumption)>Math.max(.01,consumption*.005))throw new Error('مصرف با اختلاف قرائت کنتور تطبیق ندارد.')
  return {resource:i.resource,period:required(i.period,'دوره'),site:required(i.site,'سایت/واحد'),seu:required(i.seu,'مصرف‌کننده عمده'),meterId:String(i.meterId??''),consumption,production,cost,unit:RESOURCE_CONFIG[i.resource].unit,intensity:consumption/production,costPerOutput:cost/production,startReading:start,endReading:end,calorificValue:(()=>{const supplied=i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined;if(i.resource!=='gas'||!supplied)return null;const value=number(i.calorificValue,'ارزش حرارتی گاز',0);if(value<=0)throw new Error('ارزش حرارتی گاز باید بزرگ‌تر از صفر باشد.');return value})(),calorificBasis:i.resource==='gas'&&['gross','net'].includes(i.calorificBasis)?i.calorificBasis:null,gasReferenceConditions:i.resource==='gas'?String(i.gasReferenceConditions??'').trim():null,gasEnergyKwh:i.resource==='gas'&&i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined?consumption*number(i.calorificValue,'ارزش حرارتی گاز',0):null,gasEnergyIntensityKwhPerTon:i.resource==='gas'&&i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined?consumption*number(i.calorificValue,'ارزش حرارتی گاز',0)/production:null,gasCostPerGJ:i.resource==='gas'&&i.calorificValue!==''&&i.calorificValue!==null&&i.calorificValue!==undefined&&consumption>0?cost/(consumption*number(i.calorificValue,'ارزش حرارتی گاز',0)*0.0036):null,sourceBillId:String(i.sourceBillId??''),sourceBillNumber:String(i.sourceBillNumber??''),note:String(i.note??''),dataQuality:i.dataQuality==='measured'?'measured':'estimated'}
 }
+
+function solveEnergyLinearSystem(matrix,vector){
+ const a=matrix.map((row,i)=>[...row,vector[i]])
+ const n=vector.length
+ for(let col=0;col<n;col++){
+  let pivot=col
+  for(let row=col+1;row<n;row++)if(Math.abs(a[row][col])>Math.abs(a[pivot][col]))pivot=row
+  if(Math.abs(a[pivot][col])<1e-10)return null
+  ;[a[col],a[pivot]]=[a[pivot],a[col]]
+  const divisor=a[col][col]
+  for(let j=col;j<=n;j++)a[col][j]/=divisor
+  for(let row=0;row<n;row++)if(row!==col){const factor=a[row][col];for(let j=col;j<=n;j++)a[row][j]-=factor*a[col][j]}
+ }
+ return a.map(row=>row[n])
+}
+function fitEnergyOls(rows){
+ const x=rows.map(r=>[1,Number(r.production),Number(r.operatingHours)]),y=rows.map(r=>Number(r.analysisConsumption))
+ const matrix=Array.from({length:3},()=>[0,0,0]),vector=[0,0,0]
+ for(let i=0;i<x.length;i++)for(let j=0;j<3;j++){vector[j]+=x[i][j]*y[i];for(let k=0;k<3;k++)matrix[j][k]+=x[i][j]*x[i][k]}
+ const coefficients=solveEnergyLinearSystem(matrix,vector)
+ if(!coefficients)return null
+ const predicted=x.map(row=>row.reduce((sum,value,index)=>sum+value*coefficients[index],0))
+ const mean=y.reduce((sum,value)=>sum+value,0)/y.length
+ const sse=y.reduce((sum,value,index)=>sum+(value-predicted[index])**2,0)
+ const sst=y.reduce((sum,value)=>sum+(value-mean)**2,0)
+ return {coefficients,rmse:Math.sqrt(sse/y.length),rSquared:sst>0?1-sse/sst:null}
+}
+export function analyzeMultivariableEnergyNormalization(records,{resource,site,seu}={}){
+ const selected=(Array.isArray(records)?records:[]).filter(r=>r.resource===resource&&(!site||r.site===site)&&(!seu||r.seu===seu))
+ const groups=new Map()
+ for(const row of selected){const key=[row.site,row.seu].join('::');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)}
+ const results=[],warnings=[]
+ for(const [key,items] of groups){
+  const sorted=items.slice().sort((a,b)=>String(a.period).localeCompare(String(b.period),'en',{numeric:true}))
+  const gasThermal=resource==='gas'&&sorted.every(r=>Number(r.gasEnergyKwh)>0&&['gross','net'].includes(r.calorificBasis)&&r.calorificBasis===sorted[0]?.calorificBasis&&String(r.gasReferenceConditions??'').trim()!==''&&String(r.gasReferenceConditions??'').trim()===String(sorted[0]?.gasReferenceConditions??'').trim())
+  const usable=sorted.filter(r=>r.dataQuality!=='estimated'&&Number(r.production)>0&&Number(r.operatingHours)>0&&Number(gasThermal?r.gasEnergyKwh:r.consumption)>0)
+   .map(r=>({...r,analysisConsumption:Number(gasThermal?r.gasEnergyKwh:r.consumption)}))
+  if(usable.length<6){if(usable.length)warnings.push(key+': برای نرمال‌سازی چندمتغیره حداقل ۶ دوره اندازه‌گیری‌شده با ساعت کارکرد معتبر لازم است.');continue}
+  const training=usable.slice(0,-1),actual=usable[usable.length-1]
+  const model=fitEnergyOls(training)
+  if(!model){warnings.push(key+': مدل به‌دلیل هم‌خطی یا تنوع ناکافی متغیرهای ورودی قابل برازش نیست.');continue}
+  const [intercept,productionCoefficient,hoursCoefficient]=model.coefficients
+  const normalized=intercept+productionCoefficient*Number(actual.production)+hoursCoefficient*Number(actual.operatingHours)
+  const residual=normalized-actual.analysisConsumption
+  const percent=normalized!==0?residual/normalized*100:0
+  const modelWarnings=[]
+  if(model.rSquared===null||model.rSquared<0.5)modelWarnings.push('قدرت توضیح‌دهندگی مدل پایین است؛ نتیجه را مبنای ادعای صرفه‌جویی قرار ندهید.')
+  if(model.coefficients.some(x=>!Number.isFinite(x))||normalized<=0)modelWarnings.push('ضرایب یا مقدار نرمال‌شده از نظر فیزیکی نیازمند بازبینی است.')
+  results.push({site:actual.site,seu:actual.seu,resource,comparisonBasis:gasThermal?'thermal-energy':'resource-volume',comparisonUnit:gasThermal?'kWh':RESOURCE_CONFIG[resource].unit,trainingPeriods:training.map(r=>r.period),actualPeriod:actual.period,actualConsumption:actual.analysisConsumption,normalizedConsumption:normalized,adjustedSavings:residual,adjustedSavingsPercent:percent,rSquared:model.rSquared,rmse:model.rmse,coefficients:{intercept,production:productionCoefficient,operatingHours:hoursCoefficient},warnings:modelWarnings})
+  warnings.push(...modelWarnings.map(w=>key+': '+w))
+ }
+ return {results,warnings}
+}
 export function calculateEnergyPerformance({resource,baseline,actual}){
  if(!Object.hasOwn(RESOURCE_CONFIG,resource))throw new Error('نوع منبع معتبر نیست.')
  if(baseline.resource&&baseline.resource!==resource||actual.resource&&actual.resource!==resource)throw new Error('منبع خط مبنا و رکورد واقعی باید یکسان باشد.')
