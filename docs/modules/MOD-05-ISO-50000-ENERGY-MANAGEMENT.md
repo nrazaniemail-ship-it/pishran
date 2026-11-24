@@ -85,3 +85,8 @@ Energy records can optionally include measured operating hours in addition to pr
 ## Improvement-action audit history
 
 Improvement actions retain a chronological status history (including the actor/verifier identity when a verification transition is made) and preserve superseded verification evidence when an action is reopened or re-verified. New actions cannot be created directly in the verified state. The Excel report exports the status and verification histories so the operational record can be reviewed outside the browser. This is a local application audit trail; it is not a tamper-proof or centrally governed records-management system.
+
+
+## Extended operational-driver normalization
+
+Measured energy records can additionally capture product-mix index (0–100), ambient temperature (°C), feed-quality index (0–100), and shutdown hours. These drivers are optional and are never imputed. The rolling-origin OLS model includes an optional driver only when it is complete and varies across the entire usable series, and only when the training sample retains at least two residual degrees of freedom after adding the coefficient. Missing or constant drivers are explicitly listed as excluded; collinear or non-identifiable models are rejected. The latest usable period remains held out. Index definitions and measurement methods must be documented consistently by the site; these generic numeric indices do not replace plant-specific engineering definitions or formal M&V review.
