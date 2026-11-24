@@ -358,7 +358,7 @@ export default function App() {
                   const Icon = item.icon
                   return <button type="button" key={item.id} className="module-launcher-card" onClick={() => openModule(item.id)}
                     aria-label={`${item.id}: ${isEn ? item.enTitle : item.title}`}>
-                    <span className="module-launcher-icon"><Icon size={23} strokeWidth={1.9}/></span>
+                    <span className="module-launcher-icon" data-module={item.id}><Icon size={23} strokeWidth={2}/></span>
                     <span className="module-launcher-copy">
                       <small>{item.id}</small>
                       <strong>{isEn ? item.enTitle : item.title}</strong>
