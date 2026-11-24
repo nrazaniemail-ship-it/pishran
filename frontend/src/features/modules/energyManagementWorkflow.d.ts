@@ -12,6 +12,7 @@ export function calculateEnergyPerformance(i:{resource:EnergyResource;baseline:{
 export function saveEnergyRecord(i:EnergyRecordInput,s:EnergyStore,d?:string):Promise<any>
 export function saveEnergyBaseline(i:EnergyBaselineInput,s:EnergyStore,d?:string):Promise<any>
 export function saveEnergyAction(i:EnergyActionInput,s:EnergyStore,d?:string):Promise<any>
+export function updateEnergyActionStatus(id:string,status:string,s:EnergyStore):Promise<boolean>
 
 export const WATER_BALANCE_KEY:string
 export const ENERGY_COST_ALLOCATIONS_KEY:string
