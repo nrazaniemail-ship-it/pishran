@@ -21,3 +21,7 @@ Anomaly screening compares the latest period against the median of the previous 
 
 ## Validation and acceptance
 Automated module tests cover site/SEU isolation in both trend and baseline comparisons, gas-basis consistency, trend deltas, minimum forecast history, anomaly thresholds, gas allocation component reconciliation (including separately declared other charges and unclassified residual), water-balance period/boundary metadata, missing cost drivers and MOD-02 provenance. Web CI must complete on the exact branch SHA. Android APK build and emulator smoke test must complete on that same SHA before mobile validation is claimed.
+
+
+## D — Extended operational drivers
+Energy records may include optional measured product-mix index, ambient temperature, feed-quality index and shutdown hours. The normalization engine uses complete, variable driver series only; it never imputes missing observations and requires sufficient training degrees of freedom before adding a coefficient. Excluded drivers and reasons are returned as warnings. The latest period remains held out for rolling-origin comparison.
