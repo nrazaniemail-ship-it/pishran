@@ -9,7 +9,7 @@ on:
       - 'frontend/**'
       - '.github/workflows/frontend-validation.yml'
   pull_request:
-    branches: [main, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard]
+    branches: [main, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard, feature/mod05-bill-gallery-picker]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-validation.yml'
