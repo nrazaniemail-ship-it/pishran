@@ -171,6 +171,9 @@ test('MOD-05 provides a complete Excel workbook and print-to-PDF report path',as
  assert.ok(app.includes('شواهد اندازه‌گیری / روش صحه‌گذاری'))
  assert.ok(app.includes('verificationEvidence:verification?.evidenceNote'))
  assert.ok(app.includes('<th>صرفه‌جویی اندازه‌گیری‌شده</th>'))
+ assert.ok(app.includes('statusHistory:JSON.stringify(action.statusHistory??[])'))
+ assert.ok(app.includes('<th>تاریخچه وضعیت</th>'))
+ assert.ok(app.includes('<th>سوابق صحه‌گذاری قبلی</th>'))
 })
 
 
