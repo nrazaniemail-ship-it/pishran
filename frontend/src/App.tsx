@@ -347,7 +347,6 @@ export default function App() {
             return <section className="module-launcher-group" key={group}>
               <div className="module-launcher-group-heading">
                 <h3>{isEn ? groupModules[0].enGroup : group}</h3>
-                <span>{String(groupModules.length).padStart(2, '0')} {isEn ? 'workspaces' : 'ماژول'}</span>
               </div>
               <div className="module-launcher-grid">
                 {groupModules.map(item => {
