@@ -1,7 +1,7 @@
 export type EnergyResource='electricity'|'gas'|'water'
 export type EnergyRecordInput={resource:EnergyResource;period:string;site:string;seu:string;meterId?:string;consumption:string|number;production:string|number;cost:string|number;startReading?:string|number;endReading?:string|number;calorificValue?:string|number;calorificBasis?:'gross'|'net';gasReferenceConditions?:string;sourceBillId?:string;sourceBillNumber?:string;note?:string;dataQuality?:'measured'|'estimated'}
 export type EnergyBaselineInput={resource:EnergyResource;period:string;site:string;seu:string;consumption:string|number;production:string|number;calorificValue?:string|number;calorificBasis?:'gross'|'net';gasReferenceConditions?:string}
-export type EnergyActionInput={title:string;resource:EnergyResource;owner:string;dueDate:string;expectedSavings:string|number;status?:string}
+export type EnergyActionInput={title:string;resource:EnergyResource;owner:string;dueDate:string;expectedSavings:string|number;status?:'planned'|'in-progress'|'cancelled'}
 export type EnergyStore={get<T>(key:string):Promise<T|undefined>;set<T>(key:string,value:T):Promise<void>;update<T>(key:string,fn:(old:T|undefined)=>T):Promise<T>}
 export const ENERGY_DATA_KEY:string
 export const ENERGY_BASELINES_KEY:string
@@ -23,3 +23,7 @@ export function saveWaterBalance(input:Parameters<typeof analyzeWaterBalance>[0]
 export function analyzeEnergyTrends(records:any[],filters?:{resource?:EnergyResource;site?:string;seu?:string}):{count:number;points:any[];warnings:string[]}
 export function allocateElectricityBillCost(input:{bill:{id?:string;billNumber?:string;period?:string;amount:number|string;energyCharge?:number|string|null;demandCharge?:number|string|null;reactiveCharge?:number|string|null;taxCharge?:number|string|null};consumers:Array<{id?:string;name?:string;consumptionKwh:number|string;peakDemandKw?:number|string;reactiveKvarh?:number|string;productionTon?:number|string}>}):any
 export function prepareModule02EnergyCostPosting(input:{baseInput:Record<string,string|number>;allocation:any;costCenterId:string}):{input:Record<string,string|number>;sourceReferences:Record<string,string|number>;duplicatePostingGuard:string}
+
+export type EnergyActionStatusHistory={from:string|null;to:'planned'|'in-progress'|'verified'|'cancelled';changedAt:string;verifier:string|null}
+export type EnergyVerificationEvidence={period:string;measuredSavings:number;verifier:string;evidenceNote:string;verifiedAt:string}
+export type EnergyActionAudit={statusHistory:EnergyActionStatusHistory[];verificationHistory:Array<EnergyVerificationEvidence&{supersededAt:string}>}
