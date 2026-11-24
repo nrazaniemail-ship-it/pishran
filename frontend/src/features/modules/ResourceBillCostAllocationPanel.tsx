@@ -48,7 +48,7 @@ export default function ResourceBillCostAllocationPanel({resource,language='fa'}
    const allocatedTotal=rows.reduce((sum,x)=>sum+x.totalCost,0)
    if(Math.abs(allocatedTotal-amount)>Math.max(.0001,amount*1e-10))throw new Error('جمع تخصیص قبض آب با مبلغ نهایی تطبیق ندارد.')
    const residual=Math.max(0,amount-known)
-   return {billId:bill.id,billNumber:bill.billNumber,period:bill.period,resource,billAmount:amount,allocatedTotal,residual,allocations:rows,allocationRules:{volumeCharge:'consumption-m3',sewerCharge:'wastewater-m3',fixedCharge:'equal-share',taxCharge:'pre-tax-cost-share',otherCharges:'consumption-m3',residual:'consumption-m3'},warnings:residual>0?['باقیمانده تفکیک‌نشده قبض آب در سایر هزینه‌ها منظور و بر مبنای مصرف آب تخصیص یافت؛ اجزای قبض را تکمیل کنید.']:[]}
+   return {billId:bill.id,billNumber:bill.billNumber,period:bill.period,resource,billAmount:amount,allocatedTotal,residual,allocations:rows,allocationRules:{volumeCharge:'consumption-m3',sewerCharge:'wastewater-m3',fixedCharge:'equal-share',taxCharge:'pre-tax-cost-share',otherCharges:'consumption-m3',residual:'consumption-m3'},warnings:[...(residual>0?['باقیمانده تفکیک‌نشده قبض آب در سایر هزینه‌ها منظور و بر مبنای مصرف آب تخصیص یافت؛ اجزای قبض را تکمیل کنید.']:[]),...(numeric(bill.fixedCharge)>0?['هزینه ثابت آب به‌صورت مساوی بین مراکز هزینه توزیع شده است؛ در صورت وجود ظرفیت یا قرارداد اختصاصی، مبنای مناسب را بررسی کنید.']:[])]}
   }catch{return null}
  },[bill,centers,resource,gas])
  const setBillField=(key:keyof Bill,value:string)=>setBill(old=>({...old,[key]:value}))
