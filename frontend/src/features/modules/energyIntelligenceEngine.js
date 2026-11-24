@@ -103,6 +103,29 @@ export function allocateGasBillCost({bill,consumers}) {
  if(Math.abs(allocatedTotal-amount)>Math.max(.0001,amount*1e-10))throw new Error('جمع تخصیص قبض گاز با مبلغ نهایی تطبیق ندارد.')
  return {billId:String(bill.id??''),billNumber:String(bill.billNumber??''),period:String(bill.period??''),currencyUnit:'واحد پول قبض',billAmount:amount,componentTotal,residual,allocatedTotal,allocations,allocationRules:{volumeCharge:'gasNm3',thermalCharge:'gasGJ',transportCharge:'gasNm3',fixedCharge:fixedTotal>0?'contractedCapacity':'equal-share',taxCharge:'pre-tax allocated cost',otherCharges:'gasNm3',unclassifiedCharges:'gasNm3'},warnings:[...(fixedTotal>0?[]:['هزینه ثابت به‌صورت مساوی بین مراکز هزینه توزیع شده است؛ در صورت وجود ظرفیت قراردادی، مبنای ظرفیت را وارد کنید.']),...(residual>0?['باقیمانده تفکیک‌نشده قبض گاز به نسبت Nm³ تخصیص یافت؛ اجزای قبض را تکمیل و با قرارداد تطبیق دهید.']:[])],sourceReference:{type:'MOD-05-gas-bill',billId:String(bill.id??''),billNumber:String(bill.billNumber??''),period:String(bill.period??'')},duplicatePostingGuard:'در MOD-02 فقط مبلغ تخصیص‌یافته همین مرکز هزینه را یک بار ثبت کنید؛ کل قبض را مجدداً اضافه نکنید.'}
 }
+export function allocateWaterBillCost({bill,consumers}) {
+ if(!bill||!Array.isArray(consumers)||!consumers.length)throw new Error('قبض آب و حداقل یک مرکز هزینه لازم است.')
+ const amount=finite(bill.amount,'مبلغ قبض آب')
+ if(amount<0)throw new Error('مبلغ قبض آب نمی‌تواند منفی باشد.')
+ const fields=['volumeCharge','sewerCharge','fixedCharge','taxCharge','otherCharges']
+ const charges=Object.fromEntries(fields.map(k=>[k,bill[k]===null||bill[k]===undefined||bill[k]===''?0:finite(bill[k],k)]))
+ if(Object.values(charges).some(x=>x<0))throw new Error('اجزای قبض آب باید غیرمنفی باشند.')
+ const componentTotal=fields.reduce((sum,k)=>sum+charges[k],0)
+ if(componentTotal>amount+Math.max(1,amount*.001))throw new Error('جمع اجزای قبض آب از مبلغ نهایی بیشتر است.')
+ const residual=Math.max(0,amount-componentTotal)
+ const volume=distribute(charges.volumeCharge,consumers,'waterM3','حجم آب')
+ const sewer=distribute(charges.sewerCharge,consumers,'wastewaterM3','حجم فاضلاب')
+ const fixed=consumers.map(()=>charges.fixedCharge/consumers.length)
+ const other=distribute(charges.otherCharges,consumers,'waterM3','سایر هزینه‌های آب')
+ const unclassified=distribute(residual,consumers,'waterM3','باقیمانده تفکیک‌نشده')
+ const preTax=consumers.map((_,i)=>volume[i]+sewer[i]+fixed[i]+other[i]+unclassified[i])
+ const tax=distribute(charges.taxCharge,consumers.map((x,i)=>({...x,taxWeight:preTax[i]})),'taxWeight','پایه مالیات')
+ const allocations=consumers.map((x,i)=>{const totalCost=volume[i]+sewer[i]+fixed[i]+other[i]+unclassified[i]+tax[i],production=Number(x.productionTon)||0;return {costCenterId:String(x.id??x.name??i+1),name:String(x.name??x.id??'مرکز هزینه '+(i+1)),volumeCharge:volume[i],sewerCharge:sewer[i],fixedCharge:fixed[i],taxCharge:tax[i],otherCharges:other[i],unclassifiedCharges:unclassified[i],totalCost,productionTon:production,costPerTon:production>0?totalCost/production:null}})
+ const allocatedTotal=allocations.reduce((sum,x)=>sum+x.totalCost,0)
+ if(Math.abs(allocatedTotal-amount)>Math.max(.0001,amount*1e-10))throw new Error('جمع تخصیص قبض آب با مبلغ نهایی تطبیق ندارد.')
+ return {billId:String(bill.id??''),billNumber:String(bill.billNumber??''),period:String(bill.period??''),resource:'water',billAmount:amount,componentTotal,residual,allocatedTotal,allocations,allocationRules:{volumeCharge:'waterM3',sewerCharge:'wastewaterM3',fixedCharge:'equal-share',taxCharge:'pre-tax allocated cost',otherCharges:'waterM3',unclassifiedCharges:'waterM3'},warnings:[...(residual>0?['باقیمانده تفکیک‌نشده قبض آب به نسبت مصرف آب تخصیص یافت؛ اجزای قبض را تکمیل و با صورتحساب تطبیق دهید.']:[]),...(charges.fixedCharge>0?['هزینه ثابت آب به‌صورت مساوی بین مراکز هزینه توزیع شده است؛ در صورت وجود مبنای قراردادی اختصاصی، آن را بررسی کنید.']:[])],sourceReference:{type:'MOD-05-water-bill',billId:String(bill.id??''),billNumber:String(bill.billNumber??''),period:String(bill.period??'')},duplicatePostingGuard:'در MOD-02 فقط سهم همین مرکز هزینه را یک بار ثبت کنید؛ کل قبض آب را دوباره اضافه نکنید.'}
+}
+
 export function prepareModule02GasCostPosting({baseInput,allocation,costCenterId}) {
  if(!baseInput||typeof baseInput!=='object'||!allocation||!Array.isArray(allocation.allocations))throw new Error('ورودی بهای تمام‌شده یا تخصیص قبض گاز معتبر نیست.')
  const selected=allocation.allocations.find(x=>x.costCenterId===String(costCenterId))
