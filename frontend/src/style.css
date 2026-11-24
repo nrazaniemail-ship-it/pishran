@@ -2303,3 +2303,27 @@ input,select,textarea{color:var(--text)}
     width:100%;
   }
 }
+
+
+/* Module identifiers are plain text only: no polygon, chip, badge, border or background. */
+.module-launcher-card::before{display:none!important;content:none!important}
+.module-launcher-code{
+  top:13px;
+  inset-inline-end:13px;
+  width:auto;
+  height:auto;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:#718596;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.06em;
+  line-height:1.2;
+}
+@media(max-width:760px){
+  .module-launcher-card::before{display:none!important}
+  .module-launcher-code{top:11px;inset-inline-end:11px;font-size:8px}
+}
