@@ -89,7 +89,7 @@ export default function ProjectsView({ projects, onCreate, onDelete, confirmBefo
       <section className="kpis">
         <article className="kpi"><span>{en ? 'Registered projects' : 'پروژه‌های ثبت‌شده'}</span><b>{projects.length.toLocaleString(en ? 'en-US' : 'fa-IR')}</b><small>{en ? 'Stored on this device' : 'ذخیره‌شده روی این دستگاه'}</small></article>
         <article className="kpi"><span>{en ? 'Financial models' : 'مدل‌های مالی'}</span><b>{en ? '0' : '۰'}</b><small>{en ? 'Traceable and versioned calculations' : 'محاسبات قابل ثبت و نسخه‌بندی'}</small></article>
-        <article className="kpi"><span>{en ? 'Compared scenarios' : 'سناریوهای مقایسه‌شده'}</span><b>{isEn?'0':'۰'}</b><small>{en ? 'A foundation for uncertainty analysis' : 'پایه‌ای برای تحلیل عدم‌قطعیت'}</small></article>
+        <article className="kpi"><span>{en ? 'Compared scenarios' : 'سناریوهای مقایسه‌شده'}</span><b>{en ? '0' : '۰'}</b><small>{en ? 'A foundation for uncertainty analysis' : 'پایه‌ای برای تحلیل عدم‌قطعیت'}</small></article>
         <article className="kpi"><span>{en ? 'Storage status' : 'وضعیت ذخیره‌سازی'}</span><b className="live">{en&&storageInfo.backend==='در حال بررسی'?'Checking...':storageInfo.backend}</b><small>{en ? 'Data is kept on this device' : 'اطلاعات روی دستگاه نگهداری می‌شود'}</small></article>
       </section>
 
