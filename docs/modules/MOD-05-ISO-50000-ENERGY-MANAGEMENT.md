@@ -22,7 +22,7 @@ Meter opening/closing readings are optional but, when supplied, both are mandato
 
 ## Improvement actions
 
-Opportunities are registered with a responsible owner, due date, resource, and expected annual savings. Expected savings are forecasts, not verified savings. Verification must be based on measured post-implementation data and an appropriate M&V boundary.
+Opportunities are registered with a responsible owner, due date, resource, and expected annual savings. Expected savings are forecasts, not verified savings. Verification now requires a saved verification period, measured savings, verifier identity and a note describing the measurement evidence / M&V method; the action cannot be marked verified without these fields. Verification must be based on measured post-implementation data and an appropriate M&V boundary.
 
 ## Data keys
 
