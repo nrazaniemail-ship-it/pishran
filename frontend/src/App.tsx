@@ -309,7 +309,7 @@ export default function App() {
       <button className="language-switch page-language-switch" type="button" onClick={toggleLanguage} aria-label={isEn ? "Switch to Persian" : "Switch to English"}>{isEn ? "FA" : "EN"}</button>
       <div className="brand"><button className="brand-title" type="button" onClick={() => navigateTo('dashboard')}><b>{isEn ? "Pishran" : "پیشران"}</b></button></div>
       <nav className="main-nav" aria-label={isEn?"Primary navigation":"ناوبری اصلی"}>
-        <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Dashboard" : "داشبورد"}</button>
+        <button className={page === 'dashboard' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('dashboard')}><LayoutDashboard size={17}/> {isEn ? "Home" : "پیشخوان"}</button>
         <button className={page === 'projects' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('projects')}><FolderKanban size={17}/> {isEn ? "Projects" : "پروژه‌ها"}</button>
         <button className={page === 'steel-group' ? 'nav-item active' : 'nav-item'} onClick={() => navigateTo('steel-group')}><Factory size={17}/> {isEn ? "Steel Group" : "گروه فولاد"}</button>
         <div className={moduleDropdownOpen ? 'nav-dropdown is-open' : 'nav-dropdown'}>
@@ -325,12 +325,14 @@ export default function App() {
     </header>
 
     {page === 'dashboard' && <>
-      <section className="hero dashboard-hero">
-        <div className="hero-copy">
-          <h1>{isEn ? <>From idea to investment decision, <em>with greater confidence.</em></> : <><em> ... با اطمینان بیشتر.</em></>}</h1>
+      <section className="project-create-launcher" aria-label={isEn ? 'Feasibility project creation' : 'ایجاد پروژه امکان‌سنجی'}>
+        <div className="project-create-icon"><BriefcaseBusiness size={25}/></div>
+        <div className="project-create-copy">
+          <span className="project-create-eyebrow">{isEn ? 'FEASIBILITY WORKSPACE' : 'محیط امکان‌سنجی پیشران'}</span>
+          <h1>{isEn ? 'From idea to investment decision, with greater confidence.' : 'از ایده تا تصمیم سرمایه‌گذاری، با اطمینان بیشتر.'}</h1>
           <p>{isEn ? 'An integrated workspace for feasibility studies, engineering design, market analysis, financial modelling and project risk assessment.' : 'محیط یکپارچه برای امکان‌سنجی، طراحی مهندسی، تحلیل بازار، مدل‌سازی مالی و ارزیابی ریسک پروژه‌ها.'}</p>
-          <div className="hero-actions"><button className="primary" onClick={() => navigateTo('projects')}><Plus size={18}/> {isEn ? 'Create project' : 'ایجاد پروژه جدید'}</button></div>
         </div>
+        <button className="project-create-action" type="button" onClick={() => navigateTo('projects')}><Plus size={19}/> {isEn ? 'Create new project' : 'ایجاد پروژه جدید'}</button>
       </section>
 
       <section className="module-launcher" aria-labelledby="module-launcher-title">
@@ -389,7 +391,7 @@ export default function App() {
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => navigateBack('projects')}/>}
     {page === 'module' && <section className="module-workspace-page" data-module-export-root="true">
-      <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => navigateBack('dashboard')}>{isEn ? 'Back to dashboard' : 'بازگشت به داشبورد'}</button><span className="module-id">{activeModule.id}</span></div>
+      <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => navigateBack('dashboard')}>{isEn ? 'Back to home' : 'بازگشت به پیشخوان'}</button><span className="module-id">{activeModule.id}</span></div>
       <ModuleExportActions moduleId={activeModule.id} moduleTitle={isEn ? activeModule.enTitle : activeModule.title} language={settings.language}/>
       {activeModule.id === 'MOD-01' && <ExecutiveDashboardPanel language={settings.language} onOpenModule={openModule}/>}
       {(activeModule.id === 'MOD-02' || activeModule.id === 'MOD-03') && <ModuleIntelligencePanel moduleId={activeModule.id} language={settings.language}/>}
