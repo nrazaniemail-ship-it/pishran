@@ -53,9 +53,8 @@ export function bindCppCpsTraceLedgerToProductSchedule(
     issues.push('A valid fiscal-year index is required for every project period.')
   if (schedule.rows.some(row => !Number.isInteger(row.period) || row.period < 1 || row.period > periodCount))
     issues.push('Product schedule contains an invalid period index.')
-  if (issues.length) return { valid: false, issues, schedule: null, incrementalCppByPeriod: [] }
+  if (issues.length) return { valid: false, issues, schedule: null, incrementalCppByPeriod: [], tracePathRows: [] }
 
-  const allocations = new Map<string, number>()
   const itemAllocations = new Map<string, {
     itemId: string
     category: CppCpsTracePeriodRow['category']
@@ -143,8 +142,6 @@ export function bindCppCpsTraceLedgerToProductSchedule(
       }
       const share = entry.weight / denominator
       const allocatedAmount = amount * share
-      const rowKey = entry.row.productId + ':' + entry.row.period + ':' + trace.category
-      allocations.set(rowKey, (allocations.get(rowKey) ?? 0) + allocatedAmount)
       const itemKey = trace.itemId + ':' + entry.row.productId + ':' + entry.row.period
       const currentItem = itemAllocations.get(itemKey) ?? {
         itemId: trace.itemId,
@@ -167,6 +164,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
   const openingWipByItemProduct = new Map<string, number>()
   const openingFinishedGoodsByItemProduct = new Map<string, number>()
   const itemCategoryByItemProduct = new Map<string, CppCpsTracePeriodRow['category']>()
+  const itemProductKey = (itemId: string, productId: string) => itemId + '\u0000' + productId
   const tracePathRows: CppCpsTracePathRow[] = []
   const rows: ProductOperatingPeriodRow[] = []
   for (const row of schedule.rows) {
@@ -181,15 +179,15 @@ export function bindCppCpsTraceLedgerToProductSchedule(
     const currentItems = [...itemAllocations.values()].filter(item =>
       item.productId === row.productId && item.period === row.period)
     const carriedItemKeys = [...openingWipByItemProduct.keys(), ...openingFinishedGoodsByItemProduct.keys()]
-      .filter(key => key.endsWith(':' + row.productId))
+      .filter(key => key.endsWith('\u0000' + row.productId))
     const itemIds = new Set([
       ...currentItems.map(item => item.itemId),
-      ...carriedItemKeys.map(key => key.slice(0, key.lastIndexOf(':'))),
+      ...carriedItemKeys.map(key => key.slice(0, key.indexOf('\u0000'))),
     ])
     let completedCpp = 0
     let wipCpp = 0
     for (const itemId of itemIds) {
-      const itemKey = itemId + ':' + row.productId
+      const itemKey = itemProductKey(itemId, row.productId)
       const current = currentItems.find(item => item.itemId === itemId)
       const category = current?.category ?? itemCategoryByItemProduct.get(itemKey)
       if (!category) {
