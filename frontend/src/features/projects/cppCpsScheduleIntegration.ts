@@ -7,6 +7,7 @@ export type CppCpsTracePathRow = {
   category: CppCpsTracePeriodRow['category']
   period: number
   productId: string
+  postingStatus: 'incremental' | 'base-covered'
   grossCost: number
   baseCoveredCost: number
   incrementalCpp: number
@@ -245,6 +246,7 @@ export function bindCppCpsTraceLedgerToProductSchedule(
           category,
           period: row.period,
           productId: row.productId,
+          postingStatus: 'incremental',
           grossCost: current?.grossCost ?? 0,
           baseCoveredCost: current?.baseCoveredCost ?? 0,
           incrementalCpp: currentIncrementalCpp,
@@ -279,6 +281,29 @@ export function bindCppCpsTraceLedgerToProductSchedule(
     })
   }
   if (issues.length) return { valid: false, issues, schedule: null, incrementalCppByPeriod: [], tracePathRows: [] }
+  for (const trace of ledger.rows) {
+    if (trace.sourceStatus !== 'verified' || trace.incrementalCpp !== 0 ||
+        !Number.isFinite(trace.grossCost) || (trace.grossCost ?? 0) <= 0) continue
+    if (tracePathRows.some(row => row.itemId === trace.itemId && row.period === trace.period)) continue
+    tracePathRows.push({
+      itemId: trace.itemId,
+      category: trace.category,
+      period: trace.period,
+      productId: trace.productId ?? '—',
+      postingStatus: 'base-covered',
+      grossCost: trace.grossCost ?? 0,
+      baseCoveredCost: trace.baseCoveredCost ?? 0,
+      incrementalCpp: 0,
+      openingWipCarry: 0,
+      completedProductionCpp: 0,
+      closingWipCpp: 0,
+      openingFinishedGoodsCarry: 0,
+      costOfSalesCpp: 0,
+      closingFinishedGoodsCpp: 0,
+      grossProfitImpact: 0,
+      workingCapitalImpact: 0,
+    })
+  }
   const periodCostOfSales = Array(periodCount).fill(0) as number[]
   const periodWipInventoryValue = Array(periodCount).fill(0) as number[]
   let totalClosingInventoryValue = 0
