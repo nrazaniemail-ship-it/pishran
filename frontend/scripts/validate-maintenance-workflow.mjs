@@ -51,7 +51,7 @@ test('reliability indicators calculate MTBF, MTTR, availability, PM compliance a
   const orders=[
     {id:'1',assetId:'asset-1',kind:'corrective',status:'completed',openedAt:'2026-11-02',downtimeHours:6,repairHours:4,laborCost:500,materialCost:900,estimatedHours:0},
     {id:'2',assetId:'asset-1',kind:'corrective',status:'completed',openedAt:'2026-11-12',downtimeHours:6,repairHours:6,laborCost:400,materialCost:700,estimatedHours:0},
-    {id:'3',assetId:'asset-1',kind:'preventive',status:'completed',openedAt:'2026-11-05',dueAt:'2026-11-10',downtimeHours:0,repairHours:0,laborCost:100,materialCost:0,estimatedHours:0},
+    {id:'3',assetId:'asset-1',kind:'preventive',status:'completed',openedAt:'2026-11-05',dueAt:'2026-11-10',completedAt:'2026-11-10',downtimeHours:0,repairHours:0,laborCost:100,materialCost:0,estimatedHours:0},
     {id:'4',assetId:'asset-1',kind:'preventive',status:'planned',openedAt:'2026-11-08',dueAt:'2026-11-15',downtimeHours:0,repairHours:0,laborCost:0,materialCost:0,estimatedHours:3},
     {id:'5',assetId:'asset-1',kind:'inspection',status:'in-progress',openedAt:'2026-11-20',dueAt:null,downtimeHours:0,repairHours:0,laborCost:0,materialCost:0,estimatedHours:2},
     {id:'6',assetId:'asset-1',kind:'corrective',status:'cancelled',openedAt:'2026-11-21',downtimeHours:100,repairHours:100,laborCost:0,materialCost:0,estimatedHours:0},
