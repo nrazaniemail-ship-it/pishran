@@ -258,7 +258,11 @@ assert.deepEqual(coveredBound.schedule.periodCostOfSales, schedule.periodCostOfS
 assert.equal(coveredBound.tracePathRows.length, 2,
   'Fully base-covered items remain visible in the item trace without incremental posting')
 assert.ok(coveredBound.tracePathRows.every(row => row.postingStatus === 'base-covered' &&
-  row.incrementalCpp === 0 && row.costOfSalesCpp === 0 && row.workingCapitalImpact === 0))
+  row.incrementalCpp === 0 && row.costOfSalesCpp === 0 && row.workingCapitalImpact === 0),
+  'Fully covered trace rows must not post incrementally: ' + JSON.stringify(coveredBound.tracePathRows))
+assert.ok(coveredBound.tracePathRows.every(row => row.productId === 'P1' &&
+  row.grossCost > 0 && row.baseCoveredCost === row.grossCost),
+  'Fully covered zero-cost rows must retain their product trace and explicit coverage evidence')
 
 // CRC200 without evidence is explicitly null and blocks final posting, not treated as zero.
 const unverifiedLedger = ledgerModule.buildCppCpsTraceLedger([{

@@ -30,3 +30,27 @@ test('launcher preserves the twelve-module catalogue and four operational groupi
   assert.equal(ids.length, 12)
   assert.equal(new Set(groups).size, 4)
 })
+
+
+test('dashboard has a distinct feasibility core with project count and direct navigation', () => {
+  assert.ok(app.includes('className="feasibility-core-card"'))
+  assert.ok(app.includes("onClick={() => navigateTo('projects')}"))
+  assert.ok(app.includes('projects.length.toLocaleString'))
+  assert.ok(app.includes('مدل‌سازی مالی و جریان نقدی'))
+})
+
+test('module entry cards show capability highlights and saved-project counts', () => {
+  assert.ok(app.includes('module-launcher-capabilities'))
+  assert.ok(app.includes('module-launcher-saved-count'))
+  assert.ok(app.includes('moduleWorkspaces.filter(workspace => workspace.moduleId === item.id).length'))
+  assert.ok(app.includes('capabilityHighlights.map'))
+})
+
+test('module project creation and saved projects appear immediately after entering a module', () => {
+  const hero = app.indexOf('className="module-workspace-hero"')
+  const workspace = app.indexOf('className="module-workspace-card"')
+  const modulePanel = app.indexOf("activeModule.id === 'MOD-01'")
+  assert.ok(hero >= 0 && workspace > hero && workspace < modulePanel)
+  assert.ok(app.includes("isEn ? 'New project' : 'پروژه جدید'"))
+  assert.ok(app.includes('module-workspace-list'))
+})
