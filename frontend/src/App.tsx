@@ -334,7 +334,7 @@ export default function App() {
 
       </section>
 
-      <section className="module-launcher" aria-labelledby="module-launcher-title">
+      <section className="module-launcher" aria-label={isEn ? "Pishran Intelligence Modules" : "ماژولهای هوشمند پیشران"}>
 
         <div className="module-launcher-groups">
           {Array.from(new Set(modules.map(item => item.group))).map(group => {
