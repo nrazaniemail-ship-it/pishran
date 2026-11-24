@@ -89,8 +89,20 @@ if [[ "$ui_drawn" -ne 1 ]]; then
   grep -E "topResumedActivity|firstWindowDrawn|reportedDrawn|mTopFullscreenOpaqueWindowState" "$RUNNER_TEMP/pishran-activity.txt" >&2 || true
   exit 1
 fi
-if grep -q "FATAL EXCEPTION" "$RUNNER_TEMP/pishran-logcat.txt"; then
-  echo "Fatal exception found in application logcat." >&2
+
+# Android emulator images can emit FATAL EXCEPTION blocks for unrelated
+# system processes (for example android.process.acore). Only fail this app
+# smoke test when the exception block names the Pishran application process.
+if awk '
+  /FATAL EXCEPTION/ { in_exception=1; next }
+  in_exception && /Process:/ {
+    if ($0 ~ /Process: com[.]pishran[.]app([[:space:]:,]|$)/) found=1
+    in_exception=0
+  }
+  in_exception && /--------- beginning of/ { in_exception=0 }
+  END { exit(found ? 0 : 1) }
+' "$RUNNER_TEMP/pishran-logcat.txt"; then
+  echo "Fatal exception found in com.pishran.app." >&2
   exit 1
 fi
 if grep -E "ANR in com.pishran.app|am_anr.*com.pishran.app|Input dispatching timed out.*com.pishran.app" "$RUNNER_TEMP/pishran-logcat.txt"; then
