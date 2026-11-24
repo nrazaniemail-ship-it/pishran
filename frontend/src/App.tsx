@@ -330,8 +330,7 @@ export default function App() {
       <section className="module-launcher" aria-labelledby="module-launcher-title">
         <div className="module-launcher-heading">
           <div>
-            <span className="module-launcher-eyebrow">{isEn ? 'PISHRAN WORKSPACE' : 'محیط یکپارچه پیشران'}</span>
-            <h2 id="module-launcher-title">{isEn ? 'Explore the 12 intelligence modules' : 'ورود به ۱۲ ماژول هوشمند پیشران'}</h2>
+            <h2 id="module-launcher-title">{isEn ? 'Pishran Intelligent Modules' : 'ماژولهای هوشمند پیشران'}</h2>
             <p>{isEn ? 'Choose a workspace to review performance, investigate exceptions and take action.' : 'برای مشاهده عملکرد، بررسی انحراف‌ها و پیگیری اقدامات، ماژول موردنظر را انتخاب کنید.'}</p>
           </div>
           <span className="module-launcher-count"><b>12</b><small>{isEn ? 'MODULES' : 'ماژول'}</small></span>
