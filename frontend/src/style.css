@@ -618,6 +618,21 @@ input,select,textarea{color:var(--text)}
 .brand-title{border:0;background:none;color:inherit;text-align:start;padding:0;min-width:0}.language-switch{display:inline-flex;align-items:center;justify-content:center;min-width:43px;height:43px;padding:0 10px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text);font-weight:800;letter-spacing:.3px;box-shadow:0 2px 8px #17223512}.language-switch:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
 
 
+
+/* Header alignment: language stays on the physical left; Pishran identity stays on the physical right. */
+.topbar{position:relative;justify-content:center;direction:ltr}
+.topbar .brand{position:absolute;right:0;left:auto;top:50%;transform:translateY(-50%);margin:0;direction:rtl;z-index:2}
+.topbar .brand-title{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:inherit;padding:0;text-align:right}
+.topbar .brandmark{flex:none}
+.page-language-switch{position:absolute;left:0;right:auto;top:50%;transform:translateY(-50%);z-index:3}
+.topbar .main-nav{direction:rtl;justify-content:center;margin-inline:auto;max-width:calc(100% - 190px)}
+@media(max-width:760px){
+  .topbar{padding:48px 0 10px;min-height:112px;flex-wrap:wrap;justify-content:center}
+  .topbar .brand{top:12px;right:0;transform:none}
+  .page-language-switch{top:12px;left:0;transform:none}
+  .topbar .main-nav{width:100%;max-width:100%;flex-wrap:wrap;justify-content:center}
+}
+
 /* Keep the language control anchored to the page's upper-left corner. */
 .topbar{position:relative}
 .page-language-switch{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:2}
