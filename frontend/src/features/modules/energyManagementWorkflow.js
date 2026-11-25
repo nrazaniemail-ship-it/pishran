@@ -350,9 +350,10 @@ export function reconcileEnergyTariffWithBill({calculation,bill,resource,toleran
  }
  const billPeriod=String(bill.period??'').trim()
  const billConsumption=Number(bill.consumption)
- const consumptionDifference=billConsumption-Number(calculation.quantity)
- const consumptionPct=Math.abs(consumptionDifference)/Math.max(Math.abs(billConsumption),Math.abs(Number(calculation.quantity)),1)*100
- components.push({key:'consumption',label:'مصرف قبض',expected:Number(calculation.quantity),actual:billConsumption,difference:consumptionDifference,differencePercent:consumptionPct,status:consumptionPct<=tolerance?'within-tolerance':'mismatch'})
+ const expectedConsumption=Number(calculation.billedQuantity??calculation.quantity)
+ const consumptionDifference=billConsumption-expectedConsumption
+ const consumptionPct=Math.abs(consumptionDifference)/Math.max(Math.abs(billConsumption),Math.abs(expectedConsumption),1)*100
+ components.push({key:'consumption',label:'مصرف قبض',expected:expectedConsumption,actual:billConsumption,difference:consumptionDifference,differencePercent:consumptionPct,status:consumptionPct<=tolerance?'within-tolerance':'mismatch'})
  if(resource==='electricity'){
   compare('energyCharge','بهای انرژی',calculation.energyCharge,bill.energyCharge)
   compare('demandCharge','بهای دیماند',calculation.demandCharge,bill.demandCharge)
@@ -361,15 +362,15 @@ export function reconcileEnergyTariffWithBill({calculation,bill,resource,toleran
   for(const band of calculation.timeOfUseBreakdown??[])compare('time-of-use-'+band.band,'بهای بازه '+band.band,band.charge,bill.timeOfUseCharges?.[band.band],true)
  }else if(resource==='gas'){
   compare('gasCharge','بهای گاز',calculation.energyCharge,bill.gasCharge)
-  compare('gasTransmissionCharge','هزینه انتقال گاز',calculation.gasTransmissionCharge,bill.gasTransmissionCharge,calculation.gasTransmissionCharge!==null&&calculation.gasTransmissionCharge!==null&&calculation.gasTransmissionCharge!==undefined)
-  compare('gasDistributionCharge','هزینه توزیع گاز',calculation.gasDistributionCharge,bill.gasDistributionCharge,calculation.gasDistributionCharge!==null&&calculation.gasDistributionCharge!==null&&calculation.gasDistributionCharge!==undefined)
-  if((calculation.levies??[]).length)compare('levyCharge','عوارض قراردادی',calculation.levyCharge,bill.levyCharge)
+  compare('gasTransmissionCharge','هزینه انتقال گاز',calculation.gasTransmissionCharge,bill.gasTransmissionCharge,calculation.gasTransmissionCharge!==null&&calculation.gasTransmissionCharge!==undefined)
+  compare('gasDistributionCharge','هزینه توزیع گاز',calculation.gasDistributionCharge,bill.gasDistributionCharge,calculation.gasDistributionCharge!==null&&calculation.gasDistributionCharge!==undefined)
+  if((calculation.levies??[]).length)compare('levyCharge','عوارض قراردادی',calculation.levyTotal,bill.levyCharge)
   else compare('levyCharge','عوارض قراردادی',null,bill.levyCharge,false)
   compare('taxCharge','مالیات و عوارض',calculation.tax,bill.taxCharge)
   compare('otherCharges','سایر هزینه‌ها',null,bill.otherCharges,false)
  }else{
   compare('waterCharge','بهای آب',calculation.energyCharge,bill.waterCharge)
-  compare('sewerCharge','بهای دفع فاضلاب',calculation.sewerCharge,bill.sewerCharge,calculation.sewerCharge!==null&&calculation.sewerCharge!==null&&calculation.sewerCharge!==undefined)
+  compare('sewerCharge','بهای دفع فاضلاب',calculation.sewerCharge,bill.sewerCharge,calculation.sewerCharge!==null&&calculation.sewerCharge!==undefined)
   compare('fixedCharge','هزینه ثابت قبض',calculation.fixedCharge,bill.fixedCharge)
   if((calculation.levies??[]).length)compare('levyCharge','عوارض قراردادی',calculation.levyCharge,bill.levyCharge)
   else compare('levyCharge','عوارض قراردادی',null,bill.levyCharge,false)
