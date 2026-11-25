@@ -69,6 +69,22 @@ export function bwm(bestIndex:number,worstIndex:number,bestToOthers:number[],oth
  return {weights:normalize(w),xi,bestIndex,worstIndex};
 }
 
+export type BwmExpertJudgment = {
+ bestIndex:number;
+ worstIndex:number;
+ bestToOthers:number[];
+ othersToWorst:number[];
+};
+export function aggregateBwmExpertWeights(experts:BwmExpertJudgment[]) {
+ assert(experts.length>0,'At least one BWM expert is required');
+ const individual=experts.map(e=>bwm(e.bestIndex,e.worstIndex,e.bestToOthers,e.othersToWorst));
+ const criteriaCount=individual[0].weights.length;
+ assert(individual.every(r=>r.weights.length===criteriaCount),'All BWM experts must assess the same criteria');
+ const weights=normalize(Array.from({length:criteriaCount},(_,i)=>geometricMean(individual.map(r=>r.weights[i]))));
+ return {weights,individual};
+}
+
+
 export type CriterionDirection = 'benefit' | 'cost';
 export function topsis(matrix:number[][], weights:number[], directions:CriterionDirection[]) {
  const rows=matrix.length, cols=weights.length;
