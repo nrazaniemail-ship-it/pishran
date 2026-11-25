@@ -117,8 +117,9 @@ export const localStore = {
     } else {
       writeFallback(key, value)
     }
-    // Settings and small app metadata are mirrored for fast boot and PWA interoperability.
-    if (key.startsWith('settings:')) writeFallback(key, value)
+    // Settings and the MOD-10 project index are mirrored so workspace cards
+    // remain recoverable if IndexedDB is unavailable or is reset by the browser.
+    if (key.startsWith('settings:') || key === 'mod10-ranking-projects:v1') writeFallback(key, value)
   },
 
   async remove(key: string): Promise<void> {
