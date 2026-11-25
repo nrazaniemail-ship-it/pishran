@@ -10,7 +10,8 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
  const en=language==='en';
  const [method,setMethod]=useState<Method>(initialMethod??'AHP');
  const [criteria,setCriteria]=useState(()=>suggestedCriteria?.length?suggestedCriteria.slice(0,8):['هزینه سرمایه‌گذاری','ریسک اجرا','زمان اجرا']);
- const [experts,setExperts]=useState<Expert[]>([{name:en?'Expert 1':'خبره ۱',matrix:newMatrix(suggestedCriteria?.length??3),bestIndex:0,worstIndex:Math.max(0,(suggestedCriteria?.length??3)-1),bestToOthers:Array(suggestedCriteria?.length??3).fill(1),othersToWorst:Array(suggestedCriteria?.length??3).fill(1)}]);
+ const initialCriterionCount=suggestedCriteria?.length||3;
+ const [experts,setExperts]=useState<Expert[]>([{name:en?'Expert 1':'خبره ۱',matrix:newMatrix(initialCriterionCount),bestIndex:0,worstIndex:Math.max(0,initialCriterionCount-1),bestToOthers:Array(initialCriterionCount).fill(1),othersToWorst:Array(initialCriterionCount).fill(1)}]);
  const [alternatives,setAlternatives]=useState(()=>suggestedAlternatives?.length?suggestedAlternatives.slice(0,12):['گزینه الف','گزینه ب','گزینه ج']);
  const [scores,setScores]=useState<number[][]>(()=>suggestedCriteria?.length&&suggestedAlternatives?.length?suggestedAlternatives.slice(0,12).map(()=>Array(suggestedCriteria.slice(0,8).length).fill(0)):initialScores());
  const [directions,setDirections]=useState<CriterionDirection[]>(['cost','benefit','cost']);
