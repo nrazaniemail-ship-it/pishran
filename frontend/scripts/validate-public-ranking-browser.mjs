@@ -55,6 +55,9 @@ try {
     }
   }, 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', { timeout: 10000 })
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
+  await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
+  await page.waitForFunction(expectedName => [...document.querySelectorAll('.ranking-project-open')]
+    .some(card => card.textContent?.includes(expectedName)), 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', { timeout: 10000 })
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
   await page.getByRole('heading', { name: 'وزن‌دهی و رتبه‌بندی چندمعیاره' }).waitFor()
   await page.getByRole('heading', { name: 'روش‌های انجام' }).waitFor()
