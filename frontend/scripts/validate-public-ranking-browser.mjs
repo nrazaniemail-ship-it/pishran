@@ -281,8 +281,10 @@ try {
     }
     if (method === 'TOPSIS + (AHP + BWM)') {
       const ahpShare = page.getByLabel('AHP contribution percentage')
-      await ahpShare.evaluate(element => { element.value = '70'; element.dispatchEvent(new Event('input', { bubbles: true })); element.dispatchEvent(new Event('change', { bubbles: true })) })
-      assert.equal(await ahpShare.inputValue(), '70', 'hybrid AHP contribution must be adjustable')
+      await ahpShare.focus()
+      await ahpShare.press('Home')
+      for (let step = 0; step < 14; step++) await ahpShare.press('ArrowRight')
+      assert.equal(await ahpShare.inputValue(), '70', 'hybrid AHP contribution must be adjustable through real keyboard interaction')
       assert.equal(await page.getByLabel('BWM contribution percentage').inputValue(), '30', 'hybrid BWM contribution must remain complementary')
       await page.getByLabel('BWM best criterion').selectOption('1')
       await page.getByLabel('BWM worst criterion').selectOption('0')
