@@ -585,7 +585,7 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
         </button>
         <div className="module-workspace-item-actions"><button type="button" className="icon-button" aria-label={isEn ? 'Delete ' + project.name : 'حذف ' + project.name} title={isEn ? 'Delete project' : 'حذف پروژه'} onClick={() => void deleteRankingProject(project.id)}><Trash2 size={16}/></button></div>
       </article>)}</div> : <div className="empty-state"><b>{isEn ? 'No ranking projects yet' : 'هنوز پروژه رتبه‌بندی ایجاد نشده است'}</b><p>{isEn ? 'Create a project to start a separate ranking process.' : 'برای آغاز یک فرآیند رتبه‌بندی مستقل، اولین پروژه را ایجاد کنید.'}</p></div>}
-    </section> : <div data-module-export-root="true" className="ranking-project-export-root">
+    </section> : <div data-module-export-root="true" data-project-export-id={selectedProject.id} className="ranking-project-export-root">
       <section className="module-workspace-card" aria-label={isEn ? 'Current ranking project' : 'پروژه رتبه‌بندی جاری'}>
         <div className="section-head"><div><button type="button" className="secondary" onClick={() => void returnToRankingProjects()}>{isEn ? '← All ranking projects' : '→ بازگشت به پروژه‌های رتبه‌بندی'}</button><h2 style={{marginTop:12}}>{isEn ? 'Edit ranking project' : 'ویرایش پروژه رتبه‌بندی'}</h2></div></div>
         <form className="module-create-form" onSubmit={event => { event.preventDefault(); void saveRankingProjectName() }}>
@@ -891,7 +891,7 @@ export default function App() {
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
-    {page === 'project-wizard' && activeProject && <div data-module-export-root="true" className="feasibility-project-export-root">
+    {page === 'project-wizard' && activeProject && <div data-module-export-root="true" data-project-export-id={activeProject.id} className="feasibility-project-export-root">
       <ModuleExportActions moduleId={`feasibility-${activeProject.id}`} moduleTitle={activeProject.name} language={settings.language}/>
       <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => navigateBack('projects')}/>
     </div>}
