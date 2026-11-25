@@ -336,6 +336,48 @@ test('MOD-05 configurable electricity, gas and water tariff contracts persist, a
  assert.equal(revised.id,electricity.id)
  assert.equal(revised.history.length,1)
 })
+
+test('MOD-05 bill reconciliation matches itemized electricity charges and reports material discrepancies',async()=>{
+ const {reconcileEnergyTariffWithBill,saveEnergyTariffReconciliation,ENERGY_TARIFF_RECONCILIATIONS_KEY}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const calculation={id:'CAL-1',contractId:'EL-1',resource:'electricity',site:'Plant A',period:'2026-03-15',contractNumber:'EL-01',currency:'IRR',calculatedAt:'2026-03-15T12:00:00.000Z',quantity:6000,unit:'kWh',energyCharge:18000,demandCharge:50,reactiveCharge:20,fixedCharge:100,tax:1817,total:19987}
+ const bill={id:'BILL-1',billNumber:'B-001',accountNumber:'ACC-1',period:'2026-03-15',consumption:6000,energyCharge:18000,demandCharge:50,reactiveEnergy:20,reactiveCharge:20,taxCharge:1817,amount:19987}
+ const matched=reconcileEnergyTariffWithBill({calculation,bill,resource:'electricity',tolerancePercent:1})
+ assert.equal(matched.status,'reconciled')
+ assert.equal(matched.mismatchCount,0)
+ assert.equal(matched.totalDifference,0)
+ const discrepancy=reconcileEnergyTariffWithBill({calculation,bill:{...bill,amount:24000,energyCharge:22000},resource:'electricity',tolerancePercent:1})
+ assert.equal(discrepancy.status,'discrepancy')
+ assert.ok(discrepancy.components.some(x=>x.key==='energyCharge'&&x.status==='mismatch'))
+ const incomplete=reconcileEnergyTariffWithBill({calculation:{...calculation,resource:'gas'},bill:{...bill,gasCharge:18000,distributionCharge:300,otherCharges:10},resource:'gas',tolerancePercent:1})
+ assert.equal(incomplete.status,'incomplete')
+ assert.ok(incomplete.components.some(x=>x.key==='distributionCharge'&&x.status==='not-modeled'))
+ assert.throws(()=>reconcileEnergyTariffWithBill({calculation,bill,resource:'water'}),/یکسان نیست/)
+ const memory=new Map(),store={update:async(key,fn)=>{const value=fn(memory.get(key));memory.set(key,value);return value}}
+ const saved=await saveEnergyTariffReconciliation({calculation,bill,resource:'electricity'},store)
+ assert.equal(memory.get(ENERGY_TARIFF_RECONCILIATIONS_KEY)[0].id,saved.id)
+})
+test('MOD-05 correlated M&V uncertainty validates correlation matrix and includes systematic and sampling components',async()=>{
+ const {buildEnergyMvEvidencePack}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const baseline={id:'BASE-C',resource:'electricity',period:'2026-01',site:'Plant A',seu:'Furnace',consumption:1000,production:100,intensity:10}
+ const actual=validateEnergyRecord({resource:'electricity',period:'2026-02',site:'Plant A',seu:'Furnace',meterId:'EM-101',consumption:900,production:100,cost:50,dataQuality:'measured'});actual.id='ROW-C'
+ const input={resource:'electricity',baselineId:'BASE-C',actualRecordIds:['ROW-C'],method:'Correlated uncertainty model',verifier:'Reviewer',measurementBoundary:'Plant A / Furnace',boundaryConfirmed:true,adjustmentNotes:'No adjustments',evidenceReferences:'Meter log',baselineUncertaintyPct:1,actualUncertaintyPct:1,modelUncertaintyPct:0.5,samplingUncertaintyPct:0.3,resolutionUncertaintyPct:0.2,systematicBiasPct:0.1,rhoBaselineActual:0.25,rhoBaselineModel:0.1,rhoActualModel:0.15,coverageFactor:2}
+ const pack=buildEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[]},'2026-11-25T12:00:00.000Z')
+ assert.ok(pack.uncertaintyBudget.covarianceTerm>0)
+ assert.ok(pack.uncertaintyBudget.samplingUncertainty>0)
+ assert.ok(pack.uncertaintyBudget.systematicBiasBound>0)
+ assert.ok(pack.uncertaintyBudget.expandedUncertainty>pack.uncertaintyBudget.expandedRandomUncertainty)
+ assert.throws(()=>buildEnergyMvEvidencePack({...input,rhoBaselineActual:0.9,rhoBaselineModel:0.9,rhoActualModel:-0.9},{rows:[actual],baselines:[baseline],calibrations:[]},'2026-11-25T12:00:00.000Z'),/ماتریس هم‌بستگی/)
+})
+test('MOD-05 evidence attachments are encrypted at rest and require the original passphrase to decrypt',async()=>{
+ const {encryptEnergyEvidenceAttachments,decryptEnergyEvidenceAttachment}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const original=[{name:'evidence.txt',mimeType:'text/plain',size:5,lastModified:10,dataUrl:'data:text/plain;base64,aGVsbG8='}]
+ const encrypted=await encryptEnergyEvidenceAttachments(original,'correct horse battery')
+ assert.equal(encrypted[0].encrypted,true)
+ assert.equal(encrypted[0].ciphertext.includes('aGVsbG8='),false)
+ assert.equal(await decryptEnergyEvidenceAttachment(encrypted[0],'correct horse battery'),'data:text/plain;base64,aGVsbG8=')
+ await assert.rejects(()=>decryptEnergyEvidenceAttachment(encrypted[0],'wrong passphrase'),/گذرواژه نادرست/)
+})
+
 test('MOD-05 M&V uncertainty interval does not support a savings claim when the difference is within expanded uncertainty',async()=>{
  const {buildEnergyMvEvidencePack,validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
  const baseline={id:'BASE-U',resource:'electricity',period:'2026-01',site:'Plant A',seu:'Furnace',consumption:1000,production:100,intensity:10}
