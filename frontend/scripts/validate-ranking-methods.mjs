@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ahp,bwm,aggregatePairwiseMatrices,aggregateBwmJudgments,makeRankingSnapshot,validatePairwiseMatrix,topsis} from '../src/features/ranking/rankingMethods.ts';
+import {ahp,bwm,aggregatePairwiseMatrices,aggregateBwmJudgments,aggregateBwmExpertWeights,makeRankingSnapshot,validatePairwiseMatrix,topsis} from '../src/features/ranking/rankingMethods.ts';
 test('AHP recovers a consistent priority vector and reports consistency',()=>{
  const m=[[1,3,5],[1/3,1,2],[1/5,1/2,1]];
  const r=ahp(m); assert.ok(Math.abs(r.weights.reduce((s,v)=>s+v,0)-1)<1e-12); assert.ok(r.weights[0]>r.weights[1]&&r.weights[1]>r.weights[2]); assert.ok(r.cr<0.1);
@@ -21,6 +21,23 @@ test('BWM validates anchor judgments and produces normalized priorities',()=>{
 });
 test('expert BWM aggregation uses geometric means',()=>{
  const r=aggregateBwmJudgments([{bestToOthers:[1,3,5],othersToWorst:[5,2,1]},{bestToOthers:[1,5,7],othersToWorst:[7,3,1]}]); assert.ok(Math.abs(r.bestToOthers[1]-Math.sqrt(15))<1e-10);
+});
+test('group BWM solves each expert with independent best/worst anchors before geometric weight aggregation',()=>{
+ const experts=[
+  {bestIndex:0,worstIndex:2,bestToOthers:[1,3,5],othersToWorst:[5,2,1]},
+  {bestIndex:1,worstIndex:0,bestToOthers:[2,1,4],othersToWorst:[1,3,5]}
+ ];
+ const actual=aggregateBwmExpertWeights(experts);
+ const individual=experts.map(e=>bwm(e.bestIndex,e.worstIndex,e.bestToOthers,e.othersToWorst));
+ const raw=individual[0].weights.map((v,i)=>Math.sqrt(v*individual[1].weights[i]));
+ const total=raw.reduce((a,b)=>a+b,0);
+ const expected=raw.map(v=>v/total);
+ assert.equal(actual.individual.length,2);
+ assert.equal(actual.individual[0].bestIndex,0);
+ assert.equal(actual.individual[1].bestIndex,1);
+ assert.equal(actual.individual[1].worstIndex,0);
+ actual.weights.forEach((v,i)=>assert.ok(Math.abs(v-expected[i])<1e-10));
+ assert.ok(Math.abs(actual.weights.reduce((a,b)=>a+b,0)-1)<1e-12);
 });
 test('calculation snapshots are versioned and reproducible',()=>{
  const s=makeRankingSnapshot({method:'AHP',criteria:['Cost','Risk'],expertCount:2,weights:[0.6,0.4],diagnostics:{cr:0.02,consistent:true},judgments:[[1,3],[1/3,1]]},'2026-11-25T00:00:00.000Z');
