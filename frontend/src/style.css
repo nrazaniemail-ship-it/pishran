@@ -2330,3 +2330,74 @@ input,select,textarea{color:var(--text)}
 
 /* Compact green superscript version beside the Pishran wordmark. */
 .brand-title{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--text);padding:0;text-align:right}.brand-name-wrap{display:inline-flex;align-items:flex-start;gap:4px}.brand-name-wrap>b{display:block;font-size:19px;line-height:1.45}.brand-version{position:relative;top:-3px;color:#239765;font-size:9px;font-weight:800;line-height:1;direction:ltr;unicode-bidi:isolate}
+
+
+/* Modern, high-contrast navigation for the ranking method groups. */
+.ranking-category-tabs{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  margin:10px 0 4px;
+}
+.ranking-category-tab{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:62px;
+  padding:12px 16px;
+  overflow:hidden;
+  border:1px solid #d6e1eb;
+  border-radius:15px;
+  background:linear-gradient(135deg,#f8fbff 0%,#edf3f8 100%);
+  color:#42576b;
+  font:inherit;
+  font-weight:800;
+  text-align:start;
+  cursor:pointer;
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.ranking-category-tab:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(37,67,96,.10)}
+.ranking-category-tab:focus-visible,.ranking-method-tab:focus-visible{outline:3px solid rgba(44,126,190,.35);outline-offset:3px}
+.ranking-category-tab__index{font-size:11px;letter-spacing:.08em;opacity:.68}
+.ranking-category-tab__hint{margin-inline-start:auto;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.72);font-size:10px;font-weight:800}
+.ranking-category-tab--initial.is-active{border-color:#168b9b;background:linear-gradient(120deg,#e1f7f5 0%,#dceefa 100%);color:#075d6b;box-shadow:0 7px 18px rgba(18,132,148,.16),inset 0 0 0 1px rgba(22,139,155,.10)}
+.ranking-category-tab--advanced.is-active{border-color:#7862c6;background:linear-gradient(120deg,#f0eaff 0%,#e5e9ff 100%);color:#493b91;box-shadow:0 7px 18px rgba(105,83,183,.16),inset 0 0 0 1px rgba(120,98,198,.10)}
+.ranking-method-intro{margin-top:14px;padding:12px 15px;border-inline-start:4px solid #168b9b;border-radius:10px;background:linear-gradient(90deg,rgba(22,139,155,.08),rgba(22,139,155,.015));}
+.ranking-method-intro--advanced{border-inline-start-color:#7862c6;background:linear-gradient(90deg,rgba(120,98,198,.09),rgba(120,98,198,.015))}
+.ranking-method-intro h3{margin:0 0 5px}
+.ranking-method-intro p{margin:0}
+.ranking-method-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 16px}
+.ranking-method-tab{
+  --method-accent:#2584a0;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:6px;
+  min-height:66px;
+  padding:11px 13px;
+  border:1px solid color-mix(in srgb,var(--method-accent) 24%,#d9e2eb);
+  border-radius:13px;
+  background:linear-gradient(145deg,#fff 0%,color-mix(in srgb,var(--method-accent) 7%,#f7f9fc) 100%);
+  color:#33495e;
+  font:inherit;
+  cursor:pointer;
+  text-align:start;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease;
+}
+.ranking-method-tab:hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(32,56,80,.10)}
+.ranking-method-tab.is-active{border-color:var(--method-accent);background:linear-gradient(145deg,color-mix(in srgb,var(--method-accent) 17%,#fff),color-mix(in srgb,var(--method-accent) 9%,#f5f8fb));box-shadow:0 6px 16px color-mix(in srgb,var(--method-accent) 18%,transparent),inset 0 0 0 1px color-mix(in srgb,var(--method-accent) 15%,transparent);color:#20374c}
+.ranking-method-tab--ahp{--method-accent:#168b9b}
+.ranking-method-tab--bwm{--method-accent:#b87925}
+.ranking-method-tab--topsis{--method-accent:#3976bd}
+.ranking-method-tab--ahp-topsis{--method-accent:#7862c6}
+.ranking-method-tab__name{font-size:15px;font-weight:900;letter-spacing:.015em}
+.ranking-method-tab__state{font-size:10px;font-weight:700;opacity:.72}
+@media(max-width:700px){
+  .ranking-category-tabs{grid-template-columns:1fr;gap:8px}
+  .ranking-category-tab{min-height:56px}
+  .ranking-method-tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .ranking-method-tab{min-height:60px;padding:10px}
+}
+@media(prefers-reduced-motion:reduce){.ranking-category-tab,.ranking-method-tab{transition:none}.ranking-category-tab:hover,.ranking-method-tab:hover{transform:none}}
