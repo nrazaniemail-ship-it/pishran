@@ -2642,3 +2642,20 @@ input,select,textarea{color:var(--text)}
 .ranking-method-tabs:has(.ranking-method-tab--topsis-ahp-bwm.is-active)+.ranking-method-content{
   background:color-mix(in srgb,#168b9b 9%,#fff);
 }
+
+
+/* Keep project-name fields and create actions dimensionally aligned across modules. */
+.module-create-form>div{align-items:stretch}
+.module-create-form input,
+.module-create-form button{
+  box-sizing:border-box;
+  min-height:48px;
+  height:48px;
+}
+.module-create-form input{padding-block:11px}
+.module-create-form button{padding-block:10px}
+@media(max-width:900px){
+  .module-create-form>div{align-items:stretch}
+  .module-create-form input,
+  .module-create-form button{width:100%;min-height:48px;height:48px}
+}
