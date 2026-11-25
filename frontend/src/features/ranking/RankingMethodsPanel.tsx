@@ -125,7 +125,7 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
   <div style={{display:'flex',gap:10,alignItems:'end',flexWrap:'wrap',marginTop:14}}>
    <label>{en?'Sensitivity shock (%)':'دامنه تغییر حساسیت (%)'}<input aria-label={en?'Sensitivity shock percentage':'درصد تغییر حساسیت'} type="number" min="0" max="90" step="5" value={shock} onChange={e=>setShock(Math.max(0,Math.min(90,Number(e.target.value)||0)))}/></label>
    <button className="primary" onClick={()=>void run()} disabled={!scoresReady||criteria.length<2||alternatives.length<2||(method==='BWM'&&experts.some(e=>e.bestIndex===e.worstIndex))}>{en?'Calculate and save version':'محاسبه و ثبت نسخه'}</button>
-   <button className="secondary-button" onClick={runSensitivity} disabled={method==='BWM'&&experts.some(e=>e.bestIndex===e.worstIndex)}>{en?'Run rank sensitivity':'اجرای تحلیل حساسیت رتبه‌ها'}</button>
+   <button className="secondary-button" onClick={runSensitivity} disabled={!scoresReady||criteria.length<2||alternatives.length<2||(method==='BWM'&&experts.some(e=>e.bestIndex===e.worstIndex))}>{en?'Run rank sensitivity':'اجرای تحلیل حساسیت رتبه‌ها'}</button>
   </div>
   {sensitivity&&<div data-testid="ranking-sensitivity-results" style={{marginTop:14,padding:12,border:'1px solid var(--line)',borderRadius:10}}>
    <b>{en?'Rank sensitivity summary':'خلاصه تحلیل حساسیت رتبه‌ها'}</b>
