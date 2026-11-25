@@ -88,7 +88,7 @@ const COMFAR_REFERENCE_PROJECTS: Omit<FeasibilityProject, 'createdAt' | 'updated
       equity: 16401129.53, longTermDebt: 8909484.06, shortTermDebt: 0, totalFunding: 25310613.59,
       firstOperatingYear: 1405, referenceYear: 1408, lastOperatingYear: 1419,
       firstYearRevenue: 43581720, referenceRevenue: 62259600, lastYearRevenue: 62259600,
-      firstYearFactoryCost: 30130083.97, referenceFactoryCost: 42604224.43, lastYearFactoryCost: 42604224.43,
+      firstYearFactoryCost: 30130083.97, referenceFactoryCost: 42661975.08, lastYearFactoryCost: 42604224.43,
       taxPercent: 25, investmentNpvRate: 25, investmentNpv: 31399764.27, investmentIrr: 48.31, investmentMirr: 28.03,
       equityNpvRate: 30, equityNpv: 23579675.01, equityIrr: 57.99, equityMirr: 30.90, valuationDate: '12/1404'
     }
