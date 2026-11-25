@@ -109,13 +109,24 @@ try {
   await rankingPage.getByRole('heading', { name: 'پروژه آزمون IndexedDB · ranking workspace' }).waitFor()
   await advancedCategory.click()
   await rankingPage.getByRole('heading', { name: 'Advanced multi-criteria methods' }).waitFor()
-  for (const methodName of ['AHP', 'BWM', 'TOPSIS', 'AHP + TOPSIS']) {
+  const advancedMethods = ['TOPSIS', 'AHP + TOPSIS', 'BWM + TOPSIS', 'TOPSIS + (AHP + BWM)']
+  const methodButtons = rankingPage.locator('.ranking-method-tabs button')
+  assert.equal(await methodButtons.count(), 4, 'advanced ranking must expose exactly four methods')
+  assert.deepEqual(await methodButtons.allTextContents().then(items => items.map(x => x.replace(/Selected|Open/g, '').trim())), advancedMethods,
+    'advanced ranking methods must match the four supported TOPSIS-based choices')
+  for (const methodName of advancedMethods) {
     await rankingPage.getByRole('button', { name: methodName, exact: true }).click()
-    if (methodName === 'AHP') await rankingPage.getByText('Saaty 1–9 scale; reciprocal entries are automatic.').waitFor()
-    if (methodName === 'BWM') await rankingPage.getByText('Best criterion').waitFor()
     if (methodName === 'TOPSIS') await rankingPage.getByText('Manual criterion weights').waitFor()
-    if (methodName === 'AHP + TOPSIS') await rankingPage.getByText('Alternative performance matrix').waitFor()
+    if (methodName === 'AHP + TOPSIS') await rankingPage.getByText('Saaty 1–9 scale; reciprocal entries are automatic.').waitFor()
+    if (methodName === 'BWM + TOPSIS') await rankingPage.getByText('Best criterion').waitFor()
+    if (methodName === 'TOPSIS + (AHP + BWM)') {
+      await rankingPage.getByText('Hybrid weight contribution').waitFor()
+      await rankingPage.getByLabel('AHP contribution percentage').waitFor()
+      await rankingPage.getByLabel('BWM contribution percentage').waitFor()
+    }
   }
+  assert.equal(await rankingPage.getByRole('button', { name: 'AHP + BWM', exact: true }).count(), 0,
+    'standalone AHP + BWM weighting mode must not be offered')
   await rankingPage.getByRole('button', { name: 'Calculate and save version' }).click()
   await rankingPage.getByText('Calculation version saved').waitFor()
   await rankingPage.getByText('Calculation history (1)').waitFor()
@@ -128,7 +139,7 @@ try {
   await rankingPage.getByText('Calculation history (1)').waitFor()
   assert.deepEqual(rankingErrors, [], 'ranking method selection and storage must not produce browser runtime errors')
   await rankingPage.close()
-  console.log('PASS: MOD-10 initial/advanced categories, WSM/AHP/BWM/TOPSIS/AHP+TOPSIS interaction, Persian/English labels and persisted ranking data')
+  console.log('PASS: MOD-10 initial/advanced categories, exactly four TOPSIS-based methods, adjustable AHP/BWM hybrid shares, Persian/English labels and persisted ranking data')
 
   const firstModuleCard = page.locator('.module-launcher-card').filter({ hasText: 'MOD-01' })
   await firstModuleCard.waitFor({ state: 'visible' })
