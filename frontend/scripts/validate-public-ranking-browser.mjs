@@ -439,6 +439,23 @@ try {
   assert.equal(await page.locator('.module-workspace-page').getByRole('button', { name: /^(ادامه بده|ادامه|Continue|Continue now)$/i }).count(), 0,
     'obsolete bottom continue action must remain absent after recovery')
 
+  await page.getByRole('navigation').getByRole('button', { name: 'پیشخوان' }).click()
+  await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
+  const rankingAssessment = page.locator('.module-capabilities-disclosure')
+  await rankingAssessment.waitFor({ state: 'visible' })
+  const rankingAssessmentSummary = rankingAssessment.locator('summary')
+  assert.equal(await rankingAssessment.evaluate(element => element.open), false,
+    'MOD-10 comparative assessment and market position must start collapsed')
+  assert.equal(await rankingAssessmentSummary.innerText(), 'ارزیابی تطبیقی و جایگاه بازار ماژول رتبه بندی',
+    'MOD-10 collapsible assessment must show the requested title')
+  await rankingAssessmentSummary.click()
+  assert.equal(await rankingAssessment.evaluate(element => element.open), true,
+    'MOD-10 comparative assessment and market position must expand')
+  await page.getByRole('heading', { name: 'ارزیابی تطبیقی و جایگاه بازار ماژول رتبه بندی' }).waitFor()
+  await rankingAssessmentSummary.click()
+  assert.equal(await rankingAssessment.evaluate(element => element.open), false,
+    'MOD-10 comparative assessment and market position must collapse again')
+
   await page.getByRole('navigation').getByRole('button', { name: 'پروژه‌ها' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های امکان‌سنجی' }).waitFor()
   await page.getByRole('button', { name: 'پروژه جدید' }).click()
@@ -449,7 +466,7 @@ try {
   await feasibilityProjectCard.waitFor({ state: 'visible' })
   assert.equal(await feasibilityProjectCard.evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(244, 237, 223)',
     'feasibility project cards must use the pale beige background')
-  console.log('PASS: live public PWA project-card beige styling, module tabs and workspace persistence, no bottom continue action, MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
+  console.log('PASS: live public PWA project-card beige styling, MOD-10 collapsible assessment and workspace persistence, no bottom continue action, MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
 } finally {
   await browser.close()
 }
