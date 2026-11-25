@@ -376,6 +376,17 @@ test('MOD-05 evidence attachments are encrypted at rest and require the original
  assert.equal(encrypted[0].ciphertext.includes('aGVsbG8='),false)
  assert.equal(await decryptEnergyEvidenceAttachment(encrypted[0],'correct horse battery'),'data:text/plain;base64,aGVsbG8=')
  await assert.rejects(()=>decryptEnergyEvidenceAttachment(encrypted[0],'wrong passphrase'),/گذرواژه نادرست/)
+ const baseline={id:'BASE-VAULT',resource:'electricity',period:'2026-01',site:'Plant A',seu:'Furnace',consumption:1000,production:100,intensity:10}
+ const actual=validateEnergyRecord({resource:'electricity',period:'2026-02',site:'Plant A',seu:'Furnace',meterId:'EM-101',consumption:900,production:100,cost:50,dataQuality:'measured'});actual.id='ROW-VAULT'
+ const input={resource:'electricity',baselineId:'BASE-VAULT',actualRecordIds:['ROW-VAULT'],method:'Vault test',verifier:'Reviewer',measurementBoundary:'Plant A / Furnace',boundaryConfirmed:true,adjustmentNotes:'No adjustments',evidenceReferences:'Meter log',baselineUncertaintyPct:1,actualUncertaintyPct:1,modelUncertaintyPct:0,coverageFactor:2,evidenceAttachments:original}
+ const memory=new Map(),store={update:async(key,fn)=>{const value=fn(memory.get(key));memory.set(key,value);return value}}
+ const {saveEnergyMvEvidencePack,ENERGY_MV_EVIDENCE_KEY}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const saved=await saveEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[]},store,'2026-11-25T12:00:00.000Z',{passphrase:'correct horse battery'})
+ const stored=memory.get(ENERGY_MV_EVIDENCE_KEY)[0].evidenceAttachments[0]
+ assert.equal(saved.documentSecurity.encryptedAtRest,true)
+ assert.equal(stored.encrypted,true)
+ assert.equal(Object.hasOwn(stored,'dataUrl'),false)
+ assert.equal(await decryptEnergyEvidenceAttachment(stored,'correct horse battery'),'data:text/plain;base64,aGVsbG8=')
 })
 
 test('MOD-05 M&V uncertainty interval does not support a savings claim when the difference is within expanded uncertainty',async()=>{
