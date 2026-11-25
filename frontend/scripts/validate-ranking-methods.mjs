@@ -64,3 +64,17 @@ test('AHP + TOPSIS can use AHP priorities as normalized TOPSIS weights',()=>{
  assert.equal(ranked.results.length,3);
  assert.equal(ranked.results[0].rank,1);
 });
+
+import {analyzeRankingSensitivity} from '../src/features/ranking/rankingMethods.ts';
+test('ranking sensitivity compares weight perturbations and optimistic/pessimistic scenarios',()=>{
+ const scores=[[90,3],[70,6],[80,5]], weights=[0.6,0.4], directions=['benefit','cost'];
+ const result=analyzeRankingSensitivity(scores,weights,directions,[{label:'expert judgment shift',weights:[0.4,0.6]}],0.2);
+ assert.equal(result.baseline.results.length,3);
+ assert.ok(result.scenarios.some(s=>s.kind==='weight'));
+ assert.ok(result.scenarios.some(s=>s.kind==='expert'));
+ assert.ok(result.scenarios.some(s=>s.kind==='optimistic'));
+ assert.ok(result.scenarios.some(s=>s.kind==='pessimistic'));
+ assert.equal(result.summary.length,3);
+ assert.ok(result.summary.every(s=>s.averageRank>=1&&s.worstRank>=s.bestRank&&s.topFrequency>=0&&s.topFrequency<=1));
+ assert.ok(result.summary.reduce((sum,s)=>sum+s.topFrequency,0)>0);
+});
