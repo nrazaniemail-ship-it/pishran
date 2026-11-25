@@ -273,20 +273,20 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
         </div>
       </div>
       <h3 style={{ margin: '8px 0 12px' }}>{isEn ? 'Methods' : 'روش‌های انجام'}</h3>
-      <div role="group" aria-label={isEn ? 'Method categories' : 'دسته‌بندی روش‌ها'} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" data-testid="ranking-category-initial" className={category === 'INITIAL' ? 'primary' : 'secondary'} aria-pressed={category === 'INITIAL'} onClick={() => setCategory('INITIAL')}>
-          {isEn ? 'Initial methods' : 'روش‌های اولیه'}
+      <div role="group" aria-label={isEn ? 'Method categories' : 'دسته‌بندی روش‌ها'} className="ranking-category-tabs">
+        <button type="button" data-testid="ranking-category-initial" data-category="initial" className={`ranking-category-tab ranking-category-tab--initial ${category === 'INITIAL' ? 'is-active' : ''}`} aria-pressed={category === 'INITIAL'} onClick={() => setCategory('INITIAL')}>
+          <span className="ranking-category-tab__index">01</span><span>{isEn ? 'Initial methods' : 'روش‌های اولیه'}</span><span className="ranking-category-tab__hint">{isEn ? 'Core' : 'پایه'}</span>
         </button>
-        <button type="button" data-testid="ranking-category-advanced" className={category === 'ADVANCED' ? 'primary' : 'secondary'} aria-pressed={category === 'ADVANCED'} onClick={() => setCategory('ADVANCED')}>
-          {isEn ? 'Advanced methods' : 'روش‌های پیشرفته'}
+        <button type="button" data-testid="ranking-category-advanced" data-category="advanced" className={`ranking-category-tab ranking-category-tab--advanced ${category === 'ADVANCED' ? 'is-active' : ''}`} aria-pressed={category === 'ADVANCED'} onClick={() => setCategory('ADVANCED')}>
+          <span className="ranking-category-tab__index">02</span><span>{isEn ? 'Advanced methods' : 'روش‌های پیشرفته'}</span><span className="ranking-category-tab__hint">{isEn ? 'Pro' : 'تخصصی'}</span>
         </button>
       </div>
       {category === 'INITIAL'
-        ? <div data-testid="ranking-initial-method" style={{ marginTop: 14 }}>
+        ? <div data-testid="ranking-initial-method" className="ranking-method-intro ranking-method-intro--initial">
             <h3>{isEn ? 'WSM · Weighted Sum Model' : 'WSM · مجموع وزنی (روش اولیه)'}</h3>
             <p className="muted">{isEn ? 'A straightforward starting point for scoring and comparing alternatives.' : 'روش پایه برای تعریف معیارها، وزن‌دهی و مقایسه امتیازی گزینه‌ها.'}</p>
           </div>
-        : <div data-testid="ranking-advanced-methods" style={{ marginTop: 14 }}>
+        : <div data-testid="ranking-advanced-methods" className="ranking-method-intro ranking-method-intro--advanced">
             <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
           </div>}
     </section>
