@@ -37,7 +37,7 @@ try {
   await page.getByRole('button', { name: 'ارسال' }).click()
   await page.getByText(/نوع تصمیم برایم روشن نشد/).waitFor()
   await page.getByRole('button', { name: 'انتخاب سرمایه‌گذاری' }).click()
-  await answer.fill('طرح الف\nطرح ب')
+  await answer.fill('طرح الف، طرح ب')
   await page.getByRole('button', { name: 'ارسال' }).click()
   await page.getByRole('button', { name: 'داده عددی' }).click()
   await page.getByRole('button', { name: 'وزن‌ها مشخص است' }).click()
