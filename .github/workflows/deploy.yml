@@ -62,4 +62,4 @@ jobs:
           curl --fail --silent --show-error --location --retry 12 --retry-delay 10 --retry-all-errors "$PAGE_URL" -o /tmp/pishran-index.html
           grep -q '<div id="root"></div>' /tmp/pishran-index.html
           curl --fail --silent --show-error --location "${PAGE_URL%/}/manifest.webmanifest" -o /tmp/pishran-manifest.json
-          node -e "const m=require('/tmp/pishran-manifest.json'); if(m.start_url!=='/pishran/'||m.scope!=='/pishran/') process.exit(1)"
+          node -e "const fs=require('node:fs'); const m=JSON.parse(fs.readFileSync('/tmp/pishran-manifest.json','utf8')); if(m.start_url!=='/pishran/'||m.scope!=='/pishran/') process.exit(1)"
