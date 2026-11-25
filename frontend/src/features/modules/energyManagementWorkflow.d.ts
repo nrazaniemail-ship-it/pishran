@@ -49,7 +49,7 @@ export const ENERGY_TARIFF_CONTRACTS_KEY:string
 export const ENERGY_TARIFF_CALCULATIONS_KEY:string
 export type EnergyTariffTier={upperLimit:number|null;rate:number;order?:number}
 export type EnergyTariffContractInput={id?:string;resource:EnergyResource;site:string;supplier:string;contractNumber:string;currency:string;effectiveFrom:string;effectiveTo?:string;unit?:string;energyRate?:string|number|null;fixedCharge?:string|number;demandRate?:string|number;reactiveRate?:string|number;taxPercent?:string|number;tiers?:EnergyTariffTier[];tiersText?:string;notes?:string}
-export type EnergyTariffContract=ReturnType<typeof validateEnergyTariffContract>&{id:string;createdAt:string;updatedAt:string;history:any[]}
+export type EnergyTariffContract={id:string;resource:EnergyResource;site:string;supplier:string;contractNumber:string;currency:string;effectiveFrom:string;effectiveTo:string|null;unit:string;energyRate:number|null;fixedCharge:number;demandRate:number;reactiveRate:number;taxPercent:number;tiers:EnergyTariffTier[];notes:string;createdAt:string;updatedAt:string;history:any[]}
 export function parseEnergyTariffTiers(text:string):EnergyTariffTier[]
 export function validateEnergyTariffContract(input:EnergyTariffContractInput,asOf?:string):Omit<EnergyTariffContract,'id'|'createdAt'|'updatedAt'|'history'>
 export function saveEnergyTariffContract(input:EnergyTariffContractInput,store:EnergyStore,createdAt?:string):Promise<EnergyTariffContract>
