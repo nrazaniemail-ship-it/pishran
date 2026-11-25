@@ -58,7 +58,7 @@ export default function ModuleKpiPanel({ language='fa' }: { language?:Language }
       <article><small>{en?'Variance':'انحراف'}</small><b>{fmt(report.variance)} {report.unit}</b></article>
       <article><small>{en?'Variance (%)':'انحراف درصدی'}</small><b>{fmt(report.variancePercent)}٪</b></article>
       <article><small>{en?'Assessment':'ارزیابی'}</small><b>{statusLabel(report.status)}</b></article>
-    </div><small>{en?'Period: ':'دوره: '}{report.period} · {new Date(report.createdAt).toLocaleString(en?'en-US':'fa-IR')}</small><button type="button" className="primary report-continue-button" onClick={()=>document.getElementById('kpi-report-history')?.scrollIntoView({behavior:'smooth',block:'start'})}>{en?'Continue':'ادامه بده'}</button></section>}
-    <section id="kpi-report-history" className="module-analysis-history"><h3>{en?'Recent KPI reports':'گزارش‌های اخیر شاخص'}</h3>{history.length?history.slice(0,8).map(item=><button type="button" key={item.id} onClick={()=>setReport(item)}><span>{item.name} · {item.period}</span><b>{fmt(item.variancePercent)}٪ · {statusLabel(item.status)}</b></button>):<p>{en?'No KPI report saved yet.':'هنوز گزارشی ثبت نشده است.'}</p>}</section>
+    </div><small>{en?'Period: ':'دوره: '}{report.period} · {new Date(report.createdAt).toLocaleString(en?'en-US':'fa-IR')}</small></section>}
+    <section className="module-analysis-history"><h3>{en?'Recent KPI reports':'گزارش‌های اخیر شاخص'}</h3>{history.length?history.slice(0,8).map(item=><button type="button" key={item.id} onClick={()=>setReport(item)}><span>{item.name} · {item.period}</span><b>{fmt(item.variancePercent)}٪ · {statusLabel(item.status)}</b></button>):<p>{en?'No KPI report saved yet.':'هنوز گزارشی ثبت نشده است.'}</p>}</section>
   </section>
 }
