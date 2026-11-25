@@ -106,7 +106,8 @@ try {
     const matches = item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId)
     return Boolean(indexedDbProjects?.some(matches) && fallbackProjects?.some(matches))
   }, { key: 'mod10-ranking-projects:v1', expectedName: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', moduleId: undefined }, { timeout: 10000 })
-  await page.waitForFunction(expected => Array.from(document.querySelectorAll('.ranking-project-export-root .module-export-actions')).some(element => element.getAttribute('data-export-module-title') === expected), 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
+  await page.getByRole('heading', { name: /پروژه آزمایش رتبه‌بندی ویرایش‌شده/ }).waitFor()
+  await activeExportRoot(page).waitFor({ state: 'visible' })
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
@@ -602,6 +603,32 @@ try {
 
   await page.getByRole('navigation').getByRole('button', { name: 'پروژه‌ها' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های امکان‌سنجی' }).waitFor()
+  const publicComfarProjects = [
+    { title:'خط نورد گرم کلاف ۲۰۰ هزار تن', capexName:'خرید زمین', capexAmount:'2015000', opexName:'مواد خام', opexAmount:'40901015.18' },
+    { title:'خط نورد گرم ورق تخت ۲۵۰ هزار تن', capexName:'خرید زمین', capexAmount:'1000000', opexName:'مواد خام', opexAmount:'38162283.5' },
+    { title:'خط نورد سرد کلاف ۲۰۰ هزار تن', capexName:'خرید زمین', capexAmount:'2015000', opexName:'مواد خام', opexAmount:'63058700' },
+    { title:'فولادسازی ۱٫۲ میلیون و احیای مستقیم هات‌لینک ۱٫۷۶ میلیون تن', capexName:'محوطه‌سازی و بهبود زمین', capexAmount:'2456550', opexName:'مواد خام', opexAmount:'537485060' },
+  ]
+  assert.equal(await page.locator('.project-card').count(), 4, 'public PWA must expose the four imported COMFAR feasibility projects')
+  for (const item of publicComfarProjects) {
+    const card = page.locator('.project-card').filter({ hasText: item.title })
+    await card.waitFor({ state: 'visible' })
+    await card.click()
+    await page.locator('.feasibility-project-export-root').waitFor({ state: 'visible' })
+    await page.getByRole('button', { name: 'هزینه‌های دوره ساخت' }).click()
+    const capexTitles = await page.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
+    const capexIndex = capexTitles.indexOf(item.capexName)
+    assert.notEqual(capexIndex, -1, `${item.title} public CAPEX form must contain its report asset category`)
+    assert.equal(await page.locator('.fw-row').nth(capexIndex).getByLabel('قیمت واحد').inputValue(), item.capexAmount)
+    await page.getByRole('button', { name: 'هزینه‌های دوره بهره‌برداری' }).click()
+    const opexTitles = await page.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
+    const opexIndex = opexTitles.indexOf(item.opexName)
+    assert.notEqual(opexIndex, -1, `${item.title} public OPEX form must contain the report raw-material cost`)
+    assert.equal(await page.locator('.fw-row').nth(opexIndex).getByLabel('مقدار').inputValue(), item.opexAmount)
+    await page.getByRole('navigation').getByRole('button', { name: 'پروژه‌ها' }).click()
+    await page.getByRole('heading', { name: 'پروژه‌های امکان‌سنجی' }).waitFor()
+  }
+  console.log('PASS: public PWA displays source-derived CAPEX and OPEX forms for all four COMFAR projects')
   await page.getByRole('button', { name: 'پروژه جدید' }).click()
   await page.getByLabel('نوع پروژه').selectOption('نورد ورق گرم- تولید کلاف')
   await page.getByLabel('نام پروژه').fill('پروژه آزمون رنگ کارت')
