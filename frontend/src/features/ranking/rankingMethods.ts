@@ -129,7 +129,8 @@ export type RankingSensitivityOptions={trials?:number;seed?:number;expertWeightV
 function seededRandom(seed:number){let state=seed>>>0;return()=>{state=(state+0x6D2B79F5)>>>0;let t=state;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
 function percentile(values:number[],p:number){const sorted=[...values].sort((a,b)=>a-b);const index=(sorted.length-1)*p;const lo=Math.floor(index),hi=Math.ceil(index);return sorted[lo]+(sorted[hi]-sorted[lo])*(index-lo);}
 function rankVector(result:ReturnType<typeof topsis>,count:number){const ranks=Array(count).fill(0);result.results.forEach(r=>ranks[r.alternativeIndex]=r.rank);return ranks;}
-function spearman(a:number[],b:number[]){const n=a.length;if(n<2)return 1;const mean=(n+1)/2;let numerator=0,da=0,db=0;for(let i=0;i<n;i++){const x=a[i]-mean,y=b[i]-mean;numerator+=x*y;da+=x*x;db+=y*y;}return da===0||db===0?1:numerator/Math.sqrt(da*db);}
+function averageRanks(values:number[]){const order=values.map((value,index)=>({value,index})).sort((a,b)=>a.value-b.value);const ranks=Array(values.length).fill(0);for(let i=0;i<order.length;){let j=i+1;while(j<order.length&&order[j].value===order[i].value)j++;const average=(i+1+j)/2;for(let k=i;k<j;k++)ranks[order[k].index]=average;i=j;}return ranks;}
+function spearman(a:number[],b:number[]){const n=a.length;if(n<2)return 1;const ra=averageRanks(a),rb=averageRanks(b);const ma=ra.reduce((x,y)=>x+y,0)/n,mb=rb.reduce((x,y)=>x+y,0)/n;let numerator=0,da=0,db=0;for(let i=0;i<n;i++){const x=ra[i]-ma,y=rb[i]-mb;numerator+=x*y;da+=x*x;db+=y*y;}return da===0||db===0?1:numerator/Math.sqrt(da*db);}
 function summarizeExpertAgreement(vectors:number[][]):RankingSensitivityResult['expertAgreement']{
  if(vectors.length===0)return undefined;
  const n=vectors[0].length;
@@ -169,8 +170,11 @@ export function analyzeRankingSensitivity(
  const pessimistic=scores.map(row=>row.map((v,j)=>{const range=maxima[j]-minima[j];if(range===0)return v;const position=(v-minima[j])/range;return Math.max(0,directions[j]==='benefit'?v-shock*range*position:v+shock*range*(1-position));}));
  run('optimistic performance envelope','optimistic',optimistic,weights);
  run('pessimistic performance envelope','pessimistic',pessimistic,weights);
- const trials=Math.max(50,Math.min(5000,Math.floor(options.trials??500)));
- const seed=Math.floor(options.seed??20261125);
+ const requestedTrials=options.trials??500;const requestedSeed=options.seed??20261125;
+ assert(Number.isFinite(requestedTrials)&&requestedTrials>=1,'Monte Carlo trial count must be a finite positive number');
+ assert(Number.isFinite(requestedSeed),'Monte Carlo seed must be finite');
+ const trials=Math.max(50,Math.min(5000,Math.floor(requestedTrials)));
+ const seed=Math.floor(requestedSeed);
  const random=seededRandom(seed);
  const ranksByAlternative=Array.from({length:scores.length},()=>[] as number[]);
  const scoresByAlternative=Array.from({length:scores.length},()=>[] as number[]);
