@@ -20,6 +20,7 @@ export default function ComfarReferencePanel({ baseline, language = 'fa' }: Prop
     metric('وام بلندمدت', 'Long-term loans', money(baseline.longTermDebt)),
     metric('وام کوتاه‌مدت', 'Short-term loans', money(baseline.shortTermDebt)),
     metric('کل منابع تأمین مالی گزارش', 'Total financing sources in report', money(baseline.totalFunding)),
+    metric('اختلاف کل سرمایه‌گذاری و منابع گزارش', 'Difference between total investment and reported financing', money(baseline.totalInvestment - baseline.totalFunding)),
   ]
   const operations = [
     metric('درآمد فروش', 'Sales revenue', `${number(baseline.firstYearRevenue)} / ${number(baseline.referenceRevenue)} / ${number(baseline.lastYearRevenue)} ${baseline.currency}`),
@@ -63,8 +64,8 @@ export default function ComfarReferencePanel({ baseline, language = 'fa' }: Prop
       </div>)}
     </div>
     <p className="comfar-reference-note">{t(
-      'این ارقام عیناً به‌عنوان اطلاعات مرجع گزارش ثبت شده‌اند؛ به معنی بازتولید محاسبات گزارش در مدل مالی پیشران نیستند. برای جلوگیری از ساخت فرضیات، جزئیات فنی و ریزجریان‌های سالانه‌ای که در خلاصه گزارش درج نشده‌اند باید از جداول تفصیلی همان گزارش تکمیل و تطبیق داده شوند.',
-      'These figures are stored as report reference data; they do not mean the report calculations have been reproduced in Pishran’s financial model. Detailed technical inputs and annual schedules not shown in the summary must be completed and reconciled against the detailed tables in the same report.'
+      'این ارقام عیناً به‌عنوان اطلاعات مرجع گزارش ثبت شده‌اند؛ به معنی بازتولید محاسبات گزارش در مدل مالی پیشران نیستند. برای جلوگیری از ساخت فرضیات، جزئیات فنی و ریزجریان‌های سالانه‌ای که در خلاصه گزارش درج نشده‌اند باید از جداول تفصیلی همان گزارش تکمیل و تطبیق داده شوند. این اختلاف لزوماً کسری تأمین مالی نیست؛ سرمایه در گردش در طول دوره بهره‌برداری به‌تدریج افزایش می‌یابد و باید با جریان‌های نقدی سالانه و برنامه تأمین مالی تطبیق داده شود.',
+      'These figures are stored as report reference data; they do not mean the report calculations have been reproduced in Pishran’s financial model. Detailed technical inputs and annual schedules not shown in the summary must be completed and reconciled against the detailed tables in the same report. This difference is not necessarily a financing shortfall; working capital increases over the operating period and must be reconciled against annual cash flows and the financing schedule.'
     )}</p>
   </section>
 }
