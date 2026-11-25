@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {localStore} from '../../core/storage/localStore';
-import {ahp,bwm,aggregatePairwiseMatrices,aggregateBwmExpertWeights,makeRankingSnapshot,topsis,type PairwiseMatrix,type CriterionDirection} from './rankingMethods';
+import {ahp,aggregatePairwiseMatrices,aggregateBwmExpertWeights,makeRankingSnapshot,topsis,type PairwiseMatrix,type CriterionDirection} from './rankingMethods';
 type Props={language:'fa'|'en'};
 type Method='AHP'|'BWM'|'TOPSIS'|'AHP+TOPSIS';
 type Expert={name:string,matrix:PairwiseMatrix,bestIndex:number,worstIndex:number,bestToOthers:number[],othersToWorst:number[]};
