@@ -899,11 +899,12 @@ export default function App() {
         {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div className="module-workspace-item-main">{editingWorkspaceId === item.id ? <form className="module-workspace-edit-form" onSubmit={event => { event.preventDefault(); void saveModuleWorkspaceEdit(item.id) }}><input aria-label={isEn ? 'Project name' : 'نام پروژه'} value={editingWorkspaceName} onChange={event => setEditingWorkspaceName(event.target.value)} maxLength={100} autoFocus/><button type="submit" className="icon-button" title={isEn ? 'Save changes' : 'ذخیره ویرایش'} aria-label={isEn ? 'Save changes' : 'ذخیره ویرایش'} disabled={!editingWorkspaceName.trim()}><Check size={17}/></button><button type="button" className="icon-button" title={isEn ? 'Cancel editing' : 'لغو ویرایش'} aria-label={isEn ? 'Cancel editing' : 'لغو ویرایش'} onClick={() => { setEditingWorkspaceId(null); setEditingWorkspaceName('') }}><X size={17}/></button></form> : <><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></>}</div><div className="module-workspace-item-actions">{editingWorkspaceId !== item.id && <button type="button" className="icon-button" title={isEn ? 'Edit project' : 'ویرایش پروژه'} aria-label={isEn ? `Edit ${item.name}` : `ویرایش ${item.name}`} onClick={() => beginEditModuleWorkspace(item)}><Pencil size={16}/></button>}<button type="button" className="icon-button" title={isEn ? 'Delete project' : 'حذف پروژه'} aria-label={isEn ? `Delete ${item.name}` : `حذف ${item.name}`} onClick={() => void deleteModuleWorkspace(item.id)}><Trash2 size={16}/></button><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></div></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پروژه‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پروژه، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
       </section>}
 
-      <section className="module-capabilities-card" aria-labelledby="module-capabilities-title">
+      <details className="module-capabilities-card module-capabilities-disclosure">
+        <summary className="module-capabilities-summary">{isEn ? 'Comparative assessment & market position — Ranking module' : 'ارزیابی تطبیقی و جایگاه بازار ماژول رتبه بندی'}</summary>
+        <div className="module-capabilities-body">
         <div className="module-capabilities-heading">
           <span className="module-capabilities-eyebrow">{activeModule.id} · {isEn ? 'MARKET POSITION & BENCHMARKING' : 'ارزیابی تطبیقی و جایگاه بازار'}</span>
-          <h2 id="module-capabilities-title">{isEn ? <>Capabilities & Differentiators of “{activeModule.enTitle}”</> : <>قابلیت‌ها و وجه تمایز ماژول «{activeModule.title}»</>}</h2>
-          <p>{isEn ? 'Evaluation dimensions, market reference solutions and the practices selected for Pishran. Listed products are reference examples, not a claim of identical scope.' : 'معیارهای ارزیابی، نمونه‌های بازار برای مقایسه و الگوهایی که در طراحی پیشران قابل اقتباس‌اند. نام محصولات، نمونه مرجع بازار است و به‌معنای یکسان‌بودن دامنه آن‌ها نیست.'}</p>
+          <h2 id="module-capabilities-title">{isEn ? 'Comparative assessment & market position — Ranking module' : 'ارزیابی تطبیقی و جایگاه بازار ماژول رتبه بندی'}</h2>
         </div>
         {(() => { const profile = moduleCapabilityProfiles[activeModule.id]; const assessment = isEn ? profile.assessmentEn : profile.assessment; const benchmarks = isEn ? profile.benchmarksEn : profile.benchmarks; const learning = isEn ? profile.learningEn : profile.learning; return <>
           <div className="module-capabilities-tabs" role="tablist" aria-label={isEn ? 'Module evaluation sections' : 'بخش‌های ارزیابی ماژول'}>
@@ -917,7 +918,8 @@ export default function App() {
             <article className="module-capability-column"><h3>{isEn ? 'Benchmarking & adopted practices' : 'الگوبرداری و رویه‌های منتخب'}</h3><ul>{learning.map((item,index)=><li key={index}>{item}</li>)}</ul></article>
           </div>}
         </> })()}
-      </section>
+        </div>
+      </details>
     </section>}
 
 
