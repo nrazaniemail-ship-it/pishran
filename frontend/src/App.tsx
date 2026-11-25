@@ -261,6 +261,31 @@ function RankingPanel({ language }: { language: 'fa' | 'en' }) {
   </section>
 }
 
+function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
+  const isEn = language === 'en'
+  const [method, setMethod] = useState<'WSM' | 'ADVANCED'>('WSM')
+  return <div className="ranking-methods-workspace">
+    <section className="module-workspace-card" aria-labelledby="ranking-methods-heading">
+      <div className="section-head">
+        <div>
+          <h2 id="ranking-methods-heading">{isEn ? 'Multi-criteria weighting & ranking' : 'وزن‌دهی و رتبه‌بندی چندمعیاره'}</h2>
+          <p>{isEn ? 'Choose the decision method that fits your weighting and ranking workflow.' : 'متناسب با مسئله تصمیم، روش وزن‌دهی معیارها و رتبه‌بندی گزینه‌ها را انتخاب کنید.'}</p>
+        </div>
+      </div>
+      <h3 style={{ margin: '8px 0 12px' }}>{isEn ? 'Available methods' : 'روش‌های انجام'}</h3>
+      <div role="group" aria-label={isEn ? 'Ranking methods' : 'روش‌های رتبه‌بندی'} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" className={method === 'WSM' ? 'primary' : 'secondary'} aria-pressed={method === 'WSM'} onClick={() => setMethod('WSM')}>
+          {isEn ? 'WSM · Decision ranking workspace (MVP)' : 'WSM · محیط رتبه‌بندی تصمیم (نسخه اولیه)'}
+        </button>
+        <button type="button" className={method === 'ADVANCED' ? 'primary' : 'secondary'} aria-pressed={method === 'ADVANCED'} onClick={() => setMethod('ADVANCED')}>
+          {isEn ? 'AHP · BWM · TOPSIS · AHP + TOPSIS' : 'AHP · BWM · TOPSIS · ترکیب AHP + TOPSIS'}
+        </button>
+      </div>
+    </section>
+    {method === 'WSM' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language}/>}
+  </div>
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
@@ -538,7 +563,7 @@ export default function App() {
       {activeModule.id === 'MOD-04' && <ModuleKpiPanel language={settings.language}/>}
       {activeModule.id === 'MOD-05' && <ModuleEnergyPanel language={settings.language}/>}
       {activeModule.id === 'MOD-06' && <MaintenancePanel language={settings.language}/>}
-      {activeModule.id === 'MOD-10' && <><RankingPanel language={settings.language}/><RankingMethodsPanel language={settings.language}/></>}
+      {activeModule.id === 'MOD-10' && <RankingMethodChooser language={settings.language}/ >}
       <section className="module-workspace-card"><div className="section-head"><div><h2>{isEn ? 'Module workspaces' : 'پروژه‌های این ماژول'}</h2><p>{isEn ? 'Create and manage workspaces dedicated to this module.' : 'برای ثبت پروژه‌ها، تحلیل‌ها و اطلاعات اختصاصی این ماژول پروژه ایجاد کنید.'}</p></div><span className="muted">{activeModuleWorkspaces.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
         <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createModuleWorkspace() }}><label htmlFor="module-workspace-name">{isEn ? 'New module workspace name' : 'نام پروژه جدید ماژول'}</label><div><input id="module-workspace-name" value={moduleWorkspaceName} onChange={event => setModuleWorkspaceName(event.target.value)} placeholder={isEn ? 'Enter a name' : 'نام پروژه را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!moduleWorkspaceName.trim()}><Plus size={17}/>{isEn ? 'Create' : 'ایجاد پروژه'}</button></div></form>
         {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div className="module-workspace-item-main">{editingWorkspaceId === item.id ? <form className="module-workspace-edit-form" onSubmit={event => { event.preventDefault(); void saveModuleWorkspaceEdit(item.id) }}><input aria-label={isEn ? 'Project name' : 'نام پروژه'} value={editingWorkspaceName} onChange={event => setEditingWorkspaceName(event.target.value)} maxLength={100} autoFocus/><button type="submit" className="icon-button" title={isEn ? 'Save changes' : 'ذخیره ویرایش'} aria-label={isEn ? 'Save changes' : 'ذخیره ویرایش'} disabled={!editingWorkspaceName.trim()}><Check size={17}/></button><button type="button" className="icon-button" title={isEn ? 'Cancel editing' : 'لغو ویرایش'} aria-label={isEn ? 'Cancel editing' : 'لغو ویرایش'} onClick={() => { setEditingWorkspaceId(null); setEditingWorkspaceName('') }}><X size={17}/></button></form> : <><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></>}</div><div className="module-workspace-item-actions">{editingWorkspaceId !== item.id && <button type="button" className="icon-button" title={isEn ? 'Edit project' : 'ویرایش پروژه'} aria-label={isEn ? `Edit ${item.name}` : `ویرایش ${item.name}`} onClick={() => beginEditModuleWorkspace(item)}><Pencil size={16}/></button>}<button type="button" className="icon-button" title={isEn ? 'Delete project' : 'حذف پروژه'} aria-label={isEn ? `Delete ${item.name}` : `حذف ${item.name}`} onClick={() => void deleteModuleWorkspace(item.id)}><Trash2 size={16}/></button><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></div></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پروژه‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پروژه، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
