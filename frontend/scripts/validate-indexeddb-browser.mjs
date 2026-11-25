@@ -104,7 +104,7 @@ try {
   assert.equal(await rankingPage.getByLabel('امتیاز هزینه برای گزینه الف').inputValue(), '80',
     'WSM draft and scores must persist after a public-app reload')
   await rankingPage.getByRole('button', { name: 'Switch to English' }).click()
-  await rankingPage.getByRole('heading', { name: 'Multi-criteria weighting & ranking' }).waitFor()
+  await rankingPage.getByRole('heading', { name: 'Ranking methods' }).waitFor()
   await rankingPage.getByRole('button', { name: 'Initial methods' }).waitFor()
   await rankingPage.getByRole('heading', { name: 'پروژه آزمون IndexedDB · ranking workspace' }).waitFor()
   await advancedCategory.click()
