@@ -284,11 +284,14 @@ test('MOD-05 M&V evidence pack requires measured same-boundary records and expos
  const actual=validateEnergyRecord({resource:'electricity',period:'2026-02',site:'Plant A',seu:'Furnace',meterId:'EM-101',consumption:900,production:100,cost:50,dataQuality:'measured'})
  actual.id='ROW-1'
  const calibration={id:'CAL-1',meterId:'EM-101',site:'Plant A',nextCalibrationDate:'2027-01-01'}
- const input={resource:'electricity',baselineId:'BASE-1',actualRecordIds:['ROW-1'],method:'Production-normalized baseline comparison',verifier:'Energy reviewer',measurementBoundary:'Plant A / Furnace main feeder',boundaryConfirmed:true,adjustmentNotes:'No material production or operating-boundary changes declared; review supporting logs.',evidenceReferences:'Meter log ML-02; production report PR-02; calibration certificate CAL-2026-101'}
+ const input={resource:'electricity',baselineId:'BASE-1',actualRecordIds:['ROW-1'],method:'Production-normalized baseline comparison',verifier:'Energy reviewer',measurementBoundary:'Plant A / Furnace main feeder',boundaryConfirmed:true,adjustmentNotes:'No material production or operating-boundary changes declared; review supporting logs.',evidenceReferences:'Meter log ML-02; production report PR-02; calibration certificate CAL-2026-101',baselineUncertaintyPct:'0.5',actualUncertaintyPct:'0.5',modelUncertaintyPct:'0.2',coverageFactor:'2',evidenceAttachments:[{name:'meter-log.pdf',mimeType:'application/pdf',size:4,lastModified:1,dataUrl:'data:application/pdf;base64,JVBERi0='}]}
  const pack=buildEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[calibration]},'2026-11-25T12:00:00.000Z')
  assert.equal(pack.normalizedBaseline,1000)
  assert.equal(pack.actualConsumption,900)
  assert.equal(pack.calculatedVariance,100)
+ assert.ok(pack.uncertaintyBudget.expandedUncertainty>0)
+ assert.equal(pack.uncertaintyBudget.conclusion,'positive-savings-distinguishable')
+ assert.equal(pack.evidenceAttachments[0].name,'meter-log.pdf')
  assert.equal(pack.calibrationCoverage[0].status,'valid')
  assert.equal(pack.reviewStatus,'prepared-not-independent-review')
  assert.ok(pack.limitations.length>=2)
@@ -299,6 +302,49 @@ test('MOD-05 M&V evidence pack requires measured same-boundary records and expos
  const memory=new Map(),store={update:async(key,fn)=>{const next=fn(memory.get(key));memory.set(key,next);return next}}
  const saved=await saveEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[calibration]},store,'2026-11-25T12:00:00.000Z')
  assert.equal(memory.get(ENERGY_MV_EVIDENCE_KEY)[0].id,saved.id)
+})
+
+
+
+test('MOD-05 configurable electricity, gas and water tariff contracts persist, apply progressive tiers and reject invalid scope or dates',async()=>{
+ const {parseEnergyTariffTiers,saveEnergyTariffContract,calculateConfiguredEnergyTariff,saveEnergyTariffCalculation,ENERGY_TARIFF_CONTRACTS_KEY,ENERGY_TARIFF_CALCULATIONS_KEY}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const tiers=parseEnergyTariffTiers('1000:2;5000:3;*:4')
+ assert.deepEqual(tiers.map(x=>x.upperLimit),[1000,5000,null])
+ assert.throws(()=>parseEnergyTariffTiers('1000:2;500:3;*:4'),/صعودی/)
+ assert.throws(()=>parseEnergyTariffTiers('1000:2;5000:3'),/آخرین پله/)
+ const memory=new Map(),store={get:async key=>memory.get(key),update:async(key,fn)=>{const next=fn(memory.get(key));memory.set(key,next);return next}}
+ const common={site:'Plant A',supplier:'Utility Co',currency:'IRR',effectiveFrom:'2026-01-01',effectiveTo:'2026-12-31',fixedCharge:'100',demandRate:'10',reactiveRate:'1',taxPercent:'10'}
+ const electricity=await saveEnergyTariffContract({...common,resource:'electricity',contractNumber:'EL-01',tiers},store,'2026-01-01T00:00:00.000Z')
+ const gas=await saveEnergyTariffContract({...common,resource:'gas',contractNumber:'GA-01',energyRate:'5',demandRate:'0',reactiveRate:'0'},store,'2026-01-01T00:00:00.000Z')
+ const water=await saveEnergyTariffContract({...common,resource:'water',contractNumber:'WA-01',energyRate:'2',demandRate:'0',reactiveRate:'0'},store,'2026-01-01T00:00:00.000Z')
+ assert.equal(memory.get(ENERGY_TARIFF_CONTRACTS_KEY).length,3)
+ const result=calculateConfiguredEnergyTariff({contractId:electricity.id,resource:'electricity',site:'Plant A',period:'2026-03-15',quantity:6000,demand:5,reactive:20},{contracts:[electricity,gas,water]},'2026-03-15T12:00:00.000Z')
+ assert.equal(result.energyCharge,18000)
+ assert.equal(result.subtotal,18170)
+ assert.equal(result.tax,1817)
+ assert.equal(result.total,19987)
+ assert.throws(()=>calculateConfiguredEnergyTariff({contractId:electricity.id,resource:'gas',site:'Plant A',period:'2026-03-15',quantity:100},{contracts:[electricity]}),/منبع/)
+ assert.throws(()=>calculateConfiguredEnergyTariff({contractId:gas.id,resource:'gas',site:'Other',period:'2026-03-15',quantity:100},{contracts:[gas]}),/سایت/)
+ assert.throws(()=>calculateConfiguredEnergyTariff({contractId:water.id,resource:'water',site:'Plant A',period:'2027-01-01',quantity:100},{contracts:[water]}),/معتبر نیست/)
+ const gasResult=calculateConfiguredEnergyTariff({contractId:gas.id,resource:'gas',site:'Plant A',period:'2026-03-15',quantity:100},{contracts:[gas]})
+ const waterResult=calculateConfiguredEnergyTariff({contractId:water.id,resource:'water',site:'Plant A',period:'2026-03-15',quantity:100},{contracts:[water]})
+ assert.equal(gasResult.energyCharge,500)
+ assert.equal(waterResult.energyCharge,200)
+ const saved=await saveEnergyTariffCalculation({contractId:water.id,resource:'water',site:'Plant A',period:'2026-03-15',quantity:100},{contracts:[water]},store,'2026-03-15T12:00:00.000Z')
+ assert.equal(memory.get(ENERGY_TARIFF_CALCULATIONS_KEY)[0].id,saved.id)
+ const revised=await saveEnergyTariffContract({...common,resource:'electricity',contractNumber:'EL-01',tiers,energyRate:''},store,'2026-02-01T00:00:00.000Z')
+ assert.equal(revised.id,electricity.id)
+ assert.equal(revised.history.length,1)
+})
+test('MOD-05 M&V uncertainty interval does not support a savings claim when the difference is within expanded uncertainty',async()=>{
+ const {buildEnergyMvEvidencePack,validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const baseline={id:'BASE-U',resource:'electricity',period:'2026-01',site:'Plant A',seu:'Furnace',consumption:1000,production:100,intensity:10}
+ const actual=validateEnergyRecord({resource:'electricity',period:'2026-02',site:'Plant A',seu:'Furnace',meterId:'EM-101',consumption:999,production:100,cost:50,dataQuality:'measured'});actual.id='ROW-U'
+ const input={resource:'electricity',baselineId:'BASE-U',actualRecordIds:['ROW-U'],method:'Normalized comparison',verifier:'Reviewer',measurementBoundary:'Plant A / Furnace',boundaryConfirmed:true,adjustmentNotes:'No adjustments declared',evidenceReferences:'Meter log',baselineUncertaintyPct:1,actualUncertaintyPct:1,modelUncertaintyPct:0,coverageFactor:2}
+ const pack=buildEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[]},'2026-11-25T12:00:00.000Z')
+ assert.equal(pack.uncertaintyBudget.conclusion,'not-distinguishable')
+ assert.ok(pack.warnings.some(x=>x.includes('قابل تفکیک نیست')))
+ assert.throws(()=>buildEnergyMvEvidencePack({...input,evidenceAttachments:[{name:'oversize.pdf',mimeType:'application/pdf',size:6*1024*1024,dataUrl:'data:application/pdf;base64,AAAA'}]},{rows:[actual],baselines:[baseline],calibrations:[]},'2026-11-25T12:00:00.000Z'),/۵ مگابایت/)
 })
 
 test('MOD-05 interface exposes calibration register, due alerts and M&V evidence export sections',async()=>{
