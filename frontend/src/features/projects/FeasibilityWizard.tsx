@@ -3,6 +3,7 @@ import { ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Plus, Trash2, Save, CheckCir
 import { localStore } from '../../core/storage/localStore'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
 import ComfarReferencePanel from './ComfarReferencePanel'
+import { COMFAR_PROJECT_INPUTS } from './comfarProjectInputData'
 import { calculateNpv as npv, calculateIrr as irr, calculateMirr as mirr, buildComfarDepreciationAssetsFromFixedInvestmentItems, reconcileFixedInvestmentRegister, type IntegratedFinanceResult, type ComfarDepreciationAssetInput, type ComfarAssetSaleInput } from '../steel/financialModel'
 import AdvancedFinancePanel from './AdvancedFinancePanel'
 import type { OneWaySensitivityAnalysis, SensitivityCell } from '../steel/financialModel'
@@ -164,6 +165,30 @@ const steps = [
 const stepTitleEn:Record<string,string>={'تعریف پروژه و بازار':'Project Definition & Market','محصول و ظرفیت تولید':'Products & Production Capacity','فرآیند تولید و موازنه مواد':'Production Process & Material Balance','مصارف زیربنایی و فرآیندی':'Utilities & Process Consumables','هزینه‌های دوره ساخت':'Construction Costs','هزینه‌های دوره بهره‌برداری':'Operating Costs','تأمین مالی و نرخ تنزیل':'Financing & Discount Rate','جریان نقدی و شاخص‌های مالی':'Cash Flow & Financial Metrics','جمع‌بندی و ارزیابی نهایی':'Final Summary & Evaluation','گزارش و خروجی‌ها':'Reports & Outputs'}
 type Step = typeof steps[number][0]
 const makeRow=(name:string,unit='تن',quantity=0,unitPrice=0,source='فرض کاربر'):Row=>({id:crypto.randomUUID?.()??String(Date.now()+Math.random()),name,quantity,unit,unitPrice,source,flowType:'input'})
+function jalaliToGregorianIso(year:number,month:number,day:number):string {
+ let jy=year+1595
+ let days=-355668+365*jy+Math.floor(jy/33)*8+Math.floor((jy%33+3)/4)+day+(month<7?(month-1)*31:((month-7)*30)+186)
+ let gy=400*Math.floor(days/146097);days%=146097
+ if(days>36524){gy+=100*Math.floor(--days/36524);days%=36524;if(days>=365)days++}
+ gy+=4*Math.floor(days/1461);days%=1461
+ if(days>365){gy+=Math.floor((days-1)/365);days=(days-1)%365}
+ let gd=days+1
+ const leap=gy%4===0&&(gy%100!==0||gy%400===0)
+ const monthDays=[0,31,leap?29:28,31,30,31,30,31,31,30,31,30,31]
+ let gm=1
+ while(gm<=12&&gd>monthDays[gm]){gd-=monthDays[gm];gm++}
+ return String(gy).padStart(4,'0')+'-'+String(gm).padStart(2,'0')+'-'+String(gd).padStart(2,'0')
+}
+function jalaliMonthToIso(value:string,end=false):string {
+ const parts=value.split('/').map(Number)
+ let year:number,month:number
+ if(parts.length!==2)return ''
+ if(parts[0]<=12&&parts[1]>1000){month=parts[0];year=parts[1]}
+ else if(parts[0]<=12&&parts[1]<=99){month=parts[0];year=1400+parts[1]}
+ else {year=parts[0];month=parts[1]}
+ if(!Number.isInteger(year)||!Number.isInteger(month)||month<1||month>12)return ''
+ return jalaliToGregorianIso(year,month,end?30:1)
+}
 function baseModel(project:FeasibilityProject):Model {
  const blankCustomProject=project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
  const selectedStage=blankCustomProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
@@ -171,27 +196,79 @@ function baseModel(project:FeasibilityProject):Model {
  const blankTemplate=project.templateId==='raw'
  const imported=project.templateId==='comfar-import'&&!!project.sourceReport
  const report=project.sourceReport
+ const sourceInputs=imported?COMFAR_PROJECT_INPUTS[project.id]:undefined
  const reportYear=report?Number(report.constructionStart.slice(0,4)):1403
  const reportDebt=report?(report.longTermDebt+report.shortTermDebt):0
  const reportFunding=report?(report.equity+reportDebt):0
  const equityShare=reportFunding>0?report!.equity/reportFunding*100:0
  const debtShare=reportFunding>0?100-equityShare:0
+ const currencyCode=report?.currency==='یورو'?'EUR':'IRR'
+ const foundation=createBlankProjectFoundation()
+ const financialForms=createBlankProjectModelFinancialFormDrafts()
+ const importedFixedItems:FixedInvestmentItem[]=sourceInputs&&report?[
+  ...sourceInputs.fixedInvestment.map((asset,index)=>({
+   id:project.id+'-asset-'+index,description:asset.name,assetClass:asset.assetClass,origin:'local' as const,currencyCode,costCentreId:'',
+   depreciation:{method:'none' as const,startingAt:asset.periods[0]?.period??String(reportYear),ratePercent:null,lengthYears:null,lengthMonths:0,firstDepreciationMonths:12,scrapPercent:0},
+   depreciationBasis:asset.assetClass==='land'?'source-table' as const:'unresolved' as const,
+   acquisitions:asset.periods.filter(period=>period.amount>0).map((period,periodIndex)=>({id:project.id+'-asset-'+index+'-acq-'+periodIndex,period:period.period,quantity:1,unitPrice:period.amount,currencyCode,exchangeRateToLocal:null,allocationBasis:'source-period' as const})),
+   sales:[]
+  })),
+  {id:project.id+'-preproduction',description:'مخارج پیش از تولید شامل بهره سرمایه‌ای‌شده',assetClass:'preproduction',origin:'local',currencyCode,costCentreId:'',
+   depreciation:{method:'none',startingAt:String(reportYear),ratePercent:null,lengthYears:null,lengthMonths:0,firstDepreciationMonths:12,scrapPercent:0},depreciationBasis:'source-table',
+   acquisitions:sourceInputs.preproduction.filter(period=>period.net+period.capitalizedInterest>0).map((period,index)=>({id:project.id+'-preproduction-'+index,period:period.period,quantity:1,unitPrice:period.net+period.capitalizedInterest,currencyCode,exchangeRateToLocal:null,allocationBasis:'source-period'})),sales:[]}
+ ]:[]
+ if(imported&&report&&sourceInputs){
+  foundation.planning.periodFrequency='annual'
+  foundation.planning.projectStartDate=jalaliMonthToIso(report.constructionStart)
+  foundation.planning.projectEndDate=jalaliMonthToIso(report.operationEnd,true)
+  foundation.planning.fiscalYearStartMonth=3
+  foundation.planning.balanceDateMonth=3
+  foundation.planning.balanceDateDay=20
+  foundation.planning.dayCountBasis=360
+  foundation.planning.valuationDate=jalaliMonthToIso(report.valuationDate,true)
+  foundation.planning.discountConvention='period-count'
+  foundation.currencies.localCurrencyCode=currencyCode
+  foundation.currencies.localCurrencyName=report.currency
+  foundation.discounting.method='manual'
+  foundation.discounting.financialRatePercent=report.investmentNpvRate
+  foundation.taxation.system='corporate'
+  foundation.taxation.rates=Array.from({length:report.operatingYears},(_,index)=>({id:project.id+'-tax-'+index,period:String(report.firstOperatingYear+index),ratePercent:report.taxPercent}))
+  financialForms.tax={...financialForms.tax,system:'corporate',rates:foundation.taxation.rates.map(rate=>({period:rate.period,ratePercent:rate.ratePercent}))}
+  financialForms.workingCapital=[
+   {id:project.id+'-wc-inventory',name:'موجودی کالا',category:'inventory',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:sourceInputs.workingCapital.map(period=>({period:period.period,amount:period.inventory}))},
+   {id:project.id+'-wc-cash',name:'موجودی نقد',category:'cash',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:sourceInputs.workingCapital.map(period=>({period:period.period,amount:period.cash}))},
+  ]
+  financialForms.economic={...financialForms.economic,discountRatePercent:report.investmentNpvRate,discountRateSourceReference:report.reportFile+'؛ نرخ تنزیل گزارش، صفحه ۲',discountRateSourceVerified:true}
+ }
+ const capexRows=sourceInputs&&report?[
+  ...sourceInputs.fixedInvestment.map(asset=>makeRow(asset.name,report.currency,1,asset.periods.reduce((total,period)=>total+period.amount,0),report.reportFile+'؛ صفحه ۳ و ۴')),
+  makeRow('مخارج پیش از تولید (خالص از بهره)',report.currency,1,report.preproductionNet,report.reportFile+'؛ صفحه ۹'),
+  makeRow('بهره سرمایه‌ای‌شده پیش از بهره‌برداری',report.currency,1,report.capitalizedInterest,report.reportFile+'؛ صفحه ۹'),
+ ]:blankCustomProject?[]:stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex??[],'میلیون ریال','فرم سرمایه‌گذاری تخصصی مرحله '+selectedStage.name+'؛ مبلغ باید از CAPEX و استعلام‌های پروژه تکمیل شود')
+ const opexRows=sourceInputs&&report?sourceInputs.operatingCostRows.map(row=>makeRow(row.name,report.currency+'/سال',row.amount,1,report.reportFile+'؛ صفحه ۲۴، سال مرجع '+sourceInputs.operatingCostYear)):blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[],'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه')
+ const sourceFactoryCost=sourceInputs?.operatingCostRows.filter(row=>!row.name.includes('بازاریابی')).reduce((total,row)=>total+row.amount,0)??0
+ const sourceCostVariance=report?sourceFactoryCost-report.referenceFactoryCost:0
+ const sourceNotes=sourceInputs&&report?[
+  'اطلاعات CAPEX، مخارج پیش از تولید، بهره سرمایه‌ای‌شده و سرمایه در گردش از جداول تفصیلی گزارش مرجع وارد شده‌اند.',
+  'ردیف‌های OPEX مربوط به سال مرجع '+sourceInputs.operatingCostYear+' هستند؛ اختلاف جمع ریزاقلام با خلاصه گزارش: '+fmt(sourceCostVariance,2)+' '+report.currency+'.',
+  ...sourceInputs.missingSourceDetails.map(item=>'اطلاعات گزارش برای ورود قطعی ارائه نشده است: '+item)
+ ].join('\n'):''
  return {
   projectCategory:selectedStage.id==='mining'?'mining':'industrial',analysisMode:'new',partners:[],partnerDistributionPercent:100,
   scope:{studyLevel:'feasibility',jointVenture:false,economicAnalysis:false,costCentreAnalysis:false,costAllocation:false,valueAddedAnalysis:false,foreignExchangeEffect:false,employmentEffects:false},
-  foundation:createBlankProjectFoundation(),financialForms:createBlankProjectModelFinancialFormDrafts(),fixedInvestmentItems:[],fixedInvestmentSeedVersion:0,startingFixedAssets:[],
-  project:{name:project.name,location:project.location,owner:'',startYear:imported?reportYear:(blankTemplate?0:1403),constructionYears:imported?report!.constructionYears:(blankTemplate?0:2),operatingYears:imported?report!.operatingYears:(blankTemplate?0:10),currency:imported?report!.currency:(blankTemplate?'':'میلیون ریال'),fxRate:blankTemplate?0:1},
+  foundation,financialForms,fixedInvestmentItems:importedFixedItems,fixedInvestmentSeedVersion:imported?2:0,startingFixedAssets:[],
+  project:{name:project.name,location:project.location,owner:imported?report!.reportTitle:'',startYear:imported?reportYear:(blankTemplate?0:1403),constructionYears:imported?report!.constructionYears:(blankTemplate?0:2),operatingYears:imported?report!.operatingYears:(blankTemplate?0:10),currency:imported?report!.currency:(blankTemplate?'':'میلیون ریال'),fxRate:blankTemplate?0:1},
   stage:selectedStage.id,
-  products:blankCustomProject?[]:[makeRow(imported?report!.product:'محصول اصلی','تن/سال',imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),0,imported?'گزارش کامفار؛ خلاصه صفحه اول':'فرض کاربر'),...(imported&&report!.secondaryCapacity?[makeRow('آهن اسفنجی هات‌لینک','تن/سال',report!.secondaryCapacity,0,'گزارش کامفار؛ خلاصه صفحه اول')]:[])],
-  capacity:{nameplate:imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),operatingDays:imported?0:(blankTemplate?0:330),hoursPerDay:imported?0:(blankTemplate?0:24),availability:imported?0:(blankTemplate?0:100),yield:imported?0:(blankTemplate?0:100),ramp:blankTemplate||imported?[]:[70,80,90,100]},
-  process:{technology:blankCustomProject||blankTemplate?'':selectedStage.name,route:imported?report!.description:(blankCustomProject||blankTemplate?'':selectedStage.route),equipment:'',bottleneck:0,notes:imported?'مشخصات ظرفیت و دوره‌ها از خلاصه گزارش مرجع ثبت شده‌اند؛ جزئیات فنی تکمیلی نیازمند استخراج از جداول تفصیلی است.':''},
-  technical:blankCustomProject?[]:selectedStage.fields.map(field=>makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',0,0,'برآورد مهندسی')),
-  balance:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.materials??[],'فرم تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
-  utilities:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.utilities??[],'فرم تخصصی یوتیلیتی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
-  market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:blankTemplate||imported?0:10,domesticPrice:0,exportPrice:0,domesticShare:blankTemplate||imported?0:85,growth:0},
-  capex:blankCustomProject?[]:stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex??[],'میلیون ریال','فرم سرمایه‌گذاری تخصصی مرحله '+selectedStage.name+'؛ مبلغ باید از CAPEX و استعلام‌های پروژه تکمیل شود'),
-  opex:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[],'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه'),
-  finance:{equity:imported?equityShare:(blankTemplate?0:40),debt:imported?debtShare:(blankTemplate?0:60),equityCost:imported?0:(blankTemplate?0:35),debtCost:imported?0:(blankTemplate?0:23),tax:imported?report!.taxPercent:(blankTemplate?0:20),manualRate:imported?report!.investmentNpvRate:(blankTemplate?0:30),method:imported?'manual':(blankTemplate?'unspecified':'wacc'),depreciationYears:blankTemplate||imported?0:10,workingCapital:imported?report!.workingCapital:0,financeRate:blankTemplate||imported?0:23,reinvestmentRate:blankTemplate||imported?0:30},
+  products:blankCustomProject?[]:[makeRow(imported?report!.product:'محصول اصلی','تن/سال',imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),0,imported?'گزارش مرجع؛ خلاصه صفحه اول':'فرض کاربر'),...(imported&&report!.secondaryCapacity?[makeRow('آهن اسفنجی هات‌لینک','تن/سال',report!.secondaryCapacity,0,'گزارش مرجع؛ خلاصه صفحه اول')]:[])],
+  capacity:{nameplate:imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),operatingDays:0,hoursPerDay:0,availability:0,yield:0,ramp:blankTemplate||imported?[]:[70,80,90,100]},
+  process:{technology:blankCustomProject||blankTemplate?'':selectedStage.name,route:imported?report!.description:(blankCustomProject||blankTemplate?'':selectedStage.route),equipment:'',bottleneck:0,notes:imported?sourceNotes:''},
+  technical:blankCustomProject?[]:selectedStage.fields.map(field=>({...makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',0,0,'در خلاصه گزارش مرجع ارائه نشده؛ نیازمند تکمیل مهندسی'),valueText:''})),
+  balance:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.materials??[],'در گزارش مرجع مقدار فیزیکی مصرف ویژه ارائه نشده؛ نیازمند موازنه مواد مهندسی'),
+  utilities:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.utilities??[],'در گزارش مرجع مقدار فیزیکی مصرف ویژه ارائه نشده؛ نیازمند موازنه انرژی و یوتیلیتی'),
+  market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:0,domesticPrice:0,exportPrice:0,domesticShare:0,growth:0},
+  capex:capexRows,
+  opex:opexRows,
+  finance:{equity:imported?equityShare:(blankTemplate?0:40),debt:imported?debtShare:(blankTemplate?0:60),equityCost:0,debtCost:0,tax:imported?report!.taxPercent:(blankTemplate?0:20),manualRate:imported?report!.investmentNpvRate:(blankTemplate?0:30),method:imported?'manual':(blankTemplate?'unspecified':'wacc'),depreciationYears:0,workingCapital:imported?report!.workingCapital:0,financeRate:0,reinvestmentRate:0},
   risks:blankCustomProject?[]:[makeRow('افزایش قیمت مواد اولیه','درصد',0),makeRow('کاهش قیمت فروش','درصد',0),makeRow('افت ظرفیت تولید','درصد',0),makeRow('تأخیر در راه‌اندازی','ماه',0)]
  }
 }
