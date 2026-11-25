@@ -38,7 +38,7 @@ test('TOPSIS ranks benefit and cost criteria in the expected order',()=>{
 test('TOPSIS validates dimensions, weights and zero-variance columns',()=>{
  assert.throws(()=>topsis([[1,2],[2,3]],[1],['benefit']),/rectangular|criteria/);
  assert.throws(()=>topsis([[1,2],[2,3]],[0,0],['benefit','cost']),/positive finite sum/);
- assert.throws(()=>topsis([[0,2],[0,3]],[1,1],['benefit','cost']),/non-zero/);
+ assert.throws(()=>topsis([[0,2],[0,3]],[1,1],['benefit','cost']),/non-zero/);\n assert.throws(()=>topsis([[1,2],[2,3]],[1,1],['up','cost']),/valid benefit\/cost direction/);
 });
 test('AHP + TOPSIS can use AHP priorities as normalized TOPSIS weights',()=>{
  const priorities=ahp([[1,3],[1/3,1]]).weights;
