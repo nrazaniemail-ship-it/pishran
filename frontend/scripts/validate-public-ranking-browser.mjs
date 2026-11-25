@@ -32,6 +32,8 @@ try {
   await page.getByRole('heading', { name: 'وزن‌دهی و رتبه‌بندی چندمعیاره' }).waitFor()
   await page.getByRole('heading', { name: 'روش‌های انجام' }).waitFor()
   assert.equal(await page.getByTestId('ranking-category-initial').getAttribute('aria-pressed'), 'true')
+  assert.ok((await page.getByTestId('ranking-category-initial').getAttribute('class'))?.includes('is-active'),
+    'initial category tab must expose its modern active style')
   await page.getByRole('heading', { name: 'محیط رتبه‌بندی تصمیم · نسخه اولیه' }).waitFor()
 
   await page.getByPlaceholder('مثلاً NPV، ریسک اجرا، زمان تحویل').fill('هزینه آزمون زنده')
@@ -52,9 +54,15 @@ try {
   await page.getByRole('button', { name: 'Switch to English' }).click()
   await page.getByRole('heading', { name: 'Multi-criteria weighting & ranking' }).waitFor()
   await page.getByTestId('ranking-category-advanced').click()
+  assert.ok((await page.getByTestId('ranking-category-advanced').getAttribute('class'))?.includes('is-active'),
+    'advanced category tab must expose its modern active style')
   await page.getByRole('heading', { name: 'Advanced multi-criteria methods' }).waitFor()
   for (const method of ['AHP', 'BWM', 'TOPSIS', 'AHP + TOPSIS']) {
     await page.getByRole('button', { name: method, exact: true }).click()
+    assert.equal(await page.locator(`.ranking-method-tab[data-method="${method}"]`).getAttribute('aria-pressed'), 'true',
+      `${method} tab must expose the selected state`)
+    assert.ok((await page.locator(`.ranking-method-tab[data-method="${method}"]`).getAttribute('class'))?.includes('is-active'),
+      `${method} tab must expose its modern active style`)
     if (method === 'AHP') await page.getByText('Saaty 1–9 scale; reciprocal entries are automatic.').waitFor()
     if (method === 'BWM') {
       await page.getByText('Best criterion').waitFor()
