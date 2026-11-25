@@ -415,4 +415,8 @@ test('MOD-05 interface exposes calibration register, due alerts and M&V evidence
  assert.ok(app.includes('AES-256-GCM'))
  assert.ok(app.includes('rhoBaselineActual'))
  assert.ok(app.includes("['تطبیق قبض و مغایرت',tariffReconciliations.map"))
+ assert.ok(app.includes('رمزگشایی و دریافت سند'))
+ assert.ok(app.includes('samplingUncertaintyPct'))
+ assert.ok(app.includes('resolutionUncertaintyPct'))
+ assert.ok(app.includes('rhoActualModel'))
 })
