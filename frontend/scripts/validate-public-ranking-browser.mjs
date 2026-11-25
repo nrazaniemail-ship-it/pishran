@@ -1,5 +1,30 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import * as XLSX from 'xlsx'
 import { chromium } from 'playwright'
+
+async function verifyExcelExport(page, buttonName, expectedProject, excludedProject) {
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: buttonName, exact: true }).click()
+  const download = await downloadPromise
+  const filePath = await download.path()
+  assert.ok(filePath, 'Excel export must create a downloadable file')
+  const workbook = XLSX.read(await readFile(filePath))
+  assert.ok(workbook.SheetNames.length > 0, 'Excel export must contain at least one worksheet')
+  const content = workbook.SheetNames.map(name => XLSX.utils.sheet_to_csv(workbook.Sheets[name])).join('\\n')
+  assert.ok(content.includes(expectedProject), `Excel export must include the active project: ${expectedProject}`)
+  assert.ok(!content.includes(excludedProject), `Excel export must not leak another project: ${excludedProject}`)
+}
+async function verifyPdfScope(page, buttonName) {
+  const root = page.locator('[data-module-export-root="true"]').filter({ has: page.locator('.module-export-actions') }).last()
+  await root.waitFor({ state: 'visible' })
+  await page.evaluate(() => { window.__pishranPrintCalls = 0; window.print = () => { window.__pishranPrintCalls += 1 } })
+  await page.getByRole('button', { name: buttonName, exact: true }).click()
+  assert.equal(await page.evaluate(() => window.__pishranPrintCalls), 1, 'PDF action must invoke the browser print dialog')
+  assert.ok(await root.evaluate(element => element.classList.contains('module-export-print-target')), 'PDF action must scope printing to the active project root')
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
+  assert.equal(await root.evaluate(element => element.classList.contains('module-export-print-target')), false, 'PDF print scope must be cleaned up after printing')
+}
 
 const site = new URL(`?deploy=${process.env.GITHUB_SHA ?? 'latest'}`, 'https://nrazaniemail-ship-it.github.io/pishran/').toString()
 const response = await fetch(site, { redirect: 'follow' })
@@ -37,6 +62,8 @@ try {
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: 'ذخیره نام' }).click()
+  await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.waitForFunction(async ({ key, expectedName, moduleId }) => {
     let indexedDbProjects = null
     try {
@@ -362,6 +389,8 @@ try {
   await page.getByPlaceholder('Enter an option or project name').fill('گزینه اختصاصی دوم')
   await page.getByRole('button', { name: 'Add option' }).click()
   await page.getByLabel('گزینه اختصاصی دوم, معیار اختصاصی پروژه دوم score').fill('42')
+  await verifyExcelExport(page, 'Export Excel', 'پروژه دوم مستقل', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
+  await verifyPdfScope(page, 'Print / Save PDF')
   await page.getByRole('button', { name: '← All ranking projects' }).click()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
   assert.equal(await page.getByText('معیار اختصاصی پروژه دوم').count(), 0,
@@ -560,7 +589,11 @@ try {
   await feasibilityProjectCard.waitFor({ state: 'visible' })
   assert.equal(await feasibilityProjectCard.evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(244, 237, 223)',
     'feasibility project cards must use the pale beige background')
-  console.log('PASS: live public PWA project-card beige styling, MOD-10 collapsible assessment and workspace persistence, no bottom continue action, MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
+  await feasibilityProjectCard.click()
+  await page.locator('.feasibility-project-export-root').waitFor({ state: 'visible' })
+  await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمون رنگ کارت', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  console.log('PASS: public PWA per-project Excel/PDF scope for two independent ranking projects and feasibility projects; ranking storage, methods, sensitivity, project cards, MOD-10 assessment and bilingual switching')
 } finally {
   await browser.close()
 }
