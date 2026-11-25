@@ -270,27 +270,50 @@ export function parseEnergyTariffTiers(text){
  for(let i=1;i<tiers.length;i++)if(tiers[i-1].upperLimit===null||(tiers[i].upperLimit!==null&&tiers[i].upperLimit<=tiers[i-1].upperLimit))throw new Error('حدنصاب پله‌های تعرفه باید صعودی و بدون تکرار باشد.')
  return tiers
 }
+export function parseEnergyTimeOfUseRates(text){
+ const raw=String(text??'').trim()
+ if(!raw)return []
+ const rows=raw.split(';').map(entry=>{
+  const [band,rateText,...extra]=entry.trim().split(':')
+  const rate=Number(rateText)
+  if(!band||extra.length||!Number.isFinite(rate)||rate<0)throw new Error('تعرفه زمان‌مند را به صورت بازه:نرخ و با ; جدا کنید.')
+  return {band:required(band,'نام بازه زمانی'),rate}
+ })
+ if(new Set(rows.map(x=>x.band)).size!==rows.length)throw new Error('نام بازه‌های زمانی تعرفه نباید تکراری باشد.')
+ return rows
+}
+export function parseEnergyTariffLevies(text){
+ const raw=String(text??'').trim()
+ if(!raw)return []
+ return raw.split(';').map((entry,index)=>{
+  const parts=entry.trim().split('|')
+  if(parts.length!==3)throw new Error('عوارض را به صورت عنوان|fixed یا unit یا percent|مقدار ثبت کنید و با ; جدا کنید.')
+  const [label,kind,valueText]=parts
+  const value=Number(valueText)
+  if(!label.trim()||!['fixed','unit','percent'].includes(kind)||!Number.isFinite(value)||value<0||(kind==='percent'&&value>100))throw new Error('تعریف هر عوارض معتبر نیست.')
+  return {key:'levy-'+(index+1),label:label.trim(),kind,value}
+ })
+}
 export function validateEnergyTariffContract(input,asOf=input.effectiveFrom){
  const resource=input.resource
  if(!Object.hasOwn(RESOURCE_CONFIG,resource))throw new Error('نوع منبع قرارداد تعرفه معتبر نیست.')
- const site=required(input.site,'سایت قرارداد')
- const supplier=required(input.supplier,'تأمین‌کننده / شرکت خدمات‌رسان')
- const contractNumber=required(input.contractNumber,'شماره قرارداد')
- const currency=required(input.currency,'واحد پول قرارداد')
- const effectiveFrom=isoDate(input.effectiveFrom,'شروع اعتبار قرارداد')
- const effectiveTo=String(input.effectiveTo??'').trim()?isoDate(input.effectiveTo,'پایان اعتبار قرارداد'):null
+ const site=required(input.site,'سایت قرارداد'),supplier=required(input.supplier,'تأمین‌کننده / شرکت خدمات‌رسان'),contractNumber=required(input.contractNumber,'شماره قرارداد'),currency=required(input.currency,'واحد پول قرارداد')
+ const effectiveFrom=isoDate(input.effectiveFrom,'شروع اعتبار قرارداد'),effectiveTo=String(input.effectiveTo??'').trim()?isoDate(input.effectiveTo,'پایان اعتبار قرارداد'):null
  if(effectiveTo&&effectiveTo<effectiveFrom)throw new Error('پایان اعتبار قرارداد نمی‌تواند پیش از شروع آن باشد.')
  const tiers=Array.isArray(input.tiers)?input.tiers:parseEnergyTariffTiers(input.tiersText)
  const energyRate=input.energyRate===''||input.energyRate===null||input.energyRate===undefined?null:number(input.energyRate,'نرخ پایه انرژی',0)
- if(!tiers.length&&energyRate===null)throw new Error('نرخ پایه انرژی یا جدول تعرفه پلکانی الزامی است.')
+ if(!tiers.length&&energyRate===null&&!String(input.timeOfUseRatesText??'').trim())throw new Error('نرخ پایه، جدول پلکانی یا نرخ‌های زمان‌مند الزامی است.')
  if(tiers.length&&tiers.at(-1)?.upperLimit!==null)throw new Error('آخرین پله تعرفه باید نامحدود باشد.')
- const fixedCharge=number(input.fixedCharge??0,'هزینه ثابت',0)
- const demandRate=number(input.demandRate??0,'نرخ دیماند',0)
- const reactiveRate=number(input.reactiveRate??0,'نرخ انرژی راکتیو',0)
- const taxPercent=number(input.taxPercent??0,'درصد مالیات',0)
+ const fixedCharge=number(input.fixedCharge??0,'هزینه ثابت',0),demandRate=number(input.demandRate??0,'نرخ دیماند',0),reactiveRate=number(input.reactiveRate??0,'نرخ انرژی راکتیو',0),taxPercent=number(input.taxPercent??0,'درصد مالیات',0)
  if(taxPercent>100)throw new Error('درصد مالیات نمی‌تواند بیش از ۱۰۰ باشد.')
+ const optionalRate=(value,label)=>value===''||value===null||value===undefined?null:number(value,label,0)
+ const gasTransmissionRate=optionalRate(input.gasTransmissionRate,'نرخ انتقال گاز'),gasDistributionRate=optionalRate(input.gasDistributionRate,'نرخ توزیع گاز'),sewerRate=optionalRate(input.sewerRate,'نرخ فاضلاب')
+ const timeOfUseRates=Array.isArray(input.timeOfUseRates)?input.timeOfUseRates:parseEnergyTimeOfUseRates(input.timeOfUseRatesText)
+ const levies=Array.isArray(input.levies)?input.levies:parseEnergyTariffLevies(input.leviesText)
+ const meterMultiplier=number(input.meterMultiplier??1,'ضریب کنتور',0)
+ if(meterMultiplier<=0||meterMultiplier>1000000)throw new Error('ضریب کنتور باید بزرگ‌تر از صفر و حداکثر یک میلیون باشد.')
  const unit=required(input.unit||RESOURCE_CONFIG[resource].unit,'واحد تعرفه')
- return {resource,site,supplier,contractNumber,currency,effectiveFrom,effectiveTo,unit,energyRate,fixedCharge,demandRate,reactiveRate,taxPercent,tiers,notes:String(input.notes??'').trim()}
+ return {resource,site,supplier,contractNumber,currency,effectiveFrom,effectiveTo,unit,energyRate,fixedCharge,demandRate,reactiveRate,taxPercent,tiers,gasTransmissionRate,gasDistributionRate,sewerRate,timeOfUseRates,levies,meterMultiplier,notes:String(input.notes??'').trim()}
 }
 export async function saveEnergyTariffContract(input,store,createdAt=new Date().toISOString()){
  const checked=validateEnergyTariffContract(input)
@@ -313,30 +336,46 @@ export function calculateConfiguredEnergyTariff(input,{contracts=[]}={},calculat
  if(contract.site!==site)throw new Error('قرارداد تعرفه متعلق به سایت انتخاب‌شده نیست.')
  const period=isoDate(input.period,'تاریخ دوره قبض')
  if(period<contract.effectiveFrom||(contract.effectiveTo&&period>contract.effectiveTo))throw new Error('قرارداد در تاریخ دوره قبض معتبر نیست.')
- const quantity=number(input.quantity,'مصرف دوره',0)
- const demand=number(input.demand??0,'دیماند',0)
- const reactive=number(input.reactive??0,'انرژی راکتیو',0)
- const tiers=Array.isArray(contract.tiers)?contract.tiers:[]
- let energyCharge=0
- if(tiers.length){
-  let lower=0,remaining=quantity
-  for(const tier of tiers){
-   const capacity=tier.upperLimit===null?remaining:Math.max(0,Math.min(remaining,tier.upperLimit-lower))
-   energyCharge+=capacity*Number(tier.rate)
-   remaining-=capacity
-   if(tier.upperLimit===null||remaining<=0)break
-   lower=tier.upperLimit
+ const rawQuantity=number(input.quantity,'مصرف دوره',0),meterMultiplier=number(input.meterMultiplier??contract.meterMultiplier??1,'ضریب کنتور',0)
+ if(meterMultiplier<=0)throw new Error('ضریب کنتور باید بزرگ‌تر از صفر باشد.')
+ const quantity=rawQuantity*meterMultiplier,demand=number(input.demand??0,'دیماند',0),reactive=number(input.reactive??0,'انرژی راکتیو',0)
+ const tiers=Array.isArray(contract.tiers)?contract.tiers:[],timeRates=Array.isArray(contract.timeOfUseRates)?contract.timeOfUseRates:[]
+ const timeQuantities=input.timeOfUseQuantities&&typeof input.timeOfUseQuantities==='object'?input.timeOfUseQuantities:{}
+ const hasTimeQuantities=Object.keys(timeQuantities).length>0
+ let energyCharge=0,unconfiguredTimeBands=[]
+ const timeOfUseBreakdown=[]
+ if(hasTimeQuantities){
+  for(const [band,raw] of Object.entries(timeQuantities)){
+   const bandQuantity=number(raw,'مصرف بازه '+band,0)*meterMultiplier
+   const rate=timeRates.find(x=>x.band===band)
+   if(!rate){unconfiguredTimeBands.push(band);timeOfUseBreakdown.push({band,quantity:bandQuantity,rate:null,charge:null,status:'unconfigured'});continue}
+   const charge=bandQuantity*Number(rate.rate);energyCharge+=charge
+   timeOfUseBreakdown.push({band,quantity:bandQuantity,rate:Number(rate.rate),charge,status:'modeled'})
   }
+ }else if(timeRates.length){unconfiguredTimeBands=timeRates.map(x=>x.band)}
+ else if(tiers.length){
+  let lower=0,remaining=quantity
+  for(const tier of tiers){const capacity=tier.upperLimit===null?remaining:Math.max(0,Math.min(remaining,tier.upperLimit-lower));energyCharge+=capacity*Number(tier.rate);remaining-=capacity;if(tier.upperLimit===null||remaining<=0)break;lower=tier.upperLimit}
   if(remaining>0)throw new Error('جدول پلکانی قرارداد تمام مقدار مصرف را پوشش نمی‌دهد.')
- }else energyCharge=quantity*Number(contract.energyRate)
- const demandCharge=demand*Number(contract.demandRate??0)
- const reactiveCharge=reactive*Number(contract.reactiveRate??0)
- const fixedCharge=Number(contract.fixedCharge??0)
- const subtotal=energyCharge+demandCharge+reactiveCharge+fixedCharge
- const tax=subtotal*Number(contract.taxPercent??0)/100
- const total=subtotal+tax
- const result={id:'MOD05-TARIFF-CALC-'+Date.parse(calculatedAt)+'-'+String(contract.id),contractId:contract.id,resource,site,period,supplier:contract.supplier,contractNumber:contract.contractNumber,currency:contract.currency,unit:contract.unit,quantity,demand,reactive,energyCharge,demandCharge,reactiveCharge,fixedCharge,subtotal,taxPercent:Number(contract.taxPercent??0),tax,total,calculatedAt,source:'Configured user-entered tariff contract',warnings:['محاسبه بر اساس قرارداد و نرخ‌های ثبت‌شده کاربر است؛ صحت قرارداد، قرائت‌ها، مالیات و عوارض باید با قبض رسمی تطبیق داده شود.']}
- return result
+ }else if(contract.energyRate!==null&&contract.energyRate!==undefined)energyCharge=quantity*Number(contract.energyRate)
+ else throw new Error('برای این محاسبه نرخ انرژی قابل اعمال تعریف نشده است.')
+ const demandCharge=demand*Number(contract.demandRate??0),reactiveCharge=reactive*Number(contract.reactiveRate??0),fixedCharge=Number(contract.fixedCharge??0)
+ const gasTransmissionCharge=resource==='gas'&&contract.gasTransmissionRate!==null&&contract.gasTransmissionRate!==undefined?quantity*Number(contract.gasTransmissionRate):null
+ const gasDistributionCharge=resource==='gas'&&contract.gasDistributionRate!==null&&contract.gasDistributionRate!==undefined?quantity*Number(contract.gasDistributionRate):null
+ const sewerCharge=resource==='water'&&contract.sewerRate!==null&&contract.sewerRate!==undefined?quantity*Number(contract.sewerRate):null
+ const levies=(contract.levies??[]).map(levy=>({key:levy.key,label:levy.label,kind:levy.kind,value:Number(levy.value),amount:levy.kind==='fixed'?Number(levy.value):levy.kind==='unit'?quantity*Number(levy.value):null}))
+ const levyBase=energyCharge+demandCharge+reactiveCharge+fixedCharge+(gasTransmissionCharge??0)+(gasDistributionCharge??0)+(sewerCharge??0)
+ for(const levy of levies)if(levy.kind==='percent')levy.amount=levyBase*levy.value/100
+ const levyTotal=levies.reduce((sum,x)=>sum+Number(x.amount??0),0)
+ const subtotal=levyBase+levyTotal,tax=subtotal*Number(contract.taxPercent??0)/100,total=subtotal+tax
+ const unconfiguredComponents=[]
+ if(resource==='gas'&&contract.gasTransmissionRate===null)unconfiguredComponents.push('gas-transmission')
+ if(resource==='gas'&&contract.gasDistributionRate===null)unconfiguredComponents.push('gas-distribution')
+ if(resource==='water'&&contract.sewerRate===null)unconfiguredComponents.push('sewer')
+ if(unconfiguredTimeBands.length)unconfiguredComponents.push('time-of-use:'+unconfiguredTimeBands.join(','))
+ const warnings=['محاسبه بر اساس نرخ‌های ثبت‌شده کاربر است؛ نرخ‌های مقرراتی یا قراردادی حدس زده نمی‌شوند.']
+ if(unconfiguredComponents.length)warnings.push('اجزای زیر در قرارداد تعریف نشده‌اند و در مبلغ محاسبه‌شده منظور نشده‌اند: '+unconfiguredComponents.join('، '))
+ return {id:'MOD05-TARIFF-CALC-'+Date.parse(calculatedAt)+'-'+String(contract.id),contractId:contract.id,resource,site,period,supplier:contract.supplier,contractNumber:contract.contractNumber,currency:contract.currency,unit:contract.unit,quantity:rawQuantity,billedQuantity:quantity,meterMultiplier,demand,reactive,energyCharge,demandCharge,reactiveCharge,fixedCharge,gasTransmissionCharge,gasDistributionCharge,sewerCharge,timeOfUseBreakdown,levies,levyTotal,unconfiguredComponents,subtotal,taxPercent:Number(contract.taxPercent??0),tax,total,calculatedAt,source:'Configured user-entered tariff contract',warnings}
 }
 
 export function reconcileEnergyTariffWithBill({calculation,bill,resource,tolerancePercent=1}){
