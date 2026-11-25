@@ -65,7 +65,14 @@ try {
       const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
       if (Array.isArray(fallback)) values.push(...fallback)
     } catch { /* Ignore unavailable fallback storage. */ }
-    return values.some(item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId))
+    const matches = item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId)
+    const indexedDbSaved = values.some(matches)
+    let fallbackSaved = false
+    try {
+      const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
+      fallbackSaved = Array.isArray(fallback) && fallback.some(matches)
+    } catch {}
+    return indexedDbSaved && fallbackSaved
   }, { key: 'mod10-ranking-projects:v1', expectedName: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', moduleId: undefined }, { timeout: 10000 })
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
