@@ -102,7 +102,8 @@ jobs:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           test -n "$PAGE_URL"
-          curl --fail --silent --show-error --location --retry 12 --retry-delay 10 --retry-all-errors "$PAGE_URL" -o /tmp/pishran-index.html
-          grep -q '<div id="root"></div>' /tmp/pishran-index.html
-          curl --fail --silent --show-error --location "${PAGE_URL%/}/manifest.webmanifest" -o /tmp/pishran-manifest.json
-          node -e "const fs=require('node:fs'); const m=JSON.parse(fs.readFileSync('/tmp/pishran-manifest.json','utf8')); if(m.start_url!=='/pishran/'||m.scope!=='/pishran/') process.exit(1)"
+          # Bypass GitHub Pages/CDN cached HTML from the automatic branch deployment.
+          curl --fail --silent --show-error --location --retry 12 --retry-delay 10 --retry-all-errors "${PAGE_URL}?deploy=${GITHUB_SHA}" -o /tmp/pishran-index.html
+          grep -q '<div id="root"></div>' /tmp/pishran-index.html || { echo "Published PWA HTML did not contain the React root for SHA $GITHUB_SHA"; head -c 1200 /tmp/pishran-index.html; exit 1; }
+          curl --fail --silent --show-error --location --retry 12 --retry-delay 10 --retry-all-errors "${PAGE_URL%/}/manifest.webmanifest?deploy=${GITHUB_SHA}" -o /tmp/pishran-manifest.json
+          node -e "const fs=require('node:fs'); const m=JSON.parse(fs.readFileSync('/tmp/pishran-manifest.json','utf8')); if(m.start_url!=='/pishran/'||m.scope!=='/pishran/'){console.error('Unexpected PWA manifest:',m);process.exit(1)}"
