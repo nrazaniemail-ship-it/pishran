@@ -23,7 +23,8 @@ export function calculateOee(input) {
   const plannedStops=hasSplitStops?positive(input.plannedStopMinutes??0,'توقفات برنامه‌ریزی‌شده'):0
   const unplannedStops=hasSplitStops?positive(input.unplannedStopMinutes??0,'توقفات برنامه‌ریزی‌نشده'):positive(input.downtimeMinutes,'توقفات')
   const downtime=plannedStops+unplannedStops
-  const cycle=positive(input.idealCycleSeconds,'زمان سیکل ایده‌آل')
+  const cycleRaw=input.idealCycleMinutes??(input.idealCycleSeconds!==undefined&&input.idealCycleSeconds!==''?Number(input.idealCycleSeconds)/60:undefined)
+  const cycle=positive(cycleRaw,'زمان سیکل ایده‌آل به دقیقه بر واحد')
   const total=positive(input.totalCount,'تولید کل')
   const firstPassRaw=input.firstPassGoodCount
   const rejectRaw=input.rejectCount
@@ -38,12 +39,12 @@ export function calculateOee(input) {
   const run=planned-downtime
   if(run<=0) throw new Error('زمان کارکرد باید بزرگ‌تر از صفر باشد.')
   const availability=run/planned*100
-  const performance=total*cycle/(run*60)*100
+  const performance=total*cycle/run*100
   const quality=good/total*100
   const oee=availability/100*performance/100*quality/100*100
-  const direct=good*cycle/(planned*60)*100
+  const direct=good*cycle/planned*100
   const variance=Math.abs(oee-direct)
-  return { shiftMinutes:legacy?null:shift,breakMinutes:breaks,plannedMinutes:planned,plannedStopMinutes:plannedStops,unplannedStopMinutes:unplannedStops,downtimeMinutes:downtime,runMinutes:run,availability,performance,quality,oee,directOee:direct,variance,idealProduction:run*60/cycle,goodProductionRate:good/(planned*60),totalCount:total,goodCount:good,firstPassGoodCount:good,rejectCount:rejects,warnings:[...(performance>100?['عملکرد بیش از ۱۰۰٪ است؛ زمان سیکل ایده‌آل، واحد زمان و شمارش تولید بررسی شود.']:[]),...(variance>0.000001?['اختلاف روش تفصیلی و کنترل مستقیم از حد تلورانس بیشتر است؛ سازگاری ورودی‌ها بررسی شود.']:[])] }
+  return { idealCycleMinutes:cycle,shiftMinutes:legacy?null:shift,breakMinutes:breaks,plannedMinutes:planned,plannedStopMinutes:plannedStops,unplannedStopMinutes:unplannedStops,downtimeMinutes:downtime,runMinutes:run,availability,performance,quality,oee,directOee:direct,variance,idealProduction:run/cycle,goodProductionRate:good/(planned*60),totalCount:total,goodCount:good,firstPassGoodCount:good,rejectCount:rejects,warnings:[...(performance>100?['عملکرد بیش از ۱۰۰٪ است؛ زمان سیکل ایده‌آل، واحد زمان و شمارش تولید بررسی شود.']:[]),...(variance>0.000001?['اختلاف روش تفصیلی و کنترل مستقیم از حد تلورانس بیشتر است؛ سازگاری ورودی‌ها بررسی شود.']:[])] }
 }
 export function aggregateLineOee(input) { return calculateOee(input) }
 export function calculateStationOees(stations) { return stations.map(station=>({...station,result:calculateOee(station)})) }
