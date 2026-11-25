@@ -314,9 +314,12 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
   if(!(Number(actual.production)>0))throw new Error('تولید/فعالیت رکورد واقعی باید معتبر باشد.')
  }
  const calculations=actuals.map(actual=>({recordId:actual.id,period:actual.period,meterId:actual.meterId??'',...calculateEnergyPerformance({resource,baseline,actual})}))
+ const comparisonBases=[...new Set(calculations.map(x=>x.comparisonBasis))]
+ if(comparisonBases.length!==1)throw new Error('مبنای محاسبه رکوردهای انتخاب‌شده یکسان نیست؛ دوره‌های گاز با مبنای حرارتی و حجمی را در یک بسته ادغام نکنید.')
+ const comparisonUnit=calculations[0].comparisonUnit
  const normalizedBaseline=calculations.reduce((sum,x)=>sum+x.normalizedBaseline,0)
  const actualConsumption=calculations.reduce((sum,x)=>sum+x.actualConsumption,0)
- const measuredSavings=normalizedBaseline-actualConsumption
+ const calculatedVariance=normalizedBaseline-actualConsumption
  const calibrationIndex=new Map(calibrations.map(x=>[String(x.meterId)+'::'+String(x.site),x]))
  const calibrationCoverage=actuals.map(actual=>{
   const calibration=calibrationIndex.get(String(actual.meterId??'')+'::'+String(actual.site))
@@ -324,7 +327,7 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
   return {recordId:actual.id,period:actual.period,meterId:actual.meterId??'',site:actual.site,calibrationId:calibration?.id??null,status:status.status,nextCalibrationDate:calibration?.nextCalibrationDate??null}
  })
  const warnings=[...new Set([...calculations.flatMap(x=>x.warnings??[]),...calibrationCoverage.filter(x=>x.status!=='valid').map(x=>'وضعیت کالیبراسیون کنتور '+(x.meterId||'نامشخص')+': '+x.status)])]
- return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,measuredSavings,measuredSavingsPercent:normalizedBaseline?measuredSavings/normalizedBaseline*100:0,calibrationCoverage,warnings,reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
+ return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,comparisonUnit,calculatedVariance,calculatedVariancePercent:normalizedBaseline?calculatedVariance/normalizedBaseline*100:0,calibrationCoverage,warnings,reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
 }
 export async function saveEnergyMvEvidencePack(input,context,store,generatedAt=new Date().toISOString()){
  const pack=buildEnergyMvEvidencePack(input,context,generatedAt)
