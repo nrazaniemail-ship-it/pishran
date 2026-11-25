@@ -2474,45 +2474,62 @@ input,select,textarea{color:var(--text)}
 }
 
 
-/* Connected tab/content frames: use one stronger, continuous outer outline. */
-:root{--tab-frame-outline:color-mix(in srgb,var(--workspace-border,var(--line)) 72%,#52677c)}
-.ranking-category-tabs,
-.module-capabilities-tabs,
-.maintenance-tabs,
-.energy-work-tabs{
+/* Soft continuous frames joining ranking tabs to their content; replaces the previous dark outline. */
+:root{--tab-frame-outline:#c8d6df}
+.ranking-category-tabs{
   border:2px solid var(--tab-frame-outline);
   border-bottom:0;
   border-radius:14px 14px 0 0;
 }
-.ranking-category-tabs+.ranking-method-intro,
-.module-capabilities-tabs+.module-capabilities-grid,
-.maintenance-tabs+.maintenance-card{
+.ranking-category-tabs+.ranking-method-intro{
+  border-inline:2px solid var(--tab-frame-outline);
+  border-top:0;
+  border-bottom:0;
+  border-radius:0;
+}
+.ranking-category-tabs+.ranking-method-intro+.module-workspace-card{
   border:2px solid var(--tab-frame-outline);
   border-top:0;
   border-radius:0 0 14px 14px;
+  margin-top:0!important;
 }
-.energy-work-tabs~.energy-panel-grid,
-.energy-work-tabs~.energy-form-card,
-.energy-work-tabs~.energy-water-balance{
-  border-inline:2px solid var(--tab-frame-outline);
-  border-bottom:2px solid var(--tab-frame-outline);
-  border-top:0;
-  border-radius:0 0 14px 14px;
-}
-.ranking-category-tabs .ranking-category-tab.is-active,
-.module-capabilities-tabs button.active,
-.maintenance-tabs button.active,
-.energy-work-tabs button.active{
+.ranking-category-tabs .ranking-category-tab.is-active{
   border-bottom-color:var(--surface,#fff);
 }
+.ranking-method-tabs{
+  display:flex;
+  align-items:stretch;
+  gap:8px;
+}
+.ranking-method-tab{
+  flex:1 1 0;
+  width:0;
+  min-width:0;
+  min-height:68px;
+  height:68px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:9px 8px;
+  text-align:center;
+}
+.ranking-method-tab__name{
+  display:block;
+  width:100%;
+  font-size:13px;
+  line-height:1.4;
+  font-weight:800;
+  text-wrap:balance;
+}
+.ranking-method-tab__state{font-size:10px;line-height:1.2}
 @media(max-width:700px){
-  .ranking-category-tabs,
-  .module-capabilities-tabs,
-  .maintenance-tabs,
-  .energy-work-tabs{border-width:2px}
-  .ranking-category-tabs+.ranking-method-intro,
-  .module-capabilities-tabs+.module-capabilities-grid,
-  .maintenance-tabs+.maintenance-card{border-width:2px;border-top:0}
+  .ranking-method-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .ranking-method-tab{width:100%;height:68px;min-height:68px}
+}
+@media(prefers-reduced-motion:reduce){
+  .ranking-method-tab{transition:none}
 }
 
 
