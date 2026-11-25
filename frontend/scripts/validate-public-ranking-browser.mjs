@@ -382,7 +382,7 @@ try {
   const editingWorkspaceInput = editingWorkspaceForm.locator('input')
   await editingWorkspaceInput.waitFor({ state: 'visible' })
   await editingWorkspaceInput.fill('پروژه آزمون ویرایش و بازیابی')
-  assert.equal(await editingWorkspaceForm.locator('..').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(244, 237, 223)',
+  assert.equal(await editingWorkspaceForm.evaluate(element => getComputedStyle(element.closest('.module-workspace-item')).backgroundColor), 'rgb(244, 237, 223)',
     'project workspace cards must use the pale beige background')
   await editingWorkspaceForm.getByRole('button', { name: 'ذخیره ویرایش' }).click()
   await page.locator('.module-workspace-page').getByText('پروژه آزمون ویرایش و بازیابی', { exact: true }).waitFor()
