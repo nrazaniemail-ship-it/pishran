@@ -56,13 +56,20 @@ try {
   for (const method of ['AHP', 'BWM', 'TOPSIS', 'AHP + TOPSIS']) {
     await page.getByRole('button', { name: method, exact: true }).click()
     if (method === 'AHP') await page.getByText('Saaty 1–9 scale; reciprocal entries are automatic.').waitFor()
-    if (method === 'BWM') await page.getByText('Best criterion').waitFor()
+    if (method === 'BWM') {
+      await page.getByText('Best criterion').waitFor()
+      await page.getByLabel('Expert 1 best criterion').selectOption('1')
+      await page.getByLabel('Expert 1 worst criterion').selectOption('0')
+      await page.getByRole('button', { name: 'Calculate and save version' }).click()
+      await page.getByText('Calculation version saved').waitFor()
+      await page.getByText('Calculation history (1)').waitFor()
+    }
     if (method === 'TOPSIS') await page.getByText('Manual criterion weights').waitFor()
     if (method === 'AHP + TOPSIS') await page.getByText('Alternative performance matrix').waitFor()
   }
   await page.getByRole('button', { name: 'Calculate and save version' }).click()
   await page.getByText('Calculation version saved').waitFor()
-  await page.getByText('Calculation history (1)').waitFor()
+  await page.getByText('Calculation history (2)').waitFor()
   assert.deepEqual(pageErrors, [], 'public ranking interaction must not generate browser runtime errors')
   console.log('PASS: live public PWA SHA bundle markers, MOD-10 categories, WSM data persistence, AHP/BWM/TOPSIS/AHP+TOPSIS panels and Persian/English switching')
 } finally {
