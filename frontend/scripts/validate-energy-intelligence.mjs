@@ -118,7 +118,7 @@ test('gas cost allocation panel uses the tested thermal and contracted-capacity 
 
 test('MOD-05 specification documents the implemented advanced scope and does not describe delivered capabilities as future work',async()=>{
  const {readFile}=await import('node:fs/promises')
- const spec=await readFile(new URL('../../../docs/modules/MOD-05-ISO-50000-ENERGY-MANAGEMENT.md',import.meta.url),'utf8')
+ const spec=await readFile(new URL('../../docs/modules/MOD-05-ISO-50000-ENERGY-MANAGEMENT.md',import.meta.url),'utf8')
  assert.match(spec,/rolling-origin multivariable OLS screening model/i)
  assert.match(spec,/optional drivers/i)
  assert.match(spec,/water-balances:v1/)
