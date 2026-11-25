@@ -153,6 +153,65 @@ try {
   assert.deepEqual(pageErrors, [], 'module workspace must not produce browser runtime errors')
   console.log('PASS: MOD-01 workspace opens and the removed Continue button stays absent')
 
+  const feasibilityPage = await browser.newPage()
+  await feasibilityPage.goto(previewUrl)
+  await feasibilityPage.getByRole('button', { name: 'پروژه‌ها' }).click()
+  await feasibilityPage.locator('.project-card').first().waitFor({ state: 'visible' })
+  assert.equal(await feasibilityPage.locator('.project-card').count(), 4, 'four COMFAR feasibility projects must be seeded')
+  const importedProjectChecks = [
+    { id:'comfar-hr-coil-200k', title:'خط نورد گرم کلاف ۲۰۰ هزار تن', capexName:'خرید زمین', capexAmount:'2015000', opexName:'مواد خام', opexAmount:'40901015.18', currency:'IRR', fixed:18463009, preproduction:3538460.06, workingCapital:4595370.36, discount:25, workingCapitalComponents:2 },
+    { id:'comfar-hr-plate-250k', title:'خط نورد گرم ورق تخت ۲۵۰ هزار تن', capexName:'خرید زمین', capexAmount:'1000000', opexName:'مواد خام', opexAmount:'38162283.5', currency:'IRR', fixed:13327319.84, preproduction:9420983.31, workingCapital:1953898.01, discount:30, workingCapitalComponents:3 },
+    { id:'comfar-cold-coil-200k', title:'خط نورد سرد کلاف ۲۰۰ هزار تن', capexName:'خرید زمین', capexAmount:'2015000', opexName:'مواد خام', opexAmount:'63058700', currency:'IRR', fixed:14387972, preproduction:652400, workingCapital:2960412.61, discount:20, workingCapitalComponents:2 },
+    { id:'comfar-integrated-steel-dri', title:'فولادسازی ۱٫۲ میلیون و احیای مستقیم هات‌لینک ۱٫۷۶ میلیون تن', capexName:'محوطه‌سازی و بهبود زمین', capexAmount:'2456550', opexName:'مواد خام', opexAmount:'537485060', currency:'EUR', fixed:453858298, preproduction:117124027, workingCapital:68155775.89, discount:25, workingCapitalComponents:2 },
+  ]
+  for (const item of importedProjectChecks) {
+    const projectCard = feasibilityPage.locator('.project-card').filter({ hasText: item.title })
+    await projectCard.waitFor({ state: 'visible' })
+    await projectCard.click()
+    await feasibilityPage.locator('.fw-steps').waitFor({ state: 'visible' })
+    await feasibilityPage.getByRole('button', { name: 'هزینه‌های دوره ساخت' }).click()
+    const capexTitles = await feasibilityPage.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
+    const capexIndex = capexTitles.indexOf(item.capexName)
+    assert.notEqual(capexIndex, -1, `${item.id} must populate the fixed-investment form with ${item.capexName}`)
+    assert.equal(await feasibilityPage.locator('.fw-row').nth(capexIndex).getByLabel('قیمت واحد').inputValue(), item.capexAmount,
+      `${item.id} fixed-investment amount must match the COMFAR report`)
+    await feasibilityPage.getByRole('button', { name: 'هزینه‌های دوره بهره‌برداری' }).click()
+    const opexTitles = await feasibilityPage.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
+    const opexIndex = opexTitles.indexOf(item.opexName)
+    assert.notEqual(opexIndex, -1, `${item.id} must populate the operating-cost form with raw materials`)
+    assert.equal(await feasibilityPage.locator('.fw-row').nth(opexIndex).getByLabel('مقدار').inputValue(), item.opexAmount,
+      `${item.id} reference-year raw-material cost must match the COMFAR report`)
+    await feasibilityPage.locator('.fw-save').filter({ hasText: 'ذخیره شد' }).waitFor({ timeout: 10000 })
+    const persisted = await feasibilityPage.evaluate(async ({ storeUrl, id }) => {
+      const { localStore } = await import(storeUrl)
+      return await localStore.get('feasibility:project:' + id + ':v1')
+    }, { storeUrl: localStoreUrl, id: item.id })
+    assert.ok(persisted, `${item.id} model must persist in IndexedDB after autosave`)
+    assert.equal(persisted.foundation.currencies.localCurrencyCode, item.currency)
+    assert.equal(persisted.financialForms.tax.rates.length, 15, `${item.id} must include all 15 annual tax periods`)
+    assert.equal(persisted.financialForms.workingCapital.length, item.workingCapitalComponents)
+    const workingCapital = Object.fromEntries(persisted.financialForms.workingCapital.map(component => [
+      component.category, component.periodBalances.at(-1)?.amount ?? 0
+    ]))
+    assert.ok(Math.abs(workingCapital.inventory + workingCapital.cash - (workingCapital.payables ?? 0) - item.workingCapital) < 0.02,
+      `${item.id} net working capital schedule must reconcile to the COMFAR report`)
+    const registeredInvestment = persisted.fixedInvestmentItems.reduce((total, asset) =>
+      total + asset.acquisitions.reduce((sum, acquisition) => sum + acquisition.quantity * acquisition.unitPrice, 0), 0)
+    assert.ok(Math.abs(registeredInvestment - item.fixed - item.preproduction) < 0.02,
+      `${item.id} fixed-asset and pre-production registers must reconcile to the report`)
+    assert.ok(Math.abs(persisted.financialForms.economic.discountRatePercent - item.discount) < 0.001)
+    if (item.id === 'comfar-cold-coil-200k') assert.deepEqual(persisted.capacity.ramp, [81.11, 90.14, 100.14, 100])
+    if (item.id === 'comfar-integrated-steel-dri') {
+      assert.equal(persisted.products.length, 2)
+      assert.equal(persisted.products[1].quantity, 1760000)
+    }
+    console.log(`PASS: ${item.id} report-derived feasibility inputs and IndexedDB persistence`)
+    await feasibilityPage.getByRole('button', { name: 'پروژه‌ها' }).click()
+    await feasibilityPage.locator('.project-card').first().waitFor({ state: 'visible' })
+  }
+  await feasibilityPage.close()
+  console.log('PASS: all four COMFAR feasibility projects are populated, reconciled and persisted in native IndexedDB')
+
   const result = await page.evaluate(async ({ storeUrl, projectsUrl, backupUrl }) => {
     const { localStore } = await import(storeUrl)
     const projects = await import(projectsUrl)
