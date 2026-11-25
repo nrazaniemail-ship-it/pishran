@@ -9,6 +9,7 @@ export type ComfarSourceWorkingCapitalPeriod = {
   period: string
   inventory: number
   cash: number
+  payables?: number
 }
 export type ComfarSourceInputData = {
   fixedInvestment: ComfarSourceCapexItem[]
@@ -96,11 +97,11 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { name: 'سربار کارخانه', amount: 154777.98 },
     ],
     workingCapital: [
-      { period: '1404', inventory: 1313822.72, cash: 91388.51 },
-      { period: '1405', inventory: 1491745.91, cash: 93535.11 },
-      { period: '1406', inventory: 1675054.83, cash: 95755.72 },
-      { period: '1407', inventory: 1858363.74, cash: 97976.34 },
-      ...Array.from({ length: 11 }, (_, index) => ({ period: String(1408 + index), inventory: 1857466.12, cash: 97964 })),
+      { period: '1404', inventory: 1313822.72, cash: 91388.51, payables: 1172.42 },
+      { period: '1405', inventory: 1491745.91, cash: 93535.11, payables: 1287.98 },
+      { period: '1406', inventory: 1675054.83, cash: 95755.72, payables: 1410.56 },
+      { period: '1407', inventory: 1858363.74, cash: 97976.34, payables: 1533.13 },
+      ...Array.from({ length: 11 }, (_, index) => ({ period: String(1408 + index), inventory: 1857466.12, cash: 97964, payables: 1532.11 })),
     ],
     missingSourceDetails: ['مقادیر فیزیکی اسلب و مواد مصرفی به ازای هر تن پلیت', 'مصرف ویژه آب، برق و گاز و تلفات خط', 'برنامه مقداری فروش و قیمت واحد محصول', 'عمر مفید و روش استهلاک تفکیکی دارایی‌ها', 'نرخ سود و جزئیات قرارداد وام بلندمدت'],
   },
