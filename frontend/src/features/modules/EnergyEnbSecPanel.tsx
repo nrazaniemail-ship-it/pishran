@@ -11,7 +11,7 @@ export default function EnergyEnbSecPanel({language='fa'}:{language?:'fa'|'en'})
  useEffect(()=>{let live=true;localStore.get<R[]>(KEY).then(x=>{if(live)S(x??[])}).catch(()=>Se('خواندن داده‌های EnB/SEC ناموفق بود.'));return()=>{live=false}},[])
  const sites=[...new Set(rows.map(x=>x.site))],visible=rows.filter(x=>!site||x.site===site).sort((a,b)=>a.period.localeCompare(b.period)),selected=visible.find(x=>x.id===base)??visible[0]
  const comparable=selected?visible.filter(x=>x.site===selected.site&&x.seu===selected.seu&&x.boundary===selected.boundary):visible
- const calc=useMemo(()=>comparable.map(x=>({ ...x,e:x.production?x.electricityKwh/x.production:0,g:x.production?x.gasNm3/x.production:0,w:x.production?x.waterM3/x.production:0,gasGJ:x.production&&x.gasCalorificValue!==null?x.gasNm3*x.gasCalorificValue/1000/x.production: null})),[comparable])
+ const calc=useMemo(()=>comparable.map(x=>({ ...x,e:x.production?x.electricityKwh/x.production:0,g:x.production?x.gasNm3/x.production:0,w:x.production?x.waterM3/x.production:0,gasGJ:x.production&&x.gasCalorificValue!==null?x.gasNm3*x.gasCalorificValue*0.0036/x.production: null})),[comparable])
  const ref=calc.find(x=>x.id===selected?.id)
  const normalized=(x:typeof calc[number],resource:'electricityKwh'|'gasNm3'|'waterM3')=>(ref&&ref.production?ref[resource]/ref.production*x.production:0)
  async function save(){Se('');Sn('');if(!form.period||!form.site.trim()||!form.seu.trim()||n(form.production)<=0){Se('دوره، سایت، مصرف‌کننده عمده و تولید مثبت الزامی است.');return}if(['electricityKwh','gasNm3','waterM3','gasCalorificValue'].some(k=>n((form as any)[k])<0)){Se('مصرف و ارزش حرارتی نمی‌توانند منفی باشند.');return}
