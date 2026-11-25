@@ -1,7 +1,7 @@
 export type PairwiseMatrix = number[][];
 export type RankingSnapshot = {
   schema: 'pishran-ranking-snapshot/v1';
-  method: 'AHP' | 'BWM' | 'TOPSIS' | 'AHP+TOPSIS';
+  method: 'AHP' | 'BWM' | 'TOPSIS' | 'AHP+TOPSIS' | 'AHP+BWM';
   createdAt: string;
   criteria: string[];
   expertCount: number;
@@ -85,6 +85,12 @@ export function aggregateBwmExpertWeights(experts:BwmExpertJudgment[]) {
 }
 
 
+export function combineAHPBWMWeights(ahpWeights:number[],bwmWeights:number[],ahpShare=0.5){
+ assert(ahpWeights.length>=2&&ahpWeights.length===bwmWeights.length,'AHP and BWM weights must have the same criteria count');
+ assert(Number.isFinite(ahpShare)&&ahpShare>=0&&ahpShare<=1,'AHP share must be between 0 and 1');
+ [...ahpWeights,...bwmWeights].forEach(v=>assert(Number.isFinite(v)&&v>0,'AHP and BWM weights must be positive finite values'));
+ return normalize(ahpWeights.map((v,i)=>v**ahpShare*bwmWeights[i]**(1-ahpShare)));
+}
 export type CriterionDirection = 'benefit' | 'cost';
 export function topsis(matrix:number[][], weights:number[], directions:CriterionDirection[]) {
  const rows=matrix.length, cols=weights.length;
