@@ -13,8 +13,7 @@ const bundles = await Promise.all(scriptPaths.map(async path => {
   assert.equal(asset.ok, true, `published bundle ${path} must respond`)
   return asset.text()
 }))
-const bundle = bundles.join('
-')
+const bundle = bundles.join('\\n')
 for (const marker of ['Initial methods', 'Advanced methods', 'روش‌های اولیه', 'روش‌های پیشرفته', 'AHP + TOPSIS']) {
   assert.ok(bundle.includes(marker), `published JavaScript must contain deployed ranking marker: ${marker}`)
 }
