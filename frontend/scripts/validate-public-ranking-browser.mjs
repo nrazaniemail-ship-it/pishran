@@ -75,6 +75,9 @@ try {
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).waitFor()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  await page.goBack()
+  await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
   await page.getByRole('heading', { name: 'وزن‌دهی و رتبه‌بندی چندمعیاره' }).waitFor()
   await page.getByRole('heading', { name: 'روش‌های انجام' }).waitFor()
   await page.getByRole('button', { name: 'گفت‌وگو با دستیار' }).click()
@@ -139,14 +142,14 @@ try {
   assert.ok((await page.getByTestId('ranking-category-advanced').getAttribute('class'))?.includes('is-active'),
     'advanced category tab must expose its modern active style')
   await page.getByRole('heading', { name: 'Advanced multi-criteria methods' }).waitFor()
-  for (const method of ['AHP', 'BWM', 'TOPSIS', 'AHP + TOPSIS']) {
-    const methodKey = method === 'AHP + TOPSIS' ? 'AHP+TOPSIS' : method
+  for (const method of ['TOPSIS', 'AHP + TOPSIS', 'BWM + TOPSIS', 'TOPSIS + (AHP + BWM)']) {
+    const methodKey = method === 'AHP + TOPSIS' ? 'AHP+TOPSIS' : method === 'BWM + TOPSIS' ? 'BWM+TOPSIS' : method === 'TOPSIS + (AHP + BWM)' ? 'TOPSIS+(AHP+BWM)' : method
     await page.getByRole('button', { name: method, exact: true }).click()
     assert.equal(await page.locator(`.ranking-method-tab[data-method="${methodKey}"]`).getAttribute('aria-pressed'), 'true',
       `${method} tab must expose the selected state`)
     assert.ok((await page.locator(`.ranking-method-tab[data-method="${methodKey}"]`).getAttribute('class'))?.includes('is-active'),
       `${method} tab must expose its modern active style`)
-    if (method === 'AHP') {
+    if (method === 'AHP + TOPSIS') {
       await page.getByText('Saaty 1–9 scale; reciprocal entries are automatic.').waitFor()
       await page.getByLabel(/هزینه سرمایه‌گذاری vs ریسک اجرا$/).selectOption('2')
       await page.getByLabel(/هزینه سرمایه‌گذاری vs زمان اجرا$/).selectOption('4')
@@ -155,7 +158,7 @@ try {
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
     }
-    if (method === 'BWM') {
+    if (method === 'BWM + TOPSIS') {
       await page.getByRole('button', { name: 'Add criterion' }).click()
       await page.getByRole('button', { name: 'Remove criterion Criterion 4' }).click()
       await page.getByRole('button', { name: 'Add alternative' }).click()
@@ -184,7 +187,7 @@ try {
       await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
       await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
       await page.getByTestId('ranking-category-advanced').click()
-      await page.getByRole('button', { name: 'BWM', exact: true }).click()
+      await page.getByRole('button', { name: 'BWM + TOPSIS', exact: true }).click()
       await page.getByText('Sensitivity history (1)').waitFor()
       await page.locator('.ranking-sensitivity-history-entry').first().locator('summary').click()
       await page.getByText('Persisted Monte Carlo robustness and rank acceptability').waitFor()
@@ -198,7 +201,19 @@ try {
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
     }
-    if (method === 'AHP + TOPSIS') {
+    if (method === 'TOPSIS + (AHP + BWM)') {
+      const ahpShare = page.getByLabel('AHP contribution percentage')
+      await ahpShare.evaluate(element => { element.value = '70'; element.dispatchEvent(new Event('input', { bubbles: true })); element.dispatchEvent(new Event('change', { bubbles: true })) })
+      assert.equal(await ahpShare.inputValue(), '70', 'hybrid AHP contribution must be adjustable')
+      assert.equal(await page.getByLabel('BWM contribution percentage').inputValue(), '30', 'hybrid BWM contribution must remain complementary')
+      await page.getByLabel('BWM best criterion').selectOption('1')
+      await page.getByLabel('BWM worst criterion').selectOption('0')
+      await page.getByLabel('BWM best over هزینه سرمایه‌گذاری').selectOption('5')
+      await page.getByLabel('BWM best over زمان اجرا').selectOption('3')
+      await page.getByLabel('BWM other over worst ریسک اجرا').selectOption('4')
+      await page.getByLabel('BWM other over worst زمان اجرا').selectOption('2')
+    }
+    if (method === 'AHP + TOPSIS' || method === 'TOPSIS + (AHP + BWM)') {
       await page.getByText('Alternative performance matrix').waitFor()
       const matrixCells = [
         ['گزینه الف', 'هزینه سرمایه‌گذاری'], ['گزینه الف', 'ریسک اجرا'], ['گزینه الف', 'زمان اجرا'],
@@ -220,14 +235,14 @@ try {
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
   await page.getByTestId('ranking-category-advanced').click()
   await page.getByText('Calculation history (4)').waitFor()
-  await page.getByRole('button', { name: 'AHP', exact: true }).click()
+  await page.getByRole('button', { name: 'AHP + TOPSIS', exact: true }).click()
   assert.equal(await page.getByLabel(/هزینه سرمایه‌گذاری vs ریسک اجرا$/).inputValue(), '2',
     'AHP first pairwise judgment must persist after reload')
   assert.equal(await page.getByLabel(/هزینه سرمایه‌گذاری vs زمان اجرا$/).inputValue(), '4',
     'AHP second pairwise judgment must persist after reload')
   assert.equal(await page.getByLabel(/ریسک اجرا vs زمان اجرا$/).inputValue(), '2',
     'AHP third pairwise judgment must persist after reload')
-  await page.getByRole('button', { name: 'BWM', exact: true }).click()
+  await page.getByRole('button', { name: 'BWM + TOPSIS', exact: true }).click()
   assert.equal(await page.locator('select[aria-label*="best criterion"]').inputValue(), '1',
     'BWM best-criterion anchor must persist after reload')
   assert.equal(await page.getByLabel('Best over هزینه سرمایه‌گذاری').inputValue(), '5',
