@@ -119,6 +119,7 @@ const moduleCapabilityProfiles: Record<string, { assessment: string[]; benchmark
       'ارزیابی معیارهای کمی و کیفی با نرمال‌سازی مستند و انتخاب روش متناسب از میان WSM، TOPSIS، VIKOR و PROMETHEE',
       'کنترل کیفیت داده، منشأ امتیاز، تاریخ، واحد، سطح اطمینان و ثبت شواهد برای هر ارزیابی',
       'تحلیل حساسیت وزن‌ها و مفروضات، پایداری رتبه، اختلاف نتایج روش‌ها و اثر داده ناقص یا گزینه حذف‌شده',
+      'شبیه‌سازی مقاوم مونت‌کارلو با بذر ثابت، احتمال رتبه اول، توزیع پذیرش رتبه و بازه صدکی امتیاز تحت عدم‌قطعیت هم‌زمان وزن و عملکرد',
       'اتصال نتایج به داده‌های مالی، تولید، انرژی، بازار، تأمین، پروژه و ریسک و بررسی محدودیت واقعی بودجه و منابع'
     ],
     benchmarks: [
@@ -138,6 +139,7 @@ const moduleCapabilityProfiles: Record<string, { assessment: string[]; benchmark
     learning: [
       'الگوبرداری از جریان ساده onboarding و قالب‌های آماده برای تصمیم سرمایه‌گذاری، انتخاب تأمین‌کننده و انتخاب فناوری',
       'ثبت مستقل نظر خبرگان و نمایش اختلاف دیدگاه‌ها پیش از تجمیع؛ جلوگیری از پنهان‌شدن اختلاف نظر زیر یک وزن میانگین',
+      'سنجش توافق خبرگان با همبستگی رتبه‌ای اسپیرمن و پراکندگی وزن هر معیار؛ ثبت جداگانه CR فردی AHP و شاخص انحراف BWM',
       'تفکیک سه لایه احراز و وتو، وزن‌دهی معیارها و رتبه‌بندی گزینه‌ها؛ امتیاز بالا نباید نقض شرط حیاتی را جبران کند',
       'نمایش وزن، امتیاز خام، امتیاز نرمال‌شده، سهم هر معیار در نتیجه و دلیل تغییر رتبه',
       'نسخه‌بندی داده، وزن، پارامتر و الگوریتم برای بازتولید هر اجرای رتبه‌بندی و ممیزی تصمیم',
@@ -150,6 +152,7 @@ const moduleCapabilityProfiles: Record<string, { assessment: string[]; benchmark
       'Evaluate quantitative and qualitative criteria with documented normalization and fit-for-purpose WSM, TOPSIS, VIKOR or PROMETHEE methods',
       'Control data quality, score provenance, date, unit, confidence and evidence for every evaluation',
       'Analyze weight and assumption sensitivity, rank stability, method disagreement and the effects of missing data or removed alternatives',
+      'Seeded Monte Carlo robustness with top-rank probabilities, rank-acceptability distributions and score percentiles under joint weight and performance uncertainty',
       'Connect finance, production, energy, market, supply, project and risk data; assess actual budget and resource constraints'
     ],
     benchmarksEn: [
@@ -169,6 +172,7 @@ const moduleCapabilityProfiles: Record<string, { assessment: string[]; benchmark
     learningEn: [
       'Adopt guided onboarding and reusable templates for investment, supplier and technology decisions',
       'Capture expert judgments independently and expose disagreement before aggregation',
+      'Quantify expert consensus with pairwise Spearman rank correlation and criterion-weight dispersion; retain individual AHP consistency and BWM deviation diagnostics',
       'Separate eligibility and veto rules, criterion weighting and alternative ranking; a high score must not offset a critical failure',
       'Show weights, raw and normalized scores, each criterion contribution and reasons for rank changes',
       'Version data, weights, parameters and algorithms so every ranking run is reproducible and auditable',
