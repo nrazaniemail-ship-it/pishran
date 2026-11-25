@@ -405,6 +405,7 @@ test('MOD-05 M&V uncertainty interval does not support a savings claim when the 
 test('MOD-05 interface exposes calibration register, due alerts and M&V evidence export sections',async()=>{
  const {readFile}=await import('node:fs/promises')
  const app=await readFile(new URL('../src/features/modules/ModuleEnergyPanel.tsx',import.meta.url),'utf8')
+ const enb=await readFile(new URL('../src/features/modules/EnergyEnbSecPanel.tsx',import.meta.url),'utf8')
  const docs=await readFile(new URL('../../docs/modules/MOD-05-ISO-50000-ENERGY-MANAGEMENT.md',import.meta.url),'utf8')
  assert.ok(app.includes('METER_CALIBRATIONS_KEY'))
  assert.ok(app.includes('ENERGY_MV_EVIDENCE_KEY'))
