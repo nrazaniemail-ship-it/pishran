@@ -10,7 +10,7 @@ export default function RankingMethodsPanel({language}:Props){
  const en=language==='en';
  const [method,setMethod]=useState<Method>('AHP');
  const [criteria,setCriteria]=useState(['هزینه سرمایه‌گذاری','ریسک اجرا','زمان اجرا']);
- const [experts,setExperts]=useState<Expert[]>([{name:'خبره ۱',matrix:newMatrix(3),bestIndex:0,worstIndex:2,bestToOthers:[1,1,1],othersToWorst:[1,1,1]}]);
+ const [experts,setExperts]=useState<Expert[]>([{name:en?'Expert 1':'خبره ۱',matrix:newMatrix(3),bestIndex:0,worstIndex:2,bestToOthers:[1,1,1],othersToWorst:[1,1,1]}]);
  const [alternatives,setAlternatives]=useState(['گزینه الف','گزینه ب','گزینه ج']);
  const [scores,setScores]=useState<number[][]>(initialScores());
  const [directions,setDirections]=useState<CriterionDirection[]>(['cost','benefit','cost']);
