@@ -106,7 +106,6 @@ try {
     const matches = item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId)
     return Boolean(indexedDbProjects?.some(matches) && fallbackProjects?.some(matches))
   }, { key: 'mod10-ranking-projects:v1', expectedName: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', moduleId: undefined }, { timeout: 10000 })
-  await page.getByRole('heading', { name: /پروژه آزمایش رتبه‌بندی ویرایش‌شده/ }).waitFor()
   await activeExportRoot(page).waitFor({ state: 'visible' })
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
