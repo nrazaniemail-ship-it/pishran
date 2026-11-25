@@ -69,7 +69,7 @@ export interface FeasibilityProject {
 
 const PROJECTS_KEY = 'projects:list:v1'
 
-const COMFAR_SEED_KEY = 'projects:comfar-reference-seeded:v1'
+const COMFAR_SEED_KEY = 'projects:comfar-reference-seeded:v2'
 const COMFAR_REFERENCE_PROJECTS: Omit<FeasibilityProject, 'createdAt' | 'updatedAt' | 'status'>[] = [
   {
     id: 'comfar-hr-coil-200k', name: 'طرح توسعه شرکت نورد زرین فجر گالوانیزه کاشان ـ خط نورد گرم کلاف ۲۰۰ هزار تن',
