@@ -252,7 +252,7 @@ try {
         return { indexedDbHistory, fallbackHistory }
       })
       console.log('Method history after BWM calculation:', JSON.stringify(methodHistoryAfterBwm))
-      await page.getByText('Calculation history (2)').waitFor()
+      await page.getByText('Calculation history (3)').waitFor()
       await page.getByRole('button', { name: 'Run rank sensitivity' }).click()
       await page.getByTestId('ranking-sensitivity-results').waitFor()
       await page.getByText('Sensitivity history (1)').waitFor()
