@@ -44,12 +44,13 @@ export default function RankingMethodsPanel({language}:Props){
  };
  const runSensitivity=()=>{
   try{
-   let weights:number[];
+   let weights:number[];let expertWeightVectors:number[][]=[];
    if(method==='AHP'||method==='AHP+TOPSIS'){
+    expertWeightVectors=experts.map(e=>ahp(e.matrix).weights);
     const base=ahp(aggregatePairwiseMatrices(experts.map(e=>e.matrix)));
     if(!base.consistent) throw new Error(en?'AHP consistency ratio exceeds 0.10.':'نسبت ناسازگاری AHP بیش از ۰٫۱۰ است.');
     weights=base.weights;
-   }else if(method==='BWM') weights=aggregateBwmExpertWeights(experts).weights;
+   }else if(method==='BWM') {const group=aggregateBwmExpertWeights(experts);weights=group.weights;expertWeightVectors=group.individual.map(x=>x.weights);}
    else weights=topsis(scores,manualWeights,directions).weights;
    const cases:Array<{label:string;weights:number[]}>=[];
    const delta=shock/100;
@@ -81,7 +82,7 @@ export default function RankingMethodsPanel({language}:Props){
      cases.push({label:'وزن دستی · '+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:changed});
     }
    }
-   const result=analyzeRankingSensitivity(scores,weights,directions,cases,delta);
+   const result=analyzeRankingSensitivity(scores,weights,directions,cases,delta,{trials:500,seed:20261125,expertWeightVectors});
    setSensitivity(result);
    setNotice(en?'Sensitivity analysis completed':'تحلیل حساسیت با موفقیت محاسبه شد');
   }catch(error){setNotice(error instanceof Error?error.message:String(error))}
@@ -109,7 +110,9 @@ export default function RankingMethodsPanel({language}:Props){
   {sensitivity&&<div data-testid="ranking-sensitivity-results" style={{marginTop:14,padding:12,border:'1px solid var(--line)',borderRadius:10}}>
    <b>{en?'Rank sensitivity summary':'خلاصه تحلیل حساسیت رتبه‌ها'}</b>
    <p className="muted">{en?'Baseline ranking is compared with criterion-weight shifts, expert-judgment perturbations and optimistic/pessimistic performance scenarios.':'رتبه پایه با تغییر وزن معیارها، تغییر قضاوت خبرگان و سناریوهای خوش‌بینانه و بدبینانه مقایسه شده است.'} · {en?'Scenarios':'سناریوها'}: {sensitivity.scenarios.length}</p>
-   <div style={{overflowX:'auto'}}><table style={{borderCollapse:'collapse',width:'100%'}}><thead><tr><th>{en?'Alternative':'گزینه'}</th><th>{en?'Average rank':'میانگین رتبه'}</th><th>{en?'Rank range':'دامنه رتبه'}</th><th>{en?'Top rank frequency':'فراوانی رتبه اول'}</th></tr></thead><tbody>{sensitivity.summary.map((r:any)=><tr key={r.alternativeIndex}><th>{alternatives[r.alternativeIndex]}</th><td>{r.averageRank.toFixed(2)}</td><td>{r.bestRank}–{r.worstRank}</td><td>{(r.topFrequency*100).toFixed(1)}%</td></tr>)}</tbody></table></div>
+   <div style={{overflowX:'auto'}}><table style={{borderCollapse:'collapse',width:'100%'}}><thead><tr><th>{en?'Alternative':'گزینه'}</th><th>{en?'Scenario avg. rank':'میانگین رتبه سناریو'}</th><th>{en?'Rank range':'دامنه رتبه'}</th><th>{en?'Scenario top frequency':'فراوانی رتبه اول'}</th><th>{en?'Monte Carlo top probability':'احتمال رتبه اول در شبیه‌سازی'}</th><th>{en?'Score P05–P95':'بازه امتیاز ۵–۹۵٪'}</th></tr></thead><tbody>{sensitivity.summary.map((r:any)=><tr key={r.alternativeIndex}><th>{alternatives[r.alternativeIndex]}</th><td>{r.averageRank.toFixed(2)}</td><td>{r.bestRank}–{r.worstRank}</td><td>{(r.topFrequency*100).toFixed(1)}%</td><td>{(sensitivity.robustness.topFrequency[r.alternativeIndex]*100).toFixed(1)}%</td><td>{sensitivity.robustness.scoreP05[r.alternativeIndex].toFixed(3)}–{sensitivity.robustness.scoreP95[r.alternativeIndex].toFixed(3)}</td></tr>)}</tbody></table></div>
+   <p className="muted">{en?`Deterministic Monte Carlo: ${sensitivity.robustness.trials} trials · seed ${sensitivity.robustness.seed}. Top-rank probability and score percentile range measure robustness under simultaneous weight and performance uncertainty.`:`شبیه‌سازی مونت‌کارلو با ${sensitivity.robustness.trials} تکرار و بذر ${sensitivity.robustness.seed}؛ احتمال رتبه اول و بازه صدکی امتیاز، پایداری تصمیم را تحت عدم‌قطعیت هم‌زمان وزن‌ها و عملکرد گزینه‌ها نشان می‌دهد.`}</p>
+   {sensitivity.expertAgreement&&<div style={{marginTop:8}}><b>{en?'Expert agreement & disagreement':'توافق و اختلاف خبرگان'}</b><p>{en?'Mean pairwise Spearman rank agreement':'میانگین همبستگی رتبه‌ای اسپیرمن بین خبرگان'}: {sensitivity.expertAgreement.meanPairwiseSpearman===null?'—':sensitivity.expertAgreement.meanPairwiseSpearman.toFixed(3)} · {en?'Experts':'تعداد خبرگان'}: {sensitivity.expertAgreement.expertCount}</p><div style={{overflowX:'auto'}}><table style={{borderCollapse:'collapse',width:'100%'}}><thead><tr><th>{en?'Criterion':'معیار'}</th><th>{en?'Mean weight':'میانگین وزن'}</th><th>{en?'Std. dev.':'انحراف معیار'}</th><th>{en?'CV':'ضریب تغییرات'}</th></tr></thead><tbody>{sensitivity.expertAgreement.criterionDispersion.map((r:any)=><tr key={r.criterionIndex}><th>{criteria[r.criterionIndex]}</th><td>{(r.meanWeight*100).toFixed(2)}%</td><td>{(r.standardDeviation*100).toFixed(2)}%</td><td>{(r.coefficientOfVariation*100).toFixed(1)}%</td></tr>)}</tbody></table></div></div>}
    <details style={{marginTop:8}}><summary>{en?'Scenario comparison':'مقایسه سناریوها'}</summary>{sensitivity.scenarios.map((s:any,i:number)=><div key={i} style={{padding:6,borderBottom:'1px solid var(--line)'}}>{s.kind} · {s.label} · {s.ranking.results.map((r:any)=>`${alternatives[r.alternativeIndex]}: #${r.rank}`).join(' / ')}</div>)}</details>
   </div>}
   {notice&&<p className="muted" role="status">{notice}</p>}
