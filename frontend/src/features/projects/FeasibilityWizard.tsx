@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Plus, Trash2, Save, CheckCircle2, AlertCircle, Printer } from 'lucide-react'
 import { localStore } from '../../core/storage/localStore'
 import type { FeasibilityProject } from '../../core/projects/projectRepository'
+import ComfarReferencePanel from './ComfarReferencePanel'
 import { calculateNpv as npv, calculateIrr as irr, calculateMirr as mirr, buildComfarDepreciationAssetsFromFixedInvestmentItems, reconcileFixedInvestmentRegister, type IntegratedFinanceResult, type ComfarDepreciationAssetInput, type ComfarAssetSaleInput } from '../steel/financialModel'
 import AdvancedFinancePanel from './AdvancedFinancePanel'
 import type { OneWaySensitivityAnalysis, SensitivityCell } from '../steel/financialModel'
@@ -168,22 +169,29 @@ function baseModel(project:FeasibilityProject):Model {
  const selectedStage=blankCustomProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
  const parsedCapacity=Number(project.capacity.replace(/[^0-9.]/g,''))||0
  const blankTemplate=project.templateId==='raw'
+ const imported=project.templateId==='comfar-import'&&!!project.sourceReport
+ const report=project.sourceReport
+ const reportYear=report?Number(report.constructionStart.slice(0,4)):1403
+ const reportDebt=report?(report.longTermDebt+report.shortTermDebt):0
+ const reportFunding=report?(report.equity+reportDebt):0
+ const equityShare=reportFunding>0?report!.equity/reportFunding*100:0
+ const debtShare=reportFunding>0?reportDebt/reportFunding*100:0
  return {
   projectCategory:selectedStage.id==='mining'?'mining':'industrial',analysisMode:'new',partners:[],partnerDistributionPercent:100,
   scope:{studyLevel:'feasibility',jointVenture:false,economicAnalysis:false,costCentreAnalysis:false,costAllocation:false,valueAddedAnalysis:false,foreignExchangeEffect:false,employmentEffects:false},
   foundation:createBlankProjectFoundation(),financialForms:createBlankProjectModelFinancialFormDrafts(),fixedInvestmentItems:[],fixedInvestmentSeedVersion:0,startingFixedAssets:[],
-  project:{name:project.name,location:project.location,owner:'',startYear:blankTemplate?0:1403,constructionYears:blankTemplate?0:2,operatingYears:blankTemplate?0:10,currency:blankTemplate?'':'میلیون ریال',fxRate:blankTemplate?0:1},
+  project:{name:project.name,location:project.location,owner:report?.reportTitle??'',startYear:imported?reportYear:(blankTemplate?0:1403),constructionYears:imported?report!.constructionYears:(blankTemplate?0:2),operatingYears:imported?report!.operatingYears:(blankTemplate?0:10),currency:imported?report!.currency:(blankTemplate?'':'میلیون ریال'),fxRate:blankTemplate?0:1},
   stage:selectedStage.id,
-  products:blankCustomProject?[]:[makeRow('محصول اصلی','تن/سال',blankTemplate?0:parsedCapacity,0)],
-  capacity:{nameplate:blankTemplate?0:parsedCapacity,operatingDays:blankTemplate?0:330,hoursPerDay:blankTemplate?0:24,availability:blankTemplate?0:100,yield:blankTemplate?0:100,ramp:blankTemplate?[]:[70,80,90,100]},
-  process:{technology:blankCustomProject||blankTemplate?'':selectedStage.name,route:blankCustomProject||blankTemplate?'':selectedStage.route,equipment:'',bottleneck:0,notes:''},
+  products:blankCustomProject?[]:[makeRow(imported?report!.product:'محصول اصلی','تن/سال',imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),0,imported?'گزارش کامفار؛ خلاصه صفحه اول':'فرض کاربر')],
+  capacity:{nameplate:imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),operatingDays:imported?0:(blankTemplate?0:330),hoursPerDay:imported?0:(blankTemplate?0:24),availability:imported?0:(blankTemplate?0:100),yield:imported?0:(blankTemplate?0:100),ramp:blankTemplate||imported?[]:[70,80,90,100]},
+  process:{technology:blankCustomProject||blankTemplate?'':selectedStage.name,route:imported?report!.description:(blankCustomProject||blankTemplate?'':selectedStage.route),equipment:'',bottleneck:0,notes:imported?'مشخصات ظرفیت و دوره‌ها از خلاصه گزارش مرجع ثبت شده‌اند؛ جزئیات فنی تکمیلی نیازمند استخراج از جداول تفصیلی است.':''},
   technical:blankCustomProject?[]:selectedStage.fields.map(field=>makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',0,0,'برآورد مهندسی')),
   balance:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.materials??[],'فرم تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
   utilities:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.utilities??[],'فرم تخصصی یوتیلیتی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
   market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:blankTemplate?0:10,domesticPrice:0,exportPrice:0,domesticShare:blankTemplate?0:85,growth:0},
   capex:blankCustomProject?[]:stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex??[],'میلیون ریال','فرم سرمایه‌گذاری تخصصی مرحله '+selectedStage.name+'؛ مبلغ باید از CAPEX و استعلام‌های پروژه تکمیل شود'),
   opex:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[],'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه'),
-  finance:{equity:blankTemplate?0:40,debt:blankTemplate?0:60,equityCost:blankTemplate?0:35,debtCost:blankTemplate?0:23,tax:blankTemplate?0:20,manualRate:blankTemplate?0:30,method:blankTemplate?'unspecified':'wacc',depreciationYears:blankTemplate?0:10,workingCapital:0,financeRate:blankTemplate?0:23,reinvestmentRate:blankTemplate?0:30},
+  finance:{equity:imported?equityShare:(blankTemplate?0:40),debt:imported?debtShare:(blankTemplate?0:60),equityCost:imported?0:(blankTemplate?0:35),debtCost:imported?0:(blankTemplate?0:23),tax:imported?report!.taxPercent:(blankTemplate?0:20),manualRate:imported?report!.investmentNpvRate:(blankTemplate?0:30),method:imported?'manual':(blankTemplate?'unspecified':'wacc'),depreciationYears:blankTemplate||imported?0:10,workingCapital:imported?report!.workingCapital:0,financeRate:blankTemplate||imported?0:23,reinvestmentRate:blankTemplate||imported?0:30},
   risks:blankCustomProject?[]:[makeRow('افزایش قیمت مواد اولیه','درصد',0),makeRow('کاهش قیمت فروش','درصد',0),makeRow('افت ظرفیت تولید','درصد',0),makeRow('تأخیر در راه‌اندازی','ماه',0)]
  }
 }
@@ -462,6 +470,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
  const go=(direction:number)=>{const next=Math.max(0,Math.min(steps.length-1,current+direction));setStep(steps[next][0])}
  return <section className="fw-page" dir={en?"ltr":"rtl"}>
   <header className="fw-head"><button className="secondary-button" onClick={onBack}><ArrowRight size={16}/> {t("بازگشت به پروژه‌ها","Back to Projects")}</button><div><h1>{m.project.name}</h1><p>{m.project.location} · {stageTitle(stage.id,stage.name)}</p></div><span className="fw-save"><Save size={14}/>{loaded?(saved?t('ذخیره شد','Saved')+' · '+saved:t('ذخیره خودکار فعال','Auto-save active')):t('در حال بارگذاری','Loading')}</span></header>
+  {project.sourceReport&&<ComfarReferencePanel baseline={project.sourceReport} language={language}/> }
   <div className="fw-progress"><div><b>{t('پیشرفت تکمیل','Completion Progress')}</b><strong>{fmt(completed/steps.length*100)}٪</strong></div><i><span style={{width:(completed/steps.length*100)+'%'}}/></i></div>
   <nav className="fw-steps">{steps.map(([id,label],i)=><button key={id} className={step===id?'active':''} onClick={()=>setStep(id)}><small>{fmt(i+1)}</small><span>{en?(stepTitleEn[label]??label):label}</span>{done[id]&&<CheckCircle2 size={14}/>}</button>)}</nav>
   <main className="fw-content">
