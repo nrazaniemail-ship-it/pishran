@@ -106,4 +106,35 @@ assert.equal(comfar.find(row => row.id === 'comfar-cold-coil-200k')?.sourceRepor
 assert.equal(comfar.find(row => row.id === 'comfar-integrated-steel-dri')?.sourceReport?.primaryCapacity,1200000)
 assert.equal(comfar.find(row => row.id === 'comfar-integrated-steel-dri')?.sourceReport?.secondaryCapacity,1760000)
 assert.equal((await repository.listProjects()).filter(row => row.id.startsWith('comfar-')).every(row => row.templateId === 'comfar-import'),true)
+
+const inputSource = await readFile(new URL('../src/features/projects/comfarProjectInputData.ts', import.meta.url), 'utf8')
+const inputOutput = ts.transpileModule(inputSource, {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
+}).outputText
+const { COMFAR_PROJECT_INPUTS } = await import('data:text/javascript;base64,' + Buffer.from(inputOutput).toString('base64'))
+const expectedSourceTotals = {
+  'comfar-hr-coil-200k': { fixed:18463009, preproduction:3538460.06, operating:42661975.08, workingCapital:4595370.36, years:15 },
+  'comfar-hr-plate-250k': { fixed:13327319.84, preproduction:9420983.31, operating:40237584.18, workingCapital:1953898.01, years:15 },
+  'comfar-cold-coil-200k': { fixed:14387972, preproduction:652400, operating:66206503.66, workingCapital:2960412.61, years:15 },
+  'comfar-integrated-steel-dri': { fixed:453858298, preproduction:117124027, operating:643963499, workingCapital:68155775.89, years:15 },
+}
+for (const [id, expected] of Object.entries(expectedSourceTotals)) {
+  const input = COMFAR_PROJECT_INPUTS[id]
+  assert.ok(input, `Detailed source input schedule must exist for ${id}`)
+  const fixed = input.fixedInvestment.reduce((total, asset) => total + asset.periods.reduce((sum, period) => sum + period.amount, 0), 0)
+  const preproduction = input.preproduction.reduce((total, period) => total + period.net + period.capitalizedInterest, 0)
+  const operating = input.operatingCostRows.filter(row => !row.name.includes('بازاریابی')).reduce((total, row) => total + row.amount, 0)
+  const lastWorkingCapital = input.workingCapital.at(-1)
+  assert.ok(Math.abs(fixed - expected.fixed) < 0.02, `${id} fixed asset schedule must reconcile to the report`)
+  assert.ok(Math.abs(preproduction - expected.preproduction) < 0.02, `${id} pre-production and capitalized interest must reconcile to the report`)
+  assert.ok(Math.abs(operating - expected.operating) < 0.02, `${id} reference-year factory cost breakdown must reconcile to its detailed table`)
+  assert.ok(Math.abs(lastWorkingCapital.inventory + lastWorkingCapital.cash - expected.workingCapital) < 0.02, `${id} terminal working capital must reconcile to the report`)
+  assert.ok(input.workingCapital.length >= expected.years - 3, `${id} must include a multi-year working-capital schedule`)
+  assert.ok(input.missingSourceDetails.length >= 4, `${id} must explicitly disclose report details that were not supplied`)
+}
+assert.match(modelSource, /COMFAR_PROJECT_INPUTS/)
+assert.match(modelSource, /fixedInvestmentItems:importedFixedItems/)
+assert.match(modelSource, /workingCapital:imported\?report!\.workingCapital:0/)
+assert.match(modelSource, /مخارج پیش از تولید/)
+assert.match(modelSource, /بهره سرمایه‌ای‌شده/)
 console.log('Raw project templates, COMFAR reference seeding and retired dataset purge validation passed.')
