@@ -1,8 +1,8 @@
 import {useEffect,useState} from 'react';
 import {localStore} from '../../core/storage/localStore';
-import {ahp,aggregatePairwiseMatrices,aggregateBwmExpertWeights,analyzeRankingSensitivity,makeRankingSnapshot,topsis,type PairwiseMatrix,type CriterionDirection} from './rankingMethods';
+import {ahp,aggregatePairwiseMatrices,aggregateBwmExpertWeights,combineAHPBWMWeights,analyzeRankingSensitivity,makeRankingSnapshot,topsis,type PairwiseMatrix,type CriterionDirection} from './rankingMethods';
 type Props={language:'fa'|'en';projectId?:string;initialMethod?:Method;suggestedCriteria?:string[];suggestedAlternatives?:string[];suggestedScores?:Array<Array<number|null>>;suggestedDirections?:CriterionDirection[]};
-type Method='AHP'|'BWM'|'TOPSIS'|'AHP+TOPSIS';
+type Method='AHP'|'BWM'|'TOPSIS'|'AHP+TOPSIS'|'AHP+BWM';
 type Expert={name:string,matrix:PairwiseMatrix,bestIndex:number,worstIndex:number,bestToOthers:number[],othersToWorst:number[]};
 const newMatrix=(n:number):PairwiseMatrix=>Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:1));
 const initialScores=()=>[[80,7,12],[65,9,8],[90,6,15]];
@@ -45,7 +45,7 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
   if(!projectDraftLoaded)return;
   void localStore.set(methodDraftKey,{method,criteria,alternatives,scores,directions,manualWeights,experts});
  },[projectDraftLoaded,methodDraftKey,method,criteria,alternatives,scores,directions,manualWeights,experts]);
- const usesExperts=method==='AHP'||method==='BWM'||method==='AHP+TOPSIS';
+ const usesExperts=method==='AHP'||method==='BWM'||method==='AHP+TOPSIS'||method==='AHP+BWM';
  const updateExpert=(idx:number,fn:(e:Expert)=>Expert)=>setExperts(es=>es.map((e,i)=>i===idx?fn(e):e));
  const addExpert=()=>setExperts(es=>[...es,{name:`${en?'Expert':'خبره'} ${es.length+1}`,matrix:newMatrix(criteria.length),bestIndex:0,worstIndex:criteria.length-1,bestToOthers:Array(criteria.length).fill(1),othersToWorst:Array(criteria.length).fill(1)}]);
  const removeCriterion=(idx:number)=>{
@@ -67,12 +67,19 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
  const run=async()=>{
   try{
    let weights:number[],diagnostics:any,judgments:any,ranking:any=undefined;
-   if(method==='AHP'||method==='AHP+TOPSIS'){
+   if(method==='AHP'||method==='AHP+TOPSIS'||method==='AHP+BWM'){
     const matrices=experts.map(e=>e.matrix);const individual=experts.map(e=>ahp(e.matrix));const group=aggregatePairwiseMatrices(matrices);const result=ahp(group);
     if(!result.consistent){setNotice(en?'Group consistency ratio exceeds 0.10. Revise judgments before accepting weights.':'نسبت ناسازگاری گروهی بیش از ۰٫۱۰ است؛ قضاوت‌ها را اصلاح کنید.');return;}
     const individualCRs=individual.map(x=>x.cr);
     weights=result.weights;diagnostics={lambdaMax:result.lambdaMax,ci:result.ci,cr:result.cr,consistent:result.consistent,maxExpertCR:Math.max(...individualCRs),meanExpertCR:individualCRs.reduce((a,b)=>a+b,0)/individualCRs.length,inconsistentExpertCount:individualCRs.filter(v=>v>0.1).length};judgments={expertMatrices:matrices,individualExpertDiagnostics:individual.map(x=>({lambdaMax:x.lambdaMax,ci:x.ci,cr:x.cr,consistent:x.consistent})),aggregatedMatrix:group};
     if(method==='AHP+TOPSIS'){ranking=topsis(numericScores,weights,directions);diagnostics={...diagnostics,topsis:'vector-normalized Euclidean TOPSIS'};judgments={...judgments,alternatives,scores:numericScores,directions};}
+    if(method==='AHP+BWM'){
+     const bwmResult=aggregateBwmExpertWeights(experts);
+     weights=combineAHPBWMWeights(result.weights,bwmResult.weights);
+     ranking=topsis(numericScores,weights,directions);
+     diagnostics={...diagnostics,bwmMaxExpertXi:Math.max(...bwmResult.individual.map(x=>x.xi)),weightFusion:'50/50 normalized geometric mean',rankingMethod:'TOPSIS'};
+     judgments={...judgments,bwmExpertJudgments:experts.map(e=>({name:e.name,bestIndex:e.bestIndex,worstIndex:e.worstIndex,bestToOthers:e.bestToOthers,othersToWorst:e.othersToWorst})),bwmIndividualResults:bwmResult.individual,ahpWeights:result.weights,bwmWeights:bwmResult.weights,weightFusion:'50/50 normalized geometric mean',alternatives,scores:numericScores,directions};
+    }
    }else if(method==='BWM'){
     const result=aggregateBwmExpertWeights(experts);weights=result.weights;const xis=result.individual.map(x=>x.xi);diagnostics={maxExpertXi:Math.max(...xis),meanExpertXi:xis.reduce((a,b)=>a+b,0)/xis.length,aggregation:'geometric mean of individual expert priorities'};judgments={expertJudgments:experts.map(e=>({name:e.name,bestIndex:e.bestIndex,worstIndex:e.worstIndex,bestToOthers:e.bestToOthers,othersToWorst:e.othersToWorst})),individualResults:result.individual};
    }else{
@@ -87,16 +94,21 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
  const runSensitivity=async()=>{
   try{
    let weights:number[];let expertWeightVectors:number[][]=[];
-   if(method==='AHP'||method==='AHP+TOPSIS'){
+   if(method==='AHP'||method==='AHP+TOPSIS'||method==='AHP+BWM'){
     expertWeightVectors=experts.map(e=>ahp(e.matrix).weights);
     const base=ahp(aggregatePairwiseMatrices(experts.map(e=>e.matrix)));
     if(!base.consistent) throw new Error(en?'AHP consistency ratio exceeds 0.10.':'نسبت ناسازگاری AHP بیش از ۰٫۱۰ است.');
     weights=base.weights;
+    if(method==='AHP+BWM'){
+     const bwmBase=aggregateBwmExpertWeights(experts);
+     weights=combineAHPBWMWeights(base.weights,bwmBase.weights);
+     expertWeightVectors=experts.map((e,i)=>combineAHPBWMWeights(ahp(e.matrix).weights,bwmBase.individual[i].weights));
+    }
    }else if(method==='BWM') {const group=aggregateBwmExpertWeights(experts);weights=group.weights;expertWeightVectors=group.individual.map(x=>x.weights);}
    else weights=topsis(numericScores,manualWeights,directions).weights;
    const cases:Array<{label:string;weights:number[]}>=[];
    const delta=shock/100;
-   if(method==='AHP'||method==='AHP+TOPSIS'){
+   if(method==='AHP'||method==='AHP+TOPSIS'||method==='AHP+BWM'){
     experts.forEach((expert,expertIndex)=>{
      for(let i=0;i<criteria.length;i++) for(let j=i+1;j<criteria.length;j++) for(const sign of [-1,1]){
       const changed=expert.matrix.map(row=>[...row]);
@@ -107,7 +119,8 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
       if(candidate.consistent) cases.push({label:'AHP · '+expert.name+' · '+criteria[i]+'/'+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:candidate.weights});
      }
     });
-   }else if(method==='BWM'){
+   }else if(method==='BWM'||method==='AHP+BWM'){
+    const baseAHP=method==='AHP+BWM'?ahp(aggregatePairwiseMatrices(experts.map(e=>e.matrix))).weights:undefined;
     experts.forEach((expert,expertIndex)=>{
      for(let j=0;j<criteria.length;j++) if(j!==expert.bestIndex&&j!==expert.worstIndex) for(const sign of [-1,1]){
       const changed=experts.map((e,k)=>k===expertIndex?{
@@ -115,7 +128,8 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
        bestToOthers:e.bestToOthers.map((v,i)=>i===j?Math.min(9,Math.max(1,v*(1+sign*delta))):v),
        othersToWorst:e.othersToWorst.map((v,i)=>i===j?Math.min(9,Math.max(1,v*(1+sign*delta))):v)
       }:e);
-      cases.push({label:'BWM · '+expert.name+' · '+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:aggregateBwmExpertWeights(changed).weights});
+      const bwmWeights=aggregateBwmExpertWeights(changed).weights;
+      cases.push({label:'BWM · '+expert.name+' · '+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:baseAHP?combineAHPBWMWeights(baseAHP,bwmWeights):bwmWeights});
      }
     });
    }else{
@@ -134,14 +148,14 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
   }catch(error){setNotice(error instanceof Error?error.message:String(error))}
  };
  const scale=[1,2,3,4,5,6,7,8,9];
- const titles:Record<Method,string>={AHP:'AHP',BWM:'BWM',TOPSIS:'TOPSIS','AHP+TOPSIS':'AHP + TOPSIS'};
+ const titles:Record<Method,string>={AHP:'AHP',BWM:'BWM',TOPSIS:'TOPSIS','AHP+TOPSIS':'AHP + TOPSIS','AHP+BWM':'AHP + BWM + TOPSIS'};
  return <section className="module-workspace-card" style={{marginTop:18}} aria-label={en?'Ranking methods':'روش‌های رتبه‌بندی'}>
   <div className="section-head"><div><h2>{en?'Multi-criteria weighting & ranking':'وزن‌دهی و رتبه‌بندی چندمعیاره'}</h2><p>{en?'AHP/BWM weight criteria; TOPSIS ranks alternatives; AHP + TOPSIS combines both stages.':'AHP و BWM وزن معیارها را تعیین می‌کنند؛ TOPSIS گزینه‌ها را رتبه‌بندی می‌کند؛ ترکیب AHP + TOPSIS هر دو مرحله را انجام می‌دهد.'}</p></div><span className="muted">{en?'Independent engine tests':'موتور محاسبات قابل آزمون مستقل'}</span></div>
-  <div className="ranking-method-tabs" role="group" aria-label={en?'Advanced ranking methods':'روش‌های پیشرفته رتبه‌بندی'}>{(['AHP','BWM','TOPSIS','AHP+TOPSIS'] as Method[]).map(m=><button key={m} type="button" data-method={m} aria-label={titles[m]} aria-pressed={method===m} className={`ranking-method-tab ranking-method-tab--${m.toLowerCase().replace('+','-')} ${method===m?'is-active':''}`} onClick={()=>setMethod(m)}><span className="ranking-method-tab__name">{titles[m]}</span><span className="ranking-method-tab__state">{method===m?(en?'Selected':'فعال'):(en?'Open':'انتخاب')}</span></button>)}</div>
-  <p className="muted">{method==='TOPSIS'?(en?'TOPSIS uses manually supplied criterion weights.':'در TOPSIS وزن معیارها را به‌صورت دستی وارد کنید.'):method==='AHP+TOPSIS'?(en?'AHP derives criterion weights from expert pairwise judgments; TOPSIS then ranks alternatives.':'در ترکیب AHP + TOPSIS ابتدا وزن معیارها از قضاوت زوجی خبرگان در AHP استخراج و سپس گزینه‌ها با TOPSIS رتبه‌بندی می‌شوند.'):method==='BWM'?(en?'BWM is a criterion-weighting method; it does not rank alternatives by itself.':'BWM روش وزن‌دهی معیارهاست و به‌تنهایی رتبه گزینه‌ها را محاسبه نمی‌کند.'): (en?'AHP derives criterion weights; use TOPSIS to rank alternatives.':'AHP وزن معیارها را محاسبه می‌کند؛ برای رتبه‌بندی گزینه‌ها از TOPSIS استفاده کنید.')}</p>
+  <div className="ranking-method-tabs" role="group" aria-label={en?'Advanced ranking methods':'روش‌های پیشرفته رتبه‌بندی'}>{(['AHP','BWM','TOPSIS','AHP+TOPSIS','AHP+BWM'] as Method[]).map(m=><button key={m} type="button" data-method={m} aria-label={titles[m]} aria-pressed={method===m} className={`ranking-method-tab ranking-method-tab--${m.toLowerCase().replace('+','-')} ${method===m?'is-active':''}`} onClick={()=>setMethod(m)}><span className="ranking-method-tab__name">{titles[m]}</span><span className="ranking-method-tab__state">{method===m?(en?'Selected':'فعال'):(en?'Open':'انتخاب')}</span></button>)}</div>
+  <p className="muted">{method==='TOPSIS'?(en?'TOPSIS uses manually supplied criterion weights.':'در TOPSIS وزن معیارها را به‌صورت دستی وارد کنید.'):method==='AHP+TOPSIS'?(en?'AHP derives criterion weights from expert pairwise judgments; TOPSIS then ranks alternatives.':'در ترکیب AHP + TOPSIS ابتدا وزن معیارها از قضاوت زوجی خبرگان در AHP استخراج و سپس گزینه‌ها با TOPSIS رتبه‌بندی می‌شوند.'):method==='AHP+BWM'?(en?'AHP and BWM independently derive expert weights; a 50/50 normalized geometric blend feeds TOPSIS ranking.':'AHP و BWM به‌طور مستقل وزن معیارها را از خبرگان استخراج می‌کنند؛ میانگین هندسی نرمال‌شده با سهم برابر ۵۰/۵۰ به TOPSIS برای رتبه‌بندی داده می‌شود.'):method==='BWM'?(en?'BWM is a criterion-weighting method; it does not rank alternatives by itself.':'BWM روش وزن‌دهی معیارهاست و به‌تنهایی رتبه گزینه‌ها را محاسبه نمی‌کند.'): (en?'AHP derives criterion weights; use TOPSIS to rank alternatives.':'AHP وزن معیارها را محاسبه می‌کند؛ برای رتبه‌بندی گزینه‌ها از TOPSIS استفاده کنید.')}</p>
   <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}><b>{en?'Criteria':'معیارها'}:</b>{criteria.map((c,i)=><span key={i} className="tag" style={{display:'inline-flex',alignItems:'center',gap:6}}>{c}<button type="button" className="secondary-button" aria-label={en?`Remove criterion ${c}`:`حذف معیار ${c}`} title={en?'Remove criterion':'حذف معیار'} onClick={()=>removeCriterion(i)} style={{padding:'2px 6px',minWidth:0}}>×</button></span>)}<button className="secondary-button" onClick={addCriterion} disabled={criteria.length>=8}>{en?'Add criterion':'افزودن معیار'}</button></div>
   {usesExperts&&experts.map((e,ei)=><div key={ei} style={{border:'1px solid var(--line)',borderRadius:10,padding:12,marginTop:12}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><b>{e.name}</b><button className="secondary-button" onClick={()=>setExperts(es=>es.filter((_,i)=>i!==ei))} disabled={experts.length===1}>{en?'Remove':'حذف'}</button></div>
-   {method==='BWM'?<><div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:8,marginTop:10}}><label>{en?'Best criterion':'معیار بهترین'}<select aria-label={en?`${e.name} best criterion`:`${e.name} معیار بهترین`} value={e.bestIndex} onChange={ev=>{const v=Number(ev.target.value);updateExpert(ei,x=>({...x,bestIndex:v,bestToOthers:x.bestToOthers.map((n,i)=>i===v?1:n)}))}}>{criteria.map((c,i)=><option value={i} key={i}>{c}</option>)}</select></label><label>{en?'Worst criterion':'معیار بدترین'}<select aria-label={en?`${e.name} worst criterion`:`${e.name} معیار بدترین`} value={e.worstIndex} onChange={ev=>{const v=Number(ev.target.value);updateExpert(ei,x=>({...x,worstIndex:v,othersToWorst:x.othersToWorst.map((n,i)=>i===v?1:n)}))}}>{criteria.map((c,i)=><option value={i} key={i}>{c}</option>)}</select></label></div><div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:8,marginTop:10}}>{criteria.map((c,i)=><label key={i} style={{display:'grid',gap:4}}>{en?'Best over':'برتری بهترین بر'} {c}<select aria-label={en?`Best over ${c}`:`برتری بهترین بر ${c}`} value={e.bestToOthers[i]} disabled={i===e.bestIndex} onChange={ev=>updateExpert(ei,x=>({...x,bestToOthers:x.bestToOthers.map((v,k)=>k===i?Number(ev.target.value):v)}))}>{scale.map(v=><option key={v}>{v}</option>)}</select><small>{en?'Other over worst':'برتری '+c+' بر بدترین'}</small><select aria-label={en?`Other over worst ${c}`:`برتری ${c} بر بدترین`} value={e.othersToWorst[i]} disabled={i===e.worstIndex} onChange={ev=>updateExpert(ei,x=>({...x,othersToWorst:x.othersToWorst.map((v,k)=>k===i?Number(ev.target.value):v)}))}>{scale.map(v=><option key={v}>{v}</option>)}</select></label>)}</div></>:<div style={{overflowX:'auto',marginTop:10}}><table style={{borderCollapse:'collapse',width:'100%'}}><tbody>{criteria.map((c,i)=><tr key={i}><th>{c}</th>{criteria.map((_,j)=><td key={j} style={{padding:4}}>{i===j?'1':i<j?<select aria-label={en?`${e.name} ${c} vs ${criteria[j]}`:`${e.name}: ${c} در برابر ${criteria[j]}`} value={e.matrix[i][j]} onChange={ev=>{const v=Number(ev.target.value);updateExpert(ei,x=>{const m=x.matrix.map(r=>[...r]);m[i][j]=v;m[j][i]=1/v;return {...x,matrix:m}})}}>{scale.map(v=><option key={v} value={v}>{v}</option>)}</select>:<span>{e.matrix[i][j].toFixed(3)}</span>}</td>)}</tr>)}</tbody></table><small className="muted">{en?'Saaty 1–9 scale; reciprocal entries are automatic.':'مقیاس ۱ تا ۹ ساعتی؛ مقادیر معکوس خودکار ثبت می‌شوند.'}</small></div>}
+   {method==='BWM'?<><div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:8,marginTop:10}}><label>{en?'Best criterion':'معیار بهترین'}<select aria-label={en?`${e.name} best criterion`:`${e.name} معیار بهترین`} value={e.bestIndex} onChange={ev=>{const v=Number(ev.target.value);updateExpert(ei,x=>({...x,bestIndex:v,bestToOthers:x.bestToOthers.map((n,i)=>i===v?1:n)}))}}>{criteria.map((c,i)=><option value={i} key={i}>{c}</option>)}</select></label><label>{en?'Worst criterion':'معیار بدترین'}<select aria-label={en?`${e.name} worst criterion`:`${e.name} معیار بدترین`} value={e.worstIndex} onChange={ev=>{const v=Number(ev.target.value);updateExpert(ei,x=>({...x,worstIndex:v,othersToWorst:x.othersToWorst.map((n,i)=>i===v?1:n)}))}}>{criteria.map((c,i)=><option value={i} key={i}>{c}</option>)}</select></label></div><div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:8,marginTop:10}}>{criteria.map((c,i)=><label key={i} style={{display:'grid',gap:4}}>{en?'Best over':'برتری بهترین بر'} {c}<select aria-label={en?`Best over ${c}`:`برتری بهترین بر ${c}`} value={e.bestToOthers[i]} disabled={i===e.bestIndex} onChange={ev=>updateExpert(ei,x=>({...x,bestToOthers:x.bestToOthers.map((v,k)=>k===i?Number(ev.target.value):v)}))}>{scale.map(v=><option key={v}>{v}</option>)}</select><small>{en?'Other over worst':'برتری '+c+' بر بدترین'}</small><select aria-label={en?`Other over worst ${c}`:`برتری ${c} بر بدترین`} value={e.othersToWorst[i]} disabled={i===e.worstIndex} onChange={ev=>updateExpert(ei,x=>({...x,othersToWorst:x.othersToWorst.map((v,k)=>k===i?Number(ev.target.value):v)}))}>{scale.map(v=><option key={v}>{v}</option>)}</select></label>)}</div></>:<div style={{overflowX:'auto',marginTop:10}}><table style={{borderCollapse:'collapse',width:'100%'}}><tbody>{criteria.map((c,i)=><tr key={i}><th>{c}</th>{criteria.map((_,j)=><td key={j} style={{padding:4}}>{i===j?'1':i<j?<select aria-label={en?`${e.name} ${c} vs ${criteria[j]}`:`${e.name}: ${c} در برابر ${criteria[j]}`} value={e.matrix[i][j]} onChange={ev=>{const v=Number(ev.target.value);updateExpert(ei,x=>{const m=x.matrix.map(r=>[...r]);m[i][j]=v;m[j][i]=1/v;return {...x,matrix:m}})}}>{scale.map(v=><option key={v} value={v}>{v}</option>)}</select>:<span>{e.matrix[i][j].toFixed(3)}</span>}</td>)}</tr>)}</tbody></table><small className="muted">{en?'Saaty 1–9 scale; reciprocal entries are automatic.':'مقیاس ۱ تا ۹ ساعتی؛ مقادیر معکوس خودکار ثبت می‌شوند.'}</small></div>}${bwmUI}
   </div>)}
   {usesExperts&&<button className="secondary-button" style={{marginTop:10}} onClick={addExpert} disabled={criteria.length<2}>{en?'Add expert':'افزودن خبره'}</button>}
   <div style={{marginTop:16}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,flexWrap:'wrap'}}><b>{en?'Alternative performance matrix':'ماتریس عملکرد گزینه‌ها'}</b><button className="secondary-button" onClick={addAlternative} disabled={alternatives.length>=12}>{en?'Add alternative':'افزودن گزینه'}</button></div><p className="muted">{en?'Enter comparable numeric values. Set each criterion as benefit (higher is better) or cost (lower is better).':'مقادیر عددی و قابل مقایسه وارد کنید. برای هر معیار مشخص کنید سود (بیشتر بهتر) است یا هزینه (کمتر بهتر).'}</p>
@@ -150,8 +164,8 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
   {method==='TOPSIS'&&<div style={{marginTop:12}}><b>{en?'Manual criterion weights':'وزن‌های دستی معیارها'}</b><div style={{display:'flex',gap:10,flexWrap:'wrap'}}>{criteria.map((c,i)=><label key={i}>{c}<input aria-label={en?c+' manual weight':'وزن دستی '+c} type="number" min="0" step="any" value={manualWeights[i]??0} onChange={e=>setManualWeights(ws=>ws.map((v,k)=>k===i?Number(e.target.value):v))} style={{width:90}}/></label>)}</div><small className="muted">{en?'Weights are normalized automatically.':'وزن‌ها هنگام محاسبه به‌صورت خودکار نرمال می‌شوند.'}</small></div>}
   <div style={{display:'flex',gap:10,alignItems:'end',flexWrap:'wrap',marginTop:14}}>
    <label>{en?'Sensitivity shock (%)':'دامنه تغییر حساسیت (%)'}<input aria-label={en?'Sensitivity shock percentage':'درصد تغییر حساسیت'} type="number" min="0" max="90" step="5" value={shock} onChange={e=>setShock(Math.max(0,Math.min(90,Number(e.target.value)||0)))}/></label>
-   <button className="primary" onClick={()=>void run()} disabled={!scoresReady||criteria.length<2||alternatives.length<2||(method==='BWM'&&experts.some(e=>e.bestIndex===e.worstIndex))}>{en?'Calculate and save version':'محاسبه و ثبت نسخه'}</button>
-   <button className="secondary-button" onClick={runSensitivity} disabled={!scoresReady||criteria.length<2||alternatives.length<2||(method==='BWM'&&experts.some(e=>e.bestIndex===e.worstIndex))}>{en?'Run rank sensitivity':'اجرای تحلیل حساسیت رتبه‌ها'}</button>
+   <button className="primary" onClick={()=>void run()} disabled={!scoresReady||criteria.length<2||alternatives.length<2||((method==='BWM'||method==='AHP+BWM')&&experts.some(e=>e.bestIndex===e.worstIndex))}>{en?'Calculate and save version':'محاسبه و ثبت نسخه'}</button>
+   <button className="secondary-button" onClick={runSensitivity} disabled={!scoresReady||criteria.length<2||alternatives.length<2||((method==='BWM'||method==='AHP+BWM')&&experts.some(e=>e.bestIndex===e.worstIndex))}>{en?'Run rank sensitivity':'اجرای تحلیل حساسیت رتبه‌ها'}</button>
   </div>
   {sensitivity&&<div data-testid="ranking-sensitivity-results" style={{marginTop:14,padding:12,border:'1px solid var(--line)',borderRadius:10}}>
    <b>{en?'Rank sensitivity summary':'خلاصه تحلیل حساسیت رتبه‌ها'}</b>
