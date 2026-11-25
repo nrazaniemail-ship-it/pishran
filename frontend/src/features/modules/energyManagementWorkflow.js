@@ -247,3 +247,86 @@ export function prepareModule02EnergyCostPosting({baseInput,allocation,costCente
  if(!Number.isFinite(Number(selected.totalCost))||Number(selected.totalCost)<0)throw new Error('مبلغ تخصیص‌یافته به مرکز هزینه معتبر نیست.')
  return {input:{...baseInput,energy:String(selected.totalCost)},sourceReferences:{energyBillId:String(allocation.billId??''),billNumber:String(allocation.billNumber??''),billingPeriod:String(allocation.period??''),energyAllocationCost:Number(selected.totalCost),energyAllocationCenter:selected.costCenterId,energyAllocationBasis:'kWh + demand kW + reactive kVArh + tax + residual'},duplicatePostingGuard:'Use this prepared energy value as MOD-02 energy cost; do not add the full bill total separately.'}
 }
+
+
+export const METER_CALIBRATIONS_KEY = 'module-intelligence:MOD-05:meter-calibrations:v1'
+export const ENERGY_MV_EVIDENCE_KEY = 'module-intelligence:MOD-05:mv-evidence:v1'
+
+const isoDate=(value,label)=>{
+ const text=required(value,label)
+ if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(text)||Number.isNaN(Date.parse(text+'T00:00:00Z'))||new Date(text+'T00:00:00Z').toISOString().slice(0,10)!==text)throw new Error('تاریخ '+label+' باید به قالب YYYY-MM-DD و معتبر باشد.')
+ return text
+}
+const addUtcDays=(date,days)=>{const d=new Date(date+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}
+export function getMeterCalibrationStatus(record,asOf=new Date().toISOString().slice(0,10),dueSoonDays=30){
+ const today=isoDate(asOf,'تاریخ مبنا')
+ const next=isoDate(record?.nextCalibrationDate,'موعد کالیبراسیون')
+ const delta=Math.round((Date.parse(next+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000)
+ return {status:delta<0?'overdue':delta<=dueSoonDays?'due-soon':'valid',daysUntilDue:delta,nextCalibrationDate:next}
+}
+export function listMeterCalibrationAlerts(records,asOf=new Date().toISOString().slice(0,10),dueSoonDays=30){
+ return (Array.isArray(records)?records:[]).map(record=>({...record,...getMeterCalibrationStatus(record,asOf,dueSoonDays)})).filter(record=>record.status!=='valid').sort((a,b)=>a.daysUntilDue-b.daysUntilDue)
+}
+export function validateMeterCalibration(input,asOf=new Date().toISOString().slice(0,10)){
+ const meterId=required(input.meterId,'شناسه تجهیز اندازه‌گیری')
+ const site=required(input.site,'سایت')
+ const parameter=required(input.parameter,'کمیت اندازه‌گیری')
+ const unit=required(input.unit,'واحد اندازه‌گیری')
+ const intervalDays=number(input.intervalDays,'فاصله کالیبراسیون',1)
+ if(!Number.isInteger(intervalDays)||intervalDays>3650)throw new Error('فاصله کالیبراسیون باید عدد صحیح بین ۱ تا ۳۶۵۰ روز باشد.')
+ const lastCalibrationDate=isoDate(input.lastCalibrationDate,'آخرین کالیبراسیون')
+ const today=isoDate(asOf,'تاریخ مبنا')
+ if(lastCalibrationDate>today)throw new Error('تاریخ آخرین کالیبراسیون نمی‌تواند در آینده باشد.')
+ const certificateRef=required(input.certificateRef,'شماره گواهی / مرجع ردیابی')
+ const provider=required(input.provider,'آزمایشگاه / مرجع کالیبراسیون')
+ const accuracy=input.accuracy===''||input.accuracy===null||input.accuracy===undefined?null:number(input.accuracy,'دقت اعلام‌شده',0)
+ const range=String(input.measurementRange??'').trim()
+ const nextCalibrationDate=addUtcDays(lastCalibrationDate,intervalDays)
+ return {meterId,site,parameter,unit,intervalDays,lastCalibrationDate,nextCalibrationDate,certificateRef,provider,owner:String(input.owner??'').trim(),accuracy,measurementRange:range,notes:String(input.notes??'').trim(),...getMeterCalibrationStatus({nextCalibrationDate},today)}
+}
+export async function saveMeterCalibration(input,store,createdAt=new Date().toISOString()){
+ const checked=validateMeterCalibration(input,createdAt.slice(0,10))
+ let saved
+ await store.update(METER_CALIBRATIONS_KEY,old=>{
+  const records=Array.isArray(old)?old:[]
+  const existing=records.find(x=>x.id===input.id)||records.find(x=>x.meterId===checked.meterId&&x.site===checked.site)
+  const id=existing?.id??('MOD05-CAL-'+Date.parse(createdAt)+'-'+checked.meterId.replace(/[^a-zA-Z0-9_-]/g,'-'))
+  const history=[...(existing?.history??[]),...(existing?[{...existing,archivedAt:createdAt}]:[])]
+  saved={...checked,id,createdAt,updatedAt:createdAt,history}
+  return [saved,...records.filter(x=>x.id!==id)].slice(0,1000)
+ })
+ return saved
+}
+export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibrations=[]}={},generatedAt=new Date().toISOString()){
+ const resource=input.resource
+ if(!Object.hasOwn(RESOURCE_CONFIG,resource))throw new Error('نوع منبع برای بسته M&V معتبر نیست.')
+ const baseline=baselines.find(x=>x.id===input.baselineId)
+ if(!baseline)throw new Error('خط مبنای انتخاب‌شده در دسترس نیست.')
+ if(baseline.resource!==resource)throw new Error('منبع خط مبنا با منبع بسته M&V یکسان نیست.')
+ const actualIds=[...new Set(Array.isArray(input.actualRecordIds)?input.actualRecordIds:[])]
+ if(!actualIds.length)throw new Error('حداقل یک رکورد واقعی برای دوره گزارش انتخاب کنید.')
+ const actuals=actualIds.map(id=>rows.find(x=>x.id===id))
+ if(actuals.some(x=>!x))throw new Error('یکی از رکوردهای واقعی انتخاب‌شده یافت نشد.')
+ for(const actual of actuals){
+  if(actual.resource!==resource||actual.site!==baseline.site||actual.seu!==baseline.seu)throw new Error('تمام رکوردهای واقعی باید از همان منبع، سایت و مصرف‌کننده عمده خط مبنا باشند.')
+  if(actual.dataQuality==='estimated')throw new Error('رکوردهای برآوردی برای بسته شواهد صرفه‌جویی پذیرفته نیستند.')
+  if(!(Number(actual.production)>0))throw new Error('تولید/فعالیت رکورد واقعی باید معتبر باشد.')
+ }
+ const calculations=actuals.map(actual=>({recordId:actual.id,period:actual.period,meterId:actual.meterId??'',...calculateEnergyPerformance({resource,baseline,actual})}))
+ const normalizedBaseline=calculations.reduce((sum,x)=>sum+x.normalizedBaseline,0)
+ const actualConsumption=calculations.reduce((sum,x)=>sum+x.actualConsumption,0)
+ const measuredSavings=normalizedBaseline-actualConsumption
+ const calibrationIndex=new Map(calibrations.map(x=>[String(x.meterId)+'::'+String(x.site),x]))
+ const calibrationCoverage=actuals.map(actual=>{
+  const calibration=calibrationIndex.get(String(actual.meterId??'')+'::'+String(actual.site))
+  const status=calibration?getMeterCalibrationStatus(calibration,generatedAt.slice(0,10)):{status:'missing',daysUntilDue:null}
+  return {recordId:actual.id,period:actual.period,meterId:actual.meterId??'',site:actual.site,calibrationId:calibration?.id??null,status:status.status,nextCalibrationDate:calibration?.nextCalibrationDate??null}
+ })
+ const warnings=[...new Set([...calculations.flatMap(x=>x.warnings??[]),...(!input.boundaryConfirmed?['مرز اندازه‌گیری هنوز توسط تهیه‌کننده تأیید نشده است.']:[]),...calibrationCoverage.filter(x=>x.status!=='valid').map(x=>'وضعیت کالیبراسیون کنتور '+(x.meterId||'نامشخص')+': '+x.status)])]
+ return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,measuredSavings,measuredSavingsPercent:normalizedBaseline?measuredSavings/normalizedBaseline*100:0,calibrationCoverage,warnings,reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
+}
+export async function saveEnergyMvEvidencePack(input,context,store,generatedAt=new Date().toISOString()){
+ const pack=buildEnergyMvEvidencePack(input,context,generatedAt)
+ await store.update(ENERGY_MV_EVIDENCE_KEY,old=>[pack,...(Array.isArray(old)?old:[])].slice(0,300))
+ return pack
+}
