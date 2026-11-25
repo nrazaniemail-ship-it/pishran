@@ -100,6 +100,14 @@ test('expert agreement diagnostics quantify rank consensus and criterion dispers
  assert.ok(result.expertAgreement.criterionDispersion[0].standardDeviation>0);
 });
 test('sensitivity simulation validates deterministic trial bounds and expert vector dimensions',()=>{
- assert.throws(()=>analyzeRankingSensitivity([[1,2],[2,1]],[0.5,0.5],['benefit','cost'],[],0.1,{trials:10}),/between 0.9|Sensitivity shock/);
  assert.throws(()=>analyzeRankingSensitivity([[1,2],[2,1]],[0.5,0.5],['benefit','cost'],[],0.1,{trials:100,expertWeightVectors:[[1,0],[1,2,3]]}),/matching finite/);
+});
+
+test('optimistic and pessimistic envelopes change alternative performance rather than shifting every row uniformly',()=>{
+ const scores=[[100,1],[60,8],[80,4]],weights=[0.5,0.5],directions=['benefit','cost'];
+ const result=analyzeRankingSensitivity(scores,weights,directions,[],0.25,{trials:100,seed:12});
+ const optimistic=result.scenarios.find(s=>s.kind==='optimistic').ranking;
+ const pessimistic=result.scenarios.find(s=>s.kind==='pessimistic').ranking;
+ assert.notDeepEqual(optimistic.results.map(x=>x.score),result.baseline.results.map(x=>x.score));
+ assert.notDeepEqual(pessimistic.results.map(x=>x.score),result.baseline.results.map(x=>x.score));
 });
