@@ -203,7 +203,7 @@ type RankingCriterion = { id: string; name: string; weight: number; direction: '
 type RankingOption = { id: string; name: string; scores: Record<string, number | null> }
 type RankingDraft = { criteria: RankingCriterion[]; options: RankingOption[] }
 
-function RankingPanel({ language }: { language: 'fa' | 'en' }) {
+function RankingPanel({ language, projectId, projectName }: { language: 'fa' | 'en'; projectId: string; projectName: string }) {
   const isEn = language === 'en'
   const [draft, setDraft] = useState<RankingDraft>({ criteria: [], options: [] })
   const [loaded, setLoaded] = useState(false)
@@ -212,14 +212,14 @@ function RankingPanel({ language }: { language: 'fa' | 'en' }) {
   const [notice, setNotice] = useState('')
   useEffect(() => {
     let alive = true
-    localStore.get<RankingDraft>('mod10-ranking-draft:v1').then(value => {
+    localStore.get<RankingDraft>('mod10-ranking-draft:' + projectId).then(value => {
       if (alive && value && Array.isArray(value.criteria) && Array.isArray(value.options)) setDraft(value)
     }).catch(() => undefined).finally(() => { if (alive) setLoaded(true) })
     return () => { alive = false }
-  }, [])
+  }, [projectId])
   useEffect(() => {
     if (!loaded) return
-    void localStore.set('mod10-ranking-draft:v1', draft).then(() => setNotice(isEn ? 'Saved on this device' : 'روی این دستگاه ذخیره شد')).catch(() => setNotice(isEn ? 'Local save failed' : 'ذخیره محلی ناموفق بود'))
+    void localStore.set('mod10-ranking-draft:' + projectId, draft).then(() => setNotice(isEn ? 'Saved on this device' : 'روی این دستگاه ذخیره شد')).catch(() => setNotice(isEn ? 'Local save failed' : 'ذخیره محلی ناموفق بود'))
   }, [draft, loaded, isEn])
   const addCriterion = () => {
     const name = criterionName.trim()
@@ -261,7 +261,7 @@ function RankingPanel({ language }: { language: 'fa' | 'en' }) {
   }).sort((a, b) => Number(b.eligible) - Number(a.eligible) || b.score - a.score) : []
   const fieldStyle: React.CSSProperties = { minWidth: 0, width: '100%', boxSizing: 'border-box' }
   return <section className="module-workspace-card" aria-labelledby="mod10-ranking-title">
-    <div className="section-head"><div><h2 id="mod10-ranking-title">{isEn ? 'Decision ranking workspace · MVP' : 'محیط رتبه‌بندی تصمیم · نسخه اولیه'}</h2><p>{isEn ? 'Define criteria and alternatives, enter evidence-based scores and calculate a transparent weighted-sum ranking.' : 'معیارها و گزینه‌ها را تعریف کنید، امتیازهای مبتنی بر شواهد را وارد کنید و رتبه‌بندی وزنی شفاف بگیرید.'}</p></div><span className="muted">{notice || (loaded ? (isEn ? 'Ready' : 'آماده') : (isEn ? 'Loading' : 'در حال بارگذاری'))}</span></div>
+    <div className="section-head"><div><h2 id="mod10-ranking-title">{projectName ? projectName + (isEn ? ' · ranking workspace' : ' · محیط رتبه‌بندی') : (isEn ? 'Decision ranking workspace · MVP' : 'محیط رتبه‌بندی تصمیم · نسخه اولیه')}</h2><p>{isEn ? 'Define criteria and alternatives, enter evidence-based scores and calculate a transparent weighted-sum ranking.' : 'معیارها و گزینه‌ها را تعریف کنید، امتیازهای مبتنی بر شواهد را وارد کنید و رتبه‌بندی وزنی شفاف بگیرید.'}</p></div><span className="muted">{notice || (loaded ? (isEn ? 'Ready' : 'آماده') : (isEn ? 'Loading' : 'در حال بارگذاری'))}</span></div>
     <div className="module-create-form"><label>{isEn ? 'Add a criterion' : 'افزودن معیار'}</label><div><input style={fieldStyle} value={criterionName} onChange={event => setCriterionName(event.target.value)} placeholder={isEn ? 'e.g. NPV, implementation risk, delivery time' : 'مثلاً NPV، ریسک اجرا، زمان تحویل'} maxLength={100}/><button className="primary" type="button" onClick={addCriterion} disabled={!criterionName.trim()}><Plus size={16}/>{isEn ? 'Add criterion' : 'افزودن معیار'}</button></div></div>
     {draft.criteria.length > 0 && <div style={{overflowX:'auto', marginTop:12}}><table style={{width:'100%',borderCollapse:'collapse',minWidth:620}}><thead><tr><th style={{textAlign:'start',padding:8}}>{isEn?'Criterion':'معیار'}</th><th style={{padding:8}}>{isEn?'Weight':'وزن'}</th><th style={{padding:8}}>{isEn?'Direction':'جهت'}</th><th style={{padding:8}}>{isEn?'Minimum threshold':'حداقل احراز'}</th><th style={{padding:8}}>{isEn?'Actions':'عملیات'}</th></tr></thead><tbody>{draft.criteria.map(item=><tr key={item.id}><td style={{padding:8}}>{item.name}</td><td style={{padding:8}}><input aria-label={isEn?`Weight ${item.name}`:`وزن ${item.name}`} style={{width:84}} type="number" min="0.001" step="0.1" value={item.weight} onChange={event=>updateCriterion(item.id,{weight:Math.max(0,Number(event.target.value)||0)})}/></td><td style={{padding:8}}><select aria-label={isEn?`Direction ${item.name}`:`جهت ${item.name}`} value={item.direction} onChange={event=>updateCriterion(item.id,{direction:event.target.value as RankingCriterion['direction']})}><option value="benefit">{isEn?'Higher is better':'بیشتر بهتر است'}</option><option value="cost">{isEn?'Lower is better':'کمتر بهتر است'}</option></select></td><td style={{padding:8}}><input aria-label={isEn?`Minimum threshold ${item.name}`:`حداقل احراز ${item.name}`} style={{width:100}} type="number" min="0" placeholder={isEn?'None':'بدون شرط'} value={item.minimum ?? ''} onChange={event=>updateCriterion(item.id,{minimum:event.target.value===''?null:Number(event.target.value)})}/></td><td style={{padding:8}}><button className="secondary" type="button" aria-label={isEn?`Remove criterion ${item.name}`:`حذف معیار ${item.name}`} onClick={()=>removeCriterion(item.id)}><Trash2 size={15}/>{isEn?'Remove':'حذف'}</button></td></tr>)}</tbody></table></div>}
     <div className="module-create-form" style={{marginTop:18}}><label>{isEn ? 'Add an alternative' : 'افزودن گزینه قابل مقایسه'}</label><div><input style={fieldStyle} value={optionName} onChange={event => setOptionName(event.target.value)} placeholder={isEn ? 'Enter an option or project name' : 'نام گزینه یا پروژه را وارد کنید'} maxLength={100}/><button className="primary" type="button" onClick={addOption} disabled={!optionName.trim() || draft.criteria.length===0}><Plus size={16}/>{isEn ? 'Add option' : 'افزودن گزینه'}</button></div></div>
@@ -461,9 +461,55 @@ function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoos
   </section>
 }
 
+type RankingWorkspaceProject = { id: string; name: string; createdAt: string; updatedAt: string; method: RankingAdvisorMethod }
+
 function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
   const isEn = language === 'en'
   const [category, setCategory] = useState<'INITIAL' | 'ADVANCED'>('INITIAL')
+  const [rankingProjects, setRankingProjects] = useState<RankingWorkspaceProject[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [newRankingProjectName, setNewRankingProjectName] = useState('')
+  const [editingRankingProjectName, setEditingRankingProjectName] = useState('')
+  const [rankingProjectsLoaded, setRankingProjectsLoaded] = useState(false)
+  const selectedProject = rankingProjects.find(project => project.id === selectedProjectId) ?? null
+  useEffect(() => {
+    let alive = true
+    localStore.get<RankingWorkspaceProject[]>('mod10-ranking-projects:v1').then(items => {
+      if (!alive) return
+      const safe = Array.isArray(items) ? items : []
+      setRankingProjects(safe)
+      setRankingProjectsLoaded(true)
+    }).catch(() => { if (alive) setRankingProjectsLoaded(true) })
+    return () => { alive = false }
+  }, [])
+  const persistRankingProjects = async (items: RankingWorkspaceProject[]) => {
+    setRankingProjects(items)
+    await localStore.set('mod10-ranking-projects:v1', items)
+  }
+  const createRankingProject = async () => {
+    const name = newRankingProjectName.trim()
+    if (!name) return
+    const now = new Date().toISOString()
+    const item: RankingWorkspaceProject = { id: 'ranking-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7), name, createdAt: now, updatedAt: now, method: 'WSM' }
+    await persistRankingProjects([item, ...rankingProjects])
+    setNewRankingProjectName('')
+    setSelectedProjectId(item.id)
+    setEditingRankingProjectName(item.name)
+    setCategory('INITIAL')
+  }
+  const saveRankingProjectName = async () => {
+    if (!selectedProject) return
+    const name = editingRankingProjectName.trim()
+    if (!name) return
+    await persistRankingProjects(rankingProjects.map(project => project.id === selectedProject.id ? { ...project, name, updatedAt: new Date().toISOString() } : project))
+  }
+  const deleteRankingProject = async (projectId: string) => {
+    const next = rankingProjects.filter(project => project.id !== projectId)
+    await persistRankingProjects(next)
+    if (selectedProjectId === projectId) setSelectedProjectId(null)
+    await localStore.set('mod10-ranking-draft:' + projectId, null)
+    await localStore.set('mod10-ranking-method-draft:' + projectId, null)
+  }
   const [initialPanelKey, setInitialPanelKey] = useState(0)
   const [advancedPanelKey, setAdvancedPanelKey] = useState(0)
   const [recommendedMethod, setRecommendedMethod] = useState<RankingAdvisorMethod>('AHP')
@@ -476,6 +522,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
     const cleanAlternatives = alternatives.map(value => value.trim()).filter(Boolean).slice(0, 12)
     if (!cleanCriteria.length || cleanAlternatives.length < 2) return
     setRecommendedMethod(method)
+    if (selectedProject) await persistRankingProjects(rankingProjects.map(project => project.id === selectedProject.id ? { ...project, method, updatedAt: new Date().toISOString() } : project))
     const selectedDirections: Array<'benefit' | 'cost'> = cleanCriteria.map((name, index) => directions[index] ?? (/هزینه|سرمایه|ریسک|زمان|مصرف|قیمت|نیاز منابع/.test(name) ? 'cost' : 'benefit'))
     const blankMatrix = cleanAlternatives.map(() => cleanCriteria.map(() => null))
     if (method === 'WSM') {
@@ -484,7 +531,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
         criteria: cleanCriteria.map((name, index) => ({ id: id('criterion'), name, weight: 1, direction: selectedDirections[index], minimum: null })),
         options: cleanAlternatives.map(name => ({ id: id('option'), name, scores: {} })),
       }
-      await localStore.set('mod10-ranking-draft:v1', draft)
+      await localStore.set('mod10-ranking-draft:' + (selectedProject?.id ?? 'unsaved'), draft)
       setInitialPanelKey(value => value + 1)
       setSuggestedCriteria([])
       setSuggestedDirections([])
@@ -502,7 +549,27 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
     setTimeout(() => document.getElementById('ranking-methods-heading')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
   return <div className="ranking-methods-workspace">
-    <RankingAdvisor language={language} onChoose={applyAdvisor}/>
+    {!selectedProject ? <section className="module-workspace-card" aria-labelledby="ranking-projects-title">
+      <div className="section-head"><div><h2 id="ranking-projects-title">{isEn ? 'Ranking projects' : 'پروژه‌های رتبه‌بندی'}</h2><p>{isEn ? 'Each project keeps its own criteria, alternatives and ranking inputs. Open a project card to continue editing.' : 'هر پروژه معیارها، گزینه‌ها و اطلاعات رتبه‌بندی مستقل خود را دارد. برای ادامه و ویرایش، روی کارت پروژه کلیک کنید.'}</p></div><span className="muted">{rankingProjects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
+      <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createRankingProject() }}>
+        <label htmlFor="ranking-project-new-name">{isEn ? 'New ranking project name' : 'نام پروژه رتبه‌بندی جدید'}</label>
+        <div><input id="ranking-project-new-name" value={newRankingProjectName} onChange={event => setNewRankingProjectName(event.target.value)} placeholder={isEn ? 'Enter a project name' : 'نام پروژه را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!newRankingProjectName.trim()}><Plus size={17}/>{isEn ? 'Create project' : 'ایجاد پروژه'}</button></div>
+      </form>
+      {rankingProjectsLoaded && rankingProjects.length > 0 ? <div className="module-workspace-list">{rankingProjects.map(project => <article className="module-workspace-item" key={project.id}>
+        <button type="button" className="ranking-project-open" onClick={() => { setSelectedProjectId(project.id); setEditingRankingProjectName(project.name); setRecommendedMethod(project.method ?? 'WSM'); setCategory(project.method === 'WSM' ? 'INITIAL' : 'ADVANCED'); setInitialPanelKey(value => value + 1); setAdvancedPanelKey(value => value + 1) }}>
+          <b>{project.name}</b><small>{isEn ? 'Last updated ' : 'آخرین ویرایش '} {new Date(project.updatedAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small><span>{isEn ? 'Open and edit →' : 'ورود و ویرایش ←'}</span>
+        </button>
+        <div className="module-workspace-item-actions"><button type="button" className="icon-button" aria-label={isEn ? 'Delete ' + project.name : 'حذف ' + project.name} title={isEn ? 'Delete project' : 'حذف پروژه'} onClick={() => void deleteRankingProject(project.id)}><Trash2 size={16}/></button></div>
+      </article>)}</div> : <div className="empty-state"><b>{isEn ? 'No ranking projects yet' : 'هنوز پروژه رتبه‌بندی ایجاد نشده است'}</b><p>{isEn ? 'Create a project to start a separate ranking process.' : 'برای آغاز یک فرآیند رتبه‌بندی مستقل، اولین پروژه را ایجاد کنید.'}</p></div>}
+    </section> : <>
+      <section className="module-workspace-card" aria-label={isEn ? 'Current ranking project' : 'پروژه رتبه‌بندی جاری'}>
+        <div className="section-head"><div><button type="button" className="secondary" onClick={() => setSelectedProjectId(null)}>{isEn ? '← All ranking projects' : '→ بازگشت به پروژه‌های رتبه‌بندی'}</button><h2 style={{marginTop:12}}>{isEn ? 'Edit ranking project' : 'ویرایش پروژه رتبه‌بندی'}</h2></div></div>
+        <form className="module-create-form" onSubmit={event => { event.preventDefault(); void saveRankingProjectName() }}>
+          <label htmlFor="ranking-project-edit-name">{isEn ? 'Project name' : 'نام پروژه'}</label>
+          <div><input id="ranking-project-edit-name" value={editingRankingProjectName} onChange={event => setEditingRankingProjectName(event.target.value)} maxLength={100}/><button type="submit" className="primary" disabled={!editingRankingProjectName.trim()}><Check size={16}/>{isEn ? 'Save name' : 'ذخیره نام'}</button></div>
+        </form>
+      </section>
+      <RankingAdvisor language={language} onChoose={applyAdvisor}/>
     <section className="module-workspace-card" aria-labelledby="ranking-methods-heading">
       <div className="section-head">
         <div>
@@ -528,7 +595,8 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
             <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
           </div>}
     </section>
-    {category === 'INITIAL' ? <RankingPanel key={initialPanelKey} language={language}/> : <RankingMethodsPanel key={advancedPanelKey} language={language} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
+    {category === 'INITIAL' ? <RankingPanel key={selectedProject?.id ?? initialPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} projectName={selectedProject?.name ?? ''}/> : <RankingMethodsPanel key={(selectedProject?.id ?? 'unsaved') + '-' + advancedPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
+    </>}
   </div>
 }
 
