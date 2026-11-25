@@ -153,7 +153,7 @@ try {
 
   const feasibilityPage = await browser.newPage()
   await feasibilityPage.goto(previewUrl)
-  await feasibilityPage.getByRole('button', { name: 'پروژه‌ها' }).click()
+  await feasibilityPage.getByRole('button', { name: 'پروژه‌ها', exact: true }).click()
   await feasibilityPage.locator('.project-card').first().waitFor({ state: 'visible' })
   assert.equal(await feasibilityPage.locator('.project-card').count(), 4, 'four COMFAR feasibility projects must be seeded')
   const importedProjectChecks = [
@@ -204,7 +204,7 @@ try {
       assert.equal(persisted.products[1].quantity, 1760000)
     }
     console.log(`PASS: ${item.id} report-derived feasibility inputs and IndexedDB persistence`)
-    await feasibilityPage.getByRole('button', { name: 'پروژه‌ها' }).click()
+    await feasibilityPage.getByRole('button', { name: 'پروژه‌ها', exact: true }).click()
     await feasibilityPage.locator('.project-card').first().waitFor({ state: 'visible' })
   }
   await feasibilityPage.close()
