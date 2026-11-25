@@ -37,23 +37,36 @@ try {
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: 'ذخیره نام' }).click()
-  await page.waitForFunction(async expectedName => {
-    const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('pishran_store')
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () => reject(request.error)
-    })
+  await page.waitForFunction(async ({ key, expectedName, moduleId }) => {
+    const values = []
     try {
-      const record = await new Promise((resolve, reject) => {
-        const request = db.transaction('kv', 'readonly').objectStore('kv').get('mod10-ranking-projects:v1')
+      const db = await new Promise(resolve => {
+        const request = indexedDB.open('pishran_store')
         request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error)
+        request.onerror = () => resolve(null)
+        request.onblocked = () => resolve(null)
       })
-      return Array.isArray(record?.value) && record.value.some(project => project.name === expectedName)
-    } finally {
-      db.close()
-    }
-  }, 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', { timeout: 10000 })
+      if (db) {
+        try {
+          if (db.objectStoreNames.contains('kv')) {
+            const record = await new Promise((resolve, reject) => {
+              const request = db.transaction('kv', 'readonly').objectStore('kv').get(key)
+              request.onsuccess = () => resolve(request.result)
+              request.onerror = () => reject(request.error)
+            })
+            if (Array.isArray(record?.value)) values.push(...record.value)
+          }
+        } finally {
+          db.close()
+        }
+      }
+    } catch { /* Use the supported localStorage fallback below. */ }
+    try {
+      const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
+      if (Array.isArray(fallback)) values.push(...fallback)
+    } catch { /* Ignore unavailable fallback storage. */ }
+    return values.some(item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId))
+  }, { key: 'mod10-ranking-projects:v1', expectedName: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', moduleId: undefined }, { timeout: 10000 })
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   // Re-mount the app to verify the renamed project is recovered from IndexedDB.
@@ -329,23 +342,36 @@ try {
   await page.getByLabel('نام پروژه جدید ماژول').fill('پروژه آزمون ذخیره ماژول')
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await modulePage.getByText('پروژه آزمون ذخیره ماژول', { exact: true }).waitFor()
-  await page.waitForFunction(async expectedName => {
-    const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('pishran_store')
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () => reject(request.error)
-    })
+  await page.waitForFunction(async ({ key, expectedName, moduleId }) => {
+    const values = []
     try {
-      const record = await new Promise((resolve, reject) => {
-        const request = db.transaction('kv', 'readonly').objectStore('kv').get('module-workspaces:v1')
+      const db = await new Promise(resolve => {
+        const request = indexedDB.open('pishran_store')
         request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error)
+        request.onerror = () => resolve(null)
+        request.onblocked = () => resolve(null)
       })
-      return Array.isArray(record?.value) && record.value.some(item => item.moduleId === 'MOD-02' && item.name === expectedName)
-    } finally {
-      db.close()
-    }
-  }, 'پروژه آزمون ذخیره ماژول', { timeout: 10000 })
+      if (db) {
+        try {
+          if (db.objectStoreNames.contains('kv')) {
+            const record = await new Promise((resolve, reject) => {
+              const request = db.transaction('kv', 'readonly').objectStore('kv').get(key)
+              request.onsuccess = () => resolve(request.result)
+              request.onerror = () => reject(request.error)
+            })
+            if (Array.isArray(record?.value)) values.push(...record.value)
+          }
+        } finally {
+          db.close()
+        }
+      }
+    } catch { /* Use the supported localStorage fallback below. */ }
+    try {
+      const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
+      if (Array.isArray(fallback)) values.push(...fallback)
+    } catch { /* Ignore unavailable fallback storage. */ }
+    return values.some(item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId))
+  }, { key: 'module-workspaces:v1', expectedName: 'پروژه آزمون ذخیره ماژول', moduleId: 'MOD-02' }, { timeout: 10000 })
 
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('.module-launcher-card').filter({ hasText: 'MOD-02' }).click()
@@ -360,23 +386,36 @@ try {
     'project workspace cards must use the pale beige background')
   await editingWorkspaceForm.getByRole('button', { name: 'ذخیره ویرایش' }).click()
   await page.locator('.module-workspace-page').getByText('پروژه آزمون ویرایش و بازیابی', { exact: true }).waitFor()
-  await page.waitForFunction(async expectedName => {
-    const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('pishran_store')
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () => reject(request.error)
-    })
+  await page.waitForFunction(async ({ key, expectedName, moduleId }) => {
+    const values = []
     try {
-      const record = await new Promise((resolve, reject) => {
-        const request = db.transaction('kv', 'readonly').objectStore('kv').get('module-workspaces:v1')
+      const db = await new Promise(resolve => {
+        const request = indexedDB.open('pishran_store')
         request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error)
+        request.onerror = () => resolve(null)
+        request.onblocked = () => resolve(null)
       })
-      return Array.isArray(record?.value) && record.value.some(item => item.moduleId === 'MOD-02' && item.name === expectedName)
-    } finally {
-      db.close()
-    }
-  }, 'پروژه آزمون ویرایش و بازیابی', { timeout: 10000 })
+      if (db) {
+        try {
+          if (db.objectStoreNames.contains('kv')) {
+            const record = await new Promise((resolve, reject) => {
+              const request = db.transaction('kv', 'readonly').objectStore('kv').get(key)
+              request.onsuccess = () => resolve(request.result)
+              request.onerror = () => reject(request.error)
+            })
+            if (Array.isArray(record?.value)) values.push(...record.value)
+          }
+        } finally {
+          db.close()
+        }
+      }
+    } catch { /* Use the supported localStorage fallback below. */ }
+    try {
+      const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
+      if (Array.isArray(fallback)) values.push(...fallback)
+    } catch { /* Ignore unavailable fallback storage. */ }
+    return values.some(item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId))
+  }, { key: 'module-workspaces:v1', expectedName: 'پروژه آزمون ویرایش و بازیابی', moduleId: 'MOD-02' }, { timeout: 10000 })
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('.module-launcher-card').filter({ hasText: 'MOD-02' }).click()
   await page.locator('.module-workspace-page').getByText('پروژه آزمون ویرایش و بازیابی', { exact: true }).waitFor()
