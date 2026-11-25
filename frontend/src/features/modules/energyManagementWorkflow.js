@@ -282,6 +282,7 @@ export function validateEnergyTariffContract(input,asOf=input.effectiveFrom){
  if(!tiers.length&&!timeOfUseRates.length&&energyRate===null)throw new Error('نرخ پایه، پلکانی یا زمان‌مند الزامی است.')
  const fixedCharge=number(input.fixedCharge??0,'هزینه ثابت',0),demandRate=number(input.demandRate??0,'نرخ دیماند',0),reactiveRate=number(input.reactiveRate??0,'نرخ انرژی راکتیو',0),taxPercent=number(input.taxPercent??0,'درصد مالیات',0)
  if(taxPercent>100)throw new Error('درصد مالیات نمی‌تواند بیش از ۱۰۰ باشد.')
+ if(taxPercent>100)throw new Error('درصد مالیات نمی‌تواند بیش از ۱۰۰ باشد.')
  const optionalRate=(value,label)=>value===''||value===null||value===undefined?null:number(value,label,0)
  const gasTransmissionRate=optionalRate(input.gasTransmissionRate,'نرخ انتقال گاز'),gasDistributionRate=optionalRate(input.gasDistributionRate,'نرخ توزیع گاز'),sewerRate=optionalRate(input.sewerRate,'نرخ فاضلاب'),meterMultiplier=number(input.meterMultiplier??1,'ضریب کنتور',0)
  if(meterMultiplier<=0)throw new Error('ضریب کنتور باید بزرگ‌تر از صفر باشد.')
@@ -362,8 +363,8 @@ export function reconcileEnergyTariffWithBill({calculation,bill,resource,toleran
   for(const band of calculation.timeOfUseBreakdown??[])compare('time-of-use-'+band.band,'بهای بازه '+band.band,band.charge,bill.timeOfUseCharges?.[band.band],true)
  }else if(resource==='gas'){
   compare('gasCharge','بهای گاز',calculation.energyCharge,bill.gasCharge)
-  compare('gasTransmissionCharge','هزینه انتقال گاز',calculation.gasTransmissionCharge,bill.gasTransmissionCharge,calculation.gasTransmissionCharge!==null&&calculation.gasTransmissionCharge!==undefined)
-  compare('gasDistributionCharge','هزینه توزیع گاز',calculation.gasDistributionCharge,bill.gasDistributionCharge,calculation.gasDistributionCharge!==null&&calculation.gasDistributionCharge!==undefined)
+  compare('gasTransmissionCharge','هزینه انتقال گاز',calculation.gasTransmissionCharge,bill.gasTransmissionCharge??bill.transmissionCharge,calculation.gasTransmissionCharge!==null&&calculation.gasTransmissionCharge!==undefined)
+  compare('gasDistributionCharge','هزینه توزیع گاز',calculation.gasDistributionCharge,bill.gasDistributionCharge??bill.distributionCharge,calculation.gasDistributionCharge!==null&&calculation.gasDistributionCharge!==undefined)
   if((calculation.levies??[]).length)compare('levyCharge','عوارض قراردادی',calculation.levyTotal,bill.levyCharge)
   else compare('levyCharge','عوارض قراردادی',null,bill.levyCharge,false)
   compare('taxCharge','مالیات و عوارض',calculation.tax,bill.taxCharge)
