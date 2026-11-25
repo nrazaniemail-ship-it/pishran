@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { BookOpen, Search, ChevronDown, ChevronUp, Calculator, ClipboardCheck, Lightbulb, AlertTriangle } from 'lucide-react'
+import ModuleGuide from './ModuleGuide'
 
 type Topic = { title:string; purpose:string; inputs:string[]; method:string[]; formulas:string[]; example:string; checks:string[]; pitfalls:string[] }
 type Chapter = { id:number; title:string; objective:string; topics:Topic[] }
@@ -320,6 +321,7 @@ export default function Guide({language='fa'}:{language?:'fa'|'en'}) {
     <div className="guide-warning"><h4><AlertTriangle size={16}/> {en?"Common Pitfalls":"خطاهای متداول"}</h4><ul>{topic.pitfalls.map(x=><li key={x}>{x}</li>)}</ul></div>
    </div>}</article>})}</section>})}
    {!results.length&&<div className="guide-empty"><Search size={28}/><h3>{en?"No results found":"نتیجه‌ای پیدا نشد"}</h3><p>{en?"Try another term, such as cost of capital, return, slab or payback.":"عبارت دیگری جست‌وجو کنید؛ مانند «هزینه سرمایه»، «بازده»، «اسلب» یا «دوره بازگشت»."}</p></div>}
+   <ModuleGuide language={language}/>
    <div className="guide-disclaimer"><b>{en?"Methodology Note":"یادداشت روش‌شناسی"}</b><p>{en?"These formulas are general feasibility-study frameworks. Tax bases, tariffs, design standards, depreciation rules and lender covenants must be checked against applicable regulations and project agreements. Numerical examples are illustrative, not actual project data.":"فرمول‌ها چارچوب عمومی مطالعات امکان‌سنجی‌اند. مبنای مالیاتی، تعرفه‌ها، استانداردهای طراحی، قواعد استهلاک و تعهدات وام‌دهنده باید با مقررات و قراردادهای معتبر پروژه تطبیق داده شوند. مثال‌های عددی آموزشی‌اند و داده واقعی پروژه محسوب نمی‌شوند."}</p></div>
    </section>
   </div>
