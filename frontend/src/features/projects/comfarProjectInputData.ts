@@ -1,0 +1,171 @@
+import type { FixedInvestmentAssetClass } from './projectFoundation'
+
+export type ComfarSourceCapexItem = {
+  name: string
+  assetClass: FixedInvestmentAssetClass
+  periods: { period: string; amount: number }[]
+}
+export type ComfarSourceWorkingCapitalPeriod = {
+  period: string
+  inventory: number
+  cash: number
+}
+export type ComfarSourceInputData = {
+  fixedInvestment: ComfarSourceCapexItem[]
+  preproduction: { period: string; net: number; capitalizedInterest: number }[]
+  operatingCostYear: number
+  operatingCostRows: { name: string; amount: number }[]
+  workingCapital: ComfarSourceWorkingCapitalPeriod[]
+  missingSourceDetails: string[]
+}
+
+/**
+ * Source-derived input schedules transcribed from the attached COMFAR III reports.
+ * Amounts remain in each report's accounting currency; no FX conversion is inferred.
+ * Missing engineering and financing assumptions are deliberately left unfilled.
+ */
+export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
+  'comfar-hr-coil-200k': {
+    fixedInvestment: [
+      { name: 'خرید زمین', assetClass: 'land', periods: [{ period: '1403', amount: 2015000 }] },
+      { name: 'محوطه‌سازی و بهبود زمین', assetClass: 'site', periods: [{ period: '1403', amount: 301005.60 }, { period: '1404', amount: 129002.40 }] },
+      { name: 'کارهای عمرانی، بنا و ساختمان‌ها', assetClass: 'buildings', periods: [{ period: '1403', amount: 1084284.40 }, { period: '1404', amount: 1313137.60 }] },
+      { name: 'ماشین‌آلات و تجهیزات کارخانه', assetClass: 'machinery', periods: [{ period: '1403', amount: 8087192 }, { period: '1404', amount: 2385548 }] },
+      { name: 'تجهیزات خدماتی و جانبی کارخانه', assetClass: 'infrastructure', periods: [{ period: '1403', amount: 722627.70 }, { period: '1404', amount: 1546020.30 }] },
+      { name: 'هزینه‌های احتمالی', assetClass: 'other', periods: [{ period: '1403', amount: 439595.50 }, { period: '1404', amount: 439595.50 }] },
+    ],
+    preproduction: [
+      { period: '1403', net: 71948.10, capitalizedInterest: 1186151.73 },
+      { period: '1404', net: 167878.90, capitalizedInterest: 2112481.33 },
+    ],
+    operatingCostYear: 1408,
+    operatingCostRows: [
+      { name: 'مواد خام', amount: 40901015.18 },
+      { name: 'ملزومات کارخانه', amount: 0 },
+      { name: 'یوتیلیتی', amount: 0 },
+      { name: 'انرژی', amount: 269879.53 },
+      { name: 'قطعات یدکی مصرف‌شده', amount: 176670.08 },
+      { name: 'تعمیرات و نگهداری', amount: 375176.40 },
+      { name: 'حق امتیاز', amount: 0 },
+      { name: 'دستمزد', amount: 650052.86 },
+      { name: 'هزینه‌های بالاسری دستمزد', amount: 130010.57 },
+      { name: 'سربار کارخانه', amount: 159170.46 },
+      { name: 'بازاریابی مستقیم', amount: 62260 },
+    ],
+    workingCapital: [
+      { period: '1405', inventory: 3108516.19, cash: 200628.34 },
+      { period: '1406', inventory: 3511936.83, cash: 206423.78 },
+      { period: '1407', inventory: 3946782.02, cash: 212746.08 },
+      { period: '1408', inventory: 4381627.22, cash: 219068.38 },
+      ...Array.from({ length: 11 }, (_, index) => ({ period: String(1409 + index), inventory: 4376389.79, cash: 218980.57 })),
+    ],
+    missingSourceDetails: ['مقادیر فیزیکی مواد اولیه و ضرایب مصرف ویژه', 'مقادیر مصرف آب، برق و گاز به تفکیک تجهیز', 'برنامه مقداری فروش و قیمت واحد محصول', 'عمر مفید و روش استهلاک تفکیکی هر دارایی', 'نرخ سود، دوره تنفس و قرارداد تفصیلی تسهیلات'],
+  },
+  'comfar-hr-plate-250k': {
+    fixedInvestment: [
+      { name: 'خرید زمین', assetClass: 'land', periods: [{ period: '1403', amount: 1000000 }] },
+      { name: 'محوطه‌سازی و بهبود زمین', assetClass: 'site', periods: [{ period: '1403', amount: 75700 }] },
+      { name: 'کارهای عمرانی، بنا و ساختمان‌ها', assetClass: 'buildings', periods: [{ period: '1402', amount: 427314.60 }, { period: '1403', amount: 932876.40 }] },
+      { name: 'ماشین‌آلات و تجهیزات کارخانه', assetClass: 'machinery', periods: [{ period: '1402', amount: 4570408.32 }, { period: '1403', amount: 4253281.52 }] },
+      { name: 'تجهیزات خدماتی و جانبی کارخانه', assetClass: 'infrastructure', periods: [{ period: '1402', amount: 638634 }, { period: '1403', amount: 1214646 }] },
+      { name: 'هزینه‌های احتمالی', assetClass: 'other', periods: [{ period: '1402', amount: 107229.50 }, { period: '1403', amount: 107229.50 }] },
+    ],
+    preproduction: [
+      { period: '1402', net: 214460.80, capitalizedInterest: 1787136.19 },
+      { period: '1403', net: 53615.20, capitalizedInterest: 3627653.13 },
+      { period: '1404', net: 0, capitalizedInterest: 3738117.99 },
+    ],
+    operatingCostYear: 1407,
+    operatingCostRows: [
+      { name: 'مواد خام', amount: 38162283.50 },
+      { name: 'ملزومات کارخانه', amount: 0 },
+      { name: 'یوتیلیتی', amount: 0 },
+      { name: 'انرژی', amount: 347779.50 },
+      { name: 'قطعات یدکی مصرف‌شده', amount: 551805.14 },
+      { name: 'تعمیرات و نگهداری', amount: 236488.06 },
+      { name: 'حق امتیاز', amount: 0 },
+      { name: 'دستمزد', amount: 653708 },
+      { name: 'هزینه‌های بالاسری دستمزد', amount: 130742 },
+      { name: 'سربار کارخانه', amount: 154777.98 },
+    ],
+    workingCapital: [
+      { period: '1404', inventory: 1313822.72, cash: 91388.51 },
+      { period: '1405', inventory: 1491745.91, cash: 93535.11 },
+      { period: '1406', inventory: 1675054.83, cash: 95755.72 },
+      { period: '1407', inventory: 1858363.74, cash: 97976.34 },
+      ...Array.from({ length: 8 }, (_, index) => ({ period: String(1408 + index), inventory: 1857466.12, cash: 97964 })),
+    ],
+    missingSourceDetails: ['مقادیر فیزیکی اسلب و مواد مصرفی به ازای هر تن پلیت', 'مصرف ویژه آب، برق و گاز و تلفات خط', 'برنامه مقداری فروش و قیمت واحد محصول', 'عمر مفید و روش استهلاک تفکیکی دارایی‌ها', 'نرخ سود و جزئیات قرارداد وام بلندمدت'],
+  },
+  'comfar-cold-coil-200k': {
+    fixedInvestment: [
+      { name: 'خرید زمین', assetClass: 'land', periods: [{ period: '1401-07', amount: 2015000 }] },
+      { name: 'محوطه‌سازی و بهبود زمین', assetClass: 'site', periods: [{ period: '1401-07', amount: 764640.80 }, { period: '1402', amount: 327703.20 }] },
+      { name: 'کارهای عمرانی، بنا و ساختمان‌ها', assetClass: 'buildings', periods: [{ period: '1401-07', amount: 765144.40 }, { period: '1402', amount: 1147716.60 }] },
+      { name: 'ماشین‌آلات و تجهیزات کارخانه', assetClass: 'machinery', periods: [{ period: '1401-07', amount: 1986050 }, { period: '1402', amount: 6128750 }] },
+      { name: 'تجهیزات خدماتی و جانبی کارخانه', assetClass: 'infrastructure', periods: [{ period: '1401-07', amount: 970850 }] },
+      { name: 'هزینه‌های احتمالی', assetClass: 'other', periods: [{ period: '1401-07', amount: 68405.50 }, { period: '1402', amount: 213711.50 }] },
+    ],
+    preproduction: [
+      { period: '1401-07', net: 90720, capitalizedInterest: 0 },
+      { period: '1402', net: 211680, capitalizedInterest: 350000 },
+    ],
+    operatingCostYear: 1405,
+    operatingCostRows: [
+      { name: 'مواد خام', amount: 63058700 },
+      { name: 'ملزومات کارخانه', amount: 0 },
+      { name: 'یوتیلیتی', amount: 0 },
+      { name: 'انرژی', amount: 441856 },
+      { name: 'قطعات یدکی مصرف‌شده', amount: 176670.08 },
+      { name: 'تعمیرات و نگهداری', amount: 526809.19 },
+      { name: 'حق امتیاز', amount: 0 },
+      { name: 'دستمزد', amount: 187071.21 },
+      { name: 'هزینه‌های بالاسری دستمزد', amount: 177872.18 },
+      { name: 'سربار کارخانه', amount: 1637525 },
+      { name: 'بازاریابی مستقیم', amount: 79000 },
+    ],
+    workingCapital: [
+      { period: '1403', inventory: 2292317.03, cash: 101181.29 },
+      { period: '1404', inventory: 2573679.11, cash: 103176.50 },
+      { period: '1405', inventory: 2855059.33, cash: 105386.57 },
+      ...Array.from({ length: 12 }, (_, index) => ({ period: String(1406 + index), inventory: 2855056.74, cash: 105355.87 })),
+    ],
+    missingSourceDetails: ['مقادیر و مشخصات کلاف گرم ورودی و ضریب تبدیل به کلاف سرد', 'مصرف ویژه اسید، روغن نورد، آب و برق', 'مقادیر مقداری فروش و قیمت واحد محصول', 'عمر مفید و روش استهلاک تفکیکی دارایی‌ها', 'نرخ سود و جزئیات قرارداد تسهیلات'],
+  },
+  'comfar-integrated-steel-dri': {
+    fixedInvestment: [
+      { name: 'محوطه‌سازی و بهبود زمین', assetClass: 'site', periods: [{ period: '1401', amount: 368482.50 }, { period: '1402', amount: 466744.50 }, { period: '1403', amount: 1007185.50 }, { period: '1404', amount: 614137.50 }] },
+      { name: 'کارهای عمرانی، بنا و ساختمان‌ها', assetClass: 'buildings', periods: [{ period: '1401', amount: 267692.10 }, { period: '1402', amount: 535384.20 }, { period: '1403', amount: 803076.30 }, { period: '1404', amount: 1070768.40 }] },
+      { name: 'ماشین‌آلات و تجهیزات کارخانه', assetClass: 'machinery', periods: [{ period: '1401', amount: 99980360.16 }, { period: '1402', amount: 128191433.40 }, { period: '1403', amount: 123627543.84 }, { period: '1404', amount: 75505440.60 }] },
+      { name: 'تجهیزات خدماتی و جانبی کارخانه', assetClass: 'infrastructure', periods: [{ period: '1401', amount: 1746184.40 }, { period: '1402', amount: 3445384.40 }, { period: '1403', amount: 5683334.80 }, { period: '1404', amount: 9280692.40 }] },
+      { name: 'هزینه‌های احتمالی', assetClass: 'other', periods: [{ period: '1401', amount: 316113.25 }, { period: '1402', amount: 316113.25 }, { period: '1403', amount: 316113.25 }, { period: '1404', amount: 316113.25 }] },
+    ],
+    preproduction: [
+      { period: '1401', net: 1656006.75, capitalizedInterest: 9760000 },
+      { period: '1402', net: 1656006.75, capitalizedInterest: 22920000 },
+      { period: '1403', net: 1656006.75, capitalizedInterest: 36080000 },
+      { period: '1404', net: 1656006.75, capitalizedInterest: 41740000 },
+    ],
+    operatingCostYear: 9,
+    operatingCostRows: [
+      { name: 'مواد خام', amount: 537485060 },
+      { name: 'ملزومات کارخانه', amount: 0 },
+      { name: 'یوتیلیتی', amount: 0 },
+      { name: 'انرژی', amount: 69530818 },
+      { name: 'قطعات یدکی مصرف‌شده', amount: 0 },
+      { name: 'تعمیرات و نگهداری', amount: 17977288 },
+      { name: 'حق امتیاز', amount: 0 },
+      { name: 'دستمزد', amount: 10272936 },
+      { name: 'هزینه‌های بالاسری دستمزد', amount: 2054587 },
+      { name: 'سربار کارخانه', amount: 6642810 },
+    ],
+    workingCapital: [
+      { period: '1405', inventory: 44300800.78, cash: 5301460.86 },
+      { period: '1406', inventory: 49933989.25, cash: 5571926.96 },
+      { period: '1407', inventory: 56002162.92, cash: 5866980.88 },
+      { period: '1408', inventory: 62070336.59, cash: 6162034.80 },
+      ...Array.from({ length: 11 }, (_, index) => ({ period: String(1409 + index), inventory: 61997839.06, cash: 6157936.83 })),
+    ],
+    missingSourceDetails: ['موازنه فیزیکی DRI هات‌لینک به فولاد مذاب و ترکیب شارژ', 'مصرف ویژه برق، گاز، اکسیژن، آب و فروآلیاژها', 'تفکیک تولید و فروش دو محصول و قیمت فروش هرکدام', 'عمر مفید و روش استهلاک تفکیکی تجهیزات احیا و فولادسازی', 'نرخ سود و برنامه تفصیلی بازپرداخت وام‌های بلندمدت و کوتاه‌مدت'],
+  },
+}
