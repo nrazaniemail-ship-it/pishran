@@ -266,7 +266,7 @@ export function parseEnergyTariffTiers(text){
   return {upperLimit,rate,order:index+1}
  })
  if(tiers.at(-1)?.upperLimit!==null)throw new Error('آخرین پله تعرفه باید با * و نرخ نهایی نامحدود تعریف شود.')
- for(let i=1;i<tiers.length;i++)if(tiers[i-1].upperLimit===null||tiers[i].upperLimit<=tiers[i-1].upperLimit)throw new Error('حدنصاب پله‌های تعرفه باید صعودی و بدون تکرار باشد.')
+ for(let i=1;i<tiers.length;i++)if(tiers[i-1].upperLimit===null||(tiers[i].upperLimit!==null&&tiers[i].upperLimit<=tiers[i-1].upperLimit))throw new Error('حدنصاب پله‌های تعرفه باید صعودی و بدون تکرار باشد.')
  return tiers
 }
 export function validateEnergyTariffContract(input,asOf=input.effectiveFrom){
