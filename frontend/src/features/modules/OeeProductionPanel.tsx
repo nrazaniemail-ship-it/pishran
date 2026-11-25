@@ -6,7 +6,7 @@ import './OeeProductionPanel.css'
 
 type Language='fa'|'en'
 type OeeInput={shiftMinutes:string;breakMinutes:string;downtimeMinutes:string;idealCycleSeconds:string;totalCount:string;rejectCount:string}
-type Station={id:string;name:string;code:string;plannedMinutes:string;downtimeMinutes:string;idealCycleSeconds:string;totalCount:string;goodCount:string}
+type Station={id:string;name:string;code:string}&OeeInput
 type LossEvent={id:string;category:string;minutes:string;note:string}
 const emptyInput:OeeInput={shiftMinutes:'',breakMinutes:'',downtimeMinutes:'',idealCycleSeconds:'',totalCount:'',rejectCount:''}
 const normalizeInput=(x:any):OeeInput=>x?.shiftMinutes!==undefined?{...emptyInput,...x}:{shiftMinutes:x?.plannedMinutes||'',breakMinutes:'0',downtimeMinutes:x?.downtimeMinutes||'',idealCycleSeconds:x?.idealCycleSeconds||'',totalCount:x?.totalCount||'',rejectCount:x?.totalCount!==undefined&&x?.goodCount!==undefined?String(Number(x.totalCount)-Number(x.goodCount)):''}
@@ -23,8 +23,7 @@ const metrics=(result:ReturnType<typeof calculateOee>,en:boolean)=>[
  [en?'Availability':'دسترس‌پذیری',result.availability],
  [en?'Performance':'عملکرد',result.performance],
  [en?'Quality':'کیفیت',result.quality],
- [en?'OEE · detailed':'OEE · روش تفصیلی',result.oee],
- [en?'OEE · direct':'OEE · روش مستقیم',result.directOee],
+ [en?'OEE · preferred A×P×Q':'OEE · روش ترجیحی A×P×Q',result.oee],
 ]
 export default function OeeProductionPanel({language='fa'}:{language?:Language}) {
  const en=language==='en'
@@ -54,7 +53,7 @@ export default function OeeProductionPanel({language='fa'}:{language?:Language})
    const lineMetrics=aggregateLineOee(line)
    const detail=calculateStationOees(stations.filter(s=>Object.values(toInput(s)).every(v=>v.trim()!=='')))
    if(level==='stations'&&!detail.length)throw new Error('برای محاسبه جزئی، حداقل اطلاعات یک ایستگاه را کامل کنید.')
-   const record=await saveOeeAnalysis(localStore,{moduleId:'MOD-03',level,period,shift,product,lineName,lineInputs:{...line},lineMetrics,stations:detail.map(s=>({id:s.id,name:s.name,code:s.code,inputs:toInput(s),metrics:s.result})),lossEvents:events.map(e=>({...e,minutes:Number(e.minutes)||0})),lossSummary,calculationMethods:['three-factor','direct']})
+   const record=await saveOeeAnalysis(localStore,{moduleId:'MOD-03',level,period,shift,product,lineName,lineInputs:{...line},lineMetrics,stations:detail.map(s=>({id:s.id,name:s.name,code:s.code,inputs:toInput(s),metrics:s.result})),lossEvents:events.map(e=>({...e,minutes:Number(e.minutes)||0})),lossSummary,calculationMethods:['preferred-three-factor','simple-formula-cross-check']})
    const rows=await localStore.get<any[]>(OEE_STORAGE_KEY);setHistory(Array.isArray(rows)?rows:[]);setReport(record);setActiveTab('overview')
   }catch(e){setError(e instanceof Error?e.message:'محاسبه یا ذخیره‌سازی انجام نشد.')}finally{setBusy(false)}
  }
