@@ -1,28 +1,45 @@
 name: Public PWA ranking interaction verification
 
 on:
-  workflow_run:
-    workflows: ["Deploy Pishran PWA to GitHub Pages"]
-    types: [completed]
+  push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: public-ranking-browser-${{ github.event.workflow_run.head_sha }}
+  group: public-ranking-browser-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
   verify-live-ranking:
-    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout the exact deployed commit
+      - name: Wait for deployment of this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          for attempt in $(seq 1 90); do
+            runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100")
+            status=$(echo "$runs" | jq -r --arg sha "$TARGET_SHA" '.workflow_runs[] | select(.name == "Deploy Pishran PWA to GitHub Pages" and .head_sha == $sha) | .status' | head -n 1)
+            conclusion=$(echo "$runs" | jq -r --arg sha "$TARGET_SHA" '.workflow_runs[] | select(.name == "Deploy Pishran PWA to GitHub Pages" and .head_sha == $sha) | .conclusion' | head -n 1)
+            if [ "$status" = "completed" ]; then
+              [ "$conclusion" = "success" ] || { echo "Exact-SHA deployment concluded: $conclusion"; exit 1; }
+              echo "Exact-SHA deployment succeeded: $TARGET_SHA"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for exact-SHA PWA deployment: $TARGET_SHA"
+          exit 1
+      - name: Checkout the exact commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.sha }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
