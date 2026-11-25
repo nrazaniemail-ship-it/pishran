@@ -122,7 +122,8 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
       if(candidate.consistent) cases.push({label:'AHP · '+expert.name+' · '+criteria[i]+'/'+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:baseBWM?combineAHPBWMWeights(candidate.weights,baseBWM,ahpShare/100):candidate.weights});
      }
     });
-   }else if(method==='BWM+TOPSIS'||method==='TOPSIS+(AHP+BWM)'){
+   }
+   if(method==='BWM+TOPSIS'||method==='TOPSIS+(AHP+BWM)'){
     const baseAHP=method==='TOPSIS+(AHP+BWM)'?ahp(aggregatePairwiseMatrices(experts.map(e=>e.matrix))).weights:undefined;
     experts.forEach((expert,expertIndex)=>{
      for(let j=0;j<criteria.length;j++) if(j!==expert.bestIndex&&j!==expert.worstIndex) for(const sign of [-1,1]){
@@ -135,7 +136,8 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
       cases.push({label:'BWM · '+expert.name+' · '+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:baseAHP?combineAHPBWMWeights(baseAHP,bwmWeights,ahpShare/100):bwmWeights});
      }
     });
-   }else{
+   }
+   if(method==='TOPSIS'){
     for(let j=0;j<weights.length;j++) for(const sign of [-1,1]){
      const changed=weights.map((v,i)=>i===j?v*(1+sign*delta):v);
      cases.push({label:'وزن دستی · '+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:changed});
