@@ -297,7 +297,7 @@ export async function saveEnergyTariffContract(input,store,createdAt=new Date().
  await store.update(ENERGY_TARIFF_CONTRACTS_KEY,old=>{
   const records=Array.isArray(old)?old:[]
   const existing=records.find(x=>x.id===input.id)||records.find(x=>x.resource===checked.resource&&x.site===checked.site&&x.contractNumber===checked.contractNumber)
-  const id=existing?.id??('MOD05-TARIFF-'+Date.parse(createdAt))
+  const id=existing?.id??('MOD05-TARIFF-'+Date.parse(createdAt)+'-'+checked.resource+'-'+checked.contractNumber.replace(/[^a-zA-Z0-9_-]/g,'-'))
   saved={...checked,id,createdAt:existing?.createdAt??createdAt,updatedAt:createdAt,history:[...(existing?.history??[]),...(existing?[{...existing,archivedAt:createdAt}]:[])]}
   return [saved,...records.filter(x=>x.id!==id)].slice(0,500)
  })
