@@ -357,7 +357,7 @@ test('MOD-05 interface exposes calibration register, due alerts and M&V evidence
  assert.ok(app.includes('بسته شواهد اندازه‌گیری و صحه‌گذاری (M&V)'))
  assert.ok(app.includes('هشدارهای سررسید کالیبراسیون'))
  assert.ok(app.includes("['سوابق کالیبراسیون',calibrations]"))
- assert.ok(app.includes("['بسته‌های شواهد M&V',mvPacks]"))
+ assert.ok(app.includes("['بسته‌های شواهد M&V',mvPacks.map"))
  assert.ok(app.includes('قراردادهای تعرفه'))
  assert.ok(app.includes('ثبت قرارداد تعرفه'))
  assert.ok(app.includes('محاسبه و ذخیره مبلغ قبض'))
