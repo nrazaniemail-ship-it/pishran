@@ -2659,3 +2659,20 @@ input,select,textarea{color:var(--text)}
   .module-create-form input,
   .module-create-form button{width:100%;min-height:48px;height:48px}
 }
+
+
+/* Use one identical corner treatment for every ranking-method option. */
+.ranking-method-tabs .ranking-method-tab,
+.ranking-method-tabs .ranking-method-tab.is-active,
+.ranking-method-tabs .ranking-method-tab:hover,
+.ranking-method-tabs .ranking-method-tab:focus-visible{
+  border-radius:12px!important;
+}
+@media(max-width:700px){
+  .ranking-method-tabs .ranking-method-tab,
+  .ranking-method-tabs .ranking-method-tab.is-active,
+  .ranking-method-tabs .ranking-method-tab:hover,
+  .ranking-method-tabs .ranking-method-tab:focus-visible{
+    border-radius:12px!important;
+  }
+}
