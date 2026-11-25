@@ -108,7 +108,7 @@ try {
       `${method} tab must expose its modern active style`)
     if (method === 'AHP') {
       await page.getByText('Saaty 1–9 scale; reciprocal entries are automatic.').waitFor()
-      await page.getByLabel(/هزینه سرمایه‌گذاری vs ریسک اجرا$/).selectOption('3')
+      await page.getByLabel(/هزینه سرمایه‌گذاری vs ریسک اجرا$/).selectOption('2')
       await page.waitForTimeout(350)
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
@@ -169,7 +169,7 @@ try {
   await page.getByTestId('ranking-category-advanced').click()
   await page.getByText('Calculation history (4)').waitFor()
   await page.getByRole('button', { name: 'AHP', exact: true }).click()
-  assert.equal(await page.getByLabel(/هزینه سرمایه‌گذاری vs ریسک اجرا$/).inputValue(), '3',
+  assert.equal(await page.getByLabel(/هزینه سرمایه‌گذاری vs ریسک اجرا$/).inputValue(), '2',
     'AHP pairwise judgments must persist after reload')
   await page.getByRole('button', { name: 'BWM', exact: true }).click()
   assert.equal(await page.locator('select[aria-label*="best criterion"]').inputValue(), '1',
