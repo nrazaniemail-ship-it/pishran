@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Wait for exact-SHA GitHub Pages deployment
+      - name: Wait for exact-SHA PWA deployment
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ github.sha }}
@@ -26,27 +26,20 @@ jobs:
           for attempt in $(seq 1 90); do
             runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100")
             deploy=$(echo "$runs" | jq -c --arg sha "$TARGET_SHA" '[.workflow_runs[] | select(.name == "Deploy Pishran PWA to GitHub Pages" and .head_sha == $sha)] | sort_by(.created_at) | last // {}')
-            pages=$(echo "$runs" | jq -c --arg sha "$TARGET_SHA" '[.workflow_runs[] | select(.name == "pages build and deployment" and .head_sha == $sha)] | sort_by(.created_at) | last // {}')
             deploy_status=$(echo "$deploy" | jq -r '.status // empty')
             deploy_conclusion=$(echo "$deploy" | jq -r '.conclusion // empty')
-            pages_status=$(echo "$pages" | jq -r '.status // empty')
-            pages_conclusion=$(echo "$pages" | jq -r '.conclusion // empty')
 
             if [ "$deploy_conclusion" = "success" ]; then
               echo "Exact-SHA PWA deployment workflow succeeded: $TARGET_SHA"
               exit 0
             fi
-            if [ "$pages_conclusion" = "success" ]; then
-              echo "Exact-SHA GitHub Pages build and deployment succeeded: $TARGET_SHA"
-              exit 0
-            fi
-            if [ "$deploy_status" = "completed" ] && [ "$pages_status" = "completed" ]; then
-              echo "Both exact-SHA deployment workflows completed without success (deploy=$deploy_conclusion, pages=$pages_conclusion)"
+            if [ "$deploy_status" = "completed" ]; then
+              echo "Exact-SHA PWA deployment concluded without success: $deploy_conclusion"
               exit 1
             fi
             sleep 10
           done
-          echo "Timed out waiting for an exact-SHA GitHub Pages deployment: $TARGET_SHA"
+          echo "Timed out waiting for exact-SHA PWA deployment: $TARGET_SHA"
           exit 1
       - name: Checkout the exact commit
         uses: actions/checkout@v4
