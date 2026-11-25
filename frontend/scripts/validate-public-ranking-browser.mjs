@@ -73,6 +73,32 @@ try {
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
+  // The list heading renders before its asynchronous IndexedDB read completes.
+  // Wait for the create control to become enabled before asserting restored cards.
+  await page.waitForFunction(() => {
+    const input = document.querySelector('#ranking-project-new-name')
+    return input && !input.disabled
+  }, null, { timeout: 15000 })
+  const restoredRankingProjects = await page.evaluate(async () => {
+    const db = await new Promise(resolve => {
+      const request = indexedDB.open('pishran_store')
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => resolve(null)
+      request.onblocked = () => resolve(null)
+    })
+    if (!db) return null
+    try {
+      if (!db.objectStoreNames.contains('kv')) return null
+      return await new Promise(resolve => {
+        const request = db.transaction('kv', 'readonly').objectStore('kv').get('mod10-ranking-projects:v1')
+        request.onsuccess = () => resolve(request.result?.value ?? null)
+        request.onerror = () => resolve(null)
+      })
+    } finally { db.close() }
+  })
+  assert.ok(Array.isArray(restoredRankingProjects), 'ranking project collection must be readable after a full page reload')
+  assert.ok(restoredRankingProjects.some(project => project.name === 'پروژه آزمایش رتبه‌بندی ویرایش‌شده'),
+    'renamed ranking project must be present in IndexedDB after a full page reload')
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).waitFor()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
   await page.goBack()
