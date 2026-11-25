@@ -300,7 +300,7 @@ export function calculateConfiguredEnergyTariff(input,{contracts=[]}={},calculat
  const resource=input.resource;if(contract.resource!==resource)throw new Error('نوع منبع قرارداد با منبع محاسبه یکسان نیست.')
  const site=required(input.site,'سایت محاسبه');if(contract.site!==site)throw new Error('قرارداد تعرفه متعلق به سایت انتخاب‌شده نیست.')
  const period=isoDate(input.period,'تاریخ دوره قبض');if(period<contract.effectiveFrom||(contract.effectiveTo&&period>contract.effectiveTo))throw new Error('قرارداد در تاریخ دوره قبض معتبر نیست.')
- const rawQuantity=number(input.quantity,'مصرف دوره',0),meterMultiplier=number(input.meterMultiplier??contract.meterMultiplier??1,'ضریب کنتور',0)
+ const rawQuantity=number(input.quantity,'مصرف دوره',0),multiplierInput=input.meterMultiplier===''||input.meterMultiplier===null||input.meterMultiplier===undefined?(contract.meterMultiplier??1):input.meterMultiplier,meterMultiplier=number(multiplierInput,'ضریب کنتور',0)
  if(meterMultiplier<=0)throw new Error('ضریب کنتور باید بزرگ‌تر از صفر باشد.')
  const quantity=rawQuantity*meterMultiplier,demand=number(input.demand??0,'دیماند',0),reactive=number(input.reactive??0,'انرژی راکتیو',0),tiers=Array.isArray(contract.tiers)?contract.tiers:[],timeRates=Array.isArray(contract.timeOfUseRates)?contract.timeOfUseRates:[]
  let energyCharge=0;const timeOfUseBreakdown=[]
