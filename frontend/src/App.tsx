@@ -271,10 +271,116 @@ function RankingPanel({ language }: { language: 'fa' | 'en' }) {
   </section>
 }
 
+type RankingAdvisorMethod = 'WSM' | 'AHP' | 'BWM' | 'TOPSIS' | 'AHP+TOPSIS'
+type RankingAdvisorAnswers = {
+  purpose: 'investment' | 'supplier' | 'project' | 'strategy' | 'general'
+  evidence: 'numeric' | 'mixed' | 'qualitative'
+  weights: 'known' | 'experts' | 'unknown'
+  decisionMakers: 'solo' | 'group'
+  time: 'short' | 'enough'
+  uncertainty: 'low' | 'high'
+  dependencies: 'independent' | 'dependent'
+  scale: 'few' | 'many'
+}
+function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoose: (method: RankingAdvisorMethod, mode: 'manual' | 'automatic', criteria: string[], alternatives: string[]) => void }) {
+  const isEn = language === 'en'
+  const [open, setOpen] = useState(false)
+  const [answers, setAnswers] = useState<RankingAdvisorAnswers>({ purpose: 'investment', evidence: 'mixed', weights: 'unknown', decisionMakers: 'group', time: 'enough', uncertainty: 'low', dependencies: 'independent', scale: 'few' })
+  const [alternativeNames, setAlternativeNames] = useState('')
+  const [result, setResult] = useState<{ method: RankingAdvisorMethod; reasons: string[]; criteria: string[]; warning: string } | null>(null)
+  const update = <K extends keyof RankingAdvisorAnswers>(key: K, value: RankingAdvisorAnswers[K]) => setAnswers(current => ({ ...current, [key]: value }))
+  const options = (key: keyof RankingAdvisorAnswers, values: Array<[string, string, string]>) => <label style={{ display: 'grid', gap: 5, minWidth: 0 }}><b>{values[0]?.[1]}</b><select aria-label={values[0]?.[1]} value={String(answers[key])} onChange={event => update(key, event.target.value as RankingAdvisorAnswers[typeof key])}>{values.slice(1).map(([value, fa, en]) => <option key={value} value={value}>{isEn ? en : fa}</option>)}</select></label>
+  const buildRecommendation = () => {
+    let method: RankingAdvisorMethod
+    if (answers.weights === 'known' && answers.evidence === 'numeric') method = answers.scale === 'many' ? 'TOPSIS' : 'WSM'
+    else if (answers.decisionMakers === 'group' && answers.time === 'short') method = 'BWM'
+    else if (answers.weights === 'experts' || answers.decisionMakers === 'group' || answers.evidence !== 'numeric') method = 'AHP+TOPSIS'
+    else method = answers.scale === 'many' ? 'TOPSIS' : 'WSM'
+    const criteriaByPurpose: Record<RankingAdvisorAnswers['purpose'], string[]> = {
+      investment: ['ارزش فعلی خالص (NPV)', 'نرخ بازده داخلی (IRR)', 'سرمایه‌گذاری ثابت (CAPEX)', 'هزینه بهره‌برداری (OPEX)', 'ریسک اجرا', 'زمان اجرا', 'ظرفیت تولید'],
+      supplier: ['قیمت کل مالکیت', 'کیفیت محصول', 'تحویل به‌موقع', 'انطباق فنی', 'خدمات و ضمانت', 'ریسک تأمین'],
+      project: ['هم‌راستایی راهبردی', 'ارزش اقتصادی', 'امکان‌پذیری فنی', 'ریسک اجرا', 'نیاز منابع', 'زمان تحقق'],
+      strategy: ['هم‌راستایی با اهداف', 'ارزش‌آفرینی', 'امکان‌پذیری', 'ریسک راهبردی', 'نیاز منابع', 'زمان اثرگذاری'],
+      general: ['هزینه کل', 'کیفیت و عملکرد', 'ریسک', 'زمان اجرا', 'قابلیت توسعه', 'اثر بلندمدت'],
+    }
+    const criteria = criteriaByPurpose[answers.purpose]
+    const reasons = [
+      method === 'WSM' ? 'روش ساده و شفاف برای داده‌های عددی و تعداد محدود گزینه‌ها' : method === 'TOPSIS' ? 'مناسب مقایسه چند گزینه عددی بر اساس فاصله از راه‌حل ایده‌آل' : method === 'BWM' ? 'کاهش بار مقایسه خبرگان با انتخاب بهترین و بدترین معیار و قضاوت‌های محدودتر' : 'تفکیک وزن‌دهی خبرگان با AHP و رتبه‌بندی گزینه‌ها با TOPSIS',
+      answers.weights === 'known' ? 'وزن معیارها از قبل مشخص شده است؛ منبع و مبنای آن را ثبت کنید' : 'وزن معیارها باید با قضاوت مستند یا نظر خبرگان تعیین شود',
+      answers.uncertainty === 'high' ? 'به دلیل عدم‌قطعیت بالا، تحلیل حساسیت و سناریوها را پیش از تصمیم نهایی اجرا کنید' : 'پس از ورود داده‌ها، تحلیل حساسیت را برای کنترل پایداری رتبه‌ها اجرا کنید',
+    ]
+    const warning = answers.dependencies === 'dependent'
+      ? 'معیارها به یکدیگر وابسته‌اند. روش ANP برای مدل‌سازی این وابستگی‌ها مناسب‌تر است اما هنوز در این ماژول پیاده‌سازی نشده؛ خروجی AHP/TOPSIS را با این محدودیت تفسیر کنید.'
+      : 'معیارها را مستقل، بدون هم‌پوشانی و قابل‌اندازه‌گیری تعریف کنید؛ جهت سود/هزینه، واحد، دامنه و منبع داده هر معیار را مشخص سازید.'
+    setResult({ method, reasons, criteria, warning })
+  }
+  const parsedAlternatives = () => alternativeNames.split(/\r?\n|,/).map(value => value.trim()).filter(Boolean).slice(0, 12)
+  return <section className="module-workspace-card" aria-label={isEn ? 'Intelligent ranking advisor' : 'دستیار هوشمند رتبه‌بندی'} style={{ marginBottom: 14 }}>
+    <div className="section-head"><div><h2>{isEn ? 'Decision method advisor' : 'دستیار هوشمند انتخاب روش رتبه‌بندی'}</h2><p>{isEn ? 'Answer a few questions to get a method recommendation and a practical criteria checklist.' : 'با پاسخ به چند سؤال، روش مناسب، معیارهای پیشنهادی و راهنمای تعریف معیارها را دریافت کنید.'}</p></div><button type="button" className="secondary-button" onClick={() => setOpen(value => !value)}>{open ? (isEn ? 'Close guide' : 'بستن راهنما') : (isEn ? 'Start guided setup' : 'شروع راهنمای مرحله‌ای')}</button></div>
+    {open && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12, marginTop: 12 }}>
+      {options('purpose', [['', 'نوع تصمیم', 'Decision type'], ['investment', 'انتخاب یا ارزیابی سرمایه‌گذاری', 'Investment selection'], ['supplier', 'انتخاب تأمین‌کننده', 'Supplier selection'], ['project', 'اولویت‌بندی پروژه‌ها', 'Project prioritization'], ['strategy', 'انتخاب راهبرد', 'Strategy selection'], ['general', 'سایر تصمیم‌ها', 'Other decisions']])}
+      {options('evidence', [['', 'جنس داده‌ها', 'Evidence type'], ['numeric', 'عمدتاً عددی و قابل‌اندازه‌گیری', 'Mostly numeric'], ['mixed', 'ترکیبی از عددی و کیفی', 'Mixed numeric and qualitative'], ['qualitative', 'عمدتاً کیفی و قضاوتی', 'Mostly qualitative']])}
+      {options('weights', [['', 'وضعیت وزن معیارها', 'Criterion weights'], ['known', 'وزن‌ها از قبل مشخص است', 'Weights are already known'], ['experts', 'وزن‌ها باید از نظر خبرگان استخراج شود', 'Elicit weights from experts'], ['unknown', 'هنوز نمی‌دانم', 'Not sure yet']])}
+      {options('decisionMakers', [['', 'چه کسانی تصمیم می‌گیرند؟', 'Decision makers'], ['solo', 'یک تصمیم‌گیرنده', 'One decision maker'], ['group', 'چند خبره یا ذی‌نفع', 'Multiple experts or stakeholders']])}
+      {options('time', [['', 'زمان در دسترس خبرگان', 'Expert availability'], ['short', 'محدود؛ پرسش‌های کمتر لازم است', 'Limited; fewer questions'], ['enough', 'کافی برای مقایسه دقیق', 'Enough for detailed comparisons']])}
+      {options('uncertainty', [['', 'میزان عدم‌قطعیت داده‌ها', 'Data uncertainty'], ['low', 'کم', 'Low'], ['high', 'زیاد', 'High']])}
+      {options('dependencies', [['', 'رابطه بین معیارها', 'Criterion relationships'], ['independent', 'معیارها مستقل‌اند', 'Criteria are independent'], ['dependent', 'برخی معیارها بر هم اثر می‌گذارند', 'Some criteria influence others']])}
+      {options('scale', [['', 'تعداد گزینه‌ها', 'Number of alternatives'], ['few', 'کمتر از ۵ گزینه', 'Fewer than 5'], ['many', '۵ گزینه یا بیشتر', '5 or more']])}
+    </div>}
+    {open && <div style={{ marginTop: 12 }}>
+      <label style={{ display: 'grid', gap: 5 }}><b>{isEn ? 'Alternative names (optional, one per line)' : 'نام گزینه‌ها (اختیاری؛ هر گزینه در یک خط)'}</b><textarea rows={3} value={alternativeNames} onChange={event => setAlternativeNames(event.target.value)} placeholder={isEn ? 'Project A\nProject B\nProject C' : 'پروژه الف\nپروژه ب\nپروژه ج'}/></label>
+      <button type="button" className="primary" style={{ marginTop: 10 }} onClick={buildRecommendation}>{isEn ? 'Analyze answers and recommend' : 'تحلیل پاسخ‌ها و ارائه پیشنهاد'}</button>
+    </div>}
+    {result && open && <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+      <h3>{isEn ? 'Recommended method: ' + result.method : 'روش پیشنهادی: ' + result.method}</h3>
+      <ul>{result.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
+      <b>{isEn ? 'Suggested criteria — review and edit before use' : 'معیارهای پیشنهادی — پیش از استفاده بازبینی و ویرایش کنید'}</b>
+      <ul>{result.criteria.map(item => <li key={item}>{item}</li>)}</ul>
+      <p className="muted">{result.warning}</p>
+      <p className="muted">{isEn ? 'For each criterion define: an unambiguous name, operational definition, unit, benefit/cost direction, measurement period, source, scoring scale and (if relevant) a minimum eligibility threshold. Avoid overlapping criteria and double-counting.' : 'برای هر معیار این موارد را مشخص کنید: نام بدون ابهام، تعریف عملیاتی، واحد اندازه‌گیری، جهت سود/هزینه، دوره سنجش، منبع داده، مقیاس امتیازدهی و در صورت نیاز حداقل شرط احراز. از هم‌پوشانی معیارها و دوباره‌شماری یک اثر جلوگیری کنید.'}</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <button type="button" className="secondary-button" onClick={() => onChoose(result.method, 'manual', result.criteria, parsedAlternatives())}>{isEn ? 'Manual entry' : 'مسیر دستی · ورود اطلاعات توسط کاربر'}</button>
+        <button type="button" className="primary" onClick={() => onChoose(result.method, 'automatic', result.criteria, parsedAlternatives())}>{isEn ? 'Build automatic draft' : 'مسیر خودکار · ساخت پیش‌نویس توسط برنامه'}</button>
+      </div>
+      <small className="muted">{isEn ? 'Automatic mode creates editable criteria and alternative placeholders. It never invents real scores or evidence; missing values remain blank.' : 'در مسیر خودکار، برنامه معیارها و گزینه‌های قابل‌ویرایش را می‌سازد؛ هیچ امتیاز یا شاهد واقعی را حدس نمی‌زند و خانه‌های فاقد داده خالی می‌مانند.'}</small>
+    </div>}
+  </section>
+}
+
 function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
   const isEn = language === 'en'
   const [category, setCategory] = useState<'INITIAL' | 'ADVANCED'>('INITIAL')
+  const [recommendedMethod, setRecommendedMethod] = useState<RankingAdvisorMethod>('AHP')
+  const [suggestedCriteria, setSuggestedCriteria] = useState<string[]>([])
+  const [suggestedAlternatives, setSuggestedAlternatives] = useState<string[]>([])
+  const applyAdvisor = (method: RankingAdvisorMethod, mode: 'manual' | 'automatic', criteria: string[], alternatives: string[]) => {
+    setRecommendedMethod(method)
+    if (mode === 'automatic') {
+      const names = alternatives.length ? alternatives : ['گزینه پیشنهادی ۱', 'گزینه پیشنهادی ۲', 'گزینه پیشنهادی ۳']
+      if (method === 'WSM') {
+        const id = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,7)
+        const draft: RankingDraft = {
+          criteria: criteria.slice(0, 8).map(name => ({ id: id('criterion'), name, weight: 1, direction: /هزینه|سرمایه|ریسک|زمان|مصرف|قیمت/.test(name) ? 'cost' : 'benefit', minimum: null })),
+          options: names.slice(0, 12).map(name => ({ id: id('option'), name, scores: {} })),
+        }
+        draft.options = draft.options.map(option => ({ ...option, scores: Object.fromEntries(draft.criteria.map(item => [item.id, null])) }))
+        void localStore.set('mod10-ranking-draft:v1', draft)
+        setSuggestedCriteria([])
+        setSuggestedAlternatives([])
+        setCategory('INITIAL')
+      } else {
+        setSuggestedCriteria(criteria.slice(0, 8))
+        setSuggestedAlternatives(names.slice(0, 12))
+        setCategory('ADVANCED')
+      }
+    } else {
+      setSuggestedCriteria([])
+      setSuggestedAlternatives([])
+      setCategory(method === 'WSM' ? 'INITIAL' : 'ADVANCED')
+    }
+  }
   return <div className="ranking-methods-workspace">
+    <RankingAdvisor language={language} onChoose={applyAdvisor}/>
     <section className="module-workspace-card" aria-labelledby="ranking-methods-heading">
       <div className="section-head">
         <div>
@@ -300,7 +406,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
             <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
           </div>}
     </section>
-    {category === 'INITIAL' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language}/>}
+    {category === 'INITIAL' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives}/>}
   </div>
 }
 
