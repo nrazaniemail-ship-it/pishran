@@ -22,7 +22,7 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   const projectId = await root.getAttribute('data-project-export-id')
   assert.ok(moduleId && projectId && moduleId.endsWith(projectId), `Export controls must belong to the active project root: module=${moduleId}, project=${projectId}`)
   assert.ok(content.includes(moduleId), `Excel workbook must include the active project identifier ${moduleId}; workbook content: ${content.slice(0, 1800)}`)
-  const filenameIdentity = value => value.normalize('NFC').replace(/[\\s_\\-]+/g, '').toLocaleLowerCase()
+  const filenameIdentity = value => value.normalize('NFC').replace(/[\s_-]+/g, '').toLocaleLowerCase()
   assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedProject)), `Excel filename must identify the active project ${expectedProject}; filename: ${download.suggestedFilename()}`)
   assert.ok(!content.includes(excludedProject.normalize('NFC')), `Excel export must not leak another project: ${excludedProject}`)
 }
@@ -189,7 +189,6 @@ try {
   await page.goBack()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
-  await page.getByRole('heading', { name: 'روشهای رتبه بندی' }).waitFor()
   await page.getByRole('heading', { name: 'روشهای رتبه بندی' }).waitFor()
   await page.getByRole('button', { name: 'گفت‌وگو با دستیار' }).click()
   const answer = page.getByLabel('پاسخ شما')
