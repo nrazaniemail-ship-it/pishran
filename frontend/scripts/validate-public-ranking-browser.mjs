@@ -22,7 +22,7 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   const projectId = await root.getAttribute('data-project-export-id')
   assert.ok(moduleId && projectId && moduleId.endsWith(projectId), `Export controls must belong to the active project root: module=${moduleId}, project=${projectId}`)
   assert.ok(content.includes(moduleId), `Excel workbook must include the active project identifier ${moduleId}; workbook content: ${content.slice(0, 1800)}`)
-  const filenameIdentity = value => value.normalize('NFC').replace(/[\s_-]+/g, '').toLocaleLowerCase()
+  const filenameIdentity = value => value.normalize('NFKC').replace(/[\s_\-\u200c\u200d\u200e\u200f\u0640]+/g, '').toLocaleLowerCase()
   assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedProject)), `Excel filename must identify the active project ${expectedProject}; filename: ${download.suggestedFilename()}`)
   assert.ok(!content.includes(excludedProject.normalize('NFC')), `Excel export must not leak another project: ${excludedProject}`)
 }
