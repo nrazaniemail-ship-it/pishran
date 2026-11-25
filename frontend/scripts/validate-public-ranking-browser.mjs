@@ -130,6 +130,7 @@ try {
       await page.getByText(/optimistic/).last().waitFor()
       await page.reload({ waitUntil: 'domcontentloaded' })
       await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
+      await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
       await page.getByTestId('ranking-category-advanced').click()
       await page.getByRole('button', { name: 'BWM', exact: true }).click()
       await page.getByText('Sensitivity history (1)').waitFor()
