@@ -1,10 +1,10 @@
 name: Frontend build and financial validation
 
-# Validate feature branch changes before they are promoted to main.
+# Validate web changes on main and feature branches. Mobile packaging remains manual-only.
 
 on:
   push:
-    branches: [feature/raw-template-comfar-financial-integration, feature/integrated-dri-steelmaking-comfar, feat/valuation-date-discounting-rebased, feat/periodic-loan-rate-resets-and-fees, feature/mod05-water-gas-bill-analysis, feature/pishran-module-exports-nav, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard, feature/mod05-bill-gallery-picker]
+    branches: [main, feature/raw-template-comfar-financial-integration, feature/integrated-dri-steelmaking-comfar, feat/valuation-date-discounting-rebased, feat/periodic-loan-rate-resets-and-fees, feature/mod05-water-gas-bill-analysis, feature/pishran-module-exports-nav, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard, feature/mod05-bill-gallery-picker]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-validation.yml'
