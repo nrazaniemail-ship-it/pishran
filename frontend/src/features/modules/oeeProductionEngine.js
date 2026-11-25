@@ -27,7 +27,7 @@ export function calculateOee(input) {
   const total=positive(input.totalCount,'تولید کل')
   const firstPassRaw=input.firstPassGoodCount
   const rejectRaw=input.rejectCount
-  const good=firstPassRaw!==undefined&&firstPassRaw!==null&&firstPassRaw!==''?positive(firstPassRaw,'تولید سالم در بار اول'):total-(rejectRaw===undefined||rejectRaw===null||rejectRaw===''?positive(input.goodCount,'تولید سالم'):positive(rejectRaw,'تعداد مردود و دوباره‌کاری'))
+  const good=firstPassRaw!==undefined&&firstPassRaw!==null&&firstPassRaw!==''?positive(firstPassRaw,'تولید سالم در بار اول'):rejectRaw!==undefined&&rejectRaw!==null&&rejectRaw!==''?total-positive(rejectRaw,'تعداد مردود و دوباره‌کاری'):positive(input.goodCount,'تولید سالم')
   const rejects=total-good
   if(!legacy&&shift<=0) throw new Error('طول شیفت باید بزرگ‌تر از صفر باشد.')
   if(!legacy&&breaks>shift) throw new Error('زمان استراحت و خارج از برنامه نمی‌تواند از طول شیفت بیشتر باشد.')
