@@ -282,12 +282,12 @@ type RankingAdvisorAnswers = {
   dependencies: 'independent' | 'dependent'
   scale: 'few' | 'many'
 }
-function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoose: (method: RankingAdvisorMethod, mode: 'manual' | 'automatic', criteria: string[], alternatives: string[]) => void }) {
+function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoose: (method: RankingAdvisorMethod, mode: 'manual' | 'automatic', criteria: string[], alternatives: string[], directions: Array<'benefit' | 'cost'>) => void }) {
   const isEn = language === 'en'
   const [open, setOpen] = useState(false)
   const [answers, setAnswers] = useState<RankingAdvisorAnswers>({ purpose: 'investment', evidence: 'mixed', weights: 'unknown', decisionMakers: 'group', time: 'enough', uncertainty: 'low', dependencies: 'independent', scale: 'few' })
   const [alternativeNames, setAlternativeNames] = useState('')
-  const [result, setResult] = useState<{ method: RankingAdvisorMethod; reasons: string[]; criteria: string[]; warning: string } | null>(null)
+  const [result, setResult] = useState<{ method: RankingAdvisorMethod; reasons: string[]; criteria: string[]; guides: Array<{name:string;definition:string;unit:string;direction:'benefit'|'cost'}>; warning: string } | null>(null)
   const update = <K extends keyof RankingAdvisorAnswers>(key: K, value: RankingAdvisorAnswers[K]) => setAnswers(current => ({ ...current, [key]: value }))
   const options = (key: keyof RankingAdvisorAnswers, values: Array<[string, string, string]>) => <label style={{ display: 'grid', gap: 5, minWidth: 0 }}><b>{values[0]?.[1]}</b><select aria-label={values[0]?.[1]} value={String(answers[key])} onChange={event => update(key, event.target.value as RankingAdvisorAnswers[typeof key])}>{values.slice(1).map(([value, fa, en]) => <option key={value} value={value}>{isEn ? en : fa}</option>)}</select></label>
   const buildRecommendation = () => {
@@ -304,6 +304,36 @@ function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoos
       general: ['هزینه کل', 'کیفیت و عملکرد', 'ریسک', 'زمان اجرا', 'قابلیت توسعه', 'اثر بلندمدت'],
     }
     const criteria = criteriaByPurpose[answers.purpose]
+    const commonGuides: Record<string, {definition:string;unit:string;direction:'benefit'|'cost'}> = {
+      'ارزش فعلی خالص (NPV)': { definition: 'ارزش فعلی جریان نقدی خالص پروژه با نرخ تنزیل و افق زمانی یکسان', unit: 'میلیون یا میلیارد ریال', direction: 'benefit' },
+      'نرخ بازده داخلی (IRR)': { definition: 'نرخی که ارزش فعلی خالص جریان نقدی را صفر می‌کند', unit: 'درصد سالانه', direction: 'benefit' },
+      'سرمایه‌گذاری ثابت (CAPEX)': { definition: 'مجموع مخارج سرمایه‌ای موردنیاز تا راه‌اندازی، با دامنه اقلام یکسان', unit: 'میلیون یا میلیارد ریال', direction: 'cost' },
+      'هزینه بهره‌برداری (OPEX)': { definition: 'هزینه سالانه تولید و بهره‌برداری در ظرفیت و قیمت‌های مبنا', unit: 'میلیون ریال در سال', direction: 'cost' },
+      'ریسک اجرا': { definition: 'امتیاز احتمال و شدت ریسک‌های زمان، فناوری، تأمین و مجوز بر مقیاس ثابت', unit: 'امتیاز ۱ تا ۵؛ کمتر بهتر', direction: 'cost' },
+      'زمان اجرا': { definition: 'مدت زمان از شروع عملیات اجرایی تا بهره‌برداری تجاری', unit: 'ماه', direction: 'cost' },
+      'ظرفیت تولید': { definition: 'ظرفیت اسمی قابل‌دستیابی در شرایط تعریف‌شده بهره‌برداری', unit: 'تن در سال', direction: 'benefit' },
+      'قیمت کل مالکیت': { definition: 'قیمت خرید به‌علاوه حمل، نصب، نگهداری و هزینه چرخه عمر در افق یکسان', unit: 'ریال', direction: 'cost' },
+      'کیفیت محصول': { definition: 'نرخ انطباق محصول با مشخصات فنی و نرخ عیب در نمونه‌برداری یکسان', unit: 'درصد انطباق', direction: 'benefit' },
+      'تحویل به‌موقع': { definition: 'سهم سفارش‌های تحویل‌شده در موعد قراردادی', unit: 'درصد', direction: 'benefit' },
+      'انطباق فنی': { definition: 'درصد الزامات فنی احرازشده از چک‌لیست مصوب', unit: 'درصد', direction: 'benefit' },
+      'خدمات و ضمانت': { definition: 'پوشش خدمات پس از فروش، زمان پاسخ و مدت ضمانت قابل‌تعهد', unit: 'امتیاز ۱ تا ۵', direction: 'benefit' },
+      'ریسک تأمین': { definition: 'احتمال اختلال تأمین با توجه به تمرکز منبع، سابقه و زمان جایگزینی', unit: 'امتیاز ۱ تا ۵؛ کمتر بهتر', direction: 'cost' },
+      'هم‌راستایی راهبردی': { definition: 'میزان انطباق خروجی پروژه با اهداف مصوب و شاخص‌های راهبردی', unit: 'امتیاز ۱ تا ۵', direction: 'benefit' },
+      'ارزش اقتصادی': { definition: 'ارزش اقتصادی خالص یا منفعت کمی‌شده در افق و نرخ تنزیل یکسان', unit: 'میلیون یا میلیارد ریال', direction: 'benefit' },
+      'امکان‌پذیری فنی': { definition: 'درصد تحقق الزامات فنی، فناوری، زیرساخت و نیروی انسانی', unit: 'درصد', direction: 'benefit' },
+      'نیاز منابع': { definition: 'مجموع منابع مالی، انسانی و تجهیزاتی موردنیاز نسبت به منابع در دسترس', unit: 'ریال و نفر-ماه', direction: 'cost' },
+      'زمان تحقق': { definition: 'مدت زمان تا دستیابی به منفعت یا خروجی مورد انتظار', unit: 'ماه', direction: 'cost' },
+      'ارزش‌آفرینی': { definition: 'میزان منفعت مالی و غیرمالی قابل‌اندازه‌گیری در افق برنامه', unit: 'امتیاز ۱ تا ۵ یا ریال', direction: 'benefit' },
+      'امکان‌پذیری': { definition: 'احتمال تحقق با توجه به منابع، قابلیت سازمان و محدودیت‌ها', unit: 'درصد یا امتیاز ۱ تا ۵', direction: 'benefit' },
+      'ریسک راهبردی': { definition: 'احتمال و شدت اثر نامطلوب بر اهداف کلان و مزیت رقابتی', unit: 'امتیاز ۱ تا ۵؛ کمتر بهتر', direction: 'cost' },
+      'زمان اثرگذاری': { definition: 'مدت زمان تا مشاهده اثر قابل‌اندازه‌گیری راهبرد', unit: 'ماه', direction: 'cost' },
+      'هزینه کل': { definition: 'هزینه مستقیم و غیرمستقیم در دوره ارزیابی مشترک', unit: 'واحد پولی ثابت', direction: 'cost' },
+      'کیفیت و عملکرد': { definition: 'میزان تحقق مشخصات عملکردی و کیفیت تعریف‌شده', unit: 'درصد یا امتیاز ۱ تا ۵', direction: 'benefit' },
+      'ریسک': { definition: 'احتمال وقوع ضربدر شدت پیامد بر مقیاس مصوب', unit: 'امتیاز ۱ تا ۵؛ کمتر بهتر', direction: 'cost' },
+      'قابلیت توسعه': { definition: 'امکان افزایش ظرفیت یا دامنه بدون بازطراحی اساسی', unit: 'امتیاز ۱ تا ۵', direction: 'benefit' },
+      'اثر بلندمدت': { definition: 'اثر پایدار اقتصادی، عملیاتی و راهبردی در افق بلندمدت', unit: 'امتیاز ۱ تا ۵', direction: 'benefit' },
+    }
+    const guides = criteria.map(name => ({ name, ...(commonGuides[name] ?? { definition: 'شاخص را با فرمول قابل‌تکرار، دامنه زمانی ثابت و منبع داده قابل‌ردیابی تعریف کنید', unit: 'واحد متناسب با شاخص', direction: 'benefit' as const }) }))
     const reasons = [
       method === 'WSM' ? 'روش ساده و شفاف برای داده‌های عددی و تعداد محدود گزینه‌ها' : method === 'TOPSIS' ? 'مناسب مقایسه چند گزینه عددی بر اساس فاصله از راه‌حل ایده‌آل' : method === 'BWM' ? 'کاهش بار مقایسه خبرگان با انتخاب بهترین و بدترین معیار و قضاوت‌های محدودتر' : 'تفکیک وزن‌دهی خبرگان با AHP و رتبه‌بندی گزینه‌ها با TOPSIS',
       answers.weights === 'known' ? 'وزن معیارها از قبل مشخص شده است؛ منبع و مبنای آن را ثبت کنید' : 'وزن معیارها باید با قضاوت مستند یا نظر خبرگان تعیین شود',
@@ -312,7 +342,7 @@ function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoos
     const warning = answers.dependencies === 'dependent'
       ? 'معیارها به یکدیگر وابسته‌اند. روش ANP برای مدل‌سازی این وابستگی‌ها مناسب‌تر است اما هنوز در این ماژول پیاده‌سازی نشده؛ خروجی AHP/TOPSIS را با این محدودیت تفسیر کنید.'
       : 'معیارها را مستقل، بدون هم‌پوشانی و قابل‌اندازه‌گیری تعریف کنید؛ جهت سود/هزینه، واحد، دامنه و منبع داده هر معیار را مشخص سازید.'
-    setResult({ method, reasons, criteria, warning })
+    setResult({ method, reasons, criteria, guides, warning })
   }
   const parsedAlternatives = () => alternativeNames.split(/\r?\n|,/).map(value => value.trim()).filter(Boolean).slice(0, 12)
   return <section className="module-workspace-card" aria-label={isEn ? 'Intelligent ranking advisor' : 'دستیار هوشمند رتبه‌بندی'} style={{ marginBottom: 14 }}>
@@ -335,12 +365,12 @@ function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoos
       <h3>{isEn ? 'Recommended method: ' + result.method : 'روش پیشنهادی: ' + result.method}</h3>
       <ul>{result.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
       <b>{isEn ? 'Suggested criteria — review and edit before use' : 'معیارهای پیشنهادی — پیش از استفاده بازبینی و ویرایش کنید'}</b>
-      <ul>{result.criteria.map(item => <li key={item}>{item}</li>)}</ul>
+      <ul>{result.guides.map(item => <li key={item.name}><b>{item.name}</b> — {item.definition} · {isEn ? 'Unit' : 'واحد'}: {item.unit} · {isEn ? 'Direction' : 'جهت'}: {item.direction === 'benefit' ? (isEn ? 'Benefit' : 'سود؛ بیشتر بهتر') : (isEn ? 'Cost' : 'هزینه؛ کمتر بهتر')}</li>)}</ul>
       <p className="muted">{result.warning}</p>
       <p className="muted">{isEn ? 'For each criterion define: an unambiguous name, operational definition, unit, benefit/cost direction, measurement period, source, scoring scale and (if relevant) a minimum eligibility threshold. Avoid overlapping criteria and double-counting.' : 'برای هر معیار این موارد را مشخص کنید: نام بدون ابهام، تعریف عملیاتی، واحد اندازه‌گیری، جهت سود/هزینه، دوره سنجش، منبع داده، مقیاس امتیازدهی و در صورت نیاز حداقل شرط احراز. از هم‌پوشانی معیارها و دوباره‌شماری یک اثر جلوگیری کنید.'}</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        <button type="button" className="secondary-button" onClick={() => onChoose(result.method, 'manual', result.criteria, parsedAlternatives())}>{isEn ? 'Manual entry' : 'مسیر دستی · ورود اطلاعات توسط کاربر'}</button>
-        <button type="button" className="primary" onClick={() => onChoose(result.method, 'automatic', result.criteria, parsedAlternatives())}>{isEn ? 'Build automatic draft' : 'مسیر خودکار · ساخت پیش‌نویس توسط برنامه'}</button>
+        <button type="button" className="secondary-button" onClick={() => onChoose(result.method, 'manual', result.criteria, parsedAlternatives(), result.guides.map(item => item.direction))}>{isEn ? 'Manual entry' : 'مسیر دستی · ورود اطلاعات توسط کاربر'}</button>
+        <button type="button" className="primary" onClick={() => onChoose(result.method, 'automatic', result.criteria, parsedAlternatives(), result.guides.map(item => item.direction))}>{isEn ? 'Build automatic draft' : 'مسیر خودکار · ساخت پیش‌نویس توسط برنامه'}</button>
       </div>
       <small className="muted">{isEn ? 'Automatic mode imports available project names and capacity data, creates editable criteria, and leaves missing scores blank. Equal starting weights are provisional; no evidence is invented.' : 'در مسیر خودکار، نام پروژه‌ها و ظرفیت‌های موجود را وارد و معیارهای قابل‌ویرایش را می‌سازد؛ وزن‌های اولیه برابر و موقت‌اند و امتیاز فاقد داده خالی می‌ماند.'}</small>
     </div>}
@@ -354,7 +384,8 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
   const [suggestedCriteria, setSuggestedCriteria] = useState<string[]>([])
   const [suggestedAlternatives, setSuggestedAlternatives] = useState<string[]>([])
   const [suggestedScores, setSuggestedScores] = useState<Array<Array<number | null>>>([])
-  const applyAdvisor = async (method: RankingAdvisorMethod, mode: 'manual' | 'automatic', criteria: string[], alternatives: string[]) => {
+  const [suggestedDirections, setSuggestedDirections] = useState<Array<'benefit' | 'cost'>>([])
+  const applyAdvisor = async (method: RankingAdvisorMethod, mode: 'manual' | 'automatic', criteria: string[], alternatives: string[], directions: Array<'benefit' | 'cost'>) => {
     setRecommendedMethod(method)
     if (mode === 'automatic') {
       const projects = await listProjects().catch(() => [])
@@ -369,11 +400,12 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
         }
         return null
       }
+      const selectedDirections = directions.slice(0, 8)
       const matrix = names.map(name => criteria.slice(0, 8).map(criterion => scoreFor(name, criterion)))
       if (method === 'WSM') {
         const id = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,7)
         const draft: RankingDraft = {
-          criteria: criteria.slice(0, 8).map(name => ({ id: id('criterion'), name, weight: 1, direction: /هزینه|سرمایه|ریسک|زمان|مصرف|قیمت/.test(name) ? 'cost' : 'benefit', minimum: null })),
+          criteria: criteria.slice(0, 8).map(name => ({ id: id('criterion'), name, weight: 1, direction: selectedDirections[criteria.indexOf(name)] ?? (/هزینه|سرمایه|ریسک|زمان|مصرف|قیمت/.test(name) ? 'cost' : 'benefit'), minimum: null })),
           options: names.map(name => ({ id: id('option'), name, scores: {} })),
         }
         draft.options = draft.options.map((option, rowIndex) => ({ ...option, scores: Object.fromEntries(draft.criteria.map((item, columnIndex) => [item.id, matrix[rowIndex]?.[columnIndex] ?? null])) }))
@@ -384,6 +416,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
         setCategory('INITIAL')
       } else {
         setSuggestedCriteria(criteria.slice(0, 8))
+        setSuggestedDirections(selectedDirections)
         setSuggestedAlternatives(names)
         setSuggestedScores(matrix)
         setCategory('ADVANCED')
@@ -422,7 +455,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
             <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
           </div>}
     </section>
-    {category === 'INITIAL' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores}/>}
+    {category === 'INITIAL' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
   </div>
 }
 
