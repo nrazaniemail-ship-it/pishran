@@ -355,7 +355,7 @@ function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoos
       else { clarify(isEn ? 'Are the weights already known, should experts determine them, or are you not sure yet?' : 'وزن‌ها از قبل مشخص‌اند، باید از خبرگان استخراج شوند یا هنوز مطمئن نیستید؟'); return }
       next = 'decisionMakers'
     } else if (step === 'decisionMakers') {
-      if (/یک نفر|تنها|خودم|فردی|solo|one person|single/i.test(value)) { a.decisionMakers = 'solo'; next = 'dependencies' }
+      if (/یک نفر|یک تصمیم|تنها|خودم|فردی|solo|one person|single/i.test(value)) { a.decisionMakers = 'solo'; next = 'dependencies' }
       else if (/چند|گروه|خبره|ذی.?نفع|group|multiple|several/i.test(value)) { a.decisionMakers = 'group'; next = 'time' }
       else { clarify(isEn ? 'Is this a single-person decision or a group decision involving several experts?' : 'تصمیم فردی است یا گروهی و با مشارکت چند خبره انجام می‌شود؟'); return }
     } else if (step === 'time') {
