@@ -596,12 +596,7 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
         <ModuleExportActions moduleId={`ranking-${selectedProject.id}`} moduleTitle={selectedProject.name} language={language}/>
       </section>
       <RankingAdvisor language={language} onChoose={applyAdvisor}/>
-    <section className="module-workspace-card" aria-labelledby="ranking-methods-heading">
-      <div className="section-head">
-        <div>
-          <h2 id="ranking-methods-heading">{isEn ? 'Ranking methods' : 'روشهای رتبه بندی'}</h2>
-        </div>
-      </div>
+    <section className="module-workspace-card">
       <div role="group" aria-label={isEn ? 'Method categories' : 'دسته‌بندی روش‌ها'} className="ranking-category-tabs">
         <button type="button" data-testid="ranking-category-initial" data-category="initial" className={`ranking-category-tab ranking-category-tab--initial ${category === 'INITIAL' ? 'is-active' : ''}`} aria-pressed={category === 'INITIAL'} onClick={() => setCategory('INITIAL')}>
           <span className="ranking-category-tab__index">01</span><span>{isEn ? 'Initial methods' : 'روش‌های اولیه'}</span><span className="ranking-category-tab__hint">{isEn ? 'Core' : 'پایه'}</span>
@@ -615,9 +610,7 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
             <h3>{isEn ? 'WSM · Weighted Sum Model' : 'WSM · مجموع وزنی (روش اولیه)'}</h3>
             <p className="muted">{isEn ? 'A straightforward starting point for scoring and comparing alternatives.' : 'روش پایه برای تعریف معیارها، وزن‌دهی و مقایسه امتیازی گزینه‌ها.'}</p>
           </div>
-        : <div data-testid="ranking-advanced-methods" className="ranking-method-intro ranking-method-intro--advanced">
-            <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
-          </div>}
+        : <div data-testid="ranking-advanced-methods" className="ranking-method-intro ranking-method-intro--advanced"></div>}
     {category === 'INITIAL' ? <RankingPanel key={(selectedProject?.id ?? 'unsaved') + '-' + initialPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} projectName={selectedProject?.name ?? ''}/> : <RankingMethodsPanel key={(selectedProject?.id ?? 'unsaved') + '-' + advancedPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} initialMethod={recommendedMethod === 'WSM' || recommendedMethod === 'AHP' ? 'AHP+TOPSIS' : recommendedMethod === 'BWM' ? 'BWM+TOPSIS' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
     </section>
     </div>}
