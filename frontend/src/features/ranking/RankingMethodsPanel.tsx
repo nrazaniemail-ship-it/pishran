@@ -90,7 +90,7 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
    if(!ranking) ranking=topsis(numericScores,weights,directions);
    judgments={...judgments,alternatives,scores:numericScores,directions};
    const snapshot=makeRankingSnapshot({method,criteria,expertCount:usesExperts?experts.length:0,weights,diagnostics,judgments});
-   const saved={...snapshot,ranking};const next=[saved,...history].slice(0,100);await localStore.set(methodHistoryKey,next);setHistory(next);setActive(saved);setNotice(en?'Calculation version saved':'نسخه محاسبه ذخیره شد');
+   const saved={...snapshot,ranking};const next=await localStore.update<any[]>(methodHistoryKey,current=>[saved,...(Array.isArray(current)?current:[])].slice(0,100));setHistory(next);setActive(saved);setNotice(en?'Calculation version saved':'نسخه محاسبه ذخیره شد');
   }catch(error){setNotice(error instanceof Error?error.message:String(error))}
  };
  const runSensitivity=async()=>{
