@@ -121,14 +121,31 @@ export type RankingSensitivityResult = {
  baseline:ReturnType<typeof topsis>;
  scenarios:Array<{label:string;kind:'weight'|'expert'|'optimistic'|'pessimistic';ranking:ReturnType<typeof topsis>}>;
  summary:Array<{alternativeIndex:number;averageRank:number;bestRank:number;worstRank:number;topCount:number;topFrequency:number}>;
+ robustness:{trials:number;seed:number;topFrequency:number[];averageRank:number[];rankStdDev:number[];scoreP05:number[];scoreP95:number[];rankAcceptability:Array<{alternativeIndex:number;rank:number;frequency:number}>};
+ expertAgreement?:{expertCount:number;meanPairwiseSpearman:number|null;criterionDispersion:Array<{criterionIndex:number;meanWeight:number;standardDeviation:number;coefficientOfVariation:number}>};
  shock:number;
 };
+export type RankingSensitivityOptions={trials?:number;seed?:number;expertWeightVectors?:number[][]};
+function seededRandom(seed:number){let state=seed>>>0;return()=>{state=(state+0x6D2B79F5)>>>0;let t=state;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+function percentile(values:number[],p:number){const sorted=[...values].sort((a,b)=>a-b);const index=(sorted.length-1)*p;const lo=Math.floor(index),hi=Math.ceil(index);return sorted[lo]+(sorted[hi]-sorted[lo])*(index-lo);}
+function rankVector(result:ReturnType<typeof topsis>,count:number){const ranks=Array(count).fill(0);result.results.forEach(r=>ranks[r.alternativeIndex]=r.rank);return ranks;}
+function spearman(a:number[],b:number[]){const n=a.length;if(n<2)return 1;const mean=(n+1)/2;let numerator=0,da=0,db=0;for(let i=0;i<n;i++){const x=a[i]-mean,y=b[i]-mean;numerator+=x*y;da+=x*x;db+=y*y;}return da===0||db===0?1:numerator/Math.sqrt(da*db);}
+function summarizeExpertAgreement(vectors:number[][]):RankingSensitivityResult['expertAgreement']{
+ if(vectors.length===0)return undefined;
+ const n=vectors[0].length;
+ assert(vectors.every(v=>v.length===n&&v.every(x=>Number.isFinite(x)&&x>=0)),'Expert weight vectors must have matching finite non-negative values');
+ const ranks=vectors.map(v=>{const order=v.map((x,i)=>({x,i})).sort((a,b)=>b.x-a.x);const r=Array(n).fill(0);order.forEach((x,i)=>r[x.i]=i+1);return r;});
+ const correlations:number[]=[];for(let i=0;i<ranks.length;i++)for(let j=i+1;j<ranks.length;j++)correlations.push(spearman(ranks[i],ranks[j]));
+ const dispersion=Array.from({length:n},(_,j)=>{const values=vectors.map(v=>v[j]);const mean=values.reduce((a,b)=>a+b,0)/values.length;const sd=Math.sqrt(values.reduce((s,v)=>s+(v-mean)**2,0)/values.length);return{criterionIndex:j,meanWeight:mean,standardDeviation:sd,coefficientOfVariation:mean===0?0:sd/mean};});
+ return{expertCount:vectors.length,meanPairwiseSpearman:correlations.length?correlations.reduce((a,b)=>a+b,0)/correlations.length:null,criterionDispersion:dispersion};
+}
 export function analyzeRankingSensitivity(
  scores:number[][],
  weights:number[],
  directions:CriterionDirection[],
  expertCases:RankingSensitivityCase[]=[],
- shock=0.2
+ shock=0.2,
+ options:RankingSensitivityOptions={}
 ):RankingSensitivityResult {
  assert(Number.isFinite(shock)&&shock>=0&&shock<=0.9,'Sensitivity shock must be between 0 and 0.9');
  const baseline=topsis(scores,weights,directions);
@@ -145,15 +162,35 @@ export function analyzeRankingSensitivity(
  expertCases.forEach(c=>run(c.label,'expert',scores,c.weights));
  const minima=scores[0].map((_,j)=>Math.min(...scores.map(row=>row[j])));
  const maxima=scores[0].map((_,j)=>Math.max(...scores.map(row=>row[j])));
- const optimistic=scores.map(row=>row.map((v,j)=>Math.max(0,v+(directions[j]==='benefit'?1:-1)*shock*(maxima[j]-minima[j])*(directions[j]==='benefit'?1:1))));
- const pessimistic=scores.map(row=>row.map((v,j)=>Math.max(0,v-(directions[j]==='benefit'?1:-1)*shock*(maxima[j]-minima[j]))));
- run('optimistic','optimistic',optimistic,weights);
- run('pessimistic','pessimistic',pessimistic,weights);
+ // Stress-test each alternative asymmetrically: stronger alternatives receive
+ // a favorable upside and an unfavorable downside proportional to their
+ // distance from the relevant column boundary.
+ const optimistic=scores.map(row=>row.map((v,j)=>{const range=maxima[j]-minima[j];if(range===0)return v;const position=(v-minima[j])/range;return Math.max(0,directions[j]==='benefit'?v+shock*range*position:v-shock*range*(1-position));}));
+ const pessimistic=scores.map(row=>row.map((v,j)=>{const range=maxima[j]-minima[j];if(range===0)return v;const position=(v-minima[j])/range;return Math.max(0,directions[j]==='benefit'?v-shock*range*position:v+shock*range*(1-position));}));
+ run('optimistic performance envelope','optimistic',optimistic,weights);
+ run('pessimistic performance envelope','pessimistic',pessimistic,weights);
+ const trials=Math.max(50,Math.min(5000,Math.floor(options.trials??500)));
+ const seed=Math.floor(options.seed??20261125);
+ const random=seededRandom(seed);
+ const ranksByAlternative=Array.from({length:scores.length},()=>[] as number[]);
+ const scoresByAlternative=Array.from({length:scores.length},()=>[] as number[]);
+ const topCounts=Array(scores.length).fill(0);
+ const rankCounts=Array.from({length:scores.length},()=>Array(scores.length).fill(0));
+ for(let trial=0;trial<trials;trial++){
+  const perturbedWeights=weights.map(w=>w*(1+(random()*2-1)*shock));
+  const matrix=scores.map(row=>row.map((v,j)=>{const range=maxima[j]-minima[j];const scale=range===0?Math.max(Math.abs(v),1):range;return Math.max(0,v+(random()*2-1)*shock*scale);}));
+  const ranked=topsis(matrix,perturbedWeights,directions);
+  const rankByIndex=rankVector(ranked,scores.length);
+  ranked.results.forEach(r=>scoresByAlternative[r.alternativeIndex].push(r.score));
+  rankByIndex.forEach((rank,index)=>{ranksByAlternative[index].push(rank);rankCounts[index][rank-1]++;if(rank===1)topCounts[index]++;});
+ }
+ const robustness={trials,seed,topFrequency:topCounts.map(v=>v/trials),averageRank:ranksByAlternative.map(v=>v.reduce((a,b)=>a+b,0)/trials),rankStdDev:ranksByAlternative.map(v=>{const mean=v.reduce((a,b)=>a+b,0)/v.length;return Math.sqrt(v.reduce((s,x)=>s+(x-mean)**2,0)/v.length);}),scoreP05:scoresByAlternative.map(v=>percentile(v,0.05)),scoreP95:scoresByAlternative.map(v=>percentile(v,0.95)),rankAcceptability:rankCounts.flatMap((counts,alternativeIndex)=>counts.map((count,index)=>({alternativeIndex,rank:index+1,frequency:count/trials})))};
+ const expertAgreement=summarizeExpertAgreement(options.expertWeightVectors??[]);
  const all=[baseline,...scenarios.map(s=>s.ranking)];
  const summary=scores.map((_,alternativeIndex)=>{
   const ranks=all.map(result=>result.results.find(r=>r.alternativeIndex===alternativeIndex)!.rank);
   const topCount=ranks.filter(rank=>rank===1).length;
   return {alternativeIndex,averageRank:ranks.reduce((a,b)=>a+b,0)/ranks.length,bestRank:Math.min(...ranks),worstRank:Math.max(...ranks),topCount,topFrequency:topCount/ranks.length};
  });
- return {baseline,scenarios,summary,shock};
+ return {baseline,scenarios,summary,robustness,...(expertAgreement?{expertAgreement}:{}),shock};
 }
