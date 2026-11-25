@@ -128,7 +128,7 @@ for (const [id, expected] of Object.entries(expectedSourceTotals)) {
   assert.ok(Math.abs(fixed - expected.fixed) < 0.02, `${id} fixed asset schedule must reconcile to the report`)
   assert.ok(Math.abs(preproduction - expected.preproduction) < 0.02, `${id} pre-production and capitalized interest must reconcile to the report`)
   assert.ok(Math.abs(operating - expected.operating) < 0.02, `${id} reference-year factory cost breakdown must reconcile to its detailed table`)
-  assert.ok(Math.abs(lastWorkingCapital.inventory + lastWorkingCapital.cash - expected.workingCapital) < 0.02, `${id} terminal working capital must reconcile to the report`)
+  assert.ok(Math.abs(lastWorkingCapital.inventory + lastWorkingCapital.cash - (lastWorkingCapital.payables ?? 0) - expected.workingCapital) < 0.02, `${id} terminal working capital must reconcile to the report`)
   assert.ok(input.workingCapital.length >= expected.years, `${id} must include a multi-year working-capital schedule`)
   if (id === 'comfar-cold-coil-200k') assert.deepEqual(input.capacityUtilization, [81.11, 90.14, 100.14, 100])
   assert.ok(input.missingSourceDetails.length >= 4, `${id} must explicitly disclose report details that were not supplied`)
