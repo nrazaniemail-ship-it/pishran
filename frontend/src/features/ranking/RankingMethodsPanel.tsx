@@ -27,9 +27,10 @@ export default function RankingMethodsPanel({language}:Props){
   try{
    let weights:number[],diagnostics:any,judgments:any,ranking:any=undefined;
    if(method==='AHP'||method==='AHP+TOPSIS'){
-    const matrices=experts.map(e=>e.matrix);const group=aggregatePairwiseMatrices(matrices);const result=ahp(group);
-    if(!result.consistent){setNotice(en?'Consistency ratio exceeds 0.10. Revise judgments before accepting weights.':'نسبت ناسازگاری بیش از ۰٫۱۰ است؛ قضاوت‌ها را اصلاح کنید.');return;}
-    weights=result.weights;diagnostics={lambdaMax:result.lambdaMax,ci:result.ci,cr:result.cr,consistent:result.consistent};judgments={expertMatrices:matrices,aggregatedMatrix:group};
+    const matrices=experts.map(e=>e.matrix);const individual=experts.map(e=>ahp(e.matrix));const group=aggregatePairwiseMatrices(matrices);const result=ahp(group);
+    if(!result.consistent){setNotice(en?'Group consistency ratio exceeds 0.10. Revise judgments before accepting weights.':'نسبت ناسازگاری گروهی بیش از ۰٫۱۰ است؛ قضاوت‌ها را اصلاح کنید.');return;}
+    const individualCRs=individual.map(x=>x.cr);
+    weights=result.weights;diagnostics={lambdaMax:result.lambdaMax,ci:result.ci,cr:result.cr,consistent:result.consistent,maxExpertCR:Math.max(...individualCRs),meanExpertCR:individualCRs.reduce((a,b)=>a+b,0)/individualCRs.length,inconsistentExpertCount:individualCRs.filter(v=>v>0.1).length};judgments={expertMatrices:matrices,individualExpertDiagnostics:individual.map(x=>({lambdaMax:x.lambdaMax,ci:x.ci,cr:x.cr,consistent:x.consistent})),aggregatedMatrix:group};
     if(method==='AHP+TOPSIS'){ranking=topsis(scores,weights,directions);diagnostics={...diagnostics,topsis:'vector-normalized Euclidean TOPSIS'};judgments={...judgments,alternatives,scores,directions};}
    }else if(method==='BWM'){
     const result=aggregateBwmExpertWeights(experts);weights=result.weights;const xis=result.individual.map(x=>x.xi);diagnostics={maxExpertXi:Math.max(...xis),meanExpertXi:xis.reduce((a,b)=>a+b,0)/xis.length,aggregation:'geometric mean of individual expert priorities'};judgments={expertJudgments:experts.map(e=>({name:e.name,bestIndex:e.bestIndex,worstIndex:e.worstIndex,bestToOthers:e.bestToOthers,othersToWorst:e.othersToWorst})),individualResults:result.individual};
@@ -84,7 +85,7 @@ export default function RankingMethodsPanel({language}:Props){
    }
    const result=analyzeRankingSensitivity(scores,weights,directions,cases,delta,{trials:500,seed:20261125,expertWeightVectors});
    setSensitivity(result);
-   const record={schema:'pishran-ranking-sensitivity/v1',createdAt:new Date().toISOString(),method,criteria:[...criteria],alternatives:[...alternatives],directions:[...directions],weights:[...weights],shock:delta,trials:result.robustness.trials,seed:result.robustness.seed,expertWeightVectors:expertWeightVectors.map(v=>[...v]),result};
+   const record={schema:'pishran-ranking-sensitivity/v1',createdAt:new Date().toISOString(),method,criteria:[...criteria],alternatives:[...alternatives],directions:[...directions],weights:[...weights],shock:delta,trials:result.robustness.trials,seed:result.robustness.seed,expertWeightVectors:expertWeightVectors.map(v=>[...v]),expertJudgments:experts.map(e=>({name:e.name,bestIndex:e.bestIndex,worstIndex:e.worstIndex,matrix:e.matrix.map(row=>[...row]),bestToOthers:[...e.bestToOthers],othersToWorst:[...e.othersToWorst]})),performanceMatrix:scores.map(row=>[...row]),result};
    const next=[record,...sensitivityHistory].slice(0,50);
    await localStore.set('mod10-ranking-sensitivity-history:v1',next);
    setSensitivityHistory(next);
