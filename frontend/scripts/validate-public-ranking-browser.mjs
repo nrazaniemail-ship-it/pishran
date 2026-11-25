@@ -67,8 +67,6 @@ try {
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: 'ذخیره نام' }).click()
-  await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
-  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.waitForFunction(async ({ key, expectedName, moduleId }) => {
     let indexedDbProjects = null
     try {
@@ -101,6 +99,9 @@ try {
     const matches = item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId)
     return Boolean(indexedDbProjects?.some(matches) && fallbackProjects?.some(matches))
   }, { key: 'mod10-ranking-projects:v1', expectedName: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', moduleId: undefined }, { timeout: 10000 })
+  await page.waitForFunction(expected => Array.from(document.querySelectorAll('.ranking-project-export-root .module-export-actions')).some(element => element.getAttribute('data-export-module-title') === expected), 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
+  await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   const beforeReloadStorage = await page.evaluate(async () => {
