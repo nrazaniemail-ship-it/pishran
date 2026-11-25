@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
 
-const site = 'https://nrazaniemail-ship-it.github.io/pishran/'
+const site = new URL(`?deploy=${process.env.GITHUB_SHA ?? 'latest'}`, 'https://nrazaniemail-ship-it.github.io/pishran/').toString()
 const response = await fetch(site, { redirect: 'follow' })
 assert.equal(response.ok, true, 'public PWA homepage must respond successfully')
 const html = await response.text()
