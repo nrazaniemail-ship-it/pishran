@@ -39,6 +39,11 @@ try {
   await page.getByRole('button', { name: 'BWM', exact: true }).waitFor()
   assert.equal(await page.locator('.ranking-method-tab[data-method="BWM"]').getAttribute('aria-pressed'), 'true',
     'guided automatic setup must open the recommended method')
+  await page.getByLabel('وضعیت وزن معیارها').selectOption('known')
+  await page.getByLabel('جنس داده‌ها').selectOption('numeric')
+  await page.getByRole('button', { name: 'تحلیل پاسخ‌ها و ارائه پیشنهاد' }).click()
+  await page.getByRole('heading', { name: 'روش پیشنهادی: WSM' }).waitFor()
+  await page.getByRole('button', { name: 'مسیر دستی · ورود اطلاعات توسط کاربر' }).click()
   await page.getByTestId('ranking-category-initial').click()
   assert.equal(await page.getByTestId('ranking-category-initial').getAttribute('aria-pressed'), 'true')
   assert.ok((await page.getByTestId('ranking-category-initial').getAttribute('class'))?.includes('is-active'),
