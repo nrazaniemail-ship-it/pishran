@@ -2445,3 +2445,30 @@ input,select,textarea{color:var(--text)}
   body.module-export-printing .module-export-print-target select,
   body.module-export-printing .module-export-print-target textarea{print-color-adjust:exact}
 }
+
+
+/* Unified tab-and-panel shells: active tab sits on the same visual frame as its content. */
+.ranking-category-tabs{position:relative;z-index:2;align-items:flex-end;gap:8px;margin:0;padding:0 14px;border:1px solid var(--workspace-border,var(--line));border-bottom:0;border-radius:14px 14px 0 0;background:var(--workspace-surface,var(--surface))}
+.ranking-category-tab{margin-bottom:-1px;border-radius:11px 11px 0 0}
+.ranking-category-tab.is-active{position:relative;z-index:3;border-bottom-color:var(--surface,#fff);border-bottom-left-radius:0;border-bottom-right-radius:0;box-shadow:0 -3px 12px rgba(32,56,80,.06)}
+.ranking-category-tabs+.ranking-method-intro{position:relative;z-index:1;margin:0;padding:13px 16px;border:1px solid var(--workspace-border,var(--line));border-top:0;border-radius:0 0 14px 14px;background:var(--surface,#fff)}
+.ranking-category-tabs+.ranking-method-intro h3{margin:0}
+.ranking-category-tabs+.ranking-method-intro p{margin:5px 0 0}
+.ranking-category-tabs+.ranking-method-intro+.module-workspace-card{margin:0!important;border-top:0;border-top-left-radius:0;border-top-right-radius:0}
+.module-capabilities-tabs{position:relative;z-index:2;gap:8px;margin:0;padding:0 14px;border:1px solid var(--workspace-border,var(--line));border-bottom:0;border-radius:14px 14px 0 0;background:var(--workspace-surface,var(--surface))}
+.module-capabilities-tabs button{margin-bottom:-1px;border-radius:10px 10px 0 0}
+.module-capabilities-tabs button.active{position:relative;z-index:3;border-bottom-color:var(--surface,#fff);border-bottom-left-radius:0;border-bottom-right-radius:0;box-shadow:0 -3px 12px rgba(32,56,80,.06)}
+.module-capabilities-tabs+.module-capabilities-grid{position:relative;z-index:1;margin:0;padding:16px;border:1px solid var(--workspace-border,var(--line));border-top:0;border-radius:0 0 14px 14px;background:var(--surface,#fff)}
+.maintenance-tabs{position:relative;z-index:2;gap:8px;margin:0;padding:0 14px;border:1px solid var(--workspace-border,var(--line));border-bottom:0;border-radius:14px 14px 0 0;background:var(--workspace-surface,var(--surface))}
+.maintenance-tabs button{margin-bottom:-1px;border-radius:10px 10px 0 0}
+.maintenance-tabs button.active{position:relative;z-index:3;border-bottom-color:var(--surface,#fff);border-bottom-left-radius:0;border-bottom-right-radius:0;box-shadow:0 -3px 12px rgba(32,56,80,.06)}
+.maintenance-tabs+.maintenance-card{position:relative;z-index:1;margin:0;padding:18px;border:1px solid var(--workspace-border,var(--line));border-top:0;border-radius:0 0 14px 14px;background:var(--surface,#fff)}
+.energy-work-tabs{position:relative;z-index:2;gap:8px;margin:0;padding:0 14px;border:1px solid var(--workspace-border,var(--line));border-bottom:0;border-radius:14px 14px 0 0;background:var(--workspace-surface,var(--surface))}
+.energy-work-tabs button{margin-bottom:-1px;border-radius:10px 10px 0 0}
+.energy-work-tabs button.active{position:relative;z-index:3;border-bottom-color:var(--surface,#fff);border-bottom-left-radius:0;border-bottom-right-radius:0;box-shadow:0 -3px 12px rgba(32,56,80,.06)}
+.energy-work-tabs~.energy-panel-grid,.energy-work-tabs~.energy-form-card,.energy-work-tabs~.energy-water-balance{border-top-left-radius:0;border-top-right-radius:0}
+@media(max-width:700px){
+ .ranking-category-tabs,.module-capabilities-tabs,.maintenance-tabs,.energy-work-tabs{gap:5px;padding-inline:7px;overflow-x:auto;overscroll-behavior-x:contain}
+ .ranking-category-tab{min-width:0}
+ .ranking-category-tabs+.ranking-method-intro,.module-capabilities-tabs+.module-capabilities-grid,.maintenance-tabs+.maintenance-card{padding:12px}
+}
