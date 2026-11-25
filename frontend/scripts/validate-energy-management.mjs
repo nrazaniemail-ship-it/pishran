@@ -252,3 +252,64 @@ test('energy driver validation enforces bounded indices and permits below-zero a
  assert.throws(()=>validateEnergyRecord({...base,feedQualityIndex:-1}),/شاخص کیفیت خوراک/)
  assert.throws(()=>validateEnergyRecord({...base,shutdownHours:-1}),/ساعات توقف/)
 })
+
+
+test('MOD-05 meter calibration register validates traceability, persists history and flags due or overdue instruments',async()=>{
+ const {saveMeterCalibration,validateMeterCalibration,getMeterCalibrationStatus,listMeterCalibrationAlerts,METER_CALIBRATIONS_KEY}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const input={meterId:'EM-101',site:'Plant A',parameter:'Electricity',unit:'kWh',intervalDays:'365',lastCalibrationDate:'2026-01-01',certificateRef:'CAL-2026-101',provider:'Accredited Lab',owner:'Metrology',accuracy:'0.5',measurementRange:'0–10000 kWh'}
+ const checked=validateMeterCalibration(input,'2026-11-25')
+ assert.equal(checked.nextCalibrationDate,'2027-01-01')
+ assert.equal(checked.status,'valid')
+ assert.equal(getMeterCalibrationStatus({...checked,nextCalibrationDate:'2026-11-20'},'2026-11-25').status,'overdue')
+ assert.equal(getMeterCalibrationStatus({...checked,nextCalibrationDate:'2026-12-10'},'2026-11-25').status,'due-soon')
+ assert.throws(()=>validateMeterCalibration({...input,certificateRef:''},'2026-11-25'),/گواهی/)
+ assert.throws(()=>validateMeterCalibration({...input,intervalDays:'1.5'},'2026-11-25'),/عدد صحیح/)
+ assert.throws(()=>validateMeterCalibration({...input,lastCalibrationDate:'2026-12-01'},'2026-11-25'),/آینده/)
+ const memory=new Map(),store={get:async key=>memory.get(key),update:async(key,fn)=>{const next=fn(memory.get(key));memory.set(key,next);return next}}
+ const first=await saveMeterCalibration(input,store,'2026-11-25T10:00:00.000Z')
+ const second=await saveMeterCalibration({...input,intervalDays:'300',lastCalibrationDate:'2026-02-01',certificateRef:'CAL-UPDATED'},store,'2026-11-25T11:00:00.000Z')
+ const records=memory.get(METER_CALIBRATIONS_KEY)
+ assert.equal(records.length,1)
+ assert.equal(second.id,first.id)
+ assert.equal(second.history.length,1)
+ assert.equal(second.certificateRef,'CAL-UPDATED')
+ const alerts=listMeterCalibrationAlerts([{...second,nextCalibrationDate:'2026-11-20'}],'2026-11-25')
+ assert.equal(alerts.length,1)
+ assert.equal(alerts[0].status,'overdue')
+})
+
+test('MOD-05 M&V evidence pack requires measured same-boundary records and exposes meter calibration coverage and limitations',async()=>{
+ const {buildEnergyMvEvidencePack,saveEnergyMvEvidencePack,ENERGY_MV_EVIDENCE_KEY,validateEnergyRecord}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const baseline={id:'BASE-1',resource:'electricity',period:'2026-01',site:'Plant A',seu:'Furnace',consumption:1000,production:100,intensity:10}
+ const actual=validateEnergyRecord({resource:'electricity',period:'2026-02',site:'Plant A',seu:'Furnace',meterId:'EM-101',consumption:900,production:100,cost:50,dataQuality:'measured'})
+ actual.id='ROW-1'
+ const calibration={id:'CAL-1',meterId:'EM-101',site:'Plant A',nextCalibrationDate:'2027-01-01'}
+ const input={resource:'electricity',baselineId:'BASE-1',actualRecordIds:['ROW-1'],method:'Production-normalized baseline comparison',verifier:'Energy reviewer',measurementBoundary:'Plant A / Furnace main feeder',boundaryConfirmed:true,adjustmentNotes:'No material production or operating-boundary changes declared; review supporting logs.',evidenceReferences:'Meter log ML-02; production report PR-02; calibration certificate CAL-2026-101'}
+ const pack=buildEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[calibration]},'2026-11-25T12:00:00.000Z')
+ assert.equal(pack.normalizedBaseline,1000)
+ assert.equal(pack.actualConsumption,900)
+ assert.equal(pack.measuredSavings,100)
+ assert.equal(pack.calibrationCoverage[0].status,'valid')
+ assert.equal(pack.reviewStatus,'prepared-not-independent-review')
+ assert.ok(pack.limitations.length>=2)
+ assert.throws(()=>buildEnergyMvEvidencePack({...input,boundaryConfirmed:false},{rows:[actual],baselines:[baseline],calibrations:[]}),/مرز اندازه‌گیری/)
+ assert.throws(()=>buildEnergyMvEvidencePack({...input,actualRecordIds:[]},{rows:[actual],baselines:[baseline],calibrations:[calibration]}),/حداقل یک رکورد/)
+ assert.throws(()=>buildEnergyMvEvidencePack(input,{rows:[{...actual,dataQuality:'estimated'}],baselines:[baseline],calibrations:[calibration]}),/برآوردی/)
+ assert.throws(()=>buildEnergyMvEvidencePack(input,{rows:[{...actual,site:'Other'}],baselines:[baseline],calibrations:[calibration]}),/همان منبع/)
+ const memory=new Map(),store={update:async(key,fn)=>{const next=fn(memory.get(key));memory.set(key,next);return next}}
+ const saved=await saveEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[calibration]},store,'2026-11-25T12:00:00.000Z')
+ assert.equal(memory.get(ENERGY_MV_EVIDENCE_KEY)[0].id,saved.id)
+})
+
+test('MOD-05 interface exposes calibration register, due alerts and M&V evidence export sections',async()=>{
+ const {readFile}=await import('node:fs/promises')
+ const app=await readFile(new URL('../src/features/modules/ModuleEnergyPanel.tsx',import.meta.url),'utf8')
+ assert.ok(app.includes('METER_CALIBRATIONS_KEY'))
+ assert.ok(app.includes('ENERGY_MV_EVIDENCE_KEY'))
+ assert.ok(app.includes('ثبت تجهیزات و M&V'))
+ assert.ok(app.includes('گواهی کالیبراسیون'))
+ assert.ok(app.includes('بسته شواهد M&V'))
+ assert.ok(app.includes('کالیبراسیون سررسید'))
+ assert.ok(app.includes("['سوابق کالیبراسیون',calibrations]"))
+ assert.ok(app.includes("['بسته‌های شواهد M&V',mvPacks]"))
+})
