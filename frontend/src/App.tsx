@@ -597,11 +597,9 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
     <section className="module-workspace-card" aria-labelledby="ranking-methods-heading">
       <div className="section-head">
         <div>
-          <h2 id="ranking-methods-heading">{isEn ? 'Multi-criteria weighting & ranking' : 'وزن‌دهی و رتبه‌بندی چندمعیاره'}</h2>
-          <p>{isEn ? 'Start with the basic weighted-sum method or choose an advanced multi-criteria method.' : 'از روش پایه مجموع وزنی شروع کنید یا یکی از روش‌های پیشرفته تصمیم‌گیری چندمعیاره را انتخاب کنید.'}</p>
+          <h2 id="ranking-methods-heading">{isEn ? 'Ranking methods' : 'روشهای رتبه بندی'}</h2>
         </div>
       </div>
-      <h3 style={{ margin: '8px 0 12px' }}>{isEn ? 'Methods' : 'روش‌های انجام'}</h3>
       <div role="group" aria-label={isEn ? 'Method categories' : 'دسته‌بندی روش‌ها'} className="ranking-category-tabs">
         <button type="button" data-testid="ranking-category-initial" data-category="initial" className={`ranking-category-tab ranking-category-tab--initial ${category === 'INITIAL' ? 'is-active' : ''}`} aria-pressed={category === 'INITIAL'} onClick={() => setCategory('INITIAL')}>
           <span className="ranking-category-tab__index">01</span><span>{isEn ? 'Initial methods' : 'روش‌های اولیه'}</span><span className="ranking-category-tab__hint">{isEn ? 'Core' : 'پایه'}</span>
