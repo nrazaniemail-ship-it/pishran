@@ -44,7 +44,7 @@ export function calculateOee(input) {
   const oee=availability/100*performance/100*quality/100*100
   const direct=good*cycle/planned*100
   const variance=Math.abs(oee-direct)
-  return { idealCycleMinutes:cycle,shiftMinutes:legacy?null:shift,breakMinutes:breaks,plannedMinutes:planned,plannedStopMinutes:plannedStops,unplannedStopMinutes:unplannedStops,downtimeMinutes:downtime,runMinutes:run,availability,performance,quality,oee,directOee:direct,variance,idealProduction:run/cycle,goodProductionRate:good/(planned*60),totalCount:total,goodCount:good,firstPassGoodCount:good,rejectCount:rejects,warnings:[...(performance>100?['عملکرد بیش از ۱۰۰٪ است؛ زمان سیکل ایده‌آل، واحد زمان و شمارش تولید بررسی شود.']:[]),...(variance>0.000001?['اختلاف روش تفصیلی و کنترل مستقیم از حد تلورانس بیشتر است؛ سازگاری ورودی‌ها بررسی شود.']:[])] }
+  return { idealCycleMinutes:cycle,shiftMinutes:legacy?null:shift,breakMinutes:breaks,plannedMinutes:planned,plannedStopMinutes:plannedStops,unplannedStopMinutes:unplannedStops,downtimeMinutes:downtime,runMinutes:run,availability,performance,quality,oee,directOee:direct,variance,idealProduction:run/cycle,goodProductionRate:good/planned,totalCount:total,goodCount:good,firstPassGoodCount:good,rejectCount:rejects,warnings:[...(performance>100?['عملکرد بیش از ۱۰۰٪ است؛ زمان سیکل ایده‌آل، واحد زمان و شمارش تولید بررسی شود.']:[]),...(variance>0.000001?['اختلاف روش تفصیلی و کنترل مستقیم از حد تلورانس بیشتر است؛ سازگاری ورودی‌ها بررسی شود.']:[])] }
 }
 export function aggregateLineOee(input) { return calculateOee(input) }
 export function calculateStationOees(stations) { return stations.map(station=>({...station,result:calculateOee(station)})) }
