@@ -426,6 +426,18 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
   }).catch(()=>setLoaded(true))
   return()=>{alive=false}
  },[key]);
+ useEffect(()=>{
+  if(!loaded)return
+  let alive=true
+  const saveTimer=window.setTimeout(()=>{
+   localStore.set<Model>(key,m).then(()=>{
+    if(alive)setSaved(new Date().toLocaleTimeString(language==='en'?'en-US':'fa-IR',{hour:'2-digit',minute:'2-digit'}))
+   }).catch(()=>{
+    if(alive)setSaved(language==='en'?'Save failed':'ذخیره ناموفق')
+   })
+  },350)
+  return()=>{alive=false;window.clearTimeout(saveTimer)}
+ },[key,loaded,m,language]);
  const stage=stageOptions.find(s=>s.id===m.stage)??stageOptions[5]
  const cap=m.capacity.nameplate*Math.min(100,Math.max(0,m.capacity.availability))/100*Math.min(100,Math.max(0,m.capacity.yield))/100
  const capex=sum(m.capex),variable=m.opex.filter(r=>r.unit.includes('/تن')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)+sumMaterialInputs(m.balance)+sum(m.utilities),fixed=m.opex.filter(r=>r.unit.includes('/سال')).reduce((a,r)=>a+n(r.quantity)*n(r.unitPrice),0)
