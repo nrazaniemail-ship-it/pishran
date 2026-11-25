@@ -123,6 +123,8 @@ try {
       await page.getByText('Best criterion').waitFor()
       await page.locator('select[aria-label*="best criterion"]').selectOption('1')
       await page.getByLabel('Expert 1 worst criterion').selectOption('0')
+      await page.getByLabel('Best over هزینه سرمایه‌گذاری').selectOption('5')
+      await page.getByLabel('Other over worst ریسک اجرا').selectOption('4')
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
       await page.getByText('Calculation history (1)').waitFor()
@@ -152,7 +154,10 @@ try {
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
     }
-    if (method === 'AHP + TOPSIS') await page.getByText('Alternative performance matrix').waitFor()
+    if (method === 'AHP + TOPSIS') {
+      await page.getByText('Alternative performance matrix').waitFor()
+      await page.getByLabel('گزینه الف, هزینه سرمایه‌گذاری score').fill('88')
+    }
   }
   await page.getByRole('button', { name: 'Calculate and save version' }).click()
   await page.getByText('Calculation version saved').waitFor()
@@ -169,11 +174,15 @@ try {
   await page.getByRole('button', { name: 'BWM', exact: true }).click()
   assert.equal(await page.locator('select[aria-label*="best criterion"]').inputValue(), '1',
     'BWM best-criterion anchor must persist after reload')
+  assert.equal(await page.getByLabel('Best over هزینه سرمایه‌گذاری').inputValue(), '5',
+    'BWM best-to-others judgments must persist after reload')
+  assert.equal(await page.getByLabel('Other over worst ریسک اجرا').inputValue(), '4',
+    'BWM others-to-worst judgments must persist after reload')
   await page.getByRole('button', { name: 'TOPSIS', exact: true }).click()
   assert.equal(await page.getByLabel('هزینه سرمایه‌گذاری manual weight').inputValue(), '7',
     'TOPSIS manual criterion weights must persist after reload')
   await page.getByRole('button', { name: 'AHP + TOPSIS', exact: true }).click()
-  assert.equal(await page.getByLabel('گزینه الف, هزینه سرمایه‌گذاری score').inputValue(), '80',
+  assert.equal(await page.getByLabel('گزینه الف, هزینه سرمایه‌گذاری score').inputValue(), '88',
     'AHP + TOPSIS performance matrix must persist after reload')
 
   await page.getByRole('button', { name: '← All ranking projects' }).click()
