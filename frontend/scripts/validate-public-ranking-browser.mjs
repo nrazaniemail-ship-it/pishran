@@ -73,6 +73,9 @@ try {
       await page.getByText('Calculation history (1)').waitFor()
       await page.getByRole('button', { name: 'Run rank sensitivity' }).click()
       await page.getByTestId('ranking-sensitivity-results').waitFor()
+      await page.getByText(/Deterministic Monte Carlo: 500 trials/).waitFor()
+      await page.getByRole('columnheader', { name: 'Monte Carlo top probability' }).waitFor()
+      await page.getByText('Expert agreement & disagreement').waitFor()
       await page.getByText('Scenario comparison').click()
       await page.getByText(/optimistic/).last().waitFor()
     }
@@ -83,7 +86,7 @@ try {
   await page.getByText('Calculation version saved').waitFor()
   await page.getByText('Calculation history (2)').waitFor()
   assert.deepEqual(pageErrors, [], 'public ranking interaction must not generate browser runtime errors')
-  assert.ok(bundle.includes('Rank sensitivity summary') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')
+  assert.ok(bundle.includes('Monte Carlo top probability') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')
   console.log('PASS: live public PWA MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
 } finally {
   await browser.close()
