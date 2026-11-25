@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ahp,bwm,aggregatePairwiseMatrices,aggregateBwmJudgments,aggregateBwmExpertWeights,makeRankingSnapshot,validatePairwiseMatrix,topsis} from '../src/features/ranking/rankingMethods.ts';
+import {ahp,bwm,aggregatePairwiseMatrices,aggregateBwmJudgments,aggregateBwmExpertWeights,combineAHPBWMWeights,makeRankingSnapshot,validatePairwiseMatrix,topsis} from '../src/features/ranking/rankingMethods.ts';
 test('AHP recovers a consistent priority vector and reports consistency',()=>{
  const m=[[1,3,5],[1/3,1,2],[1/5,1/2,1]];
  const r=ahp(m); assert.ok(Math.abs(r.weights.reduce((s,v)=>s+v,0)-1)<1e-12); assert.ok(r.weights[0]>r.weights[1]&&r.weights[1]>r.weights[2]); assert.ok(r.cr<0.1);
@@ -57,6 +57,14 @@ test('TOPSIS validates dimensions, weights and zero-variance columns',()=>{
  assert.throws(()=>topsis([[1,2],[2,3]],[0,0],['benefit','cost']),/positive finite sum/);
  assert.throws(()=>topsis([[0,2],[0,3]],[1,1],['benefit','cost']),/non-zero/);
  assert.throws(()=>topsis([[1,2],[2,3]],[1,1],['up','cost']),/valid benefit\/cost direction/);
+});
+test('AHP + BWM fuses normalized priorities by a 50/50 geometric mean',()=>{
+ const a=[0.6,0.3,0.1],b=[0.2,0.3,0.5],combined=combineAHPBWMWeights(a,b);
+ const raw=a.map((v,i)=>Math.sqrt(v*b[i])),sum=raw.reduce((x,y)=>x+y,0);
+ combined.forEach((v,i)=>assert.ok(Math.abs(v-raw[i]/sum)<1e-12));
+ assert.ok(Math.abs(combined.reduce((x,y)=>x+y,0)-1)<1e-12);
+ assert.throws(()=>combineAHPBWMWeights([0.5,0.5],[0.5]),/same criteria count/);
+ assert.throws(()=>combineAHPBWMWeights([0.5,0.5],[0.5,0.5],1.2),/between 0 and 1/);
 });
 test('AHP + TOPSIS can use AHP priorities as normalized TOPSIS weights',()=>{
  const priorities=ahp([[1,3],[1/3,1]]).weights;
