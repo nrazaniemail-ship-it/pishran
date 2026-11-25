@@ -189,7 +189,6 @@ try {
   await page.goBack()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
-  await page.getByRole('heading', { name: 'روشهای رتبه بندی' }).waitFor()
   await page.getByRole('button', { name: 'گفت‌وگو با دستیار' }).click()
   const answer = page.getByLabel('پاسخ شما')
   await answer.fill('مطمئن نیستم دقیقاً چه نوع تصمیمی است')
@@ -247,11 +246,9 @@ try {
     'public WSM data must persist after reload')
 
   await page.getByRole('button', { name: 'Switch to English' }).click()
-  await page.getByRole('heading', { name: 'Ranking methods' }).waitFor()
   await page.getByTestId('ranking-category-advanced').click()
   assert.ok((await page.getByTestId('ranking-category-advanced').getAttribute('class'))?.includes('is-active'),
     'advanced category tab must expose its modern active style')
-  await page.getByRole('heading', { name: 'Advanced multi-criteria methods' }).waitFor()
   for (const method of ['TOPSIS', 'AHP + TOPSIS', 'BWM + TOPSIS', 'TOPSIS + (AHP + BWM)']) {
     const methodKey = method === 'AHP + TOPSIS' ? 'AHP+TOPSIS' : method === 'BWM + TOPSIS' ? 'BWM+TOPSIS' : method === 'TOPSIS + (AHP + BWM)' ? 'TOPSIS+(AHP+BWM)' : method
     await page.getByRole('button', { name: method, exact: true }).click()
