@@ -26,7 +26,7 @@ Opportunities are registered with a responsible owner, due date, resource, and e
 
 ## Multivariable operational normalization
 
-When at least six measured periods are available for the same resource, site and significant energy use, MOD-05 fits an ordinary-least-squares model using production and operating hours. The latest valid measured period is held out; estimated periods are excluded from model fitting. The model compares actual consumption with the consumption expected at the held-out period's production and operating hours. For gas, thermal energy is used only when all records share a documented gross/net calorific basis and identical reference conditions; otherwise the model remains on volume. Results expose training periods, coefficients, R² and RMSE. A weak fit, collinear drivers, nonphysical coefficients or nonpositive normalized consumption must be treated as a warning, not a savings claim. This two-driver model does not yet adjust for product mix, weather, feed quality, ambient conditions, shutdowns or other relevant variables; site engineering review and an appropriate M&V plan remain necessary.
+When at least six measured periods are available for the same resource, site and significant energy use, MOD-05 fits a rolling-origin ordinary-least-squares model using production and operating hours plus optional, complete and varying operating drivers (product mix, ambient temperature, feed quality and shutdown hours). The latest valid measured period is held out; estimated periods are excluded from model fitting and missing drivers are not imputed. Results expose training periods, selected predictors, coefficients, R² and RMSE. A weak fit, collinear drivers, nonphysical coefficients or nonpositive normalized consumption must be treated as a warning, not a savings claim. Site engineering review and a documented M&V method remain necessary.
 
 ## Data keys
 
@@ -34,14 +34,22 @@ When at least six measured periods are available for the same resource, site and
 - `module-intelligence:MOD-05:baselines:v1`
 - `module-intelligence:MOD-05:actions:v1`
 
-All operational records are stored locally through the Pishran localStore. Additional MOD-05 stores are `module-intelligence:MOD-05:water-balances:v1`, `module-intelligence:MOD-05:cost-allocations:v1`, `module-intelligence:MOD-05:gas-bills:v1`, `module-intelligence:MOD-05:water-bills:v1`, and `module-intelligence:MOD-05:resource-cost-allocations:v1`; electricity bills use `ELECTRICITY_BILLS_KEY` from the electricity bill register.
+All operational records are stored locally through the Pishran localStore. Additional MOD-05 stores are `module-intelligence:MOD-05:water-balances:v1`, `module-intelligence:MOD-05:cost-allocations:v1`, `module-intelligence:MOD-05:gas-bills:v1`, `module-intelligence:MOD-05:water-bills:v1`, and `module-intelligence:MOD-05:resource-cost-allocations:v1`, `module-intelligence:MOD-05:meter-calibrations:v1`, and `module-intelligence:MOD-05:mv-evidence:v1`; electricity bills use `ELECTRICITY_BILLS_KEY` from the electricity bill register.
 
 
 ## Implemented module scope and explicit limits
 
 The current web implementation includes separate electricity, gas and water ledgers; meter reconciliation and data-quality labels; production-normalized baselines; gas calorific-basis controls; water boundary balances; electricity/gas/water bill capture and OCR review; bill-component cost allocation; controlled MOD-02 cost handoff with source provenance and duplicate-posting guards; multi-period trends; anomaly and forecast screening; rolling-origin multivariable normalization with optional operating drivers; improvement-action status and verification histories; and Excel / print-to-PDF reporting.
 
-The module does not yet provide a meter calibration register, automated tariff calculation, tamper-proof centralized audit storage, or a formal ISO 50015 measurement-and-verification evidence pack. These require site-specific metrology, tariff contracts, governance and approved M&V methods; the module must not represent its operational indicators as certification or verified savings.
+The web module now includes a meter calibration register with traceable certificate references, interval-based due dates, overdue / due-soon alerts and revision history, plus a saved M&V evidence-pack workflow. Automated tariff calculation and tamper-proof centralized audit storage remain out of scope until site tariff contracts and governed audit infrastructure are supplied. The module must not represent operational calculations or a prepared evidence pack as ISO certification or independent verification.
+
+## Meter calibration register
+
+The meter register stores the instrument ID, site, measured parameter and unit, calibration interval, last calibration date, calculated next due date, calibration laboratory, certificate / traceability reference, responsible owner, declared accuracy, measurement range and notes. Saving a new calibration for the same instrument and site retains the prior register entry in revision history. Instruments are labelled valid, due within 30 days, or overdue; the alert is a scheduling control and does not independently establish metrological traceability or certificate authenticity. M&V evidence packs capture the calibration status associated with each selected record's meter ID at preparation time. A missing meter ID or calibration record is disclosed as missing rather than inferred.
+
+## Measurement and verification evidence packs
+
+A prepared evidence pack binds one saved baseline to one or more measured actual records for the same resource, site and significant energy use. Estimated records and cross-boundary records are rejected. The pack snapshots the baseline, selected record IDs and periods, per-period production-normalized calculations, aggregate normalized baseline consumption, actual consumption, measured variance, method label, named preparer / reviewer, measurement boundary confirmation, adjustment notes, evidence references, meter-calibration coverage and warnings. Packs are retained locally and included in Excel and print-to-PDF reports. The workflow requires explicit boundary confirmation and non-empty evidence references and adjustment notes; it does not independently authenticate attachments, calculate uncertainty, select a site-specific IPMVP / ISO 50015 method, or replace an independent technical review. A positive variance is a calculated operational result, not automatically a verified energy saving.
 
 ## Electricity bill OCR and analytical controls
 
