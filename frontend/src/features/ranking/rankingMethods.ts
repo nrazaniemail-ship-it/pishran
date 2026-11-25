@@ -1,7 +1,7 @@
 export type PairwiseMatrix = number[][];
 export type RankingSnapshot = {
   schema: 'pishran-ranking-snapshot/v1';
-  method: 'AHP' | 'BWM' | 'TOPSIS' | 'AHP+TOPSIS' | 'AHP+BWM';
+  method: 'TOPSIS' | 'AHP+TOPSIS' | 'BWM+TOPSIS' | 'TOPSIS+(AHP+BWM)';
   createdAt: string;
   criteria: string[];
   expertCount: number;
