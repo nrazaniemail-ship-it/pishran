@@ -625,3 +625,49 @@ export async function saveEnergyMvEvidencePack(input,context,store,generatedAt=n
  await store.update(ENERGY_MV_EVIDENCE_KEY,old=>[pack,...(Array.isArray(old)?old:[])].slice(0,300))
  return pack
 }
+
+
+export const ENERGY_VAULT_BACKUP_SCHEMA='pishran-mod05-vault-backup-v1'
+export const ENERGY_VAULT_BACKUP_KEYS=[
+ ENERGY_DATA_KEY,ENERGY_BASELINES_KEY,ENERGY_ACTIONS_KEY,WATER_BALANCE_KEY,ENERGY_COST_ALLOCATIONS_KEY,
+ 'module-intelligence:MOD-05:electricity-bills:v1','module-intelligence:MOD-05:gas-bills:v1','module-intelligence:MOD-05:water-bills:v1',
+ 'module-intelligence:MOD-05:resource-cost-allocations:v1',METER_CALIBRATIONS_KEY,ENERGY_MV_EVIDENCE_KEY,
+ ENERGY_TARIFF_CONTRACTS_KEY,ENERGY_TARIFF_CALCULATIONS_KEY,ENERGY_TARIFF_RECONCILIATIONS_KEY
+]
+const sha256Hex=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(x=>x.toString(16).padStart(2,'0')).join('')
+export async function exportEnergyManagementBackup(store,passphrase,createdAt=new Date().toISOString()){
+ if(!store?.get)throw new Error('مخزن داده برای تهیه نسخه پشتیبان در دسترس نیست.')
+ const payload={}
+ for(const key of ENERGY_VAULT_BACKUP_KEYS)payload[key]=(await store.get(key))??null
+ const plainBytes=new TextEncoder().encode(JSON.stringify(payload))
+ const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12))
+ const manifest={schema:ENERGY_VAULT_BACKUP_SCHEMA,createdAt,keyCount:ENERGY_VAULT_BACKUP_KEYS.length,checksum:await sha256Hex(plainBytes),algorithm:'AES-256-GCM',kdf:'PBKDF2-SHA256',iterations:EVIDENCE_KDF_ITERATIONS}
+ const aad=new TextEncoder().encode(JSON.stringify(manifest))
+ const key=await deriveEvidenceVaultKey(passphrase,salt)
+ const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aad},key,plainBytes)
+ return {manifest,salt:bytesToBase64(salt),iv:bytesToBase64(iv),ciphertext:bytesToBase64(new Uint8Array(cipher))}
+}
+export async function restoreEnergyManagementBackup(backupText,passphrase,store,restoredAt=new Date().toISOString()){
+ let backup
+ try{backup=typeof backupText==='string'?JSON.parse(backupText):backupText}catch{throw new Error('ساختار فایل پشتیبان JSON معتبر نیست.')}
+ const manifest=backup?.manifest
+ if(manifest?.schema!==ENERGY_VAULT_BACKUP_SCHEMA||manifest?.algorithm!=='AES-256-GCM'||manifest?.kdf!=='PBKDF2-SHA256'||!backup.salt||!backup.iv||!backup.ciphertext)throw new Error('نسخه یا ساختار فایل پشتیبان پشتیبانی نمی‌شود.')
+ const key=await deriveEvidenceVaultKey(passphrase,base64ToBytes(backup.salt))
+ let plain
+ try{plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:base64ToBytes(backup.iv),additionalData:new TextEncoder().encode(JSON.stringify(manifest))},key,base64ToBytes(backup.ciphertext))}catch{throw new Error('گذرواژه نادرست است یا فایل پشتیبان دستکاری/آسیب‌دیده است.')}
+ if(await sha256Hex(new Uint8Array(plain))!==manifest.checksum)throw new Error('کنترل صحت نسخه پشتیبان ناموفق بود؛ هیچ داده‌ای بازیابی نشد.')
+ let payload
+ try{payload=JSON.parse(new TextDecoder().decode(plain))}catch{throw new Error('محتوای رمزگشایی‌شده نسخه پشتیبان قابل خواندن نیست.')}
+ const allowed=new Set(ENERGY_VAULT_BACKUP_KEYS)
+ if(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.keys(payload).some(k=>!allowed.has(k))||manifest.keyCount!==ENERGY_VAULT_BACKUP_KEYS.length)throw new Error('فهرست داده‌های نسخه پشتیبان با طرح مجاز MOD-05 سازگار نیست.')
+ const previous={}
+ for(const keyName of ENERGY_VAULT_BACKUP_KEYS)previous[keyName]=await store.get(keyName)
+ const written=[]
+ try{
+  for(const keyName of ENERGY_VAULT_BACKUP_KEYS){await store.set(keyName,Object.hasOwn(payload,keyName)?payload[keyName]:null);written.push(keyName)}
+ }catch(error){
+  for(const keyName of written.reverse()){try{await store.set(keyName,previous[keyName]??null)}catch{}}
+  throw new Error('بازیابی کامل نشد؛ تلاش برای بازگردانی داده‌های قبلی انجام شد. '+(error instanceof Error?error.message:'خطای ذخیره‌سازی'))
+ }
+ return {schema:manifest.schema,backupCreatedAt:manifest.createdAt,restoredAt,keyCount:written.length,checksumVerified:true,encrypted:true}
+}
