@@ -251,6 +251,7 @@ function baseModel(project:FeasibilityProject):Model {
  const sourceNotes=sourceInputs&&report?[
   'اطلاعات CAPEX، مخارج پیش از تولید، بهره سرمایه‌ای‌شده و سرمایه در گردش از جداول تفصیلی گزارش مرجع وارد شده‌اند.',
   'ردیف‌های OPEX مربوط به سال مرجع '+sourceInputs.operatingCostYear+' هستند؛ اختلاف جمع ریزاقلام با خلاصه گزارش: '+fmt(sourceCostVariance,2)+' '+report.currency+'.',
+  'سهم هزینه متغیر گزارش: '+sourceInputs.variableCostSharePercent+'٪؛ سهم خارجی CAPEX گزارش: '+sourceInputs.foreignFixedInvestmentSharePercent+'٪. این نسبت‌ها تجمیعی‌اند و به تفکیک دارایی تخصیص داده نشده‌اند.',
   ...sourceInputs.missingSourceDetails.map(item=>'اطلاعات گزارش برای ورود قطعی ارائه نشده است: '+item)
  ].join('\n'):''
  return {
