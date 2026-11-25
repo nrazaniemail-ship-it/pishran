@@ -464,6 +464,8 @@ function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoos
 function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
   const isEn = language === 'en'
   const [category, setCategory] = useState<'INITIAL' | 'ADVANCED'>('INITIAL')
+  const [initialPanelKey, setInitialPanelKey] = useState(0)
+  const [advancedPanelKey, setAdvancedPanelKey] = useState(0)
   const [recommendedMethod, setRecommendedMethod] = useState<RankingAdvisorMethod>('AHP')
   const [suggestedCriteria, setSuggestedCriteria] = useState<string[]>([])
   const [suggestedAlternatives, setSuggestedAlternatives] = useState<string[]>([])
@@ -483,12 +485,14 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
         options: cleanAlternatives.map(name => ({ id: id('option'), name, scores: {} })),
       }
       await localStore.set('mod10-ranking-draft:v1', draft)
+      setInitialPanelKey(value => value + 1)
       setSuggestedCriteria([])
       setSuggestedDirections([])
       setSuggestedAlternatives([])
       setSuggestedScores([])
       setCategory('INITIAL')
     } else {
+      setAdvancedPanelKey(value => value + 1)
       setSuggestedCriteria(cleanCriteria)
       setSuggestedDirections(selectedDirections)
       setSuggestedAlternatives(cleanAlternatives)
@@ -524,7 +528,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
             <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
           </div>}
     </section>
-    {category === 'INITIAL' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
+    {category === 'INITIAL' ? <RankingPanel key={initialPanelKey} language={language}/> : <RankingMethodsPanel key={advancedPanelKey} language={language} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}/> : <RankingMethodsPanel language={language} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
   </div>
 }
 
