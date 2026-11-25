@@ -1,12 +1,12 @@
 import {useEffect,useState} from 'react';
 import {localStore} from '../../core/storage/localStore';
 import {ahp,aggregatePairwiseMatrices,aggregateBwmExpertWeights,analyzeRankingSensitivity,makeRankingSnapshot,topsis,type PairwiseMatrix,type CriterionDirection} from './rankingMethods';
-type Props={language:'fa'|'en';initialMethod?:Method;suggestedCriteria?:string[];suggestedAlternatives?:string[];suggestedScores?:Array<Array<number|null>>;suggestedDirections?:CriterionDirection[]};
+type Props={language:'fa'|'en';projectId?:string;initialMethod?:Method;suggestedCriteria?:string[];suggestedAlternatives?:string[];suggestedScores?:Array<Array<number|null>>;suggestedDirections?:CriterionDirection[]};
 type Method='AHP'|'BWM'|'TOPSIS'|'AHP+TOPSIS';
 type Expert={name:string,matrix:PairwiseMatrix,bestIndex:number,worstIndex:number,bestToOthers:number[],othersToWorst:number[]};
 const newMatrix=(n:number):PairwiseMatrix=>Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:1));
 const initialScores=()=>[[80,7,12],[65,9,8],[90,6,15]];
-export default function RankingMethodsPanel({language,initialMethod,suggestedCriteria,suggestedAlternatives,suggestedScores,suggestedDirections}:Props){
+export default function RankingMethodsPanel({language,projectId='unsaved',initialMethod,suggestedCriteria,suggestedAlternatives,suggestedScores,suggestedDirections}:Props){
  const en=language==='en';
  const [method,setMethod]=useState<Method>(initialMethod??'AHP');
  const [criteria,setCriteria]=useState(()=>suggestedCriteria?.length?suggestedCriteria.slice(0,8):['هزینه سرمایه‌گذاری','ریسک اجرا','زمان اجرا']);
@@ -18,7 +18,33 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
  const [manualWeights,setManualWeights]=useState(()=>suggestedCriteria?.length?Array(suggestedCriteria.slice(0,8).length).fill(1):[0.5,0.3,0.2]);
  const [notice,setNotice]=useState(''); const scoresReady=scores.length===alternatives.length&&scores.every(row=>row.length===criteria.length&&row.every(value=>Number.isFinite(value)&&value>=0)); const numericScores=scores.map(row=>row.map(value=>Number.isFinite(value)?value:0)); const [history,setHistory]=useState<any[]>([]); const [sensitivityHistory,setSensitivityHistory]=useState<any[]>([]);
  const [active,setActive]=useState<any>(null); const [sensitivity,setSensitivity]=useState<any>(null); const [shock,setShock]=useState(20);
- useEffect(()=>{void localStore.get<any[]>('mod10-ranking-method-history:v1').then(v=>setHistory(Array.isArray(v)?v:[])).catch(()=>undefined);void localStore.get<any[]>('mod10-ranking-sensitivity-history:v1').then(v=>setSensitivityHistory(Array.isArray(v)?v:[])).catch(()=>undefined)},[]);
+ const [projectDraftLoaded,setProjectDraftLoaded]=useState(false);
+ const methodHistoryKey='mod10-ranking-method-history:'+projectId;
+ const sensitivityHistoryKey='mod10-ranking-sensitivity-history:'+projectId;
+ const methodDraftKey='mod10-ranking-method-draft:'+projectId;
+ useEffect(()=>{
+  let alive=true;
+  Promise.all([localStore.get<any>(methodDraftKey),localStore.get<any[]>(methodHistoryKey),localStore.get<any[]>(sensitivityHistoryKey)]).then(([draft,historyItems,sensitivityItems])=>{
+   if(!alive)return;
+   if(draft){
+    if(Array.isArray(draft.criteria))setCriteria(draft.criteria);
+    if(Array.isArray(draft.alternatives))setAlternatives(draft.alternatives);
+    if(Array.isArray(draft.scores))setScores(draft.scores);
+    if(Array.isArray(draft.directions))setDirections(draft.directions);
+    if(Array.isArray(draft.manualWeights))setManualWeights(draft.manualWeights);
+    if(Array.isArray(draft.experts))setExperts(draft.experts);
+    if(draft.method)setMethod(draft.method);
+   }
+   setHistory(Array.isArray(historyItems)?historyItems:[]);
+   setSensitivityHistory(Array.isArray(sensitivityItems)?sensitivityItems:[]);
+   setProjectDraftLoaded(true);
+  }).catch(()=>{if(alive)setProjectDraftLoaded(true)});
+  return()=>{alive=false};
+ },[projectId]);
+ useEffect(()=>{
+  if(!projectDraftLoaded)return;
+  void localStore.set(methodDraftKey,{method,criteria,alternatives,scores,directions,manualWeights,experts});
+ },[projectDraftLoaded,methodDraftKey,method,criteria,alternatives,scores,directions,manualWeights,experts]);
  const usesExperts=method==='AHP'||method==='BWM'||method==='AHP+TOPSIS';
  const updateExpert=(idx:number,fn:(e:Expert)=>Expert)=>setExperts(es=>es.map((e,i)=>i===idx?fn(e):e));
  const addExpert=()=>setExperts(es=>[...es,{name:`${en?'Expert':'خبره'} ${es.length+1}`,matrix:newMatrix(criteria.length),bestIndex:0,worstIndex:criteria.length-1,bestToOthers:Array(criteria.length).fill(1),othersToWorst:Array(criteria.length).fill(1)}]);
@@ -55,7 +81,7 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
    if(!ranking) ranking=topsis(numericScores,weights,directions);
    judgments={...judgments,alternatives,scores:numericScores,directions};
    const snapshot=makeRankingSnapshot({method,criteria,expertCount:usesExperts?experts.length:0,weights,diagnostics,judgments});
-   const saved={...snapshot,ranking};const next=[saved,...history].slice(0,100);await localStore.set('mod10-ranking-method-history:v1',next);setHistory(next);setActive(saved);setNotice(en?'Calculation version saved':'نسخه محاسبه ذخیره شد');
+   const saved={...snapshot,ranking};const next=[saved,...history].slice(0,100);await localStore.set(methodHistoryKey,next);setHistory(next);setActive(saved);setNotice(en?'Calculation version saved':'نسخه محاسبه ذخیره شد');
   }catch(error){setNotice(error instanceof Error?error.message:String(error))}
  };
  const runSensitivity=async()=>{
@@ -102,7 +128,7 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
    setSensitivity(result);
    const record={schema:'pishran-ranking-sensitivity/v1',createdAt:new Date().toISOString(),method,criteria:[...criteria],alternatives:[...alternatives],directions:[...directions],weights:[...weights],shock:delta,trials:result.robustness.trials,seed:result.robustness.seed,expertWeightVectors:expertWeightVectors.map(v=>[...v]),expertJudgments:experts.map(e=>({name:e.name,bestIndex:e.bestIndex,worstIndex:e.worstIndex,matrix:e.matrix.map(row=>[...row]),bestToOthers:[...e.bestToOthers],othersToWorst:[...e.othersToWorst]})),performanceMatrix:numericScores.map(row=>[...row]),result};
    const next=[record,...sensitivityHistory].slice(0,50);
-   await localStore.set('mod10-ranking-sensitivity-history:v1',next);
+   await localStore.set(sensitivityHistoryKey,next);
    setSensitivityHistory(next);
    setNotice(en?'Sensitivity analysis completed and saved':'تحلیل حساسیت محاسبه و ذخیره شد');
   }catch(error){setNotice(error instanceof Error?error.message:String(error))}
