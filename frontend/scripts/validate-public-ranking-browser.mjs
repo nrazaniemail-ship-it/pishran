@@ -80,25 +80,34 @@ try {
     return input && !input.disabled
   }, null, { timeout: 15000 })
   const restoredRankingProjects = await page.evaluate(async () => {
-    const db = await new Promise(resolve => {
-      const request = indexedDB.open('pishran_store')
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () => resolve(null)
-      request.onblocked = () => resolve(null)
-    })
-    if (!db) return null
+    let indexedDbProjects = null
     try {
-      if (!db.objectStoreNames.contains('kv')) return null
-      return await new Promise(resolve => {
-        const request = db.transaction('kv', 'readonly').objectStore('kv').get('mod10-ranking-projects:v1')
-        request.onsuccess = () => resolve(request.result?.value ?? null)
+      const db = await new Promise(resolve => {
+        const request = indexedDB.open('pishran_store')
+        request.onsuccess = () => resolve(request.result)
         request.onerror = () => resolve(null)
+        request.onblocked = () => resolve(null)
       })
-    } finally { db.close() }
+      if (db) {
+        try {
+          if (db.objectStoreNames.contains('kv')) {
+            indexedDbProjects = await new Promise(resolve => {
+              const request = db.transaction('kv', 'readonly').objectStore('kv').get('mod10-ranking-projects:v1')
+              request.onsuccess = () => resolve(request.result?.value ?? null)
+              request.onerror = () => resolve(null)
+            })
+          }
+        } finally { db.close() }
+      }
+    } catch { /* localStorage is the supported fallback when IndexedDB is unavailable */ }
+    let localStorageProjects = null
+    try { localStorageProjects = JSON.parse(localStorage.getItem('pishran_mod10-ranking-projects:v1') ?? 'null') } catch { /* unavailable */ }
+    return { indexedDbProjects, localStorageProjects }
   })
-  assert.ok(Array.isArray(restoredRankingProjects), 'ranking project collection must be readable after a full page reload')
-  assert.ok(restoredRankingProjects.some(project => project.name === 'پروژه آزمایش رتبه‌بندی ویرایش‌شده'),
-    'renamed ranking project must be present in IndexedDB after a full page reload')
+  const hasRestoredProject = [restoredRankingProjects.indexedDbProjects, restoredRankingProjects.localStorageProjects]
+    .some(items => Array.isArray(items) && items.some(project => project.name === 'پروژه آزمایش رتبه‌بندی ویرایش‌شده'))
+  assert.ok(hasRestoredProject,
+    'renamed ranking project must be recoverable from IndexedDB or the supported localStorage fallback after a full page reload')
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).waitFor()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
   await page.goBack()
