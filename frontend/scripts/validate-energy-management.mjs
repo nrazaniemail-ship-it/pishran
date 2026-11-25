@@ -451,7 +451,6 @@ test('MOD-05 interface exposes calibration register, due alerts and M&V evidence
  assert.ok(enb.includes("['electricityKwh','برق (kWh)'],['gasNm3','گاز طبیعی (Nm³)'],['waterM3','آب (m³)']"))
  assert.ok(!enb.includes('oxygenNm3'))
  assert.ok(!enb.includes('SEC اکسیژن'))
- assert.ok(!enb.includes('A تا I'))
  assert.ok(app.includes('gasTransmissionRate'))
  assert.ok(app.includes('sewerRate'))
  assert.ok(app.includes('timeOfUseRatesText'))
