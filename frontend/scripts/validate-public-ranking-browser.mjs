@@ -53,11 +53,11 @@ try {
   assert.equal(await page.getByRole('button', { name: /خودکار|automatic/i }).count(), 0,
     'ranking advisor must not expose automatic data import')
   await page.getByTestId('ranking-category-initial').click()
+  const suggestedOptionDeletes = page.getByRole('button', { name: /^حذف گزینه/ })
+  while (await suggestedOptionDeletes.count()) await suggestedOptionDeletes.first().click()
   for (const name of ['ارزش فعلی خالص (NPV)', 'سرمایه‌گذاری ثابت (CAPEX)', 'هزینه بهره‌برداری (OPEX)', 'ریسک اجرا', 'زمان اجرا', 'ظرفیت یا خروجی']) {
     await page.getByRole('button', { name: 'حذف معیار ' + name }).click()
   }
-  const suggestedOptionDeletes = page.getByRole('button', { name: /^حذف گزینه/ })
-  while (await suggestedOptionDeletes.count()) await suggestedOptionDeletes.first().click()
   assert.equal(await page.getByTestId('ranking-category-initial').getAttribute('aria-pressed'), 'true')
   assert.ok((await page.getByTestId('ranking-category-initial').getAttribute('class'))?.includes('is-active'),
     'initial category tab must expose its modern active style')
