@@ -150,6 +150,7 @@ test('improvement actions support controlled lifecycle status updates',async()=>
 test('MOD-05 provides a complete Excel workbook and print-to-PDF report path',async()=>{
  const {readFile}=await import('node:fs/promises')
  const app=await readFile(new URL('../src/features/modules/ModuleEnergyPanel.tsx',import.meta.url),'utf8')
+ const docs=await readFile(new URL('../../docs/modules/MOD-05-ISO-50000-ENERGY-MANAGEMENT.md',import.meta.url),'utf8')
  const css=await readFile(new URL('../src/style.css',import.meta.url),'utf8')
  assert.ok(app.includes("import * as XLSX from 'xlsx'"))
  assert.ok(app.includes('XLSX.writeFile'))
