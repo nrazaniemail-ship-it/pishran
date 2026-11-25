@@ -38,7 +38,7 @@ try {
   await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: 'ذخیره نام' }).click()
   await page.waitForFunction(async ({ key, expectedName, moduleId }) => {
-    const values = []
+    let indexedDbProjects = null
     try {
       const db = await new Promise(resolve => {
         const request = indexedDB.open('pishran_store')
@@ -54,25 +54,20 @@ try {
               request.onsuccess = () => resolve(request.result)
               request.onerror = () => reject(request.error)
             })
-            if (Array.isArray(record?.value)) values.push(...record.value)
+            indexedDbProjects = Array.isArray(record?.value) ? record.value : null
           }
         } finally {
           db.close()
         }
       }
     } catch { /* Use the supported localStorage fallback below. */ }
+    let fallbackProjects = null
     try {
       const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
-      if (Array.isArray(fallback)) values.push(...fallback)
+      fallbackProjects = Array.isArray(fallback) ? fallback : null
     } catch { /* Ignore unavailable fallback storage. */ }
     const matches = item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId)
-    const indexedDbSaved = values.some(matches)
-    let fallbackSaved = false
-    try {
-      const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
-      fallbackSaved = Array.isArray(fallback) && fallback.some(matches)
-    } catch {}
-    return indexedDbSaved && fallbackSaved
+    return Boolean(indexedDbProjects?.some(matches) && fallbackProjects?.some(matches))
   }, { key: 'mod10-ranking-projects:v1', expectedName: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', moduleId: undefined }, { timeout: 10000 })
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
