@@ -51,3 +51,5 @@ jobs:
         run: npm run test:financial
       - name: Executive dashboard MOD-01 integration tests
         run: npm run test:modules
+      - name: Independent AHP and BWM ranking method tests
+        run: npm run test:ranking
