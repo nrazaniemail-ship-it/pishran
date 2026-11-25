@@ -110,11 +110,11 @@ test('the real module form delegates calculations and persistence to the tested 
  assert.match(dashboard,/onClick=\{\(\)=>void refresh\(\)\}/)
 })
 
-test('module workspace exposes sequential Continue navigation through all twelve modules',async()=>{
+test('module workspace does not expose the removed Continue navigation button',async()=>{
  const source=await readFile(new URL('../src/App.tsx',import.meta.url),'utf8')
- assert.match(source,/function continueToNextModule\(\)/)
- assert.match(source,/onClick=\{continueToNextModule\}/)
- assert.match(source,/activeModule\.id === 'MOD-12' \? 'پایان مرور ماژول‌ها' : 'ادامه بده'/)
+ assert.doesNotMatch(source,/function continueToNextModule\(\)/)
+ assert.doesNotMatch(source,/onClick=\{continueToNextModule\}/)
+ assert.doesNotMatch(source,/activeModule\.id === 'MOD-12' \? 'پایان مرور ماژول‌ها' : 'ادامه بده'/)
 })
 
 test('actual localStore fallback persists module executions and MOD-01 reads them',async()=>{

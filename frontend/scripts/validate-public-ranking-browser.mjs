@@ -106,7 +106,13 @@ try {
       `${method} tab must expose the selected state`)
     assert.ok((await page.locator(`.ranking-method-tab[data-method="${methodKey}"]`).getAttribute('class'))?.includes('is-active'),
       `${method} tab must expose its modern active style`)
-    if (method === 'AHP') await page.getByText('Saaty 1–9 scale; reciprocal entries are automatic.').waitFor()
+    if (method === 'AHP') {
+      await page.getByText('Saaty 1–9 scale; reciprocal entries are automatic.').waitFor()
+      await page.getByLabel(/هزینه سرمایه‌گذاری vs ریسک اجرا$/).selectOption('3')
+      await page.waitForTimeout(350)
+      await page.getByRole('button', { name: 'Calculate and save version' }).click()
+      await page.getByText('Calculation version saved').waitFor()
+    }
     if (method === 'BWM') {
       await page.getByRole('button', { name: 'Add criterion' }).click()
       await page.getByRole('button', { name: 'Remove criterion Criterion 4' }).click()
@@ -115,7 +121,7 @@ try {
       const performanceInputs = page.locator('.ranking-performance-matrix input[type="number"]')
       for (let i = 0; i < await performanceInputs.count(); i++) await performanceInputs.nth(i).fill(String((i % 3) + 1))
       await page.getByText('Best criterion').waitFor()
-      await page.getByLabel('Expert 1 best criterion').selectOption('1')
+      await page.locator('select[aria-label*="best criterion"]').selectOption('1')
       await page.getByLabel('Expert 1 worst criterion').selectOption('0')
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
@@ -138,12 +144,87 @@ try {
       await page.getByText('Persisted Monte Carlo robustness and rank acceptability').waitFor()
       await page.getByRole('columnheader', { name: 'Top probability' }).waitFor()
     }
-    if (method === 'TOPSIS') await page.getByText('Manual criterion weights').waitFor()
+    if (method === 'TOPSIS') {
+      await page.getByText('Manual criterion weights').waitFor()
+      await page.getByLabel('هزینه سرمایه‌گذاری manual weight').fill('7')
+      await page.getByLabel('ریسک اجرا manual weight').fill('2')
+      await page.getByLabel('زمان اجرا manual weight').fill('1')
+      await page.getByRole('button', { name: 'Calculate and save version' }).click()
+      await page.getByText('Calculation version saved').waitFor()
+    }
     if (method === 'AHP + TOPSIS') await page.getByText('Alternative performance matrix').waitFor()
   }
   await page.getByRole('button', { name: 'Calculate and save version' }).click()
   await page.getByText('Calculation version saved').waitFor()
-  await page.getByText('Calculation history (2)').waitFor()
+  await page.getByText('Calculation history (4)').waitFor()
+  await page.waitForTimeout(600)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  await page.getByTestId('ranking-category-advanced').click()
+  await page.getByText('Calculation history (4)').waitFor()
+  await page.getByRole('button', { name: 'AHP', exact: true }).click()
+  assert.equal(await page.getByLabel(/هزینه سرمایه‌گذاری vs ریسک اجرا$/).inputValue(), '3',
+    'AHP pairwise judgments must persist after reload')
+  await page.getByRole('button', { name: 'BWM', exact: true }).click()
+  assert.equal(await page.locator('select[aria-label*="best criterion"]').inputValue(), '1',
+    'BWM best-criterion anchor must persist after reload')
+  await page.getByRole('button', { name: 'TOPSIS', exact: true }).click()
+  assert.equal(await page.getByLabel('هزینه سرمایه‌گذاری manual weight').inputValue(), '7',
+    'TOPSIS manual criterion weights must persist after reload')
+  await page.getByRole('button', { name: 'AHP + TOPSIS', exact: true }).click()
+  assert.equal(await page.getByLabel('گزینه الف, هزینه سرمایه‌گذاری score').inputValue(), '80',
+    'AHP + TOPSIS performance matrix must persist after reload')
+
+  await page.getByRole('button', { name: '← All ranking projects' }).click()
+  await page.getByLabel('New ranking project name').fill('پروژه دوم مستقل')
+  await page.getByRole('button', { name: 'Create project' }).click()
+  await page.getByPlaceholder('e.g. NPV, implementation risk, delivery time').fill('معیار اختصاصی پروژه دوم')
+  await page.getByRole('button', { name: 'Add criterion' }).click()
+  await page.getByPlaceholder('Enter an option or project name').fill('گزینه اختصاصی دوم')
+  await page.getByRole('button', { name: 'Add option' }).click()
+  await page.getByLabel('گزینه اختصاصی دوم, معیار اختصاصی پروژه دوم score').fill('42')
+  await page.getByRole('button', { name: '← All ranking projects' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  assert.equal(await page.getByText('معیار اختصاصی پروژه دوم').count(), 0,
+    'second-project criteria must not leak into the first project')
+  assert.equal(await page.getByLabel('گزینه زنده الف, هزینه آزمون زنده score').inputValue(), '90',
+    'first-project WSM scores must remain unchanged after editing a second project')
+
+  await page.getByRole('button', { name: '← All ranking projects' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه دوم مستقل' }).click()
+  assert.equal(await page.getByLabel('گزینه اختصاصی دوم, معیار اختصاصی پروژه دوم score').inputValue(), '42',
+    'second-project WSM scores must persist independently')
+  await page.getByTestId('ranking-category-advanced').click()
+  await page.getByRole('button', { name: 'TOPSIS', exact: true }).click()
+  await page.getByLabel('هزینه سرمایه‌گذاری manual weight').fill('1')
+  await page.getByLabel('ریسک اجرا manual weight').fill('8')
+  await page.getByLabel('زمان اجرا manual weight').fill('1')
+  await page.getByRole('button', { name: 'Calculate and save version' }).click()
+  await page.getByText('Calculation history (1)').waitFor()
+  await page.getByRole('button', { name: 'Run rank sensitivity' }).click()
+  await page.getByText('Sensitivity history (1)').waitFor()
+  await page.waitForTimeout(600)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه دوم مستقل' }).click()
+  assert.equal(await page.getByLabel('گزینه اختصاصی دوم, معیار اختصاصی پروژه دوم score').inputValue(), '42',
+    'second-project WSM score must survive reload before opening advanced methods')
+  await page.getByTestId('ranking-category-advanced').click()
+  await page.getByText('Calculation history (1)').waitFor()
+  await page.getByText('Sensitivity history (1)').waitFor()
+  await page.getByRole('button', { name: 'TOPSIS', exact: true }).click()
+  assert.equal(await page.getByLabel('ریسک اجرا manual weight').inputValue(), '8',
+    'second-project advanced inputs must persist independently after reload')
+  await page.getByText('Calculation history (1)').waitFor()
+  await page.getByText('Sensitivity history (1)').waitFor()
+  await page.getByRole('button', { name: '← All ranking projects' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  await page.getByTestId('ranking-category-advanced').click()
+  await page.getByRole('button', { name: 'TOPSIS', exact: true }).click()
+  assert.equal(await page.getByLabel('هزینه سرمایه‌گذاری manual weight').inputValue(), '7',
+    'first-project advanced inputs must remain isolated from the second project')
+  await page.getByText('Calculation history (4)').waitFor()
   assert.deepEqual(pageErrors, [], 'public ranking interaction must not generate browser runtime errors')
   assert.ok(bundle.includes('Monte Carlo top probability') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')
   console.log('PASS: live public PWA MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
