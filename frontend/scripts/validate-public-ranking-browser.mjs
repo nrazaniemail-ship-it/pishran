@@ -349,8 +349,9 @@ try {
   await page.locator('.module-workspace-page').getByText('پروژه آزمون ذخیره ماژول', { exact: true }).waitFor()
   const workspaceItem = modulePage.locator('.module-workspace-item').filter({ hasText: 'پروژه آزمون ذخیره ماژول' })
   await workspaceItem.getByRole('button', { name: 'ویرایش پروژه آزمون ذخیره ماژول' }).click()
-  await workspaceItem.getByRole('textbox').fill('پروژه آزمون ویرایش و بازیابی')
-  await workspaceItem.getByRole('button', { name: 'ذخیره ویرایش' }).click()
+  const editingWorkspaceItem = modulePage.locator('.module-workspace-item').filter({ has: modulePage.getByRole('button', { name: 'ذخیره ویرایش' }) })
+  await editingWorkspaceItem.getByRole('textbox').fill('پروژه آزمون ویرایش و بازیابی')
+  await editingWorkspaceItem.getByRole('button', { name: 'ذخیره ویرایش' }).click()
   assert.equal(await workspaceItem.evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(244, 237, 223)',
     'project workspace cards must use the pale beige background')
   await page.locator('.module-workspace-page').getByText('پروژه آزمون ویرایش و بازیابی', { exact: true }).waitFor()
