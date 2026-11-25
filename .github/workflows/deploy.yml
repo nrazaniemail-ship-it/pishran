@@ -36,6 +36,9 @@ jobs:
       - name: Validate module exports and navigation
         working-directory: frontend
         run: npm run test:modules
+      - name: Independent AHP and BWM ranking method tests
+        working-directory: frontend
+        run: npm run test:ranking
       - name: Build
         working-directory: frontend
         env:
