@@ -69,7 +69,28 @@ try {
   }, { key: 'mod10-ranking-projects:v1', expectedName: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', moduleId: undefined }, { timeout: 10000 })
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
-  // Re-mount the app to verify the renamed project is recovered from IndexedDB.
+  const beforeReloadStorage = await page.evaluate(async () => {
+    const db = await new Promise(resolve => {
+      const request = indexedDB.open('pishran_store')
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => resolve(null)
+    })
+    let indexedDbProjects = null
+    if (db) {
+      try {
+        indexedDbProjects = await new Promise(resolve => {
+          const request = db.transaction('kv', 'readonly').objectStore('kv').get('mod10-ranking-projects:v1')
+          request.onsuccess = () => resolve(request.result?.value ?? null)
+          request.onerror = () => resolve(null)
+        })
+      } finally { db.close() }
+    }
+    let localStorageProjects = null
+    try { localStorageProjects = JSON.parse(localStorage.getItem('pishran_mod10-ranking-projects:v1') ?? 'null') } catch {}
+    return { indexedDbProjects, localStorageProjects }
+  })
+  console.log('Ranking project storage before full reload:', JSON.stringify(beforeReloadStorage))
+  // Re-mount the app to verify the renamed project is recovered from IndexedDB or its fallback.
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
@@ -106,8 +127,9 @@ try {
   })
   const hasRestoredProject = [restoredRankingProjects.indexedDbProjects, restoredRankingProjects.localStorageProjects]
     .some(items => Array.isArray(items) && items.some(project => project.name === 'پروژه آزمایش رتبه‌بندی ویرایش‌شده'))
+  console.log('Ranking project storage after full reload:', JSON.stringify(restoredRankingProjects))
   assert.ok(hasRestoredProject,
-    'renamed ranking project must be recoverable from IndexedDB or the supported localStorage fallback after a full page reload')
+    'renamed ranking project must be recoverable from IndexedDB or the supported localStorage fallback after a full page reload; storage=' + JSON.stringify(restoredRankingProjects))
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).waitFor()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
   await page.goBack()
