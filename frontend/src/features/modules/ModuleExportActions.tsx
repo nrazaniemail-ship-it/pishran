@@ -24,7 +24,7 @@ export default function ModuleExportActions({moduleId,moduleTitle,language='fa'}
   finally{setBusy(false)}
  }
  function exportPdf(){const root=rootRef.current?.closest<HTMLElement>('[data-module-export-root]');if(!root){setMessage(en?'Module report is not available.':'محتوای پروژه برای خروجی در دسترس نیست.');return}setMessage('');root.classList.add('module-export-print-target');document.body.classList.add('module-export-printing');const cleanup=()=>{root.classList.remove('module-export-print-target');document.body.classList.remove('module-export-printing');window.removeEventListener('afterprint',cleanup)};window.addEventListener('afterprint',cleanup);window.print()}
- return <div ref={rootRef} className="module-export-actions" aria-label={en?'Module exports':'خروجی‌های ماژول'}>
+ return <div ref={rootRef} className="module-export-actions" data-export-module-id={moduleId} aria-label={en?'Module exports':'خروجی‌های ماژول'}>
   <span>{en?'Export this module':'دریافت خروجی ماژول'}</span>
   <button type="button" onClick={exportExcel} disabled={busy}><span aria-hidden="true">▦</span>{busy?(en?'Preparing…':'در حال آماده‌سازی…'):(en?'Export Excel':'خروجی Excel')}</button>
   <button type="button" onClick={exportPdf}><span aria-hidden="true">▤</span>{en?'Print / Save PDF':'چاپ / ذخیره PDF'}</button>
