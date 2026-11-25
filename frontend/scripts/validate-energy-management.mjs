@@ -300,7 +300,7 @@ test('MOD-05 M&V evidence pack requires measured same-boundary records and expos
  assert.throws(()=>buildEnergyMvEvidencePack(input,{rows:[{...actual,dataQuality:'estimated'}],baselines:[baseline],calibrations:[calibration]}),/برآوردی/)
  assert.throws(()=>buildEnergyMvEvidencePack(input,{rows:[{...actual,site:'Other'}],baselines:[baseline],calibrations:[calibration]}),/همان منبع/)
  const memory=new Map(),store={update:async(key,fn)=>{const next=fn(memory.get(key));memory.set(key,next);return next}}
- const saved=await saveEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[calibration]},store,'2026-11-25T12:00:00.000Z')
+ const saved=await saveEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[calibration]},store,'2026-11-25T12:00:00.000Z',{passphrase:'test vault passphrase'})
  assert.equal(memory.get(ENERGY_MV_EVIDENCE_KEY)[0].id,saved.id)
 })
 
@@ -422,7 +422,7 @@ test('MOD-05 interface exposes calibration register, due alerts and M&V evidence
  assert.ok(app.includes('تطبیق محاسبه تعرفه با قبض واقعی'))
  assert.ok(app.includes('گزارش تطبیق قبض'))
  assert.ok(app.includes('reconciliationForm'))
- assert.ok(app.includes('رمزگذاری مستندات'))
+ assert.ok(app.includes('گذرواژه مخزن رمزگذاری اسناد'))
  assert.ok(app.includes('AES-256-GCM'))
  assert.ok(app.includes('rhoBaselineActual'))
  assert.ok(app.includes("['تطبیق قبض و مغایرت',tariffReconciliations.map"))
