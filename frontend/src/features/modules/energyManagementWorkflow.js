@@ -300,6 +300,7 @@ export async function saveMeterCalibration(input,store,createdAt=new Date().toIS
 export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibrations=[]}={},generatedAt=new Date().toISOString()){
  const resource=input.resource
  if(!Object.hasOwn(RESOURCE_CONFIG,resource))throw new Error('نوع منبع برای بسته M&V معتبر نیست.')
+ if(input.boundaryConfirmed!==true)throw new Error('تأیید صریح مرز اندازه‌گیری برای بسته M&V الزامی است.')
  const baseline=baselines.find(x=>x.id===input.baselineId)
  if(!baseline)throw new Error('خط مبنای انتخاب‌شده در دسترس نیست.')
  if(baseline.resource!==resource)throw new Error('منبع خط مبنا با منبع بسته M&V یکسان نیست.')
@@ -322,7 +323,7 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
   const status=calibration?getMeterCalibrationStatus(calibration,generatedAt.slice(0,10)):{status:'missing',daysUntilDue:null}
   return {recordId:actual.id,period:actual.period,meterId:actual.meterId??'',site:actual.site,calibrationId:calibration?.id??null,status:status.status,nextCalibrationDate:calibration?.nextCalibrationDate??null}
  })
- const warnings=[...new Set([...calculations.flatMap(x=>x.warnings??[]),...(!input.boundaryConfirmed?['مرز اندازه‌گیری هنوز توسط تهیه‌کننده تأیید نشده است.']:[]),...calibrationCoverage.filter(x=>x.status!=='valid').map(x=>'وضعیت کالیبراسیون کنتور '+(x.meterId||'نامشخص')+': '+x.status)])]
+ const warnings=[...new Set([...calculations.flatMap(x=>x.warnings??[]),...calibrationCoverage.filter(x=>x.status!=='valid').map(x=>'وضعیت کالیبراسیون کنتور '+(x.meterId||'نامشخص')+': '+x.status)])]
  return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,measuredSavings,measuredSavingsPercent:normalizedBaseline?measuredSavings/normalizedBaseline*100:0,calibrationCoverage,warnings,reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
 }
 export async function saveEnergyMvEvidencePack(input,context,store,generatedAt=new Date().toISOString()){
