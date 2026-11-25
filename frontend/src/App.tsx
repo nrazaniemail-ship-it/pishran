@@ -503,12 +503,14 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
     const name = editingRankingProjectName.trim()
     if (!name) return
     const key = 'mod10-ranking-projects:v1'
-    const latest = await localStore.get<RankingWorkspaceProject[]>(key)
-    const source = Array.isArray(latest) ? latest : rankingProjects
-    const next = source.map(project => project.id === selectedProject.id
-      ? { ...project, name, updatedAt: new Date().toISOString() }
-      : project)
-    await persistRankingProjects(next)
+    const next = await localStore.update<RankingWorkspaceProject[]>(key, current => {
+      const source = Array.isArray(current) ? current : rankingProjects
+      return source.map(project => project.id === selectedProject.id
+        ? { ...project, name, updatedAt: new Date().toISOString() }
+        : project)
+    })
+    setRankingProjects(next)
+    try { localStorage.setItem('pishran_' + key, JSON.stringify(next)) } catch { /* IndexedDB remains authoritative. */ }
   }
   const returnToRankingProjects = async () => {
     const latest = await localStore.get<RankingWorkspaceProject[]>('mod10-ranking-projects:v1')
@@ -889,7 +891,10 @@ export default function App() {
     {page === 'guide' && <Guide language={settings.language}/>}
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
-    {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => navigateBack('projects')}/>}
+    {page === 'project-wizard' && activeProject && <div data-module-export-root="true" className="feasibility-project-export-root">
+      <ModuleExportActions moduleId={`feasibility-${activeProject.id}`} moduleTitle={activeProject.name} language={settings.language}/>
+      <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => navigateBack('projects')}/>
+    </div>}
     {page === 'module' && <section className="module-workspace-page" data-module-export-root="true">
       <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => navigateBack('projects')}>{isEn ? 'Back to previous layer' : 'بازگشت به لایه قبل'}</button><span className="module-id">{activeModule.id}</span></div>
       <ModuleExportActions moduleId={activeModule.id} moduleTitle={isEn ? activeModule.enTitle : activeModule.title} language={settings.language}/>
