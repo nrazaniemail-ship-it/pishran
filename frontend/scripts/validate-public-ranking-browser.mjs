@@ -13,7 +13,8 @@ const bundles = await Promise.all(scriptPaths.map(async path => {
   assert.equal(asset.ok, true, `published bundle ${path} must respond`)
   return asset.text()
 }))
-const bundle = bundles.join('\n')
+const bundle = bundles.join('
+')
 for (const marker of ['Initial methods', 'Advanced methods', 'روش‌های اولیه', 'روش‌های پیشرفته', 'AHP + TOPSIS']) {
   assert.ok(bundle.includes(marker), `published JavaScript must contain deployed ranking marker: ${marker}`)
 }
@@ -62,7 +63,11 @@ try {
       await page.getByLabel('Expert 1 worst criterion').selectOption('0')
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
-      await page.getByText('Calculation history (1)').waitFor()\n      await page.getByRole('button', { name: 'Run rank sensitivity' }).click()\n      await page.getByTestId('ranking-sensitivity-results').waitFor()\n      await page.getByText(/optimistic/).waitFor()
+      await page.getByText('Calculation history (1)').waitFor()
+      await page.getByRole('button', { name: 'Run rank sensitivity' }).click()
+      await page.getByTestId('ranking-sensitivity-results').waitFor()
+      await page.getByText('Scenario comparison').click()
+      await page.getByText(/optimistic/).waitFor()
     }
     if (method === 'TOPSIS') await page.getByText('Manual criterion weights').waitFor()
     if (method === 'AHP + TOPSIS') await page.getByText('Alternative performance matrix').waitFor()
@@ -71,7 +76,8 @@ try {
   await page.getByText('Calculation version saved').waitFor()
   await page.getByText('Calculation history (2)').waitFor()
   assert.deepEqual(pageErrors, [], 'public ranking interaction must not generate browser runtime errors')
-  assert.ok(bundle.includes('Rank sensitivity summary') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')\n  console.log('PASS: live public PWA MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
+  assert.ok(bundle.includes('Rank sensitivity summary') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')
+  console.log('PASS: live public PWA MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
 } finally {
   await browser.close()
 }
