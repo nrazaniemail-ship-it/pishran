@@ -160,19 +160,23 @@ MOD-05 now provides a user-initiated encrypted JSON backup covering energy recor
 Backups are not uploaded to a server. Users should store the exported encrypted file in an access-controlled location separate from the device and keep the passphrase in a separately protected password manager or recovery process. A lost passphrase makes the backup unrecoverable. The application cannot guarantee atomic rollback if the browser storage engine itself fails during both restore and rollback; users should retain the pre-restore backup and test restoration on a separate browser profile/device before relying on it. This is a local encrypted export/import workflow, not centrally managed retention, remote disaster recovery, immutable audit logging or managed key escrow.
 
 
-## EnB and SEC calculation workspace
 
-The web interface provides a dedicated EnB/SEC workspace based on the two supplied reference workbooks. It records period, site, significant energy use (SEU), production (tonnes), electricity (kWh), natural gas (Nm³), water (m³), oxygen (Nm³), and the heat-treatment share removed from the reported intensity. Records are locally persisted and a repeated period/site/SEU entry replaces that same period key rather than creating a duplicate.
+## EnB and SEC calculation workspace — ISO-aligned design
 
-For each carrier, SEC is period consumption divided by period production. Electricity is reported in kWh/t; gas and oxygen in Nm³/t; water in m³/t. Thermal gas SEC is additionally converted using 1 Nm³ = 0.03768 GJ. Electricity conversion is 1 kWh = 0.0036 GJ. The reference workbook's adjusted column multiplies consumption by 0.85 (15% heat-treatment exclusion); the new form exposes the excluded share per period and keeps raw and adjusted SEC distinct.
+The dedicated EnB/SEC workspace records only electricity, natural gas and water. Oxygen is not part of this form or its calculations. Each observation records reporting period, site, significant energy use (SEU), production, measured utility consumption, the measurement boundary/meter, and notes describing operating conditions or static-factor changes. Natural-gas calorific value may be entered when supported by the supplier or bill; gas energy in GJ/t is not inferred when that value is absent.
 
-A selected reference period defines the EnB intensity for the matching site and SEU. Period-specific EnB consumption is that reference SEC multiplied by the period's production. The interface charts electricity SEC against the configured electricity limit, gas thermal SEC against the configured thermal limit, actual electricity against production-normalized EnB, and water/oxygen SEC trends. The table retains the raw and adjusted values.
+The basic EnPI for each utility is consumption divided by the corresponding production quantity:
+- Electricity: kWh/t
+- Natural gas: Nm³/t (and GJ/t only when a documented calorific value is supplied; conversion is kWh × 0.0036 = GJ)
+- Water: m³/t
 
-The benchmark expressions transcribed from the reference workbook are:
-- Electrical SEC limit: (95 × G × H) + I, in kWh/t.
-- Thermal SEC limit: 1.1 × A × B × C × D × E × F, in GJ/t.
-- The workbook also shows reference values of 146.4 kWh/t and 52 Nm³/t (approximately 1.95936 GJ/t) as example limits. These are not automatically imposed as universal limits.
-- Factor descriptions A–I and example coefficients are visible and editable in the UI. Where the workbook refers to an additional relation for factor A below 50% hot charge or factor C for a pit furnace but does not provide that relation, the form does not invent it; the site owner must supply a documented value.
-- The source workbook does not define water or oxygen SEC limits. Their intensities are charted without invented compliance thresholds.
+A selected reference period is used for a transparent single-variable production-normalized comparison, within the same site, SEU and measurement boundary. Expected baseline consumption for a comparison period is reference-period intensity multiplied by that period's production. This is a simple ratio model, not a claim that production is the only relevant variable. Where operating hours, product mix, weather, feed quality, operating state or other variables materially affect consumption, the organization should use an appropriate multivariable model and retain the model, input data and rationale. Do not compare observations with different sites, SEUs or measurement boundaries as if they were equivalent.
 
-The workspace is local-first and independent of the earlier generic monitoring records. It does not import the sample workbook's historic observations automatically; users enter or import their own period values into the dedicated form. This avoids silently treating historical sample data as the user's plant data.
+The UI is designed with reference to:
+- ISO 50006:2023 — establishing, using and maintaining EnPIs and EnBs, including relevant variables, normalization and documented information.
+- ISO 50015:2014 — measurement and verification principles for energy performance; the edition was reviewed and confirmed in 2025.
+- ISO 46001:2019 — water-efficiency management, including monitoring, measurement, documentation, reporting and continual improvement; Amendment 1:2024 is listed by ISO.
+
+The example workbook's A–I factors, fixed limits and 15% heat-treatment adjustment are not ISO requirements and are not applied as universal thresholds or defaults in the revised form. A plant-specific adjustment must be supported by a documented process rationale, measurement evidence and a controlled calculation method. Compliance thresholds should be entered only when supported by applicable regulation, a technical benchmark, a contract, or an approved organizational target. This interface supports implementation; it does not certify ISO conformity.
+
+The sample feasibility reports are design references rather than operational meter data. The revised form does not import their historic values as actual plant observations. Users enter measured period data and retain source bills/meter records. Data quality review should cover meter calibration, unit consistency, billing-period alignment, production boundary, missing data, estimated readings, changes to static factors and the validity of the selected baseline period.
