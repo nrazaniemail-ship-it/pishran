@@ -114,3 +114,44 @@ export function makeRankingSnapshot(input:Omit<RankingSnapshot,'schema'|'created
  assert(input.weights.every(v=>Number.isFinite(v)&&v>=0),'Snapshot weights must be finite and non-negative');
  return {schema:'pishran-ranking-snapshot/v1',createdAt,...input};
 }
+
+
+export type RankingSensitivityCase = { label:string; weights:number[] };
+export type RankingSensitivityResult = {
+ baseline:ReturnType<typeof topsis>;
+ scenarios:Array<{label:string;kind:'weight'|'expert'|'optimistic'|'pessimistic';ranking:ReturnType<typeof topsis>}>;
+ summary:Array<{alternativeIndex:number;averageRank:number;bestRank:number;worstRank:number;topCount:number;topFrequency:number}>;
+ shock:number;
+};
+export function analyzeRankingSensitivity(
+ scores:number[][],
+ weights:number[],
+ directions:CriterionDirection[],
+ expertCases:RankingSensitivityCase[]=[],
+ shock=0.2
+):RankingSensitivityResult {
+ assert(Number.isFinite(shock)&&shock>=0&&shock<=0.9,'Sensitivity shock must be between 0 and 0.9');
+ const baseline=topsis(scores,weights,directions);
+ const scenarios:RankingSensitivityResult['scenarios']=[];
+ const run=(label:string,kind:'weight'|'expert'|'optimistic'|'pessimistic',matrix:number[][],candidateWeights:number[])=>{
+  scenarios.push({label,kind,ranking:topsis(matrix,candidateWeights,directions)});
+ };
+ for(let j=0;j<weights.length;j++){
+  for(const sign of [-1,1]){
+   const adjusted=weights.map((v,i)=>i===j?v*(1+sign*shock):v);
+   run(`${j}:${sign<0?'−':'+'}${Math.round(shock*100)}%`,'weight',scores,adjusted);
+  }
+ }
+ expertCases.forEach(c=>run(c.label,'expert',scores,c.weights));
+ const optimistic=scores.map(row=>row.map((v,j)=>Math.max(0,v*(directions[j]==='benefit'?1+shock:1-shock))));
+ const pessimistic=scores.map(row=>row.map((v,j)=>Math.max(0,v*(directions[j]==='benefit'?1-shock:1+shock))));
+ run('optimistic','optimistic',optimistic,weights);
+ run('pessimistic','pessimistic',pessimistic,weights);
+ const all=[baseline,...scenarios.map(s=>s.ranking)];
+ const summary=scores.map((_,alternativeIndex)=>{
+  const ranks=all.map(result=>result.results.find(r=>r.alternativeIndex===alternativeIndex)!.rank);
+  const topCount=ranks.filter(rank=>rank===1).length;
+  return {alternativeIndex,averageRank:ranks.reduce((a,b)=>a+b,0)/ranks.length,bestRank:Math.min(...ranks),worstRank:Math.max(...ranks),topCount,topFrequency:topCount/ranks.length};
+ });
+ return {baseline,scenarios,summary,shock};
+}
