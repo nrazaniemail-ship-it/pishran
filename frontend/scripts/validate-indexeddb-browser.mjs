@@ -106,7 +106,7 @@ try {
   await rankingPage.getByRole('button', { name: 'Switch to English' }).click()
   await rankingPage.getByRole('heading', { name: 'Multi-criteria weighting & ranking' }).waitFor()
   await rankingPage.getByRole('button', { name: 'Initial methods' }).waitFor()
-  await rankingPage.getByRole('heading', { name: 'Decision ranking workspace · MVP' }).waitFor()
+  await rankingPage.getByRole('heading', { name: 'پروژه آزمون IndexedDB · ranking workspace' }).waitFor()
   await advancedCategory.click()
   await rankingPage.getByRole('heading', { name: 'Advanced multi-criteria methods' }).waitFor()
   for (const methodName of ['AHP', 'BWM', 'TOPSIS', 'AHP + TOPSIS']) {
@@ -123,6 +123,7 @@ try {
   const rankingLauncherEnglish = rankingPage.locator('.module-launcher-card').filter({ hasText: 'MOD-10' })
   await rankingLauncherEnglish.waitFor({ state: 'visible' })
   await rankingLauncherEnglish.click()
+  await rankingPage.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمون IndexedDB' }).click()
   await rankingPage.getByTestId('ranking-category-advanced').click()
   await rankingPage.getByText('Calculation history (1)').waitFor()
   assert.deepEqual(rankingErrors, [], 'ranking method selection and storage must not produce browser runtime errors')
