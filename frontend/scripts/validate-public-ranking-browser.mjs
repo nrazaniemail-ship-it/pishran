@@ -201,7 +201,7 @@ try {
     'public WSM data must persist after reload')
 
   await page.getByRole('button', { name: 'Switch to English' }).click()
-  await page.getByRole('heading', { name: 'Multi-criteria weighting & ranking' }).waitFor()
+  await page.getByRole('heading', { name: 'Ranking methods' }).waitFor()
   await page.getByTestId('ranking-category-advanced').click()
   assert.ok((await page.getByTestId('ranking-category-advanced').getAttribute('class'))?.includes('is-active'),
     'advanced category tab must expose its modern active style')
