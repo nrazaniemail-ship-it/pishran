@@ -44,7 +44,7 @@ assert.match(modelSource, /balance:blankCustomProject\?\[\]:stageRows/)
 assert.match(modelSource, /utilities:blankCustomProject\?\[\]:stageRows/)
 assert.match(modelSource, /capex:blankCustomProject\?\[\]:stageCapexRows/)
 assert.match(modelSource, /opex:blankCustomProject\?\[\]:stageRows/)
-assert.match(modelSource, /equity:blankTemplate\?0:40,debt:blankTemplate\?0:60/)
+assert.match(modelSource, /equity:imported\?equityShare:\(blankTemplate\?0:40\),debt:imported\?debtShare:\(blankTemplate\?0:60\)/)
 assert.match(modelSource, /startYear:blankTemplate\?0:1403,constructionYears:blankTemplate\?0:2/)
 const store = await import(storeUrl)
 
