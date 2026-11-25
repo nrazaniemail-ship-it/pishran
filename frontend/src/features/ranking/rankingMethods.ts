@@ -143,8 +143,10 @@ export function analyzeRankingSensitivity(
   }
  }
  expertCases.forEach(c=>run(c.label,'expert',scores,c.weights));
- const optimistic=scores.map(row=>row.map((v,j)=>Math.max(0,v*(directions[j]==='benefit'?1+shock:1-shock))));
- const pessimistic=scores.map(row=>row.map((v,j)=>Math.max(0,v*(directions[j]==='benefit'?1-shock:1+shock))));
+ const minima=scores[0].map((_,j)=>Math.min(...scores.map(row=>row[j])));
+ const maxima=scores[0].map((_,j)=>Math.max(...scores.map(row=>row[j])));
+ const optimistic=scores.map(row=>row.map((v,j)=>Math.max(0,v+(directions[j]==='benefit'?1:-1)*shock*(maxima[j]-minima[j])*(directions[j]==='benefit'?1:1))));
+ const pessimistic=scores.map(row=>row.map((v,j)=>Math.max(0,v-(directions[j]==='benefit'?1:-1)*shock*(maxima[j]-minima[j]))));
  run('optimistic','optimistic',optimistic,weights);
  run('pessimistic','pessimistic',pessimistic,weights);
  const all=[baseline,...scenarios.map(s=>s.ranking)];
