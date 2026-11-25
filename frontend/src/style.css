@@ -2472,3 +2472,45 @@ input,select,textarea{color:var(--text)}
  .ranking-category-tab{min-width:0}
  .ranking-category-tabs+.ranking-method-intro,.module-capabilities-tabs+.module-capabilities-grid,.maintenance-tabs+.maintenance-card{padding:12px}
 }
+
+
+/* Connected tab/content frames: use one stronger, continuous outer outline. */
+:root{--tab-frame-outline:color-mix(in srgb,var(--workspace-border,var(--line)) 72%,#52677c)}
+.ranking-category-tabs,
+.module-capabilities-tabs,
+.maintenance-tabs,
+.energy-work-tabs{
+  border:2px solid var(--tab-frame-outline);
+  border-bottom:0;
+  border-radius:14px 14px 0 0;
+}
+.ranking-category-tabs+.ranking-method-intro,
+.module-capabilities-tabs+.module-capabilities-grid,
+.maintenance-tabs+.maintenance-card{
+  border:2px solid var(--tab-frame-outline);
+  border-top:0;
+  border-radius:0 0 14px 14px;
+}
+.energy-work-tabs~.energy-panel-grid,
+.energy-work-tabs~.energy-form-card,
+.energy-work-tabs~.energy-water-balance{
+  border-inline:2px solid var(--tab-frame-outline);
+  border-bottom:2px solid var(--tab-frame-outline);
+  border-top:0;
+  border-radius:0 0 14px 14px;
+}
+.ranking-category-tabs .ranking-category-tab.is-active,
+.module-capabilities-tabs button.active,
+.maintenance-tabs button.active,
+.energy-work-tabs button.active{
+  border-bottom-color:var(--surface,#fff);
+}
+@media(max-width:700px){
+  .ranking-category-tabs,
+  .module-capabilities-tabs,
+  .maintenance-tabs,
+  .energy-work-tabs{border-width:2px}
+  .ranking-category-tabs+.ranking-method-intro,
+  .module-capabilities-tabs+.module-capabilities-grid,
+  .maintenance-tabs+.maintenance-card{border-width:2px;border-top:0}
+}
