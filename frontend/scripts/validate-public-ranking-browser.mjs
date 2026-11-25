@@ -344,9 +344,10 @@ try {
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('.module-launcher-card').filter({ hasText: 'MOD-02' }).click()
   await page.locator('.module-workspace-page').getByText('پروژه آزمون ذخیره ماژول', { exact: true }).waitFor()
-  await page.getByRole('button', { name: 'ویرایش پروژه آزمون ذخیره ماژول' }).click()
-  await page.getByRole('textbox', { name: 'نام پروژه' }).fill('پروژه آزمون ویرایش و بازیابی')
-  await page.getByRole('button', { name: 'ذخیره ویرایش' }).click()
+  const workspaceItem = modulePage.locator('.module-workspace-item').filter({ hasText: 'پروژه آزمون ذخیره ماژول' })
+  await workspaceItem.getByRole('button', { name: 'ویرایش پروژه آزمون ذخیره ماژول' }).click()
+  await workspaceItem.getByRole('textbox').fill('پروژه آزمون ویرایش و بازیابی')
+  await workspaceItem.getByRole('button', { name: 'ذخیره ویرایش' }).click()
   await page.locator('.module-workspace-page').getByText('پروژه آزمون ویرایش و بازیابی', { exact: true }).waitFor()
   await page.waitForFunction(async expectedName => {
     const db = await new Promise((resolve, reject) => {
