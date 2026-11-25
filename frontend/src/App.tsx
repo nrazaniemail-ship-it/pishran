@@ -289,7 +289,7 @@ function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoos
   const [alternativeNames, setAlternativeNames] = useState('')
   const [result, setResult] = useState<{ method: RankingAdvisorMethod; reasons: string[]; criteria: string[]; guides: Array<{name:string;definition:string;unit:string;direction:'benefit'|'cost'}>; warning: string } | null>(null)
   const update = <K extends keyof RankingAdvisorAnswers>(key: K, value: RankingAdvisorAnswers[K]) => setAnswers(current => ({ ...current, [key]: value }))
-  const options = (key: keyof RankingAdvisorAnswers, values: Array<[string, string, string]>) => <label style={{ display: 'grid', gap: 5, minWidth: 0 }}><b>{values[0]?.[1]}</b><select aria-label={values[0]?.[1]} value={String(answers[key])} onChange={event => update(key, event.target.value as RankingAdvisorAnswers[typeof key])}>{values.slice(1).map(([value, fa, en]) => <option key={value} value={value}>{isEn ? en : fa}</option>)}</select></label>
+  const options = (key: keyof RankingAdvisorAnswers, values: Array<[string, string, string]>) => <label style={{ display: 'grid', gap: 5, minWidth: 0 }}><b>{isEn ? values[0]?.[2] : values[0]?.[1]}</b><select aria-label={isEn ? values[0]?.[2] : values[0]?.[1]} value={String(answers[key])} onChange={event => update(key, event.target.value as RankingAdvisorAnswers[typeof key])}>{values.slice(1).map(([value, fa, en]) => <option key={value} value={value}>{isEn ? en : fa}</option>)}</select></label>
   const buildRecommendation = () => {
     let method: RankingAdvisorMethod
     if (answers.weights === 'known' && answers.evidence === 'numeric') method = answers.scale === 'many' ? 'TOPSIS' : 'WSM'
@@ -390,7 +390,8 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
     if (mode === 'automatic') {
       const projects = await listProjects().catch(() => [])
       const projectNames = projects.map(project => project.name).filter(Boolean)
-      const names = (alternatives.length ? alternatives : projectNames.length ? projectNames : ['گزینه پیشنهادی ۱', 'گزینه پیشنهادی ۲', 'گزینه پیشنهادی ۳']).slice(0, 12)
+      const availableNames = alternatives.length ? alternatives : projectNames.length ? projectNames : ['گزینه پیشنهادی ۱', 'گزینه پیشنهادی ۲', 'گزینه پیشنهادی ۳']
+      const names = (availableNames.length === 1 ? [...availableNames, 'گزینه مقایسه‌ای جدید'] : availableNames).slice(0, 12)
       const scoreFor = (alternativeName: string, criterionName: string): number | null => {
         const project = projects.find(item => item.name === alternativeName)
         if (!project) return null
