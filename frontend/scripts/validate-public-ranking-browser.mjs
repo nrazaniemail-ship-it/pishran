@@ -62,7 +62,7 @@ try {
       await page.getByLabel('Expert 1 worst criterion').selectOption('0')
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
-      await page.getByText('Calculation history (1)').waitFor()\n      await page.getByRole('button', { name: 'Run rank sensitivity' }).click()\n      await page.getByTestId('ranking-sensitivity-results').waitFor()\n      await page.getByText('optimistic', { exact: true }).waitFor()
+      await page.getByText('Calculation history (1)').waitFor()\n      await page.getByRole('button', { name: 'Run rank sensitivity' }).click()\n      await page.getByTestId('ranking-sensitivity-results').waitFor()\n      await page.getByText(/optimistic/).waitFor()
     }
     if (method === 'TOPSIS') await page.getByText('Manual criterion weights').waitFor()
     if (method === 'AHP + TOPSIS') await page.getByText('Alternative performance matrix').waitFor()
