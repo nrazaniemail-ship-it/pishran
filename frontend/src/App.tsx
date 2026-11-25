@@ -508,10 +508,10 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
       </div>
       <h3 style={{ margin: '8px 0 12px' }}>{isEn ? 'Methods' : 'روش‌های انجام'}</h3>
       <div role="group" aria-label={isEn ? 'Method categories' : 'دسته‌بندی روش‌ها'} className="ranking-category-tabs">
-        <button type="button" data-testid="ranking-category-initial" data-category="initial" className={\`ranking-category-tab ranking-category-tab--initial \${category === 'INITIAL' ? 'is-active' : ''}\`} aria-pressed={category === 'INITIAL'} onClick={() => setCategory('INITIAL')}>
+        <button type="button" data-testid="ranking-category-initial" data-category="initial" className={`ranking-category-tab ranking-category-tab--initial ${category === 'INITIAL' ? 'is-active' : ''}`} aria-pressed={category === 'INITIAL'} onClick={() => setCategory('INITIAL')}>
           <span className="ranking-category-tab__index">01</span><span>{isEn ? 'Initial methods' : 'روش‌های اولیه'}</span><span className="ranking-category-tab__hint">{isEn ? 'Core' : 'پایه'}</span>
         </button>
-        <button type="button" data-testid="ranking-category-advanced" data-category="advanced" className={\`ranking-category-tab ranking-category-tab--advanced \${category === 'ADVANCED' ? 'is-active' : ''}\`} aria-pressed={category === 'ADVANCED'} onClick={() => setCategory('ADVANCED')}>
+        <button type="button" data-testid="ranking-category-advanced" data-category="advanced" className={`ranking-category-tab ranking-category-tab--advanced ${category === 'ADVANCED' ? 'is-active' : ''}`} aria-pressed={category === 'ADVANCED'} onClick={() => setCategory('ADVANCED')}>
           <span className="ranking-category-tab__index">02</span><span>{isEn ? 'Advanced methods' : 'روش‌های پیشرفته'}</span><span className="ranking-category-tab__hint">{isEn ? 'Pro' : 'تخصصی'}</span>
         </button>
       </div>
