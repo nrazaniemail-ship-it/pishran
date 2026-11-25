@@ -509,6 +509,8 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
     if (selectedProjectId === projectId) setSelectedProjectId(null)
     await localStore.set('mod10-ranking-draft:' + projectId, null)
     await localStore.set('mod10-ranking-method-draft:' + projectId, null)
+    await localStore.set('mod10-ranking-method-history:' + projectId, null)
+    await localStore.set('mod10-ranking-sensitivity-history:' + projectId, null)
   }
   const [initialPanelKey, setInitialPanelKey] = useState(0)
   const [advancedPanelKey, setAdvancedPanelKey] = useState(0)
@@ -595,7 +597,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
             <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
           </div>}
     </section>
-    {category === 'INITIAL' ? <RankingPanel key={selectedProject?.id ?? initialPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} projectName={selectedProject?.name ?? ''}/> : <RankingMethodsPanel key={(selectedProject?.id ?? 'unsaved') + '-' + advancedPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
+    {category === 'INITIAL' ? <RankingPanel key={(selectedProject?.id ?? 'unsaved') + '-' + initialPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} projectName={selectedProject?.name ?? ''}/> : <RankingMethodsPanel key={(selectedProject?.id ?? 'unsaved') + '-' + advancedPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
     </>}
   </div>
 }
