@@ -253,6 +253,9 @@ function baseModel(project:FeasibilityProject):Model {
   'اطلاعات CAPEX، مخارج پیش از تولید، بهره سرمایه‌ای‌شده و سرمایه در گردش از جداول تفصیلی گزارش مرجع وارد شده‌اند.',
   'ردیف‌های OPEX مربوط به سال مرجع '+sourceInputs.operatingCostYear+' هستند؛ اختلاف جمع ریزاقلام با خلاصه گزارش (پس از اصلاح ردیف‌های منبع): '+fmt(sourceCostVariance,2)+' '+report.currency+'.',
   'سهم هزینه متغیر گزارش: '+sourceInputs.variableCostSharePercent+'٪؛ سهم خارجی CAPEX گزارش: '+sourceInputs.foreignFixedInvestmentSharePercent+'٪. این نسبت‌ها تجمیعی‌اند و به تفکیک دارایی تخصیص داده نشده‌اند.',
+  'برنامه سالانه تولید و فروش از صفحه ۳۵: '+(sourceInputs.productionSalesSchedule??[]).map(row=>row.period+' تولید '+fmt(row.production,2)+' تن، فروش '+fmt(row.sales,2)+' تن، قیمت '+fmt(row.netUnitPrice,2)+' و درآمد '+fmt(row.salesRevenue,2)).join('؛ '),
+  'برنامه بدهی صفحات ۵۱ تا ۵۳: '+(sourceInputs.financingSchedule??[]).map(row=>row.period+' برداشت '+fmt(row.loanDisbursement,2)+'، بازپرداخت اصل '+fmt(row.principalRepayment,2)+'، بهره '+fmt(row.interestExpense,2)+'، مانده '+fmt(row.closingDebt,2)).join('؛ '),
+  'استهلاک کل سالانه صفحات ۲۴ تا ۲۷ در داده مرجع ثبت شده؛ ریز استهلاک دارایی‌به‌دارایی از این گزارش خلاصه قابل استخراج قطعی نیست.',
   ...sourceInputs.missingSourceDetails.map(item=>'اطلاعات گزارش برای ورود قطعی ارائه نشده است: '+item)
  ].join('\n'):''
  return {
