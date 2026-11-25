@@ -127,7 +127,7 @@ try {
       await page.getByLabel('Other over worst ریسک اجرا').selectOption('4')
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
-      await page.getByText('Calculation history (1)').waitFor()
+      await page.getByText('Calculation history (2)').waitFor()
       await page.getByRole('button', { name: 'Run rank sensitivity' }).click()
       await page.getByTestId('ranking-sensitivity-results').waitFor()
       await page.getByText('Sensitivity history (1)').waitFor()
