@@ -58,10 +58,11 @@ try {
     'advanced category tab must expose its modern active style')
   await page.getByRole('heading', { name: 'Advanced multi-criteria methods' }).waitFor()
   for (const method of ['AHP', 'BWM', 'TOPSIS', 'AHP + TOPSIS']) {
+    const methodKey = method === 'AHP + TOPSIS' ? 'AHP+TOPSIS' : method
     await page.getByRole('button', { name: method, exact: true }).click()
-    assert.equal(await page.locator(`.ranking-method-tab[data-method="${method}"]`).getAttribute('aria-pressed'), 'true',
+    assert.equal(await page.locator(`.ranking-method-tab[data-method="${methodKey}"]`).getAttribute('aria-pressed'), 'true',
       `${method} tab must expose the selected state`)
-    assert.ok((await page.locator(`.ranking-method-tab[data-method="${method}"]`).getAttribute('class'))?.includes('is-active'),
+    assert.ok((await page.locator(`.ranking-method-tab[data-method="${methodKey}"]`).getAttribute('class'))?.includes('is-active'),
       `${method} tab must expose its modern active style`)
     if (method === 'AHP') await page.getByText('Saaty 1–9 scale; reciprocal entries are automatic.').waitFor()
     if (method === 'BWM') {
