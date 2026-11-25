@@ -344,11 +344,14 @@ export function calculateConfiguredEnergyTariff(input,{contracts=[]}={},calculat
  const hasTimeQuantities=Object.keys(timeQuantities).length>0
  let energyCharge=0,unconfiguredTimeBands=[]
  const timeOfUseBreakdown=[]
+ if(timeRates.length&&!hasTimeQuantities)throw new Error('برای اعمال تعرفه زمان‌مند، مقدار مصرف هر بازه زمانی را وارد کنید؛ مبلغ صفر محاسبه نمی‌شود.')
  if(hasTimeQuantities){
+  const suppliedTimeQuantity=Object.values(timeQuantities).reduce((sum,value)=>sum+number(value,'مصرف بازه زمانی',0),0)
+  if(Math.abs(suppliedTimeQuantity-rawQuantity)>Math.max(0.01,rawQuantity*0.001))throw new Error('جمع مصرف بازه‌های زمانی باید با مصرف کل قبض تطبیق داشته باشد.')
   for(const [band,raw] of Object.entries(timeQuantities)){
    const bandQuantity=number(raw,'مصرف بازه '+band,0)*meterMultiplier
    const rate=timeRates.find(x=>x.band===band)
-   if(!rate){unconfiguredTimeBands.push(band);timeOfUseBreakdown.push({band,quantity:bandQuantity,rate:null,charge:null,status:'unconfigured'});continue}
+   if(!rate)throw new Error('برای بازه زمانی '+band+' در قرارداد نرخ تعریف نشده است.')
    const charge=bandQuantity*Number(rate.rate);energyCharge+=charge
    timeOfUseBreakdown.push({band,quantity:bandQuantity,rate:Number(rate.rate),charge,status:'modeled'})
   }
@@ -403,18 +406,21 @@ export function reconcileEnergyTariffWithBill({calculation,bill,resource,toleran
   compare('demandCharge','بهای دیماند',calculation.demandCharge,bill.demandCharge)
   compare('reactiveCharge','بهای انرژی راکتیو',calculation.reactiveCharge,bill.reactiveCharge)
   compare('taxCharge','مالیات و عوارض',calculation.tax,bill.taxCharge)
+  for(const band of calculation.timeOfUseBreakdown??[])compare('time-of-use-'+band.band,'بهای بازه '+band.band,band.charge,bill.timeOfUseCharges?.[band.band],true)
  }else if(resource==='gas'){
   compare('gasCharge','بهای گاز',calculation.energyCharge,bill.gasCharge)
-  compare('distributionCharge','انتقال و توزیع',null,bill.distributionCharge,false)
+  compare('gasTransmissionCharge','هزینه انتقال گاز',calculation.gasTransmissionCharge,bill.gasTransmissionCharge,calculation.gasTransmissionCharge!==null&&calculation.gasTransmissionCharge!==undefined)
+  compare('gasDistributionCharge','هزینه توزیع گاز',calculation.gasDistributionCharge,bill.gasDistributionCharge,calculation.gasDistributionCharge!==null&&calculation.gasDistributionCharge!==undefined)
   compare('taxCharge','مالیات و عوارض',calculation.tax,bill.taxCharge)
   compare('otherCharges','سایر هزینه‌ها',null,bill.otherCharges,false)
  }else{
   compare('waterCharge','بهای آب',calculation.energyCharge,bill.waterCharge)
-  compare('sewerCharge','بهای دفع فاضلاب',null,bill.sewerCharge,false)
+  compare('sewerCharge','بهای دفع فاضلاب',calculation.sewerCharge,bill.sewerCharge,calculation.sewerCharge!==null&&calculation.sewerCharge!==undefined)
   compare('fixedCharge','هزینه ثابت قبض',calculation.fixedCharge,bill.fixedCharge)
   compare('taxCharge','مالیات و عوارض',calculation.tax,bill.taxCharge)
   compare('otherCharges','سایر هزینه‌ها',null,bill.otherCharges,false)
  }
+ for(const levy of calculation.levies??[])compare(levy.key,'عوارض '+levy.label,levy.amount,bill.levies?.[levy.key]??bill.levyAmounts?.[levy.key],true)
  compare('amount','مبلغ قابل پرداخت',calculation.total,bill.amount)
  const mismatches=components.filter(x=>x.status==='mismatch')
  const incomplete=components.filter(x=>x.status==='not-provided'||x.status==='not-modeled')
