@@ -14,6 +14,8 @@ export type ComfarSourceInputData = {
   fixedInvestment: ComfarSourceCapexItem[]
   preproduction: { period: string; net: number; capitalizedInterest: number }[]
   operatingCostYear: number
+  variableCostSharePercent: number
+  foreignFixedInvestmentSharePercent: number
   capacityUtilization?: number[]
   operatingCostRows: { name: string; amount: number }[]
   workingCapital: ComfarSourceWorkingCapitalPeriod[]
@@ -40,6 +42,8 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1404', net: 167878.90, capitalizedInterest: 2112481.33 },
     ],
     operatingCostYear: 1408,
+    variableCostSharePercent: 91.83,
+    foreignFixedInvestmentSharePercent: 43.19,
     operatingCostRows: [
       { name: 'مواد خام', amount: 40901015.18 },
       { name: 'ملزومات کارخانه', amount: 0 },
@@ -77,6 +81,8 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1404', net: 0, capitalizedInterest: 3738117.99 },
     ],
     operatingCostYear: 1407,
+    variableCostSharePercent: 87.87,
+    foreignFixedInvestmentSharePercent: 38.07,
     operatingCostRows: [
       { name: 'مواد خام', amount: 38162283.50 },
       { name: 'ملزومات کارخانه', amount: 0 },
@@ -112,6 +118,8 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1402', net: 211680, capitalizedInterest: 350000 },
     ],
     operatingCostYear: 1405,
+    variableCostSharePercent: 95.60,
+    foreignFixedInvestmentSharePercent: 48.28,
     capacityUtilization: [81.11, 90.14, 100.14, 100],
     operatingCostRows: [
       { name: 'مواد خام', amount: 63058700 },
@@ -149,6 +157,8 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1404', net: 1656006.75, capitalizedInterest: 41740000 },
     ],
     operatingCostYear: 9,
+    variableCostSharePercent: 90.91,
+    foreignFixedInvestmentSharePercent: 54.22,
     operatingCostRows: [
       { name: 'مواد خام', amount: 537485060 },
       { name: 'ملزومات کارخانه', amount: 0 },
