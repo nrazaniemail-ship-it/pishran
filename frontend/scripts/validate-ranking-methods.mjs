@@ -58,13 +58,24 @@ test('TOPSIS validates dimensions, weights and zero-variance columns',()=>{
  assert.throws(()=>topsis([[0,2],[0,3]],[1,1],['benefit','cost']),/non-zero/);
  assert.throws(()=>topsis([[1,2],[2,3]],[1,1],['up','cost']),/valid benefit\/cost direction/);
 });
-test('AHP + BWM fuses normalized priorities by a 50/50 geometric mean',()=>{
- const a=[0.6,0.3,0.1],b=[0.2,0.3,0.5],combined=combineAHPBWMWeights(a,b);
- const raw=a.map((v,i)=>Math.sqrt(v*b[i])),sum=raw.reduce((x,y)=>x+y,0);
- combined.forEach((v,i)=>assert.ok(Math.abs(v-raw[i]/sum)<1e-12));
- assert.ok(Math.abs(combined.reduce((x,y)=>x+y,0)-1)<1e-12);
+test('AHP + BWM hybrid supports adjustable contribution shares before TOPSIS',()=>{
+ const a=[0.6,0.3,0.1],b=[0.2,0.3,0.5];
+ for (const share of [0,0.25,0.5,0.7,1]) {
+  const combined=combineAHPBWMWeights(a,b,share);
+  const raw=a.map((v,i)=>v**share*b[i]**(1-share)),sum=raw.reduce((x,y)=>x+y,0);
+  combined.forEach((v,i)=>assert.ok(Math.abs(v-raw[i]/sum)<1e-12));
+  assert.ok(Math.abs(combined.reduce((x,y)=>x+y,0)-1)<1e-12);
+  const ranked=topsis([[9,2,6],[7,4,8],[5,8,4]],combined,['benefit','cost','benefit']);
+  assert.equal(ranked.results.length,3);
+ }
  assert.throws(()=>combineAHPBWMWeights([0.5,0.5],[0.5]),/same criteria count/);
  assert.throws(()=>combineAHPBWMWeights([0.5,0.5],[0.5,0.5],1.2),/between 0 and 1/);
+});
+test('BWM priorities can feed TOPSIS directly for the BWM + TOPSIS method',()=>{
+ const weights=bwm(0,2,[1,3,5],[5,2,1]).weights;
+ const ranked=topsis([[9,2,6],[7,4,8],[5,8,4]],weights,['benefit','cost','benefit']);
+ assert.equal(ranked.results.length,3);
+ assert.equal(ranked.results[0].rank,1);
 });
 test('AHP + TOPSIS can use AHP priorities as normalized TOPSIS weights',()=>{
  const priorities=ahp([[1,3],[1/3,1]]).weights;
