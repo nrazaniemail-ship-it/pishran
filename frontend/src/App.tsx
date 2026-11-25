@@ -269,18 +269,28 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
       <div className="section-head">
         <div>
           <h2 id="ranking-methods-heading">{isEn ? 'Multi-criteria weighting & ranking' : 'وزن‌دهی و رتبه‌بندی چندمعیاره'}</h2>
-          <p>{isEn ? 'Choose the decision method that fits your weighting and ranking workflow.' : 'متناسب با مسئله تصمیم، روش وزن‌دهی معیارها و رتبه‌بندی گزینه‌ها را انتخاب کنید.'}</p>
+          <p>{isEn ? 'Select a method by its level of complexity.' : 'روش انجام را بر اساس سطح پیچیدگی و نوع تحلیل موردنیاز انتخاب کنید.'}</p>
         </div>
       </div>
-      <h3 style={{ margin: '8px 0 12px' }}>{isEn ? 'Available methods' : 'روش‌های انجام'}</h3>
-      <div role="group" aria-label={isEn ? 'Ranking methods' : 'روش‌های رتبه‌بندی'} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <h3 style={{ margin: '8px 0 12px' }}>{isEn ? 'Method categories' : 'دسته‌بندی روش‌های انجام'}</h3>
+      <section aria-labelledby="ranking-initial-heading" style={{ marginBottom: 18 }}>
+        <div style={{ marginBottom: 8 }}>
+          <h4 id="ranking-initial-heading" style={{ margin: '0 0 4px' }}>{isEn ? 'Initial method' : 'روش اولیه'}</h4>
+          <p style={{ margin: 0, color: 'var(--muted, #64748b)' }}>{isEn ? 'A straightforward workspace for basic criteria-based scoring and ranking.' : 'برای شروع سریع، تعریف معیارها، امتیازدهی و رتبه‌بندی ساده گزینه‌ها.'}</p>
+        </div>
         <button type="button" className={method === 'WSM' ? 'primary' : 'secondary'} aria-pressed={method === 'WSM'} onClick={() => setMethod('WSM')}>
-          {isEn ? 'WSM · Decision ranking workspace (MVP)' : 'WSM · محیط رتبه‌بندی تصمیم (نسخه اولیه)'}
+          {isEn ? 'WSM · Decision ranking workspace' : 'WSM · محیط رتبه‌بندی تصمیم (نسخه اولیه)'}
         </button>
+      </section>
+      <section aria-labelledby="ranking-advanced-heading">
+        <div style={{ marginBottom: 8 }}>
+          <h4 id="ranking-advanced-heading" style={{ margin: '0 0 4px' }}>{isEn ? 'Advanced methods' : 'روش‌های پیشرفته'}</h4>
+          <p style={{ margin: 0, color: 'var(--muted, #64748b)' }}>{isEn ? 'Structured weighting, consistency assessment and multi-criteria ranking.' : 'برای تحلیل ساختاریافته‌تر؛ وزن‌دهی تخصصی، سنجش سازگاری و رتبه‌بندی چندمعیاره.'}</p>
+        </div>
         <button type="button" className={method === 'ADVANCED' ? 'primary' : 'secondary'} aria-pressed={method === 'ADVANCED'} onClick={() => setMethod('ADVANCED')}>
           {isEn ? 'AHP · BWM · TOPSIS · AHP + TOPSIS' : 'AHP · BWM · TOPSIS · ترکیب AHP + TOPSIS'}
         </button>
-      </div>
+      </section>
     </section>
     {method === 'WSM' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language}/>}
   </div>
