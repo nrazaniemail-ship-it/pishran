@@ -16,7 +16,7 @@ Electricity is stored in kWh, natural gas in Nm³, and water in m³. Water is a 
 
 ## Baseline and performance
 
-The first implementation supports a transparent production-intensity baseline: EnPI = consumption / production. The baseline is normalized to actual production by multiplying baseline EnPI by actual production. The difference between normalized baseline and actual consumption is shown as a calculated variance. This simple ratio method is explicitly disclosed and must not be treated as formal savings verification when other material variables (weather, product mix, operating hours, feedstock quality, etc.) affect consumption. A future model-based normalization and documented M&V plan are required for formal claims.
+The module supports a transparent production-intensity baseline (EnPI = consumption / production), normalized to actual production, and a rolling-origin multivariable OLS screening model. The latter holds out the latest usable measured period and can include production, operating hours, and complete, varying optional drivers (product mix, ambient temperature, feed quality and shutdown hours). Estimated records are excluded; missing or constant drivers are not imputed. Both methods are operational screening tools, not formal savings verification. Material variables, model fit, meter quality and the M&V boundary must be reviewed before any savings claim.
 
 Meter opening/closing readings are optional but, when supplied, both are mandatory and their difference must reconcile with recorded consumption within a small tolerance. Estimated and metered data are labelled separately.
 
@@ -34,10 +34,14 @@ When at least six measured periods are available for the same resource, site and
 - `module-intelligence:MOD-05:baselines:v1`
 - `module-intelligence:MOD-05:actions:v1`
 
-All records are stored locally through the Pishran localStore.
+All operational records are stored locally through the Pishran localStore. Additional MOD-05 stores are `module-intelligence:MOD-05:water-balances:v1`, `module-intelligence:MOD-05:cost-allocations:v1`, `module-intelligence:MOD-05:gas-bills:v1`, `module-intelligence:MOD-05:water-bills:v1`, and `module-intelligence:MOD-05:resource-cost-allocations:v1`; electricity bills use `ELECTRICITY_BILLS_KEY` from the electricity bill register.
 
 
-Implementation scope in this increment: separate electricity, natural-gas and water ledgers; meter-reading reconciliation when readings are provided; data-quality labels; site/SEU boundaries; production-intensity baselines; normalized comparisons; and improvement-action registers. Advanced regression normalization, multi-variable adjustment, audit trails for calibration, and formal M&V evidence packs remain follow-on work.
+## Implemented module scope and explicit limits
+
+The current web implementation includes separate electricity, gas and water ledgers; meter reconciliation and data-quality labels; production-normalized baselines; gas calorific-basis controls; water boundary balances; electricity/gas/water bill capture and OCR review; bill-component cost allocation; controlled MOD-02 cost handoff with source provenance and duplicate-posting guards; multi-period trends; anomaly and forecast screening; rolling-origin multivariable normalization with optional operating drivers; improvement-action status and verification histories; and Excel / print-to-PDF reporting.
+
+The module does not yet provide a meter calibration register, automated tariff calculation, tamper-proof centralized audit storage, or a formal ISO 50015 measurement-and-verification evidence pack. These require site-specific metrology, tariff contracts, governance and approved M&V methods; the module must not represent its operational indicators as certification or verified savings.
 
 ## Electricity bill OCR and analytical controls
 
