@@ -3,7 +3,7 @@ import ReactECharts from 'echarts-for-react'
 import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Zap, Wrench, Boxes, Target, BriefcaseBusiness, Pencil, Trash2, Check, X } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
-import { createProject, deleteProject, purgeRemovedCaseProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
+import { createProject, deleteProject, purgeRemovedCaseProjects, seedComfarReferenceProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
 import ProjectsView from './features/projects/ProjectsView'
 import SettingsView from './features/settings/SettingsView'
 import SteelGroupWorkspace from './features/steel/SteelGroupWorkspace'
@@ -695,7 +695,8 @@ export default function App() {
   useEffect(() => {
     let alive = true
     Promise.all([loadSettings(), purgeRemovedCaseProjects()])
-      .then(async ([nextSettings, nextProjects]) => {
+      .then(async ([nextSettings]) => {
+        const nextProjects = await seedComfarReferenceProjects()
         const info = await localStore.info()
         if (!alive) return
         setSettings(nextSettings)
