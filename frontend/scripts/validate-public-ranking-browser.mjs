@@ -37,6 +37,23 @@ try {
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: 'ذخیره نام' }).click()
+  await page.waitForFunction(async expectedName => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('pishran_store')
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    try {
+      const record = await new Promise((resolve, reject) => {
+        const request = db.transaction('kv', 'readonly').objectStore('kv').get('mod10-ranking-projects:v1')
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      return Array.isArray(record?.value) && record.value.some(project => project.name === expectedName)
+    } finally {
+      db.close()
+    }
+  }, 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', { timeout: 10000 })
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
   await page.getByRole('heading', { name: 'وزن‌دهی و رتبه‌بندی چندمعیاره' }).waitFor()
