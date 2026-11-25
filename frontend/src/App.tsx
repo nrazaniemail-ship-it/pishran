@@ -353,29 +353,45 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
   const [recommendedMethod, setRecommendedMethod] = useState<RankingAdvisorMethod>('AHP')
   const [suggestedCriteria, setSuggestedCriteria] = useState<string[]>([])
   const [suggestedAlternatives, setSuggestedAlternatives] = useState<string[]>([])
-  const applyAdvisor = (method: RankingAdvisorMethod, mode: 'manual' | 'automatic', criteria: string[], alternatives: string[]) => {
+  const [suggestedScores, setSuggestedScores] = useState<Array<Array<number | null>>>([])
+  const applyAdvisor = async (method: RankingAdvisorMethod, mode: 'manual' | 'automatic', criteria: string[], alternatives: string[]) => {
     setRecommendedMethod(method)
     if (mode === 'automatic') {
-      const names = alternatives.length ? alternatives : ['گزینه پیشنهادی ۱', 'گزینه پیشنهادی ۲', 'گزینه پیشنهادی ۳']
+      const projects = await listProjects().catch(() => [])
+      const projectNames = projects.map(project => project.name).filter(Boolean)
+      const names = (alternatives.length ? alternatives : projectNames.length ? projectNames : ['گزینه پیشنهادی ۱', 'گزینه پیشنهادی ۲', 'گزینه پیشنهادی ۳']).slice(0, 12)
+      const scoreFor = (alternativeName: string, criterionName: string): number | null => {
+        const project = projects.find(item => item.name === alternativeName)
+        if (!project) return null
+        if (/ظرفیت/.test(criterionName)) {
+          const capacity = Number(String(project.capacity ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/)?.[0])
+          return Number.isFinite(capacity) ? capacity : null
+        }
+        return null
+      }
+      const matrix = names.map(name => criteria.slice(0, 8).map(criterion => scoreFor(name, criterion)))
       if (method === 'WSM') {
         const id = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,7)
         const draft: RankingDraft = {
           criteria: criteria.slice(0, 8).map(name => ({ id: id('criterion'), name, weight: 1, direction: /هزینه|سرمایه|ریسک|زمان|مصرف|قیمت/.test(name) ? 'cost' : 'benefit', minimum: null })),
-          options: names.slice(0, 12).map(name => ({ id: id('option'), name, scores: {} })),
+          options: names.map((name, rowIndex) => ({ id: id('option'), name, scores: Object.fromEntries(criteria.slice(0, 8).map((criterion, columnIndex) => [id('score'), null])) })),
         }
-        draft.options = draft.options.map(option => ({ ...option, scores: Object.fromEntries(draft.criteria.map(item => [item.id, null])) }))
+        draft.options = draft.options.map((option, rowIndex) => ({ ...option, scores: Object.fromEntries(draft.criteria.map((item, columnIndex) => [item.id, matrix[rowIndex]?.[columnIndex] ?? null])) }))
         void localStore.set('mod10-ranking-draft:v1', draft)
         setSuggestedCriteria([])
         setSuggestedAlternatives([])
+        setSuggestedScores([])
         setCategory('INITIAL')
       } else {
         setSuggestedCriteria(criteria.slice(0, 8))
-        setSuggestedAlternatives(names.slice(0, 12))
+        setSuggestedAlternatives(names)
+        setSuggestedScores(matrix)
         setCategory('ADVANCED')
       }
     } else {
       setSuggestedCriteria([])
       setSuggestedAlternatives([])
+      setSuggestedScores([])
       setCategory(method === 'WSM' ? 'INITIAL' : 'ADVANCED')
     }
   }
@@ -406,7 +422,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
             <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
           </div>}
     </section>
-    {category === 'INITIAL' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives}/>}
+    {category === 'INITIAL' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores}/>}
   </div>
 }
 
