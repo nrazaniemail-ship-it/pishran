@@ -411,6 +411,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
         draft.options = draft.options.map((option, rowIndex) => ({ ...option, scores: Object.fromEntries(draft.criteria.map((item, columnIndex) => [item.id, matrix[rowIndex]?.[columnIndex] ?? null])) }))
         await localStore.set('mod10-ranking-draft:v1', draft)
         setSuggestedCriteria([])
+        setSuggestedDirections([])
         setSuggestedAlternatives([])
         setSuggestedScores([])
         setCategory('INITIAL')
@@ -423,6 +424,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
       }
     } else {
       setSuggestedCriteria([])
+      setSuggestedDirections([])
       setSuggestedAlternatives([])
       setSuggestedScores([])
       setCategory(method === 'WSM' ? 'INITIAL' : 'ADVANCED')
