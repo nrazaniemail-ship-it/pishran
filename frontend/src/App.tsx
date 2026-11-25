@@ -610,6 +610,7 @@ export default function App() {
   const [storageInfo, setStorageInfo] = useState({ backend: 'در حال بررسی', items: 0 })
   const [ready, setReady] = useState(false)
   const [activeModuleId, setActiveModuleId] = useState('MOD-01')
+  const [capabilitiesTab, setCapabilitiesTab] = useState<'assessment' | 'market'>('assessment')
   const [moduleWorkspaces, setModuleWorkspaces] = useState<ModuleWorkspace[]>([])
   const [moduleWorkspaceName, setModuleWorkspaceName] = useState('')
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null)
@@ -745,13 +746,6 @@ export default function App() {
   function openModule(moduleId: string) {
     setModuleDropdownOpen(false)
     navigateTo('module', activeProject, moduleId)
-  }
-
-  function continueToNextModule() {
-    const currentIndex = modules.findIndex(item => item.id === activeModuleId)
-    const nextModule = modules[currentIndex + 1]
-    if (nextModule) openModule(nextModule.id)
-    else navigateTo('dashboard')
   }
 
   async function createModuleWorkspace() {
@@ -891,13 +885,19 @@ export default function App() {
           <h2 id="module-capabilities-title">{isEn ? <>Capabilities & Differentiators of “{activeModule.enTitle}”</> : <>قابلیت‌ها و وجه تمایز ماژول «{activeModule.title}»</>}</h2>
           <p>{isEn ? 'Evaluation dimensions, market reference solutions and the practices selected for Pishran. Listed products are reference examples, not a claim of identical scope.' : 'معیارهای ارزیابی، نمونه‌های بازار برای مقایسه و الگوهایی که در طراحی پیشران قابل اقتباس‌اند. نام محصولات، نمونه مرجع بازار است و به‌معنای یکسان‌بودن دامنه آن‌ها نیست.'}</p>
         </div>
-        {(() => { const profile = moduleCapabilityProfiles[activeModule.id]; const assessment = isEn ? profile.assessmentEn : profile.assessment; const benchmarks = isEn ? profile.benchmarksEn : profile.benchmarks; const learning = isEn ? profile.learningEn : profile.learning; return <div className="module-capabilities-grid">
-          <article className="module-capability-column"><h3>{isEn ? 'Evaluation dimensions' : 'محورهای ارزیابی'}</h3><ul>{assessment.map((item,index)=><li key={index}>{item}</li>)}</ul></article>
-          <article className="module-capability-column"><h3>{isEn ? 'Competitors & market references' : 'رقبا و نمونه‌های مرجع بازار'}</h3><ul>{benchmarks.map((item,index)=><li key={index}>{item}</li>)}</ul></article>
-          <article className="module-capability-column"><h3>{isEn ? 'Benchmarking & adopted practices' : 'الگوبرداری و رویه‌های منتخب'}</h3><ul>{learning.map((item,index)=><li key={index}>{item}</li>)}</ul></article>
-        </div> })()}
+        {(() => { const profile = moduleCapabilityProfiles[activeModule.id]; const assessment = isEn ? profile.assessmentEn : profile.assessment; const benchmarks = isEn ? profile.benchmarksEn : profile.benchmarks; const learning = isEn ? profile.learningEn : profile.learning; return <>
+          <div className="module-capabilities-tabs" role="tablist" aria-label={isEn ? 'Module evaluation sections' : 'بخش‌های ارزیابی ماژول'}>
+            <button type="button" role="tab" id="module-tab-assessment" aria-selected={capabilitiesTab === 'assessment'} aria-controls="module-panel-assessment" className={capabilitiesTab === 'assessment' ? 'active' : ''} onClick={() => setCapabilitiesTab('assessment')}>{isEn ? 'Comparative assessment' : 'ارزیابی تطبیقی'}</button>
+            <button type="button" role="tab" id="module-tab-market" aria-selected={capabilitiesTab === 'market'} aria-controls="module-panel-market" className={capabilitiesTab === 'market' ? 'active' : ''} onClick={() => setCapabilitiesTab('market')}>{isEn ? 'Market position' : 'جایگاه بازار'}</button>
+          </div>
+          {capabilitiesTab === 'assessment' ? <div className="module-capabilities-grid" role="tabpanel" id="module-panel-assessment" aria-labelledby="module-tab-assessment">
+            <article className="module-capability-column"><h3>{isEn ? 'Evaluation dimensions' : 'محورهای ارزیابی'}</h3><ul>{assessment.map((item,index)=><li key={index}>{item}</li>)}</ul></article>
+          </div> : <div className="module-capabilities-grid" role="tabpanel" id="module-panel-market" aria-labelledby="module-tab-market">
+            <article className="module-capability-column"><h3>{isEn ? 'Competitors & market references' : 'رقبا و نمونه‌های مرجع بازار'}</h3><ul>{benchmarks.map((item,index)=><li key={index}>{item}</li>)}</ul></article>
+            <article className="module-capability-column"><h3>{isEn ? 'Benchmarking & adopted practices' : 'الگوبرداری و رویه‌های منتخب'}</h3><ul>{learning.map((item,index)=><li key={index}>{item}</li>)}</ul></article>
+          </div>}
+        </> })()}
       </section>
-      <div className="module-continue-actions"><button className="primary" type="button" onClick={continueToNextModule}>{isEn ? (activeModule.id === 'MOD-12' ? 'Finish modules' : 'Continue') : (activeModule.id === 'MOD-12' ? 'پایان مرور ماژول‌ها' : 'ادامه بده')}</button></div>
     </section>}
 
 
