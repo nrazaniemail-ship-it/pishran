@@ -342,7 +342,7 @@ function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoos
         <button type="button" className="secondary-button" onClick={() => onChoose(result.method, 'manual', result.criteria, parsedAlternatives())}>{isEn ? 'Manual entry' : 'مسیر دستی · ورود اطلاعات توسط کاربر'}</button>
         <button type="button" className="primary" onClick={() => onChoose(result.method, 'automatic', result.criteria, parsedAlternatives())}>{isEn ? 'Build automatic draft' : 'مسیر خودکار · ساخت پیش‌نویس توسط برنامه'}</button>
       </div>
-      <small className="muted">{isEn ? 'Automatic mode creates editable criteria and alternative placeholders. It never invents real scores or evidence; missing values remain blank.' : 'در مسیر خودکار، برنامه معیارها و گزینه‌های قابل‌ویرایش را می‌سازد؛ هیچ امتیاز یا شاهد واقعی را حدس نمی‌زند و خانه‌های فاقد داده خالی می‌مانند.'}</small>
+      <small className="muted">{isEn ? 'Automatic mode imports available project names and capacity data, creates editable criteria, and leaves missing scores blank. Equal starting weights are provisional; no evidence is invented.' : 'در مسیر خودکار، نام پروژه‌ها و ظرفیت‌های موجود را وارد و معیارهای قابل‌ویرایش را می‌سازد؛ وزن‌های اولیه برابر و موقت‌اند و امتیاز فاقد داده خالی می‌ماند.'}</small>
     </div>}
   </section>
 }
@@ -377,7 +377,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
           options: names.map(name => ({ id: id('option'), name, scores: {} })),
         }
         draft.options = draft.options.map((option, rowIndex) => ({ ...option, scores: Object.fromEntries(draft.criteria.map((item, columnIndex) => [item.id, matrix[rowIndex]?.[columnIndex] ?? null])) }))
-        void localStore.set('mod10-ranking-draft:v1', draft)
+        await localStore.set('mod10-ranking-draft:v1', draft)
         setSuggestedCriteria([])
         setSuggestedAlternatives([])
         setSuggestedScores([])
