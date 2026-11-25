@@ -271,7 +271,7 @@ function RankingPanel({ language, projectId, projectName }: { language: 'fa' | '
   </section>
 }
 
-type RankingAdvisorMethod = 'WSM' | 'AHP' | 'BWM' | 'TOPSIS' | 'AHP+TOPSIS'
+type RankingAdvisorMethod = 'WSM' | 'AHP' | 'BWM' | 'TOPSIS' | 'AHP+TOPSIS' | 'BWM+TOPSIS' | 'TOPSIS+(AHP+BWM)'
 type RankingAdvisorStep = 'purpose' | 'alternatives' | 'evidence' | 'weights' | 'decisionMakers' | 'time' | 'dependencies' | 'uncertainty' | 'result'
 type RankingAdvisorAnswers = {
   purpose: 'investment' | 'supplier' | 'project' | 'strategy' | 'general'
@@ -603,7 +603,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
             <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
           </div>}
     </section>
-    {category === 'INITIAL' ? <RankingPanel key={(selectedProject?.id ?? 'unsaved') + '-' + initialPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} projectName={selectedProject?.name ?? ''}/> : <RankingMethodsPanel key={(selectedProject?.id ?? 'unsaved') + '-' + advancedPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} initialMethod={recommendedMethod === 'WSM' ? 'AHP' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
+    {category === 'INITIAL' ? <RankingPanel key={(selectedProject?.id ?? 'unsaved') + '-' + initialPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} projectName={selectedProject?.name ?? ''}/> : <RankingMethodsPanel key={(selectedProject?.id ?? 'unsaved') + '-' + advancedPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} initialMethod={recommendedMethod === 'WSM' || recommendedMethod === 'AHP' ? 'AHP+TOPSIS' : recommendedMethod === 'BWM' ? 'BWM+TOPSIS' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
     </>}
   </div>
 }
@@ -872,7 +872,7 @@ export default function App() {
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
     {page === 'project-wizard' && activeProject && <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => navigateBack('projects')}/>}
     {page === 'module' && <section className="module-workspace-page" data-module-export-root="true">
-      <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => navigateBack('dashboard')}>{isEn ? 'Back to home' : 'بازگشت به پیشخوان'}</button><span className="module-id">{activeModule.id}</span></div>
+      <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => navigateBack('projects')}>{isEn ? 'Back to previous layer' : 'بازگشت به لایه قبل'}</button><span className="module-id">{activeModule.id}</span></div>
       <ModuleExportActions moduleId={activeModule.id} moduleTitle={isEn ? activeModule.enTitle : activeModule.title} language={settings.language}/>
       {activeModule.id === 'MOD-01' && <ExecutiveDashboardPanel language={settings.language} onOpenModule={openModule}/>}
       {(activeModule.id === 'MOD-02' || activeModule.id === 'MOD-03') && <ModuleIntelligencePanel moduleId={activeModule.id} language={settings.language}/>}
