@@ -1,12 +1,12 @@
 import {useEffect,useState} from 'react';
 import {localStore} from '../../core/storage/localStore';
 import {ahp,aggregatePairwiseMatrices,aggregateBwmExpertWeights,analyzeRankingSensitivity,makeRankingSnapshot,topsis,type PairwiseMatrix,type CriterionDirection} from './rankingMethods';
-type Props={language:'fa'|'en';initialMethod?:Method;suggestedCriteria?:string[];suggestedAlternatives?:string[];suggestedScores?:Array<Array<number|null>>};
+type Props={language:'fa'|'en';initialMethod?:Method;suggestedCriteria?:string[];suggestedAlternatives?:string[];suggestedScores?:Array<Array<number|null>>;suggestedDirections?:CriterionDirection[]};
 type Method='AHP'|'BWM'|'TOPSIS'|'AHP+TOPSIS';
 type Expert={name:string,matrix:PairwiseMatrix,bestIndex:number,worstIndex:number,bestToOthers:number[],othersToWorst:number[]};
 const newMatrix=(n:number):PairwiseMatrix=>Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:1));
 const initialScores=()=>[[80,7,12],[65,9,8],[90,6,15]];
-export default function RankingMethodsPanel({language,initialMethod,suggestedCriteria,suggestedAlternatives,suggestedScores}:Props){
+export default function RankingMethodsPanel({language,initialMethod,suggestedCriteria,suggestedAlternatives,suggestedScores,suggestedDirections}:Props){
  const en=language==='en';
  const [method,setMethod]=useState<Method>(initialMethod??'AHP');
  const [criteria,setCriteria]=useState(()=>suggestedCriteria?.length?suggestedCriteria.slice(0,8):['هزینه سرمایه‌گذاری','ریسک اجرا','زمان اجرا']);
@@ -14,8 +14,8 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
  const [experts,setExperts]=useState<Expert[]>([{name:en?'Expert 1':'خبره ۱',matrix:newMatrix(initialCriterionCount),bestIndex:0,worstIndex:Math.max(0,initialCriterionCount-1),bestToOthers:Array(initialCriterionCount).fill(1),othersToWorst:Array(initialCriterionCount).fill(1)}]);
  const [alternatives,setAlternatives]=useState(()=>suggestedAlternatives?.length?suggestedAlternatives.slice(0,12):['گزینه الف','گزینه ب','گزینه ج']);
  const [scores,setScores]=useState<number[][]>(()=>suggestedScores?.length?suggestedScores.map(row=>row.map(value=>value===null?Number.NaN:value)):initialScores());
- const [directions,setDirections]=useState<CriterionDirection[]>(['cost','benefit','cost']);
- const [manualWeights,setManualWeights]=useState([0.5,0.3,0.2]);
+ const [directions,setDirections]=useState<CriterionDirection[]>(()=>suggestedDirections?.length?suggestedDirections.slice(0,8):['cost','benefit','cost']);
+ const [manualWeights,setManualWeights]=useState(()=>suggestedCriteria?.length?Array(suggestedCriteria.slice(0,8).length).fill(1):[0.5,0.3,0.2]);
  const [notice,setNotice]=useState(''); const scoresReady=scores.length===alternatives.length&&scores.every(row=>row.length===criteria.length&&row.every(value=>Number.isFinite(value)&&value>=0)); const numericScores=scores.map(row=>row.map(value=>Number.isFinite(value)?value:0)); const [history,setHistory]=useState<any[]>([]); const [sensitivityHistory,setSensitivityHistory]=useState<any[]>([]);
  const [active,setActive]=useState<any>(null); const [sensitivity,setSensitivity]=useState<any>(null); const [shock,setShock]=useState(20);
  useEffect(()=>{void localStore.get<any[]>('mod10-ranking-method-history:v1').then(v=>setHistory(Array.isArray(v)?v:[])).catch(()=>undefined);void localStore.get<any[]>('mod10-ranking-sensitivity-history:v1').then(v=>setSensitivityHistory(Array.isArray(v)?v:[])).catch(()=>undefined)},[]);
