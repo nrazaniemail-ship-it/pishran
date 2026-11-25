@@ -74,7 +74,7 @@ export function topsis(matrix:number[][], weights:number[], directions:Criterion
  const rows=matrix.length, cols=weights.length;
  assert(rows>=2,'TOPSIS requires at least two alternatives');
  assert(cols>=2&&matrix.every(row=>row.length===cols),'Performance matrix must have at least two criteria and be rectangular');
- assert(directions.length===cols,'A direction is required for every criterion');
+ assert(directions.length===cols&&directions.every(d=>d==='benefit'||d==='cost'),'A valid benefit/cost direction is required for every criterion');
  matrix.forEach(row=>row.forEach(v=>assert(Number.isFinite(v)&&v>=0,'TOPSIS performance values must be finite and non-negative')));
  assert(weights.length===cols&&weights.every(v=>Number.isFinite(v)&&v>=0),'TOPSIS weights must be finite, non-negative and match criteria');
  const normalizedWeights=normalize(weights);
