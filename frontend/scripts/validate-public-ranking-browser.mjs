@@ -293,7 +293,85 @@ try {
   await page.getByText('Calculation history (4)').waitFor()
   assert.deepEqual(pageErrors, [], 'public ranking interaction must not generate browser runtime errors')
   assert.ok(bundle.includes('Monte Carlo top probability') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')
-  console.log('PASS: live public PWA MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
+  // Public regression: module capability tabs, no obsolete bottom continue action,
+  // and module workspace create/edit persistence across a full reload.
+  await page.getByRole('button', { name: /^(پیشران|Pishran)$/ }).click()
+  await page.locator('.module-launcher-card').filter({ hasText: 'MOD-02' }).click()
+  const capabilities = page.locator('.module-capabilities-card')
+  await capabilities.waitFor({ state: 'visible' })
+  const assessmentTab = page.getByRole('tab', { name: 'ارزیابی تطبیقی' })
+  const marketTab = page.getByRole('tab', { name: 'جایگاه بازار' })
+  await assessmentTab.waitFor()
+  assert.equal(await assessmentTab.getAttribute('aria-selected'), 'true',
+    'comparative assessment tab must be selected by default')
+  await page.getByRole('tabpanel', { name: 'ارزیابی تطبیقی' }).waitFor()
+  await marketTab.click()
+  assert.equal(await marketTab.getAttribute('aria-selected'), 'true',
+    'market position tab must become selected when clicked')
+  await page.getByRole('tabpanel', { name: 'جایگاه بازار' }).waitFor()
+  await page.getByRole('heading', { name: 'رقبا و نمونه‌های مرجع بازار' }).waitFor()
+  await assessmentTab.click()
+  assert.equal(await assessmentTab.getAttribute('aria-selected'), 'true',
+    'comparative assessment tab must be selectable again')
+  await page.getByRole('tabpanel', { name: 'ارزیابی تطبیقی' }).waitFor()
+
+  const modulePage = page.locator('.module-workspace-page')
+  const obsoleteContinue = modulePage.getByRole('button', { name: /^(ادامه بده|ادامه|Continue|Continue now)$/i })
+  assert.equal(await obsoleteContinue.count(), 0,
+    'module workspace must not show the removed bottom continue button')
+  await page.getByLabel('نام پروژه جدید ماژول').fill('پروژه آزمون ذخیره ماژول')
+  await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
+  await modulePage.getByText('پروژه آزمون ذخیره ماژول', { exact: true }).waitFor()
+  await page.waitForFunction(async expectedName => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('pishran_store')
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    try {
+      const record = await new Promise((resolve, reject) => {
+        const request = db.transaction('kv', 'readonly').objectStore('kv').get('module-workspaces:v1')
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      return Array.isArray(record?.value) && record.value.some(item => item.moduleId === 'MOD-02' && item.name === expectedName)
+    } finally {
+      db.close()
+    }
+  }, 'پروژه آزمون ذخیره ماژول', { timeout: 10000 })
+
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.locator('.module-launcher-card').filter({ hasText: 'MOD-02' }).click()
+  await page.locator('.module-workspace-page').getByText('پروژه آزمون ذخیره ماژول', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'ویرایش پروژه آزمون ذخیره ماژول' }).click()
+  await page.getByRole('textbox', { name: 'نام پروژه' }).fill('پروژه آزمون ویرایش و بازیابی')
+  await page.getByRole('button', { name: 'ذخیره ویرایش' }).click()
+  await page.locator('.module-workspace-page').getByText('پروژه آزمون ویرایش و بازیابی', { exact: true }).waitFor()
+  await page.waitForFunction(async expectedName => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('pishran_store')
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    try {
+      const record = await new Promise((resolve, reject) => {
+        const request = db.transaction('kv', 'readonly').objectStore('kv').get('module-workspaces:v1')
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      return Array.isArray(record?.value) && record.value.some(item => item.moduleId === 'MOD-02' && item.name === expectedName)
+    } finally {
+      db.close()
+    }
+  }, 'پروژه آزمون ویرایش و بازیابی', { timeout: 10000 })
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.locator('.module-launcher-card').filter({ hasText: 'MOD-02' }).click()
+  await page.locator('.module-workspace-page').getByText('پروژه آزمون ویرایش و بازیابی', { exact: true }).waitFor()
+  assert.equal(await page.locator('.module-workspace-page').getByText('پروژه آزمون ذخیره ماژول', { exact: true }).count(), 0,
+    'edited module workspace name must replace the old name after recovery')
+  assert.equal(await page.locator('.module-workspace-page').getByRole('button', { name: /^(ادامه بده|ادامه|Continue|Continue now)$/i }).count(), 0,
+    'obsolete bottom continue action must remain absent after recovery')
+  console.log('PASS: live public PWA module tabs and workspace persistence, no bottom continue action, MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
 } finally {
   await browser.close()
 }
