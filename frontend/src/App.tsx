@@ -469,51 +469,33 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
   const [suggestedAlternatives, setSuggestedAlternatives] = useState<string[]>([])
   const [suggestedScores, setSuggestedScores] = useState<Array<Array<number | null>>>([])
   const [suggestedDirections, setSuggestedDirections] = useState<Array<'benefit' | 'cost'>>([])
-  const applyAdvisor = async (method: RankingAdvisorMethod, mode: 'manual' | 'automatic', criteria: string[], alternatives: string[], directions: Array<'benefit' | 'cost'>) => {
+  const applyAdvisor = async (method: RankingAdvisorMethod, criteria: string[], alternatives: string[], directions: Array<'benefit' | 'cost'>) => {
+    const cleanCriteria = criteria.map(value => value.trim()).filter(Boolean).slice(0, 8)
+    const cleanAlternatives = alternatives.map(value => value.trim()).filter(Boolean).slice(0, 12)
+    if (!cleanCriteria.length || cleanAlternatives.length < 2) return
     setRecommendedMethod(method)
-    if (mode === 'automatic') {
-      const projects = await listProjects().catch(() => [])
-      const projectNames = projects.map(project => project.name).filter(Boolean)
-      const availableNames = alternatives.length ? alternatives : projectNames.length ? projectNames : ['گزینه پیشنهادی ۱', 'گزینه پیشنهادی ۲', 'گزینه پیشنهادی ۳']
-      const names = (availableNames.length === 1 ? [...availableNames, 'گزینه مقایسه‌ای جدید'] : availableNames).slice(0, 12)
-      const scoreFor = (alternativeName: string, criterionName: string): number | null => {
-        const project = projects.find(item => item.name === alternativeName)
-        if (!project) return null
-        if (/ظرفیت/.test(criterionName)) {
-          const capacity = Number(String(project.capacity ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/)?.[0])
-          return Number.isFinite(capacity) ? capacity : null
-        }
-        return null
+    const selectedDirections = cleanCriteria.map((name, index) => directions[index] ?? (/هزینه|سرمایه|ریسک|زمان|مصرف|قیمت|نیاز منابع/.test(name) ? 'cost' : 'benefit'))
+    const blankMatrix = cleanAlternatives.map(() => cleanCriteria.map(() => null))
+    if (method === 'WSM') {
+      const id = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+      const draft: RankingDraft = {
+        criteria: cleanCriteria.map((name, index) => ({ id: id('criterion'), name, weight: 1, direction: selectedDirections[index], minimum: null })),
+        options: cleanAlternatives.map(name => ({ id: id('option'), name, scores: {} })),
       }
-      const selectedDirections = directions.slice(0, 8)
-      const matrix = names.map(name => criteria.slice(0, 8).map(criterion => scoreFor(name, criterion)))
-      if (method === 'WSM') {
-        const id = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,7)
-        const draft: RankingDraft = {
-          criteria: criteria.slice(0, 8).map(name => ({ id: id('criterion'), name, weight: 1, direction: selectedDirections[criteria.indexOf(name)] ?? (/هزینه|سرمایه|ریسک|زمان|مصرف|قیمت/.test(name) ? 'cost' : 'benefit'), minimum: null })),
-          options: names.map(name => ({ id: id('option'), name, scores: {} })),
-        }
-        draft.options = draft.options.map((option, rowIndex) => ({ ...option, scores: Object.fromEntries(draft.criteria.map((item, columnIndex) => [item.id, matrix[rowIndex]?.[columnIndex] ?? null])) }))
-        await localStore.set('mod10-ranking-draft:v1', draft)
-        setSuggestedCriteria([])
-        setSuggestedDirections([])
-        setSuggestedAlternatives([])
-        setSuggestedScores([])
-        setCategory('INITIAL')
-      } else {
-        setSuggestedCriteria(criteria.slice(0, 8))
-        setSuggestedDirections(selectedDirections)
-        setSuggestedAlternatives(names)
-        setSuggestedScores(matrix)
-        setCategory('ADVANCED')
-      }
-    } else {
+      await localStore.set('mod10-ranking-draft:v1', draft)
       setSuggestedCriteria([])
       setSuggestedDirections([])
       setSuggestedAlternatives([])
       setSuggestedScores([])
-      setCategory(method === 'WSM' ? 'INITIAL' : 'ADVANCED')
+      setCategory('INITIAL')
+    } else {
+      setSuggestedCriteria(cleanCriteria)
+      setSuggestedDirections(selectedDirections)
+      setSuggestedAlternatives(cleanAlternatives)
+      setSuggestedScores(blankMatrix)
+      setCategory('ADVANCED')
     }
+    setTimeout(() => document.getElementById('ranking-methods-heading')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
   return <div className="ranking-methods-workspace">
     <RankingAdvisor language={language} onChoose={applyAdvisor}/>
@@ -526,10 +508,10 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
       </div>
       <h3 style={{ margin: '8px 0 12px' }}>{isEn ? 'Methods' : 'روش‌های انجام'}</h3>
       <div role="group" aria-label={isEn ? 'Method categories' : 'دسته‌بندی روش‌ها'} className="ranking-category-tabs">
-        <button type="button" data-testid="ranking-category-initial" data-category="initial" className={`ranking-category-tab ranking-category-tab--initial ${category === 'INITIAL' ? 'is-active' : ''}`} aria-pressed={category === 'INITIAL'} onClick={() => setCategory('INITIAL')}>
+        <button type="button" data-testid="ranking-category-initial" data-category="initial" className={\`ranking-category-tab ranking-category-tab--initial \${category === 'INITIAL' ? 'is-active' : ''}\`} aria-pressed={category === 'INITIAL'} onClick={() => setCategory('INITIAL')}>
           <span className="ranking-category-tab__index">01</span><span>{isEn ? 'Initial methods' : 'روش‌های اولیه'}</span><span className="ranking-category-tab__hint">{isEn ? 'Core' : 'پایه'}</span>
         </button>
-        <button type="button" data-testid="ranking-category-advanced" data-category="advanced" className={`ranking-category-tab ranking-category-tab--advanced ${category === 'ADVANCED' ? 'is-active' : ''}`} aria-pressed={category === 'ADVANCED'} onClick={() => setCategory('ADVANCED')}>
+        <button type="button" data-testid="ranking-category-advanced" data-category="advanced" className={\`ranking-category-tab ranking-category-tab--advanced \${category === 'ADVANCED' ? 'is-active' : ''}\`} aria-pressed={category === 'ADVANCED'} onClick={() => setCategory('ADVANCED')}>
           <span className="ranking-category-tab__index">02</span><span>{isEn ? 'Advanced methods' : 'روش‌های پیشرفته'}</span><span className="ranking-category-tab__hint">{isEn ? 'Pro' : 'تخصصی'}</span>
         </button>
       </div>
