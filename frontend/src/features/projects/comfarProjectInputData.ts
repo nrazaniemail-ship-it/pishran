@@ -14,6 +14,7 @@ export type ComfarSourceInputData = {
   fixedInvestment: ComfarSourceCapexItem[]
   preproduction: { period: string; net: number; capitalizedInterest: number }[]
   operatingCostYear: number
+  capacityUtilization?: number[]
   operatingCostRows: { name: string; amount: number }[]
   workingCapital: ComfarSourceWorkingCapitalPeriod[]
   missingSourceDetails: string[]
@@ -111,6 +112,7 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1402', net: 211680, capitalizedInterest: 350000 },
     ],
     operatingCostYear: 1405,
+    capacityUtilization: [81.11, 90.14, 100.14, 100],
     operatingCostRows: [
       { name: 'مواد خام', amount: 63058700 },
       { name: 'ملزومات کارخانه', amount: 0 },
