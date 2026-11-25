@@ -2676,3 +2676,83 @@ input,select,textarea{color:var(--text)}
     border-radius:12px!important;
   }
 }
+
+
+/* COMFAR source-report reference panel inside imported feasibility projects. */
+.comfar-reference-panel{
+  margin:0 0 18px;
+  padding:18px;
+  border:1px solid #dfd3bf;
+  border-radius:16px;
+  background:linear-gradient(145deg,#fffdf8 0%,#f7f0e4 100%);
+  color:#334155;
+  box-shadow:0 5px 18px rgba(91,72,43,.07);
+}
+.comfar-reference-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  padding-bottom:14px;
+  border-bottom:1px solid #e8dece;
+}
+.comfar-reference-kicker{font-size:.78rem;color:#8a6a3d;font-weight:700}
+.comfar-reference-head h2{margin:5px 0 6px;font-size:1.08rem;color:#344256}
+.comfar-reference-head p{margin:0;color:#64748b;font-size:.86rem;line-height:1.7}
+.comfar-reference-source{max-width:290px;color:#7b6b55;font-size:.72rem;overflow-wrap:anywhere;text-align:end}
+.comfar-reference-meta{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+  padding:14px 0;
+}
+.comfar-reference-meta span{
+  padding:9px 11px;
+  border:1px solid #e8dece;
+  border-radius:10px;
+  background:rgba(255,255,255,.68);
+  color:#64748b;
+  font-size:.78rem;
+  line-height:1.7;
+}
+.comfar-reference-meta b{color:#334155;font-weight:700}
+.comfar-reference-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.comfar-reference-group{
+  min-width:0;
+  padding:12px;
+  border:1px solid #e6dccb;
+  border-radius:12px;
+  background:rgba(255,255,255,.74);
+}
+.comfar-reference-group h3{margin:0 0 9px;color:#42536a;font-size:.9rem}
+.comfar-reference-group dl{display:grid;gap:7px;margin:0}
+.comfar-reference-group dl>div{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding-bottom:6px;
+  border-bottom:1px dashed #e8e0d4;
+}
+.comfar-reference-group dl>div:last-child{padding-bottom:0;border-bottom:0}
+.comfar-reference-group dt{color:#64748b;font-size:.78rem;line-height:1.6}
+.comfar-reference-group dd{margin:0;color:#26374c;font-size:.8rem;font-weight:700;text-align:end;overflow-wrap:anywhere}
+.comfar-reference-note{
+  margin:12px 0 0;
+  padding:10px 12px;
+  border-radius:10px;
+  background:#f1eadf;
+  color:#75644d;
+  font-size:.78rem;
+  line-height:1.8;
+}
+@media(max-width:760px){
+  .comfar-reference-panel{padding:13px}
+  .comfar-reference-head{display:block}
+  .comfar-reference-source{display:block;max-width:none;margin-top:8px;text-align:start}
+  .comfar-reference-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .comfar-reference-groups{grid-template-columns:1fr}
+}
+@media(max-width:420px){
+  .comfar-reference-meta{grid-template-columns:1fr}
+}
