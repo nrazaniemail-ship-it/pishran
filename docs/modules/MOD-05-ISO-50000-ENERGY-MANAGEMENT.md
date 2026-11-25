@@ -158,3 +158,21 @@ These are explicit engineering approximations, not a complete GUM evaluation. We
 MOD-05 now provides a user-initiated encrypted JSON backup covering energy records, baselines, actions, water balances, utility bills, cost allocations, meter calibration records, M&V evidence packs, tariff contracts, calculations and reconciliation reports. The backup payload is encrypted in the browser with AES-256-GCM, a random 96-bit IV and a random salt using the same PBKDF2-HMAC-SHA-256 derivation profile (310,000 iterations). The authenticated manifest contains the schema version, creation time, key count and SHA-256 checksum of the plaintext payload. Restore authenticates/decrypts the ciphertext, verifies the checksum and allowed storage-key set before writing any records. The restore path snapshots existing values and attempts rollback if a storage write fails.
 
 Backups are not uploaded to a server. Users should store the exported encrypted file in an access-controlled location separate from the device and keep the passphrase in a separately protected password manager or recovery process. A lost passphrase makes the backup unrecoverable. The application cannot guarantee atomic rollback if the browser storage engine itself fails during both restore and rollback; users should retain the pre-restore backup and test restoration on a separate browser profile/device before relying on it. This is a local encrypted export/import workflow, not centrally managed retention, remote disaster recovery, immutable audit logging or managed key escrow.
+
+
+## EnB and SEC calculation workspace
+
+The web interface provides a dedicated EnB/SEC workspace based on the two supplied reference workbooks. It records period, site, significant energy use (SEU), production (tonnes), electricity (kWh), natural gas (Nm³), water (m³), oxygen (Nm³), and the heat-treatment share removed from the reported intensity. Records are locally persisted and a repeated period/site/SEU entry replaces that same period key rather than creating a duplicate.
+
+For each carrier, SEC is period consumption divided by period production. Electricity is reported in kWh/t; gas and oxygen in Nm³/t; water in m³/t. Thermal gas SEC is additionally converted using 1 Nm³ = 0.03768 GJ. Electricity conversion is 1 kWh = 0.0036 GJ. The reference workbook's adjusted column multiplies consumption by 0.85 (15% heat-treatment exclusion); the new form exposes the excluded share per period and keeps raw and adjusted SEC distinct.
+
+A selected reference period defines the EnB intensity for the matching site and SEU. Period-specific EnB consumption is that reference SEC multiplied by the period's production. The interface charts electricity SEC against the configured electricity limit, gas thermal SEC against the configured thermal limit, actual electricity against production-normalized EnB, and water/oxygen SEC trends. The table retains the raw and adjusted values.
+
+The benchmark expressions transcribed from the reference workbook are:
+- Electrical SEC limit: (95 × G × H) + I, in kWh/t.
+- Thermal SEC limit: 1.1 × A × B × C × D × E × F, in GJ/t.
+- The workbook also shows reference values of 146.4 kWh/t and 52 Nm³/t (approximately 1.95936 GJ/t) as example limits. These are not automatically imposed as universal limits.
+- Factor descriptions A–I and example coefficients are visible and editable in the UI. Where the workbook refers to an additional relation for factor A below 50% hot charge or factor C for a pit furnace but does not provide that relation, the form does not invent it; the site owner must supply a documented value.
+- The source workbook does not define water or oxygen SEC limits. Their intensities are charted without invented compliance thresholds.
+
+The workspace is local-first and independent of the earlier generic monitoring records. It does not import the sample workbook's historic observations automatically; users enter or import their own period values into the dedicated form. This avoids silently treating historical sample data as the user's plant data.
