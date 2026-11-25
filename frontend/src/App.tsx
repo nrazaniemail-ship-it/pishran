@@ -194,6 +194,72 @@ const moduleCapabilityProfiles: Record<string, { assessment: string[]; benchmark
 }
 
 
+type RankingCriterion = { id: string; name: string; weight: number; direction: 'benefit' | 'cost'; minimum?: number | null }
+type RankingOption = { id: string; name: string; scores: Record<string, number | null> }
+type RankingDraft = { criteria: RankingCriterion[]; options: RankingOption[] }
+
+function RankingPanel({ language }: { language: 'fa' | 'en' }) {
+  const isEn = language === 'en'
+  const [draft, setDraft] = useState<RankingDraft>({ criteria: [], options: [] })
+  const [loaded, setLoaded] = useState(false)
+  const [criterionName, setCriterionName] = useState('')
+  const [optionName, setOptionName] = useState('')
+  const [notice, setNotice] = useState('')
+  useEffect(() => {
+    let alive = true
+    localStore.get<RankingDraft>('mod10-ranking-draft:v1').then(value => {
+      if (alive && value && Array.isArray(value.criteria) && Array.isArray(value.options)) setDraft(value)
+    }).catch(() => undefined).finally(() => { if (alive) setLoaded(true) })
+    return () => { alive = false }
+  }, [])
+  useEffect(() => {
+    if (!loaded) return
+    void localStore.set('mod10-ranking-draft:v1', draft).then(() => setNotice(isEn ? 'Saved on this device' : 'روی این دستگاه ذخیره شد')).catch(() => setNotice(isEn ? 'Local save failed' : 'ذخیره محلی ناموفق بود'))
+  }, [draft, loaded, isEn])
+  const addCriterion = () => {
+    const name = criterionName.trim()
+    if (!name) return
+    const id = `criterion-${Date.now()}`
+    setDraft(current => ({ ...current, criteria: [...current.criteria, { id, name, weight: 1, direction: 'benefit', minimum: null }], options: current.options.map(option => ({ ...option, scores: { ...option.scores, [id]: null } })) }))
+    setCriterionName('')
+  }
+  const addOption = () => {
+    const name = optionName.trim()
+    if (!name) return
+    const id = `option-${Date.now()}`
+    setDraft(current => ({ ...current, options: [...current.options, { id, name, scores: Object.fromEntries(current.criteria.map(item => [item.id, null])) }] }))
+    setOptionName('')
+  }
+  const updateCriterion = (id: string, patch: Partial<RankingCriterion>) => setDraft(current => ({ ...current, criteria: current.criteria.map(item => item.id === id ? { ...item, ...patch } : item) }))
+  const updateScore = (optionId: string, criterionId: string, value: string) => setDraft(current => ({ ...current, options: current.options.map(option => option.id === optionId ? { ...option, scores: { ...option.scores, [criterionId]: value === '' ? null : Number(value) } } : option) }))
+  const complete = draft.criteria.length > 0 && draft.options.length > 0 && draft.criteria.every(item => item.weight > 0) && draft.criteria.reduce((sum, item) => sum + item.weight, 0) > 0 && draft.options.every(option => draft.criteria.every(item => Number.isFinite(option.scores[item.id]) && option.scores[item.id] !== null && Number(option.scores[item.id]) >= 0))
+  const totalWeight = draft.criteria.reduce((sum, item) => sum + item.weight, 0)
+  const results = complete ? draft.options.map(option => {
+    let score = 0
+    let eligible = true
+    for (const criterion of draft.criteria) {
+      const values = draft.options.map(item => Number(item.scores[criterion.id]))
+      const value = Number(option.scores[criterion.id])
+      const min = Math.min(...values)
+      const max = Math.max(...values)
+      const normalized = criterion.direction === 'benefit' ? (max === 0 ? 0 : value / max) : (value === 0 ? (min === 0 ? 1 : 0) : min / value)
+      score += normalized * criterion.weight / totalWeight
+      if (criterion.minimum !== null && criterion.minimum !== undefined && value < criterion.minimum) eligible = false
+    }
+    return { id: option.id, name: option.name, score: score * 100, eligible }
+  }).sort((a, b) => Number(b.eligible) - Number(a.eligible) || b.score - a.score) : []
+  const fieldStyle: React.CSSProperties = { minWidth: 0, width: '100%', boxSizing: 'border-box' }
+  return <section className="module-workspace-card" aria-labelledby="mod10-ranking-title">
+    <div className="section-head"><div><h2 id="mod10-ranking-title">{isEn ? 'Decision ranking workspace · MVP' : 'محیط رتبه‌بندی تصمیم · نسخه اولیه'}</h2><p>{isEn ? 'Define criteria and alternatives, enter evidence-based scores and calculate a transparent weighted-sum ranking.' : 'معیارها و گزینه‌ها را تعریف کنید، امتیازهای مبتنی بر شواهد را وارد کنید و رتبه‌بندی وزنی شفاف بگیرید.'}</p></div><span className="muted">{notice || (loaded ? (isEn ? 'Ready' : 'آماده') : (isEn ? 'Loading' : 'در حال بارگذاری'))}</span></div>
+    <div className="module-create-form"><label>{isEn ? 'Add a criterion' : 'افزودن معیار'}</label><div><input style={fieldStyle} value={criterionName} onChange={event => setCriterionName(event.target.value)} placeholder={isEn ? 'e.g. NPV, implementation risk, delivery time' : 'مثلاً NPV، ریسک اجرا، زمان تحویل'} maxLength={100}/><button className="primary" type="button" onClick={addCriterion} disabled={!criterionName.trim()}><Plus size={16}/>{isEn ? 'Add criterion' : 'افزودن معیار'}</button></div></div>
+    {draft.criteria.length > 0 && <div style={{overflowX:'auto', marginTop:12}}><table style={{width:'100%',borderCollapse:'collapse',minWidth:620}}><thead><tr><th style={{textAlign:'start',padding:8}}>{isEn?'Criterion':'معیار'}</th><th style={{padding:8}}>{isEn?'Weight':'وزن'}</th><th style={{padding:8}}>{isEn?'Direction':'جهت'}</th><th style={{padding:8}}>{isEn?'Minimum threshold':'حداقل احراز'}</th></tr></thead><tbody>{draft.criteria.map(item=><tr key={item.id}><td style={{padding:8}}>{item.name}</td><td style={{padding:8}}><input aria-label={isEn?`Weight ${item.name}`:`وزن ${item.name}`} style={{width:84}} type="number" min="0.001" step="0.1" value={item.weight} onChange={event=>updateCriterion(item.id,{weight:Math.max(0,Number(event.target.value)||0)})}/></td><td style={{padding:8}}><select aria-label={isEn?`Direction ${item.name}`:`جهت ${item.name}`} value={item.direction} onChange={event=>updateCriterion(item.id,{direction:event.target.value as RankingCriterion['direction']})}><option value="benefit">{isEn?'Higher is better':'بیشتر بهتر است'}</option><option value="cost">{isEn?'Lower is better':'کمتر بهتر است'}</option></select></td><td style={{padding:8}}><input aria-label={isEn?`Minimum threshold ${item.name}`:`حداقل احراز ${item.name}`} style={{width:100}} type="number" min="0" placeholder={isEn?'None':'بدون شرط'} value={item.minimum ?? ''} onChange={event=>updateCriterion(item.id,{minimum:event.target.value===''?null:Number(event.target.value)})}/></td></tr>)}</tbody></table></div>}
+    <div className="module-create-form" style={{marginTop:18}}><label>{isEn ? 'Add an alternative' : 'افزودن گزینه قابل مقایسه'}</label><div><input style={fieldStyle} value={optionName} onChange={event => setOptionName(event.target.value)} placeholder={isEn ? 'Enter an option or project name' : 'نام گزینه یا پروژه را وارد کنید'} maxLength={100}/><button className="primary" type="button" onClick={addOption} disabled={!optionName.trim() || draft.criteria.length===0}><Plus size={16}/>{isEn ? 'Add option' : 'افزودن گزینه'}</button></div></div>
+    {draft.options.length > 0 && draft.criteria.length > 0 && <div style={{overflowX:'auto',marginTop:12}}><table style={{width:'100%',borderCollapse:'collapse',minWidth:Math.max(560,180+draft.criteria.length*130)}}><thead><tr><th style={{textAlign:'start',padding:8}}>{isEn?'Alternative':'گزینه'}</th>{draft.criteria.map(item=><th key={item.id} style={{padding:8}}>{item.name}</th>)}</tr></thead><tbody>{draft.options.map(option=><tr key={option.id}><td style={{padding:8,fontWeight:600}}>{option.name}</td>{draft.criteria.map(item=><td key={item.id} style={{padding:8}}><input aria-label={isEn?`${option.name}, ${item.name} score`:`امتیاز ${item.name} برای ${option.name}`} style={{width:100}} type="number" min="0" step="any" value={option.scores[item.id] ?? ''} onChange={event=>updateScore(option.id,item.id,event.target.value)} placeholder={isEn?'Score':'امتیاز'}/></td>)}</tr>)}</tbody></table></div>}
+    {results.length > 0 ? <div style={{marginTop:20}}><h3>{isEn?'Weighted-sum ranking':'رتبه‌بندی با روش مجموع وزنی (WSM)'}</h3><ol>{results.map((item,index)=><li key={item.id} style={{padding:'7px 0'}}><b>{item.name}</b> — {item.eligible ? `${item.score.toFixed(2)}%` : (isEn?'Ineligible':'فاقد شرط احراز')} {item.eligible ? (index===0 || !results.slice(0,index).some(previous=>previous.eligible) ? (isEn?' · Highest eligible score':' · بالاترین امتیاز واجد شرایط') : '') : ''}</li>)}</ol><p className="muted">{isEn?'Weights are normalized to sum to 100%. This MVP uses min/max ratio normalization and is a decision aid, not an investment recommendation.':'وزن‌ها برای محاسبه به مجموع ۱۰۰٪ نرمال می‌شوند. این نسخه اولیه از نرمال‌سازی نسبتی حداقل/حداکثر استفاده می‌کند و ابزار پشتیبان تصمیم است، نه توصیه قطعی سرمایه‌گذاری.'}</p></div> : <p className="muted" style={{marginTop:14}}>{isEn?'Enter at least one criterion, one alternative and a non-negative score for every criterion to calculate the ranking.':'برای محاسبه رتبه، دست‌کم یک معیار، یک گزینه و امتیاز غیرمنفی برای تمام خانه‌ها وارد کنید.'}</p>}
+    <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}><button className="secondary" type="button" onClick={()=>{setDraft({criteria:[],options:[]});setNotice(isEn?'Draft cleared':'پیش‌نویس پاک شد')}}>{isEn?'Clear draft':'پاک‌کردن پیش‌نویس'}</button></div>
+  </section>
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
@@ -439,6 +505,7 @@ export default function App() {
       {activeModule.id === 'MOD-04' && <ModuleKpiPanel language={settings.language}/>}
       {activeModule.id === 'MOD-05' && <ModuleEnergyPanel language={settings.language}/>}
       {activeModule.id === 'MOD-06' && <MaintenancePanel language={settings.language}/>}
+      {activeModule.id === 'MOD-10' && <RankingPanel language={settings.language}/>}
       <section className="module-workspace-card"><div className="section-head"><div><h2>{isEn ? 'Module workspaces' : 'پروژه‌های این ماژول'}</h2><p>{isEn ? 'Create and manage workspaces dedicated to this module.' : 'برای ثبت پروژه‌ها، تحلیل‌ها و اطلاعات اختصاصی این ماژول پروژه ایجاد کنید.'}</p></div><span className="muted">{activeModuleWorkspaces.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
         <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createModuleWorkspace() }}><label htmlFor="module-workspace-name">{isEn ? 'New module workspace name' : 'نام پروژه جدید ماژول'}</label><div><input id="module-workspace-name" value={moduleWorkspaceName} onChange={event => setModuleWorkspaceName(event.target.value)} placeholder={isEn ? 'Enter a name' : 'نام پروژه را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!moduleWorkspaceName.trim()}><Plus size={17}/>{isEn ? 'Create' : 'ایجاد پروژه'}</button></div></form>
         {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></div><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پروژه‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پروژه، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
