@@ -34,7 +34,7 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
     if(Array.isArray(draft.directions))setDirections(draft.directions);
     if(Array.isArray(draft.manualWeights))setManualWeights(draft.manualWeights);
     if(Array.isArray(draft.experts))setExperts(draft.experts);
-    if(draft.method)setMethod(draft.method==='AHP'?'AHP+TOPSIS':draft.method==='BWM+TOPSIS'?'BWM+TOPSIS':draft.method==='TOPSIS+(AHP+BWM)'?'TOPSIS+(AHP+BWM)':draft.method);
+    if(draft.method)setMethod(draft.method==='AHP'?'AHP+TOPSIS':draft.method==='BWM'?'BWM+TOPSIS':draft.method==='AHP+BWM'?'TOPSIS+(AHP+BWM)':draft.method);
     if(Number.isFinite(draft.ahpShare))setAhpShare(Math.max(0,Math.min(100,draft.ahpShare)));
    }
    setHistory(Array.isArray(historyItems)?historyItems:[]);
