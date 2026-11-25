@@ -374,7 +374,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
         const id = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,7)
         const draft: RankingDraft = {
           criteria: criteria.slice(0, 8).map(name => ({ id: id('criterion'), name, weight: 1, direction: /هزینه|سرمایه|ریسک|زمان|مصرف|قیمت/.test(name) ? 'cost' : 'benefit', minimum: null })),
-          options: names.map((name, rowIndex) => ({ id: id('option'), name, scores: Object.fromEntries(criteria.slice(0, 8).map((criterion, columnIndex) => [id('score'), null])) })),
+          options: names.map(name => ({ id: id('option'), name, scores: {} })),
         }
         draft.options = draft.options.map((option, rowIndex) => ({ ...option, scores: Object.fromEntries(draft.criteria.map((item, columnIndex) => [item.id, matrix[rowIndex]?.[columnIndex] ?? null])) }))
         void localStore.set('mod10-ranking-draft:v1', draft)
