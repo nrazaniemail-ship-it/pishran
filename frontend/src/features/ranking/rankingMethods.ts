@@ -1,7 +1,7 @@
 export type PairwiseMatrix = number[][];
 export type RankingSnapshot = {
   schema: 'pishran-ranking-snapshot/v1';
-  method: 'AHP' | 'BWM';
+  method: 'AHP' | 'BWM' | 'TOPSIS' | 'AHP+TOPSIS';
   createdAt: string;
   criteria: string[];
   expertCount: number;
@@ -68,6 +68,31 @@ export function bwm(bestIndex:number,worstIndex:number,bestToOthers:number[],oth
  const xi=Math.max(...bestToOthers.map((a,j)=>Math.abs(w[bestIndex]-a*w[j])),...othersToWorst.map((a,j)=>Math.abs(w[j]-a*w[worstIndex])));
  return {weights:normalize(w),xi,bestIndex,worstIndex};
 }
+
+export type CriterionDirection = 'benefit' | 'cost';
+export function topsis(matrix:number[][], weights:number[], directions:CriterionDirection[]) {
+ const rows=matrix.length, cols=weights.length;
+ assert(rows>=2,'TOPSIS requires at least two alternatives');
+ assert(cols>=2&&matrix.every(row=>row.length===cols),'Performance matrix must have at least two criteria and be rectangular');
+ assert(directions.length===cols,'A direction is required for every criterion');
+ matrix.forEach(row=>row.forEach(v=>assert(Number.isFinite(v)&&v>=0,'TOPSIS performance values must be finite and non-negative')));
+ assert(weights.length===cols&&weights.every(v=>Number.isFinite(v)&&v>=0),'TOPSIS weights must be finite, non-negative and match criteria');
+ const normalizedWeights=normalize(weights);
+ const norms=Array.from({length:cols},(_,j)=>Math.sqrt(matrix.reduce((sum,row)=>sum+row[j]**2,0)));
+ assert(norms.every(v=>v>0&&Number.isFinite(v)),'Each TOPSIS criterion must contain at least one non-zero value');
+ const weighted=matrix.map(row=>row.map((v,j)=>v/norms[j]*normalizedWeights[j]));
+ const idealBest=Array.from({length:cols},(_,j)=>directions[j]==='benefit'?Math.max(...weighted.map(r=>r[j])):Math.min(...weighted.map(r=>r[j])));
+ const idealWorst=Array.from({length:cols},(_,j)=>directions[j]==='benefit'?Math.min(...weighted.map(r=>r[j])):Math.max(...weighted.map(r=>r[j])));
+ const results=weighted.map((row,index)=>{
+  const positiveDistance=Math.sqrt(row.reduce((sum,v,j)=>sum+(v-idealBest[j])**2,0));
+  const negativeDistance=Math.sqrt(row.reduce((sum,v,j)=>sum+(v-idealWorst[j])**2,0));
+  const score=positiveDistance+negativeDistance===0?0.5:negativeDistance/(positiveDistance+negativeDistance);
+  return {alternativeIndex:index,score,positiveDistance,negativeDistance};
+ });
+ const ranked=[...results].sort((a,b)=>b.score-a.score).map((r,index)=>({...r,rank:index+1}));
+ return {weights:normalizedWeights,normalizedMatrix:weighted,idealBest,idealWorst,results:ranked};
+}
+
 export function makeRankingSnapshot(input:Omit<RankingSnapshot,'schema'|'createdAt'>,createdAt=new Date().toISOString()):RankingSnapshot {
  assert(input.criteria.length===input.weights.length,'Snapshot criteria and weights do not match');
  assert(input.weights.every(v=>Number.isFinite(v)&&v>=0),'Snapshot weights must be finite and non-negative');
