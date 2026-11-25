@@ -82,7 +82,7 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1404', net: 0, capitalizedInterest: 3738117.99 },
     ],
     operatingCostYear: 1407,
-    variableCostSharePercent: 87.87,
+    variableCostSharePercent: 87.62,
     foreignFixedInvestmentSharePercent: 38.07,
     operatingCostRows: [
       { name: 'مواد خام', amount: 38162283.50 },
