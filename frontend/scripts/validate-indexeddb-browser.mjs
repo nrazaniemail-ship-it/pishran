@@ -78,7 +78,7 @@ try {
   await rankingPage.locator('[data-module-export-root] .module-id').filter({ hasText: 'MOD-10' }).waitFor()
   await rankingPage.getByLabel('نام پروژه رتبه‌بندی جدید').fill('پروژه آزمون IndexedDB')
   await rankingPage.getByRole('button', { name: 'ایجاد پروژه' }).click()
-  await rankingPage.getByRole('heading', { name: 'روشهای رتبه بندی' }).waitFor()
+  await rankingPage.getByTestId('ranking-category-initial').waitFor({ state: 'visible' })
   await rankingPage.getByRole('heading', { name: 'روشهای رتبه بندی' }).waitFor()
   const initialCategory = rankingPage.getByTestId('ranking-category-initial')
   const advancedCategory = rankingPage.getByTestId('ranking-category-advanced')
