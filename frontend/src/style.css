@@ -2514,3 +2514,74 @@ input,select,textarea{color:var(--text)}
   .module-capabilities-tabs+.module-capabilities-grid,
   .maintenance-tabs+.maintenance-card{border-width:2px;border-top:0}
 }
+
+
+/* MOD-03 production project cards: align their visual hierarchy with ranking projects. */
+.mod03-projects-card .module-workspace-list{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.mod03-project-card{
+  position:relative;
+  min-width:0;
+  min-height:104px;
+  padding:15px 16px;
+  border:1px solid #e2d4bc!important;
+  border-radius:15px!important;
+  background:linear-gradient(145deg,#f8f1e5 0%,#f1e7d6 100%)!important;
+  box-shadow:0 3px 10px rgba(83,66,39,.055);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.mod03-project-card::before{
+  content:"";
+  position:absolute;
+  inset-block:13px;
+  inset-inline-start:0;
+  width:3px;
+  border-radius:0 5px 5px 0;
+  background:linear-gradient(180deg,#c69a53,#8d754f);
+}
+.mod03-project-card:hover{
+  transform:translateY(-2px);
+  border-color:#c9ae7e!important;
+  box-shadow:0 8px 20px rgba(83,66,39,.11);
+}
+.mod03-project-card .module-workspace-item-main{min-width:0;gap:7px}
+.mod03-project-card .module-workspace-item-main>b{
+  color:#493b28;
+  font-size:14px;
+  font-weight:800;
+  line-height:1.7;
+}
+.mod03-project-card .module-workspace-item-main>small{
+  color:#89785f;
+  font-size:10px;
+}
+.mod03-project-card .module-workspace-item-actions{
+  flex-shrink:0;
+  align-items:center;
+  gap:7px;
+}
+.mod03-project-card .module-workspace-item-actions>span{
+  padding:5px 8px;
+  border:1px solid #dfd0b5;
+  border-radius:20px;
+  background:#fff9ef;
+  color:#806b49;
+  font-size:9px;
+  white-space:nowrap;
+}
+.mod03-project-card .icon-button{
+  border:1px solid #e1d4bf;
+  border-radius:9px;
+  background:#fffaf1;
+  color:#796647;
+}
+.mod03-project-card .icon-button:hover{background:#f0e4cf;color:#493b28}
+@media(max-width:760px){
+  .mod03-projects-card .module-workspace-list{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  .mod03-project-card{transition:none}
+  .mod03-project-card:hover{transform:none}
+}
