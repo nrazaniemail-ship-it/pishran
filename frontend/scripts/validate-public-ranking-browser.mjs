@@ -231,6 +231,27 @@ try {
       await page.getByLabel('Other over worst زمان اجرا').selectOption('2')
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
+      const methodHistoryAfterBwm = await page.evaluate(async () => {
+        const db = await new Promise(resolve => {
+          const request = indexedDB.open('pishran_store')
+          request.onsuccess = () => resolve(request.result)
+          request.onerror = () => resolve(null)
+        })
+        let indexedDbHistory = null
+        if (db) {
+          try {
+            indexedDbHistory = await new Promise(resolve => {
+              const request = db.transaction('kv', 'readonly').objectStore('kv').get('mod10-ranking-method-history:ranking-test')
+              request.onsuccess = () => resolve(request.result?.value ?? null)
+              request.onerror = () => resolve(null)
+            })
+          } finally { db.close() }
+        }
+        let fallbackHistory = null
+        try { fallbackHistory = JSON.parse(localStorage.getItem('pishran_mod10-ranking-method-history:ranking-test') ?? 'null') } catch {}
+        return { indexedDbHistory, fallbackHistory }
+      })
+      console.log('Method history after BWM calculation:', JSON.stringify(methodHistoryAfterBwm))
       await page.getByText('Calculation history (2)').waitFor()
       await page.getByRole('button', { name: 'Run rank sensitivity' }).click()
       await page.getByTestId('ranking-sensitivity-results').waitFor()
