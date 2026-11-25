@@ -241,14 +241,14 @@ try {
         if (db) {
           try {
             indexedDbHistory = await new Promise(resolve => {
-              const request = db.transaction('kv', 'readonly').objectStore('kv').get('mod10-ranking-method-history:ranking-test')
-              request.onsuccess = () => resolve(request.result?.value ?? null)
+              const request = db.transaction('kv', 'readonly').objectStore('kv').getAll()
+              request.onsuccess = () => resolve(request.result?.find(record => record.key.startsWith('mod10-ranking-method-history:'))?.value ?? null)
               request.onerror = () => resolve(null)
             })
           } finally { db.close() }
         }
         let fallbackHistory = null
-        try { fallbackHistory = JSON.parse(localStorage.getItem('pishran_mod10-ranking-method-history:ranking-test') ?? 'null') } catch {}
+        try { const key = Object.keys(localStorage).find(name => name.startsWith('pishran_mod10-ranking-method-history:')); fallbackHistory = key ? JSON.parse(localStorage.getItem(key) ?? 'null') : null } catch {}
         return { indexedDbHistory, fallbackHistory }
       })
       console.log('Method history after BWM calculation:', JSON.stringify(methodHistoryAfterBwm))
