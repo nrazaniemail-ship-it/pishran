@@ -66,7 +66,7 @@ try {
       await page.getByRole('button', { name: 'Run rank sensitivity' }).click()
       await page.getByTestId('ranking-sensitivity-results').waitFor()
       await page.getByText('Scenario comparison').click()
-      await page.getByText(/optimistic/).waitFor()
+      await page.getByText(/optimistic/).last().waitFor()
     }
     if (method === 'TOPSIS') await page.getByText('Manual criterion weights').waitFor()
     if (method === 'AHP + TOPSIS') await page.getByText('Alternative performance matrix').waitFor()
