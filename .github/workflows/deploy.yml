@@ -49,7 +49,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for the exact-SHA automatic Pages build and deployment
+      - name: Wait for the exact-SHA automatic Pages build or a completed ancestor Pages deployment
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ github.sha }}
@@ -60,12 +60,28 @@ jobs:
             conclusion=$(echo "$runs" | jq -r --arg sha "$TARGET_SHA" '.workflow_runs[] | select(.name == "pages build and deployment" and .head_sha == $sha) | .conclusion' | head -n 1)
             if [ "$status" = "completed" ]; then
               [ "$conclusion" = "success" ] || { echo "Automatic Pages build concluded: $conclusion"; exit 1; }
-              echo "Automatic Pages deployment completed for $TARGET_SHA"
+              echo "Automatic Pages deployment completed for exact SHA $TARGET_SHA"
               exit 0
+            fi
+
+            # GitHub Pages' automatic branch workflow may skip a rapid follow-up
+            # push. After allowing it time to start, accept only a successful
+            # Pages deployment for an ancestor of this exact target SHA. The
+            # Actions-based deploy below still publishes the artifact built
+            # from TARGET_SHA, and no older Pages deployment remains in flight.
+            if [ "$attempt" -ge 6 ]; then
+              latest_pages_sha=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" --jq '[.workflow_runs[] | select(.name == "pages build and deployment" and .head_branch == "main" and .status == "completed" and .conclusion == "success")] | sort_by(.created_at) | last | .head_sha // empty')
+              if [ -n "$latest_pages_sha" ]; then
+                relation=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${latest_pages_sha}...${TARGET_SHA}" --jq '.status')
+                if [ "$relation" = "ahead" ] || [ "$relation" = "identical" ]; then
+                  echo "Latest automatic Pages deployment $latest_pages_sha is a successful ancestor of exact target $TARGET_SHA; proceeding with exact-SHA Actions artifact"
+                  exit 0
+                fi
+              fi
             fi
             sleep 10
           done
-          echo "Timed out waiting for automatic Pages deployment: $TARGET_SHA"
+          echo "Timed out waiting for an exact-SHA or successful ancestor automatic Pages deployment: $TARGET_SHA"
           exit 1
 
   deploy:
