@@ -36,7 +36,9 @@ export default function RankingMethodsPanel({language}:Props){
    }else{
     const result=topsis(scores,manualWeights,directions);weights=result.weights;ranking=result;diagnostics={rankingMethod:'TOPSIS',normalization:'vector',idealSolution:'benefit/cost aware'};judgments={alternatives,scores,directions,manualWeights};
    }
-   if(!ranking) ranking=topsis(scores,weights,directions);\n   judgments={...judgments,alternatives,scores,directions};\n   const snapshot=makeRankingSnapshot({method,criteria,expertCount:usesExperts?experts.length:0,weights,diagnostics,judgments});
+   if(!ranking) ranking=topsis(scores,weights,directions);
+   judgments={...judgments,alternatives,scores,directions};
+   const snapshot=makeRankingSnapshot({method,criteria,expertCount:usesExperts?experts.length:0,weights,diagnostics,judgments});
    const saved={...snapshot,ranking};const next=[saved,...history].slice(0,100);await localStore.set('mod10-ranking-method-history:v1',next);setHistory(next);setActive(saved);setNotice(en?'Calculation version saved':'نسخه محاسبه ذخیره شد');
   }catch(error){setNotice(error instanceof Error?error.message:String(error))}
  };
