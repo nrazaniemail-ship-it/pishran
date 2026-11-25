@@ -617,8 +617,8 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
         : <div data-testid="ranking-advanced-methods" className="ranking-method-intro ranking-method-intro--advanced">
             <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
           </div>}
-    </section>
     {category === 'INITIAL' ? <RankingPanel key={(selectedProject?.id ?? 'unsaved') + '-' + initialPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} projectName={selectedProject?.name ?? ''}/> : <RankingMethodsPanel key={(selectedProject?.id ?? 'unsaved') + '-' + advancedPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} initialMethod={recommendedMethod === 'WSM' || recommendedMethod === 'AHP' ? 'AHP+TOPSIS' : recommendedMethod === 'BWM' ? 'BWM+TOPSIS' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
+    </section>
     </div>}
   </div>
 }
