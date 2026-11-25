@@ -583,13 +583,14 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
         </button>
         <div className="module-workspace-item-actions"><button type="button" className="icon-button" aria-label={isEn ? 'Delete ' + project.name : 'حذف ' + project.name} title={isEn ? 'Delete project' : 'حذف پروژه'} onClick={() => void deleteRankingProject(project.id)}><Trash2 size={16}/></button></div>
       </article>)}</div> : <div className="empty-state"><b>{isEn ? 'No ranking projects yet' : 'هنوز پروژه رتبه‌بندی ایجاد نشده است'}</b><p>{isEn ? 'Create a project to start a separate ranking process.' : 'برای آغاز یک فرآیند رتبه‌بندی مستقل، اولین پروژه را ایجاد کنید.'}</p></div>}
-    </section> : <>
+    </section> : <div data-module-export-root="true" className="ranking-project-export-root">
       <section className="module-workspace-card" aria-label={isEn ? 'Current ranking project' : 'پروژه رتبه‌بندی جاری'}>
         <div className="section-head"><div><button type="button" className="secondary" onClick={() => void returnToRankingProjects()}>{isEn ? '← All ranking projects' : '→ بازگشت به پروژه‌های رتبه‌بندی'}</button><h2 style={{marginTop:12}}>{isEn ? 'Edit ranking project' : 'ویرایش پروژه رتبه‌بندی'}</h2></div></div>
         <form className="module-create-form" onSubmit={event => { event.preventDefault(); void saveRankingProjectName() }}>
           <label htmlFor="ranking-project-edit-name">{isEn ? 'Project name' : 'نام پروژه'}</label>
           <div><input id="ranking-project-edit-name" value={editingRankingProjectName} onChange={event => setEditingRankingProjectName(event.target.value)} maxLength={100}/><button type="submit" className="primary" disabled={!editingRankingProjectName.trim()}><Check size={16}/>{isEn ? 'Save name' : 'ذخیره نام'}</button></div>
         </form>
+        <ModuleExportActions moduleId={`ranking-${selectedProject.id}`} moduleTitle={selectedProject.name} language={language}/>
       </section>
       <RankingAdvisor language={language} onChoose={applyAdvisor}/>
     <section className="module-workspace-card" aria-labelledby="ranking-methods-heading">
@@ -616,7 +617,7 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
           </div>}
     </section>
     {category === 'INITIAL' ? <RankingPanel key={(selectedProject?.id ?? 'unsaved') + '-' + initialPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} projectName={selectedProject?.name ?? ''}/> : <RankingMethodsPanel key={(selectedProject?.id ?? 'unsaved') + '-' + advancedPanelKey} language={language} projectId={selectedProject?.id ?? 'unsaved'} initialMethod={recommendedMethod === 'WSM' || recommendedMethod === 'AHP' ? 'AHP+TOPSIS' : recommendedMethod === 'BWM' ? 'BWM+TOPSIS' : recommendedMethod} suggestedCriteria={suggestedCriteria} suggestedAlternatives={suggestedAlternatives} suggestedScores={suggestedScores} suggestedDirections={suggestedDirections}/>}
-    </>}
+    </div>}
   </div>
 }
 
