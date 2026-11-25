@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx'
 import { chromium } from 'playwright'
 
 async function verifyExcelExport(page, buttonName, expectedProject, excludedProject) {
-  const downloadPromise = page.waitForEvent('download')
+  const downloadPromise = page.waitForEvent('download', { timeout: 15000 })
   await page.getByRole('button', { name: buttonName, exact: true }).click()
   const download = await downloadPromise
   const filePath = await download.path()
@@ -45,7 +45,7 @@ for (const marker of ['Initial methods', 'Advanced methods', 'روش‌های ا
 
 const browser = await chromium.launch({ headless: true })
 try {
-  const context = await browser.newContext()
+  const context = await browser.newContext({ acceptDownloads: true })
   const page = await context.newPage()
   const pageErrors = []
   page.on('pageerror', error => pageErrors.push(error.message))
