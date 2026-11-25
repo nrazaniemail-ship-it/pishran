@@ -487,6 +487,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
     await localStore.set('mod10-ranking-projects:v1', items)
   }
   const createRankingProject = async () => {
+    if (!rankingProjectsLoaded) return
     const name = newRankingProjectName.trim()
     if (!name) return
     const now = new Date().toISOString()
@@ -555,7 +556,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
       <div className="section-head"><div><h2 id="ranking-projects-title">{isEn ? 'Ranking projects' : 'پروژه‌های رتبه‌بندی'}</h2><p>{isEn ? 'Each project keeps its own criteria, alternatives and ranking inputs. Open a project card to continue editing.' : 'هر پروژه معیارها، گزینه‌ها و اطلاعات رتبه‌بندی مستقل خود را دارد. برای ادامه و ویرایش، روی کارت پروژه کلیک کنید.'}</p></div><span className="muted">{rankingProjects.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
       <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createRankingProject() }}>
         <label htmlFor="ranking-project-new-name">{isEn ? 'New ranking project name' : 'نام پروژه رتبه‌بندی جدید'}</label>
-        <div><input id="ranking-project-new-name" value={newRankingProjectName} onChange={event => setNewRankingProjectName(event.target.value)} placeholder={isEn ? 'Enter a project name' : 'نام پروژه را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!newRankingProjectName.trim()}><Plus size={17}/>{isEn ? 'Create project' : 'ایجاد پروژه'}</button></div>
+        <div><input id="ranking-project-new-name" value={newRankingProjectName} onChange={event => setNewRankingProjectName(event.target.value)} placeholder={isEn ? 'Enter a project name' : 'نام پروژه را وارد کنید'} maxLength={100} disabled={!rankingProjectsLoaded}/><button className="primary" type="submit" disabled={!rankingProjectsLoaded || !newRankingProjectName.trim()}><Plus size={17}/>{isEn ? 'Create project' : 'ایجاد پروژه'}</button></div>
       </form>
       {rankingProjectsLoaded && rankingProjects.length > 0 ? <div className="module-workspace-list">{rankingProjects.map(project => <article className="module-workspace-item" key={project.id}>
         <button type="button" className="ranking-project-open" style={{flex:1,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:5,textAlign:"start",padding:12,border:0,background:"transparent",cursor:"pointer",minWidth:0}} onClick={() => { setSelectedProjectId(project.id); setEditingRankingProjectName(project.name); setRecommendedMethod(project.method ?? 'WSM'); setCategory(project.method === 'WSM' ? 'INITIAL' : 'ADVANCED'); setInitialPanelKey(value => value + 1); setAdvancedPanelKey(value => value + 1) }}>

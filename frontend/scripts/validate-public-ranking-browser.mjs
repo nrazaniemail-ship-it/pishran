@@ -29,6 +29,10 @@ try {
   const moduleCard = page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' })
   await moduleCard.waitFor({ state: 'visible' })
   await moduleCard.click()
+  await page.waitForFunction(() => {
+    const input = document.querySelector('#ranking-project-new-name')
+    return input && !input.disabled
+  })
   await page.getByLabel('نام پروژه رتبه‌بندی جدید').fill('پروژه آزمایش رتبه‌بندی')
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
