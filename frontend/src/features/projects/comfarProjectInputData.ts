@@ -15,6 +15,8 @@ export type ComfarSourceInputData = {
   fixedInvestment: ComfarSourceCapexItem[]
   preproduction: { period: string; net: number; capitalizedInterest: number }[]
   operatingCostYear: number
+  salesUnitPrice?: number
+  salesPriceSource?: string
   variableCostSharePercent: number
   foreignFixedInvestmentSharePercent: number
   capacityUtilization?: number[]
@@ -43,19 +45,21 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1404', net: 167878.90, capitalizedInterest: 2112481.33 },
     ],
     operatingCostYear: 1408,
+    salesUnitPrice: 307,
+    salesPriceSource: 'گزارش مرجع، صفحه ۳۵؛ میانگین قیمت فروش خالص هر تن',
     variableCostSharePercent: 91.83,
     foreignFixedInvestmentSharePercent: 43.19,
     operatingCostRows: [
-      { name: 'مواد خام', amount: 40901015.18 },
+      { name: 'مواد خام', amount: 40844287 },
       { name: 'ملزومات کارخانه', amount: 0 },
       { name: 'یوتیلیتی', amount: 0 },
-      { name: 'انرژی', amount: 269879.53 },
-      { name: 'قطعات یدکی مصرف‌شده', amount: 176670.08 },
-      { name: 'تعمیرات و نگهداری', amount: 375176.40 },
+      { name: 'انرژی', amount: 269580 },
+      { name: 'قطعات یدکی مصرف‌شده', amount: 176474 },
+      { name: 'تعمیرات و نگهداری', amount: 374760 },
       { name: 'حق امتیاز', amount: 0 },
       { name: 'دستمزد', amount: 650052.86 },
       { name: 'هزینه‌های بالاسری دستمزد', amount: 130010.57 },
-      { name: 'سربار کارخانه', amount: 159170.46 },
+      { name: 'سربار کارخانه', amount: 159060 },
       { name: 'بازاریابی مستقیم', amount: 62260 },
     ],
     workingCapital: [
@@ -65,7 +69,7 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1408', inventory: 4381627.22, cash: 219068.38 },
       ...Array.from({ length: 11 }, (_, index) => ({ period: String(1409 + index), inventory: 4376389.79, cash: 218980.57 })),
     ],
-    missingSourceDetails: ['مقادیر فیزیکی مواد اولیه و ضرایب مصرف ویژه', 'مقادیر مصرف آب، برق و گاز به تفکیک تجهیز', 'برنامه مقداری فروش و قیمت واحد محصول', 'عمر مفید و روش استهلاک تفکیکی هر دارایی', 'نرخ سود، دوره تنفس و قرارداد تفصیلی تسهیلات'],
+    missingSourceDetails: ['مقادیر فیزیکی مواد اولیه و ضرایب مصرف ویژه', 'مقادیر مصرف آب، برق و گاز به تفکیک تجهیز', 'عمر مفید و روش استهلاک تفکیکی هر دارایی', 'نرخ سود، دوره تنفس و قرارداد تفصیلی تسهیلات'],
   },
   'comfar-hr-plate-250k': {
     fixedInvestment: [
