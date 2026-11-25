@@ -54,13 +54,16 @@ export function bwm(bestIndex:number,worstIndex:number,bestToOthers:number[],oth
  [...bestToOthers,...othersToWorst].forEach(v=>assert(Number.isFinite(v)&&v>=1&&v<=9,'BWM judgments must be on the 1–9 scale'));
  assert(Math.abs(bestToOthers[bestIndex]-1)<1e-9&&Math.abs(othersToWorst[worstIndex]-1)<1e-9,'Best-to-best and worst-to-worst judgments must equal 1');
  let w=normalize(Array.from({length:n},(_,i)=>1/(bestToOthers[i]*othersToWorst[i])**0.5));
- // Convex minimax objective: projected subgradient with diminishing steps.
- for(let k=0;k<30000;k++){
-  const residuals:number[][]=[];
-  for(let j=0;j<n;j++) if(j!==bestIndex){const d=w[bestIndex]-bestToOthers[j]*w[j];residuals.push(d>=0?[bestIndex,1]:[bestIndex,-1],[j,d>=0?-bestToOthers[j]:bestToOthers[j]]);}
-  for(let j=0;j<n;j++) if(j!==worstIndex){const d=w[j]-othersToWorst[j]*w[worstIndex];residuals.push([j,d>=0?1:-1],[worstIndex,d>=0?-othersToWorst[j]:othersToWorst[j]]);}
-  let grad=Array(n).fill(0); for(const pair of residuals){grad[pair[0]]+=pair[1];}
-  const step=0.015/Math.sqrt(k+1); w=projectSimplex(w.map((v,i)=>v-step*grad[i]/Math.max(1,residuals.length)));
+ // Minimize the BWM minimax deviation with a projected subgradient
+ // of the currently active absolute residual.
+ for(let k=0;k<50000;k++){
+  let worstResidual=0; let grad=Array(n).fill(0);
+  const consider=(d:number,terms:Array<[number,number]>)=>{
+   if(Math.abs(d)>worstResidual){worstResidual=Math.abs(d);grad=Array(n).fill(0);for(const [idx,coef] of terms)grad[idx]=Math.sign(d)*coef;}
+  };
+  for(let j=0;j<n;j++) if(j!==bestIndex) consider(w[bestIndex]-bestToOthers[j]*w[j],[[bestIndex,1],[j,-bestToOthers[j]]]);
+  for(let j=0;j<n;j++) if(j!==worstIndex) consider(w[j]-othersToWorst[j]*w[worstIndex],[[j,1],[worstIndex,-othersToWorst[j]]]);
+  const step=0.01/Math.sqrt(k+1); w=projectSimplex(w.map((v,i)=>v-step*grad[i]));
  }
  const xi=Math.max(...bestToOthers.map((a,j)=>Math.abs(w[bestIndex]-a*w[j])),...othersToWorst.map((a,j)=>Math.abs(w[j]-a*w[worstIndex])));
  return {weights:normalize(w),xi,bestIndex,worstIndex};
