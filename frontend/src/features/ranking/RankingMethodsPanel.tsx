@@ -155,7 +155,7 @@ export default function RankingMethodsPanel({language,projectId='unsaved',initia
  const scale=[1,2,3,4,5,6,7,8,9];
  const titles:Record<Method,string>={TOPSIS:'TOPSIS','AHP+TOPSIS':'AHP + TOPSIS','BWM+TOPSIS':'BWM + TOPSIS','TOPSIS+(AHP+BWM)':'TOPSIS + (AHP + BWM)'};
  return <section className="module-workspace-card" style={{marginTop:18}} aria-label={en?'Ranking methods':'روش‌های رتبه‌بندی'}>
-  <div className="section-head"><div><h2>{en?'Multi-criteria weighting & ranking':'وزن‌دهی و رتبه‌بندی چندمعیاره'}</h2></div><span className="muted">{en?'Independent engine tests':'موتور محاسبات قابل آزمون مستقل'}</span></div>
+  <div className="section-head"><div><h2>{en?'Ranking methods':'روشهای رتبه بندی'}</h2></div></div>
   <div className="ranking-method-selector">
   <div className="ranking-method-tabs" role="group" aria-label={en?'Advanced ranking methods':'روش‌های پیشرفته رتبه‌بندی'}>{(['TOPSIS','AHP+TOPSIS','BWM+TOPSIS','TOPSIS+(AHP+BWM)'] as Method[]).map(m=><button key={m} type="button" data-method={m} aria-label={titles[m]} aria-pressed={method===m} className={`ranking-method-tab ranking-method-tab--${m.toLowerCase().replace('+','-')} ${method===m?'is-active':''}`} onClick={()=>{setNotice('');setMethod(m)}}><span className="ranking-method-tab__name">{titles[m]}</span><span className="ranking-method-tab__state">{method===m?(en?'Selected':'فعال'):(en?'Open':'انتخاب')}</span></button>)}</div>
   <div className="ranking-method-content">
