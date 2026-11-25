@@ -17,6 +17,7 @@ export type ComfarSourceInputData = {
   operatingCostYear: number
   salesUnitPrice?: number
   salesPriceSource?: string
+  productionSalesSchedule?: { period: string; openingInventory: number; production: number; sales: number; closingInventory: number; netUnitPrice: number; salesRevenue: number }[]
   variableCostSharePercent: number
   foreignFixedInvestmentSharePercent: number
   capacityUtilization?: number[]
@@ -47,19 +48,20 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
     operatingCostYear: 1408,
     salesUnitPrice: 307,
     salesPriceSource: 'گزارش مرجع، صفحه ۳۵؛ میانگین قیمت فروش خالص هر تن',
+    productionSalesSchedule: [{"period":"1405","openingInventory":0,"production":141944.44,"sales":140000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":42980000},{"period":"1406","openingInventory":1944.44,"production":160277.78,"sales":160000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":49120000},{"period":"1407","openingInventory":2222.22,"production":180277.78,"sales":180000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":55260000},{"period":"1408","openingInventory":2500,"production":200277.78,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1409","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1410","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1411","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1412","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1413","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1414","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1415","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1416","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1417","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1418","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000},{"period":"1419","openingInventory":2777.78,"production":200000,"sales":200000,"closingInventory":2777.78,"netUnitPrice":307,"salesRevenue":61400000}],
     variableCostSharePercent: 91.83,
     foreignFixedInvestmentSharePercent: 43.19,
     operatingCostRows: [
-      { name: 'مواد خام', amount: 40844287 },
+      { name: 'مواد خام', amount: 40901015.18 },
       { name: 'ملزومات کارخانه', amount: 0 },
       { name: 'یوتیلیتی', amount: 0 },
-      { name: 'انرژی', amount: 269580 },
-      { name: 'قطعات یدکی مصرف‌شده', amount: 176474 },
-      { name: 'تعمیرات و نگهداری', amount: 374760 },
+      { name: 'انرژی', amount: 269879.53 },
+      { name: 'قطعات یدکی مصرف‌شده', amount: 176670.08 },
+      { name: 'تعمیرات و نگهداری', amount: 375176.40 },
       { name: 'حق امتیاز', amount: 0 },
       { name: 'دستمزد', amount: 650052.86 },
       { name: 'هزینه‌های بالاسری دستمزد', amount: 130010.57 },
-      { name: 'سربار کارخانه', amount: 159060 },
+      { name: 'سربار کارخانه', amount: 159170.46 },
       { name: 'بازاریابی مستقیم', amount: 62260 },
     ],
     workingCapital: [
