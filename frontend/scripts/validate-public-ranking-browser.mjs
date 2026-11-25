@@ -29,6 +29,12 @@ try {
   const moduleCard = page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' })
   await moduleCard.waitFor({ state: 'visible' })
   await moduleCard.click()
+  await page.getByLabel('نام پروژه رتبه‌بندی جدید').fill('پروژه آزمایش رتبه‌بندی')
+  await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
+  await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
+  await page.getByRole('button', { name: 'ذخیره نام' }).click()
+  await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
   await page.getByRole('heading', { name: 'وزن‌دهی و رتبه‌بندی چندمعیاره' }).waitFor()
   await page.getByRole('heading', { name: 'روش‌های انجام' }).waitFor()
   await page.getByRole('button', { name: 'گفت‌وگو با دستیار' }).click()
@@ -61,7 +67,7 @@ try {
   assert.equal(await page.getByTestId('ranking-category-initial').getAttribute('aria-pressed'), 'true')
   assert.ok((await page.getByTestId('ranking-category-initial').getAttribute('class'))?.includes('is-active'),
     'initial category tab must expose its modern active style')
-  await page.getByRole('heading', { name: 'محیط رتبه‌بندی تصمیم · نسخه اولیه' }).waitFor()
+  await page.getByRole('heading', { name: /پروژه آزمایش رتبه‌بندی ویرایش‌شده · محیط رتبه‌بندی/ }).waitFor()
 
   await page.getByPlaceholder('مثلاً NPV، ریسک اجرا، زمان تحویل').fill('معیار حذف آزمایشی')
   await page.getByRole('button', { name: 'افزودن معیار' }).click()
@@ -83,6 +89,7 @@ try {
   await page.waitForTimeout(500)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
   assert.equal(await page.getByLabel('امتیاز هزینه آزمون زنده برای گزینه زنده الف').inputValue(), '90',
     'public WSM data must persist after reload')
 
