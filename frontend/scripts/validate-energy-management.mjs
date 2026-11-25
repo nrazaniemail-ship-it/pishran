@@ -288,7 +288,7 @@ test('MOD-05 M&V evidence pack requires measured same-boundary records and expos
  const pack=buildEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[calibration]},'2026-11-25T12:00:00.000Z')
  assert.equal(pack.normalizedBaseline,1000)
  assert.equal(pack.actualConsumption,900)
- assert.equal(pack.measuredSavings,100)
+ assert.equal(pack.calculatedVariance,100)
  assert.equal(pack.calibrationCoverage[0].status,'valid')
  assert.equal(pack.reviewStatus,'prepared-not-independent-review')
  assert.ok(pack.limitations.length>=2)
