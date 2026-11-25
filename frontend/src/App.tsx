@@ -112,12 +112,68 @@ const moduleCapabilityProfiles: Record<string, { assessment: string[]; benchmark
     learningEn: ['Separate transaction data from price assessments and estimates','Normalize product quality, delivery terms, currency and pricing date','Connect market scenarios to product mix and profitability']
   },
   'MOD-10': {
-    assessment: ['تعریف معیارها، وزن‌ها، محدودیت‌ها و آستانه‌های حذف گزینه','تحلیل حساسیت رتبه به تغییر وزن و کیفیت داده','قابلیت توضیح رتبه نهایی، منشأ امتیاز و عدم‌قطعیت'],
-    benchmarks: ['Decision Lens؛ Analytica؛ Hiview3 و روش‌های MCDA مانند AHP، TOPSIS و PROMETHEE — نمونه ابزار و روش تصمیم‌گیری چندمعیاره'],
-    learning: ['تفکیک معیارهای کمی و کیفی و نرمال‌سازی شفاف','نمایش وزن، امتیاز خام، امتیاز نهایی و تحلیل حساسیت','ثبت نظر خبرگان و جلوگیری از رتبه‌بندی با داده ناقص بدون هشدار'],
-    assessmentEn: ['Define criteria, weights, constraints and exclusion thresholds','Test ranking sensitivity to weight changes and data quality','Explain final ranks, score provenance and uncertainty'],
-    benchmarksEn: ['Decision Lens; Analytica; Hiview3; MCDA methods including AHP, TOPSIS and PROMETHEE'],
-    learningEn: ['Transparent normalization of quantitative and qualitative criteria','Show weights, raw scores, final scores and sensitivity','Capture expert judgment and flag incomplete evidence']
+    assessment: [
+      'تعریف ساختاریافته مسئله تصمیم، گزینه‌ها، معیارها، واحد سنجش، جهت مطلوب و شروط احراز یا وتو',
+      'تفکیک روش تعیین وزن معیارها از روش رتبه‌بندی گزینه‌ها؛ پشتیبانی مرحله‌ای از وزن‌دهی مستقیم، رتبه‌ای، AHP و BWM',
+      'ارزیابی معیارهای کمی و کیفی با نرمال‌سازی مستند و انتخاب روش متناسب از میان WSM، TOPSIS، VIKOR و PROMETHEE',
+      'کنترل کیفیت داده، منشأ امتیاز، تاریخ، واحد، سطح اطمینان و ثبت شواهد برای هر ارزیابی',
+      'تحلیل حساسیت وزن‌ها و مفروضات، پایداری رتبه، اختلاف نتایج روش‌ها و اثر داده ناقص یا گزینه حذف‌شده',
+      'اتصال نتایج به داده‌های مالی، تولید، انرژی، بازار، تأمین، پروژه و ریسک و بررسی محدودیت واقعی بودجه و منابع'
+    ],
+    benchmarks: [
+      'Expert Choice Comparion — AHP، مقایسه زوجی، تجمیع دیدگاه گروهی و تحلیل حساسیت',
+      'Decision Lens — اولویت‌بندی سبد، هم‌راستایی استراتژیک و محدودیت منابع',
+      '1000minds — روش PAPRIKA و استخراج ترجیحات از انتخاب‌های زوجی',
+      'D-Sight — تصمیم‌گیری چندمعیاره، سناریو و تحلیل حساسیت',
+      'Super Decisions — AHP/ANP و مدل‌سازی وابستگی معیارها',
+      'Visual PROMETHEE — روش‌های PROMETHEE و تحلیل بصری GAIA',
+      'Logical Decisions — مدل ارزش چندمعیاره MAUT و AHP',
+      'Analytica — مدل‌سازی عدم‌قطعیت و شبیه‌سازی تصمیم',
+      'TransparentChoice — اولویت‌بندی گروهی و سبد پروژه',
+      'AHP-OS (BPMSG) — ابزار وب و گروهی AHP',
+      'MCDM App — ابزار محاسباتی روش‌های تصمیم‌گیری چندمعیاره',
+      'Planview ProjectAdvantage — اولویت‌بندی تقاضا، سبد، بودجه و منابع'
+    ],
+    learning: [
+      'الگوبرداری از جریان ساده onboarding و قالب‌های آماده برای تصمیم سرمایه‌گذاری، انتخاب تأمین‌کننده و انتخاب فناوری',
+      'ثبت مستقل نظر خبرگان و نمایش اختلاف دیدگاه‌ها پیش از تجمیع؛ جلوگیری از پنهان‌شدن اختلاف نظر زیر یک وزن میانگین',
+      'تفکیک سه لایه احراز و وتو، وزن‌دهی معیارها و رتبه‌بندی گزینه‌ها؛ امتیاز بالا نباید نقض شرط حیاتی را جبران کند',
+      'نمایش وزن، امتیاز خام، امتیاز نرمال‌شده، سهم هر معیار در نتیجه و دلیل تغییر رتبه',
+      'نسخه‌بندی داده، وزن، پارامتر و الگوریتم برای بازتولید هر اجرای رتبه‌بندی و ممیزی تصمیم',
+      'تبدیل رتبه گزینه‌ها به سبد قابل اجرا با لحاظ سقف بودجه، ظرفیت منابع، زمان و وابستگی پروژه‌ها',
+      'استفاده از هوش مصنوعی برای پیشنهاد معیار، کشف هم‌پوشانی و توضیح نتایج؛ نه تولید وزن یا رتبه رسمی بدون محاسبه و شواهد'
+    ],
+    assessmentEn: [
+      'Structure the decision problem, alternatives, criteria, units, preferred direction and eligibility or veto rules',
+      'Separate criterion weighting from alternative ranking; phase in direct, rank-based, AHP and BWM weighting',
+      'Evaluate quantitative and qualitative criteria with documented normalization and fit-for-purpose WSM, TOPSIS, VIKOR or PROMETHEE methods',
+      'Control data quality, score provenance, date, unit, confidence and evidence for every evaluation',
+      'Analyze weight and assumption sensitivity, rank stability, method disagreement and the effects of missing data or removed alternatives',
+      'Connect finance, production, energy, market, supply, project and risk data; assess actual budget and resource constraints'
+    ],
+    benchmarksEn: [
+      'Expert Choice Comparion — AHP, pairwise comparisons, group aggregation and sensitivity analysis',
+      'Decision Lens — portfolio prioritization, strategic alignment and resource constraints',
+      '1000minds — PAPRIKA and preference elicitation through pairwise choices',
+      'D-Sight — multi-criteria decision analysis, scenarios and sensitivity',
+      'Super Decisions — AHP/ANP and interdependent criteria',
+      'Visual PROMETHEE — PROMETHEE methods and GAIA visual analysis',
+      'Logical Decisions — multi-attribute value analysis and AHP',
+      'Analytica — decision modeling under uncertainty and simulation',
+      'TransparentChoice — collaborative prioritization and project portfolios',
+      'AHP-OS (BPMSG) — web-based collaborative AHP',
+      'MCDM App — multi-criteria decision calculation tools',
+      'Planview ProjectAdvantage — demand, portfolio, budget and resource prioritization'
+    ],
+    learningEn: [
+      'Adopt guided onboarding and reusable templates for investment, supplier and technology decisions',
+      'Capture expert judgments independently and expose disagreement before aggregation',
+      'Separate eligibility and veto rules, criterion weighting and alternative ranking; a high score must not offset a critical failure',
+      'Show weights, raw and normalized scores, each criterion contribution and reasons for rank changes',
+      'Version data, weights, parameters and algorithms so every ranking run is reproducible and auditable',
+      'Translate rankings into an executable portfolio under budget, resource, schedule and dependency constraints',
+      'Use AI to suggest criteria, detect overlap and explain results, not to fabricate official weights or ranks'
+    ]
   },
   'MOD-11': {
     assessment: ['کنترل CAPEX، تعهدات، پرداخت‌ها، پیشرفت فیزیکی و زمان‌بندی','تحلیل انحراف هزینه و زمان و پیش‌بینی هزینه نهایی','ارزیابی تحقق منافع، تغییرات دامنه و ریسک سبد پروژه‌ها'],
