@@ -42,6 +42,50 @@ export default function RankingMethodsPanel({language}:Props){
    const saved={...snapshot,ranking};const next=[saved,...history].slice(0,100);await localStore.set('mod10-ranking-method-history:v1',next);setHistory(next);setActive(saved);setNotice(en?'Calculation version saved':'نسخه محاسبه ذخیره شد');
   }catch(error){setNotice(error instanceof Error?error.message:String(error))}
  };
+ const runSensitivity=()=>{
+  try{
+   let weights:number[];
+   if(method==='AHP'||method==='AHP+TOPSIS'){
+    const base=ahp(aggregatePairwiseMatrices(experts.map(e=>e.matrix)));
+    if(!base.consistent) throw new Error(en?'AHP consistency ratio exceeds 0.10.':'نسبت ناسازگاری AHP بیش از ۰٫۱۰ است.');
+    weights=base.weights;
+   }else if(method==='BWM') weights=aggregateBwmExpertWeights(experts).weights;
+   else weights=topsis(scores,manualWeights,directions).weights;
+   const cases:Array<{label:string;weights:number[]}>=[];
+   const delta=shock/100;
+   if(method==='AHP'||method==='AHP+TOPSIS'){
+    experts.forEach((expert,expertIndex)=>{
+     for(let i=0;i<criteria.length;i++) for(let j=i+1;j<criteria.length;j++) for(const sign of [-1,1]){
+      const changed=expert.matrix.map(row=>[...row]);
+      changed[i][j]=Math.min(9,Math.max(1/9,changed[i][j]*(1+sign*delta)));
+      changed[j][i]=1/changed[i][j];
+      const matrices=experts.map((e,k)=>k===expertIndex?changed:e.matrix);
+      const candidate=ahp(aggregatePairwiseMatrices(matrices));
+      if(candidate.consistent) cases.push({label:'AHP · '+expert.name+' · '+criteria[i]+'/'+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:candidate.weights});
+     }
+    });
+   }else if(method==='BWM'){
+    experts.forEach((expert,expertIndex)=>{
+     for(let j=0;j<criteria.length;j++) if(j!==expert.bestIndex&&j!==expert.worstIndex) for(const sign of [-1,1]){
+      const changed=experts.map((e,k)=>k===expertIndex?{
+       ...e,
+       bestToOthers:e.bestToOthers.map((v,i)=>i===j?Math.min(9,Math.max(1,v*(1+sign*delta))):v),
+       othersToWorst:e.othersToWorst.map((v,i)=>i===j?Math.min(9,Math.max(1,v*(1+sign*delta))):v)
+      }:e);
+      cases.push({label:'BWM · '+expert.name+' · '+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:aggregateBwmExpertWeights(changed).weights});
+     }
+    });
+   }else{
+    for(let j=0;j<weights.length;j++) for(const sign of [-1,1]){
+     const changed=weights.map((v,i)=>i===j?v*(1+sign*delta):v);
+     cases.push({label:'وزن دستی · '+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:changed});
+    }
+   }
+   const result=analyzeRankingSensitivity(scores,weights,directions,cases,delta);
+   setSensitivity(result);
+   setNotice(en?'Sensitivity analysis completed':'تحلیل حساسیت با موفقیت محاسبه شد');
+  }catch(error){setNotice(error instanceof Error?error.message:String(error))}
+ };
  const scale=[1,2,3,4,5,6,7,8,9];
  const titles:Record<Method,string>={AHP:'AHP',BWM:'BWM',TOPSIS:'TOPSIS','AHP+TOPSIS':'AHP + TOPSIS'};
  return <section className="module-workspace-card" style={{marginTop:18}} aria-label={en?'Ranking methods':'روش‌های رتبه‌بندی'}>
@@ -53,9 +97,9 @@ export default function RankingMethodsPanel({language}:Props){
    {method==='BWM'?<><div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:8,marginTop:10}}><label>{en?'Best criterion':'معیار بهترین'}<select aria-label={en?`${e.name} best criterion`:`${e.name} معیار بهترین`} value={e.bestIndex} onChange={ev=>{const v=Number(ev.target.value);updateExpert(ei,x=>({...x,bestIndex:v,bestToOthers:x.bestToOthers.map((n,i)=>i===v?1:n)}))}}>{criteria.map((c,i)=><option value={i} key={i}>{c}</option>)}</select></label><label>{en?'Worst criterion':'معیار بدترین'}<select aria-label={en?`${e.name} worst criterion`:`${e.name} معیار بدترین`} value={e.worstIndex} onChange={ev=>{const v=Number(ev.target.value);updateExpert(ei,x=>({...x,worstIndex:v,othersToWorst:x.othersToWorst.map((n,i)=>i===v?1:n)}))}}>{criteria.map((c,i)=><option value={i} key={i}>{c}</option>)}</select></label></div><div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:8,marginTop:10}}>{criteria.map((c,i)=><label key={i} style={{display:'grid',gap:4}}>{en?'Best over':'برتری بهترین بر'} {c}<select value={e.bestToOthers[i]} disabled={i===e.bestIndex} onChange={ev=>updateExpert(ei,x=>({...x,bestToOthers:x.bestToOthers.map((v,k)=>k===i?Number(ev.target.value):v)}))}>{scale.map(v=><option key={v}>{v}</option>)}</select><small>{en?'Other over worst':'برتری '+c+' بر بدترین'}</small><select value={e.othersToWorst[i]} disabled={i===e.worstIndex} onChange={ev=>updateExpert(ei,x=>({...x,othersToWorst:x.othersToWorst.map((v,k)=>k===i?Number(ev.target.value):v)}))}>{scale.map(v=><option key={v}>{v}</option>)}</select></label>)}</div></>:<div style={{overflowX:'auto',marginTop:10}}><table style={{borderCollapse:'collapse',width:'100%'}}><tbody>{criteria.map((c,i)=><tr key={i}><th>{c}</th>{criteria.map((_,j)=><td key={j} style={{padding:4}}>{i===j?'1':i<j?<select aria-label={en?`${e.name} ${c} vs ${criteria[j]}`:`${e.name}: ${c} در برابر ${criteria[j]}`} value={e.matrix[i][j]} onChange={ev=>{const v=Number(ev.target.value);updateExpert(ei,x=>{const m=x.matrix.map(r=>[...r]);m[i][j]=v;m[j][i]=1/v;return {...x,matrix:m}})}}>{scale.map(v=><option key={v} value={v}>{v}</option>)}</select>:<span>{e.matrix[i][j].toFixed(3)}</span>}</td>)}</tr>)}</tbody></table><small className="muted">{en?'Saaty 1–9 scale; reciprocal entries are automatic.':'مقیاس ۱ تا ۹ ساعتی؛ مقادیر معکوس خودکار ثبت می‌شوند.'}</small></div>}
   </div>)}
   {usesExperts&&<button className="secondary-button" style={{marginTop:10}} onClick={addExpert}>{en?'Add expert':'افزودن خبره'}</button>}
-  {<div style={{marginTop:16}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,flexWrap:'wrap'}}><b>{en?'Alternative performance matrix':'ماتریس عملکرد گزینه‌ها'}</b><button className="secondary-button" onClick={addAlternative} disabled={alternatives.length>=12}>{en?'Add alternative':'افزودن گزینه'}</button></div><p className="muted">{en?'Enter comparable numeric values. Set each criterion as benefit (higher is better) or cost (lower is better).':'مقادیر عددی و قابل مقایسه وارد کنید. برای هر معیار مشخص کنید سود (بیشتر بهتر) است یا هزینه (کمتر بهتر).'}</p>
+  <div style={{marginTop:16}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,flexWrap:'wrap'}}><b>{en?'Alternative performance matrix':'ماتریس عملکرد گزینه‌ها'}</b><button className="secondary-button" onClick={addAlternative} disabled={alternatives.length>=12}>{en?'Add alternative':'افزودن گزینه'}</button></div><p className="muted">{en?'Enter comparable numeric values. Set each criterion as benefit (higher is better) or cost (lower is better).':'مقادیر عددی و قابل مقایسه وارد کنید. برای هر معیار مشخص کنید سود (بیشتر بهتر) است یا هزینه (کمتر بهتر).'}</p>
    <div style={{overflowX:'auto'}}><table style={{borderCollapse:'collapse',width:'100%'}}><thead><tr><th>{en?'Alternative':'گزینه'}</th>{criteria.map((c,j)=><th key={j}>{c}<select aria-label={en?`${c} direction`:`جهت ${c}`} value={directions[j]} onChange={e=>setDirections(ds=>ds.map((d,k)=>k===j?e.target.value as CriterionDirection:d))}><option value="benefit">{en?'Benefit':'سود'}</option><option value="cost">{en?'Cost':'هزینه'}</option></select></th>)}</tr></thead><tbody>{alternatives.map((a,i)=><tr key={i}><th><input aria-label={en?'Alternative name':'نام گزینه'} value={a} onChange={e=>setAlternatives(as=>as.map((v,k)=>k===i?e.target.value:v))}/></th>{criteria.map((_,j)=><td key={j}><input type="number" min="0" step="any" value={scores[i]?.[j]??0} onChange={e=>setScores(ms=>ms.map((row,k)=>k===i?row.map((v,l)=>l===j?Number(e.target.value):v):row))} style={{width:90}}/></td>)}</tr>)}</tbody></table></div>
-  </div>}
+  </div>
   {method==='TOPSIS'&&<div style={{marginTop:12}}><b>{en?'Manual criterion weights':'وزن‌های دستی معیارها'}</b><div style={{display:'flex',gap:10,flexWrap:'wrap'}}>{criteria.map((c,i)=><label key={i}>{c}<input type="number" min="0" step="any" value={manualWeights[i]??0} onChange={e=>setManualWeights(ws=>ws.map((v,k)=>k===i?Number(e.target.value):v))} style={{width:90}}/></label>)}</div><small className="muted">{en?'Weights are normalized automatically.':'وزن‌ها هنگام محاسبه به‌صورت خودکار نرمال می‌شوند.'}</small></div>}
   <div style={{display:'flex',gap:10,alignItems:'end',flexWrap:'wrap',marginTop:14}}>
    <label>{en?'Sensitivity shock (%)':'دامنه تغییر حساسیت (%)'}<input aria-label={en?'Sensitivity shock percentage':'درصد تغییر حساسیت'} type="number" min="0" max="90" step="5" value={shock} onChange={e=>setShock(Math.max(0,Math.min(90,Number(e.target.value)||0)))}/></label>
