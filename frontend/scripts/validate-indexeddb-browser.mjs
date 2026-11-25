@@ -133,29 +133,15 @@ try {
   const firstModuleCard = page.locator('.module-launcher-card').filter({ hasText: 'MOD-01' })
   await firstModuleCard.waitFor({ state: 'visible' })
   await firstModuleCard.click()
-  const expectedModuleIds = Array.from({ length: 12 }, (_, index) => `MOD-${String(index + 1).padStart(2, '0')}`)
-  for (const [index, expectedId] of expectedModuleIds.entries()) {
-    await page.waitForFunction(id => document.querySelector('[data-module-export-root] .module-id')?.textContent?.trim() === id, expectedId)
-    assert.equal(await page.locator('[data-module-export-root] .module-id').innerText(), expectedId,
-      `Continue sequence must display ${expectedId} at step ${index + 1}`)
-    const continueButton = page.locator('.module-continue-actions button')
-    const expectedLabel = index === expectedModuleIds.length - 1 ? 'پایان مرور ماژول‌ها' : 'ادامه بده'
-    assert.equal((await continueButton.innerText()).trim(), expectedLabel,
-      `Continue control label must be correct on ${expectedId}`)
-    await continueButton.click()
-    if (index < expectedModuleIds.length - 1) {
-      await page.waitForFunction(id => document.querySelector('[data-module-export-root] .module-id')?.textContent?.trim() === id,
-        expectedModuleIds[index + 1])
-    }
-  }
-  await page.waitForFunction(() => document.querySelector('.app-page-dashboard .feasibility-launcher-card') !== null &&
-    document.querySelector('[data-module-export-root]') === null)
-  assert.equal(await page.locator('.app-page-dashboard .feasibility-launcher-card').count(), 1,
-    'finishing MOD-12 must return to the dashboard')
-  assert.equal(await page.locator('[data-module-export-root]').count(), 0,
-    'module workspace must be unmounted after finishing MOD-12')
-  assert.deepEqual(pageErrors, [], 'module sequence must not produce browser runtime errors')
-  console.log('PASS: real browser Continue navigation MOD-01 through MOD-12 and dashboard return')
+  await page.waitForFunction(() => document.querySelector('[data-module-export-root] .module-id')?.textContent?.trim() === 'MOD-01')
+  assert.equal(await page.locator('[data-module-export-root] .module-id').innerText(), 'MOD-01',
+    'MOD-01 workspace must open from its dashboard card')
+  assert.equal(await page.locator('.module-continue-actions button').count(), 0,
+    'the removed Continue button must not be rendered at the bottom of module workspaces')
+  assert.equal(await page.getByRole('button', { name: 'ادامه بده' }).count(), 0,
+    'no visible Continue button may remain in the module workspace')
+  assert.deepEqual(pageErrors, [], 'module workspace must not produce browser runtime errors')
+  console.log('PASS: MOD-01 workspace opens and the removed Continue button stays absent')
 
   const result = await page.evaluate(async ({ storeUrl, projectsUrl, backupUrl }) => {
     const { localStore } = await import(storeUrl)
