@@ -15,9 +15,9 @@ export default function RankingMethodsPanel({language}:Props){
  const [scores,setScores]=useState<number[][]>(initialScores());
  const [directions,setDirections]=useState<CriterionDirection[]>(['cost','benefit','cost']);
  const [manualWeights,setManualWeights]=useState([0.5,0.3,0.2]);
- const [notice,setNotice]=useState(''); const [history,setHistory]=useState<any[]>([]);
+ const [notice,setNotice]=useState(''); const [history,setHistory]=useState<any[]>([]); const [sensitivityHistory,setSensitivityHistory]=useState<any[]>([]);
  const [active,setActive]=useState<any>(null); const [sensitivity,setSensitivity]=useState<any>(null); const [shock,setShock]=useState(20);
- useEffect(()=>{void localStore.get<any[]>('mod10-ranking-method-history:v1').then(v=>setHistory(Array.isArray(v)?v:[])).catch(()=>undefined)},[]);
+ useEffect(()=>{void localStore.get<any[]>('mod10-ranking-method-history:v1').then(v=>setHistory(Array.isArray(v)?v:[])).catch(()=>undefined);void localStore.get<any[]>('mod10-ranking-sensitivity-history:v1').then(v=>setSensitivityHistory(Array.isArray(v)?v:[])).catch(()=>undefined)},[]);
  const usesExperts=method==='AHP'||method==='BWM'||method==='AHP+TOPSIS';
  const updateExpert=(idx:number,fn:(e:Expert)=>Expert)=>setExperts(es=>es.map((e,i)=>i===idx?fn(e):e));
  const addExpert=()=>setExperts(es=>[...es,{name:`${en?'Expert':'خبره'} ${es.length+1}`,matrix:newMatrix(criteria.length),bestIndex:0,worstIndex:criteria.length-1,bestToOthers:Array(criteria.length).fill(1),othersToWorst:Array(criteria.length).fill(1)}]);
@@ -42,7 +42,7 @@ export default function RankingMethodsPanel({language}:Props){
    const saved={...snapshot,ranking};const next=[saved,...history].slice(0,100);await localStore.set('mod10-ranking-method-history:v1',next);setHistory(next);setActive(saved);setNotice(en?'Calculation version saved':'نسخه محاسبه ذخیره شد');
   }catch(error){setNotice(error instanceof Error?error.message:String(error))}
  };
- const runSensitivity=()=>{
+ const runSensitivity=async()=>{
   try{
    let weights:number[];let expertWeightVectors:number[][]=[];
    if(method==='AHP'||method==='AHP+TOPSIS'){
@@ -84,7 +84,11 @@ export default function RankingMethodsPanel({language}:Props){
    }
    const result=analyzeRankingSensitivity(scores,weights,directions,cases,delta,{trials:500,seed:20261125,expertWeightVectors});
    setSensitivity(result);
-   setNotice(en?'Sensitivity analysis completed':'تحلیل حساسیت با موفقیت محاسبه شد');
+   const record={schema:'pishran-ranking-sensitivity/v1',createdAt:new Date().toISOString(),method,criteria:[...criteria],directions:[...directions],weights:[...weights],shock:delta,trials:result.robustness.trials,seed:result.robustness.seed,expertWeightVectors:expertWeightVectors.map(v=>[...v]),result};
+   const next=[record,...sensitivityHistory].slice(0,50);
+   await localStore.set('mod10-ranking-sensitivity-history:v1',next);
+   setSensitivityHistory(next);
+   setNotice(en?'Sensitivity analysis completed and saved':'تحلیل حساسیت محاسبه و ذخیره شد');
   }catch(error){setNotice(error instanceof Error?error.message:String(error))}
  };
  const scale=[1,2,3,4,5,6,7,8,9];
@@ -119,5 +123,6 @@ export default function RankingMethodsPanel({language}:Props){
   {notice&&<p className="muted" role="status">{notice}</p>}
   {active&&<div style={{marginTop:14,padding:12,border:'1px solid var(--line)',borderRadius:10}}><b>{en?'Calculation result':'نتیجه محاسبه'} · {active.method}</b>{active.ranking?<ol>{active.ranking.results.map((r:any)=><li key={r.alternativeIndex}>{active.judgments.alternatives[r.alternativeIndex]}: {(r.score*100).toFixed(2)}% · {en?'Rank':'رتبه'} {r.rank}</li>)}</ol>:<ol>{active.criteria.map((c:string,i:number)=><li key={c}>{c}: {(active.weights[i]*100).toFixed(2)}%</li>)}</ol>}<small className="muted">{en?'Version':'نسخه'}: {active.createdAt} · {JSON.stringify(active.diagnostics)}</small></div>}
   <div style={{marginTop:14}}><b>{en?'Calculation history':'تاریخچه نسخه‌های محاسبه'} ({history.length})</b>{history.slice(0,5).map((s:any,i:number)=><div key={s.createdAt+i} style={{padding:8,borderBottom:'1px solid var(--line)'}}>{s.method} · {s.createdAt} · {s.expertCount} {en?'experts':'خبره'} · {s.weights.map((w:number)=>`${(w*100).toFixed(1)}%`).join(' / ')}</div>)}</div>
+  <div style={{marginTop:14}}><b>{en?'Sensitivity history':'تاریخچه تحلیل حساسیت'} ({sensitivityHistory.length})</b>{sensitivityHistory.slice(0,5).map((s:any,i:number)=><div key={s.createdAt+i} style={{padding:8,borderBottom:'1px solid var(--line)'}}>{s.method} · {s.createdAt} · {en?'Shock':'دامنه تغییر'} {(s.shock*100).toFixed(0)}% · {s.trials} {en?'trials':'تکرار'} · {en?'seed':'بذر'} {s.seed}</div>)}</div>
  </section>
 }
