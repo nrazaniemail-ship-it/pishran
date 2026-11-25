@@ -249,6 +249,100 @@ export function prepareModule02EnergyCostPosting({baseInput,allocation,costCente
 }
 
 
+
+
+export const ENERGY_TARIFF_CONTRACTS_KEY = 'module-intelligence:MOD-05:tariff-contracts:v1'
+export const ENERGY_TARIFF_CALCULATIONS_KEY = 'module-intelligence:MOD-05:tariff-calculations:v1'
+
+export function parseEnergyTariffTiers(text){
+ const raw=String(text??'').trim()
+ if(!raw)return []
+ const tiers=raw.split(';').map((entry,index)=>{
+  const parts=entry.trim().split(':')
+  if(parts.length!==2)throw new Error('تعرفه پلکانی را به صورت حدنصاب:نرخ و با ; جدا کنید؛ برای پله آخر از * استفاده کنید.')
+  const upperLimit=parts[0].trim()==='*'?null:Number(parts[0].trim())
+  const rate=Number(parts[1].trim())
+  if((upperLimit!==null&&(!Number.isFinite(upperLimit)||upperLimit<=0))||!Number.isFinite(rate)||rate<0)throw new Error('حدنصاب و نرخ هر پله باید معتبر و غیرمنفی باشند.')
+  return {upperLimit,rate,order:index+1}
+ })
+ if(tiers.at(-1)?.upperLimit!==null)throw new Error('آخرین پله تعرفه باید با * و نرخ نهایی نامحدود تعریف شود.')
+ for(let i=1;i<tiers.length;i++)if(tiers[i-1].upperLimit===null||tiers[i].upperLimit<=tiers[i-1].upperLimit)throw new Error('حدنصاب پله‌های تعرفه باید صعودی و بدون تکرار باشد.')
+ return tiers
+}
+export function validateEnergyTariffContract(input,asOf=input.effectiveFrom){
+ const resource=input.resource
+ if(!Object.hasOwn(RESOURCE_CONFIG,resource))throw new Error('نوع منبع قرارداد تعرفه معتبر نیست.')
+ const site=required(input.site,'سایت قرارداد')
+ const supplier=required(input.supplier,'تأمین‌کننده / شرکت خدمات‌رسان')
+ const contractNumber=required(input.contractNumber,'شماره قرارداد')
+ const currency=required(input.currency,'واحد پول قرارداد')
+ const effectiveFrom=isoDate(input.effectiveFrom,'شروع اعتبار قرارداد')
+ const effectiveTo=String(input.effectiveTo??'').trim()?isoDate(input.effectiveTo,'پایان اعتبار قرارداد'):null
+ if(effectiveTo&&effectiveTo<effectiveFrom)throw new Error('پایان اعتبار قرارداد نمی‌تواند پیش از شروع آن باشد.')
+ const tiers=Array.isArray(input.tiers)?input.tiers:parseEnergyTariffTiers(input.tiersText)
+ const energyRate=input.energyRate===''||input.energyRate===null||input.energyRate===undefined?null:number(input.energyRate,'نرخ پایه انرژی',0)
+ if(!tiers.length&&energyRate===null)throw new Error('نرخ پایه انرژی یا جدول تعرفه پلکانی الزامی است.')
+ if(tiers.length&&tiers.at(-1)?.upperLimit!==null)throw new Error('آخرین پله تعرفه باید نامحدود باشد.')
+ const fixedCharge=number(input.fixedCharge??0,'هزینه ثابت',0)
+ const demandRate=number(input.demandRate??0,'نرخ دیماند',0)
+ const reactiveRate=number(input.reactiveRate??0,'نرخ انرژی راکتیو',0)
+ const taxPercent=number(input.taxPercent??0,'درصد مالیات',0)
+ if(taxPercent>100)throw new Error('درصد مالیات نمی‌تواند بیش از ۱۰۰ باشد.')
+ const unit=required(input.unit||RESOURCE_CONFIG[resource].unit,'واحد تعرفه')
+ return {resource,site,supplier,contractNumber,currency,effectiveFrom,effectiveTo,unit,energyRate,fixedCharge,demandRate,reactiveRate,taxPercent,tiers,notes:String(input.notes??'').trim()}
+}
+export async function saveEnergyTariffContract(input,store,createdAt=new Date().toISOString()){
+ const checked=validateEnergyTariffContract(input)
+ let saved
+ await store.update(ENERGY_TARIFF_CONTRACTS_KEY,old=>{
+  const records=Array.isArray(old)?old:[]
+  const existing=records.find(x=>x.id===input.id)||records.find(x=>x.resource===checked.resource&&x.site===checked.site&&x.contractNumber===checked.contractNumber)
+  const id=existing?.id??('MOD05-TARIFF-'+Date.parse(createdAt))
+  saved={...checked,id,createdAt:existing?.createdAt??createdAt,updatedAt:createdAt,history:[...(existing?.history??[]),...(existing?[{...existing,archivedAt:createdAt}]:[])]}
+  return [saved,...records.filter(x=>x.id!==id)].slice(0,500)
+ })
+ return saved
+}
+export function calculateConfiguredEnergyTariff(input,{contracts=[]}={},calculatedAt=new Date().toISOString()){
+ const contract=contracts.find(x=>x.id===input.contractId)
+ if(!contract)throw new Error('قرارداد تعرفه انتخاب‌شده یافت نشد.')
+ const resource=input.resource
+ if(contract.resource!==resource)throw new Error('نوع منبع قرارداد با منبع محاسبه یکسان نیست.')
+ const site=required(input.site,'سایت محاسبه')
+ if(contract.site!==site)throw new Error('قرارداد تعرفه متعلق به سایت انتخاب‌شده نیست.')
+ const period=isoDate(input.period,'تاریخ دوره قبض')
+ if(period<contract.effectiveFrom||(contract.effectiveTo&&period>contract.effectiveTo))throw new Error('قرارداد در تاریخ دوره قبض معتبر نیست.')
+ const quantity=number(input.quantity,'مصرف دوره',0)
+ const demand=number(input.demand??0,'دیماند',0)
+ const reactive=number(input.reactive??0,'انرژی راکتیو',0)
+ const tiers=Array.isArray(contract.tiers)?contract.tiers:[]
+ let energyCharge=0
+ if(tiers.length){
+  let lower=0,remaining=quantity
+  for(const tier of tiers){
+   const capacity=tier.upperLimit===null?remaining:Math.max(0,Math.min(remaining,tier.upperLimit-lower))
+   energyCharge+=capacity*Number(tier.rate)
+   remaining-=capacity
+   if(tier.upperLimit===null||remaining<=0)break
+   lower=tier.upperLimit
+  }
+  if(remaining>0)throw new Error('جدول پلکانی قرارداد تمام مقدار مصرف را پوشش نمی‌دهد.')
+ }else energyCharge=quantity*Number(contract.energyRate)
+ const demandCharge=demand*Number(contract.demandRate??0)
+ const reactiveCharge=reactive*Number(contract.reactiveRate??0)
+ const fixedCharge=Number(contract.fixedCharge??0)
+ const subtotal=energyCharge+demandCharge+reactiveCharge+fixedCharge
+ const tax=subtotal*Number(contract.taxPercent??0)/100
+ const total=subtotal+tax
+ const result={id:'MOD05-TARIFF-CALC-'+Date.parse(calculatedAt)+'-'+String(contract.id),contractId:contract.id,resource,site,period,supplier:contract.supplier,contractNumber:contract.contractNumber,currency:contract.currency,unit:contract.unit,quantity,demand,reactive,energyCharge,demandCharge,reactiveCharge,fixedCharge,subtotal,taxPercent:Number(contract.taxPercent??0),tax,total,calculatedAt,source:'Configured user-entered tariff contract',warnings:['محاسبه بر اساس قرارداد و نرخ‌های ثبت‌شده کاربر است؛ صحت قرارداد، قرائت‌ها، مالیات و عوارض باید با قبض رسمی تطبیق داده شود.']}
+ return result
+}
+export async function saveEnergyTariffCalculation(input,context,store,calculatedAt=new Date().toISOString()){
+ const result=calculateConfiguredEnergyTariff(input,context,calculatedAt)
+ await store.update(ENERGY_TARIFF_CALCULATIONS_KEY,old=>[result,...(Array.isArray(old)?old:[])].slice(0,1000))
+ return result
+}
+
 export const METER_CALIBRATIONS_KEY = 'module-intelligence:MOD-05:meter-calibrations:v1'
 export const ENERGY_MV_EVIDENCE_KEY = 'module-intelligence:MOD-05:mv-evidence:v1'
 
