@@ -246,7 +246,7 @@ function baseModel(project:FeasibilityProject):Model {
   makeRow('مخارج پیش از تولید (خالص از بهره)',report.currency,1,report.preproductionNet,report.reportFile+'؛ صفحه ۹'),
   makeRow('بهره سرمایه‌ای‌شده پیش از بهره‌برداری',report.currency,1,report.capitalizedInterest,report.reportFile+'؛ صفحه ۹'),
  ]:blankCustomProject?[]:stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex??[],'میلیون ریال','فرم سرمایه‌گذاری تخصصی مرحله '+selectedStage.name+'؛ مبلغ باید از CAPEX و استعلام‌های پروژه تکمیل شود')
- const opexRows=sourceInputs&&report?sourceInputs.operatingCostRows.map(row=>makeRow(row.name,report.currency+'/سال',row.amount,1,report.reportFile+'؛ صفحه ۲۶، سال مرجع '+sourceInputs.operatingCostYear)):blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[],'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه')
+ const opexRows=sourceInputs&&report?sourceInputs.operatingCostRows.map(row=>makeRow(row.name,report.currency+'/سال',row.amount,1,report.reportFile+'؛ صفحه ۲۴، سال مرجع '+sourceInputs.operatingCostYear)):blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[],'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه')
  const sourceFactoryCost=sourceInputs?.operatingCostRows.filter(row=>!row.name.includes('بازاریابی')).reduce((total,row)=>total+row.amount,0)??0
  const sourceCostVariance=report?sourceFactoryCost-report.referenceFactoryCost:0
  const sourceNotes=sourceInputs&&report?[
