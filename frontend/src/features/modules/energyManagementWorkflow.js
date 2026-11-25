@@ -519,20 +519,51 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
  const rhoBaselineModel=number(input.rhoBaselineModel??0,'هم‌بستگی خط مبنا و مدل',-1)
  const rhoActualModel=number(input.rhoActualModel??0,'هم‌بستگی اندازه‌گیری و مدل',-1)
  const coverageFactor=number(input.coverageFactor??2,'ضریب پوشش عدم‌قطعیت',1)
- if([baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct,samplingUncertaintyPct,resolutionUncertaintyPct,systematicBiasPct].some(x=>x>100)||coverageFactor>3||[rhoBaselineActual,rhoBaselineModel,rhoActualModel].some(x=>x>1))throw new Error('درصدهای عدم‌قطعیت باید حداکثر ۱۰۰، هم‌بستگی بین ۱- و ۱ و ضریب پوشش بین ۱ تا ۳ باشد.')
+ const sensitivityBaseline=number(input.sensitivityBaseline??1,'ضریب حساسیت خط مبنا',-10)
+ const sensitivityActual=number(input.sensitivityActual??-1,'ضریب حساسیت اندازه‌گیری واقعی',-10)
+ const sensitivityModel=number(input.sensitivityModel??1,'ضریب حساسیت مدل',-10)
+ const samplingSensitivity=number(input.samplingSensitivity??1,'ضریب حساسیت نمونه‌گیری',-10)
+ const resolutionSensitivity=number(input.resolutionSensitivity??1,'ضریب حساسیت تفکیک‌پذیری',-10)
+ const rhoLag1=number(input.rhoLag1??0,'خودهم‌بستگی وقفه اول',-0.95)
+ const observationCount=optionalDriver(input.observationCount,'تعداد مشاهدات',{min:2,max:1000000})
+ const parseDf=(value,label)=>optionalDriver(value,label,{min:0.5,max:1000000000})
+ const baselineDf=parseDf(input.baselineDegreesFreedom,'درجات آزادی خط مبنا')
+ const actualDf=parseDf(input.actualDegreesFreedom,'درجات آزادی اندازه‌گیری واقعی')
+ const modelDf=parseDf(input.modelDegreesFreedom,'درجات آزادی مدل')
+ const samplingDf=parseDf(input.samplingDegreesFreedom,'درجات آزادی نمونه‌گیری')
+ if([baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct,samplingUncertaintyPct,resolutionUncertaintyPct,systematicBiasPct].some(x=>x>100)||coverageFactor>3||[rhoBaselineActual,rhoBaselineModel,rhoActualModel].some(x=>x>1)||[sensitivityBaseline,sensitivityActual,sensitivityModel,samplingSensitivity,resolutionSensitivity].some(x=>Math.abs(x)>10)||rhoLag1>0.95)throw new Error('درصدها باید حداکثر ۱۰۰، هم‌بستگی بین ۱- و ۱، خودهم‌بستگی بین ۰٫۹۵- و ۰٫۹۵ و ضرایب حساسیت بین ۱۰- و ۱۰ باشند.')
  const correlationDeterminant=1+2*rhoBaselineActual*rhoBaselineModel*rhoActualModel-rhoBaselineActual**2-rhoBaselineModel**2-rhoActualModel**2
  if(correlationDeterminant< -1e-9)throw new Error('ماتریس هم‌بستگی عدم‌قطعیت معتبر و نیمه‌مثبت معین نیست.')
- const baselineUncertainty=normalizedBaseline*baselineUncertaintyPct/100
- const actualUncertainty=actualConsumption*actualUncertaintyPct/100
- const modelUncertainty=normalizedBaseline*modelUncertaintyPct/100
- const samplingUncertainty=actualConsumption*samplingUncertaintyPct/100
- const resolutionUncertainty=actualConsumption*resolutionUncertaintyPct/100
+ const rawBaselineUncertainty=normalizedBaseline*baselineUncertaintyPct/100
+ const rawActualUncertainty=actualConsumption*actualUncertaintyPct/100
+ const rawModelUncertainty=normalizedBaseline*modelUncertaintyPct/100
+ const baselineUncertainty=rawBaselineUncertainty*Math.abs(sensitivityBaseline)
+ const actualUncertainty=rawActualUncertainty*Math.abs(sensitivityActual)
+ const modelUncertainty=rawModelUncertainty*Math.abs(sensitivityModel)
+ let effectiveObservationCount=observationCount,autocorrelationInflation=1
+ if(observationCount!==null){
+  effectiveObservationCount=observationCount*(1-rhoLag1)/(1+rhoLag1)
+  effectiveObservationCount=Math.max(1,Math.min(observationCount*100,effectiveObservationCount))
+  autocorrelationInflation=Math.sqrt(observationCount/effectiveObservationCount)
+ }
+ const samplingUncertainty=actualConsumption*samplingUncertaintyPct/100*Math.abs(samplingSensitivity)*autocorrelationInflation
+ const resolutionUncertainty=actualConsumption*resolutionUncertaintyPct/100*Math.abs(resolutionSensitivity)
  const systematicBiasBound=normalizedBaseline*systematicBiasPct/100
- const covarianceTerm=2*(rhoBaselineActual*baselineUncertainty*actualUncertainty+rhoBaselineModel*baselineUncertainty*modelUncertainty+rhoActualModel*actualUncertainty*modelUncertainty)
+ const signedBaseline=rawBaselineUncertainty*sensitivityBaseline,signedActual=rawActualUncertainty*sensitivityActual,signedModel=rawModelUncertainty*sensitivityModel
+ const covarianceTerm=2*(rhoBaselineActual*signedBaseline*signedActual+rhoBaselineModel*signedBaseline*signedModel+rhoActualModel*signedActual*signedModel)
  const combinedVariance=baselineUncertainty**2+actualUncertainty**2+modelUncertainty**2+samplingUncertainty**2+resolutionUncertainty**2+covarianceTerm
- if(combinedVariance< -1e-8)throw new Error('واریانس ترکیبی عدم‌قطعیت منفی شده است؛ ورودی‌های هم‌بستگی را بازبینی کنید.')
+ if(combinedVariance< -1e-8)throw new Error('واریانس ترکیبی عدم‌قطعیت منفی شده است؛ ورودی‌های هم‌بستگی و ضرایب حساسیت را بازبینی کنید.')
  const combinedStandardUncertainty=Math.sqrt(Math.max(0,combinedVariance))
- const expandedRandomUncertainty=coverageFactor*combinedStandardUncertainty
+ const dfTerms=[]
+ const addDf=(u,df)=>{if(u>0&&df!==null&&Number.isFinite(df))dfTerms.push(u**4/df)}
+ addDf(baselineUncertainty,baselineDf);addDf(actualUncertainty,actualDf);addDf(modelUncertainty,modelDf)
+ addDf(samplingUncertainty,samplingDf??(effectiveObservationCount!==null&&effectiveObservationCount>1?effectiveObservationCount-1:null))
+ const welchSatterthwaiteDenominator=dfTerms.reduce((sum,x)=>sum+x,0)
+ const effectiveDegreesFreedom=welchSatterthwaiteDenominator>0?combinedVariance**2/welchSatterthwaiteDenominator:null
+ const z95=1.959963984540054
+ const studentT95=effectiveDegreesFreedom&&Number.isFinite(effectiveDegreesFreedom)?z95+(z95**3+z95)/(4*effectiveDegreesFreedom)+(5*z95**5+16*z95**3+3*z95)/(96*effectiveDegreesFreedom**2)+(3*z95**7+19*z95**5+17*z95**3-15*z95)/(384*effectiveDegreesFreedom**3):null
+ const coverageFactorApplied=studentT95??coverageFactor
+ const expandedRandomUncertainty=coverageFactorApplied*combinedStandardUncertainty
  const expandedUncertainty=expandedRandomUncertainty+systematicBiasBound
  const uncertaintyLowerBound=calculatedVariance-expandedUncertainty
  const uncertaintyUpperBound=calculatedVariance+expandedUncertainty
@@ -553,7 +584,7 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
   return {recordId:actual.id,period:actual.period,meterId:actual.meterId??'',site:actual.site,calibrationId:calibration?.id??null,status:status.status,nextCalibrationDate:calibration?.nextCalibrationDate??null}
  })
  const warnings=[...new Set([...calculations.flatMap(x=>x.warnings??[]),...calibrationCoverage.filter(x=>x.status!=='valid').map(x=>'وضعیت کالیبراسیون کنتور '+(x.meterId||'نامشخص')+': '+x.status)])]
- return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,comparisonUnit,calculatedVariance,calculatedVariancePercent:normalizedBaseline?calculatedVariance/normalizedBaseline*100:0,uncertaintyBudget:{baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct,samplingUncertaintyPct,resolutionUncertaintyPct,systematicBiasPct,rhoBaselineActual,rhoBaselineModel,rhoActualModel,correlationDeterminant,baselineUncertainty,actualUncertainty,modelUncertainty,samplingUncertainty,resolutionUncertainty,systematicBiasBound,covarianceTerm,combinedStandardUncertainty,expandedRandomUncertainty,coverageFactor,expandedUncertainty,lowerBound:uncertaintyLowerBound,upperBound:uncertaintyUpperBound,conclusion:uncertaintyConclusion,interpretation:'مؤلفه‌های تصادفی با احتساب کوواریانس سه منبع اصلی ترکیب شده‌اند؛ مؤلفه سیستماتیک به‌صورت محافظه‌کارانه و خطی به عدم‌قطعیت بسط‌یافته افزوده شده است. فرض‌ها و ماتریس هم‌بستگی نیازمند مستندات و بازبینی متخصص هستند.'},evidenceAttachments:evidenceAttachments.map(({name,mimeType,size,lastModified,dataUrl})=>({name,mimeType,size,lastModified,dataUrl})),calibrationCoverage,warnings:[...warnings,...(uncertaintyConclusion==='not-distinguishable'?['اختلاف محاسبه‌شده در بازه عدم‌قطعیت قرار دارد و از صفر قابل تفکیک نیست؛ ادعای صرفه‌جویی مثبت از این محاسبه پشتیبانی نمی‌شود.']:[])],reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
+ return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,comparisonUnit,calculatedVariance,calculatedVariancePercent:normalizedBaseline?calculatedVariance/normalizedBaseline*100:0,uncertaintyBudget:{baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct,samplingUncertaintyPct,resolutionUncertaintyPct,systematicBiasPct,rhoBaselineActual,rhoBaselineModel,rhoActualModel,correlationDeterminant,sensitivityBaseline,sensitivityActual,sensitivityModel,samplingSensitivity,resolutionSensitivity,baselineDegreesFreedom:baselineDf,actualDegreesFreedom:actualDf,modelDegreesFreedom:modelDf,samplingDegreesFreedom:samplingDf,observationCount,effectiveObservationCount,rhoLag1,autocorrelationInflation,baselineUncertainty,actualUncertainty,modelUncertainty,samplingUncertainty,resolutionUncertainty,systematicBiasBound,covarianceTerm,combinedVariance,combinedStandardUncertainty,welchSatterthwaiteDenominator,effectiveDegreesFreedom,studentT95,coverageFactor,coverageFactorApplied,expandedRandomUncertainty,expandedUncertainty,lowerBound:uncertaintyLowerBound,upperBound:uncertaintyUpperBound,conclusion:uncertaintyConclusion,interpretation:'ضرایب حساسیت با علامت در کوواریانس و با قدرمطلق در مؤلفه‌های استاندارد اعمال شده‌اند. درجات آزادی مؤلفه‌های دارای df با تقریب Welch–Satterthwaite ترکیب شده‌اند؛ خودهم‌بستگی وقفه اول، اندازه نمونه مؤثر و تورم عدم‌قطعیت نمونه‌گیری را برآورد می‌کند. اگر df محدود باشد، ضریب پوشش تقریبی t با احتمال دوطرفه ۹۵٪ جایگزین k ورودی می‌شود. برای مؤلفه‌های هم‌بسته، df مؤثر تقریبی است و باید با داده‌های سری زمانی و طرح نمونه‌گیری اعتبارسنجی شود.'},evidenceAttachments:evidenceAttachments.map(({name,mimeType,size,lastModified,dataUrl})=>({name,mimeType,size,lastModified,dataUrl})),calibrationCoverage,warnings:[...warnings,...(uncertaintyConclusion==='not-distinguishable'?['اختلاف محاسبه‌شده در بازه عدم‌قطعیت قرار دارد و از صفر قابل تفکیک نیست؛ ادعای صرفه‌جویی مثبت از این محاسبه پشتیبانی نمی‌شود.']:[])],reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
 }
 
 const EVIDENCE_KDF_ITERATIONS=310000
