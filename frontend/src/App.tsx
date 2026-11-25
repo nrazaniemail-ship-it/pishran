@@ -272,107 +272,191 @@ function RankingPanel({ language }: { language: 'fa' | 'en' }) {
 }
 
 type RankingAdvisorMethod = 'WSM' | 'AHP' | 'BWM' | 'TOPSIS' | 'AHP+TOPSIS'
+type RankingAdvisorStep = 'purpose' | 'alternatives' | 'evidence' | 'weights' | 'decisionMakers' | 'time' | 'dependencies' | 'uncertainty' | 'result'
 type RankingAdvisorAnswers = {
   purpose: 'investment' | 'supplier' | 'project' | 'strategy' | 'general'
+  alternatives: string[]
   evidence: 'numeric' | 'mixed' | 'qualitative'
   weights: 'known' | 'experts' | 'unknown'
   decisionMakers: 'solo' | 'group'
   time: 'short' | 'enough'
-  uncertainty: 'low' | 'high'
   dependencies: 'independent' | 'dependent'
-  scale: 'few' | 'many'
+  uncertainty: 'low' | 'high'
 }
-function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoose: (method: RankingAdvisorMethod, mode: 'manual' | 'automatic', criteria: string[], alternatives: string[], directions: Array<'benefit' | 'cost'>) => void }) {
+type RankingAdvisorMessage = { role: 'assistant' | 'user'; text: string }
+function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoose: (method: RankingAdvisorMethod, criteria: string[], alternatives: string[], directions: Array<'benefit' | 'cost'>) => void }) {
   const isEn = language === 'en'
-  const [open, setOpen] = useState(false)
-  const [answers, setAnswers] = useState<RankingAdvisorAnswers>({ purpose: 'investment', evidence: 'mixed', weights: 'unknown', decisionMakers: 'group', time: 'enough', uncertainty: 'low', dependencies: 'independent', scale: 'few' })
-  const [alternativeNames, setAlternativeNames] = useState('')
-  const [result, setResult] = useState<{ method: RankingAdvisorMethod; reasons: string[]; criteria: string[]; guides: Array<{name:string;definition:string;unit:string;direction:'benefit'|'cost'}>; warning: string } | null>(null)
-  const update = <K extends keyof RankingAdvisorAnswers>(key: K, value: RankingAdvisorAnswers[K]) => setAnswers(current => ({ ...current, [key]: value }))
-  const options = (key: keyof RankingAdvisorAnswers, values: Array<[string, string, string]>) => <label style={{ display: 'grid', gap: 5, minWidth: 0 }}><b>{isEn ? values[0]?.[2] : values[0]?.[1]}</b><select aria-label={isEn ? values[0]?.[2] : values[0]?.[1]} value={String(answers[key])} onChange={event => update(key, event.target.value as RankingAdvisorAnswers[typeof key])}>{values.slice(1).map(([value, fa, en]) => <option key={value} value={value}>{isEn ? en : fa}</option>)}</select></label>
-  const buildRecommendation = () => {
-    let method: RankingAdvisorMethod
-    if (answers.weights === 'known' && answers.evidence === 'numeric') method = answers.scale === 'many' ? 'TOPSIS' : 'WSM'
-    else if (answers.decisionMakers === 'group' && answers.time === 'short') method = 'BWM'
-    else if (answers.weights === 'experts' || answers.decisionMakers === 'group' || answers.evidence !== 'numeric') method = 'AHP+TOPSIS'
-    else method = answers.scale === 'many' ? 'TOPSIS' : 'WSM'
+  const [started, setStarted] = useState(false)
+  const [step, setStep] = useState<RankingAdvisorStep>('purpose')
+  const [input, setInput] = useState('')
+  const [messages, setMessages] = useState<RankingAdvisorMessage[]>([])
+  const [answers, setAnswers] = useState<Partial<RankingAdvisorAnswers>>({})
+  const [criteriaText, setCriteriaText] = useState('')
+  const [alternativesText, setAlternativesText] = useState('')
+  const [clarificationCount, setClarificationCount] = useState(0)
+  const addAssistant = (text: string) => setMessages(current => [...current, { role: 'assistant', text }])
+  const start = () => {
+    setStarted(true)
+    setStep('purpose')
+    setAnswers({})
+    setCriteriaText('')
+    setAlternativesText('')
+    setClarificationCount(0)
+    setMessages([{ role: 'assistant', text: isEn ? 'Hello! I will help you choose a ranking method and prepare your manual data-entry plan. I will ask one question at a time, and you can answer naturally.' : 'سلام! کمک می‌کنم روش رتبه‌بندی مناسب را انتخاب و اطلاعات لازم برای ورود دستی را آماده کنید. هر بار فقط یک سؤال می‌پرسم؛ می‌توانید کاملاً محاوره‌ای پاسخ بدهید.' }, { role: 'assistant', text: isEn ? 'First, what decision are you trying to make? For example: selecting an investment, supplier, project, or strategy.' : 'اول بفرمایید دقیقاً چه تصمیمی می‌خواهید بگیرید؟ مثلاً انتخاب یک سرمایه‌گذاری، تأمین‌کننده، اولویت‌بندی پروژه‌ها یا انتخاب راهبرد.' }])
+  }
+  const questionFor = (next: RankingAdvisorStep, a: Partial<RankingAdvisorAnswers>) => {
+    if (next === 'alternatives') return isEn ? 'What options do you want to compare? Write their names, separated by commas or on separate lines. At least two options are needed.' : 'چه گزینه‌هایی را می‌خواهید با هم مقایسه کنید؟ نام آن‌ها را با ویرگول یا در چند خط بنویسید. دست‌کم دو گزینه لازم است.'
+    if (next === 'evidence') return isEn ? 'What kind of information do you have for comparing them: mostly measurable numbers, a mix of numbers and expert judgment, or mostly qualitative descriptions?' : 'اطلاعات مقایسه این گزینه‌ها از چه نوعی است؟ بیشتر عددی و قابل‌اندازه‌گیری، ترکیبی از عدد و نظر کارشناسی، یا عمدتاً توصیفی و کیفی؟'
+    if (next === 'weights') return isEn ? 'Do you already know how important each criterion is, or should we determine criterion weights from your judgments or experts?' : 'اهمیت نسبی معیارها را از قبل می‌دانید، یا باید وزن معیارها را با نظر شما یا خبرگان تعیین کنیم؟'
+    if (next === 'decisionMakers') return isEn ? 'Will one person make this decision, or should several experts/stakeholders contribute?' : 'تصمیم را یک نفر می‌گیرد یا لازم است چند خبره و ذی‌نفع در آن مشارکت کنند؟'
+    if (next === 'time') return isEn ? 'How much time can the experts spend on comparisons: limited time and fewer questions, or enough time for detailed pairwise judgments?' : 'خبرگان چقدر برای مقایسه‌ها وقت دارند؟ زمان محدود است و پرسش‌های کمتر ترجیح دارد، یا برای قضاوت‌های دقیق‌تر فرصت کافی دارند؟'
+    if (next === 'dependencies') return isEn ? 'Are the criteria largely independent, or does one criterion directly affect another? For example, quality may affect operating cost.' : 'معیارها عمدتاً مستقل‌اند یا بعضی معیارها مستقیماً بر هم اثر می‌گذارند؟ مثلاً کیفیت ممکن است بر هزینه بهره‌برداری اثر بگذارد.'
+    if (next === 'uncertainty') return isEn ? 'How reliable are the available figures and judgments: relatively stable, or substantially uncertain?' : 'اطمینان شما به اعداد و قضاوت‌های موجود چقدر است؟ نسبتاً پایدار و قابل‌اتکا هستند یا عدم‌قطعیت قابل‌توجهی دارند؟'
+    return ''
+  }
+  const clarify = (text: string) => {
+    setClarificationCount(count => count + 1)
+    addAssistant(text)
+  }
+  const parsePurpose = (v: string): RankingAdvisorAnswers['purpose'] | null => {
+    if (/سرمایه|investment|طرح توجیه|اقتصادی/i.test(v)) return 'investment'
+    if (/تأمین.?کننده|تامين.?كننده|supplier|فروشنده/i.test(v)) return 'supplier'
+    if (/پروژه|طرح.?ها|project/i.test(v)) return 'project'
+    if (/راهبرد|استراتژ|strategy/i.test(v)) return 'strategy'
+    if (/سایر|عمومی|other|general/i.test(v)) return 'general'
+    return null
+  }
+  const parseAlternatives = (v: string) => v.split(/[\n,،;؛]+/).map(item => item.trim()).filter(Boolean).slice(0, 12)
+  const submit = (raw: string) => {
+    const value = raw.trim()
+    if (!value || step === 'result') return
+    setMessages(current => [...current, { role: 'user', text: value }])
+    setInput('')
+    let next: RankingAdvisorStep | null = null
+    const a = { ...answers }
+    if (step === 'purpose') {
+      const purpose = parsePurpose(value)
+      if (!purpose) { clarify(isEn ? 'I could not identify the decision type. Could you clarify: investment, supplier, project prioritization, strategy, or another decision?' : 'نوع تصمیم برایم روشن نشد. لطفاً مشخص کنید موضوع سرمایه‌گذاری، انتخاب تأمین‌کننده، اولویت‌بندی پروژه، راهبرد یا تصمیم دیگری است؟'); return }
+      a.purpose = purpose; next = 'alternatives'
+    } else if (step === 'alternatives') {
+      const names = parseAlternatives(value)
+      if (names.length < 2) { clarify(isEn ? 'I need at least two distinct option names. Please write their names, not just the number of options.' : 'برای مقایسه حداقل دو نام متمایز لازم دارم. لطفاً نام گزینه‌ها را بنویسید، نه فقط تعداد آن‌ها را.'); return }
+      a.alternatives = names; setAlternativesText(names.join('\n')); next = 'evidence'
+    } else if (step === 'evidence') {
+      if (/عددی|عدد|quantit|numeric|measur/i.test(value) && !/ترکیب|مختلط|mixed/i.test(value)) a.evidence = 'numeric'
+      else if (/ترکیب|مختلط|کیفی.*عددی|mixed|both/i.test(value)) a.evidence = 'mixed'
+      else if (/کیفی|توصیف|قضاوتی|qualit/i.test(value)) a.evidence = 'qualitative'
+      else { clarify(isEn ? 'Do you mainly have numeric data, a mix of numeric and qualitative data, or qualitative judgments?' : 'منظورتان کدام است: داده عمدتاً عددی، ترکیبی از عددی و کیفی، یا قضاوت‌های عمدتاً کیفی؟'); return }
+      next = 'weights'
+    } else if (step === 'weights') {
+      if (/مشخص|دارم|known|given|already|تعیین شده/i.test(value)) a.weights = 'known'
+      else if (/خبره|کارشناس|نظر|استخراج|experts?|elicit/i.test(value)) a.weights = 'experts'
+      else if (/نمی.?دانم|نامشخص|نامعلوم|unknown|not sure/i.test(value)) a.weights = 'unknown'
+      else { clarify(isEn ? 'Are the weights already known, should experts determine them, or are you not sure yet?' : 'وزن‌ها از قبل مشخص‌اند، باید از خبرگان استخراج شوند یا هنوز مطمئن نیستید؟'); return }
+      next = 'decisionMakers'
+    } else if (step === 'decisionMakers') {
+      if (/یک نفر|تنها|خودم|فردی|solo|one person|single/i.test(value)) { a.decisionMakers = 'solo'; next = 'dependencies' }
+      else if (/چند|گروه|خبره|ذی.?نفع|group|multiple|several/i.test(value)) { a.decisionMakers = 'group'; next = 'time' }
+      else { clarify(isEn ? 'Is this a single-person decision or a group decision involving several experts?' : 'تصمیم فردی است یا گروهی و با مشارکت چند خبره انجام می‌شود؟'); return }
+    } else if (step === 'time') {
+      if (/محدود|کم|کوتاه|short|limited|کمتر/i.test(value)) a.time = 'short'
+      else if (/کافی|زیاد|فرصت|enough|ample|detailed/i.test(value)) a.time = 'enough'
+      else { clarify(isEn ? 'Would you describe expert time as limited or sufficient for detailed comparisons?' : 'زمان خبرگان را محدود می‌دانید یا برای مقایسه‌های دقیق کافی است؟'); return }
+      next = 'dependencies'
+    } else if (step === 'dependencies') {
+      if (/مستقل|جدا|independent|no relation/i.test(value)) a.dependencies = 'independent'
+      else if (/وابسته|اثر.*هم|تأثیر|ارتباط|dependent|influence|interact/i.test(value)) a.dependencies = 'dependent'
+      else { clarify(isEn ? 'Are criteria independent, or do some criteria influence one another?' : 'معیارها مستقل‌اند یا بعضی بر یکدیگر اثر می‌گذارند؟'); return }
+      next = 'uncertainty'
+    } else if (step === 'uncertainty') {
+      if (/کم|پایین|قابل.?اتکا|مطمئن|stable|reliable|low/i.test(value)) a.uncertainty = 'low'
+      else if (/زیاد|بالا|نامطمئن|متغیر|uncertain|high|volatile/i.test(value)) a.uncertainty = 'high'
+      else { clarify(isEn ? 'Is uncertainty low and data relatively reliable, or high and data uncertain?' : 'عدم‌قطعیت کم و داده‌ها قابل‌اتکا هستند یا زیاد و داده‌ها نامطمئن‌اند؟'); return }
+      next = 'result'
+    }
+    if (!next) return
+    setAnswers(a)
+    setClarificationCount(0)
+    if (next !== 'result') {
+      setStep(next)
+      addAssistant(questionFor(next, a))
+      return
+    }
+    const method: RankingAdvisorMethod =
+      a.weights === 'known' && a.evidence === 'numeric'
+        ? ((a.alternatives?.length ?? 0) >= 5 ? 'TOPSIS' : 'WSM')
+        : a.decisionMakers === 'group' && a.time === 'short'
+          ? 'BWM'
+          : a.weights === 'experts' || a.decisionMakers === 'group' || a.evidence !== 'numeric'
+            ? 'AHP+TOPSIS'
+            : ((a.alternatives?.length ?? 0) >= 5 ? 'TOPSIS' : 'WSM')
     const criteriaByPurpose: Record<RankingAdvisorAnswers['purpose'], string[]> = {
-      investment: ['ارزش فعلی خالص (NPV)', 'نرخ بازده داخلی (IRR)', 'سرمایه‌گذاری ثابت (CAPEX)', 'هزینه بهره‌برداری (OPEX)', 'ریسک اجرا', 'زمان اجرا', 'ظرفیت تولید'],
+      investment: ['ارزش فعلی خالص (NPV)', 'سرمایه‌گذاری ثابت (CAPEX)', 'هزینه بهره‌برداری (OPEX)', 'ریسک اجرا', 'زمان اجرا', 'ظرفیت یا خروجی'],
       supplier: ['قیمت کل مالکیت', 'کیفیت محصول', 'تحویل به‌موقع', 'انطباق فنی', 'خدمات و ضمانت', 'ریسک تأمین'],
       project: ['هم‌راستایی راهبردی', 'ارزش اقتصادی', 'امکان‌پذیری فنی', 'ریسک اجرا', 'نیاز منابع', 'زمان تحقق'],
       strategy: ['هم‌راستایی با اهداف', 'ارزش‌آفرینی', 'امکان‌پذیری', 'ریسک راهبردی', 'نیاز منابع', 'زمان اثرگذاری'],
       general: ['هزینه کل', 'کیفیت و عملکرد', 'ریسک', 'زمان اجرا', 'قابلیت توسعه', 'اثر بلندمدت'],
     }
-    const criteria = criteriaByPurpose[answers.purpose]
-    const commonGuides: Record<string, {definition:string;unit:string;direction:'benefit'|'cost'}> = {
-      'ارزش فعلی خالص (NPV)': { definition: 'ارزش فعلی جریان نقدی خالص پروژه با نرخ تنزیل و افق زمانی یکسان', unit: 'میلیون یا میلیارد ریال', direction: 'benefit' },
-      'نرخ بازده داخلی (IRR)': { definition: 'نرخی که ارزش فعلی خالص جریان نقدی را صفر می‌کند', unit: 'درصد سالانه', direction: 'benefit' },
-      'سرمایه‌گذاری ثابت (CAPEX)': { definition: 'مجموع مخارج سرمایه‌ای موردنیاز تا راه‌اندازی، با دامنه اقلام یکسان', unit: 'میلیون یا میلیارد ریال', direction: 'cost' },
-      'هزینه بهره‌برداری (OPEX)': { definition: 'هزینه سالانه تولید و بهره‌برداری در ظرفیت و قیمت‌های مبنا', unit: 'میلیون ریال در سال', direction: 'cost' },
-      'ریسک اجرا': { definition: 'امتیاز احتمال و شدت ریسک‌های زمان، فناوری، تأمین و مجوز بر مقیاس ثابت', unit: 'امتیاز ۱ تا ۵؛ کمتر بهتر', direction: 'cost' },
-      'زمان اجرا': { definition: 'مدت زمان از شروع عملیات اجرایی تا بهره‌برداری تجاری', unit: 'ماه', direction: 'cost' },
-      'ظرفیت تولید': { definition: 'ظرفیت اسمی قابل‌دستیابی در شرایط تعریف‌شده بهره‌برداری', unit: 'تن در سال', direction: 'benefit' },
-      'قیمت کل مالکیت': { definition: 'قیمت خرید به‌علاوه حمل، نصب، نگهداری و هزینه چرخه عمر در افق یکسان', unit: 'ریال', direction: 'cost' },
-      'کیفیت محصول': { definition: 'نرخ انطباق محصول با مشخصات فنی و نرخ عیب در نمونه‌برداری یکسان', unit: 'درصد انطباق', direction: 'benefit' },
-      'تحویل به‌موقع': { definition: 'سهم سفارش‌های تحویل‌شده در موعد قراردادی', unit: 'درصد', direction: 'benefit' },
-      'انطباق فنی': { definition: 'درصد الزامات فنی احرازشده از چک‌لیست مصوب', unit: 'درصد', direction: 'benefit' },
-      'خدمات و ضمانت': { definition: 'پوشش خدمات پس از فروش، زمان پاسخ و مدت ضمانت قابل‌تعهد', unit: 'امتیاز ۱ تا ۵', direction: 'benefit' },
-      'ریسک تأمین': { definition: 'احتمال اختلال تأمین با توجه به تمرکز منبع، سابقه و زمان جایگزینی', unit: 'امتیاز ۱ تا ۵؛ کمتر بهتر', direction: 'cost' },
-      'هم‌راستایی راهبردی': { definition: 'میزان انطباق خروجی پروژه با اهداف مصوب و شاخص‌های راهبردی', unit: 'امتیاز ۱ تا ۵', direction: 'benefit' },
-      'ارزش اقتصادی': { definition: 'ارزش اقتصادی خالص یا منفعت کمی‌شده در افق و نرخ تنزیل یکسان', unit: 'میلیون یا میلیارد ریال', direction: 'benefit' },
-      'امکان‌پذیری فنی': { definition: 'درصد تحقق الزامات فنی، فناوری، زیرساخت و نیروی انسانی', unit: 'درصد', direction: 'benefit' },
-      'نیاز منابع': { definition: 'مجموع منابع مالی، انسانی و تجهیزاتی موردنیاز نسبت به منابع در دسترس', unit: 'ریال و نفر-ماه', direction: 'cost' },
-      'زمان تحقق': { definition: 'مدت زمان تا دستیابی به منفعت یا خروجی مورد انتظار', unit: 'ماه', direction: 'cost' },
-      'ارزش‌آفرینی': { definition: 'میزان منفعت مالی و غیرمالی قابل‌اندازه‌گیری در افق برنامه', unit: 'امتیاز ۱ تا ۵ یا ریال', direction: 'benefit' },
-      'امکان‌پذیری': { definition: 'احتمال تحقق با توجه به منابع، قابلیت سازمان و محدودیت‌ها', unit: 'درصد یا امتیاز ۱ تا ۵', direction: 'benefit' },
-      'ریسک راهبردی': { definition: 'احتمال و شدت اثر نامطلوب بر اهداف کلان و مزیت رقابتی', unit: 'امتیاز ۱ تا ۵؛ کمتر بهتر', direction: 'cost' },
-      'زمان اثرگذاری': { definition: 'مدت زمان تا مشاهده اثر قابل‌اندازه‌گیری راهبرد', unit: 'ماه', direction: 'cost' },
-      'هزینه کل': { definition: 'هزینه مستقیم و غیرمستقیم در دوره ارزیابی مشترک', unit: 'واحد پولی ثابت', direction: 'cost' },
-      'کیفیت و عملکرد': { definition: 'میزان تحقق مشخصات عملکردی و کیفیت تعریف‌شده', unit: 'درصد یا امتیاز ۱ تا ۵', direction: 'benefit' },
-      'ریسک': { definition: 'احتمال وقوع ضربدر شدت پیامد بر مقیاس مصوب', unit: 'امتیاز ۱ تا ۵؛ کمتر بهتر', direction: 'cost' },
-      'قابلیت توسعه': { definition: 'امکان افزایش ظرفیت یا دامنه بدون بازطراحی اساسی', unit: 'امتیاز ۱ تا ۵', direction: 'benefit' },
-      'اثر بلندمدت': { definition: 'اثر پایدار اقتصادی، عملیاتی و راهبردی در افق بلندمدت', unit: 'امتیاز ۱ تا ۵', direction: 'benefit' },
-    }
-    const guides = criteria.map(name => ({ name, ...(commonGuides[name] ?? { definition: 'شاخص را با فرمول قابل‌تکرار، دامنه زمانی ثابت و منبع داده قابل‌ردیابی تعریف کنید', unit: 'واحد متناسب با شاخص', direction: 'benefit' as const }) }))
-    const reasons = [
-      method === 'WSM' ? 'روش ساده و شفاف برای داده‌های عددی و تعداد محدود گزینه‌ها' : method === 'TOPSIS' ? 'مناسب مقایسه چند گزینه عددی بر اساس فاصله از راه‌حل ایده‌آل' : method === 'BWM' ? 'کاهش بار مقایسه خبرگان با انتخاب بهترین و بدترین معیار و قضاوت‌های محدودتر' : 'تفکیک وزن‌دهی خبرگان با AHP و رتبه‌بندی گزینه‌ها با TOPSIS',
-      answers.weights === 'known' ? 'وزن معیارها از قبل مشخص شده است؛ منبع و مبنای آن را ثبت کنید' : 'وزن معیارها باید با قضاوت مستند یا نظر خبرگان تعیین شود',
-      answers.uncertainty === 'high' ? 'به دلیل عدم‌قطعیت بالا، تحلیل حساسیت و سناریوها را پیش از تصمیم نهایی اجرا کنید' : 'پس از ورود داده‌ها، تحلیل حساسیت را برای کنترل پایداری رتبه‌ها اجرا کنید',
-    ]
-    const warning = answers.dependencies === 'dependent'
-      ? 'معیارها به یکدیگر وابسته‌اند. روش ANP برای مدل‌سازی این وابستگی‌ها مناسب‌تر است اما هنوز در این ماژول پیاده‌سازی نشده؛ خروجی AHP/TOPSIS را با این محدودیت تفسیر کنید.'
-      : 'معیارها را مستقل، بدون هم‌پوشانی و قابل‌اندازه‌گیری تعریف کنید؛ جهت سود/هزینه، واحد، دامنه و منبع داده هر معیار را مشخص سازید.'
-    setResult({ method, reasons, criteria, guides, warning })
+    const criteria = criteriaByPurpose[a.purpose!]
+    setCriteriaText(criteria.join('\n'))
+    const rationale = method === 'WSM'
+      ? (isEn ? 'WSM is transparent and easy to audit for a small set of options with known weights and numeric scores.' : 'WSM برای تعداد محدود گزینه، وزن‌های مشخص و امتیازهای عددی، ساده و شفاف است و به‌راحتی قابل بازبینی است.')
+      : method === 'TOPSIS'
+        ? (isEn ? 'TOPSIS compares each option with an ideal best and worst profile; it is useful for several numeric alternatives.' : 'TOPSIS هر گزینه را با وضعیت ایده‌آل و ضدایده‌آل مقایسه می‌کند و برای چندین گزینه با داده عددی مناسب است.')
+        : method === 'BWM'
+          ? (isEn ? 'BWM reduces expert workload: each expert identifies the best and worst criterion and makes focused comparisons.' : 'BWM بار کاری خبرگان را کم می‌کند؛ هر خبره بهترین و بدترین معیار را تعیین و مقایسه‌های محدودتری ثبت می‌کند.')
+          : (isEn ? 'AHP elicits criterion weights from pairwise expert judgments, then TOPSIS ranks options using the performance matrix.' : 'در AHP وزن معیارها از مقایسه‌های زوجی خبرگان به‌دست می‌آید و سپس TOPSIS با ماتریس عملکرد، گزینه‌ها را رتبه‌بندی می‌کند.')
+    const caution = a.dependencies === 'dependent'
+      ? (isEn ? 'Some criteria influence one another. ANP models dependencies but is not currently available here; interpret the suggested method cautiously and avoid double-counting.' : 'برخی معیارها بر هم اثر دارند. ANP برای مدل‌سازی وابستگی‌ها مناسب‌تر است اما فعلاً در این ابزار پیاده‌سازی نشده؛ از دوباره‌شماری اثرها پرهیز کنید و نتیجه را با احتیاط تفسیر کنید.')
+      : (isEn ? 'Keep criteria distinct and measurable; specify a unit, period, source and benefit/cost direction for each.' : 'معیارها را مستقل و بدون هم‌پوشانی تعریف کنید و برای هرکدام واحد، دوره سنجش، منبع و جهت سود/هزینه تعیین کنید.')
+    setStep('result')
+    addAssistant((isEn ? 'Thank you. Based on your answers, my recommendation is ' : 'ممنون. بر اساس پاسخ‌هایتان، پیشنهاد من روش ') + method + '. ' + rationale)
+    addAssistant(caution)
+    addAssistant(isEn ? 'Next, review the suggested criteria below. You can edit or remove any criterion before opening the manual entry form.' : 'حالا معیارهای پیشنهادی را در ادامه بازبینی کنید. پیش از ورود به فرم دستی می‌توانید هر معیار را ویرایش یا حذف کنید.')
   }
-  const parsedAlternatives = () => alternativeNames.split(/\r?\n|,/).map(value => value.trim()).filter(Boolean).slice(0, 12)
-  return <section className="module-workspace-card" aria-label={isEn ? 'Intelligent ranking advisor' : 'دستیار هوشمند رتبه‌بندی'} style={{ marginBottom: 14 }}>
-    <div className="section-head"><div><h2>{isEn ? 'Decision method advisor' : 'دستیار هوشمند انتخاب روش رتبه‌بندی'}</h2><p>{isEn ? 'Answer a few questions to get a method recommendation and a practical criteria checklist.' : 'با پاسخ به چند سؤال، روش مناسب، معیارهای پیشنهادی و راهنمای تعریف معیارها را دریافت کنید.'}</p></div><button type="button" className="secondary-button" onClick={() => setOpen(value => !value)}>{open ? (isEn ? 'Close guide' : 'بستن راهنما') : (isEn ? 'Start guided setup' : 'شروع راهنمای مرحله‌ای')}</button></div>
-    {open && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12, marginTop: 12 }}>
-      {options('purpose', [['', 'نوع تصمیم', 'Decision type'], ['investment', 'انتخاب یا ارزیابی سرمایه‌گذاری', 'Investment selection'], ['supplier', 'انتخاب تأمین‌کننده', 'Supplier selection'], ['project', 'اولویت‌بندی پروژه‌ها', 'Project prioritization'], ['strategy', 'انتخاب راهبرد', 'Strategy selection'], ['general', 'سایر تصمیم‌ها', 'Other decisions']])}
-      {options('evidence', [['', 'جنس داده‌ها', 'Evidence type'], ['numeric', 'عمدتاً عددی و قابل‌اندازه‌گیری', 'Mostly numeric'], ['mixed', 'ترکیبی از عددی و کیفی', 'Mixed numeric and qualitative'], ['qualitative', 'عمدتاً کیفی و قضاوتی', 'Mostly qualitative']])}
-      {options('weights', [['', 'وضعیت وزن معیارها', 'Criterion weights'], ['known', 'وزن‌ها از قبل مشخص است', 'Weights are already known'], ['experts', 'وزن‌ها باید از نظر خبرگان استخراج شود', 'Elicit weights from experts'], ['unknown', 'هنوز نمی‌دانم', 'Not sure yet']])}
-      {options('decisionMakers', [['', 'چه کسانی تصمیم می‌گیرند؟', 'Decision makers'], ['solo', 'یک تصمیم‌گیرنده', 'One decision maker'], ['group', 'چند خبره یا ذی‌نفع', 'Multiple experts or stakeholders']])}
-      {options('time', [['', 'زمان در دسترس خبرگان', 'Expert availability'], ['short', 'محدود؛ پرسش‌های کمتر لازم است', 'Limited; fewer questions'], ['enough', 'کافی برای مقایسه دقیق', 'Enough for detailed comparisons']])}
-      {options('uncertainty', [['', 'میزان عدم‌قطعیت داده‌ها', 'Data uncertainty'], ['low', 'کم', 'Low'], ['high', 'زیاد', 'High']])}
-      {options('dependencies', [['', 'رابطه بین معیارها', 'Criterion relationships'], ['independent', 'معیارها مستقل‌اند', 'Criteria are independent'], ['dependent', 'برخی معیارها بر هم اثر می‌گذارند', 'Some criteria influence others']])}
-      {options('scale', [['', 'تعداد گزینه‌ها', 'Number of alternatives'], ['few', 'کمتر از ۵ گزینه', 'Fewer than 5'], ['many', '۵ گزینه یا بیشتر', '5 or more']])}
-    </div>}
-    {open && <div style={{ marginTop: 12 }}>
-      <label style={{ display: 'grid', gap: 5 }}><b>{isEn ? 'Alternative names (optional, one per line)' : 'نام گزینه‌ها (اختیاری؛ هر گزینه در یک خط)'}</b><textarea rows={3} value={alternativeNames} onChange={event => setAlternativeNames(event.target.value)} placeholder={isEn ? 'Project A\nProject B\nProject C' : 'پروژه الف\nپروژه ب\nپروژه ج'}/></label>
-      <button type="button" className="primary" style={{ marginTop: 10 }} onClick={buildRecommendation}>{isEn ? 'Analyze answers and recommend' : 'تحلیل پاسخ‌ها و ارائه پیشنهاد'}</button>
-    </div>}
-    {result && open && <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
-      <h3>{isEn ? 'Recommended method: ' + result.method : 'روش پیشنهادی: ' + result.method}</h3>
-      <ul>{result.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
-      <b>{isEn ? 'Suggested criteria — review and edit before use' : 'معیارهای پیشنهادی — پیش از استفاده بازبینی و ویرایش کنید'}</b>
-      <ul>{result.guides.map(item => <li key={item.name}><b>{item.name}</b> — {item.definition} · {isEn ? 'Unit' : 'واحد'}: {item.unit} · {isEn ? 'Direction' : 'جهت'}: {item.direction === 'benefit' ? (isEn ? 'Benefit' : 'سود؛ بیشتر بهتر') : (isEn ? 'Cost' : 'هزینه؛ کمتر بهتر')}</li>)}</ul>
-      <p className="muted">{result.warning}</p>
-      <p className="muted">{isEn ? 'For each criterion define: an unambiguous name, operational definition, unit, benefit/cost direction, measurement period, source, scoring scale and (if relevant) a minimum eligibility threshold. Avoid overlapping criteria and double-counting.' : 'برای هر معیار این موارد را مشخص کنید: نام بدون ابهام، تعریف عملیاتی، واحد اندازه‌گیری، جهت سود/هزینه، دوره سنجش، منبع داده، مقیاس امتیازدهی و در صورت نیاز حداقل شرط احراز. از هم‌پوشانی معیارها و دوباره‌شماری یک اثر جلوگیری کنید.'}</p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        <button type="button" className="secondary-button" onClick={() => onChoose(result.method, 'manual', result.criteria, parsedAlternatives(), result.guides.map(item => item.direction))}>{isEn ? 'Manual entry' : 'مسیر دستی · ورود اطلاعات توسط کاربر'}</button>
-        <button type="button" className="primary" onClick={() => onChoose(result.method, 'automatic', result.criteria, parsedAlternatives(), result.guides.map(item => item.direction))}>{isEn ? 'Build automatic draft' : 'مسیر خودکار · ساخت پیش‌نویس توسط برنامه'}</button>
+  const send = () => submit(input)
+  const quickReplies = step === 'purpose'
+    ? (isEn ? ['Investment', 'Supplier selection', 'Project prioritization', 'Strategy', 'Other'] : ['انتخاب سرمایه‌گذاری', 'انتخاب تأمین‌کننده', 'اولویت‌بندی پروژه', 'انتخاب راهبرد', 'سایر'])
+    : step === 'evidence'
+      ? (isEn ? ['Numeric data', 'Mixed data', 'Qualitative judgments'] : ['داده عددی', 'داده ترکیبی', 'اطلاعات کیفی'])
+      : step === 'weights'
+        ? (isEn ? ['Weights are known', 'Experts should set weights', 'Not sure yet'] : ['وزن‌ها مشخص است', 'استخراج وزن از خبرگان', 'هنوز مطمئن نیستم'])
+        : step === 'decisionMakers'
+          ? (isEn ? ['One decision maker', 'Several experts'] : ['یک تصمیم‌گیرنده', 'چند خبره'])
+          : step === 'time'
+            ? (isEn ? ['Limited time', 'Enough time'] : ['زمان محدود', 'زمان کافی'])
+            : step === 'dependencies'
+              ? (isEn ? ['Independent criteria', 'Some criteria are dependent'] : ['معیارها مستقل‌اند', 'برخی معیارها وابسته‌اند'])
+              : step === 'uncertainty'
+                ? (isEn ? ['Low uncertainty', 'High uncertainty'] : ['عدم‌قطعیت کم', 'عدم‌قطعیت زیاد'])
+                : []
+  const parsedCriteria = criteriaText.split(/\r?\n|[,،;؛]/).map(item => item.trim()).filter(Boolean).slice(0, 8)
+  const parsedOptions = alternativesText.split(/\r?\n|[,،;؛]/).map(item => item.trim()).filter(Boolean).slice(0, 12)
+  const directions = parsedCriteria.map(name => /هزینه|سرمایه|ریسک|زمان|مصرف|قیمت|نیاز منابع/i.test(name) ? 'cost' as const : 'benefit' as const)
+  return <section className="module-workspace-card" aria-label={isEn ? 'Conversational ranking advisor' : 'دستیار محاوره‌ای رتبه‌بندی'} data-testid="ranking-conversation">
+    <div className="section-head"><div><h2>{isEn ? 'Conversational decision advisor' : 'دستیار گفت‌وگومحور انتخاب روش رتبه‌بندی'}</h2><p>{isEn ? 'A step-by-step conversation that adapts to your answers. No other module data is accessed.' : 'گفت‌وگویی مرحله‌ای که با پاسخ شما پیش می‌رود؛ هیچ داده‌ای از ماژول‌های دیگر دریافت نمی‌شود.'}</p></div><button type="button" className="secondary-button" onClick={start}>{started ? (isEn ? 'Start over' : 'شروع گفت‌وگوی جدید') : (isEn ? 'Talk to the advisor' : 'گفت‌وگو با دستیار')}</button></div>
+    {started && <div style={{ marginTop: 14 }}>
+      <div role="log" aria-live="polite" aria-label={isEn ? 'Conversation' : 'گفت‌وگو'} style={{ display: 'grid', gap: 9, maxHeight: 360, overflowY: 'auto', padding: 10, border: '1px solid var(--line)', borderRadius: 10 }}>
+        {messages.map((message, index) => <div key={index} style={{ justifySelf: message.role === 'user' ? 'end' : 'start', maxWidth: '92%', padding: '9px 12px', borderRadius: 12, background: message.role === 'user' ? 'var(--surface-2, #eef3f7)' : 'var(--surface, #fff)', border: '1px solid var(--line)' }}><b>{message.role === 'user' ? (isEn ? 'You' : 'شما') : (isEn ? 'Advisor' : 'دستیار')}</b><div style={{ whiteSpace: 'pre-wrap', marginTop: 4 }}>{message.text}</div></div>)}
       </div>
-      <small className="muted">{isEn ? 'Automatic mode imports available project names and capacity data, creates editable criteria, and leaves missing scores blank. Equal starting weights are provisional; no evidence is invented.' : 'در مسیر خودکار، نام پروژه‌ها و ظرفیت‌های موجود را وارد و معیارهای قابل‌ویرایش را می‌سازد؛ وزن‌های اولیه برابر و موقت‌اند و امتیاز فاقد داده خالی می‌ماند.'}</small>
+      {step !== 'result' && <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+        {quickReplies.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>{quickReplies.map(reply => <button key={reply} type="button" className="secondary-button" onClick={() => submit(reply)}>{reply}</button>)}</div>}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}><input aria-label={isEn ? 'Your answer' : 'پاسخ شما'} value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); send() } }} placeholder={isEn ? 'Type your answer in your own words…' : 'پاسخ خود را به زبان خودتان بنویسید…'}/><button type="button" className="primary" onClick={send} disabled={!input.trim()}>{isEn ? 'Send' : 'ارسال'}</button></div>
+      </div>}
+      {step === 'result' && <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
+        <div><h3>{isEn ? 'Recommended method' : 'روش پیشنهادی'}: {answers.weights === 'known' && answers.evidence === 'numeric' ? ((answers.alternatives?.length ?? 0) >= 5 ? 'TOPSIS' : 'WSM') : answers.decisionMakers === 'group' && answers.time === 'short' ? 'BWM' : answers.weights === 'experts' || answers.decisionMakers === 'group' || answers.evidence !== 'numeric' ? 'AHP+TOPSIS' : ((answers.alternatives?.length ?? 0) >= 5 ? 'TOPSIS' : 'WSM')}</h3>
+          <p className="muted">{isEn ? 'Method selection is advisory. Review the assumptions and use sensitivity analysis before a consequential decision.' : 'این پیشنهاد راهنماست؛ پیش از تصمیم مهم، مفروضات را بازبینی و تحلیل حساسیت را اجرا کنید.'}</p></div>
+        <label style={{ display: 'grid', gap: 5 }}><b>{isEn ? 'Suggested criteria (one per line; edit freely)' : 'معیارهای پیشنهادی (هر معیار در یک خط؛ قابل ویرایش)'}</b><textarea rows={5} value={criteriaText} onChange={event => setCriteriaText(event.target.value)} /></label>
+        <label style={{ display: 'grid', gap: 5 }}><b>{isEn ? 'Options to compare (one per line)' : 'گزینه‌های مقایسه (هر گزینه در یک خط)'}</b><textarea rows={3} value={alternativesText} onChange={event => setAlternativesText(event.target.value)} /></label>
+        <div><b>{isEn ? 'How to define each criterion' : 'چگونه هر معیار را تعریف کنید'}</b><ul><li>{isEn ? 'Give it a unique, unambiguous name and a measurable operational definition.' : 'نام یکتا و بدون ابهام و تعریف عملیاتی قابل‌اندازه‌گیری برای آن بنویسید.'}</li><li>{isEn ? 'Specify the unit, time period, data source and whether higher or lower is better.' : 'واحد، دوره سنجش، منبع داده و بهتر بودن مقدار بیشتر یا کمتر را مشخص کنید.'}</li><li>{isEn ? 'For qualitative factors, use a shared anchored scale (for example 1–5) and describe what each score means.' : 'برای عوامل کیفی از مقیاس مشترک دارای تعریف (مثلاً ۱ تا ۵) استفاده کنید و معنای هر امتیاز را بنویسید.'}</li><li>{isEn ? 'Avoid overlapping criteria; record eligibility thresholds separately from weighted criteria.' : 'از معیارهای هم‌پوشان پرهیز کنید و شروط احراز را جدا از معیارهای وزن‌دار ثبت کنید.'}</li></ul></div>
+        <div><b>{isEn ? 'Manual data-entry guide' : 'راهنمای ورود دستی اطلاعات'}</b><ol><li>{isEn ? 'Add or edit criteria and choose benefit/cost direction.' : 'معیارها را اضافه یا ویرایش و جهت سود/هزینه را تعیین کنید.'}</li><li>{isEn ? 'Add the alternatives and enter one comparable value per criterion and alternative.' : 'گزینه‌ها را اضافه کنید و برای هر گزینه در برابر هر معیار یک مقدار قابل‌مقایسه وارد کنید.'}</li><li>{isEn ? 'Use the same unit, reference period and scoring scale across all alternatives.' : 'برای تمام گزینه‌ها واحد، دوره مرجع و مقیاس امتیازدهی یکسان به‌کار ببرید.'}</li><li>{isEn ? 'Leave unknown values blank; do not replace missing evidence with zero.' : 'مقادیر نامعلوم را خالی بگذارید و داده مفقود را با صفر جایگزین نکنید.'}</li></ol></div>
+        {answers.dependencies === 'dependent' && <p className="muted">{isEn ? 'Because some criteria are dependent, note that ANP is designed for interdependent criteria but is not currently implemented in this module.' : 'با توجه به وابستگی بعضی معیارها، توجه کنید ANP برای معیارهای وابسته مناسب است اما فعلاً در این ماژول پیاده‌سازی نشده است.'}</p>}
+        {answers.uncertainty === 'high' && <p className="muted">{isEn ? 'Your data is uncertain: use optimistic/pessimistic scenarios and rank sensitivity; do not treat a single ranking as definitive.' : 'با توجه به عدم‌قطعیت بالا، سناریوهای خوش‌بینانه/بدبینانه و تحلیل حساسیت رتبه را اجرا کنید و یک رتبه منفرد را قطعی تلقی نکنید.'}</p>}
+        <button type="button" className="primary" disabled={parsedCriteria.length < 1 || parsedOptions.length < 2} onClick={() => onChoose(
+          answers.weights === 'known' && answers.evidence === 'numeric' ? ((answers.alternatives?.length ?? 0) >= 5 ? 'TOPSIS' : 'WSM') : answers.decisionMakers === 'group' && answers.time === 'short' ? 'BWM' : answers.weights === 'experts' || answers.decisionMakers === 'group' || answers.evidence !== 'numeric' ? 'AHP+TOPSIS' : ((answers.alternatives?.length ?? 0) >= 5 ? 'TOPSIS' : 'WSM'),
+          parsedCriteria, parsedOptions, directions
+        )}>{isEn ? 'Open manual ranking form' : 'تأیید و ورود به فرم دستی رتبه‌بندی'}</button>
+      </div>}
     </div>}
   </section>
 }
