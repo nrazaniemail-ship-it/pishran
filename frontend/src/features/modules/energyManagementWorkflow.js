@@ -253,6 +253,7 @@ export function prepareModule02EnergyCostPosting({baseInput,allocation,costCente
 
 export const ENERGY_TARIFF_CONTRACTS_KEY = 'module-intelligence:MOD-05:tariff-contracts:v1'
 export const ENERGY_TARIFF_CALCULATIONS_KEY = 'module-intelligence:MOD-05:tariff-calculations:v1'
+export const ENERGY_TARIFF_RECONCILIATIONS_KEY = 'module-intelligence:MOD-05:tariff-reconciliations:v1'
 
 export function parseEnergyTariffTiers(text){
  const raw=String(text??'').trim()
@@ -337,6 +338,61 @@ export function calculateConfiguredEnergyTariff(input,{contracts=[]}={},calculat
  const result={id:'MOD05-TARIFF-CALC-'+Date.parse(calculatedAt)+'-'+String(contract.id),contractId:contract.id,resource,site,period,supplier:contract.supplier,contractNumber:contract.contractNumber,currency:contract.currency,unit:contract.unit,quantity,demand,reactive,energyCharge,demandCharge,reactiveCharge,fixedCharge,subtotal,taxPercent:Number(contract.taxPercent??0),tax,total,calculatedAt,source:'Configured user-entered tariff contract',warnings:['محاسبه بر اساس قرارداد و نرخ‌های ثبت‌شده کاربر است؛ صحت قرارداد، قرائت‌ها، مالیات و عوارض باید با قبض رسمی تطبیق داده شود.']}
  return result
 }
+
+export function reconcileEnergyTariffWithBill({calculation,bill,resource,tolerancePercent=1}){
+ if(!calculation||!bill)throw new Error('محاسبه تعرفه و قبض واقعی برای تطبیق الزامی هستند.')
+ if(!['electricity','gas','water'].includes(resource)||calculation.resource!==resource)throw new Error('منبع محاسبه تعرفه با قبض یکسان نیست.')
+ if(bill.consumption===null||bill.consumption===undefined||!Number.isFinite(Number(bill.consumption)))throw new Error('مصرف ثبت‌شده قبض برای تطبیق معتبر نیست.')
+ const tolerance=number(tolerancePercent,'دامنه اغماض درصدی',0)
+ if(tolerance>20)throw new Error('دامنه اغماض نمی‌تواند بیش از ۲۰ درصد باشد.')
+ const components=[]
+ const compare=(key,label,expected,actual,modeled=true)=>{
+  if(!modeled){components.push({key,label,expected:null,actual:actual===null||actual===undefined?null:Number(actual),difference:null,differencePercent:null,status:'not-modeled',note:'این جزء در ساختار فعلی قرارداد تعرفه مدل نشده است.'});return}
+  if(actual===null||actual===undefined||actual===''){components.push({key,label,expected:Number(expected),actual:null,difference:null,differencePercent:null,status:'not-provided',note:'مقدار جزء قبض ارائه نشده است.'});return}
+  const observed=number(actual,label,0),target=Number(expected),difference=observed-target,denominator=Math.max(Math.abs(target),Math.abs(observed),1)
+  const differencePercent=Math.abs(difference)/denominator*100
+  const limit=Math.max(1,Math.abs(target)*tolerance/100)
+  components.push({key,label,expected:target,actual:observed,difference,differencePercent,status:Math.abs(difference)<=limit?'within-tolerance':'mismatch',toleranceAmount:limit})
+ }
+ const billPeriod=String(bill.period??'').trim()
+ const billConsumption=Number(bill.consumption)
+ const consumptionDifference=billConsumption-Number(calculation.quantity)
+ const consumptionPct=Math.abs(consumptionDifference)/Math.max(Math.abs(billConsumption),Math.abs(Number(calculation.quantity)),1)*100
+ components.push({key:'consumption',label:'مصرف قبض',expected:Number(calculation.quantity),actual:billConsumption,difference:consumptionDifference,differencePercent:consumptionPct,status:consumptionPct<=tolerance?'within-tolerance':'mismatch'})
+ if(resource==='electricity'){
+  compare('energyCharge','بهای انرژی',calculation.energyCharge,bill.energyCharge)
+  compare('demandCharge','بهای دیماند',calculation.demandCharge,bill.demandCharge)
+  compare('reactiveCharge','بهای انرژی راکتیو',calculation.reactiveCharge,bill.reactiveCharge)
+  compare('taxCharge','مالیات و عوارض',calculation.tax,bill.taxCharge)
+ }else if(resource==='gas'){
+  compare('gasCharge','بهای گاز',calculation.energyCharge,bill.gasCharge)
+  compare('distributionCharge','انتقال و توزیع',null,bill.distributionCharge,false)
+  compare('taxCharge','مالیات و عوارض',calculation.tax,bill.taxCharge)
+  compare('otherCharges','سایر هزینه‌ها',null,bill.otherCharges,false)
+ }else{
+  compare('waterCharge','بهای آب',calculation.energyCharge,bill.waterCharge)
+  compare('sewerCharge','بهای دفع فاضلاب',null,bill.sewerCharge,false)
+  compare('fixedCharge','هزینه ثابت قبض',calculation.fixedCharge,bill.fixedCharge)
+  compare('taxCharge','مالیات و عوارض',calculation.tax,bill.taxCharge)
+  compare('otherCharges','سایر هزینه‌ها',null,bill.otherCharges,false)
+ }
+ compare('amount','مبلغ قابل پرداخت',calculation.total,bill.amount)
+ const mismatches=components.filter(x=>x.status==='mismatch')
+ const incomplete=components.filter(x=>x.status==='not-provided'||x.status==='not-modeled')
+ const status=mismatches.length?'discrepancy':incomplete.length?'incomplete':'reconciled'
+ const warnings=[]
+ if(billPeriod&&billPeriod!==calculation.period)warnings.push('دوره قبض با تاریخ محاسبه تعرفه عیناً یکسان نیست؛ بازه صورتحساب را دستی کنترل کنید.')
+ if(components.some(x=>x.status==='not-modeled'))warnings.push('برخی ردیف‌های قبض مانند انتقال، فاضلاب یا سایر عوارض در قرارداد فعلی مدل نشده‌اند؛ نتیجه تطبیق کامل نیست.')
+ if(status==='discrepancy')warnings.push('حداقل یک جزء یا مبلغ کل قبض خارج از دامنه اغماض تعیین‌شده است.')
+ if(status==='incomplete')warnings.push('برای تطبیق کامل، تمام اجزای قابل مقایسه باید در قبض و قرارداد ثبت شوند.')
+ return {id:'MOD05-RECON-'+Date.now()+'-'+String(bill.id??bill.billNumber??'bill').replace(/[^a-zA-Z0-9_-]/g,'-'),resource,site:calculation.site,contractId:calculation.contractId,contractNumber:calculation.contractNumber,billId:String(bill.id??''),billNumber:String(bill.billNumber??''),accountNumber:String(bill.accountNumber??''),billPeriod,calculationPeriod:calculation.period,currency:calculation.currency,calculatedAt:calculation.calculatedAt,reconciledAt:new Date().toISOString(),tolerancePercent:tolerance,components,mismatchCount:mismatches.length,incompleteCount:incomplete.length,status,warnings,calculatedTotal:calculation.total,billedTotal:bill.amount===null||bill.amount===undefined?null:Number(bill.amount),totalDifference:bill.amount===null||bill.amount===undefined?null:Number(bill.amount)-calculation.total}
+}
+export async function saveEnergyTariffReconciliation(input,store){
+ const result=reconcileEnergyTariffWithBill(input)
+ await store.update(ENERGY_TARIFF_RECONCILIATIONS_KEY,old=>[result,...(Array.isArray(old)?old:[])].slice(0,1000))
+ return result
+}
+
 export async function saveEnergyTariffCalculation(input,context,store,calculatedAt=new Date().toISOString()){
  const result=calculateConfiguredEnergyTariff(input,context,calculatedAt)
  await store.update(ENERGY_TARIFF_CALCULATIONS_KEY,old=>[result,...(Array.isArray(old)?old:[])].slice(0,1000))
@@ -417,13 +473,28 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
  const baselineUncertaintyPct=number(input.baselineUncertaintyPct,'عدم‌قطعیت نسبی خط مبنا',0)
  const actualUncertaintyPct=number(input.actualUncertaintyPct,'عدم‌قطعیت نسبی اندازه‌گیری واقعی',0)
  const modelUncertaintyPct=number(input.modelUncertaintyPct??0,'عدم‌قطعیت مدل / تعدیل',0)
+ const samplingUncertaintyPct=number(input.samplingUncertaintyPct??0,'عدم‌قطعیت نمونه‌گیری',0)
+ const resolutionUncertaintyPct=number(input.resolutionUncertaintyPct??0,'عدم‌قطعیت تفکیک‌پذیری ابزار',0)
+ const systematicBiasPct=number(input.systematicBiasPct??0,'حد باقیمانده خطای سیستماتیک',0)
+ const rhoBaselineActual=number(input.rhoBaselineActual??0,'هم‌بستگی خط مبنا و اندازه‌گیری',-1)
+ const rhoBaselineModel=number(input.rhoBaselineModel??0,'هم‌بستگی خط مبنا و مدل',-1)
+ const rhoActualModel=number(input.rhoActualModel??0,'هم‌بستگی اندازه‌گیری و مدل',-1)
  const coverageFactor=number(input.coverageFactor??2,'ضریب پوشش عدم‌قطعیت',1)
- if([baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct].some(x=>x>100)||coverageFactor>3)throw new Error('درصدهای عدم‌قطعیت باید حداکثر ۱۰۰ و ضریب پوشش بین ۱ تا ۳ باشد.')
+ if([baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct,samplingUncertaintyPct,resolutionUncertaintyPct,systematicBiasPct].some(x=>x>100)||coverageFactor>3||[rhoBaselineActual,rhoBaselineModel,rhoActualModel].some(x=>x>1))throw new Error('درصدهای عدم‌قطعیت باید حداکثر ۱۰۰، هم‌بستگی بین ۱- و ۱ و ضریب پوشش بین ۱ تا ۳ باشد.')
+ const correlationDeterminant=1+2*rhoBaselineActual*rhoBaselineModel*rhoActualModel-rhoBaselineActual**2-rhoBaselineModel**2-rhoActualModel**2
+ if(correlationDeterminant< -1e-9)throw new Error('ماتریس هم‌بستگی عدم‌قطعیت معتبر و نیمه‌مثبت معین نیست.')
  const baselineUncertainty=normalizedBaseline*baselineUncertaintyPct/100
  const actualUncertainty=actualConsumption*actualUncertaintyPct/100
  const modelUncertainty=normalizedBaseline*modelUncertaintyPct/100
- const combinedStandardUncertainty=Math.sqrt(baselineUncertainty**2+actualUncertainty**2+modelUncertainty**2)
- const expandedUncertainty=coverageFactor*combinedStandardUncertainty
+ const samplingUncertainty=actualConsumption*samplingUncertaintyPct/100
+ const resolutionUncertainty=actualConsumption*resolutionUncertaintyPct/100
+ const systematicBiasBound=normalizedBaseline*systematicBiasPct/100
+ const covarianceTerm=2*(rhoBaselineActual*baselineUncertainty*actualUncertainty+rhoBaselineModel*baselineUncertainty*modelUncertainty+rhoActualModel*actualUncertainty*modelUncertainty)
+ const combinedVariance=baselineUncertainty**2+actualUncertainty**2+modelUncertainty**2+samplingUncertainty**2+resolutionUncertainty**2+covarianceTerm
+ if(combinedVariance< -1e-8)throw new Error('واریانس ترکیبی عدم‌قطعیت منفی شده است؛ ورودی‌های هم‌بستگی را بازبینی کنید.')
+ const combinedStandardUncertainty=Math.sqrt(Math.max(0,combinedVariance))
+ const expandedRandomUncertainty=coverageFactor*combinedStandardUncertainty
+ const expandedUncertainty=expandedRandomUncertainty+systematicBiasBound
  const uncertaintyLowerBound=calculatedVariance-expandedUncertainty
  const uncertaintyUpperBound=calculatedVariance+expandedUncertainty
  const uncertaintyConclusion=uncertaintyLowerBound>0?'positive-savings-distinguishable':uncertaintyUpperBound<0?'negative-variance-distinguishable':'not-distinguishable'
@@ -443,10 +514,44 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
   return {recordId:actual.id,period:actual.period,meterId:actual.meterId??'',site:actual.site,calibrationId:calibration?.id??null,status:status.status,nextCalibrationDate:calibration?.nextCalibrationDate??null}
  })
  const warnings=[...new Set([...calculations.flatMap(x=>x.warnings??[]),...calibrationCoverage.filter(x=>x.status!=='valid').map(x=>'وضعیت کالیبراسیون کنتور '+(x.meterId||'نامشخص')+': '+x.status)])]
- return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,comparisonUnit,calculatedVariance,calculatedVariancePercent:normalizedBaseline?calculatedVariance/normalizedBaseline*100:0,uncertaintyBudget:{baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct,baselineUncertainty,actualUncertainty,modelUncertainty,combinedStandardUncertainty,coverageFactor,expandedUncertainty,lowerBound:uncertaintyLowerBound,upperBound:uncertaintyUpperBound,conclusion:uncertaintyConclusion,interpretation:'درصدهای ورودی به‌عنوان عدم‌قطعیت استاندارد نسبی مستقل فرض شده‌اند؛ ضریب پوشش بر عدم‌قطعیت ترکیبی اعمال شده است. هم‌بستگی خط مبنا، داده واقعی و مدل در این محاسبه لحاظ نشده است.'},evidenceAttachments:evidenceAttachments.map(({name,mimeType,size,lastModified,dataUrl})=>({name,mimeType,size,lastModified,dataUrl})),calibrationCoverage,warnings:[...warnings,...(uncertaintyConclusion==='not-distinguishable'?['اختلاف محاسبه‌شده در بازه عدم‌قطعیت قرار دارد و از صفر قابل تفکیک نیست؛ ادعای صرفه‌جویی مثبت از این محاسبه پشتیبانی نمی‌شود.']:[])],reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
+ return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,comparisonUnit,calculatedVariance,calculatedVariancePercent:normalizedBaseline?calculatedVariance/normalizedBaseline*100:0,uncertaintyBudget:{baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct,samplingUncertaintyPct,resolutionUncertaintyPct,systematicBiasPct,rhoBaselineActual,rhoBaselineModel,rhoActualModel,correlationDeterminant,baselineUncertainty,actualUncertainty,modelUncertainty,samplingUncertainty,resolutionUncertainty,systematicBiasBound,covarianceTerm,combinedStandardUncertainty,expandedRandomUncertainty,coverageFactor,expandedUncertainty,lowerBound:uncertaintyLowerBound,upperBound:uncertaintyUpperBound,conclusion:uncertaintyConclusion,interpretation:'مؤلفه‌های تصادفی با احتساب کوواریانس سه منبع اصلی ترکیب شده‌اند؛ مؤلفه سیستماتیک به‌صورت محافظه‌کارانه و خطی به عدم‌قطعیت بسط‌یافته افزوده شده است. فرض‌ها و ماتریس هم‌بستگی نیازمند مستندات و بازبینی متخصص هستند.'},evidenceAttachments:evidenceAttachments.map(({name,mimeType,size,lastModified,dataUrl})=>({name,mimeType,size,lastModified,dataUrl})),calibrationCoverage,warnings:[...warnings,...(uncertaintyConclusion==='not-distinguishable'?['اختلاف محاسبه‌شده در بازه عدم‌قطعیت قرار دارد و از صفر قابل تفکیک نیست؛ ادعای صرفه‌جویی مثبت از این محاسبه پشتیبانی نمی‌شود.']:[])],reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
 }
-export async function saveEnergyMvEvidencePack(input,context,store,generatedAt=new Date().toISOString()){
+
+const EVIDENCE_KDF_ITERATIONS=310000
+const bytesToBase64=bytes=>{let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
+const base64ToBytes=value=>Uint8Array.from(atob(value),char=>char.charCodeAt(0))
+async function deriveEvidenceVaultKey(passphrase,salt){
+ if(!String(passphrase??'').trim())throw new Error('برای رمزگذاری مستندات، گذرواژه مخزن اسناد الزامی است.')
+ if(!globalThis.crypto?.subtle)throw new Error('رمزگذاری امن در این مرورگر در دسترس نیست؛ از مرورگر به‌روز و اتصال HTTPS استفاده کنید.')
+ const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(passphrase),'PBKDF2',false,['deriveKey'])
+ return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:EVIDENCE_KDF_ITERATIONS,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])
+}
+export async function encryptEnergyEvidenceAttachments(attachments,passphrase){
+ const files=Array.isArray(attachments)?attachments:[]
+ if(!files.length)return []
+ const salt=crypto.getRandomValues(new Uint8Array(16)),key=await deriveEvidenceVaultKey(passphrase,salt)
+ return Promise.all(files.map(async file=>{
+  const match=String(file.dataUrl??'').match(/^data:([^;]+);base64,(.+)$/)
+  if(!match)throw new Error('ساختار فایل برای رمزگذاری معتبر نیست.')
+  const iv=crypto.getRandomValues(new Uint8Array(12)),plain=base64ToBytes(match[2])
+  const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,plain)
+  return {name:file.name,mimeType:file.mimeType||match[1],size:Number(file.size),lastModified:Number(file.lastModified??0),encrypted:true,algorithm:'AES-256-GCM',kdf:'PBKDF2-SHA256',iterations:EVIDENCE_KDF_ITERATIONS,salt:bytesToBase64(salt),iv:bytesToBase64(iv),ciphertext:bytesToBase64(new Uint8Array(cipher))}
+ }))
+}
+export async function decryptEnergyEvidenceAttachment(file,passphrase){
+ if(!file?.encrypted||file.algorithm!=='AES-256-GCM'||file.kdf!=='PBKDF2-SHA256')throw new Error('این پیوست در قالب رمزگذاری‌شده پشتیبانی‌شده نیست.')
+ const key=await deriveEvidenceVaultKey(passphrase,base64ToBytes(file.salt))
+ try{
+  const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:base64ToBytes(file.iv)},key,base64ToBytes(file.ciphertext))
+  return 'data:'+(file.mimeType||'application/octet-stream')+';base64,'+bytesToBase64(new Uint8Array(plain))
+ }catch{throw new Error('گذرواژه نادرست است یا محتوای رمزگذاری‌شده آسیب دیده است.')}
+}
+export async function saveEnergyMvEvidencePack(input,context,store,generatedAt=new Date().toISOString(),options={}){
  const pack=buildEnergyMvEvidencePack(input,context,generatedAt)
+ if(pack.evidenceAttachments.length){
+  pack.evidenceAttachments=await encryptEnergyEvidenceAttachments(pack.evidenceAttachments,options.passphrase)
+  pack.documentSecurity={encryptedAtRest:true,algorithm:'AES-256-GCM',kdf:'PBKDF2-SHA256',iterations:EVIDENCE_KDF_ITERATIONS,passphraseStored:false,warning:'گذرواژه در مرورگر ذخیره نمی‌شود؛ گم‌شدن آن به معنی عدم امکان بازیابی فایل‌هاست.'}
+ }else pack.documentSecurity={encryptedAtRest:true,algorithm:'AES-256-GCM',kdf:'PBKDF2-SHA256',passphraseStored:false,warning:'این بسته پیوست فایل ندارد.'}
  await store.update(ENERGY_MV_EVIDENCE_KEY,old=>[pack,...(Array.isArray(old)?old:[])].slice(0,300))
  return pack
 }
