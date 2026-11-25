@@ -9,6 +9,7 @@ on:
       - 'frontend/**'
       - 'docs/**'
       - '.github/workflows/frontend-validation.yml'
+      - '.github/workflows/deploy.yml'
       - '.github/workflows/public-ranking-browser.yml'
   pull_request:
     branches: [main, feature/pishran-module-launcher-redesign, feature/pishran-mod05-energy-dashboard, feature/mod05-bill-upload-source-menu]
