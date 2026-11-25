@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -44,12 +45,35 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist
+  wait-for-branch-pages-build:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for the exact-SHA automatic Pages build and deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          for attempt in $(seq 1 90); do
+            runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100")
+            status=$(echo "$runs" | jq -r --arg sha "$TARGET_SHA" '.workflow_runs[] | select(.name == "pages build and deployment" and .head_sha == $sha) | .status' | head -n 1)
+            conclusion=$(echo "$runs" | jq -r --arg sha "$TARGET_SHA" '.workflow_runs[] | select(.name == "pages build and deployment" and .head_sha == $sha) | .conclusion' | head -n 1)
+            if [ "$status" = "completed" ]; then
+              [ "$conclusion" = "success" ] || { echo "Automatic Pages build concluded: $conclusion"; exit 1; }
+              echo "Automatic Pages deployment completed for $TARGET_SHA"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for automatic Pages deployment: $TARGET_SHA"
+          exit 1
+
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, wait-for-branch-pages-build]
     steps:
       - name: Deploy
         id: deployment
