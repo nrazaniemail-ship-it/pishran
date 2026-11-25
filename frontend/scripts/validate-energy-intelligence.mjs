@@ -114,3 +114,16 @@ test('gas cost allocation panel uses the tested thermal and contracted-capacity 
  assert.match(electricity,/ENERGY_COST_ALLOCATIONS_KEY/)
  assert.match(electricity,/This invoice has already been allocated|برای این قبض قبلاً تخصیص ثبت شده است/)
 })
+
+
+test('MOD-05 specification documents the implemented advanced scope and does not describe delivered capabilities as future work',async()=>{
+ const {readFile}=await import('node:fs/promises')
+ const spec=await readFile(new URL('../../../docs/modules/MOD-05-ISO-50000-ENERGY-MANAGEMENT.md',import.meta.url),'utf8')
+ assert.match(spec,/rolling-origin multivariable OLS screening model/i)
+ assert.match(spec,/optional drivers/i)
+ assert.match(spec,/water-balances:v1/)
+ assert.match(spec,/resource-cost-allocations:v1/)
+ assert.match(spec,/meter calibration register/)
+ assert.doesNotMatch(spec,/A future model-based normalization/)
+ assert.doesNotMatch(spec,/Advanced regression normalization, multi-variable adjustment.*remain follow-on work/)
+})
