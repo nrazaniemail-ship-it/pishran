@@ -379,7 +379,18 @@ try {
     'edited module workspace name must replace the old name after recovery')
   assert.equal(await page.locator('.module-workspace-page').getByRole('button', { name: /^(ادامه بده|ادامه|Continue|Continue now)$/i }).count(), 0,
     'obsolete bottom continue action must remain absent after recovery')
-  console.log('PASS: live public PWA module tabs and workspace persistence, no bottom continue action, MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
+
+  await page.getByRole('navigation').getByRole('button', { name: 'پروژه‌ها' }).click()
+  await page.getByRole('heading', { name: 'پروژه‌های امکان‌سنجی' }).waitFor()
+  await page.getByRole('button', { name: 'پروژه جدید' }).click()
+  await page.getByLabel('نوع پروژه').selectOption('نورد ورق گرم- تولید کلاف')
+  await page.getByLabel('نام پروژه').fill('پروژه آزمون رنگ کارت')
+  await page.getByRole('button', { name: 'ذخیره پروژه' }).click()
+  const feasibilityProjectCard = page.locator('.project-card').filter({ hasText: 'پروژه آزمون رنگ کارت' })
+  await feasibilityProjectCard.waitFor({ state: 'visible' })
+  assert.equal(await feasibilityProjectCard.evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(244, 237, 223)',
+    'feasibility project cards must use the pale beige background')
+  console.log('PASS: live public PWA project-card beige styling, module tabs and workspace persistence, no bottom continue action, MOD-10, WSM persistence, AHP/BWM/TOPSIS/AHP+TOPSIS, independent expert BWM, rank sensitivity scenarios and bilingual switching')
 } finally {
   await browser.close()
 }
