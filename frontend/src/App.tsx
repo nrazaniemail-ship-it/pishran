@@ -504,6 +504,11 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
     if (!name) return
     await persistRankingProjects(rankingProjects.map(project => project.id === selectedProject.id ? { ...project, name, updatedAt: new Date().toISOString() } : project))
   }
+  const returnToRankingProjects = async () => {
+    const latest = await localStore.get<RankingWorkspaceProject[]>('mod10-ranking-projects:v1')
+    setRankingProjects(Array.isArray(latest) ? latest : [])
+    setSelectedProjectId(null)
+  }
   const deleteRankingProject = async (projectId: string) => {
     const next = rankingProjects.filter(project => project.id !== projectId)
     await persistRankingProjects(next)
@@ -566,7 +571,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
       </article>)}</div> : <div className="empty-state"><b>{isEn ? 'No ranking projects yet' : 'هنوز پروژه رتبه‌بندی ایجاد نشده است'}</b><p>{isEn ? 'Create a project to start a separate ranking process.' : 'برای آغاز یک فرآیند رتبه‌بندی مستقل، اولین پروژه را ایجاد کنید.'}</p></div>}
     </section> : <>
       <section className="module-workspace-card" aria-label={isEn ? 'Current ranking project' : 'پروژه رتبه‌بندی جاری'}>
-        <div className="section-head"><div><button type="button" className="secondary" onClick={() => setSelectedProjectId(null)}>{isEn ? '← All ranking projects' : '→ بازگشت به پروژه‌های رتبه‌بندی'}</button><h2 style={{marginTop:12}}>{isEn ? 'Edit ranking project' : 'ویرایش پروژه رتبه‌بندی'}</h2></div></div>
+        <div className="section-head"><div><button type="button" className="secondary" onClick={() => void returnToRankingProjects()}>{isEn ? '← All ranking projects' : '→ بازگشت به پروژه‌های رتبه‌بندی'}</button><h2 style={{marginTop:12}}>{isEn ? 'Edit ranking project' : 'ویرایش پروژه رتبه‌بندی'}</h2></div></div>
         <form className="module-create-form" onSubmit={event => { event.preventDefault(); void saveRankingProjectName() }}>
           <label htmlFor="ranking-project-edit-name">{isEn ? 'Project name' : 'نام پروژه'}</label>
           <div><input id="ranking-project-edit-name" value={editingRankingProjectName} onChange={event => setEditingRankingProjectName(event.target.value)} maxLength={100}/><button type="submit" className="primary" disabled={!editingRankingProjectName.trim()}><Check size={16}/>{isEn ? 'Save name' : 'ذخیره نام'}</button></div>
