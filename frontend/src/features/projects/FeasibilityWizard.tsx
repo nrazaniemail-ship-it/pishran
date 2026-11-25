@@ -175,7 +175,7 @@ function baseModel(project:FeasibilityProject):Model {
  const reportDebt=report?(report.longTermDebt+report.shortTermDebt):0
  const reportFunding=report?(report.equity+reportDebt):0
  const equityShare=reportFunding>0?report!.equity/reportFunding*100:0
- const debtShare=reportFunding>0?reportDebt/reportFunding*100:0
+ const debtShare=reportFunding>0?100-equityShare:0
  return {
   projectCategory:selectedStage.id==='mining'?'mining':'industrial',analysisMode:'new',partners:[],partnerDistributionPercent:100,
   scope:{studyLevel:'feasibility',jointVenture:false,economicAnalysis:false,costCentreAnalysis:false,costAllocation:false,valueAddedAnalysis:false,foreignExchangeEffect:false,employmentEffects:false},
@@ -188,7 +188,7 @@ function baseModel(project:FeasibilityProject):Model {
   technical:blankCustomProject?[]:selectedStage.fields.map(field=>makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',0,0,'برآورد مهندسی')),
   balance:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.materials??[],'فرم تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
   utilities:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.utilities??[],'فرم تخصصی یوتیلیتی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل و تأیید مهندسی'),
-  market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:blankTemplate?0:10,domesticPrice:0,exportPrice:0,domesticShare:blankTemplate?0:85,growth:0},
+  market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:blankTemplate||imported?0:10,domesticPrice:0,exportPrice:0,domesticShare:blankTemplate||imported?0:85,growth:0},
   capex:blankCustomProject?[]:stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex??[],'میلیون ریال','فرم سرمایه‌گذاری تخصصی مرحله '+selectedStage.name+'؛ مبلغ باید از CAPEX و استعلام‌های پروژه تکمیل شود'),
   opex:blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[],'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه'),
   finance:{equity:imported?equityShare:(blankTemplate?0:40),debt:imported?debtShare:(blankTemplate?0:60),equityCost:imported?0:(blankTemplate?0:35),debtCost:imported?0:(blankTemplate?0:23),tax:imported?report!.taxPercent:(blankTemplate?0:20),manualRate:imported?report!.investmentNpvRate:(blankTemplate?0:30),method:imported?'manual':(blankTemplate?'unspecified':'wacc'),depreciationYears:blankTemplate||imported?0:10,workingCapital:imported?report!.workingCapital:0,financeRate:blankTemplate||imported?0:23,reinvestmentRate:blankTemplate||imported?0:30},
