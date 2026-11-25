@@ -3,9 +3,14 @@ import { readFile } from 'node:fs/promises'
 import * as XLSX from 'xlsx'
 import { chromium } from 'playwright'
 
+function activeExportRoot(page) {
+  return page.locator('[data-module-export-root="true"]').filter({ has: page.locator('.module-export-actions') }).last()
+}
 async function verifyExcelExport(page, buttonName, expectedProject, excludedProject) {
+  const root = activeExportRoot(page)
+  await root.waitFor({ state: 'visible' })
   const downloadPromise = page.waitForEvent('download', { timeout: 15000 })
-  await page.getByRole('button', { name: buttonName, exact: true }).click()
+  await root.locator('.module-export-actions').getByRole('button', { name: buttonName, exact: true }).click()
   const download = await downloadPromise
   const filePath = await download.path()
   assert.ok(filePath, 'Excel export must create a downloadable file')
@@ -16,10 +21,10 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   assert.ok(!content.includes(excludedProject), `Excel export must not leak another project: ${excludedProject}`)
 }
 async function verifyPdfScope(page, buttonName) {
-  const root = page.locator('[data-module-export-root="true"]').filter({ has: page.locator('.module-export-actions') }).last()
+  const root = activeExportRoot(page)
   await root.waitFor({ state: 'visible' })
   await page.evaluate(() => { window.__pishranPrintCalls = 0; window.print = () => { window.__pishranPrintCalls += 1 } })
-  await page.getByRole('button', { name: buttonName, exact: true }).click()
+  await root.locator('.module-export-actions').getByRole('button', { name: buttonName, exact: true }).click()
   assert.equal(await page.evaluate(() => window.__pishranPrintCalls), 1, 'PDF action must invoke the browser print dialog')
   assert.ok(await root.evaluate(element => element.classList.contains('module-export-print-target')), 'PDF action must scope printing to the active project root')
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
