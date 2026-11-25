@@ -64,6 +64,7 @@ export interface FeasibilityProject {
   status: ProjectStatus
   createdAt: string
   updatedAt: string
+  sourceReport?: ComfarReferenceBaseline
 }
 
 const PROJECTS_KEY = 'projects:list:v1'
@@ -147,7 +148,7 @@ const COMFAR_REFERENCE_PROJECTS: Omit<FeasibilityProject, 'createdAt' | 'updated
       inputDate: '1402/02/01', constructionStart: '1401/01', constructionEnd: '1404/12', constructionYears: 4,
       operationStart: '1405/01', operationEnd: '1419/12', operatingYears: 15,
       capacityDescription: 'فولادسازی ۱٬۲۰۰٬۰۰۰ تن/سال و احیای مستقیم هات‌لینک ۱٬۷۶۰٬۰۰۰ تن/سال',
-      primaryCapacity: 1200000, secondaryCapacity: 1760000, product: 'محصول فولادسازی و آهن اسفنجی هات‌لینک',
+      primaryCapacity: 1200000, secondaryCapacity: 1760000, product: 'محصول فولادسازی',
       currency: 'یورو', accountingUnit: 'مطلق',
       fixedInvestment: 453858298, preproductionTotal: 117124027, preproductionNet: 6624027, capitalizedInterest: 110500000,
       workingCapital: 68155775.89, totalInvestment: 639138100.89,
@@ -165,13 +166,24 @@ const COMFAR_REFERENCE_PROJECTS: Omit<FeasibilityProject, 'createdAt' | 'updated
 export async function seedComfarReferenceProjects(): Promise<FeasibilityProject[]> {
   const seeded = await localStore.get<boolean>(COMFAR_SEED_KEY)
   const current = await listProjects()
-  if (seeded) return current
   const now = new Date().toISOString()
+  const references = new Map(COMFAR_REFERENCE_PROJECTS.map(project => [project.id, project]))
   const existingIds = new Set(current.map(project => project.id))
-  const additions: FeasibilityProject[] = COMFAR_REFERENCE_PROJECTS
+  const restored = current.map(project => {
+    const reference = references.get(project.id)
+    if (!reference) return project
+    return {
+      ...project,
+      templateId: 'comfar-import' as const,
+      projectType: reference.projectType,
+      steelStage: reference.steelStage,
+      sourceReport: reference.sourceReport
+    }
+  })
+  const additions: FeasibilityProject[] = seeded ? [] : COMFAR_REFERENCE_PROJECTS
     .filter(project => !existingIds.has(project.id))
     .map(project => ({ ...project, status: 'draft', createdAt: now, updatedAt: now }))
-  const next = [...additions, ...current]
+  const next = [...additions, ...restored]
   await localStore.set(PROJECTS_KEY, next)
   await localStore.set(COMFAR_SEED_KEY, true)
   return next
@@ -179,8 +191,16 @@ export async function seedComfarReferenceProjects(): Promise<FeasibilityProject[
 
 export async function listProjects(): Promise<FeasibilityProject[]> {
   const stored = (await localStore.get<FeasibilityProject[]>(PROJECTS_KEY)) ?? []
-  const normalized = stored.map(project => ({ ...project, templateId: 'raw' as const }))
-  if (stored.some(project => project.templateId !== 'raw')) await localStore.set(PROJECTS_KEY, normalized)
+  const importedIds = new Set(COMFAR_REFERENCE_PROJECTS.map(project => project.id))
+  const normalized = stored.map(project => ({
+    ...project,
+    templateId: project.sourceReport || importedIds.has(project.id) || project.templateId === 'comfar-import'
+      ? 'comfar-import' as const
+      : 'raw' as const
+  }))
+  if (stored.some((project, index) => project.templateId !== normalized[index].templateId)) {
+    await localStore.set(PROJECTS_KEY, normalized)
+  }
   return normalized
 }
 
