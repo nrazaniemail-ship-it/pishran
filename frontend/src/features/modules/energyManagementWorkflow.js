@@ -254,7 +254,7 @@ export const ENERGY_MV_EVIDENCE_KEY = 'module-intelligence:MOD-05:mv-evidence:v1
 
 const isoDate=(value,label)=>{
  const text=required(value,label)
- if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(text)||Number.isNaN(Date.parse(text+'T00:00:00Z'))||new Date(text+'T00:00:00Z').toISOString().slice(0,10)!==text)throw new Error('تاریخ '+label+' باید به قالب YYYY-MM-DD و معتبر باشد.')
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(text)||Number.isNaN(Date.parse(text+'T00:00:00Z'))||new Date(text+'T00:00:00Z').toISOString().slice(0,10)!==text)throw new Error('تاریخ '+label+' باید به قالب YYYY-MM-DD و معتبر باشد.')
  return text
 }
 const addUtcDays=(date,days)=>{const d=new Date(date+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}
