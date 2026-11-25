@@ -29,3 +29,17 @@ export type EnergyVerificationEvidence={period:string;measuredSavings:number;ver
 export type EnergyActionAudit={statusHistory:EnergyActionStatusHistory[];verificationHistory:Array<EnergyVerificationEvidence&{supersededAt:string}>}
 
 export function analyzeMultivariableEnergyNormalization(records:any[],filters?:{resource:EnergyResource;site?:string;seu?:string}):{results:Array<{site:string;seu:string;resource:EnergyResource;comparisonBasis:string;comparisonUnit:string;trainingPeriods:string[];actualPeriod:string;actualConsumption:number;normalizedConsumption:number;adjustedSavings:number;adjustedSavingsPercent:number;rSquared:number|null;rmse:number;coefficients:{intercept:number;production:number;operatingHours:number};warnings:string[]}>;warnings:string[]}
+
+
+export const METER_CALIBRATIONS_KEY:string
+export const ENERGY_MV_EVIDENCE_KEY:string
+export type MeterCalibrationInput={id?:string;meterId:string;site:string;parameter:string;unit:string;intervalDays:string|number;lastCalibrationDate:string;certificateRef:string;provider:string;owner?:string;accuracy?:string|number;measurementRange?:string;notes?:string}
+export type MeterCalibrationRecord={id:string;meterId:string;site:string;parameter:string;unit:string;intervalDays:number;lastCalibrationDate:string;nextCalibrationDate:string;certificateRef:string;provider:string;owner:string;accuracy:number|null;measurementRange:string;notes:string;status:'valid'|'due-soon'|'overdue';daysUntilDue:number;createdAt:string;updatedAt:string;history:any[]}
+export function validateMeterCalibration(input:MeterCalibrationInput,asOf?:string):Omit<MeterCalibrationRecord,'id'|'createdAt'|'updatedAt'|'history'>
+export function getMeterCalibrationStatus(record:{nextCalibrationDate:string},asOf?:string,dueSoonDays?:number):{status:'valid'|'due-soon'|'overdue';daysUntilDue:number;nextCalibrationDate:string}
+export function listMeterCalibrationAlerts(records:MeterCalibrationRecord[],asOf?:string,dueSoonDays?:number):MeterCalibrationRecord[]
+export function saveMeterCalibration(input:MeterCalibrationInput,store:EnergyStore,createdAt?:string):Promise<MeterCalibrationRecord>
+export type EnergyMvEvidenceInput={resource:EnergyResource;baselineId:string;actualRecordIds:string[];method:string;verifier:string;measurementBoundary:string;boundaryConfirmed:boolean;adjustmentNotes:string;evidenceReferences:string}
+export type EnergyMvEvidencePack={id:string;generatedAt:string;resource:EnergyResource;site:string;seu:string;baseline:any;actualRecordIds:string[];periods:string[];method:string;verifier:string;measurementBoundary:string;boundaryConfirmed:boolean;adjustmentNotes:string;evidenceReferences:string;calculations:any[];normalizedBaseline:number;actualConsumption:number;comparisonUnit:string;calculatedVariance:number;calculatedVariancePercent:number;calibrationCoverage:Array<{recordId:string;period:string;meterId:string;site:string;calibrationId:string|null;status:string;nextCalibrationDate:string|null}>;warnings:string[];reviewStatus:'prepared-not-independent-review';limitations:string[]}
+export function buildEnergyMvEvidencePack(input:EnergyMvEvidenceInput,context:{rows:any[];baselines:any[];calibrations:MeterCalibrationRecord[]},generatedAt?:string):EnergyMvEvidencePack
+export function saveEnergyMvEvidencePack(input:EnergyMvEvidenceInput,context:{rows:any[];baselines:any[];calibrations:MeterCalibrationRecord[]},store:EnergyStore,generatedAt?:string):Promise<EnergyMvEvidencePack>
