@@ -414,6 +414,28 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
  const normalizedBaseline=calculations.reduce((sum,x)=>sum+x.normalizedBaseline,0)
  const actualConsumption=calculations.reduce((sum,x)=>sum+x.actualConsumption,0)
  const calculatedVariance=normalizedBaseline-actualConsumption
+ const baselineUncertaintyPct=number(input.baselineUncertaintyPct,'عدم‌قطعیت نسبی خط مبنا',0)
+ const actualUncertaintyPct=number(input.actualUncertaintyPct,'عدم‌قطعیت نسبی اندازه‌گیری واقعی',0)
+ const modelUncertaintyPct=number(input.modelUncertaintyPct??0,'عدم‌قطعیت مدل / تعدیل',0)
+ const coverageFactor=number(input.coverageFactor??2,'ضریب پوشش عدم‌قطعیت',1)
+ if([baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct].some(x=>x>100)||coverageFactor>3)throw new Error('درصدهای عدم‌قطعیت باید حداکثر ۱۰۰ و ضریب پوشش بین ۱ تا ۳ باشد.')
+ const baselineUncertainty=normalizedBaseline*baselineUncertaintyPct/100
+ const actualUncertainty=actualConsumption*actualUncertaintyPct/100
+ const modelUncertainty=normalizedBaseline*modelUncertaintyPct/100
+ const combinedStandardUncertainty=Math.sqrt(baselineUncertainty**2+actualUncertainty**2+modelUncertainty**2)
+ const expandedUncertainty=coverageFactor*combinedStandardUncertainty
+ const uncertaintyLowerBound=calculatedVariance-expandedUncertainty
+ const uncertaintyUpperBound=calculatedVariance+expandedUncertainty
+ const uncertaintyConclusion=uncertaintyLowerBound>0?'positive-savings-distinguishable':uncertaintyUpperBound<0?'negative-variance-distinguishable':'not-distinguishable'
+ const evidenceAttachments=Array.isArray(input.evidenceAttachments)?input.evidenceAttachments:[]
+ if(evidenceAttachments.length>10)throw new Error('حداکثر ۱۰ سند را می‌توان به هر بسته M&V پیوست کرد.')
+ const attachmentTotal=evidenceAttachments.reduce((sum,file)=>{
+  const size=Number(file.size)
+  if(!String(file.name??'').trim()||!Number.isFinite(size)||size<0||size>5*1024*1024)throw new Error('هر پیوست باید نام معتبر و حداکثر ۵ مگابایت حجم داشته باشد.')
+  if(!/^data:[^;]+;base64,/.test(String(file.dataUrl??'')))throw new Error('محتوای پیوست باید به‌صورت فایل Base64 معتبر ذخیره شود.')
+  return sum+size
+ },0)
+ if(attachmentTotal>20*1024*1024)throw new Error('حجم مجموع پیوست‌های بسته M&V نمی‌تواند بیش از ۲۰ مگابایت باشد.')
  const calibrationIndex=new Map(calibrations.map(x=>[String(x.meterId)+'::'+String(x.site),x]))
  const calibrationCoverage=actuals.map(actual=>{
   const calibration=calibrationIndex.get(String(actual.meterId??'')+'::'+String(actual.site))
@@ -421,7 +443,7 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
   return {recordId:actual.id,period:actual.period,meterId:actual.meterId??'',site:actual.site,calibrationId:calibration?.id??null,status:status.status,nextCalibrationDate:calibration?.nextCalibrationDate??null}
  })
  const warnings=[...new Set([...calculations.flatMap(x=>x.warnings??[]),...calibrationCoverage.filter(x=>x.status!=='valid').map(x=>'وضعیت کالیبراسیون کنتور '+(x.meterId||'نامشخص')+': '+x.status)])]
- return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,comparisonUnit,calculatedVariance,calculatedVariancePercent:normalizedBaseline?calculatedVariance/normalizedBaseline*100:0,calibrationCoverage,warnings,reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
+ return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,comparisonUnit,calculatedVariance,calculatedVariancePercent:normalizedBaseline?calculatedVariance/normalizedBaseline*100:0,uncertaintyBudget:{baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct,baselineUncertainty,actualUncertainty,modelUncertainty,combinedStandardUncertainty,coverageFactor,expandedUncertainty,lowerBound:uncertaintyLowerBound,upperBound:uncertaintyUpperBound,conclusion:uncertaintyConclusion,interpretation:'درصدهای ورودی به‌عنوان عدم‌قطعیت استاندارد نسبی مستقل فرض شده‌اند؛ ضریب پوشش بر عدم‌قطعیت ترکیبی اعمال شده است. هم‌بستگی خط مبنا، داده واقعی و مدل در این محاسبه لحاظ نشده است.'},evidenceAttachments:evidenceAttachments.map(({name,mimeType,size,lastModified,dataUrl})=>({name,mimeType,size,lastModified,dataUrl})),calibrationCoverage,warnings:[...warnings,...(uncertaintyConclusion==='not-distinguishable'?['اختلاف محاسبه‌شده در بازه عدم‌قطعیت قرار دارد و از صفر قابل تفکیک نیست؛ ادعای صرفه‌جویی مثبت از این محاسبه پشتیبانی نمی‌شود.']:[])],reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
 }
 export async function saveEnergyMvEvidencePack(input,context,store,generatedAt=new Date().toISOString()){
  const pack=buildEnergyMvEvidencePack(input,context,generatedAt)
