@@ -295,6 +295,7 @@ try {
   assert.ok(bundle.includes('Monte Carlo top probability') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')
   // Public regression: module capability tabs, no obsolete bottom continue action,
   // and module workspace create/edit persistence across a full reload.
+  await page.getByRole('button', { name: 'Switch to Persian' }).click()
   await page.locator('.brand-title').click()
   await page.locator('.module-launcher-card').filter({ hasText: 'MOD-02' }).click()
   const capabilities = page.locator('.module-capabilities-card')
