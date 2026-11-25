@@ -2409,7 +2409,8 @@ input,select,textarea{color:var(--text)}
 
 
 /* Keep project-card backgrounds beige despite earlier theme-specific surface rules. */
-:root .project-card,
+:root:not([data-theme="dark"]) .project-card,
+:root[data-theme="dark"] .project-card,
 :root .module-workspace-item {
   background: #f4eddf !important;
   border-color: #e5d9c4 !important;
