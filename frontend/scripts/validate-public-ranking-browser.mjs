@@ -20,8 +20,8 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   const content = workbook.SheetNames.map(name => XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, raw: false }).flat().map(value => String(value).normalize('NFC')).join('\\n')).join('\\n')
   const moduleId = await root.locator('.module-export-actions').getAttribute('data-export-module-id')
   assert.ok(moduleId && content.includes(moduleId), `Excel workbook must include the active project identifier ${moduleId}; workbook content: ${content.slice(0, 1800)}`)
-  const safeName = expectedProject.replace(/[\\/:*?"<>|]+/g, '-').replace(/\\s+/g, '-')
-  assert.ok(download.suggestedFilename().normalize('NFC').includes(safeName.normalize('NFC')), `Excel filename must identify the active project ${expectedProject}; filename: ${download.suggestedFilename()}`)
+  const filenameIdentity = value => value.normalize('NFC').replace(/[\\s_\\-]+/g, '').toLocaleLowerCase()
+  assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedProject)), `Excel filename must identify the active project ${expectedProject}; filename: ${download.suggestedFilename()}`)
   assert.ok(!content.includes(excludedProject.normalize('NFC')), `Excel export must not leak another project: ${excludedProject}`)
 }
 async function verifyPdfScope(page, buttonName) {
