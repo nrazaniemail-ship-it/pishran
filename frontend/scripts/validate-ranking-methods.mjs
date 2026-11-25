@@ -78,3 +78,28 @@ test('ranking sensitivity compares weight perturbations and optimistic/pessimist
  assert.ok(result.summary.every(s=>s.averageRank>=1&&s.worstRank>=s.bestRank&&s.topFrequency>=0&&s.topFrequency<=1));
  assert.ok(result.summary.reduce((sum,s)=>sum+s.topFrequency,0)>0);
 });
+
+test('rank robustness simulation is deterministic, normalized and exposes rank acceptability',()=>{
+ const input={scores:[[90,3],[70,6],[80,5]],weights:[0.6,0.4],directions:['benefit','cost'],cases:[{label:'expert shift',weights:[0.4,0.6]}]};
+ const a=analyzeRankingSensitivity(input.scores,input.weights,input.directions,input.cases,0.2,{trials:250,seed:77});
+ const b=analyzeRankingSensitivity(input.scores,input.weights,input.directions,input.cases,0.2,{trials:250,seed:77});
+ assert.deepEqual(a.robustness,b.robustness);
+ assert.equal(a.robustness.trials,250);
+ assert.equal(a.robustness.rankAcceptability.length,9);
+ for(let alternative=0;alternative<3;alternative++){
+  const total=a.robustness.rankAcceptability.filter(x=>x.alternativeIndex===alternative).reduce((s,x)=>s+x.frequency,0);
+  assert.ok(Math.abs(total-1)<1e-12);
+ }
+ assert.ok(a.robustness.topFrequency.every(v=>v>=0&&v<=1));
+});
+test('expert agreement diagnostics quantify rank consensus and criterion dispersion',()=>{
+ const result=analyzeRankingSensitivity([[9,2],[7,4],[5,8]],[0.6,0.4],['benefit','cost'],[],0.1,{trials:100,seed:9,expertWeightVectors:[[0.8,0.2],[0.7,0.3],[0.2,0.8]]});
+ assert.equal(result.expertAgreement.expertCount,3);
+ assert.ok(result.expertAgreement.meanPairwiseSpearman>=-1&&result.expertAgreement.meanPairwiseSpearman<=1);
+ assert.equal(result.expertAgreement.criterionDispersion.length,2);
+ assert.ok(result.expertAgreement.criterionDispersion[0].standardDeviation>0);
+});
+test('sensitivity simulation validates deterministic trial bounds and expert vector dimensions',()=>{
+ assert.throws(()=>analyzeRankingSensitivity([[1,2],[2,1]],[0.5,0.5],['benefit','cost'],[],0.1,{trials:10}),/between 0.9|Sensitivity shock/);
+ assert.throws(()=>analyzeRankingSensitivity([[1,2],[2,1]],[0.5,0.5],['benefit','cost'],[],0.1,{trials:100,expertWeightVectors:[[1,0],[1,2,3]]}),/matching finite/);
+});
