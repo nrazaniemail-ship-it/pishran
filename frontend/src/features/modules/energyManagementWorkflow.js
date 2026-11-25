@@ -294,6 +294,17 @@ export function parseEnergyTariffLevies(text){
   return {key:'levy-'+(index+1),label:label.trim(),kind,value}
  })
 }
+export function parseEnergyTariffLevies(text){
+ const raw=String(text??'').trim()
+ if(!raw)return []
+ return raw.split(';').map((entry,index)=>{
+  const parts=entry.trim().split(':')
+  if(parts.length!==3)throw new Error('عوارض را به صورت نام:fixed:مبلغ یا نام:percent:درصد؛ و با ; جدا کنید.')
+  const name=required(parts[0],'نام عوارض'),kind=parts[1].trim(),value=number(parts[2].trim(),'مقدار عوارض',0)
+  if(!['fixed','percent'].includes(kind))throw new Error('نوع عوارض باید fixed یا percent باشد.')
+  return {id:'levy-'+(index+1),name,kind,value,base:'subtotal'}
+ })
+}
 export function validateEnergyTariffContract(input,asOf=input.effectiveFrom){
  const resource=input.resource
  if(!Object.hasOwn(RESOURCE_CONFIG,resource))throw new Error('نوع منبع قرارداد تعرفه معتبر نیست.')
@@ -301,26 +312,28 @@ export function validateEnergyTariffContract(input,asOf=input.effectiveFrom){
  const effectiveFrom=isoDate(input.effectiveFrom,'شروع اعتبار قرارداد'),effectiveTo=String(input.effectiveTo??'').trim()?isoDate(input.effectiveTo,'پایان اعتبار قرارداد'):null
  if(effectiveTo&&effectiveTo<effectiveFrom)throw new Error('پایان اعتبار قرارداد نمی‌تواند پیش از شروع آن باشد.')
  const tiers=Array.isArray(input.tiers)?input.tiers:parseEnergyTariffTiers(input.tiersText)
+ const timeOfUseRates=Array.isArray(input.timeOfUseRates)?input.timeOfUseRates.map((x,index)=>({band:required(x.band,'بازه تعرفه زمان‌مند'),rate:number(x.rate,'نرخ بازه زمان‌مند',0),order:index+1})):String(input.timeOfUseRatesText??'').trim().split(';').filter(Boolean).map((entry,index)=>{const parts=entry.split(':');if(parts.length!==2)throw new Error('تعرفه زمان‌مند را به صورت نام‌بازه:نرخ و با ; جدا کنید.');return {band:required(parts[0],'نام بازه'),rate:number(parts[1],'نرخ بازه',0),order:index+1}})
+ if(new Set(timeOfUseRates.map(x=>x.band)).size!==timeOfUseRates.length)throw new Error('نام بازه‌های تعرفه زمان‌مند نباید تکراری باشد.')
+ if(tiers.length&&timeOfUseRates.length)throw new Error('تعرفه پلکانی و زمان‌مند را هم‌زمان فعال نکنید؛ یکی را انتخاب کنید.')
  const energyRate=input.energyRate===''||input.energyRate===null||input.energyRate===undefined?null:number(input.energyRate,'نرخ پایه انرژی',0)
- if(!tiers.length&&energyRate===null&&!String(input.timeOfUseRatesText??'').trim())throw new Error('نرخ پایه، جدول پلکانی یا نرخ‌های زمان‌مند الزامی است.')
+ if(!tiers.length&&!timeOfUseRates.length&&energyRate===null)throw new Error('نرخ پایه، پلکانی یا زمان‌مند الزامی است.')
  if(tiers.length&&tiers.at(-1)?.upperLimit!==null)throw new Error('آخرین پله تعرفه باید نامحدود باشد.')
  const fixedCharge=number(input.fixedCharge??0,'هزینه ثابت',0),demandRate=number(input.demandRate??0,'نرخ دیماند',0),reactiveRate=number(input.reactiveRate??0,'نرخ انرژی راکتیو',0),taxPercent=number(input.taxPercent??0,'درصد مالیات',0)
+ const gasTransmissionRate=number(input.gasTransmissionRate??0,'نرخ انتقال گاز',0),gasDistributionRate=number(input.gasDistributionRate??0,'نرخ توزیع گاز',0),sewerRate=number(input.sewerRate??0,'نرخ فاضلاب',0),meterMultiplier=number(input.meterMultiplier??1,'ضریب کنتور',0)
+ if(meterMultiplier<=0)throw new Error('ضریب کنتور باید بزرگ‌تر از صفر باشد.')
  if(taxPercent>100)throw new Error('درصد مالیات نمی‌تواند بیش از ۱۰۰ باشد.')
- const optionalRate=(value,label)=>value===''||value===null||value===undefined?null:number(value,label,0)
- const gasTransmissionRate=optionalRate(input.gasTransmissionRate,'نرخ انتقال گاز'),gasDistributionRate=optionalRate(input.gasDistributionRate,'نرخ توزیع گاز'),sewerRate=optionalRate(input.sewerRate,'نرخ فاضلاب')
- const timeOfUseRates=Array.isArray(input.timeOfUseRates)?input.timeOfUseRates:parseEnergyTimeOfUseRates(input.timeOfUseRatesText)
- const levies=Array.isArray(input.levies)?input.levies:parseEnergyTariffLevies(input.leviesText)
- const meterMultiplier=number(input.meterMultiplier??1,'ضریب کنتور',0)
- if(meterMultiplier<=0||meterMultiplier>1000000)throw new Error('ضریب کنتور باید بزرگ‌تر از صفر و حداکثر یک میلیون باشد.')
+ const levies=Array.isArray(input.levies)?input.levies.map((x,index)=>({id:String(x.id??'levy-'+(index+1)),name:required(x.name,'نام عوارض'),kind:x.kind==='percent'?'percent':'fixed',value:number(x.value,'مقدار عوارض',0),base:['energy','subtotal'].includes(x.base)?x.base:'subtotal'})):parseEnergyTariffLevies(input.leviesText).map(x=>({...x,base:'subtotal'}))
+ if(levies.some(x=>x.kind==='percent'&&x.value>100))throw new Error('درصد هر عوارض نمی‌تواند بیش از ۱۰۰ باشد.')
+ if(resource!=='gas'&&(gasTransmissionRate>0||gasDistributionRate>0))throw new Error('هزینه انتقال و توزیع گاز فقط برای قرارداد گاز مجاز است.')
+ if(resource!=='water'&&sewerRate>0)throw new Error('هزینه فاضلاب فقط برای قرارداد آب مجاز است.')
  const unit=required(input.unit||RESOURCE_CONFIG[resource].unit,'واحد تعرفه')
- return {resource,site,supplier,contractNumber,currency,effectiveFrom,effectiveTo,unit,energyRate,fixedCharge,demandRate,reactiveRate,taxPercent,tiers,gasTransmissionRate,gasDistributionRate,sewerRate,timeOfUseRates,levies,meterMultiplier,notes:String(input.notes??'').trim()}
+ return {resource,site,supplier,contractNumber,currency,effectiveFrom,effectiveTo,unit,energyRate,fixedCharge,demandRate,reactiveRate,taxPercent,tiers,timeOfUseRates,gasTransmissionRate,gasDistributionRate,sewerRate,meterMultiplier,levies,notes:String(input.notes??'').trim()}
 }
 export async function saveEnergyTariffContract(input,store,createdAt=new Date().toISOString()){
  const checked=validateEnergyTariffContract(input)
  let saved
  await store.update(ENERGY_TARIFF_CONTRACTS_KEY,old=>{
-  const records=Array.isArray(old)?old:[]
-  const existing=records.find(x=>x.id===input.id)||records.find(x=>x.resource===checked.resource&&x.site===checked.site&&x.contractNumber===checked.contractNumber)
+  const records=Array.isArray(old)?old:[],existing=records.find(x=>x.id===input.id)||records.find(x=>x.resource===checked.resource&&x.site===checked.site&&x.contractNumber===checked.contractNumber)
   const id=existing?.id??('MOD05-TARIFF-'+Date.parse(createdAt)+'-'+checked.resource+'-'+checked.contractNumber.replace(/[^a-zA-Z0-9_-]/g,'-'))
   saved={...checked,id,createdAt:existing?.createdAt??createdAt,updatedAt:createdAt,history:[...(existing?.history??[]),...(existing?[{...existing,archivedAt:createdAt}]:[])]}
   return [saved,...records.filter(x=>x.id!==id)].slice(0,500)
@@ -336,49 +349,43 @@ export function calculateConfiguredEnergyTariff(input,{contracts=[]}={},calculat
  if(contract.site!==site)throw new Error('قرارداد تعرفه متعلق به سایت انتخاب‌شده نیست.')
  const period=isoDate(input.period,'تاریخ دوره قبض')
  if(period<contract.effectiveFrom||(contract.effectiveTo&&period>contract.effectiveTo))throw new Error('قرارداد در تاریخ دوره قبض معتبر نیست.')
- const rawQuantity=number(input.quantity,'مصرف دوره',0),meterMultiplier=number(input.meterMultiplier??contract.meterMultiplier??1,'ضریب کنتور',0)
- if(meterMultiplier<=0)throw new Error('ضریب کنتور باید بزرگ‌تر از صفر باشد.')
+ const rawQuantity=number(input.quantity,'مصرف دوره',0),meterMultiplier=Number(contract.meterMultiplier??1)
+ if(!Number.isFinite(meterMultiplier)||meterMultiplier<=0)throw new Error('ضریب کنتور قرارداد معتبر نیست.')
  const quantity=rawQuantity*meterMultiplier,demand=number(input.demand??0,'دیماند',0),reactive=number(input.reactive??0,'انرژی راکتیو',0)
- const tiers=Array.isArray(contract.tiers)?contract.tiers:[],timeRates=Array.isArray(contract.timeOfUseRates)?contract.timeOfUseRates:[]
- const timeQuantities=input.timeOfUseQuantities&&typeof input.timeOfUseQuantities==='object'?input.timeOfUseQuantities:{}
- const hasTimeQuantities=Object.keys(timeQuantities).length>0
- let energyCharge=0,unconfiguredTimeBands=[]
- const timeOfUseBreakdown=[]
- if(timeRates.length&&!hasTimeQuantities)throw new Error('برای اعمال تعرفه زمان‌مند، مقدار مصرف هر بازه زمانی را وارد کنید؛ مبلغ صفر محاسبه نمی‌شود.')
- if(hasTimeQuantities){
-  const suppliedTimeQuantity=Object.values(timeQuantities).reduce((sum,value)=>sum+number(value,'مصرف بازه زمانی',0),0)
-  if(Math.abs(suppliedTimeQuantity-rawQuantity)>Math.max(0.01,rawQuantity*0.001))throw new Error('جمع مصرف بازه‌های زمانی باید با مصرف کل قبض تطبیق داشته باشد.')
-  for(const [band,raw] of Object.entries(timeQuantities)){
-   const bandQuantity=number(raw,'مصرف بازه '+band,0)*meterMultiplier
-   const rate=timeRates.find(x=>x.band===band)
-   if(!rate)throw new Error('برای بازه زمانی '+band+' در قرارداد نرخ تعریف نشده است.')
-   const charge=bandQuantity*Number(rate.rate);energyCharge+=charge
-   timeOfUseBreakdown.push({band,quantity:bandQuantity,rate:Number(rate.rate),charge,status:'modeled'})
+ const tiers=Array.isArray(contract.tiers)?contract.tiers:[],timeOfUseRates=Array.isArray(contract.timeOfUseRates)?contract.timeOfUseRates:[]
+ let energyCharge=0,timeOfUseBreakdown=[]
+ if(timeOfUseRates.length){
+  const bandQuantities=input.timeOfUseQuantities&&typeof input.timeOfUseQuantities==='object'?input.timeOfUseQuantities:{}
+  const entered=Object.entries(bandQuantities).filter(([,v])=>v!==''&&v!==null&&v!==undefined)
+  if(!entered.length)throw new Error('برای تعرفه زمان‌مند، مقدار مصرف هر بازه را جداگانه وارد کنید.')
+  const normalized=Object.fromEntries(entered.map(([band,value])=>[band,number(value,'مصرف بازه '+band,0)]))
+  const sum=Object.values(normalized).reduce((total,value)=>total+value,0)
+  if(Math.abs(sum-rawQuantity)>Math.max(.01,rawQuantity*.0001))throw new Error('مجموع مصرف بازه‌های زمان‌مند باید با مصرف قبض برابر باشد.')
+  const configured=new Map(timeOfUseRates.map(x=>[x.band,Number(x.rate)]))
+  for(const [band,value] of Object.entries(normalized)){
+   if(!configured.has(band))throw new Error('برای بازه '+band+' نرخ قراردادی تعریف نشده است.')
+   const adjustedQuantity=value*meterMultiplier,charge=adjustedQuantity*configured.get(band)
+   timeOfUseBreakdown.push({band,rawQuantity:value,quantity:adjustedQuantity,rate:configured.get(band),charge})
+   energyCharge+=charge
   }
- }else if(timeRates.length){unconfiguredTimeBands=timeRates.map(x=>x.band)}
- else if(tiers.length){
+ }else if(tiers.length){
   let lower=0,remaining=quantity
   for(const tier of tiers){const capacity=tier.upperLimit===null?remaining:Math.max(0,Math.min(remaining,tier.upperLimit-lower));energyCharge+=capacity*Number(tier.rate);remaining-=capacity;if(tier.upperLimit===null||remaining<=0)break;lower=tier.upperLimit}
   if(remaining>0)throw new Error('جدول پلکانی قرارداد تمام مقدار مصرف را پوشش نمی‌دهد.')
- }else if(contract.energyRate!==null&&contract.energyRate!==undefined)energyCharge=quantity*Number(contract.energyRate)
- else throw new Error('برای این محاسبه نرخ انرژی قابل اعمال تعریف نشده است.')
+ }else energyCharge=quantity*Number(contract.energyRate)
  const demandCharge=demand*Number(contract.demandRate??0),reactiveCharge=reactive*Number(contract.reactiveRate??0),fixedCharge=Number(contract.fixedCharge??0)
- const gasTransmissionCharge=resource==='gas'&&contract.gasTransmissionRate!==null&&contract.gasTransmissionRate!==undefined?quantity*Number(contract.gasTransmissionRate):null
- const gasDistributionCharge=resource==='gas'&&contract.gasDistributionRate!==null&&contract.gasDistributionRate!==undefined?quantity*Number(contract.gasDistributionRate):null
- const sewerCharge=resource==='water'&&contract.sewerRate!==null&&contract.sewerRate!==undefined?quantity*Number(contract.sewerRate):null
- const levies=(contract.levies??[]).map(levy=>({key:levy.key,label:levy.label,kind:levy.kind,value:Number(levy.value),amount:levy.kind==='fixed'?Number(levy.value):levy.kind==='unit'?quantity*Number(levy.value):null}))
- const levyBase=energyCharge+demandCharge+reactiveCharge+fixedCharge+(gasTransmissionCharge??0)+(gasDistributionCharge??0)+(sewerCharge??0)
- for(const levy of levies)if(levy.kind==='percent')levy.amount=levyBase*levy.value/100
- const levyTotal=levies.reduce((sum,x)=>sum+Number(x.amount??0),0)
- const subtotal=levyBase+levyTotal,tax=subtotal*Number(contract.taxPercent??0)/100,total=subtotal+tax
- const unconfiguredComponents=[]
- if(resource==='gas'&&contract.gasTransmissionRate===null)unconfiguredComponents.push('gas-transmission')
- if(resource==='gas'&&contract.gasDistributionRate===null)unconfiguredComponents.push('gas-distribution')
- if(resource==='water'&&contract.sewerRate===null)unconfiguredComponents.push('sewer')
- if(unconfiguredTimeBands.length)unconfiguredComponents.push('time-of-use:'+unconfiguredTimeBands.join(','))
- const warnings=['محاسبه بر اساس نرخ‌های ثبت‌شده کاربر است؛ نرخ‌های مقرراتی یا قراردادی حدس زده نمی‌شوند.']
- if(unconfiguredComponents.length)warnings.push('اجزای زیر در قرارداد تعریف نشده‌اند و در مبلغ محاسبه‌شده منظور نشده‌اند: '+unconfiguredComponents.join('، '))
- return {id:'MOD05-TARIFF-CALC-'+Date.parse(calculatedAt)+'-'+String(contract.id),contractId:contract.id,resource,site,period,supplier:contract.supplier,contractNumber:contract.contractNumber,currency:contract.currency,unit:contract.unit,quantity:rawQuantity,billedQuantity:quantity,meterMultiplier,demand,reactive,energyCharge,demandCharge,reactiveCharge,fixedCharge,gasTransmissionCharge,gasDistributionCharge,sewerCharge,timeOfUseBreakdown,levies,levyTotal,unconfiguredComponents,subtotal,taxPercent:Number(contract.taxPercent??0),tax,total,calculatedAt,source:'Configured user-entered tariff contract',warnings}
+ const gasTransmissionCharge=resource==='gas'?quantity*Number(contract.gasTransmissionRate??0):0
+ const gasDistributionCharge=resource==='gas'?quantity*Number(contract.gasDistributionRate??0):0
+ const sewerCharge=resource==='water'?quantity*Number(contract.sewerRate??0):0
+ const energyBase=energyCharge,preLevySubtotal=energyCharge+demandCharge+reactiveCharge+fixedCharge+gasTransmissionCharge+gasDistributionCharge+sewerCharge
+ const levies=(Array.isArray(contract.levies)?contract.levies:[]).map(levy=>({id:levy.id,name:levy.name,kind:levy.kind,base:levy.base,value:Number(levy.value),amount:levy.kind==='percent'?(levy.base==='energy'?energyBase:preLevySubtotal)*Number(levy.value)/100:Number(levy.value)}))
+ const levyCharge=levies.reduce((sum,x)=>sum+x.amount,0),subtotal=preLevySubtotal+levyCharge,tax=subtotal*Number(contract.taxPercent??0)/100,total=subtotal+tax
+ return {id:'MOD05-TARIFF-CALC-'+Date.parse(calculatedAt)+'-'+String(contract.id),contractId:contract.id,resource,site,period,supplier:contract.supplier,contractNumber:contract.contractNumber,currency:contract.currency,unit:contract.unit,rawQuantity,quantity,meterMultiplier,demand,reactive,energyCharge,timeOfUseBreakdown,demandCharge,reactiveCharge,fixedCharge,gasTransmissionCharge,gasDistributionCharge,sewerCharge,levies,levyCharge,subtotal,taxPercent:Number(contract.taxPercent??0),tax,total,calculatedAt,source:'Configured user-entered tariff contract',warnings:['محاسبه فقط بر اساس نرخ‌ها و عوارضی است که کاربر در قرارداد وارد کرده است؛ نرخ تعریف‌نشده صفر فرض نمی‌شود و باید به‌عنوان جزء خارج از مدل در تطبیق قبض بررسی شود.']}
+}
+export async function saveEnergyTariffCalculation(input,context,store,calculatedAt=new Date().toISOString()){
+ const result=calculateConfiguredEnergyTariff(input,context,calculatedAt)
+ await store.update(ENERGY_TARIFF_CALCULATIONS_KEY,old=>[result,...(Array.isArray(old)?old:[])].slice(0,1000))
+ return result
 }
 
 export function reconcileEnergyTariffWithBill({calculation,bill,resource,tolerancePercent=1}){
@@ -417,6 +424,8 @@ export function reconcileEnergyTariffWithBill({calculation,bill,resource,toleran
   compare('waterCharge','بهای آب',calculation.energyCharge,bill.waterCharge)
   compare('sewerCharge','بهای دفع فاضلاب',calculation.sewerCharge,bill.sewerCharge,calculation.sewerCharge!==null&&calculation.sewerCharge!==undefined)
   compare('fixedCharge','هزینه ثابت قبض',calculation.fixedCharge,bill.fixedCharge)
+  if((calculation.levies??[]).length)compare('levyCharge','عوارض قراردادی',calculation.levyCharge,bill.levyCharge)
+  else compare('levyCharge','عوارض قراردادی',null,bill.levyCharge,false)
   compare('taxCharge','مالیات و عوارض',calculation.tax,bill.taxCharge)
   compare('otherCharges','سایر هزینه‌ها',null,bill.otherCharges,false)
  }
@@ -524,6 +533,10 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
  const rhoBaselineActual=number(input.rhoBaselineActual??0,'هم‌بستگی خط مبنا و اندازه‌گیری',-1)
  const rhoBaselineModel=number(input.rhoBaselineModel??0,'هم‌بستگی خط مبنا و مدل',-1)
  const rhoActualModel=number(input.rhoActualModel??0,'هم‌بستگی اندازه‌گیری و مدل',-1)
+ const coverageFactorInput=input.coverageFactor===undefined||input.coverageFactor===''?null:number(input.coverageFactor,'ضریب پوشش عدم‌قطعیت',1)
+ const baselineDof=optionalDriver(input.baselineDof,'درجه آزادی خط مبنا',{min:1}),actualDof=optionalDriver(input.actualDof,'درجه آزادی اندازه‌گیری واقعی',{min:1}),modelDof=optionalDriver(input.modelDof,'درجه آزادی مدل',{min:1}),samplingDof=optionalDriver(input.samplingDof,'درجه آزادی نمونه‌گیری',{min:1}),resolutionDof=optionalDriver(input.resolutionDof,'درجه آزادی تفکیک‌پذیری',{min:1})
+ const sampleCount=optionalDriver(input.sampleCount,'تعداد نمونه',{min:1}),autocorrelationRho=optionalDriver(input.autocorrelationRho,'خودهم‌بستگی مرتبه اول',{min:-0.95,max:0.95})??0
+ const sensitivityBaseline=optionalDriver(input.sensitivityBaseline,'ضریب حساسیت خط مبنا',{min:0})??1,sensitivityActual=optionalDriver(input.sensitivityActual,'ضریب حساسیت اندازه‌گیری',{min:0})??1,sensitivityModel=optionalDriver(input.sensitivityModel,'ضریب حساسیت مدل',{min:0})??1,sensitivitySampling=optionalDriver(input.sensitivitySampling,'ضریب حساسیت نمونه‌گیری',{min:0})??1,sensitivityResolution=optionalDriver(input.sensitivityResolution,'ضریب حساسیت تفکیک‌پذیری',{min:0})??1
  const coverageFactor=number(input.coverageFactor??2,'ضریب پوشش عدم‌قطعیت',1)
  const sensitivityBaseline=number(input.sensitivityBaseline??1,'ضریب حساسیت خط مبنا',-10)
  const sensitivityActual=number(input.sensitivityActual??-1,'ضریب حساسیت اندازه‌گیری واقعی',-10)
@@ -589,10 +602,34 @@ export function buildEnergyMvEvidencePack(input,{rows=[],baselines=[],calibratio
   const status=calibration?getMeterCalibrationStatus(calibration,generatedAt.slice(0,10)):{status:'missing',daysUntilDue:null}
   return {recordId:actual.id,period:actual.period,meterId:actual.meterId??'',site:actual.site,calibrationId:calibration?.id??null,status:status.status,nextCalibrationDate:calibration?.nextCalibrationDate??null}
  })
- const warnings=[...new Set([...calculations.flatMap(x=>x.warnings??[]),...calibrationCoverage.filter(x=>x.status!=='valid').map(x=>'وضعیت کالیبراسیون کنتور '+(x.meterId||'نامشخص')+': '+x.status)])]
- return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,comparisonUnit,calculatedVariance,calculatedVariancePercent:normalizedBaseline?calculatedVariance/normalizedBaseline*100:0,uncertaintyBudget:{baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct,samplingUncertaintyPct,resolutionUncertaintyPct,systematicBiasPct,rhoBaselineActual,rhoBaselineModel,rhoActualModel,correlationDeterminant,sensitivityBaseline,sensitivityActual,sensitivityModel,samplingSensitivity,resolutionSensitivity,baselineDegreesFreedom:baselineDf,actualDegreesFreedom:actualDf,modelDegreesFreedom:modelDf,samplingDegreesFreedom:samplingDf,observationCount,effectiveObservationCount,rhoLag1,autocorrelationInflation,baselineUncertainty,actualUncertainty,modelUncertainty,samplingUncertainty,resolutionUncertainty,systematicBiasBound,covarianceTerm,combinedVariance,combinedStandardUncertainty,welchSatterthwaiteDenominator,effectiveDegreesFreedom,studentT95,coverageFactor,coverageFactorApplied,expandedRandomUncertainty,expandedUncertainty,lowerBound:uncertaintyLowerBound,upperBound:uncertaintyUpperBound,conclusion:uncertaintyConclusion,interpretation:'ضرایب حساسیت با علامت در کوواریانس و با قدرمطلق در مؤلفه‌های استاندارد اعمال شده‌اند. درجات آزادی مؤلفه‌های دارای df با تقریب Welch–Satterthwaite ترکیب شده‌اند؛ خودهم‌بستگی وقفه اول، اندازه نمونه مؤثر و تورم عدم‌قطعیت نمونه‌گیری را برآورد می‌کند. اگر df محدود باشد، ضریب پوشش تقریبی t با احتمال دوطرفه ۹۵٪ جایگزین k ورودی می‌شود. برای مؤلفه‌های هم‌بسته، df مؤثر تقریبی است و باید با داده‌های سری زمانی و طرح نمونه‌گیری اعتبارسنجی شود.'},evidenceAttachments:evidenceAttachments.map(({name,mimeType,size,lastModified,dataUrl})=>({name,mimeType,size,lastModified,dataUrl})),calibrationCoverage,warnings:[...warnings,...(uncertaintyConclusion==='not-distinguishable'?['اختلاف محاسبه‌شده در بازه عدم‌قطعیت قرار دارد و از صفر قابل تفکیک نیست؛ ادعای صرفه‌جویی مثبت از این محاسبه پشتیبانی نمی‌شود.']:[])],reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.']}
+ const warnings=[...new Set([...calculations.flatMap(x=>x.warnings??[]),...calibrationCoverage.filter(x=>x.status!=='valid').map(x=>'وضعیت کالیبراسیون کنتور '+(x.meterId||'نامشخص')+': '+x.status),...(effectiveDegreesOfFreedom===null?['درجات آزادی کافی ارائه نشده است؛ ضریب پوشش پیش‌فرض ۲ صرفاً غربالگری است.']:['درجه آزادی مؤثر با تقریب Welch–Satterthwaite محاسبه شد؛ سهم کوواریانس‌ها در مخرج تقریب وارد نشده است.']),...(sampleCount===null?['تعداد نمونه ثبت نشده است؛ اصلاح خودهم‌بستگی اعمال نشد.']:[])])]
+ return {id:'MOD05-MV-'+Date.parse(generatedAt),generatedAt,resource,site:baseline.site,seu:baseline.seu,baseline:{...baseline},actualRecordIds:actualIds,periods:calculations.map(x=>x.period),method:required(input.method,'روش M&V'),verifier:required(input.verifier,'تهیه‌کننده / بازبین'),measurementBoundary:required(input.measurementBoundary,'مرز اندازه‌گیری'),boundaryConfirmed:Boolean(input.boundaryConfirmed),adjustmentNotes:required(input.adjustmentNotes,'توضیح تعدیلات و عوامل مؤثر'),evidenceReferences:required(input.evidenceReferences,'مراجع شواهد'),calculations,normalizedBaseline,actualConsumption,comparisonUnit,calculatedVariance,calculatedVariancePercent:normalizedBaseline?calculatedVariance/normalizedBaseline*100:0,uncertaintyBudget:{baselineUncertaintyPct,actualUncertaintyPct,modelUncertaintyPct,samplingUncertaintyPct,resolutionUncertaintyPct,systematicBiasPct,rhoBaselineActual,rhoBaselineModel,rhoActualModel,correlationDeterminant,sensitivityBaseline,sensitivityActual,sensitivityModel,samplingSensitivity,resolutionSensitivity,baselineDegreesFreedom:baselineDf,actualDegreesFreedom:actualDf,modelDegreesFreedom:modelDf,samplingDegreesFreedom:samplingDf,observationCount,effectiveObservationCount,rhoLag1,autocorrelationInflation,baselineUncertainty,actualUncertainty,modelUncertainty,samplingUncertainty,resolutionUncertainty,systematicBiasBound,covarianceTerm,combinedVariance,combinedStandardUncertainty,welchSatterthwaiteDenominator,effectiveDegreesFreedom,studentT95,coverageFactor,coverageFactorApplied,expandedRandomUncertainty,expandedUncertainty,lowerBound:uncertaintyLowerBound,upperBound:uncertaintyUpperBound,conclusion:uncertaintyConclusion,interpretation:'ضرایب حساسیت با علامت در کوواریانس و با قدرمطلق در مؤلفه‌های استاندارد اعمال شده‌اند. درجات آزادی مؤلفه‌های دارای df با تقریب Welch–Satterthwaite ترکیب شده‌اند؛ خودهم‌بستگی وقفه اول، اندازه نمونه مؤثر و تورم عدم‌قطعیت نمونه‌گیری را برآورد می‌کند. اگر df محدود باشد، ضریب پوشش تقریبی t با احتمال دوطرفه ۹۵٪ جایگزین k ورودی می‌شود. برای مؤلفه‌های هم‌بسته، df مؤثر تقریبی است و باید با داده‌های سری زمانی و طرح نمونه‌گیری اعتبارسنجی شود.'},evidenceAttachments:evidenceAttachments.map(({name,mimeType,size,lastModified,dataUrl})=>({name,mimeType,size,lastModified,dataUrl})),calibrationCoverage,warnings:[...warnings,...(uncertaintyConclusion==='not-distinguishable'?['اختلاف محاسبه‌شده در بازه عدم‌قطعیت قرار دارد و از صفر قابل تفکیک نیست؛ ادعای صرفه‌جویی مثبت از این محاسبه پشتیبانی نمی‌شود.']:[])],reviewStatus:'prepared-not-independent-review',limitations:['این بسته، مستندات عملیاتی مبتنی بر داده‌های انتخاب‌شده است و به‌تنهایی تأیید مستقل یا انطباق رسمی ISO 50015 محسوب نمی‌شود.','تعدیلات، عوامل متغیر، عدم‌قطعیت اندازه‌گیری و مناسب‌بودن روش باید توسط بازبین صلاحیت‌دار بررسی شوند.','تقریب Welch–Satterthwaite با درجات آزادی مؤلفه‌ها محاسبه می‌شود؛ اثر کوواریانس‌ها در درجات آزادی مؤثر تقریب زده نشده است.','تصحیح خودهم‌بستگی به مدل AR(1) با ضریب مرتبه اول متکی است و برای ساختارهای پیچیده‌تر سری زمانی کافی نیست.']}
 }
 
+export const ENERGY_VAULT_BACKUP_KEYS=[ENERGY_DATA_KEY,ENERGY_BASELINES_KEY,ENERGY_ACTIONS_KEY,WATER_BALANCE_KEY,ENERGY_COST_ALLOCATIONS_KEY,ELECTRICITY_BILLS_KEY,GAS_BILLS_KEY,WATER_BILLS_KEY,RESOURCE_COST_ALLOCATIONS_KEY,METER_CALIBRATIONS_KEY,ENERGY_MV_EVIDENCE_KEY,ENERGY_TARIFF_CONTRACTS_KEY,ENERGY_TARIFF_CALCULATIONS_KEY,ENERGY_TARIFF_RECONCILIATIONS_KEY]
+export async function exportEnergyEvidenceVaultBackup(collections,passphrase,createdAt=new Date().toISOString()){
+ if(!String(passphrase??'').trim())throw new Error('برای تهیه پشتیبان رمزگذاری‌شده، گذرواژه الزامی است.')
+ const payload={schema:'PISHRAN-MOD05-VAULT',version:1,createdAt,collections:Object.fromEntries(ENERGY_VAULT_BACKUP_KEYS.map(key=>[key,Array.isArray(collections?.[key])?collections[key]:[]]))}
+ const plain=new TextEncoder().encode(JSON.stringify(payload)),digest=new Uint8Array(await crypto.subtle.digest('SHA-256',plain))
+ const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),key=await deriveEvidenceVaultKey(passphrase,salt)
+ const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new Uint8Array([...plain,...digest]))
+ return {schema:'PISHRAN-MOD05-ENCRYPTED-BACKUP',version:1,algorithm:'AES-256-GCM',kdf:'PBKDF2-SHA256',iterations:EVIDENCE_KDF_ITERATIONS,createdAt,salt:bytesToBase64(salt),iv:bytesToBase64(iv),ciphertext:bytesToBase64(new Uint8Array(cipher))}
+}
+export async function restoreEnergyEvidenceVaultBackup(backup,passphrase){
+ if(!backup||backup.schema!=='PISHRAN-MOD05-ENCRYPTED-BACKUP'||backup.version!==1||backup.algorithm!=='AES-256-GCM'||backup.kdf!=='PBKDF2-SHA256'||backup.iterations!==EVIDENCE_KDF_ITERATIONS)throw new Error('قالب یا نسخه فایل پشتیبان پشتیبانی نمی‌شود.')
+ const key=await deriveEvidenceVaultKey(passphrase,base64ToBytes(backup.salt))
+ let decrypted
+ try{decrypted=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:base64ToBytes(backup.iv)},key,base64ToBytes(backup.ciphertext)))}catch{throw new Error('گذرواژه پشتیبان نادرست است یا فایل آسیب دیده است.')}
+ if(decrypted.length<33)throw new Error('محتوای فایل پشتیبان ناقص است.')
+ const plain=decrypted.slice(0,-32),digest=decrypted.slice(-32),actual=new Uint8Array(await crypto.subtle.digest('SHA-256',plain))
+ if(actual.some((byte,index)=>byte!==digest[index]))throw new Error('چکیده SHA-256 با محتوای پشتیبان تطبیق ندارد.')
+ let payload
+ try{payload=JSON.parse(new TextDecoder().decode(plain))}catch{throw new Error('ساختار داده پشتیبان معتبر نیست.')}
+ if(payload.schema!=='PISHRAN-MOD05-VAULT'||payload.version!==1||!payload.collections||typeof payload.collections!=='object')throw new Error('ساختار یا نسخه داده‌های MOD-05 معتبر نیست.')
+ const restored={}
+ for(const key of ENERGY_VAULT_BACKUP_KEYS){const value=payload.collections[key]??[];if(!Array.isArray(value))throw new Error('ساختار مجموعه '+key+' معتبر نیست.');restored[key]=value}
+ return restored
+}
 const EVIDENCE_KDF_ITERATIONS=310000
 const bytesToBase64=bytes=>{let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
 const base64ToBytes=value=>Uint8Array.from(atob(value),char=>char.charCodeAt(0))
