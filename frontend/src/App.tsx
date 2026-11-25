@@ -263,36 +263,34 @@ function RankingPanel({ language }: { language: 'fa' | 'en' }) {
 
 function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
   const isEn = language === 'en'
-  const [method, setMethod] = useState<'WSM' | 'ADVANCED'>('WSM')
+  const [category, setCategory] = useState<'INITIAL' | 'ADVANCED'>('INITIAL')
   return <div className="ranking-methods-workspace">
     <section className="module-workspace-card" aria-labelledby="ranking-methods-heading">
       <div className="section-head">
         <div>
           <h2 id="ranking-methods-heading">{isEn ? 'Multi-criteria weighting & ranking' : 'وزن‌دهی و رتبه‌بندی چندمعیاره'}</h2>
-          <p>{isEn ? 'Select a method by its level of complexity.' : 'روش انجام را بر اساس سطح پیچیدگی و نوع تحلیل موردنیاز انتخاب کنید.'}</p>
+          <p>{isEn ? 'Start with the basic weighted-sum method or choose an advanced multi-criteria method.' : 'از روش پایه مجموع وزنی شروع کنید یا یکی از روش‌های پیشرفته تصمیم‌گیری چندمعیاره را انتخاب کنید.'}</p>
         </div>
       </div>
-      <h3 style={{ margin: '8px 0 12px' }}>{isEn ? 'Method categories' : 'دسته‌بندی روش‌های انجام'}</h3>
-      <section aria-labelledby="ranking-initial-heading" style={{ marginBottom: 18 }}>
-        <div style={{ marginBottom: 8 }}>
-          <h4 id="ranking-initial-heading" style={{ margin: '0 0 4px' }}>{isEn ? 'Initial method' : 'روش اولیه'}</h4>
-          <p style={{ margin: 0, color: 'var(--muted, #64748b)' }}>{isEn ? 'A straightforward workspace for basic criteria-based scoring and ranking.' : 'برای شروع سریع، تعریف معیارها، امتیازدهی و رتبه‌بندی ساده گزینه‌ها.'}</p>
-        </div>
-        <button type="button" className={method === 'WSM' ? 'primary' : 'secondary'} aria-pressed={method === 'WSM'} onClick={() => setMethod('WSM')}>
-          {isEn ? 'WSM · Decision ranking workspace' : 'WSM · محیط رتبه‌بندی تصمیم (نسخه اولیه)'}
+      <h3 style={{ margin: '8px 0 12px' }}>{isEn ? 'Methods' : 'روش‌های انجام'}</h3>
+      <div role="group" aria-label={isEn ? 'Method categories' : 'دسته‌بندی روش‌ها'} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" data-testid="ranking-category-initial" className={category === 'INITIAL' ? 'primary' : 'secondary'} aria-pressed={category === 'INITIAL'} onClick={() => setCategory('INITIAL')}>
+          {isEn ? 'Initial methods' : 'روش‌های اولیه'}
         </button>
-      </section>
-      <section aria-labelledby="ranking-advanced-heading">
-        <div style={{ marginBottom: 8 }}>
-          <h4 id="ranking-advanced-heading" style={{ margin: '0 0 4px' }}>{isEn ? 'Advanced methods' : 'روش‌های پیشرفته'}</h4>
-          <p style={{ margin: 0, color: 'var(--muted, #64748b)' }}>{isEn ? 'Structured weighting, consistency assessment and multi-criteria ranking.' : 'برای تحلیل ساختاریافته‌تر؛ وزن‌دهی تخصصی، سنجش سازگاری و رتبه‌بندی چندمعیاره.'}</p>
-        </div>
-        <button type="button" className={method === 'ADVANCED' ? 'primary' : 'secondary'} aria-pressed={method === 'ADVANCED'} onClick={() => setMethod('ADVANCED')}>
-          {isEn ? 'AHP · BWM · TOPSIS · AHP + TOPSIS' : 'AHP · BWM · TOPSIS · ترکیب AHP + TOPSIS'}
+        <button type="button" data-testid="ranking-category-advanced" className={category === 'ADVANCED' ? 'primary' : 'secondary'} aria-pressed={category === 'ADVANCED'} onClick={() => setCategory('ADVANCED')}>
+          {isEn ? 'Advanced methods' : 'روش‌های پیشرفته'}
         </button>
-      </section>
+      </div>
+      {category === 'INITIAL'
+        ? <div data-testid="ranking-initial-method" style={{ marginTop: 14 }}>
+            <h3>{isEn ? 'WSM · Weighted Sum Model' : 'WSM · مجموع وزنی (روش اولیه)'}</h3>
+            <p className="muted">{isEn ? 'A straightforward starting point for scoring and comparing alternatives.' : 'روش پایه برای تعریف معیارها، وزن‌دهی و مقایسه امتیازی گزینه‌ها.'}</p>
+          </div>
+        : <div data-testid="ranking-advanced-methods" style={{ marginTop: 14 }}>
+            <h3>{isEn ? 'Advanced multi-criteria methods' : 'روش‌های پیشرفته رتبه‌بندی چندمعیاره'}</h3>
+          </div>}
     </section>
-    {method === 'WSM' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language}/>}
+    {category === 'INITIAL' ? <RankingPanel language={language}/> : <RankingMethodsPanel language={language}/>}
   </div>
 }
 
