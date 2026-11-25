@@ -89,7 +89,7 @@ try {
     if (method === 'AHP') await page.getByText('Saaty 1–9 scale; reciprocal entries are automatic.').waitFor()
     if (method === 'BWM') {
       await page.getByRole('button', { name: 'Add criterion' }).click()
-      await page.getByRole('button', { name: 'Remove criterion Criterion 8' }).click()
+      await page.getByRole('button', { name: 'Remove criterion Criterion 4' }).click()
       await page.getByRole('button', { name: 'Add alternative' }).click()
       await page.getByRole('button', { name: 'Remove alternative Alternative 4' }).click()
       const performanceInputs = page.locator('.ranking-performance-matrix input[type="number"]')
