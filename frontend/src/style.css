@@ -2408,9 +2408,9 @@ input,select,textarea{color:var(--text)}
 @media(prefers-reduced-motion:reduce){.ranking-category-tab,.ranking-method-tab{transition:none}.ranking-category-tab:hover,.ranking-method-tab:hover{transform:none}}
 
 
-/* Pishran project cards use a consistent pale beige surface. */
-.project-card,
-.module-workspace-item {
-  background: #f4eddf;
-  border-color: #e5d9c4;
+/* Keep project-card backgrounds beige despite earlier theme-specific surface rules. */
+:root .project-card,
+:root .module-workspace-item {
+  background: #f4eddf !important;
+  border-color: #e5d9c4 !important;
 }
