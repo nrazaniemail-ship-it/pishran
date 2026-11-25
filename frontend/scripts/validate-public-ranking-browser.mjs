@@ -9,6 +9,7 @@ function activeExportRoot(page) {
 async function verifyExcelExport(page, buttonName, expectedProject, excludedProject) {
   const root = activeExportRoot(page)
   await root.waitFor({ state: 'visible' })
+  assert.equal(await root.locator('.module-export-actions').getAttribute('data-export-scope'), 'project', 'Excel export control must declare project-scoped output')
   const downloadPromise = page.waitForEvent('download', { timeout: 15000 })
   await root.locator('.module-export-actions').getByRole('button', { name: buttonName, exact: true }).click()
   const download = await downloadPromise
@@ -23,6 +24,7 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
 async function verifyPdfScope(page, buttonName) {
   const root = activeExportRoot(page)
   await root.waitFor({ state: 'visible' })
+  assert.equal(await root.locator('.module-export-actions').getAttribute('data-export-scope'), 'project', 'PDF export control must declare project-scoped output')
   await page.evaluate(() => { window.__pishranPrintCalls = 0; window.print = () => { window.__pishranPrintCalls += 1 } })
   await root.locator('.module-export-actions').getByRole('button', { name: buttonName, exact: true }).click()
   assert.equal(await page.evaluate(() => window.__pishranPrintCalls), 1, 'PDF action must invoke the browser print dialog')
