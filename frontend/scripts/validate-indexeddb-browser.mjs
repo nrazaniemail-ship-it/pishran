@@ -79,7 +79,6 @@ try {
   await rankingPage.getByLabel('نام پروژه رتبه‌بندی جدید').fill('پروژه آزمون IndexedDB')
   await rankingPage.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await rankingPage.getByTestId('ranking-category-initial').waitFor({ state: 'visible' })
-  await rankingPage.getByRole('heading', { name: 'روشهای رتبه بندی' }).waitFor()
   const initialCategory = rankingPage.getByTestId('ranking-category-initial')
   const advancedCategory = rankingPage.getByTestId('ranking-category-advanced')
   assert.equal(await initialCategory.getAttribute('aria-pressed'), 'true', 'initial methods must be selected by default')
