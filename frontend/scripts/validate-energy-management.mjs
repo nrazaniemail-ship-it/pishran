@@ -430,4 +430,65 @@ test('MOD-05 interface exposes calibration register, due alerts and M&V evidence
  assert.ok(app.includes('samplingUncertaintyPct'))
  assert.ok(app.includes('resolutionUncertaintyPct'))
  assert.ok(app.includes('rhoActualModel'))
+ assert.ok(app.includes('baselineDegreesFreedom'))
+ assert.ok(app.includes('rhoLag1'))
+ assert.ok(app.includes('ضریب حساسیت خط مبنا'))
+ assert.ok(app.includes('تهیه و دریافت نسخه پشتیبان رمزگذاری‌شده'))
+ assert.ok(app.includes('بازیابی از فایل پشتیبان'))
+ assert.ok(app.includes('gasTransmissionRate'))
+ assert.ok(app.includes('sewerRate'))
+ assert.ok(app.includes('timeOfUseRatesText'))
+ assert.ok(app.includes('leviesText'))
 })
+
+
+test('MOD-05 tariff engine models gas transmission/distribution, sewer, time-of-use, levies and meter multipliers without guessed rates',async()=>{
+ const {validateEnergyTariffContract,calculateConfiguredEnergyTariff}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const base={site:'Plant A',supplier:'Utility',contractNumber:'T-ADV',currency:'IRR',effectiveFrom:'2026-01-01',energyRate:'10',fixedCharge:'0',demandRate:'0',reactiveRate:'0',taxPercent:'10',meterMultiplier:'2'}
+ const gas=validateEnergyTariffContract({...base,resource:'gas',gasTransmissionRate:'2',gasDistributionRate:'1',leviesText:'environmental|unit|0.5;municipal|fixed|100'})
+ const gasResult=calculateConfiguredEnergyTariff({contractId:'G',resource:'gas',site:'Plant A',period:'2026-02-01',quantity:100},{contracts:[{...gas,id:'G'}]},'2026-02-01T00:00:00Z')
+ assert.equal(gasResult.billedQuantity,200)
+ assert.equal(gasResult.gasTransmissionCharge,400)
+ assert.equal(gasResult.gasDistributionCharge,200)
+ assert.equal(gasResult.levyTotal,400)
+ assert.ok(gasResult.total>0)
+ const water=validateEnergyTariffContract({...base,resource:'water',sewerRate:'3'})
+ const waterResult=calculateConfiguredEnergyTariff({contractId:'W',resource:'water',site:'Plant A',period:'2026-02-01',quantity:10},{contracts:[{...water,id:'W'}]},'2026-02-01T00:00:00Z')
+ assert.equal(waterResult.sewerCharge,60)
+ const electricity=validateEnergyTariffContract({...base,resource:'electricity',energyRate:'',timeOfUseRatesText:'peak:30;offpeak:10'})
+ const tou=calculateConfiguredEnergyTariff({contractId:'E',resource:'electricity',site:'Plant A',period:'2026-02-01',quantity:100,timeOfUseQuantities:{peak:25,offpeak:75}},{contracts:[{...electricity,id:'E'}]},'2026-02-01T00:00:00Z')
+ assert.equal(tou.energyCharge,2250)
+ assert.throws(()=>calculateConfiguredEnergyTariff({contractId:'E',resource:'electricity',site:'Plant A',period:'2026-02-01',quantity:100},{contracts:[{...electricity,id:'E'}]}),/مصرف هر بازه زمانی/)
+ assert.throws(()=>calculateConfiguredEnergyTariff({contractId:'E',resource:'electricity',site:'Plant A',period:'2026-02-01',quantity:100,timeOfUseQuantities:{peak:20,offpeak:20}},{contracts:[{...electricity,id:'E'}]}),/جمع مصرف بازه/)
+})
+
+test('MOD-05 M&V Welch-Satterthwaite degrees of freedom, AR(1) effective sample size and sensitivity coefficients are applied',async()=>{
+ const {buildEnergyMvEvidencePack}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const baseline={id:'BASE-DF',resource:'electricity',period:'2026-01',site:'Plant A',seu:'Furnace',consumption:1000,production:100,intensity:10}
+ const actual=validateEnergyRecord({resource:'electricity',period:'2026-02',site:'Plant A',seu:'Furnace',meterId:'EM-DF',consumption:900,production:100,cost:50,dataQuality:'measured'});actual.id='ROW-DF'
+ const input={resource:'electricity',baselineId:'BASE-DF',actualRecordIds:['ROW-DF'],method:'Advanced uncertainty',verifier:'Reviewer',measurementBoundary:'Plant A / Furnace',boundaryConfirmed:true,adjustmentNotes:'Documented',evidenceReferences:'Meter data',baselineUncertaintyPct:1,actualUncertaintyPct:1,modelUncertaintyPct:0.5,samplingUncertaintyPct:0.3,resolutionUncertaintyPct:0.2,systematicBiasPct:0.1,rhoBaselineActual:0.25,rhoBaselineModel:0.1,rhoActualModel:0.15,coverageFactor:2,baselineDegreesFreedom:8,actualDegreesFreedom:10,modelDegreesFreedom:12,observationCount:12,rhoLag1:0.4,sensitivityBaseline:1.1,sensitivityActual:-0.9,sensitivityModel:0.8}
+ const pack=buildEnergyMvEvidencePack(input,{rows:[actual],baselines:[baseline],calibrations:[]},'2026-11-25T12:00:00.000Z')
+ const u=pack.uncertaintyBudget
+ assert.ok(u.effectiveDegreesFreedom>0)
+ assert.ok(u.effectiveObservationCount<12)
+ assert.ok(u.autocorrelationInflation>1)
+ assert.ok(u.studentT95>1.96)
+ assert.equal(u.coverageFactorApplied,u.studentT95)
+ assert.equal(u.sensitivityBaseline,1.1)
+ assert.throws(()=>buildEnergyMvEvidencePack({...input,rhoLag1:0.99},{rows:[actual],baselines:[baseline],calibrations:[]}),/خودهم‌بستگی/)
+})
+
+test('MOD-05 encrypted backup verifies password and integrity before replacing data',async()=>{
+ const {exportEnergyManagementBackup,restoreEnergyManagementBackup,ENERGY_DATA_KEY}=await import('../src/features/modules/energyManagementWorkflow.js')
+ const memory=new Map([[ENERGY_DATA_KEY,[{id:'before'}]]])
+ const store={get:async key=>memory.get(key),set:async(key,value)=>memory.set(key,value),update:async(key,fn)=>{const value=fn(memory.get(key));memory.set(key,value);return value}}
+ const backup=await exportEnergyManagementBackup(store,'strong backup passphrase','2026-11-25T12:00:00.000Z')
+ memory.set(ENERGY_DATA_KEY,[{id:'after'}])
+ const restored=await restoreEnergyManagementBackup(backup,'strong backup passphrase',store,'2026-11-25T12:01:00.000Z')
+ assert.equal(restored.checksumVerified,true)
+ assert.equal(memory.get(ENERGY_DATA_KEY)[0].id,'before')
+ await assert.rejects(()=>restoreEnergyManagementBackup(backup,'wrong passphrase',store),/گذرواژه نادرست/)
+ const tampered={...backup,ciphertext:backup.ciphertext.slice(0,-4)+'AAAA'}
+ await assert.rejects(()=>restoreEnergyManagementBackup(tampered,'strong backup passphrase',store),/گذرواژه نادرست/)
+})
+
