@@ -204,7 +204,11 @@ try {
     'BWM second others-to-worst judgment must persist after reload')
   await page.getByRole('button', { name: 'TOPSIS', exact: true }).click()
   assert.equal(await page.getByLabel('هزینه سرمایه‌گذاری manual weight').inputValue(), '7',
-    'TOPSIS manual criterion weights must persist after reload')
+    'TOPSIS cost weight must persist after reload')
+  assert.equal(await page.getByLabel('ریسک اجرا manual weight').inputValue(), '2',
+    'TOPSIS risk weight must persist after reload')
+  assert.equal(await page.getByLabel('زمان اجرا manual weight').inputValue(), '1',
+    'TOPSIS time weight must persist after reload')
   await page.getByRole('button', { name: 'AHP + TOPSIS', exact: true }).click()
   const persistedMatrix = [
     ['گزینه الف', 'هزینه سرمایه‌گذاری'], ['گزینه الف', 'ریسک اجرا'], ['گزینه الف', 'زمان اجرا'],
@@ -255,8 +259,12 @@ try {
   await page.getByText('Calculation history (1)').waitFor()
   await page.getByText('Sensitivity history (1)').waitFor()
   await page.getByRole('button', { name: 'TOPSIS', exact: true }).click()
+  assert.equal(await page.getByLabel('هزینه سرمایه‌گذاری manual weight').inputValue(), '1',
+    'second-project TOPSIS cost weight must persist independently after reload')
   assert.equal(await page.getByLabel('ریسک اجرا manual weight').inputValue(), '8',
-    'second-project advanced inputs must persist independently after reload')
+    'second-project TOPSIS risk weight must persist independently after reload')
+  assert.equal(await page.getByLabel('زمان اجرا manual weight').inputValue(), '1',
+    'second-project TOPSIS time weight must persist independently after reload')
   await page.getByText('Calculation history (1)').waitFor()
   await page.getByText('Sensitivity history (1)').waitFor()
   await page.getByRole('button', { name: '← All ranking projects' }).click()
