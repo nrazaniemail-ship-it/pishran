@@ -2406,3 +2406,11 @@ input,select,textarea{color:var(--text)}
   .ranking-method-tab{min-height:60px;padding:10px}
 }
 @media(prefers-reduced-motion:reduce){.ranking-category-tab,.ranking-method-tab{transition:none}.ranking-category-tab:hover,.ranking-method-tab:hover{transform:none}}
+
+
+/* Pishran project cards use a consistent pale beige surface. */
+.project-card,
+.module-workspace-item {
+  background: #f4eddf;
+  border-color: #e5d9c4;
+}
