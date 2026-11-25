@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Zap, Wrench, Boxes, Target, BriefcaseBusiness } from 'lucide-react'
+import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Zap, Wrench, Boxes, Target, BriefcaseBusiness, Pencil, Trash2, Check, X } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
 import { applySettings, DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from './core/settings/settings'
 import { createProject, deleteProject, purgeRemovedCaseProjects, listProjects, updateProject, type FeasibilityProject } from './core/projects/projectRepository'
@@ -270,6 +270,8 @@ export default function App() {
   const [activeModuleId, setActiveModuleId] = useState('MOD-01')
   const [moduleWorkspaces, setModuleWorkspaces] = useState<ModuleWorkspace[]>([])
   const [moduleWorkspaceName, setModuleWorkspaceName] = useState('')
+  const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null)
+  const [editingWorkspaceName, setEditingWorkspaceName] = useState('')
   const isEn = settings.language === 'en'
   const toggleLanguage = () => setSettings(current => ({ ...current, language: current.language === 'fa' ? 'en' : 'fa' }))
   type NavigationEntry = { page: Page; project: FeasibilityProject | null; moduleId: string }
@@ -421,6 +423,36 @@ export default function App() {
     await refreshStorage()
   }
 
+  function beginEditModuleWorkspace(item: ModuleWorkspace) {
+    setEditingWorkspaceId(item.id)
+    setEditingWorkspaceName(item.name)
+  }
+
+  async function saveModuleWorkspaceEdit(id: string) {
+    const name = editingWorkspaceName.trim()
+    if (!name) return
+    const next = moduleWorkspaces.map(item => item.id === id ? { ...item, name } : item)
+    await localStore.set('module-workspaces:v1', next)
+    setModuleWorkspaces(next)
+    setEditingWorkspaceId(null)
+    setEditingWorkspaceName('')
+    await refreshStorage()
+  }
+
+  async function deleteModuleWorkspace(id: string) {
+    const item = moduleWorkspaces.find(workspace => workspace.id === id)
+    if (!item) return
+    if (settings.confirmBeforeDelete && !window.confirm(isEn ? `Delete module project “${item.name}”?` : `پروژه «${item.name}» از این ماژول حذف شود؟`)) return
+    const next = moduleWorkspaces.filter(workspace => workspace.id !== id)
+    await localStore.set('module-workspaces:v1', next)
+    setModuleWorkspaces(next)
+    if (editingWorkspaceId === id) {
+      setEditingWorkspaceId(null)
+      setEditingWorkspaceName('')
+    }
+    await refreshStorage()
+  }
+
   const activeModule = modules.find(item => item.id === activeModuleId) ?? modules[0]
   const ActiveModuleIcon = activeModule.icon
   const activeModuleWorkspaces = moduleWorkspaces.filter(item => item.moduleId === activeModule.id)
@@ -508,7 +540,7 @@ export default function App() {
       {activeModule.id === 'MOD-10' && <RankingPanel language={settings.language}/>}
       <section className="module-workspace-card"><div className="section-head"><div><h2>{isEn ? 'Module workspaces' : 'پروژه‌های این ماژول'}</h2><p>{isEn ? 'Create and manage workspaces dedicated to this module.' : 'برای ثبت پروژه‌ها، تحلیل‌ها و اطلاعات اختصاصی این ماژول پروژه ایجاد کنید.'}</p></div><span className="muted">{activeModuleWorkspaces.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
         <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createModuleWorkspace() }}><label htmlFor="module-workspace-name">{isEn ? 'New module workspace name' : 'نام پروژه جدید ماژول'}</label><div><input id="module-workspace-name" value={moduleWorkspaceName} onChange={event => setModuleWorkspaceName(event.target.value)} placeholder={isEn ? 'Enter a name' : 'نام پروژه را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!moduleWorkspaceName.trim()}><Plus size={17}/>{isEn ? 'Create' : 'ایجاد پروژه'}</button></div></form>
-        {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></div><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پروژه‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پروژه، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
+        {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div className="module-workspace-item-main">{editingWorkspaceId === item.id ? <form className="module-workspace-edit-form" onSubmit={event => { event.preventDefault(); void saveModuleWorkspaceEdit(item.id) }}><input aria-label={isEn ? 'Project name' : 'نام پروژه'} value={editingWorkspaceName} onChange={event => setEditingWorkspaceName(event.target.value)} maxLength={100} autoFocus/><button type="submit" className="icon-button" title={isEn ? 'Save changes' : 'ذخیره ویرایش'} aria-label={isEn ? 'Save changes' : 'ذخیره ویرایش'} disabled={!editingWorkspaceName.trim()}><Check size={17}/></button><button type="button" className="icon-button" title={isEn ? 'Cancel editing' : 'لغو ویرایش'} aria-label={isEn ? 'Cancel editing' : 'لغو ویرایش'} onClick={() => { setEditingWorkspaceId(null); setEditingWorkspaceName('') }}><X size={17}/></button></form> : <><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></>}</div><div className="module-workspace-item-actions">{editingWorkspaceId !== item.id && <button type="button" className="icon-button" title={isEn ? 'Edit project' : 'ویرایش پروژه'} aria-label={isEn ? `Edit ${item.name}` : `ویرایش ${item.name}`} onClick={() => beginEditModuleWorkspace(item)}><Pencil size={16}/></button>}<button type="button" className="icon-button" title={isEn ? 'Delete project' : 'حذف پروژه'} aria-label={isEn ? `Delete ${item.name}` : `حذف ${item.name}`} onClick={() => void deleteModuleWorkspace(item.id)}><Trash2 size={16}/></button><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></div></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پروژه‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پروژه، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
       </section>
       <section className="module-capabilities-card" aria-labelledby="module-capabilities-title">
         <div className="module-capabilities-heading">
