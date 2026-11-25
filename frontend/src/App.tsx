@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { Activity, Bot, Factory, FileChartColumn, Gauge, Globe2, Plus, ShieldCheck, TrendingUp, Settings, FolderKanban, LayoutDashboard, BookOpen, Zap, Wrench, Boxes, Target, BriefcaseBusiness, Pencil, Trash2, Check, X } from 'lucide-react'
 import { localStore } from './core/storage/localStore'
@@ -463,7 +463,7 @@ function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoos
 
 type RankingWorkspaceProject = { id: string; name: string; createdAt: string; updatedAt: string; method: RankingAdvisorMethod }
 
-function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
+function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa' | 'en'; registerBackHandler: (handler: (() => boolean) | null) => void }) {
   const isEn = language === 'en'
   const [category, setCategory] = useState<'INITIAL' | 'ADVANCED'>('INITIAL')
   const [rankingProjects, setRankingProjects] = useState<RankingWorkspaceProject[]>([])
@@ -509,6 +509,14 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
     setRankingProjects(Array.isArray(latest) ? latest : [])
     setSelectedProjectId(null)
   }
+  useEffect(() => {
+    registerBackHandler(() => {
+      if (!selectedProjectId) return false
+      void returnToRankingProjects()
+      return true
+    })
+    return () => registerBackHandler(null)
+  }, [selectedProjectId, registerBackHandler])
   const deleteRankingProject = async (projectId: string) => {
     const next = rankingProjects.filter(project => project.id !== projectId)
     await persistRankingProjects(next)
@@ -625,6 +633,8 @@ export default function App() {
   const toggleLanguage = () => setSettings(current => ({ ...current, language: current.language === 'fa' ? 'en' : 'fa' }))
   type NavigationEntry = { page: Page; project: FeasibilityProject | null; moduleId: string }
   const navigationStackRef = useRef<NavigationEntry[]>([{ page: 'dashboard', project: null, moduleId: 'MOD-01' }])
+  const rankingBackHandlerRef = useRef<(() => boolean) | null>(null)
+  const registerRankingBackHandler = useCallback((handler: (() => boolean) | null) => { rankingBackHandlerRef.current = handler }, [])
   const [moduleDropdownOpen, setModuleDropdownOpen] = useState(false)
 
   useEffect(() => {
@@ -664,6 +674,10 @@ export default function App() {
     // therefore unwinds nested screens first; at the dashboard, native
     // back is left untouched so the user can exit normally.
     const handlePopState = () => {
+      if (rankingBackHandlerRef.current?.()) {
+        window.history.pushState({ pishranNavigation: true }, '', window.location.href)
+        return
+      }
       if (navigationStackRef.current.length > 1) {
         navigationStackRef.current.pop()
         const previous = navigationStackRef.current[navigationStackRef.current.length - 1]
@@ -879,7 +893,7 @@ export default function App() {
       {activeModule.id === 'MOD-04' && <ModuleKpiPanel language={settings.language}/>}
       {activeModule.id === 'MOD-05' && <ModuleEnergyPanel language={settings.language}/>}
       {activeModule.id === 'MOD-06' && <MaintenancePanel language={settings.language}/>}
-      {activeModule.id === 'MOD-10' && <RankingMethodChooser language={settings.language}/>}
+      {activeModule.id === 'MOD-10' && <RankingMethodChooser language={settings.language} registerBackHandler={registerRankingBackHandler}/>}
       {activeModule.id !== 'MOD-10' && <section className="module-workspace-card"><div className="section-head"><div><h2>{isEn ? 'Module workspaces' : 'پروژه‌های این ماژول'}</h2><p>{isEn ? 'Create and manage workspaces dedicated to this module.' : 'برای ثبت پروژه‌ها، تحلیل‌ها و اطلاعات اختصاصی این ماژول پروژه ایجاد کنید.'}</p></div><span className="muted">{activeModuleWorkspaces.length.toLocaleString(isEn ? 'en-US' : 'fa-IR')}</span></div>
         <form className="module-create-form" onSubmit={event => { event.preventDefault(); void createModuleWorkspace() }}><label htmlFor="module-workspace-name">{isEn ? 'New module workspace name' : 'نام پروژه جدید ماژول'}</label><div><input id="module-workspace-name" value={moduleWorkspaceName} onChange={event => setModuleWorkspaceName(event.target.value)} placeholder={isEn ? 'Enter a name' : 'نام پروژه را وارد کنید'} maxLength={100}/><button className="primary" type="submit" disabled={!moduleWorkspaceName.trim()}><Plus size={17}/>{isEn ? 'Create' : 'ایجاد پروژه'}</button></div></form>
         {activeModuleWorkspaces.length ? <div className="module-workspace-list">{activeModuleWorkspaces.map(item => <article className="module-workspace-item" key={item.id}><div className="module-workspace-item-main">{editingWorkspaceId === item.id ? <form className="module-workspace-edit-form" onSubmit={event => { event.preventDefault(); void saveModuleWorkspaceEdit(item.id) }}><input aria-label={isEn ? 'Project name' : 'نام پروژه'} value={editingWorkspaceName} onChange={event => setEditingWorkspaceName(event.target.value)} maxLength={100} autoFocus/><button type="submit" className="icon-button" title={isEn ? 'Save changes' : 'ذخیره ویرایش'} aria-label={isEn ? 'Save changes' : 'ذخیره ویرایش'} disabled={!editingWorkspaceName.trim()}><Check size={17}/></button><button type="button" className="icon-button" title={isEn ? 'Cancel editing' : 'لغو ویرایش'} aria-label={isEn ? 'Cancel editing' : 'لغو ویرایش'} onClick={() => { setEditingWorkspaceId(null); setEditingWorkspaceName('') }}><X size={17}/></button></form> : <><b>{item.name}</b><small>{new Date(item.createdAt).toLocaleDateString(isEn ? 'en-US' : 'fa-IR')}</small></>}</div><div className="module-workspace-item-actions">{editingWorkspaceId !== item.id && <button type="button" className="icon-button" title={isEn ? 'Edit project' : 'ویرایش پروژه'} aria-label={isEn ? `Edit ${item.name}` : `ویرایش ${item.name}`} onClick={() => beginEditModuleWorkspace(item)}><Pencil size={16}/></button>}<button type="button" className="icon-button" title={isEn ? 'Delete project' : 'حذف پروژه'} aria-label={isEn ? `Delete ${item.name}` : `حذف ${item.name}`} onClick={() => void deleteModuleWorkspace(item.id)}><Trash2 size={16}/></button><span>{isEn ? 'Saved locally' : 'ذخیره‌شده روی دستگاه'}</span></div></article>)}</div> : <div className="empty-state"><b>{isEn ? 'No workspaces yet' : 'هنوز پروژه‌ای برای این ماژول ایجاد نشده است'}</b><p>{isEn ? 'Create the first workspace to start collecting module-specific information.' : 'با ایجاد اولین پروژه، اطلاعات و تحلیل‌های اختصاصی این ماژول را ثبت کنید.'}</p></div>}
