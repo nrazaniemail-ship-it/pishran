@@ -411,9 +411,15 @@ try {
   // and module workspace create/edit persistence across a full reload.
   await page.getByRole('button', { name: 'Switch to Persian' }).click()
   await page.locator('.brand-title').click()
-  await page.locator('.module-launcher-card').filter({ hasText: 'MOD-02' }).click()
-  const capabilities = page.locator('.module-capabilities-card')
+  await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
+  const capabilities = page.locator('details.module-capabilities-card')
   await capabilities.waitFor({ state: 'visible' })
+  const capabilitySummary = capabilities.locator('summary')
+  assert.equal(await capabilities.evaluate(element => element.open), false,
+    'MOD-10 comparative assessment and market position must be collapsed by default')
+  await capabilitySummary.click()
+  assert.equal(await capabilities.evaluate(element => element.open), true,
+    'MOD-10 capability disclosure must expand when its summary is clicked')
   const assessmentTab = page.getByRole('tab', { name: 'ارزیابی تطبیقی' })
   const marketTab = page.getByRole('tab', { name: 'جایگاه بازار' })
   await assessmentTab.waitFor()
@@ -429,7 +435,13 @@ try {
   assert.equal(await assessmentTab.getAttribute('aria-selected'), 'true',
     'comparative assessment tab must be selectable again')
   await page.getByRole('tabpanel', { name: 'ارزیابی تطبیقی' }).waitFor()
+  await capabilitySummary.click()
+  assert.equal(await capabilities.evaluate(element => element.open), false,
+    'MOD-10 capability disclosure must collapse when its summary is clicked')
+  await assessmentTab.waitFor({ state: 'hidden' })
 
+  await page.locator('.brand-title').click()
+  await page.locator('.module-launcher-card').filter({ hasText: 'MOD-02' }).click()
   const modulePage = page.locator('.module-workspace-page')
   const obsoleteContinue = modulePage.getByRole('button', { name: /^(ادامه بده|ادامه|Continue|Continue now)$/i })
   assert.equal(await obsoleteContinue.count(), 0,
