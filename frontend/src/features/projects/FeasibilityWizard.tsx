@@ -246,12 +246,12 @@ function baseModel(project:FeasibilityProject):Model {
   makeRow('مخارج پیش از تولید (خالص از بهره)',report.currency,1,report.preproductionNet,report.reportFile+'؛ صفحه ۹'),
   makeRow('بهره سرمایه‌ای‌شده پیش از بهره‌برداری',report.currency,1,report.capitalizedInterest,report.reportFile+'؛ صفحه ۹'),
  ]:blankCustomProject?[]:stageCapexRows(stageFormDefinitions[selectedStage.id]?.capex??[],'میلیون ریال','فرم سرمایه‌گذاری تخصصی مرحله '+selectedStage.name+'؛ مبلغ باید از CAPEX و استعلام‌های پروژه تکمیل شود')
- const opexRows=sourceInputs&&report?sourceInputs.operatingCostRows.map(row=>makeRow(row.name,report.currency+'/سال',row.amount,1,report.reportFile+'؛ صفحه ۲۴، سال مرجع '+sourceInputs.operatingCostYear)):blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[],'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه')
+ const opexRows=sourceInputs&&report?sourceInputs.operatingCostRows.map(row=>makeRow(row.name,report.currency+'/سال',row.amount,1,report.reportFile+'؛ صفحه ۲۶، سال مرجع '+sourceInputs.operatingCostYear)):blankCustomProject?[]:stageRows(stageFormDefinitions[selectedStage.id]?.opex??[],'فرم OPEX تخصصی مرحله '+selectedStage.name+'؛ مقادیر نیازمند تکمیل از فایل هزینه‌ها و استعلام‌های پروژه')
  const sourceFactoryCost=sourceInputs?.operatingCostRows.filter(row=>!row.name.includes('بازاریابی')).reduce((total,row)=>total+row.amount,0)??0
  const sourceCostVariance=report?sourceFactoryCost-report.referenceFactoryCost:0
  const sourceNotes=sourceInputs&&report?[
   'اطلاعات CAPEX، مخارج پیش از تولید، بهره سرمایه‌ای‌شده و سرمایه در گردش از جداول تفصیلی گزارش مرجع وارد شده‌اند.',
-  'ردیف‌های OPEX مربوط به سال مرجع '+sourceInputs.operatingCostYear+' هستند؛ اختلاف جمع ریزاقلام با خلاصه گزارش: '+fmt(sourceCostVariance,2)+' '+report.currency+'.',
+  'ردیف‌های OPEX مربوط به سال مرجع '+sourceInputs.operatingCostYear+' هستند؛ اختلاف جمع ریزاقلام با خلاصه گزارش (پس از اصلاح ردیف‌های منبع): '+fmt(sourceCostVariance,2)+' '+report.currency+'.',
   'سهم هزینه متغیر گزارش: '+sourceInputs.variableCostSharePercent+'٪؛ سهم خارجی CAPEX گزارش: '+sourceInputs.foreignFixedInvestmentSharePercent+'٪. این نسبت‌ها تجمیعی‌اند و به تفکیک دارایی تخصیص داده نشده‌اند.',
   ...sourceInputs.missingSourceDetails.map(item=>'اطلاعات گزارش برای ورود قطعی ارائه نشده است: '+item)
  ].join('\n'):''
@@ -261,7 +261,7 @@ function baseModel(project:FeasibilityProject):Model {
   foundation,financialForms,fixedInvestmentItems:importedFixedItems,fixedInvestmentSeedVersion:imported?2:0,startingFixedAssets:[],
   project:{name:project.name,location:project.location,owner:imported?report!.reportTitle:'',startYear:imported?reportYear:(blankTemplate?0:1403),constructionYears:imported?report!.constructionYears:(blankTemplate?0:2),operatingYears:imported?report!.operatingYears:(blankTemplate?0:10),currency:imported?report!.currency:(blankTemplate?'':'میلیون ریال'),fxRate:blankTemplate?0:1},
   stage:selectedStage.id,
-  products:blankCustomProject?[]:[makeRow(imported?report!.product:'محصول اصلی','تن/سال',imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),0,imported?'گزارش مرجع؛ خلاصه صفحه اول':'فرض کاربر'),...(imported&&report!.secondaryCapacity?[makeRow('آهن اسفنجی هات‌لینک','تن/سال',report!.secondaryCapacity,0,'گزارش مرجع؛ خلاصه صفحه اول')]:[])],
+  products:blankCustomProject?[]:[makeRow(imported?report!.product:'محصول اصلی','تن/سال',imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),imported?(sourceInputs?.salesUnitPrice??0):0,imported?(sourceInputs?.salesPriceSource??'گزارش مرجع؛ قیمت فروش تأیید نشده'):'فرض کاربر'),...(imported&&report!.secondaryCapacity?[makeRow('آهن اسفنجی هات‌لینک','تن/سال',report!.secondaryCapacity,0,'گزارش مرجع؛ خلاصه صفحه اول')]:[])],
   capacity:{nameplate:imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),operatingDays:0,hoursPerDay:0,availability:0,yield:0,ramp:blankTemplate?[]:(imported?sourceInputs?.capacityUtilization??[]:[70,80,90,100])},
   process:{technology:blankCustomProject||blankTemplate?'':selectedStage.name,route:imported?report!.description:(blankCustomProject||blankTemplate?'':selectedStage.route),equipment:'',bottleneck:0,notes:imported?sourceNotes:''},
   technical:blankCustomProject?[]:selectedStage.fields.map(field=>({...makeRow(field,field.includes('نیروی انسانی')?'نفر':'مقدار',0,0,'در خلاصه گزارش مرجع ارائه نشده؛ نیازمند تکمیل مهندسی'),valueText:''})),
