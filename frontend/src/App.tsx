@@ -11,6 +11,7 @@ import FeasibilityWizard from './features/projects/FeasibilityWizard'
 import Guide from './features/guide/Guide'
 import BackupScheduler from './features/settings/BackupScheduler'
 import ModuleIntelligencePanel from './features/modules/ModuleIntelligencePanel'
+import OeeProductionPanel from './features/modules/OeeProductionPanel'
 import ModuleKpiPanel from './features/modules/ModuleKpiPanel'
 import ModuleEnergyPanel from './features/modules/ModuleEnergyPanel'
 import MaintenancePanel from './features/modules/MaintenancePanel'
@@ -899,7 +900,8 @@ export default function App() {
       <div className="module-workspace-heading"><button type="button" className="secondary" onClick={() => navigateBack('projects')}>{isEn ? 'Back to previous layer' : 'بازگشت به لایه قبل'}</button><span className="module-id">{activeModule.id}</span></div>
       <ModuleExportActions moduleId={activeModule.id} moduleTitle={isEn ? activeModule.enTitle : activeModule.title} language={settings.language}/>
       {activeModule.id === 'MOD-01' && <ExecutiveDashboardPanel language={settings.language} onOpenModule={openModule}/>}
-      {(activeModule.id === 'MOD-02' || activeModule.id === 'MOD-03') && <ModuleIntelligencePanel moduleId={activeModule.id} language={settings.language}/>}
+      {activeModule.id === 'MOD-02' && <ModuleIntelligencePanel moduleId={activeModule.id} language={settings.language}/>
+      {activeModule.id === 'MOD-03' && <OeeProductionPanel language={settings.language}/>}
       {activeModule.id === 'MOD-04' && <ModuleKpiPanel language={settings.language}/>}
       {activeModule.id === 'MOD-05' && <ModuleEnergyPanel language={settings.language}/>}
       {activeModule.id === 'MOD-06' && <MaintenancePanel language={settings.language}/>}
