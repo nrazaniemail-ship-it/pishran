@@ -1,22 +1,22 @@
 import {useEffect,useState} from 'react';
 import {localStore} from '../../core/storage/localStore';
 import {ahp,aggregatePairwiseMatrices,aggregateBwmExpertWeights,analyzeRankingSensitivity,makeRankingSnapshot,topsis,type PairwiseMatrix,type CriterionDirection} from './rankingMethods';
-type Props={language:'fa'|'en';initialMethod?:Method;suggestedCriteria?:string[];suggestedAlternatives?:string[]};
+type Props={language:'fa'|'en';initialMethod?:Method;suggestedCriteria?:string[];suggestedAlternatives?:string[];suggestedScores?:Array<Array<number|null>>};
 type Method='AHP'|'BWM'|'TOPSIS'|'AHP+TOPSIS';
 type Expert={name:string,matrix:PairwiseMatrix,bestIndex:number,worstIndex:number,bestToOthers:number[],othersToWorst:number[]};
 const newMatrix=(n:number):PairwiseMatrix=>Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:1));
 const initialScores=()=>[[80,7,12],[65,9,8],[90,6,15]];
-export default function RankingMethodsPanel({language,initialMethod,suggestedCriteria,suggestedAlternatives}:Props){
+export default function RankingMethodsPanel({language,initialMethod,suggestedCriteria,suggestedAlternatives,suggestedScores}:Props){
  const en=language==='en';
  const [method,setMethod]=useState<Method>(initialMethod??'AHP');
  const [criteria,setCriteria]=useState(()=>suggestedCriteria?.length?suggestedCriteria.slice(0,8):['هزینه سرمایه‌گذاری','ریسک اجرا','زمان اجرا']);
  const initialCriterionCount=suggestedCriteria?.length||3;
  const [experts,setExperts]=useState<Expert[]>([{name:en?'Expert 1':'خبره ۱',matrix:newMatrix(initialCriterionCount),bestIndex:0,worstIndex:Math.max(0,initialCriterionCount-1),bestToOthers:Array(initialCriterionCount).fill(1),othersToWorst:Array(initialCriterionCount).fill(1)}]);
  const [alternatives,setAlternatives]=useState(()=>suggestedAlternatives?.length?suggestedAlternatives.slice(0,12):['گزینه الف','گزینه ب','گزینه ج']);
- const [scores,setScores]=useState<number[][]>(()=>suggestedCriteria?.length&&suggestedAlternatives?.length?suggestedAlternatives.slice(0,12).map(()=>Array(suggestedCriteria.slice(0,8).length).fill(0)):initialScores());
+ const [scores,setScores]=useState<number[][]>(()=>suggestedScores?.length?suggestedScores.map(row=>row.map(value=>value===null?Number.NaN:value)):initialScores());
  const [directions,setDirections]=useState<CriterionDirection[]>(['cost','benefit','cost']);
  const [manualWeights,setManualWeights]=useState([0.5,0.3,0.2]);
- const [notice,setNotice]=useState(''); const [history,setHistory]=useState<any[]>([]); const [sensitivityHistory,setSensitivityHistory]=useState<any[]>([]);
+ const [notice,setNotice]=useState(''); const scoresReady=scores.length===alternatives.length&&scores.every(row=>row.length===criteria.length&&row.every(value=>Number.isFinite(value)&&value>=0)); const numericScores=scores.map(row=>row.map(value=>Number.isFinite(value)?value:0)); const [history,setHistory]=useState<any[]>([]); const [sensitivityHistory,setSensitivityHistory]=useState<any[]>([]);
  const [active,setActive]=useState<any>(null); const [sensitivity,setSensitivity]=useState<any>(null); const [shock,setShock]=useState(20);
  useEffect(()=>{void localStore.get<any[]>('mod10-ranking-method-history:v1').then(v=>setHistory(Array.isArray(v)?v:[])).catch(()=>undefined);void localStore.get<any[]>('mod10-ranking-sensitivity-history:v1').then(v=>setSensitivityHistory(Array.isArray(v)?v:[])).catch(()=>undefined)},[]);
  const usesExperts=method==='AHP'||method==='BWM'||method==='AHP+TOPSIS';
@@ -36,8 +36,8 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
   setSensitivity(null);setActive(null);
  };
  const removeAlternative=(idx:number)=>{setAlternatives(as=>as.filter((_,i)=>i!==idx));setScores(ms=>ms.filter((_,i)=>i!==idx));setSensitivity(null);setActive(null);};
- const addCriterion=()=>{if(criteria.length>=8)return;setCriteria(cs=>[...cs,`${en?'Criterion':'معیار'} ${cs.length+1}`]);setExperts(es=>es.map(e=>({...e,matrix:[...e.matrix.map(row=>[...row,1]),Array(criteria.length+1).fill(1)],bestToOthers:[...e.bestToOthers,1],othersToWorst:[...e.othersToWorst,1]})));setScores(ms=>ms.map(row=>[...row,0]));setDirections(ds=>[...ds,'benefit']);setManualWeights(ws=>[...ws,1]);};
- const addAlternative=()=>{if(alternatives.length>=12)return;setAlternatives(as=>[...as,`${en?'Alternative':'گزینه'} ${as.length+1}`]);setScores(ms=>[...ms,Array(criteria.length).fill(0)]);};
+ const addCriterion=()=>{if(criteria.length>=8)return;setCriteria(cs=>[...cs,`${en?'Criterion':'معیار'} ${cs.length+1}`]);setExperts(es=>es.map(e=>({...e,matrix:[...e.matrix.map(row=>[...row,1]),Array(criteria.length+1).fill(1)],bestToOthers:[...e.bestToOthers,1],othersToWorst:[...e.othersToWorst,1]})));setScores(ms=>ms.map(row=>[...row,Number.NaN]));setDirections(ds=>[...ds,'benefit']);setManualWeights(ws=>[...ws,1]);};
+ const addAlternative=()=>{if(alternatives.length>=12)return;setAlternatives(as=>[...as,`${en?'Alternative':'گزینه'} ${as.length+1}`]);setScores(ms=>[...ms,Array(criteria.length).fill(Number.NaN)]);};
  const run=async()=>{
   try{
    let weights:number[],diagnostics:any,judgments:any,ranking:any=undefined;
@@ -46,14 +46,14 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
     if(!result.consistent){setNotice(en?'Group consistency ratio exceeds 0.10. Revise judgments before accepting weights.':'نسبت ناسازگاری گروهی بیش از ۰٫۱۰ است؛ قضاوت‌ها را اصلاح کنید.');return;}
     const individualCRs=individual.map(x=>x.cr);
     weights=result.weights;diagnostics={lambdaMax:result.lambdaMax,ci:result.ci,cr:result.cr,consistent:result.consistent,maxExpertCR:Math.max(...individualCRs),meanExpertCR:individualCRs.reduce((a,b)=>a+b,0)/individualCRs.length,inconsistentExpertCount:individualCRs.filter(v=>v>0.1).length};judgments={expertMatrices:matrices,individualExpertDiagnostics:individual.map(x=>({lambdaMax:x.lambdaMax,ci:x.ci,cr:x.cr,consistent:x.consistent})),aggregatedMatrix:group};
-    if(method==='AHP+TOPSIS'){ranking=topsis(scores,weights,directions);diagnostics={...diagnostics,topsis:'vector-normalized Euclidean TOPSIS'};judgments={...judgments,alternatives,scores,directions};}
+    if(method==='AHP+TOPSIS'){ranking=topsis(numericScores,weights,directions);diagnostics={...diagnostics,topsis:'vector-normalized Euclidean TOPSIS'};judgments={...judgments,alternatives,scores:numericScores,directions};}
    }else if(method==='BWM'){
     const result=aggregateBwmExpertWeights(experts);weights=result.weights;const xis=result.individual.map(x=>x.xi);diagnostics={maxExpertXi:Math.max(...xis),meanExpertXi:xis.reduce((a,b)=>a+b,0)/xis.length,aggregation:'geometric mean of individual expert priorities'};judgments={expertJudgments:experts.map(e=>({name:e.name,bestIndex:e.bestIndex,worstIndex:e.worstIndex,bestToOthers:e.bestToOthers,othersToWorst:e.othersToWorst})),individualResults:result.individual};
    }else{
-    const result=topsis(scores,manualWeights,directions);weights=result.weights;ranking=result;diagnostics={rankingMethod:'TOPSIS',normalization:'vector',idealSolution:'benefit/cost aware'};judgments={alternatives,scores,directions,manualWeights};
+    const result=topsis(numericScores,manualWeights,directions);weights=result.weights;ranking=result;diagnostics={rankingMethod:'TOPSIS',normalization:'vector',idealSolution:'benefit/cost aware'};judgments={alternatives,scores:numericScores,directions,manualWeights};
    }
-   if(!ranking) ranking=topsis(scores,weights,directions);
-   judgments={...judgments,alternatives,scores,directions};
+   if(!ranking) ranking=topsis(numericScores,weights,directions);
+   judgments={...judgments,alternatives,scores:numericScores,directions};
    const snapshot=makeRankingSnapshot({method,criteria,expertCount:usesExperts?experts.length:0,weights,diagnostics,judgments});
    const saved={...snapshot,ranking};const next=[saved,...history].slice(0,100);await localStore.set('mod10-ranking-method-history:v1',next);setHistory(next);setActive(saved);setNotice(en?'Calculation version saved':'نسخه محاسبه ذخیره شد');
   }catch(error){setNotice(error instanceof Error?error.message:String(error))}
@@ -67,7 +67,7 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
     if(!base.consistent) throw new Error(en?'AHP consistency ratio exceeds 0.10.':'نسبت ناسازگاری AHP بیش از ۰٫۱۰ است.');
     weights=base.weights;
    }else if(method==='BWM') {const group=aggregateBwmExpertWeights(experts);weights=group.weights;expertWeightVectors=group.individual.map(x=>x.weights);}
-   else weights=topsis(scores,manualWeights,directions).weights;
+   else weights=topsis(numericScores,manualWeights,directions).weights;
    const cases:Array<{label:string;weights:number[]}>=[];
    const delta=shock/100;
    if(method==='AHP'||method==='AHP+TOPSIS'){
@@ -98,9 +98,9 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
      cases.push({label:'وزن دستی · '+criteria[j]+' · '+(sign<0?'−':'+')+shock+'%',weights:changed});
     }
    }
-   const result=analyzeRankingSensitivity(scores,weights,directions,cases,delta,{trials:500,seed:20261125,expertWeightVectors});
+   const result=analyzeRankingSensitivity(numericScores,weights,directions,cases,delta,{trials:500,seed:20261125,expertWeightVectors});
    setSensitivity(result);
-   const record={schema:'pishran-ranking-sensitivity/v1',createdAt:new Date().toISOString(),method,criteria:[...criteria],alternatives:[...alternatives],directions:[...directions],weights:[...weights],shock:delta,trials:result.robustness.trials,seed:result.robustness.seed,expertWeightVectors:expertWeightVectors.map(v=>[...v]),expertJudgments:experts.map(e=>({name:e.name,bestIndex:e.bestIndex,worstIndex:e.worstIndex,matrix:e.matrix.map(row=>[...row]),bestToOthers:[...e.bestToOthers],othersToWorst:[...e.othersToWorst]})),performanceMatrix:scores.map(row=>[...row]),result};
+   const record={schema:'pishran-ranking-sensitivity/v1',createdAt:new Date().toISOString(),method,criteria:[...criteria],alternatives:[...alternatives],directions:[...directions],weights:[...weights],shock:delta,trials:result.robustness.trials,seed:result.robustness.seed,expertWeightVectors:expertWeightVectors.map(v=>[...v]),expertJudgments:experts.map(e=>({name:e.name,bestIndex:e.bestIndex,worstIndex:e.worstIndex,matrix:e.matrix.map(row=>[...row]),bestToOthers:[...e.bestToOthers],othersToWorst:[...e.othersToWorst]})),performanceMatrix:numericScores.map(row=>[...row]),result};
    const next=[record,...sensitivityHistory].slice(0,50);
    await localStore.set('mod10-ranking-sensitivity-history:v1',next);
    setSensitivityHistory(next);
@@ -119,12 +119,12 @@ export default function RankingMethodsPanel({language,initialMethod,suggestedCri
   </div>)}
   {usesExperts&&<button className="secondary-button" style={{marginTop:10}} onClick={addExpert}>{en?'Add expert':'افزودن خبره'}</button>}
   <div style={{marginTop:16}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,flexWrap:'wrap'}}><b>{en?'Alternative performance matrix':'ماتریس عملکرد گزینه‌ها'}</b><button className="secondary-button" onClick={addAlternative} disabled={alternatives.length>=12}>{en?'Add alternative':'افزودن گزینه'}</button></div><p className="muted">{en?'Enter comparable numeric values. Set each criterion as benefit (higher is better) or cost (lower is better).':'مقادیر عددی و قابل مقایسه وارد کنید. برای هر معیار مشخص کنید سود (بیشتر بهتر) است یا هزینه (کمتر بهتر).'}</p>
-   <div className="ranking-performance-matrix" style={{overflowX:'auto'}}><table style={{borderCollapse:'collapse',width:'100%'}}><thead><tr><th>{en?'Alternative':'گزینه'}</th>{criteria.map((c,j)=><th key={j}>{c}<select aria-label={en?`${c} direction`:`جهت ${c}`} value={directions[j]} onChange={e=>setDirections(ds=>ds.map((d,k)=>k===j?e.target.value as CriterionDirection:d))}><option value="benefit">{en?'Benefit':'سود'}</option><option value="cost">{en?'Cost':'هزینه'}</option></select></th>)}<th>{en?'Actions':'عملیات'}</th></tr></thead><tbody>{alternatives.map((a,i)=><tr key={i}><th><input aria-label={en?'Alternative name':'نام گزینه'} value={a} onChange={e=>setAlternatives(as=>as.map((v,k)=>k===i?e.target.value:v))}/></th>{criteria.map((_,j)=><td key={j}><input type="number" min="0" step="any" aria-label={en?`${a}, ${criteria[j]} score`:`امتیاز ${criteria[j]} برای ${a}`} value={scores[i]?.[j]??0} onChange={e=>setScores(ms=>ms.map((row,k)=>k===i?row.map((v,l)=>l===j?Number(e.target.value):v):row))} style={{width:90}}/></td>)}<td><button type="button" className="secondary-button" aria-label={en?`Remove alternative ${a}`:`حذف گزینه ${a}`} onClick={()=>removeAlternative(i)}>{en?'Remove':'حذف'}</button></td></tr>)}</tbody></table></div>
+   <div className="ranking-performance-matrix" style={{overflowX:'auto'}}><table style={{borderCollapse:'collapse',width:'100%'}}><thead><tr><th>{en?'Alternative':'گزینه'}</th>{criteria.map((c,j)=><th key={j}>{c}<select aria-label={en?`${c} direction`:`جهت ${c}`} value={directions[j]} onChange={e=>setDirections(ds=>ds.map((d,k)=>k===j?e.target.value as CriterionDirection:d))}><option value="benefit">{en?'Benefit':'سود'}</option><option value="cost">{en?'Cost':'هزینه'}</option></select></th>)}<th>{en?'Actions':'عملیات'}</th></tr></thead><tbody>{alternatives.map((a,i)=><tr key={i}><th><input aria-label={en?'Alternative name':'نام گزینه'} value={a} onChange={e=>setAlternatives(as=>as.map((v,k)=>k===i?e.target.value:v))}/></th>{criteria.map((_,j)=><td key={j}><input type="number" min="0" step="any" aria-label={en?`${a}, ${criteria[j]} score`:`امتیاز ${criteria[j]} برای ${a}`} value={Number.isFinite(scores[i]?.[j])?scores[i][j]:''} onChange={e=>setScores(ms=>ms.map((row,k)=>k===i?row.map((v,l)=>l===j?(e.target.value===''?Number.NaN:Number(e.target.value)):v):row))} style={{width:90}}/></td>)}<td><button type="button" className="secondary-button" aria-label={en?`Remove alternative ${a}`:`حذف گزینه ${a}`} onClick={()=>removeAlternative(i)}>{en?'Remove':'حذف'}</button></td></tr>)}</tbody></table></div>
   </div>
   {method==='TOPSIS'&&<div style={{marginTop:12}}><b>{en?'Manual criterion weights':'وزن‌های دستی معیارها'}</b><div style={{display:'flex',gap:10,flexWrap:'wrap'}}>{criteria.map((c,i)=><label key={i}>{c}<input type="number" min="0" step="any" value={manualWeights[i]??0} onChange={e=>setManualWeights(ws=>ws.map((v,k)=>k===i?Number(e.target.value):v))} style={{width:90}}/></label>)}</div><small className="muted">{en?'Weights are normalized automatically.':'وزن‌ها هنگام محاسبه به‌صورت خودکار نرمال می‌شوند.'}</small></div>}
   <div style={{display:'flex',gap:10,alignItems:'end',flexWrap:'wrap',marginTop:14}}>
    <label>{en?'Sensitivity shock (%)':'دامنه تغییر حساسیت (%)'}<input aria-label={en?'Sensitivity shock percentage':'درصد تغییر حساسیت'} type="number" min="0" max="90" step="5" value={shock} onChange={e=>setShock(Math.max(0,Math.min(90,Number(e.target.value)||0)))}/></label>
-   <button className="primary" onClick={()=>void run()} disabled={criteria.length<2||alternatives.length<2||(method==='BWM'&&experts.some(e=>e.bestIndex===e.worstIndex))}>{en?'Calculate and save version':'محاسبه و ثبت نسخه'}</button>
+   <button className="primary" onClick={()=>void run()} disabled={!scoresReady||criteria.length<2||alternatives.length<2||(method==='BWM'&&experts.some(e=>e.bestIndex===e.worstIndex))}>{en?'Calculate and save version':'محاسبه و ثبت نسخه'}</button>
    <button className="secondary-button" onClick={runSensitivity} disabled={method==='BWM'&&experts.some(e=>e.bestIndex===e.worstIndex)}>{en?'Run rank sensitivity':'اجرای تحلیل حساسیت رتبه‌ها'}</button>
   </div>
   {sensitivity&&<div data-testid="ranking-sensitivity-results" style={{marginTop:14,padding:12,border:'1px solid var(--line)',borderRadius:10}}>
