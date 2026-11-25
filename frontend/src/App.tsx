@@ -503,14 +503,12 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
     const name = editingRankingProjectName.trim()
     if (!name) return
     const key = 'mod10-ranking-projects:v1'
-    const updatedAt = new Date().toISOString()
-    const next = await localStore.update<RankingWorkspaceProject[]>(key, current => {
-      const latest = Array.isArray(current) ? current : rankingProjects
-      return latest.map(project => project.id === selectedProject.id ? { ...project, name, updatedAt } : project)
-    })
-    // Keep the supported localStorage recovery mirror in sync with the authoritative IndexedDB value.
-    await localStore.set(key, next)
-    setRankingProjects(next)
+    const latest = await localStore.get<RankingWorkspaceProject[]>(key)
+    const source = Array.isArray(latest) ? latest : rankingProjects
+    const next = source.map(project => project.id === selectedProject.id
+      ? { ...project, name, updatedAt: new Date().toISOString() }
+      : project)
+    await persistRankingProjects(next)
   }
   const returnToRankingProjects = async () => {
     const latest = await localStore.get<RankingWorkspaceProject[]>('mod10-ranking-projects:v1')
