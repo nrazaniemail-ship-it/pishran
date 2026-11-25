@@ -38,7 +38,7 @@ export default defineConfig({
         cacheId: 'pishran-1-0-1-office-refresh',
         // The integrated feasibility and financial modules are bundled into one offline-first app shell.
         // Keep the full production entry point precached instead of silently omitting it above Workbox's 2 MiB default.
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
