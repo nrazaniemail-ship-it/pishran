@@ -464,7 +464,7 @@ test('MOD-05 tariff engine models gas transmission/distribution, sewer, time-of-
  const electricity=validateEnergyTariffContract({...base,resource:'electricity',energyRate:'',timeOfUseRatesText:'peak:30;offpeak:10'})
  const tou=calculateConfiguredEnergyTariff({contractId:'E',resource:'electricity',site:'Plant A',period:'2026-02-01',quantity:100,meterMultiplier:1,timeOfUseQuantities:{peak:25,offpeak:75}},{contracts:[{...electricity,id:'E'}]},'2026-02-01T00:00:00Z')
  assert.equal(tou.energyCharge,1500)
- assert.throws(()=>calculateConfiguredEnergyTariff({contractId:'E',resource:'electricity',site:'Plant A',period:'2026-02-01',quantity:100},{contracts:[{...electricity,id:'E'}]}),/مقدار مصرف هر بازه/)
+ assert.throws(()=>calculateConfiguredEnergyTariff({contractId:'E',resource:'electricity',site:'Plant A',period:'2026-02-01',quantity:100},{contracts:[{...electricity,id:'E'}]}),/مقدار مصرف هر بازه را جداگانه/)
  assert.throws(()=>calculateConfiguredEnergyTariff({contractId:'E',resource:'electricity',site:'Plant A',period:'2026-02-01',quantity:100,timeOfUseQuantities:{peak:20,offpeak:20}},{contracts:[{...electricity,id:'E'}]}),/جمع مصرف بازه/)
 })
 
