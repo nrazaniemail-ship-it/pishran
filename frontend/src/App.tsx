@@ -351,7 +351,7 @@ function RankingAdvisor({ language, onChoose }: { language: 'fa' | 'en'; onChoos
     } else if (step === 'weights') {
       if (/مشخص|دارم|known|given|already|تعیین شده/i.test(value)) a.weights = 'known'
       else if (/خبره|کارشناس|نظر|استخراج|experts?|elicit/i.test(value)) a.weights = 'experts'
-      else if (/نمی.?دانم|نامشخص|نامعلوم|unknown|not sure/i.test(value)) a.weights = 'unknown'
+      else if (/نمی.?دانم|مطمئن نیستم|نامشخص|نامعلوم|unknown|not sure/i.test(value)) a.weights = 'unknown'
       else { clarify(isEn ? 'Are the weights already known, should experts determine them, or are you not sure yet?' : 'وزن‌ها از قبل مشخص‌اند، باید از خبرگان استخراج شوند یا هنوز مطمئن نیستید؟'); return }
       next = 'decisionMakers'
     } else if (step === 'decisionMakers') {
@@ -474,7 +474,7 @@ function RankingMethodChooser({ language }: { language: 'fa' | 'en' }) {
     const cleanAlternatives = alternatives.map(value => value.trim()).filter(Boolean).slice(0, 12)
     if (!cleanCriteria.length || cleanAlternatives.length < 2) return
     setRecommendedMethod(method)
-    const selectedDirections = cleanCriteria.map((name, index) => directions[index] ?? (/هزینه|سرمایه|ریسک|زمان|مصرف|قیمت|نیاز منابع/.test(name) ? 'cost' : 'benefit'))
+    const selectedDirections: Array<'benefit' | 'cost'> = cleanCriteria.map((name, index) => directions[index] ?? (/هزینه|سرمایه|ریسک|زمان|مصرف|قیمت|نیاز منابع/.test(name) ? 'cost' : 'benefit'))
     const blankMatrix = cleanAlternatives.map(() => cleanCriteria.map(() => null))
     if (method === 'WSM') {
       const id = (prefix: string) => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
