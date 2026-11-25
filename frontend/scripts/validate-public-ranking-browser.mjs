@@ -351,9 +351,9 @@ try {
   await workspaceItem.getByRole('button', { name: 'ویرایش پروژه آزمون ذخیره ماژول' }).click()
   const editingWorkspaceItem = modulePage.locator('.module-workspace-item').filter({ has: modulePage.getByRole('button', { name: 'ذخیره ویرایش' }) })
   await editingWorkspaceItem.getByRole('textbox').fill('پروژه آزمون ویرایش و بازیابی')
-  await editingWorkspaceItem.getByRole('button', { name: 'ذخیره ویرایش' }).click()
-  assert.equal(await workspaceItem.evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(244, 237, 223)',
+  assert.equal(await editingWorkspaceItem.evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(244, 237, 223)',
     'project workspace cards must use the pale beige background')
+  await editingWorkspaceItem.getByRole('button', { name: 'ذخیره ویرایش' }).click()
   await page.locator('.module-workspace-page').getByText('پروژه آزمون ویرایش و بازیابی', { exact: true }).waitFor()
   await page.waitForFunction(async expectedName => {
     const db = await new Promise((resolve, reject) => {
