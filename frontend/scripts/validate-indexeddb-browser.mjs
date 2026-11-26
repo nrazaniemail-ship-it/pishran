@@ -251,7 +251,7 @@ try {
   await feasibilityPage.close()
   console.log('PASS: project 1 remains source-integrated, project 2 remains blank, and remaining reference projects persist')
   await feasibilityPage.close()
-  console.log('PASS: all four COMFAR feasibility projects are populated, reconciled and persisted in native IndexedDB')
+  console.log('PASS: all four COMFAR project records persist in native IndexedDB; project 2 remains intentionally blank')
 
   const result = await page.evaluate(async ({ storeUrl, projectsUrl, backupUrl }) => {
     const { localStore } = await import(storeUrl)
