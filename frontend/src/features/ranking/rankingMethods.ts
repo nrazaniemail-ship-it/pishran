@@ -125,13 +125,13 @@ export function bwm(bestIndex:number,worstIndex:number,bestToOthers:number[],oth
  // best-to-others and others-to-worst deviations being <= xi, sum(w)=1.
  const variableCount=n+1, xiIndex=n;
  const A:number[][]=[], b:number[]=[];
- const addAbs=(left:number[],right:number[])=>{
+ const addAbs=(left:number[])=>{
   const upper=Array(variableCount).fill(0);
   left.forEach((v,i)=>upper[i]+=v);upper[xiIndex]=-1;A.push(upper);b.push(0);
   const lower=Array(variableCount).fill(0);
   left.forEach((v,i)=>lower[i]-=v);lower[xiIndex]=-1;A.push(lower);b.push(0);
  };
- for(let j=0;j<n;j++)if(j!==bestIndex){const terms=Array(n).fill(0);terms[bestIndex]=1;terms[j]-=bestToOthers[j];addAbs(terms,[]);}
+ for(let j=0;j<n;j++)if(j!==bestIndex){const terms=Array(n).fill(0);terms[bestIndex]=1;terms[j]-=bestToOthers[j];addAbs(terms);}
  for(let j=0;j<n;j++)if(j!==worstIndex){const terms=Array(n).fill(0);terms[j]=1;terms[worstIndex]-=othersToWorst[j];addAbs(terms,[]);}
  A.push([...Array(n).fill(1),0]);b.push(1);
  A.push([...Array(n).fill(-1),0]);b.push(-1);
