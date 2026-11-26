@@ -272,7 +272,7 @@ export function buildProductOperatingSchedule(
         :sale.inventoryPolicy==='comfar-days-coverage'?previousClosingQuantity:source.openingFinishedGoodsQuantity
       const openingValue:number|null=index===0
         ?source.openingFinishedGoodsValue
-        :sale.inventoryPolicy==='comfar-days-coverage'?previousClosingValue:source.openingFinishedGoodsValue
+        :(sale.inventoryPolicy==='comfar-days-coverage'||source.openingFinishedGoodsValue===null)?previousClosingValue:source.openingFinishedGoodsValue
       if(openingQuantity===null||openingValue===null||!Number.isFinite(openingQuantity)||!Number.isFinite(openingValue)||
         openingQuantity<0||openingValue<0){
         issues.push('Product '+sale.productId+' requires explicit opening inventory quantity and value in period '+(index+1)+'.')
