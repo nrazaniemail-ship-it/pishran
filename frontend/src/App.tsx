@@ -493,7 +493,15 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
     if (!name) return
     const now = new Date().toISOString()
     const item: RankingWorkspaceProject = { id: 'ranking-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7), name, createdAt: now, updatedAt: now, method: 'WSM' }
-    await persistRankingProjects([item, ...rankingProjects])
+    const key = 'mod10-ranking-projects:v1'
+    // Merge against the authoritative persisted index so creating a second project
+    // cannot overwrite a renamed project when React state is one render behind.
+    const next = await localStore.update<RankingWorkspaceProject[]>(key, current => {
+      const source = Array.isArray(current) ? current : rankingProjects
+      return [item, ...source.filter(project => project.id !== item.id)]
+    })
+    setRankingProjects(next)
+    try { localStorage.setItem('pishran_' + key, JSON.stringify(next)) } catch { /* IndexedDB remains authoritative. */ }
     setNewRankingProjectName('')
     setSelectedProjectId(item.id)
     setEditingRankingProjectName(item.name)
