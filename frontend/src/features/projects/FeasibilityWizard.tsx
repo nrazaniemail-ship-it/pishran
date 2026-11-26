@@ -540,7 +540,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
     ?buildProjectCalendarPeriods(m.foundation.planning.projectStartDate,m.foundation.planning.projectEndDate,m.foundation.planning.periodFrequency,m.foundation.planning.fiscalYearStartMonth)
     :[]
   const terminalPeriods=project.id==='comfar-hr-coil-200k'?1:0
-  const projectComfarSourceInputs=project.templateId==='comfar-import'?COMFAR_PROJECT_INPUTS[project.id]:undefined
+  const projectComfarSourceInputs=project.id==='comfar-hr-plate-250k'?undefined:project.templateId==='comfar-import'?COMFAR_PROJECT_INPUTS[project.id]:undefined
   const periodOtherIncomeByPeriod=projectComfarSourceInputs?.otherIncomeSchedule
     ?projectCalendarPeriods.map((_,index)=>projectComfarSourceInputs.otherIncomeSchedule!.filter(row=>Number(row.period)===m.project.startYear+index).reduce((sum,row)=>sum+row.amount,0))
     :undefined
