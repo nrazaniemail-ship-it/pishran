@@ -48,7 +48,7 @@ const financialUrl='data:text/javascript;base64,'+Buffer.from(financialJs).toStr
 const financial=await import(financialUrl)
 const testAsset={
  id:'asset-evidence-test',description:'ماشین‌آلات نمونه',assetClass:'machinery',origin:'local',currencyCode:'IRR',costCentreId:'',
- depreciation:{method:'linear-zero',startingAt:'1403',ratePercent:null,lengthYears:5,lengthMonths:0,firstDepreciationMonths:12,scrapPercent:0},
+ depreciation:{method:'linear-zero',startingAt:'1403',ratePercent:20,lengthYears:5,lengthMonths:0,firstDepreciationMonths:12,scrapPercent:0},
  depreciationBasis:'unresolved',
  acquisitions:[{id:'asset-evidence-acq',period:'1403',quantity:1,unitPrice:1000,currencyCode:'IRR',exchangeRateToLocal:null,allocationBasis:'source-period'}],
  sales:[],
