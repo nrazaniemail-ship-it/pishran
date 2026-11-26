@@ -244,7 +244,7 @@ function baseModel(project:FeasibilityProject):Model {
     productionStartPeriod:1,
     productionEndPeriod:sourceSalesSchedule.length,
     periods:sourceSalesSchedule.map(row=>({
-     period:row.period,
+     period:String(Number(row.period)-reportYear+1),
      salesQuantity:row.sales,
      netUnitPrice:row.netUnitPrice,
      salesTaxPercent:null,
@@ -271,6 +271,31 @@ function baseModel(project:FeasibilityProject):Model {
      openingWipConversionValue:null,
     }))
    }]
+  }
+  const sourceOperatingCosts=sourceInputs.operatingCostSchedule??[]
+  if(sourceOperatingCosts.length){
+   const productId=project.id+'-main-product'
+   financialForms.productionCosts=sourceOperatingCosts[0].rows.map((sourceRow,rowIndex)=>({
+    id:project.id+'-opex-'+rowIndex,
+    metadata:{description:sourceRow.name,currencyCode,marketOrigin:'local',escalationPercent:0,remarks:report.reportFile+'؛ صفحات ۲۴ تا ۲۷؛ ردیف '+sourceRow.name,costCentreId:null},
+    classification:'direct',
+    productId,
+    basis:'period-adjustments',
+    standardQuantity:null,
+    standardUnitPrice:null,
+    standardTotal:null,
+    nominalCapacity:null,
+    fixedPercent:null,
+    variablePercent:null,
+    adjustments:sourceOperatingCosts.map(period=>({
+     period:String(Number(period.period)-reportYear+1),
+     quantity:null,
+     unitPrice:null,
+     total:period.rows[rowIndex]?.amount??null,
+     fixedPercent:null,
+     variablePercent:null,
+    })),
+   }))
   }
   financialForms.workingCapital=[
    {id:project.id+'-wc-inventory',name:'موجودی کالا',category:'inventory',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:sourceInputs.workingCapital.map(period=>({period:period.period,amount:period.inventory}))},
