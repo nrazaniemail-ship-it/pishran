@@ -168,11 +168,7 @@ try {
     await projectCard.waitFor({ state: 'visible' })
     await projectCard.click()
     await feasibilityPage.locator('.fw-steps').waitFor({ state: 'visible' })
-    const keepBlank = item.id === 'comfar-hr-plate-250k'
     await feasibilityPage.getByRole('button', { name: 'هزینه‌های دوره ساخت' }).click()
-    if (keepBlank) {
-      assert.equal(await feasibilityPage.locator('.fw-row').count(), 0, 'Project 2 fixed-investment form must remain blank')
-    } else {
       const capexTitles = await feasibilityPage.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
       const capexIndex = capexTitles.indexOf(item.capexName)
       assert.notEqual(capexIndex, -1, `${item.id} must populate the fixed-investment form with ${item.capexName}`)
@@ -180,9 +176,6 @@ try {
         `${item.id} fixed-investment amount must match the COMFAR report`)
     }
     await feasibilityPage.getByRole('button', { name: 'هزینه‌های دوره بهره‌برداری' }).click()
-    if (keepBlank) {
-      assert.equal(await feasibilityPage.locator('.fw-row').count(), 0, 'Project 2 operating-cost form must remain blank')
-    } else {
       const opexTitles = await feasibilityPage.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
       const opexIndex = opexTitles.indexOf(item.opexName)
       assert.notEqual(opexIndex, -1, `${item.id} must populate the operating-cost form with raw materials`)
@@ -202,31 +195,9 @@ try {
       assert.equal(persisted.financialForms.tax.documentedAmounts.length, 18, 'HRCR200 must retain all 18 documented tax amounts')
       assert.deepEqual(persisted.financialForms.tax.documentedAmounts.slice(2, 5).map(row => [row.period, row.amount]), [['3',477888.91],['4',596279.32],['5',719330.04]])
       assert.equal(persisted.financialForms.tax.documentedAmounts[2].sourceVerified, true)
-    } else if (keepBlank) {
-      assert.equal(persisted.financialForms?.tax?.rates?.length ?? 0, 0, 'Project 2 must not inherit tax-rate assumptions')
-      assert.equal(persisted.financialForms?.tax?.documentedAmounts?.length ?? 0, 0, 'Project 2 must not inherit project 1 tax amounts')
-      assert.equal(persisted.financialForms?.workingCapital?.length ?? 0, 0)
-      assert.equal(persisted.financialForms?.sales?.length ?? 0, 0)
-      assert.equal(persisted.financialForms?.loans?.length ?? 0, 0)
-      assert.equal(persisted.financialForms?.productionCosts?.length ?? 0, 0)
-      assert.equal(persisted.fixedInvestmentItems?.length ?? 0, 0)
-      assert.equal(persisted.capex?.length ?? 0, 0)
-      assert.equal(persisted.opex?.length ?? 0, 0)
-      assert.equal(persisted.products?.length ?? 0, 0)
-      assert.equal(persisted.capacity?.nameplate ?? 0, 0)
-      assert.equal(persisted.project?.startYear ?? 0, 0)
-      assert.equal(persisted.project?.constructionYears ?? 0, 0)
-      assert.equal(persisted.project?.operatingYears ?? 0, 0)
-      assert.equal(persisted.finance?.equity ?? 0, 0)
-      assert.equal(persisted.finance?.debt ?? 0, 0)
-      assert.equal(persisted.finance?.tax ?? 0, 0)
-      assert.equal(persisted.finance?.manualRate ?? 0, 0)
-      assert.equal(persisted.finance?.method ?? 'unspecified', 'unspecified')
-      assert.equal(Boolean(persisted.foundation?.planning?.projectStartDate), false)
     } else {
       assert.equal(persisted.financialForms.tax.rates.length, 15, item.id + ' must include all 15 annual tax periods')
     }
-    if (!keepBlank) {
       assert.equal(persisted.foundation.currencies.localCurrencyCode, item.currency)
       assert.equal(persisted.financialForms.workingCapital.length, item.workingCapitalComponents)
       const workingCapital = Object.fromEntries(persisted.financialForms.workingCapital.map(component => [
@@ -245,14 +216,13 @@ try {
         assert.equal(persisted.products[1].quantity, 1760000)
       }
     }
-    console.log(`PASS: ${item.id} ${keepBlank ? 'remains blank' : 'report-derived feasibility inputs and IndexedDB persistence'}`)
+    console.log(`PASS: ${item.id} report-derived feasibility inputs and IndexedDB persistence`)
     await feasibilityPage.getByRole('button', { name: 'پروژه‌ها', exact: true }).click()
     await feasibilityPage.locator('.project-card').first().waitFor({ state: 'visible' })
   }
   await feasibilityPage.close()
-  console.log('PASS: project 1 remains source-integrated, project 2 remains blank, and remaining reference projects persist')
   await feasibilityPage.close()
-  console.log('PASS: all four COMFAR project records persist in native IndexedDB; project 2 remains intentionally blank')
+  console.log('PASS: all four COMFAR project records load report-derived inputs and persist in native IndexedDB')
 
   const result = await page.evaluate(async ({ storeUrl, projectsUrl, backupUrl }) => {
     const { localStore } = await import(storeUrl)
