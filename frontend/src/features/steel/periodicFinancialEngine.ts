@@ -898,7 +898,7 @@ export function aggregatePeriodicFinanceByFiscalYear(
     if(fiscalIndex>=0&&fiscalIndex<fiscalYearCount)grouped[fiscalIndex].push(row)
   })
   return grouped.map((yearRows,fiscalYearIndex)=>{
-    const sum=(key:'projectFreeCashFlow'|'depreciation'|'changeInWorkingCapital'|'interestExpense'|'principal'|'debtService'|'cfads')=>
+    const sum=(key:'projectFreeCashFlow'|'otherIncome'|'depreciation'|'changeInWorkingCapital'|'interestExpense'|'principal'|'debtService'|'cfads')=>
       yearRows.reduce((total,row)=>total+row[key],0)
     const equityContribution=yearRows.reduce((total,row)=>total+row.equityContribution+row.equityWorkingCapitalContribution,0)
     const netDebtFinancingFlow=yearRows.reduce((total,row)=>total+row.debtDrawdown+row.capitalizedInterest-row.principal,0)
