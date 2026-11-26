@@ -196,6 +196,8 @@ try {
     assert.ok(persisted, `${item.id} model must persist in IndexedDB after autosave`)
     if (item.id === 'comfar-hr-coil-200k') {
       assert.equal(persisted.financialForms.tax.rates.length, 0, 'HRCR200 must not use inferred tax-rate rows')
+      assert.equal(persisted.finance.tax, 0, 'HRCR200 must not fall back to a general tax-rate assumption')
+      assert.equal(persisted.foundation.taxation.rates.length, 0, 'HRCR200 foundation must not retain inferred tax-rate rows')
       assert.equal(persisted.financialForms.tax.documentedAmounts.length, 18, 'HRCR200 must retain all 18 documented tax amounts')
       assert.deepEqual(persisted.financialForms.tax.documentedAmounts.slice(2, 5).map(row => [row.period, row.amount]), [['3',477888.91],['4',596279.32],['5',719330.04]])
       assert.equal(persisted.financialForms.tax.documentedAmounts[2].sourceVerified, true)
