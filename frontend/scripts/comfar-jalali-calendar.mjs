@@ -16,7 +16,7 @@ export function jalaliToIso(year, month, day) {
   assert.ok(Number.isInteger(month) && month >= 1 && month <= 12, 'Invalid Jalali month')
   assert.ok(Number.isInteger(day) && day >= 1 && day <= 31, 'Invalid Jalali day')
   const scanStart = Date.UTC(year + 621, 0, 1)
-  for (let offset = 0; offset <= 400; offset++) {
+  for (let offset = 0; offset <= 500; offset++) {
     const date = new Date(scanStart + offset * 86400000)
     const parts = persianParts(date)
     if (parts.year === year && parts.month === month && parts.day === day)
