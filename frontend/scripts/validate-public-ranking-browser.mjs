@@ -453,6 +453,7 @@ try {
         return { indexedDbHistory, fallbackHistory }
       })
       console.log('Method history after BWM calculation:', JSON.stringify(methodHistoryAfterBwm))
+      assert.ok(Array.isArray(methodHistoryAfterBwm.indexedDbHistory) && methodHistoryAfterBwm.indexedDbHistory.some(item => item.method === 'BWM+TOPSIS' && item.ranking?.results?.length === 3 && item.judgments?.expertJudgments?.length === 1), 'IndexedDB method history must retain the complete BWM judgments, weights and ranking results')
       await page.getByText('Calculation history (3)').waitFor()
       await page.getByRole('button', { name: 'Run rank sensitivity' }).click()
       await page.getByTestId('ranking-sensitivity-results').waitFor()
@@ -473,6 +474,7 @@ try {
       await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
       await page.getByTestId('ranking-category-advanced').click()
       await page.getByRole('button', { name: 'BWM + TOPSIS', exact: true }).click()
+      await page.getByText('Calculation history (3)').waitFor()
       await page.getByText('Sensitivity history (1)').waitFor()
       await page.locator('.ranking-sensitivity-history-entry').first().locator('summary').click()
       await page.getByText('Persisted Monte Carlo robustness and rank acceptability').waitFor()
