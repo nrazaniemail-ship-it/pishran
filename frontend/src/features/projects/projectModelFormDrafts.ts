@@ -88,6 +88,7 @@ export type LoanFacilityFormDraft={
  interestPaymentMonth:number|null
  capitalizedInterestPercent:number|null; capitalizeUntilDate:string
  fees:{id:string;type:LoanFeeType|null;ratePercent:number|null;currencyCode:string|null}[]
+ manualPeriodSchedule?:{period:string;drawdown:number;principal:number;interestExpense:number;capitalizedInterest:number;closingBalance:number}[]
 }
 export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{return{
  id,name:'',currencyCode:null,marketOrigin:null,annualRatePercent:null,openingBalance:null,openingExchangeRateToLocal:null,gracePeriods:null,interestConvention:null,loanType:null,repaymentInterval:null,firstRepaymentDate:'',numberOfRepayments:null,
