@@ -36,8 +36,44 @@ assert.equal(input.financingSchedule.length,7)
 close(input.financingSchedule[0].loanDisbursement,3816496,'1403 documented drawdown')
 close(input.financingSchedule[1].loanDisbursement,1794355,'1404 documented drawdown')
 close(input.financingSchedule[1].closingDebt,8909484.06,'1404 closing debt')
+assert.ok(input.depreciationSchedule?.length,'COMFAR aggregate depreciation output must remain available as a reference')
+assert.ok(input.missingSourceDetails.includes('عمر مفید و روش استهلاک تفکیکی هر دارایی'),'The HRCR200 source must disclose the missing asset-by-asset depreciation evidence')
+
+const formulaSource=await readFile(new URL('../src/features/projects/projectModelFormulaRules.ts',import.meta.url),'utf8')
+const formulaUrl='data:text/javascript;base64,'+Buffer.from(ts.transpileModule(formulaSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64')
+const financialSource=await readFile(new URL('../src/features/steel/financialModel.ts',import.meta.url),'utf8')
+let financialJs=ts.transpileModule(financialSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+financialJs=financialJs.replace(/from ['"]\.\.\/projects\/projectModelFormulaRules['"]/, 'from "'+formulaUrl+'"')
+const financialUrl='data:text/javascript;base64,'+Buffer.from(financialJs).toString('base64')
+const financial=await import(financialUrl)
+const testAsset={
+ id:'asset-evidence-test',description:'ماشین‌آلات نمونه',assetClass:'machinery',origin:'local',currencyCode:'IRR',costCentreId:'',
+ depreciation:{method:'linear-zero',startingAt:'1403',ratePercent:20,lengthYears:5,lengthMonths:0,firstDepreciationMonths:12,scrapPercent:0},
+ depreciationBasis:'unresolved',
+ acquisitions:[{id:'asset-evidence-acq',period:'1403',quantity:1,unitPrice:1000,currencyCode:'IRR',exchangeRateToLocal:null,allocationBasis:'source-period'}],
+ sales:[],
+}
+const unresolvedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([testAsset],1403,3,'annual')
+assert.equal(unresolvedDepreciation.assets[0]?.method,'none','An unresolved asset must stay on book cost without calculated depreciation')
+const unresolvedLifecycle=financial.calculateComfarAssetLifecycle(unresolvedDepreciation.assets,[],3)
+assert.equal(unresolvedLifecycle.depreciation.periods.reduce((total,row)=>total+row.depreciation,0),0,'Unverified depreciation must be zero in the integrated asset lifecycle')
+const conflictedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{...testAsset,depreciationBasis:'source-conflict'}],1403,3,'annual')
+assert.equal(conflictedDepreciation.assets[0]?.method,'none','Conflicting depreciation evidence must not produce depreciation')
+const unverifiedSourceDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{...testAsset,depreciationBasis:'source-table'}],1403,3,'annual')
+assert.equal(unverifiedSourceDepreciation.assets[0]?.method,'none','A source-table label without a document reference and verification must not calculate depreciation')
+const documentedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{
+ ...testAsset,depreciationBasis:'source-table',depreciationEvidenceReference:'Asset register, asset 001, page 4',depreciationEvidenceVerified:true,
+}],1403,3,'annual')
+assert.equal(documentedDepreciation.assets[0]?.method,'linear-to-zero','A referenced and verified asset-by-asset source may calculate depreciation')
+const documentedLifecycle=financial.calculateComfarAssetLifecycle(documentedDepreciation.assets,[],3)
+close(documentedLifecycle.depreciation.periods[1].depreciation,200,'Documented 1,000 cost / 5-year asset depreciation after acquisition year')
+const confirmedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{
+ ...testAsset,depreciationBasis:'user-confirmed',depreciationEvidenceReference:'User note',depreciationEvidenceVerified:true,
+}],1403,3,'annual')
+assert.equal(confirmedDepreciation.assets[0]?.method,'none','User confirmation without an asset-by-asset source document must not calculate depreciation')
 const engineSource=await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts',import.meta.url),'utf8')
 const engineUrl='data:text/javascript;base64,'+Buffer.from(ts.transpileModule(engineSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64')
+const engine=await import(engineUrl)
 const flowSource=await readFile(new URL('../src/features/projects/inventoryProductionFlow.ts',import.meta.url),'utf8')
 const flowUrl='data:text/javascript;base64,'+Buffer.from(ts.transpileModule(flowSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64')
 const controlSource=await readFile(new URL('../src/features/projects/inventoryControlLedgers.ts',import.meta.url),'utf8')
@@ -48,12 +84,13 @@ operatingJs=operatingJs.replace("'../steel/periodicFinancialEngine'",JSON.string
  .replace("'./inventoryProductionFlow'",JSON.stringify(flowUrl))
  .replace("'./inventoryControlLedgers'",JSON.stringify(controlUrl))
 const operating=await import('data:text/javascript;base64,'+Buffer.from(operatingJs).toString('base64'))
-const periods=Array.from({length:17},(_,index)=>({index:index+1,startDate:String(2024+index)+'-01-01',endDate:String(2024+index)+'-12-31',days:365,partial:false}))
+const periods=Array.from({length:18},(_,index)=>{const year=2024+index;const startDate=year+'-01-01';const endDate=year+'-12-31';const days=(Date.parse(endDate+'T00:00:00Z')-Date.parse(startDate+'T00:00:00Z'))/86400000+1;return {index:index+1,startDate,endDate,days,partial:false}})
 const mainProductId='hr-coil-main'
 const salesPeriods=[
  {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
  {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
  ...input.productionSalesSchedule.map(row=>({...row,period:String(Number(row.period)-1403+1)})),
+ {period:'18',openingInventory:input.productionSalesSchedule.at(-1).closingInventory,production:0,sales:0,closingInventory:input.productionSalesSchedule.at(-1).closingInventory,netUnitPrice:0},
 ].map(row=>({
  period:row.period,salesQuantity:row.sales,netUnitPrice:row.netUnitPrice,salesTaxPercent:0,
  subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:row.openingInventory,
@@ -77,6 +114,7 @@ const byproductPeriods=[
  {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
  {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
  ...input.byproductSalesSchedule.map(row=>({...row,period:String(Number(row.period)-1403+1)})),
+ {period:'18',openingInventory:input.byproductSalesSchedule.at(-1).closingInventory,production:0,sales:0,closingInventory:input.byproductSalesSchedule.at(-1).closingInventory,netUnitPrice:0},
 ].map(row=>({
  period:row.period,salesQuantity:row.sales,netUnitPrice:row.netUnitPrice,salesTaxPercent:0,
  subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:row.openingInventory,
@@ -106,6 +144,73 @@ close(productSchedule.periodRevenue[7],62259600,'Product engine 1408 total sales
 close(productSchedule.rows.find(row=>row.productId===byproductId&&row.period===3)?.productionQuantity,2838.89,'Scrape# 1405 production')
 close(productSchedule.periodCostOfSales[2],30116060.85,'Product engine 1405 weighted-average cost of sales',0.02)
 close(productSchedule.rows.find(row=>row.period===3)?.productionCost,30534338.52,'Product engine 1405 detailed factory production cost')
+assert.equal(productSchedule.periodRevenue.length,18,'The product program must include the non-operating liquidation period')
+assert.equal(productSchedule.periodRevenue[17],0,'The liquidation period must not create product sales')
+
+const taxDraftSource=await readFile(new URL('../src/features/projects/projectTaxDraftIntegration.ts',import.meta.url),'utf8')
+let taxDraftJs=ts.transpileModule(taxDraftSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+taxDraftJs=taxDraftJs.replace(/from ['"]\.\.\/steel\/periodicFinancialEngine['"]/, 'from "'+engineUrl+'"')
+const taxDraftUrl='data:text/javascript;base64,'+Buffer.from(taxDraftJs).toString('base64')
+const taxDraftModule=await import(taxDraftUrl)
+const taxSourceRows=input.taxAmountSchedule.map(row=>({
+ period:String(Number(row.period)-1403+1),amount:row.amount,sourceReference:row.sourceReference,sourceVerified:true,
+}))
+const taxSchedule=taxDraftModule.buildProjectTaxDraftSchedule({
+ system:'corporate',rates:[],documentedAmounts:taxSourceRows,allowances:[],
+ lossCarryForward:null,lossCarryForwardYears:null,openingLossVintages:[],
+},periods,1)
+assert.equal(taxSchedule.valid,true,taxSchedule.issues.join('; '))
+assert.equal(taxSchedule.taxAmountOverridesByPeriod.length,18,'Documented tax schedule must cover all 18 project periods')
+close(taxSchedule.taxAmountOverridesByPeriod[2],477888.91,'COMFAR page 59 documented 1405 tax')
+close(taxSchedule.taxAmountOverridesByPeriod[17],0,'COMFAR page 62 documented 1420 tax')
+assert.equal(taxSchedule.annualTaxRates.every(rate=>rate===0),true,'Amount-based tax must not invent a tax-rate schedule')
+
+const workingCapitalSource=await readFile(new URL('../src/features/projects/workingCapitalDraftIntegration.ts',import.meta.url),'utf8')
+const workingCapitalUrl='data:text/javascript;base64,'+Buffer.from(ts.transpileModule(workingCapitalSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64')
+const workingCapitalModule=await import(workingCapitalUrl)
+const workingCapitalDrafts={workingCapital:[
+ {id:'hrcr200-inventory',name:'Inventory',category:'inventory',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:input.workingCapital.map(row=>({period:String(Number(row.period)-1403+1),amount:row.inventory}))},
+ {id:'hrcr200-cash',name:'Cash',category:'cash',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:input.workingCapital.map(row=>({period:String(Number(row.period)-1403+1),amount:row.cash}))},
+]}
+const preserveWorkingCapital=workingCapitalModule.buildWorkingCapitalScheduleFromDrafts(workingCapitalDrafts,periods,0,false)
+assert.equal(preserveWorkingCapital.valid,true,preserveWorkingCapital.issues.join('; '))
+close(preserveWorkingCapital.terminalRecoveryAmount,0,'COMFAR terminal working capital is not separately recovered')
+close(preserveWorkingCapital.closingWorkingCapital[17],4595370.36,'COMFAR terminal working-capital balance remains on the balance sheet')
+close(preserveWorkingCapital.changeInWorkingCapital[17],0,'No unsupported terminal working-capital release is added')
+const defaultWorkingCapital=workingCapitalModule.buildWorkingCapitalScheduleFromDrafts(workingCapitalDrafts,periods,0)
+close(defaultWorkingCapital.terminalRecoveryAmount,4595370.36,'Default models retain the existing terminal working-capital recovery behavior')
+
+const amountByPeriod=(rows,amountOf)=>Array.from({length:18},(_,index)=>rows.filter(row=>Number(row.period)-1403===index).reduce((sum,row)=>sum+amountOf(row),0))
+const fixedInvestmentByPeriod=amountByPeriod(input.fixedInvestment.flatMap(item=>item.periods),row=>row.amount)
+const preOperatingByPeriod=amountByPeriod(input.preproduction,row=>row.net+row.capitalizedInterest)
+const workingCapitalByPeriod=amountByPeriod(input.workingCapital,row=>row.inventory+row.cash-(row.payables??0))
+const otherIncomeByPeriod=amountByPeriod(input.otherIncomeSchedule??[],row=>row.amount)
+const periodicResult=engine.calculateIntegratedPeriodicFinance({
+ periods,fiscalYearStartMonth:1,constructionPeriodCount:2,dayCountBasis:360,cashFlowTiming:'period-end',
+ annualRevenue:productSchedule.periodRevenue,periodRevenue:productSchedule.periodRevenue,periodSubsidyIncome:Array(18).fill(0),
+ periodOtherIncomeByPeriod:otherIncomeByPeriod,periodOtherIncomeSourceReference:input.otherIncomeSchedule[0].sourceReference,
+ annualVariableCost:productSchedule.periodCostOfSales,periodVariableCost:productSchedule.periodCostOfSales,
+ annualFixedCost:Array(18).fill(0),annualDepreciation:Array(18).fill(0),
+ annualFixedInvestment:fixedInvestmentByPeriod,annualPreOperatingCost:preOperatingByPeriod,
+ annualMaintenanceCapex:Array(18).fill(0),annualTaxRates:taxSchedule.annualTaxRates,
+ taxRatesByPeriod:taxSchedule.taxRatesByPeriod,taxAmountOverridesByPeriod:taxSchedule.taxAmountOverridesByPeriod,
+ taxAmountSourceReference:taxSchedule.taxAmountSourceReference,
+ taxableDeductionsByPeriod:taxSchedule.taxableDeductionsByPeriod,taxCreditsByPeriod:taxSchedule.taxCreditsByPeriod,
+ annualEquityContributions:Array(18).fill(0),annualEquityWorkingCapitalContributions:Array(18).fill(0),
+ workingCapitalByPeriod,annualShortTermDepositInterest:Array(18).fill(0),
+ loans:[],openingWorkingCapital:0,openingCash:0,taxLossCarryForwardEnabled:false,
+ discountRatePercent:25,valuationDate:'2026-03-20',discountConvention:'period-count',
+})
+assert.equal(periodicResult.valid,true,periodicResult.warnings.join('; '))
+assert.equal(periodicResult.rows.length,18,'Integrated finance engine must return all 18 project periods')
+close(periodicResult.rows[0].projectFreeCashFlow,-13907805.03,'COMFAR page 67 first construction-period cash flow')
+close(periodicResult.rows[1].projectFreeCashFlow,-8093664.03,'COMFAR page 67 second construction-period cash flow')
+close(periodicResult.rows[2].revenue,43581720,'Integrated engine receives 1405 product-program revenue')
+close(periodicResult.rows[2].tax,477888.91,'Integrated engine applies documented 1405 tax amount')
+assert.equal(periodicResult.rows[2].taxRatePercent,null,'Documented tax amount must not be represented as an inferred rate')
+close(periodicResult.rows[2].depreciation,0,'No asset-level depreciation evidence means no depreciation charge')
+close(periodicResult.rows[17].otherIncome,13735466.82,'COMFAR page 62/71 documented liquidation-period other income')
+close(periodicResult.rows[17].projectFreeCashFlow,13735466.82,'COMFAR page 71 terminal cash flow')
 // Page 1–2 summary values are kept as explicit reconciliation targets.
 const page1={totalInvestment:26596839.42,totalFunding:25310613.59,totalEquity:16401129.53,totalLongTermDebt:8909484.06}
 const page2={revenue1405:43581720,revenue1408:62259600,factoryCost1405:30130083.97,factoryCost1408:42604224.43,

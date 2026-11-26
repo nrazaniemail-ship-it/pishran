@@ -21,13 +21,30 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   const moduleId = await root.locator('.module-export-actions').getAttribute('data-export-module-id')
   const projectId = await root.getAttribute('data-project-export-id')
   assert.ok(moduleId && projectId && moduleId.endsWith(projectId), `Export controls must belong to the active project root: module=${moduleId}, project=${projectId}`)
-  const workbookIdentity = value => value.normalize('NFKC').replace(/[\s_\-\u200c\u200d\u200e\u200f\u0640]+/g, '').toLocaleLowerCase()
+  const workbookIdentity = value => value.normalize('NFKC').replace(/[\p{P}\p{Z}\p{Cf}\u0640]+/gu, '').toLocaleLowerCase()
   // The export slug and workbook identity intentionally omit the trailing edit-state suffix from long project names.
-  const expectedFilenameProject = expectedProject.replace(/[\s_\u200c]*ویرایش[\s_\u200c_]*شده$/u, '')
-  const filenameIdentity = value => value.normalize('NFKC').replace(/[\s_\-\u200c\u200d\u200e\u200f\u0640]+/g, '').toLocaleLowerCase()
+  const expectedFilenameProject = expectedProject.replace(/[\s_\p{P}\u200c]*ویرایش[\s_\p{P}\u200c]*شده$/u, '')
+  const filenameIdentity = value => value.normalize('NFKC').replace(/[\p{P}\p{Z}\p{Cf}\u0640]+/gu, '').toLocaleLowerCase()
   assert.ok(workbookIdentity(content).includes(workbookIdentity(expectedFilenameProject)), `Excel workbook must identify the active project ${expectedFilenameProject}; workbook content: ${content.slice(0, 1800)}`)
   assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedFilenameProject)), `Excel filename must identify the active project ${expectedFilenameProject}; filename: ${download.suggestedFilename()}`)
   assert.ok(!content.includes(excludedProject.normalize('NFC')), `Excel export must not leak another project: ${excludedProject}`)
+}
+async function readRankingProjectIndexes(page) {
+  return page.evaluate(async()=>{
+    let indexedDbNames=[]
+    try{
+      const db=await new Promise(resolve=>{const request=indexedDB.open('pishran_store');request.onsuccess=()=>resolve(request.result);request.onerror=()=>resolve(null)})
+      if(db){
+        try{
+          const record=await new Promise((resolve,reject)=>{const request=db.transaction('kv','readonly').objectStore('kv').get('mod10-ranking-projects:v1');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})
+          indexedDbNames=Array.isArray(record?.value)?record.value.map(item=>({id:item.id,name:item.name,updatedAt:item.updatedAt})):[]
+        }finally{db.close()}
+      }
+    }catch{}
+    let fallbackNames=[]
+    try{const fallback=JSON.parse(localStorage.getItem('pishran_mod10-ranking-projects:v1')??'null');fallbackNames=Array.isArray(fallback)?fallback.map(item=>({id:item.id,name:item.name,updatedAt:item.updatedAt})):[]}catch{}
+    return {indexedDbNames,fallbackNames}
+  })
 }
 async function verifyPdfScope(page, buttonName) {
   const root = activeExportRoot(page)
@@ -41,21 +58,26 @@ async function verifyPdfScope(page, buttonName) {
   assert.equal(await root.evaluate(element => element.classList.contains('module-export-print-target')), false, 'PDF print scope must be cleaned up after printing')
 }
 
-const site = new URL(`?deploy=${process.env.GITHUB_SHA ?? 'latest'}`, 'https://nrazaniemail-ship-it.github.io/pishran/').toString()
+const rankingBaseUrl=process.env.PISHRA_RANKING_BASE_URL??'https://nrazaniemail-ship-it.github.io/pishran/'
+const site = new URL(`?deploy=${process.env.GITHUB_SHA ?? 'latest'}`, rankingBaseUrl).toString()
 const response = await fetch(site, { redirect: 'follow' })
 assert.equal(response.ok, true, 'public PWA homepage must respond successfully')
 const html = await response.text()
 assert.match(html, /<title>پیشران \| امکان‌سنجی هوشمند<\/title>/, 'public homepage title must be present')
 const scriptPaths = [...html.matchAll(/src="([^"]+\.js)"/g)].map(match => match[1])
 assert.ok(scriptPaths.length > 0, 'public homepage must reference a versioned JavaScript bundle')
-const bundles = await Promise.all(scriptPaths.map(async path => {
-  const asset = await fetch(new URL(path, site))
-  assert.equal(asset.ok, true, `published bundle ${path} must respond`)
-  return asset.text()
-}))
-const bundle = bundles.join('\\n')
-for (const marker of ['Initial methods', 'Advanced methods', 'روش‌های اولیه', 'روش‌های پیشرفته', 'AHP + TOPSIS']) {
-  assert.ok(bundle.includes(marker), `published JavaScript must contain deployed ranking marker: ${marker}`)
+const isLocalPreview=/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(rankingBaseUrl)
+let bundle=''
+if(!isLocalPreview){
+  const bundles = await Promise.all(scriptPaths.map(async path => {
+    const asset = await fetch(new URL(path, site))
+    assert.equal(asset.ok, true, `published bundle ${path} at ${new URL(path,site)} must respond`)
+    return asset.text()
+  }))
+  bundle = bundles.join('\n')
+  for (const marker of ['Initial methods', 'Advanced methods', 'روش‌های اولیه', 'روش‌های پیشرفته', 'AHP + TOPSIS']) {
+    assert.ok(bundle.includes(marker), `published JavaScript must contain deployed ranking marker: ${marker}`)
+  }
 }
 
 const browser = await chromium.launch({ headless: true })
@@ -63,55 +85,76 @@ try {
   const context = await browser.newContext({ acceptDownloads: true })
   const page = await context.newPage()
   const pageErrors = []
-  page.on('pageerror', error => pageErrors.push(error.message))
+  const consoleErrors = []
+  const failedRequests = []
+  const badResponses = []
+  page.on('pageerror', error => pageErrors.push(error.stack || error.message))
+  page.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') consoleErrors.push({ type: message.type(), text: message.text() }) })
+  page.on('requestfailed', request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText }))
+  page.on('response', response => { if (response.status() >= 400) badResponses.push({ status: response.status(), url: response.url() }) })
   const live = await page.goto(site, { waitUntil: 'domcontentloaded' })
   assert.equal(live?.status(), 200, 'public PWA must load with HTTP 200')
   const moduleCard = page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' })
   await moduleCard.waitFor({ state: 'visible' })
   await moduleCard.click()
-  await page.waitForFunction(() => {
-    const input = document.querySelector('#ranking-project-new-name')
-    return input && !input.disabled
-  })
+  try {
+    await page.waitForFunction(() => {
+      const input = document.querySelector('#ranking-project-new-name')
+      return input && !input.disabled
+    }, null, { timeout: 10000 })
+  } catch (error) {
+    const diagnostics = await page.evaluate(async () => {
+      const input = document.querySelector('#ranking-project-new-name')
+      const dbState = await new Promise(resolve => {
+        if (typeof indexedDB === 'undefined') return resolve({ available: false })
+        let settled = false
+        const timer = setTimeout(() => { if (!settled) { settled = true; resolve({ available: true, open: 'timeout' }) } }, 1500)
+        try {
+          const request = indexedDB.open('pishran_store')
+          request.onsuccess = () => { if (settled) { request.result.close(); return } settled = true; clearTimeout(timer); const db = request.result; const result = { available: true, open: 'success', version: db.version, stores: [...db.objectStoreNames] }; db.close(); resolve(result) }
+          request.onerror = () => { if (!settled) { settled = true; clearTimeout(timer); resolve({ available: true, open: 'error', error: request.error?.message }) } }
+          request.onblocked = () => { if (!settled) { settled = true; clearTimeout(timer); resolve({ available: true, open: 'blocked' }) } }
+        } catch (cause) { if (!settled) { settled = true; clearTimeout(timer); resolve({ available: true, open: 'throw', error: String(cause) }) } }
+      })
+      let fallback = null
+      let fallbackError = null
+      try { fallback = JSON.parse(localStorage.getItem('pishran_mod10-ranking-projects:v1') ?? 'null') } catch (cause) { fallbackError = String(cause) }
+      return {
+        href: location.href, title: document.title, readyState: document.readyState,
+        input: input ? { disabled: input.disabled, outerHTML: input.outerHTML } : null,
+        modulePage: !!document.querySelector('.module-workspace-page'),
+        moduleId: document.querySelector('.module-workspace-page .module-id')?.textContent?.trim() ?? null,
+        rankingHeading: document.querySelector('#ranking-projects-title')?.textContent?.trim() ?? null,
+        visibleText: document.body.innerText.slice(0, 5000),
+        storage: { localStorageAvailable: (() => { try { return typeof localStorage !== 'undefined' } catch { return false } })(), fallback, fallbackError, indexedDB: dbState }
+      }
+    })
+    throw new Error('MOD-10 project create control did not become enabled. Diagnostics=' + JSON.stringify({ ...diagnostics, pageErrors, consoleErrors, failedRequests, badResponses }) + '; waitError=' + error.message)
+  }
   await page.getByLabel('نام پروژه رتبه‌بندی جدید').fill('پروژه آزمایش رتبه‌بندی')
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: 'ذخیره نام' }).click()
-  await page.waitForFunction(async ({ key, expectedName, moduleId }) => {
-    let indexedDbProjects = null
-    try {
-      const db = await new Promise(resolve => {
-        const request = indexedDB.open('pishran_store')
-        request.onsuccess = () => resolve(request.result)
-        request.onerror = () => resolve(null)
-        request.onblocked = () => resolve(null)
-      })
-      if (db) {
-        try {
-          if (db.objectStoreNames.contains('kv')) {
-            const record = await new Promise((resolve, reject) => {
-              const request = db.transaction('kv', 'readonly').objectStore('kv').get(key)
-              request.onsuccess = () => resolve(request.result)
-              request.onerror = () => reject(request.error)
-            })
-            indexedDbProjects = Array.isArray(record?.value) ? record.value : null
-          }
-        } finally {
-          db.close()
-        }
-      }
-    } catch { /* Use the supported localStorage fallback below. */ }
-    let fallbackProjects = null
+  const renamedProjectStorageName='پروژه آزمایش رتبه‌بندی ویرایش‌شده'
+  await page.waitForFunction(({ key, expectedName }) => {
     try {
       const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
-      fallbackProjects = Array.isArray(fallback) ? fallback : null
-    } catch { /* Ignore unavailable fallback storage. */ }
-    const matches = item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId)
-    return Boolean(indexedDbProjects?.some(matches) && fallbackProjects?.some(matches))
-  }, { key: 'mod10-ranking-projects:v1', expectedName: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', moduleId: undefined }, { timeout: 10000 })
+      return Array.isArray(fallback) && fallback.some(item => item.name === expectedName)
+    } catch { return false }
+  }, { key: 'mod10-ranking-projects:v1', expectedName: renamedProjectStorageName }, { timeout: 10000 })
+  let indexesAfterRename=null
+  for(let attempt=0;attempt<40;attempt++){
+    indexesAfterRename=await readRankingProjectIndexes(page)
+    if(indexesAfterRename.indexedDbNames.some(item=>item.name===renamedProjectStorageName)&&indexesAfterRename.fallbackNames.some(item=>item.name===renamedProjectStorageName))break
+    await new Promise(resolve=>setTimeout(resolve,100))
+  }
+  assert.ok(indexesAfterRename?.indexedDbNames.some(item=>item.name===renamedProjectStorageName)&&indexesAfterRename?.fallbackNames.some(item=>item.name===renamedProjectStorageName),'renamed project must be committed to IndexedDB and localStorage before exports')
+  console.log('Ranking project indexes immediately after rename:',JSON.stringify(indexesAfterRename))
   await activeExportRoot(page).waitFor({ state: 'visible' })
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
+  console.log('Ranking project indexes after Excel export:',JSON.stringify(await readRankingProjectIndexes(page)))
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  console.log('Ranking project indexes after PDF print:',JSON.stringify(await readRankingProjectIndexes(page)))
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   await page.getByLabel('نام پروژه رتبه‌بندی جدید').fill('پروژه دوم مستقل')
@@ -121,7 +164,22 @@ try {
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
+  const storageNamesAfterSecondProject=await readRankingProjectIndexes(page)
+  console.log('Ranking project indexes after creating project 2:',JSON.stringify(storageNamesAfterSecondProject))
+  const expectedStoredName='پروژه آزمایش رتبه‌بندی ویرایش‌شده'
+  assert.ok(storageNamesAfterSecondProject.indexedDbNames.some(item=>item.name===expectedStoredName)&&storageNamesAfterSecondProject.fallbackNames.some(item=>item.name===expectedStoredName),'renamed project must remain in both storage indexes after creating project 2')
+  const projectButtons=page.locator('.ranking-project-open')
+  const visibleProjectNames=await projectButtons.allTextContents()
+  console.log('Ranking project cards after creating project 2:',JSON.stringify(visibleProjectNames))
+  const normalizeProjectName=value=>value.normalize('NFKC').replace(/[\p{P}\p{Z}\p{Cf}\u0640]+/gu,'').toLocaleLowerCase()
+  const expectedRenamedName=normalizeProjectName('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
+  let renamedProjectButton=null
+  for(let index=0;index<await projectButtons.count();index++){
+    const candidate=projectButtons.nth(index)
+    if(normalizeProjectName(await candidate.innerText()).includes(expectedRenamedName)){renamedProjectButton=candidate;break}
+  }
+  assert.ok(renamedProjectButton, `renamed project card must remain visible after creating project 2; cards: ${visibleProjectNames.join(' | ')}`)
+  await renamedProjectButton.click()
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
@@ -461,7 +519,7 @@ try {
     'first-project advanced inputs must remain isolated from the second project')
   await page.getByText('Calculation history (4)').waitFor()
   assert.deepEqual(pageErrors, [], 'public ranking interaction must not generate browser runtime errors')
-  assert.ok(bundle.includes('Monte Carlo top probability') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')
+  if(!isLocalPreview) assert.ok(bundle.includes('Monte Carlo top probability') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')
   // Public regression: module capability tabs, no obsolete bottom continue action,
   // and module workspace create/edit persistence across a full reload.
   await page.getByRole('button', { name: 'Switch to Persian' }).click()
@@ -607,7 +665,7 @@ try {
   await page.getByRole('heading', { name: 'پروژه‌های امکان‌سنجی' }).waitFor()
   const publicComfarProjects = [
     { title:'خط نورد گرم کلاف ۲۰۰ هزار تن', capexName:'خرید زمین', capexAmount:'2015000', opexName:'مواد خام', opexAmount:'40901015.18' },
-    { title:'خط نورد گرم ورق تخت ۲۵۰ هزار تن', capexName:'خرید زمین', capexAmount:'1000000', opexName:'مواد خام', opexAmount:'38162283.5' },
+    { title:'خط نورد گرم ورق تخت ۲۵۰ هزار تن', expectBlank:true },
     { title:'خط نورد سرد کلاف ۲۰۰ هزار تن', capexName:'خرید زمین', capexAmount:'2015000', opexName:'مواد خام', opexAmount:'63058700' },
     { title:'فولادسازی ۱٫۲ میلیون و احیای مستقیم هات‌لینک ۱٫۷۶ میلیون تن', capexName:'محوطه‌سازی و بهبود زمین', capexAmount:'2456550', opexName:'مواد خام', opexAmount:'537485060' },
   ]
@@ -618,6 +676,16 @@ try {
     await card.click()
     await page.locator('.feasibility-project-export-root').waitFor({ state: 'visible' })
     await page.getByRole('button', { name: 'هزینه‌های دوره ساخت' }).click()
+    if (item.expectBlank) {
+      assert.equal(await page.locator('.fw-row').count(), 0,
+        `${item.title} must keep its CAPEX form blank until its source data is approved`)
+      await page.getByRole('button', { name: 'هزینه‌های دوره بهره‌برداری' }).click()
+      assert.equal(await page.locator('.fw-row').count(), 0,
+        `${item.title} must keep its OPEX form blank and must not inherit another project's data`)
+      await page.getByRole('navigation').getByRole('button', { name: 'پروژه‌ها' }).click()
+      await page.getByRole('heading', { name: 'پروژه‌های امکان‌سنجی' }).waitFor()
+      continue
+    }
     const capexTitles = await page.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
     const capexIndex = capexTitles.indexOf(item.capexName)
     assert.notEqual(capexIndex, -1, `${item.title} public CAPEX form must contain its report asset category`)

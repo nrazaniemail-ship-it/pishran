@@ -473,11 +473,26 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
   const [editingRankingProjectName, setEditingRankingProjectName] = useState('')
   const [rankingProjectsLoaded, setRankingProjectsLoaded] = useState(false)
   const selectedProject = rankingProjects.find(project => project.id === selectedProjectId) ?? null
+  const readRankingProjectFallback = (): RankingWorkspaceProject[] => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('pishran_mod10-ranking-projects:v1') ?? 'null')
+      return Array.isArray(stored) ? stored : []
+    } catch { return [] }
+  }
+  const mergeRankingProjectLists = (...lists: RankingWorkspaceProject[][]): RankingWorkspaceProject[] => {
+    const merged = new Map<string, RankingWorkspaceProject>()
+    const timestamp = (project: RankingWorkspaceProject) => Date.parse(project.updatedAt || project.createdAt) || 0
+    for (const list of lists) for (const project of list) {
+      const previous = merged.get(project.id)
+      if (!previous || timestamp(project) >= timestamp(previous)) merged.set(project.id, project)
+    }
+    return [...merged.values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+  }
   useEffect(() => {
     let alive = true
     localStore.get<RankingWorkspaceProject[]>('mod10-ranking-projects:v1').then(items => {
       if (!alive) return
-      const safe = Array.isArray(items) ? items : []
+      const safe = mergeRankingProjectLists(Array.isArray(items) ? items : [], readRankingProjectFallback())
       setRankingProjects(safe)
       setRankingProjectsLoaded(true)
     }).catch(() => { if (alive) setRankingProjectsLoaded(true) })
@@ -486,6 +501,7 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
   const persistRankingProjects = async (items: RankingWorkspaceProject[]) => {
     setRankingProjects(items)
     await localStore.set('mod10-ranking-projects:v1', items)
+    try { localStorage.setItem('pishran_mod10-ranking-projects:v1', JSON.stringify(items)) } catch { /* IndexedDB remains authoritative. */ }
   }
   const createRankingProject = async () => {
     if (!rankingProjectsLoaded) return
@@ -493,7 +509,16 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
     if (!name) return
     const now = new Date().toISOString()
     const item: RankingWorkspaceProject = { id: 'ranking-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7), name, createdAt: now, updatedAt: now, method: 'WSM' }
-    await persistRankingProjects([item, ...rankingProjects])
+    const key = 'mod10-ranking-projects:v1'
+    // Merge against the authoritative persisted index so creating a second project
+    // cannot overwrite a renamed project when React state is one render behind.
+    const fallback = readRankingProjectFallback()
+    const next = await localStore.update<RankingWorkspaceProject[]>(key, current => {
+      const source = mergeRankingProjectLists(Array.isArray(current) ? current : [], rankingProjects, fallback)
+      return [item, ...source.filter(project => project.id !== item.id)]
+    })
+    setRankingProjects(next)
+    try { localStorage.setItem('pishran_' + key, JSON.stringify(next)) } catch { /* IndexedDB remains authoritative. */ }
     setNewRankingProjectName('')
     setSelectedProjectId(item.id)
     setEditingRankingProjectName(item.name)
@@ -504,8 +529,9 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
     const name = editingRankingProjectName.trim()
     if (!name) return
     const key = 'mod10-ranking-projects:v1'
+    const fallback = readRankingProjectFallback()
     const next = await localStore.update<RankingWorkspaceProject[]>(key, current => {
-      const source = Array.isArray(current) ? current : rankingProjects
+      const source = mergeRankingProjectLists(Array.isArray(current) ? current : [], rankingProjects, fallback)
       return source.map(project => project.id === selectedProject.id
         ? { ...project, name, updatedAt: new Date().toISOString() }
         : project)
@@ -513,9 +539,9 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
     setRankingProjects(next)
     try { localStorage.setItem('pishran_' + key, JSON.stringify(next)) } catch { /* IndexedDB remains authoritative. */ }
   }
-  const returnToRankingProjects = async () => {
-    const latest = await localStore.get<RankingWorkspaceProject[]>('mod10-ranking-projects:v1')
-    setRankingProjects(Array.isArray(latest) ? latest : [])
+  const returnToRankingProjects = () => {
+    // Creation and rename already commit the latest list and update React state.
+    // Do not re-read storage here: a stale read can replace the current list and hide a saved project card.
     setSelectedProjectId(null)
   }
   useEffect(() => {

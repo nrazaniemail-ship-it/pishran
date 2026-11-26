@@ -55,3 +55,17 @@ jobs:
         run: npm run test:modules
       - name: Independent AHP and BWM ranking method tests
         run: npm run test:ranking
+      - name: Public ranking persistence regression against built preview
+        env:
+          PISHRA_RANKING_BASE_URL: http://127.0.0.1:4178/
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4178 > /tmp/pishran-preview.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent "$PISHRA_RANKING_BASE_URL" >/dev/null; then
+              node scripts/validate-public-ranking-browser.mjs
+              exit $?
+            fi
+            sleep 1
+          done
+          cat /tmp/pishran-preview.log
+          exit 1

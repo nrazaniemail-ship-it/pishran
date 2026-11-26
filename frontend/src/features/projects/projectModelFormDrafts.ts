@@ -99,11 +99,13 @@ export function createBlankLoanFacilityFormDraft(id=''):LoanFacilityFormDraft{re
 export type ProjectTaxFormDraft={
  system:'corporate'|'none'|'custom'|null
  rates:{period:string;ratePercent:number|null}[]
+ /** Final tax payable amounts transcribed from a source report; never inferred from a rate. */
+ documentedAmounts?:{period:string;amount:number|null;sourceReference:string;sourceVerified:boolean}[]
  allowances:{id:string;name:string;treatment:'deduction'|'credit'|null;periodAmounts:{period:string;amount:number|null}[]}[]
  lossCarryForward:boolean|null;lossCarryForwardYears:number|null;openingLossVintages:{amount:number|null;originFiscalYearIndex:number|null}[]
 }
 export function createBlankProjectTaxFormDraft():ProjectTaxFormDraft{return{
- system:null,rates:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null,openingLossVintages:[]
+ system:null,rates:[],documentedAmounts:[],allowances:[],lossCarryForward:null,lossCarryForwardYears:null,openingLossVintages:[]
 }}
 
 export function deriveFixedVariableSplit(fixedPercent:number|null,variablePercent:number|null):{fixedPercent:number|null;variablePercent:number|null}{
