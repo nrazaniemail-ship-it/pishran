@@ -99,6 +99,8 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { name: 'بازاریابی مستقیم', amount: 62260 },
     ],
     workingCapital: [
+      { period: '1403', inventory: 0, cash: 0 },
+      { period: '1404', inventory: 0, cash: 0 },
       { period: '1405', inventory: 3108516.19, cash: 200628.34 },
       { period: '1406', inventory: 3511936.83, cash: 206423.78 },
       { period: '1407', inventory: 3946782.02, cash: 212746.08 },
