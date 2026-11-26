@@ -19,6 +19,7 @@ const backupUrl = toDataUrl(backupSource)
 const previewUrl = 'http://127.0.0.1:4179/'
 const server = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', '4179', '--strictPort'], {
   stdio: 'ignore',
+  detached: process.platform !== 'win32',
   env: { ...process.env, VITE_PREVIEW_BUILD: 'true' }
 })
 let browser
@@ -319,5 +320,11 @@ try {
   console.log('PASS: native IndexedDB storage, project lifecycle, backup restore and undo')
 } finally {
   if (browser) await browser.close()
-  server.kill('SIGTERM')
+  // npm spawns Vite as a child; terminate the whole process group so the
+  // preview server cannot leave a stale Vite lock for the next CI step.
+  if (server.pid && process.platform !== 'win32') {
+    try { process.kill(-server.pid, 'SIGTERM') } catch { server.kill('SIGTERM') }
+  } else {
+    server.kill('SIGTERM')
+  }
 }
