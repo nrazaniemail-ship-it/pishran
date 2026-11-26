@@ -619,7 +619,7 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
           <label htmlFor="ranking-project-edit-name">{isEn ? 'Project name' : 'نام پروژه'}</label>
           <div><input id="ranking-project-edit-name" value={editingRankingProjectName} onChange={event => setEditingRankingProjectName(event.target.value)} maxLength={100}/><button type="submit" className="primary" disabled={!editingRankingProjectName.trim()}><Check size={16}/>{isEn ? 'Save name' : 'ذخیره نام'}</button></div>
         </form>
-        <ModuleExportActions moduleId={`ranking-${selectedProject.id}`} moduleTitle={selectedProject.name} language={language}/>
+        <ModuleExportActions moduleId={`ranking-${selectedProject.id}`} moduleTitle={selectedProject.name} projectId={selectedProject.id} language={language}/>
       </section>
       <RankingAdvisor language={language} onChoose={applyAdvisor}/>
     <section className="module-workspace-card">
@@ -913,7 +913,7 @@ export default function App() {
     {page === 'settings' && <SettingsView settings={settings} storageInfo={storageInfo} onChange={setSettings} onRestored={refreshAfterRestore}/>}
     {page === 'steel-group' && <SteelGroupWorkspace language={settings.language}/>}
     {page === 'project-wizard' && activeProject && <div data-module-export-root="true" data-project-export-id={activeProject.id} className="feasibility-project-export-root">
-      <ModuleExportActions moduleId={`feasibility-${activeProject.id}`} moduleTitle={activeProject.name} language={settings.language}/>
+      <ModuleExportActions moduleId={`feasibility-${activeProject.id}`} moduleTitle={activeProject.name} projectId={activeProject.id} language={settings.language}/>
       <FeasibilityWizard language={settings.language} project={activeProject} onBack={() => navigateBack('projects')}/>
     </div>}
     {page === 'module' && <section className="module-workspace-page" data-module-export-root="true">
