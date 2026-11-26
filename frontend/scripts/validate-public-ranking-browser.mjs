@@ -50,13 +50,14 @@ assert.match(html, /<title>پیشران \| امکان‌سنجی هوشمند<\/
 const scriptPaths = [...html.matchAll(/src="([^"]+\.js)"/g)].map(match => match[1])
 assert.ok(scriptPaths.length > 0, 'public homepage must reference a versioned JavaScript bundle')
 const isLocalPreview=/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(rankingBaseUrl)
+let bundle=''
 if(!isLocalPreview){
   const bundles = await Promise.all(scriptPaths.map(async path => {
     const asset = await fetch(new URL(path, site))
     assert.equal(asset.ok, true, `published bundle ${path} at ${new URL(path,site)} must respond`)
     return asset.text()
   }))
-  const bundle = bundles.join('\n')
+  bundle = bundles.join('\n')
   for (const marker of ['Initial methods', 'Advanced methods', 'روش‌های اولیه', 'روش‌های پیشرفته', 'AHP + TOPSIS']) {
     assert.ok(bundle.includes(marker), `published JavaScript must contain deployed ranking marker: ${marker}`)
   }
