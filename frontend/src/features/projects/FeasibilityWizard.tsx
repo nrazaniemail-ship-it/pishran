@@ -258,7 +258,7 @@ function baseModel(project:FeasibilityProject):Model {
    {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
    {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
    ...sourceSalesSchedule.map(row=>({...row,period:String(Number(row.period)-reportYear+1)})),
-   ...(isHrCoilReference?[{period:String(Number(report.operationEnd.split('/').at(-1)??report.operationEnd)+1-reportYear+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0}]:[]),
+   ...(isHrCoilReference?[{period:String((operationEndParts[0]<=12&&operationEndParts[1]>1000?operationEndParts[1]:operationEndParts[0])+1-reportYear+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0}]:[]),
   ]
   if(sourceSalesSchedule.length){
    financialForms.sales=[{
@@ -538,6 +538,12 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
   const projectCalendarPeriods=m.foundation.planning.projectStartDate&&m.foundation.planning.projectEndDate&&m.foundation.planning.periodFrequency!=='unspecified'&&m.foundation.planning.fiscalYearStartMonth!==null
     ?buildProjectCalendarPeriods(m.foundation.planning.projectStartDate,m.foundation.planning.projectEndDate,m.foundation.planning.periodFrequency,m.foundation.planning.fiscalYearStartMonth)
     :[]
+  const terminalPeriods=project.id==='comfar-hr-coil-200k'?1:0
+  const projectComfarSourceInputs=project.templateId==='comfar-import'?COMFAR_PROJECT_INPUTS[project.id]:undefined
+  const periodOtherIncomeByPeriod=projectComfarSourceInputs?.otherIncomeSchedule
+    ?projectCalendarPeriods.map((_,index)=>projectComfarSourceInputs.otherIncomeSchedule!.filter(row=>Number(row.period)===m.project.startYear+index).reduce((sum,row)=>sum+row.amount,0))
+    :undefined
+  const periodOtherIncomeSourceReference=projectComfarSourceInputs?.otherIncomeSchedule?.map(row=>row.sourceReference).filter(Boolean).join(' | ')
   const FormField=(props:Parameters<typeof Field>[0])=><Field {...props} blankZero={isRawTemplate||project.templateId==='comfar-import'}/>
  useEffect(()=>{
   let alive=true
@@ -602,7 +608,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
     ?buildComfarDepreciationAssetsFromFixedInvestmentItems(
       m.fixedInvestmentItems,
       m.project.startYear,
-      Math.max(1,Math.ceil(m.project.constructionYears||1)+Math.ceil(m.project.operatingYears||1)),
+      Math.max(1,Math.ceil(m.project.constructionYears||1)+Math.ceil(m.project.operatingYears||1)+terminalPeriods),
       m.foundation.planning.periodFrequency,
       m.foundation
     )
