@@ -52,10 +52,10 @@ async function verifyPdfScope(page, buttonName) {
   await root.waitFor({ state: 'visible' })
   assert.equal(await root.locator('.module-export-actions').getAttribute('data-export-scope'), 'project', 'PDF export control must declare project-scoped output')
   await page.evaluate(() => { window.__pishranPrintCalls = 0; window.print = () => { window.__pishranPrintCalls += 1 } })
-  await page.emulateMedia({ media: 'print' })
   await root.locator('.module-export-actions').getByRole('button', { name: buttonName, exact: true }).click()
   assert.equal(await page.evaluate(() => window.__pishranPrintCalls), 1, 'PDF action must invoke the browser print dialog')
   assert.ok(await root.evaluate(element => element.classList.contains('module-export-print-target')), 'PDF action must scope printing to the active project root')
+  await page.emulateMedia({ media: 'print' })
   const printVisibility = await page.evaluate(() => {
     const target = document.querySelector('.module-export-print-target')
     const actions = target?.querySelector('.module-export-actions')
