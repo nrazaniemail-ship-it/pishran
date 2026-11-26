@@ -54,4 +54,23 @@ const unsupportedPartialCapitalization=adapter.buildProjectLoanDraftIntegration(
 assert.equal(unsupportedPartialCapitalization.valid,false)
 const wrongFrequency=adapter.buildProjectLoanDraftIntegration([{...localLoan,repaymentInterval:'monthly'}],periods,365,'annual',foundation)
 assert.equal(wrongFrequency.valid,false)
+const documentedManualLoan={
+ ...localLoan,id:'comfar-manual',name:'Documented COMFAR debt schedule',
+ annualRatePercent:null,openingBalance:0,gracePeriods:null,interestConvention:null,
+ loanType:'profile',firstRepaymentDate:'',numberOfRepayments:null,
+ disbursements:[],profileMovements:[],interestRateChanges:[],interestPaymentMonth:null,
+ capitalizedInterestPercent:null,capitalizeUntilDate:'',fees:[],
+ manualPeriodSchedule:[
+  {period:'1',drawdown:100,principal:0,interestExpense:0,capitalizedInterest:10,closingBalance:110},
+  {period:'2',drawdown:0,principal:30,interestExpense:5,capitalizedInterest:0,closingBalance:80},
+  {period:'3',drawdown:0,principal:80,interestExpense:4,capitalizedInterest:0,closingBalance:0},
+ ],
+}
+const manual=adapter.buildProjectLoanDraftIntegration([documentedManualLoan],periods,365,'annual',foundation)
+assert.equal(manual.valid,true,manual.issues.join('; '))
+assert.equal(manual.loanScheduleOverrides['comfar-manual'].length,3)
+assert.deepEqual(manual.loanScheduleOverrides['comfar-manual'].map(row=>row.interestExpense),[0,5,4],
+ 'Documented interest must be posted exactly without inferring an annual interest rate')
+assert.deepEqual(manual.loanScheduleOverrides['comfar-manual'].map(row=>row.principal),[0,30,80])
+assert.deepEqual(manual.loanScheduleOverrides['comfar-manual'].map(row=>row.closingBalance),[110,80,0])
 console.log('Local and foreign loan draft integration validation passed.')
