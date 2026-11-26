@@ -561,18 +561,24 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
    const financialForms=imported?{
     ...defaultForms,...savedForms,
     workingCapital:hasWorkingCapital?savedForms.workingCapital:defaultForms.workingCapital,
-    tax:savedForms.tax.rates.length?savedForms.tax:defaultForms.tax,
+    tax:project.id==='comfar-hr-coil-200k'
+      ?(savedForms.tax.documentedAmounts?.length?savedForms.tax:defaultForms.tax)
+      :(savedForms.tax.rates.length||savedForms.tax.documentedAmounts?.length?savedForms.tax:defaultForms.tax),
     economic:{...defaultForms.economic,...savedForms.economic,
      discountRatePercent:savedForms.economic.discountRatePercent??defaultForms.economic.discountRatePercent,
      discountRateSourceReference:savedForms.economic.discountRateSourceReference||defaultForms.economic.discountRateSourceReference,
      discountRateSourceVerified:savedForms.economic.discountRateSourceVerified||defaultForms.economic.discountRateSourceVerified}
    }:savedForms
+   const mergedFoundation=mergeProjectFoundation(v.foundation)
+   const resolvedFoundation=imported&&project.id==='comfar-hr-coil-200k'
+     ?{...mergedFoundation,planning:{...mergedFoundation.planning,projectEndDate:defaults.foundation.planning.projectEndDate},taxation:{...mergedFoundation.taxation,rates:[]}}
+     :imported&&!v.foundation?.currencies?.localCurrencyCode?defaults.foundation:mergedFoundation
    setM({
     ...defaults,...v,
     partners:Array.isArray(v.partners)?v.partners:defaults.partners,
     partnerDistributionPercent:Number.isFinite(v.partnerDistributionPercent)?v.partnerDistributionPercent:defaults.partnerDistributionPercent,
     stage:defaults.stage,
-    foundation:imported&&!v.foundation?.currencies?.localCurrencyCode?defaults.foundation:mergeProjectFoundation(v.foundation),
+    foundation:resolvedFoundation,
     financialForms,
     fixedInvestmentItems:(imported&&!hasFixedAcquisitions?defaults.fixedInvestmentItems:savedFixedItems).map(item=>({...item,depreciationBasis:item.depreciationBasis??'unresolved',acquisitions:item.acquisitions.map(acquisition=>({...acquisition,allocationBasis:acquisition.allocationBasis??'unallocated'})),depreciation:{...item.depreciation,lengthMonths:item.depreciation?.lengthMonths??0,firstDepreciationMonths:item.depreciation?.firstDepreciationMonths??12}})),
     fixedInvestmentSeedVersion:Math.max(Number(v.fixedInvestmentSeedVersion)||0,defaults.fixedInvestmentSeedVersion),
