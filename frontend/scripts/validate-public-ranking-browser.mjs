@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readFile, mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import * as XLSX from 'xlsx'
 import { chromium } from 'playwright'
 
@@ -29,6 +32,7 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedFilenameProject)), `Excel filename must identify the active project ${expectedFilenameProject}; filename: ${download.suggestedFilename()}`)
   assert.ok(!/\s/u.test(download.suggestedFilename()), `Excel filename must normalize whitespace to hyphens; filename: ${download.suggestedFilename()}`)
   assert.ok(!content.includes(excludedProject.normalize('NFC')), `Excel export must not leak another project: ${excludedProject}`)
+  return { content, workbook, filename: download.suggestedFilename() }
 }
 async function readRankingProjectIndexes(page) {
   return page.evaluate(async()=>{
@@ -47,7 +51,7 @@ async function readRankingProjectIndexes(page) {
     return {indexedDbNames,fallbackNames}
   })
 }
-async function verifyPdfScope(page, buttonName) {
+async function verifyPdfScope(page, buttonName, expectedProject, excludedProject) {
   const root = activeExportRoot(page)
   await root.waitFor({ state: 'visible' })
   assert.equal(await root.locator('.module-export-actions').getAttribute('data-export-scope'), 'project', 'PDF export control must declare project-scoped output')
@@ -69,6 +73,21 @@ async function verifyPdfScope(page, buttonName) {
   assert.equal(printVisibility.targetVisibility, 'visible', 'PDF print media must expose the active project root')
   assert.equal(printVisibility.actionsDisplay, 'none', 'PDF print media must hide export controls')
   assert.equal(printVisibility.visibleProjectRoots, 1, 'PDF print media must expose exactly one project root')
+  // Generate and parse the actual PDF bytes using Chromium's print pipeline.
+  const pdfBytes = await page.pdf({ printBackground: true })
+  assert.ok(pdfBytes.length > 500 && pdfBytes.subarray(0, 5).toString() === '%PDF-', 'print action must produce a non-empty, valid PDF document')
+  const pdfDocument = await getDocument({ data: new Uint8Array(pdfBytes), useSystemFonts: true, disableFontFace: true, verbosity: 0 }).promise
+  assert.ok(pdfDocument.numPages >= 1, 'generated PDF must contain at least one page')
+  let pdfText = ''
+  for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
+    const pdfPage = await pdfDocument.getPage(pageNumber)
+    const textContent = await pdfPage.getTextContent()
+    pdfText += ' ' + textContent.items.map(item => 'str' in item ? item.str : '').join(' ')
+  }
+  const identity = value => value.normalize('NFKC').replace(/[\\p{P}\\p{Z}\\p{Cf}\\u0640]+/gu, '').toLocaleLowerCase()
+  assert.ok(identity(pdfText).includes(identity(expectedProject)), `PDF bytes must contain the active project identity: ${expectedProject}; extracted text: ${pdfText.slice(0, 1600)}`)
+  if (excludedProject) assert.ok(!identity(pdfText).includes(identity(excludedProject)), `PDF bytes must not contain another project's identity: ${excludedProject}`)
+  await pdfDocument.destroy()
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
   assert.equal(await root.evaluate(element => element.classList.contains('module-export-print-target')), false, 'PDF print scope must be cleaned up after printing')
   await page.emulateMedia({ media: 'screen' })
@@ -96,18 +115,21 @@ if(!isLocalPreview){
   }
 }
 
-const browser = await chromium.launch({ headless: true })
-try {
-  const context = await browser.newContext({ acceptDownloads: true })
-  const page = await context.newPage()
+const profileDir = await mkdtemp(join(tmpdir(), 'pishran-mod10-browser-'))
+let context = await chromium.launchPersistentContext(profileDir, { headless: true, acceptDownloads: true })
+let page = await context.newPage()
+try
   const pageErrors = []
   const consoleErrors = []
   const failedRequests = []
   const badResponses = []
-  page.on('pageerror', error => pageErrors.push(error.stack || error.message))
-  page.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') consoleErrors.push({ type: message.type(), text: message.text() }) })
-  page.on('requestfailed', request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText }))
-  page.on('response', response => { if (response.status() >= 400) badResponses.push({ status: response.status(), url: response.url() }) })
+  const attachDiagnostics = target => {
+    target.on('pageerror', error => pageErrors.push(error.stack || error.message))
+    target.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') consoleErrors.push({ type: message.type(), text: message.text() }) })
+    target.on('requestfailed', request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText }))
+    target.on('response', response => { if (response.status() >= 400) badResponses.push({ status: response.status(), url: response.url() }) })
+  }
+  attachDiagnostics(page)
   const live = await page.goto(site, { waitUntil: 'domcontentloaded' })
   assert.equal(live?.status(), 200, 'public PWA must load with HTTP 200')
   const moduleCard = page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' })
@@ -203,7 +225,7 @@ try {
   await activeExportRoot(page).waitFor({ state: 'visible' })
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   console.log('Ranking project indexes after Excel export:',JSON.stringify(await readRankingProjectIndexes(page)))
-  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   console.log('Ranking project indexes after PDF print:',JSON.stringify(await readRankingProjectIndexes(page)))
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
@@ -211,7 +233,7 @@ try {
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await page.getByLabel('نام پروژه').waitFor()
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه دوم مستقل', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
-  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF', 'پروژه دوم مستقل', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   const storageNamesAfterSecondProject=await readRankingProjectIndexes(page)
@@ -231,7 +253,7 @@ try {
   assert.ok(renamedProjectButton, `renamed project card must remain visible after creating project 2; cards: ${visibleProjectNames.join(' | ')}`)
   await renamedProjectButton.click()
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
-  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   const beforeReloadStorage = await page.evaluate(async () => {
@@ -422,7 +444,13 @@ try {
       await page.getByText('Expert agreement & disagreement').waitFor()
       await page.getByText('Scenario comparison').click()
       await page.getByText(/optimistic/).last().waitFor()
-      await page.reload({ waitUntil: 'domcontentloaded' })
+      // Close the browser process and reopen the same profile: this is a real exit/re-entry test,
+      // not only a React remount or page reload.
+      await context.close()
+      context = await chromium.launchPersistentContext(profileDir, { headless: true, acceptDownloads: true })
+      page = await context.newPage()
+      attachDiagnostics(page)
+      await page.goto(site, { waitUntil: 'domcontentloaded' })
       await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
       await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
       await page.getByTestId('ranking-category-advanced').click()
@@ -522,7 +550,7 @@ try {
   await page.getByRole('button', { name: 'Add option' }).click()
   await page.getByLabel('گزینه اختصاصی دوم, معیار اختصاصی پروژه دوم score').fill('42')
   await verifyExcelExport(page, 'Export Excel', 'پروژه دوم مستقل', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
-  await verifyPdfScope(page, 'Print / Save PDF')
+  await verifyPdfScope(page, 'Print / Save PDF', 'پروژه دوم مستقل', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: '← All ranking projects' }).click()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
   assert.equal(await page.getByText('معیار اختصاصی پروژه دوم').count(), 0,
@@ -760,8 +788,9 @@ try {
   await feasibilityProjectCard.click()
   await page.locator('.feasibility-project-export-root').waitFor({ state: 'visible' })
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمون رنگ کارت', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
-  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF', 'پروژه آزمون رنگ کارت', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   console.log('PASS: public PWA per-project Excel/PDF scope for two independent ranking projects and feasibility projects; ranking storage, methods, sensitivity, project cards, MOD-10 assessment and bilingual switching')
 } finally {
-  await browser.close()
+  await context.close()
+  await rm(profileDir, { recursive: true, force: true })
 }
