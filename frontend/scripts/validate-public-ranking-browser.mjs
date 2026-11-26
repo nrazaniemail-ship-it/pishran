@@ -76,6 +76,9 @@ async function verifyPdfScope(page, buttonName, expectedProject, excludedProject
   await root.locator('.module-export-actions').getByRole('button', { name: buttonName, exact: true }).click()
   assert.equal(await page.evaluate(() => window.__pishranPrintCalls), 1, 'PDF action must invoke the browser print dialog')
   assert.ok(await root.evaluate(element => element.classList.contains('module-export-print-target')), 'PDF action must scope printing to the active project root')
+  const printTitle = root.locator('.module-export-print-title')
+  await printTitle.waitFor({ state: 'attached' })
+  assert.equal(await printTitle.innerText(), expectedProject, 'PDF print DOM must include the exact active project name as a report heading')
   await page.emulateMedia({ media: 'print' })
   const printVisibility = await page.evaluate(() => {
     const target = document.querySelector('.module-export-print-target')
@@ -84,11 +87,13 @@ async function verifyPdfScope(page, buttonName, expectedProject, excludedProject
     return {
       targetVisibility: target ? getComputedStyle(target).visibility : 'missing',
       actionsDisplay: actions ? getComputedStyle(actions).display : 'missing',
+      printTitleDisplay: target?.querySelector('.module-export-print-title') ? getComputedStyle(target.querySelector('.module-export-print-title')).display : 'missing',
       visibleProjectRoots: roots.filter(element => getComputedStyle(element).visibility === 'visible').length
     }
   })
   assert.equal(printVisibility.targetVisibility, 'visible', 'PDF print media must expose the active project root')
   assert.equal(printVisibility.actionsDisplay, 'none', 'PDF print media must hide export controls')
+  assert.equal(printVisibility.printTitleDisplay, 'block', 'PDF print media must show the active project heading')
   assert.equal(printVisibility.visibleProjectRoots, 1, 'PDF print media must expose exactly one project root')
   // Generate and parse the actual PDF bytes using Chromium's print pipeline.
   const pdfBytes = await page.pdf({ printBackground: true })
