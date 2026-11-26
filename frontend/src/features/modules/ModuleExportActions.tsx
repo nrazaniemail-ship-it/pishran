@@ -29,9 +29,14 @@ export default function ModuleExportActions({moduleId,moduleTitle,language='fa'}
   if(!root){setMessage(en?'Module report is not available.':'محتوای پروژه برای خروجی در دسترس نیست.');return}
   setMessage('');
   const projectName=(root.querySelector<HTMLInputElement>('#ranking-project-edit-name, [data-project-name-input]')?.value.trim()||root.getAttribute('data-project-export-name')||moduleTitle).trim();
+  const projectId=root.getAttribute('data-project-export-id')||'';
   const printTitle=document.createElement('h1');
   printTitle.className='module-export-print-title';
   printTitle.textContent=projectName;
+  const printId=document.createElement('p');
+  printId.className='module-export-print-project-id';
+  printId.textContent=projectId?'Project ID: '+projectId:'';
+  root.prepend(printId);
   root.prepend(printTitle);
   root.classList.add('module-export-print-target');
   document.body.classList.add('module-export-printing');
@@ -39,6 +44,7 @@ export default function ModuleExportActions({moduleId,moduleTitle,language='fa'}
    root.classList.remove('module-export-print-target');
    document.body.classList.remove('module-export-printing');
    printTitle.remove();
+   printId.remove();
    window.removeEventListener('afterprint',cleanup);
   };
   window.addEventListener('afterprint',cleanup);
