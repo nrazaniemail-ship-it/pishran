@@ -153,11 +153,11 @@ const COMFAR_REFERENCE_PROJECTS: Omit<FeasibilityProject, 'createdAt' | 'updated
       fixedInvestment: 453858298, preproductionTotal: 117124027, preproductionNet: 6624027, capitalizedInterest: 110500000,
       workingCapital: 68155775.89, totalInvestment: 639138100.89,
       equity: 139982325, longTermDebt: 431000000, shortTermDebt: 49523442.75, totalFunding: 620505767.75,
-      firstOperatingYear: 5, referenceYear: 9, lastOperatingYear: 19,
+      firstOperatingYear: 1405, referenceYear: 1409, lastOperatingYear: 1419,
       firstYearRevenue: 633760000, referenceRevenue: 887300000, lastYearRevenue: 887300000,
       firstYearFactoryCost: 460719614.06, referenceFactoryCost: 643963499, lastYearFactoryCost: 643963499,
       taxPercent: 25, investmentNpvRate: 25, investmentNpv: 19964251.38, investmentIrr: 26.08, investmentMirr: 26.08,
-      equityNpvRate: 30, equityNpv: 60342720.87, equityIrr: 40.51, equityMirr: 40.51, valuationDate: '12/01'
+      equityNpvRate: 30, equityNpv: 60342720.87, equityIrr: 40.51, equityMirr: 40.51, valuationDate: '12/1401'
     }
   }
 ]
