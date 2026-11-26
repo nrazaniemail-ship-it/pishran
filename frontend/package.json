@@ -20,8 +20,8 @@
     "test:oee": "node --test scripts/validate-oee-production.mjs"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^7.1.12",
     "typescript": "latest",
     "react": "latest",
     "react-dom": "latest",
