@@ -21,10 +21,10 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   const moduleId = await root.locator('.module-export-actions').getAttribute('data-export-module-id')
   const projectId = await root.getAttribute('data-project-export-id')
   assert.ok(moduleId && projectId && moduleId.endsWith(projectId), `Export controls must belong to the active project root: module=${moduleId}, project=${projectId}`)
-  const workbookIdentity = value => value.normalize('NFKC').replace(/[\\s_\\-\\u200c\\u200d\\u200e\\u200f\\u0640]+/g, '').toLocaleLowerCase()
+  const workbookIdentity = value => value.normalize('NFKC').replace(/[\s_\-\u200c\u200d\u200e\u200f\u0640]+/g, '').toLocaleLowerCase()
   // The export slug and workbook identity intentionally omit the trailing edit-state suffix from long project names.
   const expectedFilenameProject = expectedProject.replace(/\s+ویرایش‌شده$/u, '')
-  const filenameIdentity = value => value.normalize('NFKC').replace(/[\\s_\\-\\u200c\\u200d\\u200e\\u200f\\u0640]+/g, '').toLocaleLowerCase()
+  const filenameIdentity = value => value.normalize('NFKC').replace(/[\s_\-\u200c\u200d\u200e\u200f\u0640]+/g, '').toLocaleLowerCase()
   assert.ok(workbookIdentity(content).includes(workbookIdentity(expectedFilenameProject)), `Excel workbook must identify the active project ${expectedFilenameProject}; workbook content: ${content.slice(0, 1800)}`)
   assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedFilenameProject)), `Excel filename must identify the active project ${expectedFilenameProject}; filename: ${download.suggestedFilename()}`)
   assert.ok(!content.includes(excludedProject.normalize('NFC')), `Excel export must not leak another project: ${excludedProject}`)
