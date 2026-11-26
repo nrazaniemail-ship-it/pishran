@@ -2434,11 +2434,15 @@ input,select,textarea{color:var(--text)}
 
 
 /* Project-scoped exports: print only the active project, never sibling projects or app chrome. */
+.module-export-print-title,.module-export-print-project-id{display:none}
 @media print{
   body.module-export-printing *{visibility:hidden!important}
   body.module-export-printing .module-export-print-target,
   body.module-export-printing .module-export-print-target *{visibility:visible!important}
   body.module-export-printing .module-export-print-target{display:block!important;position:absolute!important;inset:0 auto auto 0;width:100%;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important;color:#111!important;box-shadow:none!important}
+  body.module-export-printing .module-export-print-target .module-export-print-title{display:block!important;visibility:visible!important;direction:rtl;text-align:start;margin:0 0 14px;padding:12px 16px;border-bottom:1px solid #bbb;font-size:20px;font-weight:700;color:#111}
+  body.module-export-printing .module-export-print-target .module-export-print-title:empty{display:none!important}
+  body.module-export-printing .module-export-print-target .module-export-print-project-id{display:block!important;visibility:visible!important;direction:ltr;text-align:start;margin:0 16px 10px;font-size:9px;color:#555}
   body.module-export-printing .module-export-print-target .module-export-actions{display:none!important}
   body.module-export-printing .module-export-print-target button,
   body.module-export-printing .module-export-print-target input,

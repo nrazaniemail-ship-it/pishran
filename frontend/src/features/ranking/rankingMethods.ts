@@ -43,30 +43,106 @@ export function aggregateBwmJudgments(experts:Array<{bestToOthers:number[];other
  experts.forEach(e=>{assert(e.bestToOthers.length===n&&e.othersToWorst.length===n,'Experts must assess the same criteria');[...e.bestToOthers,...e.othersToWorst].forEach(v=>assert(Number.isFinite(v)&&v>=1&&v<=9,'BWM judgments must be on the 1–9 scale'));});
  return {bestToOthers:Array.from({length:n},(_,i)=>geometricMean(experts.map(e=>e.bestToOthers[i]))),othersToWorst:Array.from({length:n},(_,i)=>geometricMean(experts.map(e=>e.othersToWorst[i])))};
 }
-function projectSimplex(values:number[]) {
- const sorted=[...values].sort((a,b)=>b-a); let sum=0,theta=0;
- for(let i=0;i<sorted.length;i++){sum+=sorted[i];const t=(sum-1)/(i+1);if(i===sorted.length-1||t>=sorted[i+1]){theta=t;break;}}
- return values.map(v=>Math.max(0,v-theta));
+// Two-phase simplex solver for the BWM minimax linear program.
+// Maximizes c·x subject to A·x <= b and x >= 0.
+class LinearProgram {
+ private readonly m:number; private readonly n:number;
+ private readonly basis:number[]; private readonly nonBasis:number[];
+ private readonly tableau:number[][];
+ constructor(A:number[][],b:number[],c:number[]){
+  this.m=b.length;this.n=c.length;
+  this.basis=Array(this.m);this.nonBasis=Array(this.n+1);
+  this.tableau=Array.from({length:this.m+2},()=>Array(this.n+2).fill(0));
+  for(let i=0;i<this.m;i++)for(let j=0;j<this.n;j++)this.tableau[i][j]=A[i][j];
+  for(let i=0;i<this.m;i++){this.basis[i]=this.n+i;this.tableau[i][this.n]=-1;this.tableau[i][this.n+1]=b[i];}
+  for(let j=0;j<this.n;j++){this.nonBasis[j]=j;this.tableau[this.m][j]=-c[j];}
+  this.nonBasis[this.n]=-1;this.tableau[this.m+1][this.n]=1;
+ }
+ private pivot(row:number,column:number){
+  const inverse=1/this.tableau[row][column];
+  for(let i=0;i<this.m+2;i++)if(i!==row)for(let j=0;j<this.n+2;j++)if(j!==column)this.tableau[i][j]-=this.tableau[row][j]*this.tableau[i][column]*inverse;
+  for(let j=0;j<this.n+2;j++)if(j!==column)this.tableau[row][j]*=inverse;
+  for(let i=0;i<this.m+2;i++)if(i!==row)this.tableau[i][column]*=-inverse;
+  this.tableau[row][column]=inverse;
+  const swap=this.basis[row];this.basis[row]=this.nonBasis[column];this.nonBasis[column]=swap;
+ }
+ private simplex(phase:1|2):boolean{
+  const objective=phase===1?this.m+1:this.m;
+  const eps=1e-10;
+  for(let iteration=0;iteration<100000;iteration++){
+   let column=-1;
+   for(let j=0;j<=this.n;j++){
+    if(phase===2&&this.nonBasis[j]===-1)continue;
+    if(column===-1||this.tableau[objective][j]<this.tableau[objective][column]-eps||
+      (Math.abs(this.tableau[objective][j]-this.tableau[objective][column])<=eps&&this.nonBasis[j]<this.nonBasis[column]))column=j;
+   }
+   if(column===-1||this.tableau[objective][column]>=-eps)return true;
+   let row=-1;
+   for(let i=0;i<this.m;i++){
+    if(this.tableau[i][column]<=eps)continue;
+    if(row===-1)row=i;
+    else{
+     const left=this.tableau[i][this.n+1]/this.tableau[i][column];
+     const right=this.tableau[row][this.n+1]/this.tableau[row][column];
+     if(left<right-eps||(Math.abs(left-right)<=eps&&this.basis[i]<this.basis[row]))row=i;
+    }
+   }
+   if(row===-1)return false;
+   this.pivot(row,column);
+  }
+  throw new Error('BWM linear-program solver exceeded its pivot limit');
+ }
+ solve():{solution:number[];objective:number}{
+  const eps=1e-9;
+  let row=0;
+  for(let i=1;i<this.m;i++)if(this.tableau[i][this.n+1]<this.tableau[row][this.n+1])row=i;
+  if(this.tableau[row][this.n+1]<-eps){
+   this.pivot(row,this.n);
+   if(!this.simplex(1)||this.tableau[this.m+1][this.n+1]<-eps)throw new Error('BWM minimax problem is infeasible');
+   if(Math.abs(this.tableau[this.m+1][this.n+1])>eps)throw new Error('BWM minimax problem is infeasible');
+   const artificialRow=this.basis.indexOf(-1);
+   if(artificialRow!==-1){
+    let column=0;
+    for(let j=1;j<=this.n;j++)if(this.tableau[artificialRow][j]<this.tableau[artificialRow][column]-eps||
+      (Math.abs(this.tableau[artificialRow][j]-this.tableau[artificialRow][column])<=eps&&this.nonBasis[j]<this.nonBasis[column]))column=j;
+    this.pivot(artificialRow,column);
+   }
+  }
+  if(!this.simplex(2))throw new Error('BWM minimax problem is unexpectedly unbounded');
+  const solution=Array(this.n).fill(0);
+  for(let i=0;i<this.m;i++)if(this.basis[i]<this.n)solution[this.basis[i]]=this.tableau[i][this.n+1];
+  return{solution,objective:this.tableau[this.m][this.n+1]};
+ }
 }
+
 export function bwm(bestIndex:number,worstIndex:number,bestToOthers:number[],othersToWorst:number[]) {
- const n=bestToOthers.length; assert(n>=2&&othersToWorst.length===n,'BWM vectors must have equal length ≥ 2');
+ const n=bestToOthers.length;
+ assert(n>=2&&othersToWorst.length===n,'BWM vectors must have equal length ≥ 2');
  assert(Number.isInteger(bestIndex)&&bestIndex>=0&&bestIndex<n&&Number.isInteger(worstIndex)&&worstIndex>=0&&worstIndex<n&&bestIndex!==worstIndex,'Best and worst criteria must be distinct valid indices');
  [...bestToOthers,...othersToWorst].forEach(v=>assert(Number.isFinite(v)&&v>=1&&v<=9,'BWM judgments must be on the 1–9 scale'));
  assert(Math.abs(bestToOthers[bestIndex]-1)<1e-9&&Math.abs(othersToWorst[worstIndex]-1)<1e-9,'Best-to-best and worst-to-worst judgments must equal 1');
- let w=normalize(Array.from({length:n},(_,i)=>1/(bestToOthers[i]*othersToWorst[i])**0.5));
- // Minimize the BWM minimax deviation with a projected subgradient
- // of the currently active absolute residual.
- for(let k=0;k<50000;k++){
-  let worstResidual=0; let grad=Array(n).fill(0);
-  const consider=(d:number,terms:Array<[number,number]>)=>{
-   if(Math.abs(d)>worstResidual){worstResidual=Math.abs(d);grad=Array(n).fill(0);for(const [idx,coef] of terms)grad[idx]=Math.sign(d)*coef;}
-  };
-  for(let j=0;j<n;j++) if(j!==bestIndex) consider(w[bestIndex]-bestToOthers[j]*w[j],[[bestIndex,1],[j,-bestToOthers[j]]]);
-  for(let j=0;j<n;j++) if(j!==worstIndex) consider(w[j]-othersToWorst[j]*w[worstIndex],[[j,1],[worstIndex,-othersToWorst[j]]]);
-  const step=0.01/Math.sqrt(k+1); w=projectSimplex(w.map((v,i)=>v-step*grad[i]));
- }
- const xi=Math.max(...bestToOthers.map((a,j)=>Math.abs(w[bestIndex]-a*w[j])),...othersToWorst.map((a,j)=>Math.abs(w[j]-a*w[worstIndex])));
- return {weights:normalize(w),xi,bestIndex,worstIndex};
+ // Exact BWM minimax model: minimize xi subject to both absolute
+ // best-to-others and others-to-worst deviations being <= xi, sum(w)=1.
+ const variableCount=n+1, xiIndex=n;
+ const A:number[][]=[], b:number[]=[];
+ const addAbs=(left:number[])=>{
+  const upper=Array(variableCount).fill(0);
+  left.forEach((v,i)=>upper[i]+=v);upper[xiIndex]=-1;A.push(upper);b.push(0);
+  const lower=Array(variableCount).fill(0);
+  left.forEach((v,i)=>lower[i]-=v);lower[xiIndex]=-1;A.push(lower);b.push(0);
+ };
+ for(let j=0;j<n;j++)if(j!==bestIndex){const terms=Array(n).fill(0);terms[bestIndex]=1;terms[j]-=bestToOthers[j];addAbs(terms);}
+ for(let j=0;j<n;j++)if(j!==worstIndex){const terms=Array(n).fill(0);terms[j]=1;terms[worstIndex]-=othersToWorst[j];addAbs(terms);}
+ A.push([...Array(n).fill(1),0]);b.push(1);
+ A.push([...Array(n).fill(-1),0]);b.push(-1);
+ const objective=Array(variableCount).fill(0);objective[xiIndex]=-1;
+ const solved=new LinearProgram(A,b,objective).solve();
+ const weights=normalize(solved.solution.slice(0,n).map(v=>Math.max(0,v)));
+ const xi=Math.max(
+  ...bestToOthers.map((a,j)=>Math.abs(weights[bestIndex]-a*weights[j])),
+  ...othersToWorst.map((a,j)=>Math.abs(weights[j]-a*weights[worstIndex]))
+ );
+ return{weights,xi,bestIndex,worstIndex};
 }
 
 export type BwmExpertJudgment = {

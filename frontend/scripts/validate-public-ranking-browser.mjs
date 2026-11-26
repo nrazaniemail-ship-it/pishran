@@ -1,10 +1,30 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readFile, mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import * as XLSX from 'xlsx'
 import { chromium } from 'playwright'
 
+function referenceTopsis(matrix, weights, directions) {
+  const total = weights.reduce((sum, value) => sum + value, 0)
+  const normalizedWeights = weights.map(value => value / total)
+  const norms = matrix[0].map((_, column) => Math.sqrt(matrix.reduce((sum, row) => sum + row[column] ** 2, 0)))
+  const weighted = matrix.map(row => row.map((value, column) => value / norms[column] * normalizedWeights[column]))
+  const best = matrix[0].map((_, column) => directions[column] === 'benefit'
+    ? Math.max(...weighted.map(row => row[column]))
+    : Math.min(...weighted.map(row => row[column])))
+  const worst = matrix[0].map((_, column) => directions[column] === 'benefit'
+    ? Math.min(...weighted.map(row => row[column]))
+    : Math.max(...weighted.map(row => row[column])))
+  return weighted.map((row, alternativeIndex) => {
+    const positive = Math.sqrt(row.reduce((sum, value, column) => sum + (value - best[column]) ** 2, 0))
+    const negative = Math.sqrt(row.reduce((sum, value, column) => sum + (value - worst[column]) ** 2, 0))
+    return { alternativeIndex, score: positive + negative === 0 ? 0.5 : negative / (positive + negative) }
+  }).sort((a, b) => b.score - a.score)
+}
 function activeExportRoot(page) {
-  return page.locator('[data-module-export-root="true"]').filter({ has: page.locator('.module-export-actions') }).last()
+  return page.locator('[data-module-export-root="true"][data-project-export-id]').last()
 }
 async function verifyExcelExport(page, buttonName, expectedProject, excludedProject) {
   const root = activeExportRoot(page)
@@ -26,9 +46,11 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   const expectedFilenameProject = expectedProject.replace(/[\s_\p{P}\u200c]*ویرایش[\s_\p{P}\u200c]*شده$/u, '')
   const filenameIdentity = value => value.normalize('NFKC').replace(/[\p{P}\p{Z}\p{Cf}\u0640]+/gu, '').toLocaleLowerCase()
   assert.ok(workbookIdentity(content).includes(workbookIdentity(expectedFilenameProject)), `Excel workbook must identify the active project ${expectedFilenameProject}; workbook content: ${content.slice(0, 1800)}`)
+  assert.ok(workbookIdentity(content).includes(workbookIdentity(projectId)), 'Excel workbook must contain the stable active project ID ' + projectId + '; workbook content: ' + content.slice(0, 2200))
   assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedFilenameProject)), `Excel filename must identify the active project ${expectedFilenameProject}; filename: ${download.suggestedFilename()}`)
   assert.ok(!/\s/u.test(download.suggestedFilename()), `Excel filename must normalize whitespace to hyphens; filename: ${download.suggestedFilename()}`)
   assert.ok(!content.includes(excludedProject.normalize('NFC')), `Excel export must not leak another project: ${excludedProject}`)
+  return { content, workbook, filename: download.suggestedFilename() }
 }
 async function readRankingProjectIndexes(page) {
   return page.evaluate(async()=>{
@@ -47,7 +69,7 @@ async function readRankingProjectIndexes(page) {
     return {indexedDbNames,fallbackNames}
   })
 }
-async function verifyPdfScope(page, buttonName) {
+async function verifyPdfScope(page, buttonName, expectedProject, excludedProject, expectedFragments = []) {
   const root = activeExportRoot(page)
   await root.waitFor({ state: 'visible' })
   assert.equal(await root.locator('.module-export-actions').getAttribute('data-export-scope'), 'project', 'PDF export control must declare project-scoped output')
@@ -55,6 +77,13 @@ async function verifyPdfScope(page, buttonName) {
   await root.locator('.module-export-actions').getByRole('button', { name: buttonName, exact: true }).click()
   assert.equal(await page.evaluate(() => window.__pishranPrintCalls), 1, 'PDF action must invoke the browser print dialog')
   assert.ok(await root.evaluate(element => element.classList.contains('module-export-print-target')), 'PDF action must scope printing to the active project root')
+  const expectedProjectId = await root.getAttribute('data-project-export-id')
+  assert.ok(expectedProjectId, 'active project export root must expose a stable project ID')
+  const printTitle = root.locator('.module-export-print-title')
+  const printId = root.locator('.module-export-print-project-id')
+  await printTitle.waitFor({ state: 'attached' })
+  assert.equal(await printTitle.innerText(), expectedProject, 'PDF print DOM must include the exact active project name as a report heading')
+  assert.equal(await printId.innerText(), 'Project ID: ' + expectedProjectId, 'PDF print DOM must include the active project ID')
   await page.emulateMedia({ media: 'print' })
   const printVisibility = await page.evaluate(() => {
     const target = document.querySelector('.module-export-print-target')
@@ -63,12 +92,40 @@ async function verifyPdfScope(page, buttonName) {
     return {
       targetVisibility: target ? getComputedStyle(target).visibility : 'missing',
       actionsDisplay: actions ? getComputedStyle(actions).display : 'missing',
+      printTitleDisplay: target?.querySelector('.module-export-print-title') ? getComputedStyle(target.querySelector('.module-export-print-title')).display : 'missing',
+      printIdDisplay: target?.querySelector('.module-export-print-project-id') ? getComputedStyle(target.querySelector('.module-export-print-project-id')).display : 'missing',
       visibleProjectRoots: roots.filter(element => getComputedStyle(element).visibility === 'visible').length
     }
   })
   assert.equal(printVisibility.targetVisibility, 'visible', 'PDF print media must expose the active project root')
   assert.equal(printVisibility.actionsDisplay, 'none', 'PDF print media must hide export controls')
+  assert.equal(printVisibility.printTitleDisplay, 'block', 'PDF print media must show the active project heading')
+  assert.equal(printVisibility.printIdDisplay, 'block', 'PDF print media must show the active project ID')
   assert.equal(printVisibility.visibleProjectRoots, 1, 'PDF print media must expose exactly one project root')
+  // Generate and parse the actual PDF bytes using Chromium's print pipeline.
+  const pdfBytes = await page.pdf({ printBackground: true })
+  assert.ok(pdfBytes.length > 500 && pdfBytes.subarray(0, 5).toString() === '%PDF-', 'print action must produce a non-empty, valid PDF document')
+  const pdfDocument = await getDocument({ data: new Uint8Array(pdfBytes), useSystemFonts: true, disableFontFace: true, verbosity: 0 }).promise
+  assert.ok(pdfDocument.numPages >= 1, 'generated PDF must contain at least one page')
+  let pdfText = ''
+  for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
+    const pdfPage = await pdfDocument.getPage(pageNumber)
+    const textContent = await pdfPage.getTextContent()
+    pdfText += ' ' + textContent.items.map(item => 'str' in item ? item.str : '').join(' ')
+  }
+  const identity = value => value.normalize('NFKC').replace(/[\p{P}\p{Z}\p{Cf}\u0640]+/gu, '').toLocaleLowerCase()
+  const pdfIdentity = identity(pdfText)
+  const containsPdfText = fragment => {
+    const expected = identity(fragment)
+    const reversedExpected = [...expected].reverse().join('')
+    return pdfIdentity.includes(expected) || pdfIdentity.includes(reversedExpected) ||
+      [...pdfIdentity].reverse().join('').includes(expected)
+  }
+  assert.ok(containsPdfText(expectedProjectId),
+    'Actual PDF bytes must contain the active project ID ' + expectedProjectId + '; extracted text: ' + pdfText.slice(0, 1600))
+  for (const fragment of expectedFragments) assert.ok(containsPdfText(fragment),
+    'PDF bytes must contain expected report value ' + fragment + '; extracted text: ' + pdfText.slice(0, 2400))
+  await pdfDocument.destroy()
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
   assert.equal(await root.evaluate(element => element.classList.contains('module-export-print-target')), false, 'PDF print scope must be cleaned up after printing')
   await page.emulateMedia({ media: 'screen' })
@@ -96,18 +153,21 @@ if(!isLocalPreview){
   }
 }
 
-const browser = await chromium.launch({ headless: true })
+const profileDir = await mkdtemp(join(tmpdir(), 'pishran-mod10-browser-'))
+let context = await chromium.launchPersistentContext(profileDir, { headless: true, acceptDownloads: true })
+let page = await context.newPage()
 try {
-  const context = await browser.newContext({ acceptDownloads: true })
-  const page = await context.newPage()
   const pageErrors = []
   const consoleErrors = []
   const failedRequests = []
   const badResponses = []
-  page.on('pageerror', error => pageErrors.push(error.stack || error.message))
-  page.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') consoleErrors.push({ type: message.type(), text: message.text() }) })
-  page.on('requestfailed', request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText }))
-  page.on('response', response => { if (response.status() >= 400) badResponses.push({ status: response.status(), url: response.url() }) })
+  const attachDiagnostics = target => {
+    target.on('pageerror', error => pageErrors.push(error.stack || error.message))
+    target.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') consoleErrors.push({ type: message.type(), text: message.text() }) })
+    target.on('requestfailed', request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText }))
+    target.on('response', response => { if (response.status() >= 400) badResponses.push({ status: response.status(), url: response.url() }) })
+  }
+  attachDiagnostics(page)
   const live = await page.goto(site, { waitUntil: 'domcontentloaded' })
   assert.equal(live?.status(), 200, 'public PWA must load with HTTP 200')
   const moduleCard = page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' })
@@ -203,7 +263,7 @@ try {
   await activeExportRoot(page).waitFor({ state: 'visible' })
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   console.log('Ranking project indexes after Excel export:',JSON.stringify(await readRankingProjectIndexes(page)))
-  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   console.log('Ranking project indexes after PDF print:',JSON.stringify(await readRankingProjectIndexes(page)))
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
@@ -211,7 +271,7 @@ try {
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await page.getByLabel('نام پروژه').waitFor()
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه دوم مستقل', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
-  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF', 'پروژه دوم مستقل', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   const storageNamesAfterSecondProject=await readRankingProjectIndexes(page)
@@ -231,7 +291,7 @@ try {
   assert.ok(renamedProjectButton, `renamed project card must remain visible after creating project 2; cards: ${visibleProjectNames.join(' | ')}`)
   await renamedProjectButton.click()
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
-  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   const beforeReloadStorage = await page.evaluate(async () => {
@@ -413,6 +473,7 @@ try {
         return { indexedDbHistory, fallbackHistory }
       })
       console.log('Method history after BWM calculation:', JSON.stringify(methodHistoryAfterBwm))
+      assert.ok(Array.isArray(methodHistoryAfterBwm.indexedDbHistory) && methodHistoryAfterBwm.indexedDbHistory.some(item => item.method === 'BWM+TOPSIS' && item.ranking?.results?.length === 3 && item.judgments?.expertJudgments?.length === 1), 'IndexedDB method history must retain the complete BWM judgments, weights and ranking results')
       await page.getByText('Calculation history (3)').waitFor()
       await page.getByRole('button', { name: 'Run rank sensitivity' }).click()
       await page.getByTestId('ranking-sensitivity-results').waitFor()
@@ -422,11 +483,18 @@ try {
       await page.getByText('Expert agreement & disagreement').waitFor()
       await page.getByText('Scenario comparison').click()
       await page.getByText(/optimistic/).last().waitFor()
-      await page.reload({ waitUntil: 'domcontentloaded' })
+      // Close the browser process and reopen the same profile: this is a real exit/re-entry test,
+      // not only a React remount or page reload.
+      await context.close()
+      context = await chromium.launchPersistentContext(profileDir, { headless: true, acceptDownloads: true })
+      page = await context.newPage()
+      attachDiagnostics(page)
+      await page.goto(site, { waitUntil: 'domcontentloaded' })
       await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
       await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
       await page.getByTestId('ranking-category-advanced').click()
       await page.getByRole('button', { name: 'BWM + TOPSIS', exact: true }).click()
+      await page.getByText('Calculation history (3)').waitFor()
       await page.getByText('Sensitivity history (1)').waitFor()
       await page.locator('.ranking-sensitivity-history-entry').first().locator('summary').click()
       await page.getByText('Persisted Monte Carlo robustness and rank acceptability').waitFor()
@@ -439,6 +507,29 @@ try {
       await page.getByLabel('زمان اجرا manual weight').fill('1')
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
+      const liveMatrix = await page.locator('.ranking-performance-matrix').evaluate(table => {
+        const rows = [...table.querySelectorAll('tbody tr')]
+        return {
+          alternatives: rows.map(row => row.querySelector('th input')?.value ?? ''),
+          matrix: rows.map(row => [...row.querySelectorAll('td input[type="number"]')].map(input => Number(input.value))),
+          directions: [...table.querySelectorAll('thead th select')].map(select => select.value)
+        }
+      })
+      assert.ok(liveMatrix.matrix.length >= 2 && liveMatrix.matrix.every(row => row.length === liveMatrix.directions.length && row.every(Number.isFinite)), 'TOPSIS reference must read the complete live performance matrix')
+      const reference = referenceTopsis(liveMatrix.matrix, [7, 2, 1], liveMatrix.directions)
+      const expectedRankingRows = reference.map((result, rank) => ({
+        alternative: liveMatrix.alternatives[result.alternativeIndex],
+        score: (result.score * 100).toFixed(2),
+        rank: rank + 1
+      }))
+      const excelReport = await verifyExcelExport(page, 'Export Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
+      assert.ok(excelReport.workbook.SheetNames.includes('Module report'), 'ranking Excel must contain the report worksheet')
+      for (const row of expectedRankingRows) {
+        assert.ok(excelReport.content.includes(row.alternative), `Excel must contain ranked alternative ${row.alternative}`)
+        assert.ok(excelReport.content.includes(row.score + '%'), `Excel must contain independently calculated TOPSIS score ${row.score}% for ${row.alternative}; content=${excelReport.content.slice(0, 3000)}`)
+        assert.ok(excelReport.content.includes('Rank ' + row.rank), `Excel must contain the expected rank ${row.rank} for ${row.alternative}`)
+      }
+      await verifyPdfScope(page, 'Print / Save PDF', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل', expectedRankingRows.flatMap(row => [row.alternative, row.score + '%', 'Rank ' + row.rank]))
     }
     if (method === 'TOPSIS + (AHP + BWM)') {
       const ahpShare = page.getByLabel('AHP contribution percentage')
@@ -522,7 +613,7 @@ try {
   await page.getByRole('button', { name: 'Add option' }).click()
   await page.getByLabel('گزینه اختصاصی دوم, معیار اختصاصی پروژه دوم score').fill('42')
   await verifyExcelExport(page, 'Export Excel', 'پروژه دوم مستقل', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
-  await verifyPdfScope(page, 'Print / Save PDF')
+  await verifyPdfScope(page, 'Print / Save PDF', 'پروژه دوم مستقل', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: '← All ranking projects' }).click()
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
   assert.equal(await page.getByText('معیار اختصاصی پروژه دوم').count(), 0,
@@ -760,8 +851,9 @@ try {
   await feasibilityProjectCard.click()
   await page.locator('.feasibility-project-export-root').waitFor({ state: 'visible' })
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمون رنگ کارت', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
-  await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  await verifyPdfScope(page, 'چاپ / ذخیره PDF', 'پروژه آزمون رنگ کارت', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   console.log('PASS: public PWA per-project Excel/PDF scope for two independent ranking projects and feasibility projects; ranking storage, methods, sensitivity, project cards, MOD-10 assessment and bilingual switching')
 } finally {
-  await browser.close()
+  await context.close()
+  await rm(profileDir, { recursive: true, force: true })
 }
