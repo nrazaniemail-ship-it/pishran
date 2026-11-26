@@ -254,9 +254,11 @@ function baseModel(project:FeasibilityProject):Model {
   }
   const sourceSalesSchedule=sourceInputs.productionSalesSchedule??[]
   const sourceByproductSchedule=sourceInputs.byproductSalesSchedule??[]
+  const preOperatingSalesPeriods=Array.from({length:Math.max(0,Number(report.firstOperatingYear)-reportYear)},(_,index)=>({period:String(index+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0}))
+  const byproductName=sourceByproductSchedule[0]?.productName??'محصول جانبی'
+  const byproductId=project.id+'-byproduct-'+(byproductName.toLowerCase().includes('extra')?'extra-dri':'scrape')
   const sourceSalesPeriods=[
-   {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
-   {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
+   ...preOperatingSalesPeriods,
    ...sourceSalesSchedule.map(row=>({...row,period:String(Number(row.period)-reportYear+1)})),
    ...(isHrCoilReference?[{period:String((operationEndParts[0]<=12&&operationEndParts[1]>1000?operationEndParts[1]:operationEndParts[0])+1-reportYear+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0}]:[]),
   ]
@@ -297,10 +299,8 @@ function baseModel(project:FeasibilityProject):Model {
    }]
   }
   if(sourceByproductSchedule.length){
-   const byproductId=project.id+'-byproduct-scrape'
    const byproductPeriods=[
-    {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
-    {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
+    ...preOperatingSalesPeriods.map(row=>({...row})), 
     ...sourceByproductSchedule.map(row=>({...row,period:String(Number(row.period)-reportYear+1)})),
     ...(isHrCoilReference?[{period:String((operationEndParts[0]<=12&&operationEndParts[1]>1000?operationEndParts[1]:operationEndParts[0])+1-reportYear+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0}]:[]),
    ].map(row=>({
@@ -314,14 +314,19 @@ function baseModel(project:FeasibilityProject):Model {
    }))
    financialForms.sales.push({
     productId:byproductId,unitOfMeasure:'تن',inventoryPolicy:'manual',finishedGoodsDaysCoverage:null,
-    productionStartPeriod:3,productionEndPeriod:17,periods:byproductPeriods,
+    productionStartPeriod:Number(report.firstOperatingYear)-reportYear+1,productionEndPeriod:Number(report.firstOperatingYear)-reportYear+sourceByproductSchedule.length,periods:byproductPeriods,
    })
   }
   const sourceLoanSchedule=sourceInputs.financingSchedule??[]
   if(sourceLoanSchedule.length){
-   financialForms.loans=[{
-    id:project.id+'-comfar-loan',
-    name:'تسهیلات بلندمدت مطابق برنامه گزارش',
+   const sourceLoanGroups=new Map<string,typeof sourceLoanSchedule>()
+   sourceLoanSchedule.forEach(row=>{
+    const group=row.loanType??'long-term'
+    sourceLoanGroups.set(group,[...(sourceLoanGroups.get(group)??[]),row])
+   })
+   financialForms.loans=[...sourceLoanGroups.entries()].map(([loanType,rows])=>({
+    id:project.id+'-comfar-'+loanType,
+    name:loanType==='short-term'?'تسهیلات کوتاه‌مدت سرمایه در گردش مطابق برنامه گزارش':'تسهیلات بلندمدت مطابق برنامه گزارش',
     currencyCode,
     marketOrigin:'local',
     annualRatePercent:null,
@@ -340,7 +345,7 @@ function baseModel(project:FeasibilityProject):Model {
     capitalizedInterestPercent:null,
     capitalizeUntilDate:'',
     fees:[],
-    manualPeriodSchedule:sourceLoanSchedule.map(row=>({
+    manualPeriodSchedule:rows.map(row=>({
      period:String(Number(row.period)-reportYear+1),
      drawdown:row.loanDisbursement,
      principal:row.principalRepayment,
@@ -348,7 +353,7 @@ function baseModel(project:FeasibilityProject):Model {
      capitalizedInterest:row.capitalizedInterest,
      closingBalance:row.closingDebt,
     })),
-   }]
+   }))
   }
   const sourceOperatingCosts=sourceInputs.operatingCostSchedule??[]
   if(sourceOperatingCosts.length){
@@ -378,7 +383,7 @@ function baseModel(project:FeasibilityProject):Model {
     const byproductId=project.id+'-byproduct-scrape'
     financialForms.productionCosts.push({
      id:project.id+'-byproduct-cost-unallocated',
-     metadata:{description:'هزینه مستقل محصول جانبی در گزارش تفکیک نشده است',currencyCode,marketOrigin:'local',escalationPercent:0,remarks:report.reportFile+'؛ صفحات ۳۹ تا ۴۲؛ گزارش هزینه تولید مستقل برای Scrape# ارائه نکرده است و هزینه‌ها به محصول اصلی تخصیص داده شده‌اند.',costCentreId:null},
+     metadata:{description:'هزینه مستقل '+byproductName+' در گزارش تفکیک نشده است',currencyCode,marketOrigin:'local',escalationPercent:0,remarks:report.reportFile+'؛ هزینه تولید مستقل برای '+byproductName+' ارائه نشده و هزینه‌ها به محصول اصلی تخصیص داده شده‌اند.',costCentreId:null},
      classification:'direct',productId:byproductId,basis:'period-adjustments',
      standardQuantity:null,standardUnitPrice:null,standardTotal:null,nominalCapacity:null,
      fixedPercent:null,variablePercent:null,
@@ -405,8 +410,9 @@ function baseModel(project:FeasibilityProject):Model {
   'اطلاعات CAPEX، مخارج پیش از تولید، بهره سرمایه‌ای‌شده و سرمایه در گردش از جداول تفصیلی گزارش مرجع وارد شده‌اند.',
   'ردیف‌های OPEX مربوط به سال مرجع '+sourceInputs.operatingCostYear+' هستند؛ اختلاف جمع ریزاقلام با خلاصه گزارش (پس از اصلاح ردیف‌های منبع): '+fmt(sourceCostVariance,2)+' '+report.currency+'.',
   'سهم هزینه متغیر گزارش: '+sourceInputs.variableCostSharePercent+'٪؛ سهم خارجی CAPEX گزارش: '+sourceInputs.foreignFixedInvestmentSharePercent+'٪. این نسبت‌ها تجمیعی‌اند و به تفکیک دارایی تخصیص داده نشده‌اند.',
-  'برنامه سالانه تولید و فروش از صفحه ۳۵: '+(sourceInputs.productionSalesSchedule??[]).map(row=>row.period+' تولید '+fmt(row.production,2)+' تن، فروش '+fmt(row.sales,2)+' تن، قیمت '+fmt(row.netUnitPrice,2)+' و درآمد '+fmt(row.salesRevenue,2)).join('؛ '),
-  'برنامه بدهی صفحات ۵۱ تا ۵۳: '+(sourceInputs.financingSchedule??[]).map(row=>row.period+' برداشت '+fmt(row.loanDisbursement,2)+'، بازپرداخت اصل '+fmt(row.principalRepayment,2)+'، بهره '+fmt(row.interestExpense,2)+'، مانده '+fmt(row.closingDebt,2)).join('؛ '),
+  'برنامه سالانه تولید و فروش محصولات اصلی و جانبی از جداول تفصیلی گزارش مرجع: '+(sourceInputs.productionSalesSchedule??[]).map(row=>row.period+' تولید '+fmt(row.production,2)+' تن، فروش '+fmt(row.sales,2)+' تن، قیمت '+fmt(row.netUnitPrice,2)+' و درآمد '+fmt(row.salesRevenue,2)).join('؛ '),
+  ...(sourceInputs.byproductSalesSchedule??[]).length?['برنامه فروش محصول جانبی '+byproductName+': '+sourceInputs.byproductSalesSchedule.map(row=>row.period+' فروش '+fmt(row.sales,2)+' تن، قیمت '+fmt(row.netUnitPrice,2)+' و درآمد '+fmt(row.salesRevenue,2)).join('؛ ')]:[],
+  'برنامه بدهی از جداول تفصیلی گزارش مرجع: '+(sourceInputs.financingSchedule??[]).map(row=>(row.loanType??'long-term')+' '+row.period+' برداشت '+fmt(row.loanDisbursement,2)+'، بازپرداخت اصل '+fmt(row.principalRepayment,2)+'، بهره '+fmt(row.interestExpense,2)+'، بهره سرمایه‌ای '+fmt(row.capitalizedInterest,2)+'، مانده '+fmt(row.closingDebt,2)).join('؛ '),
   ...(project.id==='comfar-hr-coil-200k'?['نرخ مالیات فقط برای ۱۴۰۵ و ۱۴۰۸ برابر ۵٪ و برای ۱۴۱۹ برابر ۲۵٪ از صفحه ۲ مستند است؛ نرخ سال‌های دیگر و دو دوره ساخت در این گزارش خلاصه به‌طور کامل مشخص نشده و عمداً حدس زده نمی‌شود.']:[]),
   'استهلاک کل سالانه صفحات ۲۴ تا ۲۷ در داده مرجع ثبت شده؛ ریز استهلاک دارایی‌به‌دارایی از این گزارش خلاصه قابل استخراج قطعی نیست.',
   ...sourceInputs.missingSourceDetails.map(item=>'اطلاعات گزارش برای ورود قطعی ارائه نشده است: '+item)
