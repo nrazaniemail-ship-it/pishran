@@ -20,10 +20,10 @@ const output = ts.transpileModule(source, {
 const repository = await import('data:text/javascript;base64,' + Buffer.from(output).toString('base64'))
 const modelSource = await readFile(new URL('../src/features/projects/FeasibilityWizard.tsx', import.meta.url), 'utf8')
 assert.doesNotMatch(modelSource, /leaveProjectBlank/)
-assert.doesNotMatch(modelSource, /project\\.id==='comfar-hr-plate-250k'\\?undefined/)
-assert.match(modelSource, /const projectComfarSourceInputs=project\\.templateId==='comfar-import'\\?COMFAR_PROJECT_INPUTS\\[project\\.id\\]:undefined/)
-assert.match(modelSource, /const legacyBlankComfarPlate=project\\.id==='comfar-hr-plate-250k'/)
-assert.match(modelSource, /project:legacyBlankComfarPlate\\?\\{\\.\\.\\.defaults\\.project/)
+assert.doesNotMatch(modelSource, /project\.id==='comfar-hr-plate-250k'\?undefined/)
+assert.match(modelSource, /const projectComfarSourceInputs=project\.templateId==='comfar-import'\?COMFAR_PROJECT_INPUTS\[project\.id\]:undefined/)
+assert.match(modelSource, /const legacyBlankComfarPlate=project\.id==='comfar-hr-plate-250k'/)
+assert.match(modelSource, /project:legacyBlankComfarPlate\?\{\.\.\.defaults\.project/)
 const legacyLabel = (...codeUnits) => String.fromCharCode(...codeUnits)
 for (const retiredModelMarker of [
   legacyLabel(83,116,101,101,108,32,83,108,97,98),
