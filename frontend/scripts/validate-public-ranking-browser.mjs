@@ -23,7 +23,7 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   assert.ok(moduleId && projectId && moduleId.endsWith(projectId), `Export controls must belong to the active project root: module=${moduleId}, project=${projectId}`)
   const workbookIdentity = value => value.normalize('NFKC').replace(/[\s_\-\u200c\u200d\u200e\u200f\u0640]+/g, '').toLocaleLowerCase()
   // The export slug and workbook identity intentionally omit the trailing edit-state suffix from long project names.
-  const expectedFilenameProject = expectedProject.replace(/\s+ویرایش‌شده$/u, '')
+  const expectedFilenameProject = expectedProject.replace(/[\s_\u200c]*ویرایش[\s_\u200c_]*شده$/u, '')
   const filenameIdentity = value => value.normalize('NFKC').replace(/[\s_\-\u200c\u200d\u200e\u200f\u0640]+/g, '').toLocaleLowerCase()
   assert.ok(workbookIdentity(content).includes(workbookIdentity(expectedFilenameProject)), `Excel workbook must identify the active project ${expectedFilenameProject}; workbook content: ${content.slice(0, 1800)}`)
   assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedFilenameProject)), `Excel filename must identify the active project ${expectedFilenameProject}; filename: ${download.suggestedFilename()}`)
