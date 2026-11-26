@@ -552,14 +552,15 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
    if(!alive)return
    if(!v){setM(baseModel(project));setLoaded(true);return}
    const defaults=baseModel(project)
-   const imported=project.templateId==='comfar-import'&&!!project.sourceReport
+   const leaveProjectBlank=project.id==='comfar-hr-plate-250k'
+   const imported=project.templateId==='comfar-import'&&!!project.sourceReport&&!leaveProjectBlank
    const hasPositiveRows=(rows:Row[]|undefined)=>Array.isArray(rows)&&rows.some(row=>Number(row.quantity)>0&&Number(row.unitPrice)>0)
    const savedFixedItems=Array.isArray(v.fixedInvestmentItems)?v.fixedInvestmentItems:[]
    const hasFixedAcquisitions=savedFixedItems.some(item=>(item.acquisitions??[]).some(acquisition=>Number(acquisition.quantity)>0&&Number(acquisition.unitPrice)>0))
    const savedForms=mergeProjectModelFinancialFormDrafts(v.financialForms)
    const defaultForms=defaults.financialForms
    const hasWorkingCapital=savedForms.workingCapital.some(component=>component.periodBalances.some(period=>period.amount!==null&&Number.isFinite(period.amount)))
-   const financialForms=imported?{
+   const financialForms=leaveProjectBlank?defaultForms:imported?{
     ...defaultForms,...savedForms,
     workingCapital:hasWorkingCapital?savedForms.workingCapital:defaultForms.workingCapital,
     tax:project.id==='comfar-hr-coil-200k'
@@ -571,25 +572,34 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
      discountRateSourceVerified:savedForms.economic.discountRateSourceVerified||defaultForms.economic.discountRateSourceVerified}
    }:savedForms
    const mergedFoundation=mergeProjectFoundation(v.foundation)
-   const resolvedFoundation=imported&&project.id==='comfar-hr-coil-200k'
+   const resolvedFoundation=leaveProjectBlank?defaults.foundation:imported&&project.id==='comfar-hr-coil-200k'
      ?{...mergedFoundation,planning:{...mergedFoundation.planning,projectEndDate:defaults.foundation.planning.projectEndDate},taxation:{...mergedFoundation.taxation,rates:[]}}
      :imported&&!v.foundation?.currencies?.localCurrencyCode?defaults.foundation:mergedFoundation
    setM({
     ...defaults,...v,
-    partners:Array.isArray(v.partners)?v.partners:defaults.partners,
-    partnerDistributionPercent:Number.isFinite(v.partnerDistributionPercent)?v.partnerDistributionPercent:defaults.partnerDistributionPercent,
+    partners:leaveProjectBlank?defaults.partners:Array.isArray(v.partners)?v.partners:defaults.partners,
+    partnerDistributionPercent:leaveProjectBlank?defaults.partnerDistributionPercent:Number.isFinite(v.partnerDistributionPercent)?v.partnerDistributionPercent:defaults.partnerDistributionPercent,
+    projectCategory:leaveProjectBlank?defaults.projectCategory:v.projectCategory??defaults.projectCategory,
+    analysisMode:leaveProjectBlank?defaults.analysisMode:v.analysisMode??defaults.analysisMode,
     stage:defaults.stage,
     foundation:resolvedFoundation,
     financialForms,
-    fixedInvestmentItems:(imported&&!hasFixedAcquisitions?defaults.fixedInvestmentItems:savedFixedItems).map(item=>({...item,depreciationBasis:item.depreciationBasis??'unresolved',acquisitions:item.acquisitions.map(acquisition=>({...acquisition,allocationBasis:acquisition.allocationBasis??'unallocated'})),depreciation:{...item.depreciation,lengthMonths:item.depreciation?.lengthMonths??0,firstDepreciationMonths:item.depreciation?.firstDepreciationMonths??12}})),
-    fixedInvestmentSeedVersion:Math.max(Number(v.fixedInvestmentSeedVersion)||0,defaults.fixedInvestmentSeedVersion),
-    startingFixedAssets:Array.isArray(v.startingFixedAssets)?v.startingFixedAssets:[],
-    project:{...defaults.project,...v.project},
-    capacity:{...defaults.capacity,...v.capacity},
-    market:{...defaults.market,...v.market},
-    capex:imported&&!hasPositiveRows(v.capex)?defaults.capex:(Array.isArray(v.capex)?v.capex:defaults.capex),
-    opex:imported&&!hasPositiveRows(v.opex)?defaults.opex:(Array.isArray(v.opex)?v.opex:defaults.opex),
-    scope:{...defaults.scope,...v.scope}
+    fixedInvestmentItems:leaveProjectBlank?defaults.fixedInvestmentItems:(imported&&!hasFixedAcquisitions?defaults.fixedInvestmentItems:savedFixedItems).map(item=>({...item,depreciationBasis:item.depreciationBasis??'unresolved',acquisitions:item.acquisitions.map(acquisition=>({...acquisition,allocationBasis:acquisition.allocationBasis??'unallocated'})),depreciation:{...item.depreciation,lengthMonths:item.depreciation?.lengthMonths??0,firstDepreciationMonths:item.depreciation?.firstDepreciationMonths??12}})),
+    fixedInvestmentSeedVersion:leaveProjectBlank?defaults.fixedInvestmentSeedVersion:Math.max(Number(v.fixedInvestmentSeedVersion)||0,defaults.fixedInvestmentSeedVersion),
+    startingFixedAssets:leaveProjectBlank?[]:Array.isArray(v.startingFixedAssets)?v.startingFixedAssets:[],
+    project:leaveProjectBlank?{...defaults.project,name:project.name,location:project.location}:{...defaults.project,...v.project},
+    capacity:leaveProjectBlank?defaults.capacity:{...defaults.capacity,...v.capacity},
+    market:leaveProjectBlank?defaults.market:{...defaults.market,...v.market},
+    products:leaveProjectBlank?defaults.products:Array.isArray(v.products)?v.products:defaults.products,
+    process:leaveProjectBlank?defaults.process:{...defaults.process,...v.process},
+    technical:leaveProjectBlank?defaults.technical:Array.isArray(v.technical)?v.technical:defaults.technical,
+    balance:leaveProjectBlank?defaults.balance:Array.isArray(v.balance)?v.balance:defaults.balance,
+    utilities:leaveProjectBlank?defaults.utilities:Array.isArray(v.utilities)?v.utilities:defaults.utilities,
+    risks:leaveProjectBlank?defaults.risks:Array.isArray(v.risks)?v.risks:defaults.risks,
+    finance:leaveProjectBlank?defaults.finance:{...defaults.finance,...v.finance},
+    capex:leaveProjectBlank?defaults.capex:imported&&!hasPositiveRows(v.capex)?defaults.capex:(Array.isArray(v.capex)?v.capex:defaults.capex),
+    opex:leaveProjectBlank?defaults.opex:imported&&!hasPositiveRows(v.opex)?defaults.opex:(Array.isArray(v.opex)?v.opex:defaults.opex),
+    scope:leaveProjectBlank?defaults.scope:{...defaults.scope,...v.scope}
    })
    setLoaded(true)
   }).catch(()=>setLoaded(true))
