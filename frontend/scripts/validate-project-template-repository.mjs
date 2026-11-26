@@ -44,8 +44,8 @@ assert.match(modelSource, /balance:blankCustomProject\?\[\]:stageRows/)
 assert.match(modelSource, /utilities:blankCustomProject\?\[\]:stageRows/)
 assert.match(modelSource, /const capexRows=sourceInputs&&report\?\[/)
 assert.match(modelSource, /const opexRows=sourceInputs&&report\?sourceInputs\.operatingCostRows\.map/)
-assert.match(modelSource, /equity:imported\?equityShare:\(blankTemplate\?0:40\),debt:imported\?debtShare:\(blankTemplate\?0:60\)/)
-assert.match(modelSource, /startYear:imported\?reportYear:\(blankTemplate\?0:1403\),constructionYears:imported\?report!\.constructionYears:\(blankTemplate\?0:2\)/)
+assert.match(modelSource, /equity:imported\?equityShare:\(\(blankTemplate\|\|leaveProjectBlank\)\?0:40\),debt:imported\?debtShare:\(\(blankTemplate\|\|leaveProjectBlank\)\?0:60\)/)
+assert.match(modelSource, /startYear:imported\?reportYear:\(\(blankTemplate\|\|leaveProjectBlank\)\?0:1403\),constructionYears:imported\?report!\.constructionYears:\(\(blankTemplate\|\|leaveProjectBlank\)\?0:2\)/)
 const store = await import(storeUrl)
 
 const project = (id, name, steelStage, templateId) => ({
