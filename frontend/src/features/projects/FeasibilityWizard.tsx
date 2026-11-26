@@ -302,7 +302,7 @@ function baseModel(project:FeasibilityProject):Model {
     {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
     {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
     ...sourceByproductSchedule.map(row=>({...row,period:String(Number(row.period)-reportYear+1)})),
-    ...(isHrCoilReference?[{period:String(Number(report.operationEnd.split('/').at(-1)??report.operationEnd)+1-reportYear+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0}]:[]),
+    ...(isHrCoilReference?[{period:String((operationEndParts[0]<=12&&operationEndParts[1]>1000?operationEndParts[1]:operationEndParts[0])+1-reportYear+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0}]:[]),
    ].map(row=>({
     period:row.period,salesQuantity:row.sales,netUnitPrice:row.netUnitPrice,salesTaxPercent:0,
     subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:row.openingInventory,
