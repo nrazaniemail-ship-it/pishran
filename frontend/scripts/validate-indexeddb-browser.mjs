@@ -21,6 +21,7 @@ const server = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--p
   stdio: 'ignore',
   env: { ...process.env, VITE_PREVIEW_BUILD: 'true' }
 })
+const serverExit = new Promise(resolve => server.once('exit', resolve))
 let browser
 try {
   let ready = false
@@ -319,5 +320,12 @@ try {
   console.log('PASS: native IndexedDB storage, project lifecycle, backup restore and undo')
 } finally {
   if (browser) await browser.close()
-  server.kill('SIGTERM')
+  if (server.exitCode === null && server.signalCode === null) {
+    server.kill('SIGTERM')
+    const exited = await Promise.race([serverExit.then(() => true), delay(5000).then(() => false)])
+    if (!exited) {
+      server.kill('SIGKILL')
+      await serverExit
+    }
+  }
 }
