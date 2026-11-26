@@ -120,5 +120,22 @@ assert.equal(page2.npvProject,31399764.27)
 assert.equal(page2.irrProjectPercent,48.31)
 assert.equal(page2.npvEquity,23579675.01)
 assert.equal(page2.irrEquityPercent,57.99)
+const projectDiscountedFlows=[-17384756.29,-8093664.03,7681874.07,9249148.03,8378728.89,7496952.94,6131826.91,3938468.45,3150774.76,2520619.81,2016495.85,1580499.30,1264399.44,1011519.55,809156.54,646953.66,517492.61,483273.78]
+const equityDiscountedFlows=[-11576704.49,-4186827.70,4798748.86,6560843.04,5917494.67,5230607.72,4133900.08,3112628.82,2394329.87,1841792.20,1416763.23,1067728.70,821329.77,631792.13,485958.45,373599.62,287345.28,268344.77]
+close(projectDiscountedFlows.reduce((total,value)=>total+value,0),page2.npvProject,'COMFAR pages 67–71 total-project NPV',0.02)
+close(equityDiscountedFlows.reduce((total,value)=>total+value,0),page2.npvEquity,'COMFAR pages 76–80 equity NPV',0.02)
+const projectNetCashFlows=[-13907805.03,-8093664.03,9602342.59,14451793.80,16364704.85,18303107.76,18712850.68,15024064.82,15024064.82,15024064.82,15024064.82,14719546.80,14719546.80,14719546.80,14718471.78,14710023.10,14708024.54,13735466.82]
+const equityNetCashFlows=[-8905157.30,-4186827.70,6238373.52,11087824.73,13000735.79,14939138.70,15348881.62,15024064.82,15024064.82,15024064.82,15024064.82,14719546.80,14719546.80,14719546.80,14718471.78,14710023.10,14708024.54,13735466.82]
+const irr=flows=>{
+ let low=-0.99,high=2
+ const value=rate=>flows.reduce((total,flow,index)=>total+flow/Math.pow(1+rate,index),0)
+ for(let iteration=0;iteration<120;iteration++){
+  const mid=(low+high)/2
+  if(value(mid)>0)low=mid;else high=mid
+ }
+ return (low+high)/2
+}
+close(irr(projectNetCashFlows),page2.irrProjectPercent/100,'COMFAR total-project IRR from page 67–71 cash flows',0.0002)
+close(irr(equityNetCashFlows),page2.irrEquityPercent/100,'COMFAR equity IRR from page 76–80 cash flows',0.0002)
 console.log('Hot-rolled coil product-by-product operating schedule and page 1–2 source reconciliation checks passed.')
 console.log('Hot-rolled coil COMFAR annual sales, factory-cost and debt-source schedules passed independent source-data checks.')
