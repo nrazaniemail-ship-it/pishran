@@ -68,7 +68,7 @@ async function readRankingProjectIndexes(page) {
     return {indexedDbNames,fallbackNames}
   })
 }
-async function verifyPdfScope(page, buttonName, expectedProject, excludedProject) {
+async function verifyPdfScope(page, buttonName, expectedProject, excludedProject, expectedFragments = []) {
   const root = activeExportRoot(page)
   await root.waitFor({ state: 'visible' })
   assert.equal(await root.locator('.module-export-actions').getAttribute('data-export-scope'), 'project', 'PDF export control must declare project-scoped output')
@@ -104,6 +104,7 @@ async function verifyPdfScope(page, buttonName, expectedProject, excludedProject
   const identity = value => value.normalize('NFKC').replace(/[\\p{P}\\p{Z}\\p{Cf}\\u0640]+/gu, '').toLocaleLowerCase()
   assert.ok(identity(pdfText).includes(identity(expectedProject)), `PDF bytes must contain the active project identity: ${expectedProject}; extracted text: ${pdfText.slice(0, 1600)}`)
   if (excludedProject) assert.ok(!identity(pdfText).includes(identity(excludedProject)), `PDF bytes must not contain another project's identity: ${excludedProject}`)
+  for (const fragment of expectedFragments) assert.ok(identity(pdfText).includes(identity(fragment)), `PDF bytes must contain the expected report value ${fragment}; extracted text: ${pdfText.slice(0, 2400)}`)
   await pdfDocument.destroy()
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
   assert.equal(await root.evaluate(element => element.classList.contains('module-export-print-target')), false, 'PDF print scope must be cleaned up after printing')
@@ -501,7 +502,7 @@ try
         assert.ok(excelReport.content.includes(row.score + '%'), `Excel must contain independently calculated TOPSIS score ${row.score}% for ${row.alternative}; content=${excelReport.content.slice(0, 3000)}`)
         assert.ok(excelReport.content.includes('Rank ' + row.rank), `Excel must contain the expected rank ${row.rank} for ${row.alternative}`)
       }
-      await verifyPdfScope(page, 'Print / Save PDF', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
+      await verifyPdfScope(page, 'Print / Save PDF', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل', expectedRankingRows.flatMap(row => [row.alternative, row.score + '%', 'Rank ' + row.rank]))
     }
     if (method === 'TOPSIS + (AHP + BWM)') {
       const ahpShare = page.getByLabel('AHP contribution percentage')
