@@ -11,14 +11,15 @@ export default function ModuleExportActions({moduleId,moduleTitle,language='fa'}
   try{
    const root=rootRef.current?.closest<HTMLElement>('[data-module-export-root]') ?? null
    if(!root)throw new Error(en?'Module report is not available.':'محتوای ماژول برای خروجی در دسترس نیست.')
+   const projectName=(root.querySelector<HTMLInputElement>('#ranking-project-edit-name, [data-project-name-input]')?.value.trim()||root.getAttribute('data-project-export-name')||moduleTitle).trim()
    const wb=XLSX.utils.book_new()
-   const overview:unknown[][]=[[en?'Pishran module report':'گزارش ماژول پیشران'],[en?'Module ID':'شناسه ماژول',moduleId],[en?'Module':'ماژول',moduleTitle],[en?'Generated at':'زمان تهیه',new Date().toLocaleString()],[en?'Content type':'نوع محتوا',en?'Visible module content and current form values':'محتوای قابل مشاهده ماژول و مقادیر فعلی فرم']]
+   const overview:unknown[][]=[[en?'Pishran module report':'گزارش ماژول پیشران'],[en?'Module ID':'شناسه ماژول',moduleId],[en?'Module':'ماژول',moduleTitle],[en?'Project':'پروژه',projectName],[en?'Generated at':'زمان تهیه',new Date().toLocaleString()],[en?'Content type':'نوع محتوا',en?'Visible module content and current form values':'محتوای قابل مشاهده ماژول و مقادیر فعلی فرم']]
    const contentNodes=Array.from(root.querySelectorAll('h1,h2,h3,h4,p,article,li,label')).filter(el=>visible(el)&&!el.closest('.module-export-actions')&&!el.querySelector('article')&&el.tagName!=='LABEL')
    for(const el of contentNodes){const value=(el as HTMLElement).innerText?.trim()||el.textContent?.trim();if(value)overview.push([el.tagName.toLowerCase(),value])}
    Array.from(root.querySelectorAll('label')).filter(visible).forEach(label=>{const input=label.querySelector('input,select,textarea') as HTMLInputElement|null;if(input){const value=input instanceof HTMLSelectElement?input.selectedOptions[0]?.textContent:input.value;if(value)overview.push([label.childNodes[0]?.textContent?.trim()||'Input',value])}})
    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(overview),en?'Module report':'گزارش ماژول')
    Array.from(root.querySelectorAll('table')).filter(visible).forEach((table,index)=>{const sheet=XLSX.utils.table_to_sheet(table,{raw:true});XLSX.utils.book_append_sheet(wb,sheet,('Table-'+(index+1)).slice(0,31))})
-   XLSX.writeFile(wb,clean(moduleId+'-'+moduleTitle)+'-'+new Date().toISOString().slice(0,10)+'.xlsx')
+   XLSX.writeFile(wb,clean(moduleId+'-'+projectName)+'-'+new Date().toISOString().slice(0,10)+'.xlsx')
    setMessage(en?'Excel workbook generated.':'فایل Excel ماژول آماده شد.')
   }catch(error){setMessage(error instanceof Error?error.message:(en?'Excel export failed.':'ساخت فایل Excel ناموفق بود.'))}
   finally{setBusy(false)}
