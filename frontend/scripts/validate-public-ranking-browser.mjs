@@ -101,10 +101,17 @@ async function verifyPdfScope(page, buttonName, expectedProject, excludedProject
     const textContent = await pdfPage.getTextContent()
     pdfText += ' ' + textContent.items.map(item => 'str' in item ? item.str : '').join(' ')
   }
-  const identity = value => value.normalize('NFKC').replace(/[\\p{P}\\p{Z}\\p{Cf}\\u0640]+/gu, '').toLocaleLowerCase()
-  assert.ok(identity(pdfText).includes(identity(expectedProject)), `PDF bytes must contain the active project identity: ${expectedProject}; extracted text: ${pdfText.slice(0, 1600)}`)
-  if (excludedProject) assert.ok(!identity(pdfText).includes(identity(excludedProject)), `PDF bytes must not contain another project's identity: ${excludedProject}`)
-  for (const fragment of expectedFragments) assert.ok(identity(pdfText).includes(identity(fragment)), `PDF bytes must contain the expected report value ${fragment}; extracted text: ${pdfText.slice(0, 2400)}`)
+  const identity = value => value.normalize('NFKC').replace(/[\p{P}\p{Z}\p{Cf}\u0640]+/gu, '').toLocaleLowerCase()
+  const pdfIdentity = identity(pdfText)
+  const containsPdfText = fragment => {
+    const expected = identity(fragment)
+    const reversedExpected = [...expected].reverse().join('')
+    return pdfIdentity.includes(expected) || pdfIdentity.includes(reversedExpected) ||
+      [...pdfIdentity].reverse().join('').includes(expected)
+  }
+  assert.ok(containsPdfText(expectedProject), \`PDF bytes must contain the active project identity in logical or visual RTL order: \${expectedProject}; extracted text: \${pdfText.slice(0, 1600)}\`)
+  if (excludedProject) assert.ok(!containsPdfText(excludedProject), \`PDF bytes must not contain another project's identity: \${excludedProject}\`)
+  for (const fragment of expectedFragments) assert.ok(containsPdfText(fragment), \`PDF bytes must contain the expected report value \${fragment}; extracted text: \${pdfText.slice(0, 2400)}\`)
   await pdfDocument.destroy()
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
   assert.equal(await root.evaluate(element => element.classList.contains('module-export-print-target')), false, 'PDF print scope must be cleaned up after printing')
