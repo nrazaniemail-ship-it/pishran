@@ -656,6 +656,9 @@ export type PeriodicProjectFinanceInput = {
   periodRevenue?: number[]
   /** Subsidy income included in product revenue but removed as a transfer in economic appraisal. */
   periodSubsidyIncome?: number[]
+  /** Other operating / liquidation income documented separately from product sales. */
+  periodOtherIncomeByPeriod?: number[]
+  periodOtherIncomeSourceReference?: string
   /** Optional product-led cost of sales by exact project period; fiscal-year totals must reconcile to annualVariableCost. */
   periodVariableCost?: number[]
   annualShortTermDepositInterest?: number[]
@@ -730,6 +733,8 @@ export type PeriodicProjectFinanceRow = {
   days: number
   revenue: number
   subsidyIncome: number
+  otherIncome: number
+  otherIncomeSourceReference?: string | null
   shortTermDepositInterest: number
   variableCost: number
   fixedCost: number
@@ -1145,6 +1150,14 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Annual tax-rate schedule does not cover every project fiscal period.')
     return empty()
   }
+  if (input.periodOtherIncomeByPeriod && (
+      input.periodOtherIncomeByPeriod.length !== periods.length ||
+      input.periodOtherIncomeByPeriod.some(amount => !validFinite(amount)) ||
+      !input.periodOtherIncomeSourceReference?.trim()
+  )) {
+    warnings.push('Other-income schedule requires one finite amount per project period and a source reference.')
+    return empty()
+  }
   if (input.taxAmountOverridesByPeriod && (
       input.taxAmountOverridesByPeriod.length !== periods.length ||
       input.taxAmountOverridesByPeriod.some(amount => !validFinite(amount) || amount < 0) ||
@@ -1235,7 +1248,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const salvageBookValueDisposed = index === periods.length - 1 ? Math.max(0,input.salvageBookValue ?? 0) : 0
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
     const abnormalWasteExpense=input.periodAbnormalWasteExpense?.[index]??0
-    const ebit = revenue[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - depreciation[index] +
+    const otherIncome=input.periodOtherIncomeByPeriod?.[index]??0
+    const ebit = revenue[index] + otherIncome - variableCost[index] - fixedCost[index] - abnormalWasteExpense - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
     const currentFiscalYearIndex=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
     const taxableDeduction=input.taxableDeductionsByPeriod?.[index]??0
@@ -1274,7 +1288,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       warnings.push('Shareholder working-capital funding must be finite and non-negative (period ' + (index + 1) + ').')
       return empty()
     }
-    const cfads = revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - periodTax.tax
+    const cfads = revenue[index] + otherIncome + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - periodTax.tax
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
@@ -1284,10 +1298,10 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const projectFreeCashFlow = ebit + shortTermDepositInterest[index] - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
-    const equityFreeCashFlow = -equityContribution[index] + revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense
+    const equityFreeCashFlow = -equityContribution[index] + revenue[index] + otherIncome + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
-    const periodCashChange = revenue[index] + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - periodTax.tax
+    const periodCashChange = revenue[index] + otherIncome + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - periodTax.tax
       - interestExpense - principal - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage + debtDrawdown
       + equityContribution[index] + equityWorkingCapitalContributionAmount
@@ -1297,7 +1311,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     if (fundingGap > 0.01) warnings.push('Funding shortfall at the end of project period ' + (index + 1) + ': ' + fundingGap.toFixed(2) + '.')
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
-      revenue:revenue[index],subsidyIncome:input.periodSubsidyIncome?.[index]??0,shortTermDepositInterest:shortTermDepositInterest[index],variableCost:variableCost[index],fixedCost:fixedCost[index],abnormalWasteExpense,depreciation:depreciation[index],ebit,
+      revenue:revenue[index],subsidyIncome:input.periodSubsidyIncome?.[index]??0,otherIncome,otherIncomeSourceReference:otherIncome!==0?input.periodOtherIncomeSourceReference??null:null,shortTermDepositInterest:shortTermDepositInterest[index],variableCost:variableCost[index],fixedCost:fixedCost[index],abnormalWasteExpense,depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
