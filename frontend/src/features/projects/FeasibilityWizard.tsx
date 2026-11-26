@@ -219,8 +219,15 @@ function baseModel(project:FeasibilityProject):Model {
  ]:[]
  if(imported&&report&&sourceInputs){
   foundation.planning.periodFrequency='annual'
+  const isHrCoilReference=project.id==='comfar-hr-coil-200k'
   foundation.planning.projectStartDate=jalaliMonthToIso(report.constructionStart)
-  foundation.planning.projectEndDate=jalaliMonthToIso(report.operationEnd,true)
+  const operationEndParts=report.operationEnd.split('/').map(Number)
+  const liquidationEnd=isHrCoilReference&&operationEndParts.length===2
+    ?(operationEndParts[0]<=12&&operationEndParts[1]>1000
+      ?String(operationEndParts[0])+'/'+String(operationEndParts[1]+1)
+      :String(operationEndParts[0]+1)+'/'+String(operationEndParts[1]))
+    :report.operationEnd
+  foundation.planning.projectEndDate=jalaliMonthToIso(liquidationEnd,true)
   foundation.planning.fiscalYearStartMonth=3
   foundation.planning.balanceDateMonth=3
   foundation.planning.balanceDateDay=20
@@ -232,7 +239,6 @@ function baseModel(project:FeasibilityProject):Model {
   foundation.discounting.method='manual'
   foundation.discounting.financialRatePercent=report.investmentNpvRate
   foundation.taxation.system='corporate'
-  const isHrCoilReference=project.id==='comfar-hr-coil-200k'
   const sourceTaxAmounts=isHrCoilReference?(sourceInputs.taxAmountSchedule??[]):[]
   const sourceTaxRates=isHrCoilReference
     ?[]
@@ -252,6 +258,7 @@ function baseModel(project:FeasibilityProject):Model {
    {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
    {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
    ...sourceSalesSchedule.map(row=>({...row,period:String(Number(row.period)-reportYear+1)})),
+   ...(isHrCoilReference?[{period:String(Number(report.operationEnd.split('/').at(-1)??report.operationEnd)+1-reportYear+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0}]:[]),
   ]
   if(sourceSalesSchedule.length){
    financialForms.sales=[{
@@ -259,8 +266,8 @@ function baseModel(project:FeasibilityProject):Model {
     unitOfMeasure:'تن',
     inventoryPolicy:'manual',
     finishedGoodsDaysCoverage:null,
-    productionStartPeriod:1,
-    productionEndPeriod:sourceSalesSchedule.length,
+    productionStartPeriod:Number(report.firstOperatingYear)-reportYear+1,
+    productionEndPeriod:Number(report.firstOperatingYear)-reportYear+sourceSalesSchedule.length,
     periods:sourceSalesPeriods.map(row=>({
      period:row.period,
      salesQuantity:row.sales,
@@ -295,6 +302,7 @@ function baseModel(project:FeasibilityProject):Model {
     {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
     {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
     ...sourceByproductSchedule.map(row=>({...row,period:String(Number(row.period)-reportYear+1)})),
+    ...(isHrCoilReference?[{period:String(Number(report.operationEnd.split('/').at(-1)??report.operationEnd)+1-reportYear+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0}]:[]),
    ].map(row=>({
     period:row.period,salesQuantity:row.sales,netUnitPrice:row.netUnitPrice,salesTaxPercent:0,
     subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:row.openingInventory,
