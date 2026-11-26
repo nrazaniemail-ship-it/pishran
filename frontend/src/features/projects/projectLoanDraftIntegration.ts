@@ -52,6 +52,46 @@ export function buildProjectLoanDraftIntegration(
     issues.push('Every loan facility requires a unique identifier and a name.')
   for(const loan of drafts){
     const prefix='Facility '+(loan.name||loan.id)+': '
+    if(loan.manualPeriodSchedule?.length){
+      if(loan.marketOrigin!=='local')issues.push(prefix+'documented manual schedule overrides currently require a local-currency facility.')
+      const byPeriod=new Map<number,NonNullable<LoanFacilityFormDraft['manualPeriodSchedule']>[number]>()
+      for(const row of loan.manualPeriodSchedule){
+        const period=Number(row.period)
+        if(!Number.isInteger(period)||period<1||period>periods.length||byPeriod.has(period)||
+          ![row.drawdown,row.principal,row.interestExpense,row.capitalizedInterest,row.closingBalance].every(value=>Number.isFinite(value)&&value>=0)){
+          issues.push(prefix+'manual schedule rows require unique in-calendar period indexes and finite non-negative amounts.')
+          continue
+        }
+        byPeriod.set(period,row)
+      }
+      if(issues.some(issue=>issue.startsWith(prefix)))continue
+      let openingBalance=0
+      const rows:PeriodicLoanRow[]=periods.map((_,index)=>{
+        const period=index+1,source=byPeriod.get(period)
+        const drawdown=source?.drawdown??0,principal=source?.principal??0
+        const interestExpense=source?.interestExpense??0,capitalizedInterest=source?.capitalizedInterest??0
+        const closingBalance=source?.closingBalance??openingBalance
+        if(Math.abs(openingBalance+drawdown+capitalizedInterest-principal-closingBalance)>0.05)
+          issues.push(prefix+'manual debt balance does not reconcile in period '+period+' (opening + drawdown + capitalized interest - principal must equal closing balance).')
+        const row:PeriodicLoanRow={period,drawdown,openingBalance,periodRatePercent:0,interestExpense,capitalizedInterest,financingFeeExpense:0,commitmentFeeExpense:0,capitalizedFinancingFees:0,principal,closingBalance,debtService:principal+interestExpense}
+        openingBalance=closingBalance
+        return row
+      })
+      if(issues.some(issue=>issue.startsWith(prefix)))continue
+      const firstPrincipal=rows.findIndex(row=>row.principal>0)
+      const drawdowns=rows.map(row=>row.drawdown)
+      loans.push({id:loan.id,input:{
+        annualRatePercent:0,drawdowns,repaymentMethod:'custom',
+        repaymentStartPeriod:firstPrincipal>=0?firstPrincipal+1:periods.length,
+        gracePeriods:0,termPeriods:Math.max(1,rows.filter(row=>row.principal>0).length),
+        capitalizeInterest:false,rateConversion:'effective-annual-by-actual-days',
+        periodsPerYear:frequency??1,openingBalance:0,
+        customPrincipalRepayments:rows.filter(row=>row.principal>0).map(row=>({period:row.period,amount:row.principal})),
+        interestConvention:'comfar-months-plus-360',
+      }})
+      loanScheduleOverrides[loan.id]=rows
+      continue
+    }
     if(loan.annualRatePercent===null||!Number.isFinite(loan.annualRatePercent)||loan.annualRatePercent<0)
       issues.push(prefix+'enter a non-negative base annual interest rate.')
     if(loan.openingBalance===null||!Number.isFinite(loan.openingBalance)||loan.openingBalance<0)
