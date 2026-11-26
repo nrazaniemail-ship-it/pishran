@@ -387,9 +387,9 @@ function baseModel(project:FeasibilityProject):Model {
    }
   }
   financialForms.workingCapital=[
-   {id:project.id+'-wc-inventory',name:'موجودی کالا',category:'inventory',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:sourceInputs.workingCapital.map(period=>({period:period.period,amount:period.inventory}))},
-   {id:project.id+'-wc-cash',name:'موجودی نقد',category:'cash',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:sourceInputs.workingCapital.map(period=>({period:period.period,amount:period.cash}))},
-   ...(sourceInputs.workingCapital.some(period=>(period.payables??0)>0)?[{id:project.id+'-wc-payables',name:'حساب‌های پرداختنی',category:'payables' as const,minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined' as const,periodBalances:sourceInputs.workingCapital.map(period=>({period:period.period,amount:period.payables??0}))}]:[]),
+   {id:project.id+'-wc-inventory',name:'موجودی کالا',category:'inventory',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:sourceInputs.workingCapital.map(period=>({period:String(Number(period.period)-reportYear+1),amount:period.inventory}))},
+   {id:project.id+'-wc-cash',name:'موجودی نقد',category:'cash',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:sourceInputs.workingCapital.map(period=>({period:String(Number(period.period)-reportYear+1),amount:period.cash}))},
+   ...(sourceInputs.workingCapital.some(period=>(period.payables??0)>0)?[{id:project.id+'-wc-payables',name:'حساب‌های پرداختنی',category:'payables' as const,minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined' as const,periodBalances:sourceInputs.workingCapital.map(period=>({period:String(Number(period.period)-reportYear+1),amount:period.payables??0}))}]:[]),
   ]
   financialForms.economic={...financialForms.economic,discountRatePercent:report.investmentNpvRate,discountRateSourceReference:report.reportFile+'؛ نرخ تنزیل گزارش، صفحه ۲',discountRateSourceVerified:true}
  }
