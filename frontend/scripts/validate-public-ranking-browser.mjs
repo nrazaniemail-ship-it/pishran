@@ -126,6 +126,24 @@ try {
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
+  const storageNamesAfterSecondProject=await page.evaluate(async()=>{
+    let indexedDbNames=[]
+    try{
+      const db=await new Promise(resolve=>{const request=indexedDB.open('pishran_store');request.onsuccess=()=>resolve(request.result);request.onerror=()=>resolve(null)})
+      if(db){
+        try{
+          const record=await new Promise((resolve,reject)=>{const request=db.transaction('kv','readonly').objectStore('kv').get('mod10-ranking-projects:v1');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})
+          indexedDbNames=Array.isArray(record?.value)?record.value.map(item=>({id:item.id,name:item.name,updatedAt:item.updatedAt})):[]
+        }finally{db.close()}
+      }
+    }catch{}
+    let fallbackNames=[]
+    try{const fallback=JSON.parse(localStorage.getItem('pishran_mod10-ranking-projects:v1')??'null');fallbackNames=Array.isArray(fallback)?fallback.map(item=>({id:item.id,name:item.name,updatedAt:item.updatedAt})):[]}catch{}
+    return {indexedDbNames,fallbackNames}
+  })
+  console.log('Ranking project indexes after creating project 2:',JSON.stringify(storageNamesAfterSecondProject))
+  const expectedStoredName='پروژه آزمایش رتبه‌بندی ویرایش‌شده'
+  assert.ok(storageNamesAfterSecondProject.indexedDbNames.some(item=>item.name===expectedStoredName)&&storageNamesAfterSecondProject.fallbackNames.some(item=>item.name===expectedStoredName),'renamed project must remain in both storage indexes after creating project 2')
   const projectButtons=page.locator('.ranking-project-open')
   const visibleProjectNames=await projectButtons.allTextContents()
   console.log('Ranking project cards after creating project 2:',JSON.stringify(visibleProjectNames))
