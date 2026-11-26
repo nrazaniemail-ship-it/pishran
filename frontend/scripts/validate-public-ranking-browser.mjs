@@ -109,7 +109,7 @@ async function verifyPdfScope(page, buttonName, expectedProject, excludedProject
     return pdfIdentity.includes(expected) || pdfIdentity.includes(reversedExpected) ||
       [...pdfIdentity].reverse().join('').includes(expected)
   }
-  const distinctiveTokens = value => value.split(/\\s+/u).map(identity).filter(token => token && token !== identity('پروژه') && token !== identity('رتبه‌بندی'))
+  const distinctiveTokens = value => value.split(/\s+/u).map(identity).filter(token => token && token !== identity('پروژه') && token !== identity('رتبه‌بندی'))
   const expectedTokens = distinctiveTokens(expectedProject)
   assert.ok(expectedTokens.length > 0 && expectedTokens.every(containsPdfText),
     'PDF bytes must contain all distinctive active project-name tokens in logical or visual RTL order: ' + expectedProject + '; extracted text: ' + pdfText.slice(0, 1600))
