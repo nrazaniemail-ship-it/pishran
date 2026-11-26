@@ -27,7 +27,7 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   const filenameIdentity = value => value.normalize('NFKC').replace(/[\p{P}\p{Z}\p{Cf}\u0640]+/gu, '').toLocaleLowerCase()
   assert.ok(workbookIdentity(content).includes(workbookIdentity(expectedFilenameProject)), `Excel workbook must identify the active project ${expectedFilenameProject}; workbook content: ${content.slice(0, 1800)}`)
   assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedFilenameProject)), `Excel filename must identify the active project ${expectedFilenameProject}; filename: ${download.suggestedFilename()}`)
-  assert.ok(!/\\s/u.test(download.suggestedFilename()), `Excel filename must normalize whitespace to hyphens; filename: ${download.suggestedFilename()}`)
+  assert.ok(!/\s/u.test(download.suggestedFilename()), `Excel filename must normalize whitespace to hyphens; filename: ${download.suggestedFilename()}`)
   assert.ok(!content.includes(excludedProject.normalize('NFC')), `Excel export must not leak another project: ${excludedProject}`)
 }
 async function readRankingProjectIndexes(page) {
