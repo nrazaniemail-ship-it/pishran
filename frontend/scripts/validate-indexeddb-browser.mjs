@@ -200,6 +200,21 @@ try {
     } else {
       assert.equal(persisted.financialForms.tax.rates.length, 15, item.id + ' must include all 15 annual tax periods')
     }
+    if (item.id === 'comfar-hr-plate-250k') {
+      assert.equal(persisted.financialForms.sales.length, 2, 'Plate and Scrape# sales schedules must both be imported')
+      assert.equal(persisted.financialForms.sales[0].periods.length, 17, 'Plate sales schedule must include construction periods and all 15 operating years')
+      assert.equal(persisted.financialForms.sales[0].periods[2].salesQuantity, 175000)
+      assert.equal(persisted.financialForms.sales[0].periods[2].netUnitPrice, 193.58)
+      assert.equal(persisted.financialForms.sales[1].periods[2].salesQuantity, 21875)
+      assert.equal(persisted.financialForms.loans.length, 1, 'COMFAR long-term loan schedule must be imported')
+      const debtSchedule = persisted.financialForms.loans[0].manualPeriodSchedule
+      assert.equal(debtSchedule.length, 8)
+      assert.equal(debtSchedule[0].drawdown, 6238555.38)
+      assert.equal(debtSchedule[2].capitalizedInterest, 3738117.98)
+      assert.equal(debtSchedule.at(-1).closingBalance, 0)
+      assert.ok(Math.abs(debtSchedule.reduce((sum, row) => sum + row.principal, 0) - 21346939.92) < 0.02)
+      assert.ok(Math.abs(debtSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 17369293.32) < 0.02)
+    }
 
     assert.equal(persisted.foundation.currencies.localCurrencyCode, item.currency)
     assert.equal(persisted.financialForms.workingCapital.length, item.workingCapitalComponents)
