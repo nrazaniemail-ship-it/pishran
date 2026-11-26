@@ -209,7 +209,21 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1405', inventory: 2855059.33, cash: 105386.57 },
       ...Array.from({ length: 12 }, (_, index) => ({ period: String(1406 + index), inventory: 2855056.74, cash: 105355.87 })),
     ],
-    missingSourceDetails: ['مقادیر و مشخصات کلاف گرم ورودی و ضریب تبدیل به کلاف سرد', 'مصرف ویژه اسید، روغن نورد، آب و برق', 'مقادیر مقداری فروش و قیمت واحد محصول', 'عمر مفید و روش استهلاک تفکیکی دارایی‌ها', 'نرخ سود و جزئیات قرارداد تسهیلات'],
+    salesUnitPrice: 395,
+    salesPriceSource: 'COMFAR III Expert، صفحات ۲۹ تا ۳۱؛ قیمت فروش خالص متوسط هر تن کلاف سرد',
+    productionSalesSchedule: [
+      { period: '1403', openingInventory: 0, production: 162222.22, sales: 160000, closingInventory: 2222.22, netUnitPrice: 395, salesRevenue: 63200000 },
+      { period: '1404', openingInventory: 2222.22, production: 180277.78, sales: 180000, closingInventory: 2500, netUnitPrice: 395, salesRevenue: 71100000 },
+      { period: '1405', openingInventory: 2500, production: 200277.78, sales: 200000, closingInventory: 2777.78, netUnitPrice: 395, salesRevenue: 79000000 },
+      ...Array.from({ length: 12 }, (_, index) => ({ period: String(1406 + index), openingInventory: 2777.78, production: 200000, sales: 200000, closingInventory: 2777.78, netUnitPrice: 395, salesRevenue: 79000000 })),
+    ],
+    financingSchedule: [
+      { period: '1402', loanDisbursement: 5000000, principalRepayment: 0, interestExpense: 0, capitalizedInterest: 350000, closingDebt: 5350000 },
+      { period: '1403', loanDisbursement: 0, principalRepayment: 1327878.79, interestExpense: 1366423.77, capitalizedInterest: 0, closingDebt: 4022121.21 },
+      { period: '1404', loanDisbursement: 0, principalRepayment: 1740578.22, interestExpense: 953724.34, capitalizedInterest: 0, closingDebt: 2281542.99 },
+      { period: '1405', loanDisbursement: 0, principalRepayment: 2281542.99, interestExpense: 412759.57, capitalizedInterest: 0, closingDebt: 0 },
+    ],
+    missingSourceDetails: ['مقادیر و مشخصات کلاف گرم ورودی و ضریب تبدیل به کلاف سرد', 'مصرف ویژه اسید، روغن نورد، آب و برق', 'عمر مفید و روش استهلاک تفکیکی دارایی‌ها', 'نرخ قراردادی و جزئیات وثایق و کارمزد تسهیلات'],
   },
   'comfar-integrated-steel-dri': {
     fixedInvestment: [
