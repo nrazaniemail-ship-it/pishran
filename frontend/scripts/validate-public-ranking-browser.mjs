@@ -121,7 +121,7 @@ try {
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
@@ -188,10 +188,10 @@ try {
   assert.ok(hasRestoredProject,
     'renamed ranking project must be recoverable from IndexedDB or the supported localStorage fallback after a full page reload; storage=' + JSON.stringify(restoredRankingProjects))
   await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).waitFor()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
   await page.goBack()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
   await page.getByRole('button', { name: 'گفت‌وگو با دستیار' }).click()
   const answer = page.getByLabel('پاسخ شما')
   await answer.fill('مطمئن نیستم دقیقاً چه نوع تصمیمی است')
@@ -244,7 +244,7 @@ try {
   await page.waitForTimeout(500)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
   assert.equal(await page.getByLabel('امتیاز هزینه آزمون زنده برای گزینه زنده الف').inputValue(), '90',
     'public WSM data must persist after reload')
 
@@ -316,7 +316,7 @@ try {
       await page.getByText(/optimistic/).last().waitFor()
       await page.reload({ waitUntil: 'domcontentloaded' })
       await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
-      await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+      await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
       await page.getByTestId('ranking-category-advanced').click()
       await page.getByRole('button', { name: 'BWM + TOPSIS', exact: true }).click()
       await page.getByText('Sensitivity history (1)').waitFor()
@@ -365,7 +365,7 @@ try {
   await page.waitForTimeout(600)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
   await page.getByTestId('ranking-category-advanced').click()
   await page.getByText('Calculation history (4)').waitFor()
   await page.getByRole('button', { name: 'AHP + TOPSIS', exact: true }).click()
@@ -416,14 +416,14 @@ try {
   await verifyExcelExport(page, 'Export Excel', 'پروژه دوم مستقل', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await verifyPdfScope(page, 'Print / Save PDF')
   await page.getByRole('button', { name: '← All ranking projects' }).click()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
   assert.equal(await page.getByText('معیار اختصاصی پروژه دوم').count(), 0,
     'second-project criteria must not leak into the first project')
   assert.equal(await page.getByLabel('گزینه زنده الف, هزینه آزمون زنده score').inputValue(), '90',
     'first-project WSM scores must remain unchanged after editing a second project')
 
   await page.getByRole('button', { name: '← All ranking projects' }).click()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه دوم مستقل' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه دوم مستقل' }).first().click()
   assert.equal(await page.getByLabel('گزینه اختصاصی دوم, معیار اختصاصی پروژه دوم score').inputValue(), '42',
     'second-project WSM scores must persist independently')
   await page.getByTestId('ranking-category-advanced').click()
@@ -438,7 +438,7 @@ try {
   await page.waitForTimeout(600)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' }).click()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه دوم مستقل' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه دوم مستقل' }).first().click()
   assert.equal(await page.getByLabel('گزینه اختصاصی دوم, معیار اختصاصی پروژه دوم score').inputValue(), '42',
     'second-project WSM score must survive reload before opening advanced methods')
   await page.getByTestId('ranking-category-advanced').click()
@@ -454,7 +454,7 @@ try {
   await page.getByText('Calculation history (1)').waitFor()
   await page.getByText('Sensitivity history (1)').waitFor()
   await page.getByRole('button', { name: '← All ranking projects' }).click()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).click()
+  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
   await page.getByTestId('ranking-category-advanced').click()
   await page.getByRole('button', { name: 'TOPSIS', exact: true }).click()
   assert.equal(await page.getByLabel('هزینه سرمایه‌گذاری manual weight').inputValue(), '7',
