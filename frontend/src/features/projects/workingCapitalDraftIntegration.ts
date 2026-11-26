@@ -32,6 +32,7 @@ export function buildWorkingCapitalScheduleFromDrafts(
   drafts: Pick<ProjectModelFinancialFormDrafts, 'workingCapital'>,
   periods: ProjectCalendarPeriod[],
   openingWorkingCapital: number,
+  recoverTerminalWorkingCapital = true,
 ): WorkingCapitalDraftSchedule {
   const issues: string[] = []
   const count = periods.length
@@ -139,8 +140,8 @@ export function buildWorkingCapitalScheduleFromDrafts(
     terminalRecoveryAmount: 0,
   }
   const closingWorkingCapital = [...totals]
-  const terminalRecoveryAmount = count ? closingWorkingCapital[count - 1] : 0
-  if (count) closingWorkingCapital[count - 1] = 0
+  const terminalRecoveryAmount = recoverTerminalWorkingCapital && count ? closingWorkingCapital[count - 1] : 0
+  if (recoverTerminalWorkingCapital && count) closingWorkingCapital[count - 1] = 0
   const changeInWorkingCapital = closingWorkingCapital.map((closing, index) =>
     closing - (index === 0 ? openingWorkingCapital : closingWorkingCapital[index - 1]))
   return {
@@ -167,8 +168,9 @@ export function bindWorkingCapitalDraftsToPeriodicFinance(
   input: PeriodicProjectFinanceInput,
   drafts: Pick<ProjectModelFinancialFormDrafts, 'workingCapital'>,
   openingWorkingCapital: number,
+  recoverTerminalWorkingCapital = true,
 ): PeriodicFinanceWorkingCapitalBinding {
-  const schedule = buildWorkingCapitalScheduleFromDrafts(drafts, input.periods, openingWorkingCapital)
+  const schedule = buildWorkingCapitalScheduleFromDrafts(drafts, input.periods, openingWorkingCapital, recoverTerminalWorkingCapital)
   if (!schedule.valid) return { valid: false, issues: schedule.issues, financeInput: null, schedule }
   return {
     valid: true,
