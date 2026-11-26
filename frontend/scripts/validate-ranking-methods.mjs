@@ -19,6 +19,17 @@ test('BWM validates anchor judgments and produces normalized priorities',()=>{
  const r=bwm(0,2,[1,3,5],[5,2,1]); assert.ok(Math.abs(r.weights.reduce((s,v)=>s+v,0)-1)<1e-12); assert.ok(r.weights[0]>r.weights[1]&&r.weights[1]>r.weights[2]); assert.ok(Number.isFinite(r.xi));
  assert.throws(()=>bwm(0,2,[2,3,5],[5,2,1]),/must equal 1/);
 });
+test('BWM solves the exact minimax LP instead of returning a subgradient approximation',()=>{
+ const balanced=bwm(0,2,[1,3,5],[5,2,1]);
+ const expectedWeights=[0.65,0.225,0.125];
+ balanced.weights.forEach((value,index)=>assert.ok(Math.abs(value-expectedWeights[index])<1e-8));
+ assert.ok(Math.abs(balanced.xi-0.025)<1e-8);
+ const highConflict=bwm(0,2,[1,9,9],[9,9,1]);
+ const exactWeights=[0.8181818181818182,0.1291866028708134,0.05263157894736842];
+ highConflict.weights.forEach((value,index)=>assert.ok(Math.abs(value-exactWeights[index])<1e-7));
+ assert.ok(Math.abs(highConflict.xi-0.3444976076555024)<1e-7,
+  'BWM xi must match the independently solved minimax linear program');
+});
 test('expert BWM aggregation uses geometric means',()=>{
  const r=aggregateBwmJudgments([{bestToOthers:[1,3,5],othersToWorst:[5,2,1]},{bestToOthers:[1,5,7],othersToWorst:[7,3,1]}]); assert.ok(Math.abs(r.bestToOthers[1]-Math.sqrt(15))<1e-10);
 });
