@@ -36,6 +36,35 @@ assert.equal(input.financingSchedule.length,7)
 close(input.financingSchedule[0].loanDisbursement,3816496,'1403 documented drawdown')
 close(input.financingSchedule[1].loanDisbursement,1794355,'1404 documented drawdown')
 close(input.financingSchedule[1].closingDebt,8909484.06,'1404 closing debt')
+assert.ok(input.depreciationSchedule?.length,'COMFAR aggregate depreciation output must remain available as a reference')
+assert.ok(input.missingSourceDetails.includes('عمر مفید و روش استهلاک تفکیکی هر دارایی'),'The HRCR200 source must disclose the missing asset-by-asset depreciation evidence')
+
+const formulaSource=await readFile(new URL('../src/features/projects/projectModelFormulaRules.ts',import.meta.url),'utf8')
+const formulaUrl='data:text/javascript;base64,'+Buffer.from(ts.transpileModule(formulaSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64')
+const financialSource=await readFile(new URL('../src/features/steel/financialModel.ts',import.meta.url),'utf8')
+let financialJs=ts.transpileModule(financialSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+financialJs=financialJs.replace(/from ['"]\.\.\/projects\/projectModelFormulaRules['"]/, 'from "'+formulaUrl+'"')
+const financialUrl='data:text/javascript;base64,'+Buffer.from(financialJs).toString('base64')
+const financial=await import(financialUrl)
+const testAsset={
+ id:'asset-evidence-test',description:'ماشین‌آلات نمونه',assetClass:'machinery',origin:'local',currencyCode:'IRR',costCentreId:'',
+ depreciation:{method:'linear-zero',startingAt:'1403',ratePercent:null,lengthYears:5,lengthMonths:0,firstDepreciationMonths:12,scrapPercent:0},
+ depreciationBasis:'unresolved',
+ acquisitions:[{id:'asset-evidence-acq',period:'1403',quantity:1,unitPrice:1000,currencyCode:'IRR',exchangeRateToLocal:null,allocationBasis:'source-period'}],
+ sales:[],
+}
+const unresolvedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([testAsset],1403,3,'annual')
+assert.equal(unresolvedDepreciation.assets[0]?.method,'none','An unresolved asset must stay on book cost without calculated depreciation')
+const unresolvedLifecycle=financial.calculateComfarAssetLifecycle(unresolvedDepreciation.assets,[],3)
+assert.equal(unresolvedLifecycle.depreciation.periods.reduce((total,row)=>total+row.depreciation,0),0,'Unverified depreciation must be zero in the integrated asset lifecycle')
+const conflictedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{...testAsset,depreciationBasis:'source-conflict'}],1403,3,'annual')
+assert.equal(conflictedDepreciation.assets[0]?.method,'none','Conflicting depreciation evidence must not produce depreciation')
+const documentedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{...testAsset,depreciationBasis:'source-table'}],1403,3,'annual')
+assert.equal(documentedDepreciation.assets[0]?.method,'linear-to-zero','A source-table asset-level schedule may calculate depreciation')
+const documentedLifecycle=financial.calculateComfarAssetLifecycle(documentedDepreciation.assets,[],3)
+close(documentedLifecycle.depreciation.periods[0].depreciation,200,'Documented 1,000 cost / 5-year asset depreciation')
+const confirmedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{...testAsset,depreciationBasis:'user-confirmed'}],1403,3,'annual')
+assert.equal(confirmedDepreciation.assets[0]?.method,'linear-to-zero','Explicit per-asset user confirmation may calculate depreciation')
 const engineSource=await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts',import.meta.url),'utf8')
 const engineUrl='data:text/javascript;base64,'+Buffer.from(ts.transpileModule(engineSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64')
 const flowSource=await readFile(new URL('../src/features/projects/inventoryProductionFlow.ts',import.meta.url),'utf8')
