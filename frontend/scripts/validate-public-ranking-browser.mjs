@@ -133,7 +133,8 @@ try {
   }
   await page.getByLabel('نام پروژه رتبه‌بندی جدید').fill('پروژه آزمایش رتبه‌بندی')
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
-  await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
+  await page.locator('#ranking-project-edit-name').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
+  assert.equal(await page.locator('#ranking-project-edit-name').inputValue(), 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'the exact MOD-10 edit-name control must receive the requested new name before saving')
   await page.getByRole('button', { name: 'ذخیره نام' }).click()
   const renamedProjectStorageName='پروژه آزمایش رتبه‌بندی ویرایش‌شده'
   try {
