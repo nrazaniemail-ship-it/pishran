@@ -41,7 +41,8 @@ async function verifyPdfScope(page, buttonName) {
   assert.equal(await root.evaluate(element => element.classList.contains('module-export-print-target')), false, 'PDF print scope must be cleaned up after printing')
 }
 
-const site = new URL(`?deploy=${process.env.GITHUB_SHA ?? 'latest'}`, 'https://nrazaniemail-ship-it.github.io/pishran/').toString()
+const rankingBaseUrl=process.env.PISHRA_RANKING_BASE_URL??'https://nrazaniemail-ship-it.github.io/pishran/'
+const site = new URL(`?deploy=${process.env.GITHUB_SHA ?? 'latest'}`, rankingBaseUrl).toString()
 const response = await fetch(site, { redirect: 'follow' })
 assert.equal(response.ok, true, 'public PWA homepage must respond successfully')
 const html = await response.text()
