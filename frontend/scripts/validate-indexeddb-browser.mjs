@@ -17,10 +17,11 @@ const backupSource = (await readFile(new URL('../src/core/storage/backupService.
 const backupUrl = toDataUrl(backupSource)
 
 const previewUrl = 'http://127.0.0.1:4179/'
-const server = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', '4179', '--strictPort'], {
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4179', '--strictPort'], {
   stdio: 'ignore',
   env: { ...process.env, VITE_PREVIEW_BUILD: 'true' }
 })
+const serverExit = new Promise(resolve => server.once('exit', resolve))
 let browser
 try {
   let ready = false
@@ -319,5 +320,12 @@ try {
   console.log('PASS: native IndexedDB storage, project lifecycle, backup restore and undo')
 } finally {
   if (browser) await browser.close()
-  server.kill('SIGTERM')
+  if (server.exitCode === null && server.signalCode === null) {
+    server.kill('SIGTERM')
+    const exited = await Promise.race([serverExit.then(() => true), delay(5000).then(() => false)])
+    if (!exited) {
+      server.kill('SIGKILL')
+      await serverExit
+    }
+  }
 }
