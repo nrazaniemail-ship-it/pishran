@@ -99,39 +99,21 @@ try {
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: 'ذخیره نام' }).click()
-  await page.waitForFunction(async ({ key, expectedName, moduleId }) => {
-    let indexedDbProjects = null
-    try {
-      const db = await new Promise(resolve => {
-        const request = indexedDB.open('pishran_store')
-        request.onsuccess = () => resolve(request.result)
-        request.onerror = () => resolve(null)
-        request.onblocked = () => resolve(null)
-      })
-      if (db) {
-        try {
-          if (db.objectStoreNames.contains('kv')) {
-            const record = await new Promise((resolve, reject) => {
-              const request = db.transaction('kv', 'readonly').objectStore('kv').get(key)
-              request.onsuccess = () => resolve(request.result)
-              request.onerror = () => reject(request.error)
-            })
-            indexedDbProjects = Array.isArray(record?.value) ? record.value : null
-          }
-        } finally {
-          db.close()
-        }
-      }
-    } catch { /* Use the supported localStorage fallback below. */ }
-    let fallbackProjects = null
+  const renamedProjectStorageName='پروژه آزمایش رتبه‌بندی ویرایش‌شده'
+  await page.waitForFunction(({ key, expectedName }) => {
     try {
       const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
-      fallbackProjects = Array.isArray(fallback) ? fallback : null
-    } catch { /* Ignore unavailable fallback storage. */ }
-    const matches = item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId)
-    return Boolean(indexedDbProjects?.some(matches) && fallbackProjects?.some(matches))
-  }, { key: 'mod10-ranking-projects:v1', expectedName: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', moduleId: undefined }, { timeout: 10000 })
-  console.log('Ranking project indexes immediately after rename:',JSON.stringify(await readRankingProjectIndexes(page)))
+      return Array.isArray(fallback) && fallback.some(item => item.name === expectedName)
+    } catch { return false }
+  }, { key: 'mod10-ranking-projects:v1', expectedName: renamedProjectStorageName }, { timeout: 10000 })
+  let indexesAfterRename=null
+  for(let attempt=0;attempt<40;attempt++){
+    indexesAfterRename=await readRankingProjectIndexes(page)
+    if(indexesAfterRename.indexedDbNames.some(item=>item.name===renamedProjectStorageName)&&indexesAfterRename.fallbackNames.some(item=>item.name===renamedProjectStorageName))break
+    await new Promise(resolve=>setTimeout(resolve,100))
+  }
+  assert.ok(indexesAfterRename?.indexedDbNames.some(item=>item.name===renamedProjectStorageName)&&indexesAfterRename?.fallbackNames.some(item=>item.name===renamedProjectStorageName),'renamed project must be committed to IndexedDB and localStorage before exports')
+  console.log('Ranking project indexes immediately after rename:',JSON.stringify(indexesAfterRename))
   await activeExportRoot(page).waitFor({ state: 'visible' })
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   console.log('Ranking project indexes after Excel export:',JSON.stringify(await readRankingProjectIndexes(page)))
