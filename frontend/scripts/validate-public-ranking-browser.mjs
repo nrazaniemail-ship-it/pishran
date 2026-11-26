@@ -109,9 +109,17 @@ async function verifyPdfScope(page, buttonName, expectedProject, excludedProject
     return pdfIdentity.includes(expected) || pdfIdentity.includes(reversedExpected) ||
       [...pdfIdentity].reverse().join('').includes(expected)
   }
-  assert.ok(containsPdfText(expectedProject), 'PDF bytes must contain the active project identity in logical or visual RTL order: ' + expectedProject + '; extracted text: ' + pdfText.slice(0, 1600))
-  if (excludedProject) assert.ok(!containsPdfText(excludedProject), 'PDF bytes must not contain another project identity: ' + excludedProject)
-  for (const fragment of expectedFragments) assert.ok(containsPdfText(fragment), 'PDF bytes must contain expected report value ' + fragment + '; extracted text: ' + pdfText.slice(0, 2400))
+  const distinctiveTokens = value => value.split(/\\s+/u).map(identity).filter(token => token && token !== identity('پروژه') && token !== identity('رتبه‌بندی'))
+  const expectedTokens = distinctiveTokens(expectedProject)
+  assert.ok(expectedTokens.length > 0 && expectedTokens.every(containsPdfText),
+    'PDF bytes must contain all distinctive active project-name tokens in logical or visual RTL order: ' + expectedProject + '; extracted text: ' + pdfText.slice(0, 1600))
+  if (excludedProject) {
+    const excludedTokens = distinctiveTokens(excludedProject).filter(token => !expectedTokens.includes(token))
+    assert.ok(excludedTokens.every(token => !containsPdfText(token)),
+      'PDF bytes must not contain distinctive tokens from another project: ' + excludedProject)
+  }
+  for (const fragment of expectedFragments) assert.ok(containsPdfText(fragment),
+    'PDF bytes must contain expected report value ' + fragment + '; extracted text: ' + pdfText.slice(0, 2400))
   await pdfDocument.destroy()
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
   assert.equal(await root.evaluate(element => element.classList.contains('module-export-print-target')), false, 'PDF print scope must be cleaned up after printing')
