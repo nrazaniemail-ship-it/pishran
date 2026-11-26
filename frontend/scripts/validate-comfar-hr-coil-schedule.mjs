@@ -201,7 +201,7 @@ const periodicResult=engine.calculateIntegratedPeriodicFinance({
  loans:[],openingWorkingCapital:0,openingCash:0,taxLossCarryForwardEnabled:false,
  discountRatePercent:25,valuationDate:'2026-03-20',discountConvention:'period-count',
 })
-assert.equal(periodicResult.valid,true,periodicResult.issues.join('; '))
+assert.equal(periodicResult.valid,true,periodicResult.warnings.join('; '))
 assert.equal(periodicResult.rows.length,18,'Integrated finance engine must return all 18 project periods')
 close(periodicResult.rows[0].projectFreeCashFlow,-13907805.03,'COMFAR page 67 first construction-period cash flow')
 close(periodicResult.rows[1].projectFreeCashFlow,-8093664.03,'COMFAR page 67 second construction-period cash flow')
