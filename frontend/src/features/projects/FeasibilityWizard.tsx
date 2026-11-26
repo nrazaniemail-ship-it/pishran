@@ -415,7 +415,7 @@ function baseModel(project:FeasibilityProject):Model {
   projectCategory:selectedStage.id==='mining'?'mining':'industrial',analysisMode:'new',partners:[],partnerDistributionPercent:100,
   scope:{studyLevel:'feasibility',jointVenture:false,economicAnalysis:false,costCentreAnalysis:false,costAllocation:false,valueAddedAnalysis:false,foreignExchangeEffect:false,employmentEffects:false},
   foundation,financialForms,fixedInvestmentItems:importedFixedItems,fixedInvestmentSeedVersion:imported?2:0,startingFixedAssets:[],
-  project:{name:project.name,location:project.location,owner:imported?report!.reportTitle:'',startYear:imported?reportYear:((blankTemplate||legacyBlankComfarPlate)?0:1403),constructionYears:imported?report!.constructionYears:((blankTemplate||legacyBlankComfarPlate)?0:2),operatingYears:imported?report!.operatingYears:((blankTemplate||legacyBlankComfarPlate)?0:10),currency:imported?report!.currency:(blankTemplate?'':'میلیون ریال'),fxRate:blankTemplate?0:1},
+  project:{name:project.name,location:project.location,owner:imported?report!.reportTitle:'',startYear:imported?reportYear:(blankTemplate?0:1403),constructionYears:imported?report!.constructionYears:(blankTemplate?0:2),operatingYears:imported?report!.operatingYears:(blankTemplate?0:10),currency:imported?report!.currency:(blankTemplate?'':'میلیون ریال'),fxRate:blankTemplate?0:1},
   stage:selectedStage.id,
   products:blankCustomProject?[]:[makeRow(imported?report!.product:'محصول اصلی','تن/سال',imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),imported?(sourceInputs?.salesUnitPrice??0):0,imported?(sourceInputs?.salesPriceSource??'گزارش مرجع؛ قیمت فروش تأیید نشده'):'فرض کاربر'),...(imported&&report!.secondaryCapacity?[makeRow('آهن اسفنجی هات‌لینک','تن/سال',report!.secondaryCapacity,0,'گزارش مرجع؛ خلاصه صفحه اول')]:[])],
   capacity:{nameplate:imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),operatingDays:0,hoursPerDay:0,availability:0,yield:0,ramp:blankTemplate?[]:(imported?sourceInputs?.capacityUtilization??[]:[70,80,90,100])},
@@ -426,7 +426,7 @@ function baseModel(project:FeasibilityProject):Model {
   market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:0,domesticPrice:0,exportPrice:0,domesticShare:0,growth:0},
   capex:capexRows,
   opex:opexRows,
-  finance:{equity:imported?equityShare:((blankTemplate||legacyBlankComfarPlate)?0:40),debt:imported?debtShare:((blankTemplate||legacyBlankComfarPlate)?0:60),equityCost:0,debtCost:0,tax:imported&&!isHrCoilReference?report!.taxPercent:0,manualRate:imported?report!.investmentNpvRate:((blankTemplate||legacyBlankComfarPlate)?0:30),method:imported?'manual':((blankTemplate||legacyBlankComfarPlate)?'unspecified':'wacc'),depreciationYears:0,workingCapital:imported?report!.workingCapital:0,financeRate:0,reinvestmentRate:0},
+  finance:{equity:imported?equityShare:(blankTemplate?0:40),debt:imported?debtShare:(blankTemplate?0:60),equityCost:0,debtCost:0,tax:imported&&!isHrCoilReference?report!.taxPercent:0,manualRate:imported?report!.investmentNpvRate:(blankTemplate?0:30),method:imported?'manual':(blankTemplate?'unspecified':'wacc'),depreciationYears:0,workingCapital:imported?report!.workingCapital:0,financeRate:0,reinvestmentRate:0},
   risks:blankCustomProject?[]:[makeRow('افزایش قیمت مواد اولیه','درصد',0),makeRow('کاهش قیمت فروش','درصد',0),makeRow('افت ظرفیت تولید','درصد',0),makeRow('تأخیر در راه‌اندازی','ماه',0)]
  }
 }
@@ -586,7 +586,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
     fixedInvestmentItems:legacyBlankComfarPlate?defaults.fixedInvestmentItems:(imported&&!hasFixedAcquisitions?defaults.fixedInvestmentItems:savedFixedItems).map(item=>({...item,depreciationBasis:item.depreciationBasis??'unresolved',acquisitions:item.acquisitions.map(acquisition=>({...acquisition,allocationBasis:acquisition.allocationBasis??'unallocated'})),depreciation:{...item.depreciation,lengthMonths:item.depreciation?.lengthMonths??0,firstDepreciationMonths:item.depreciation?.firstDepreciationMonths??12}})),
     fixedInvestmentSeedVersion:legacyBlankComfarPlate?defaults.fixedInvestmentSeedVersion:Math.max(Number(v.fixedInvestmentSeedVersion)||0,defaults.fixedInvestmentSeedVersion),
     startingFixedAssets:legacyBlankComfarPlate?[]:Array.isArray(v.startingFixedAssets)?v.startingFixedAssets:[],
-    project:legacyBlankComfarPlate?{...defaults.project,name:v.project?.name||project.name,location:v.project?.location||project.location,startYear:0,constructionYears:0,operatingYears:0}:{...defaults.project,...v.project},
+    project:legacyBlankComfarPlate?{...defaults.project,name:v.project?.name||project.name,location:v.project?.location||project.location}:{...defaults.project,...v.project},
     capacity:legacyBlankComfarPlate?defaults.capacity:{...defaults.capacity,...v.capacity},
     market:legacyBlankComfarPlate?defaults.market:{...defaults.market,...v.market},
     products:legacyBlankComfarPlate?defaults.products:Array.isArray(v.products)?v.products:defaults.products,
