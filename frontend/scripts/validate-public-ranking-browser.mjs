@@ -136,7 +136,7 @@ if(!isLocalPreview){
 const profileDir = await mkdtemp(join(tmpdir(), 'pishran-mod10-browser-'))
 let context = await chromium.launchPersistentContext(profileDir, { headless: true, acceptDownloads: true })
 let page = await context.newPage()
-try
+try {
   const pageErrors = []
   const consoleErrors = []
   const failedRequests = []
