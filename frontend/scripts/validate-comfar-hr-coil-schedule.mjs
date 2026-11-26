@@ -54,8 +54,7 @@ const salesPeriods=[
  subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:row.openingInventory,
  openingFinishedGoodsValue:row.openingInventory===0?0:null,finishedGoodsClosingQuantity:row.closingInventory,
  rawMaterialPurchasesQuantity:null,rawMaterialPurchasesValue:null,rawMaterialConsumptionQuantity:null,
- normalRawMaterialWasteQuantity:null,abnormalRawMaterialWasteQuantity:null,unitsStarted:row.production,
- unitsCompleted:row.production,closingWipQuantity:null,materialCompletionPercent:null,
+ normalRawMaterialWasteQuantity:null,abnormalRawMaterialWasteQuantity:null,unitsStarted:null,unitsCompleted:null,closingWipQuantity:null,materialCompletionPercent:null,
  conversionCompletionPercent:null,conversionCost:null,openingRawMaterialQuantity:null,
  openingRawMaterialValue:null,openingWipQuantity:null,openingWipMaterialValue:null,openingWipConversionValue:null,
 }))
