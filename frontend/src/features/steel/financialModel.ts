@@ -1424,11 +1424,17 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
     return Number.isFinite(rate) && (rate ?? 0) > 0 ? rate! : null
   }
   for (const item of items) {
-    if (!item.depreciationBasis || item.depreciationBasis === 'unresolved') warnings.push(`${item.description || item.id}: depreciation conditions are unresolved; this schedule is preliminary.`)
-    else if (item.depreciationBasis === 'source-conflict') warnings.push(`${item.description || item.id}: source documents conflict on depreciation conditions; this schedule is preliminary.`)
     const method = methodMap[item.depreciation.method]
+    const hasVerifiedDepreciationBasis = item.depreciationBasis === 'source-table' || item.depreciationBasis === 'user-confirmed'
+    const effectiveMethod = method !== 'none' && !hasVerifiedDepreciationBasis ? 'none' : method
+    if (method !== 'none' && !hasVerifiedDepreciationBasis) {
+      const reason = item.depreciationBasis === 'source-conflict'
+        ? 'source documents conflict'
+        : 'asset-by-asset depreciation evidence is missing'
+      warnings.push(`${item.description || item.id}: ${reason}; depreciation is excluded until source-table evidence or explicit user confirmation is recorded.`)
+    }
     const starting = parsePeriod(item.depreciation.startingAt)
-    if (method !== 'none' && !starting) {
+    if (effectiveMethod !== 'none' && !starting) {
       warnings.push(`${item.description || item.id}: تاریخ Starting at باید به‌صورت سال یا YYYY-MM-DD وارد شود.`)
       if (item.assetClass === 'preproduction') preOperatingScheduleVerified = false
       else investmentScheduleVerified = false
@@ -1483,15 +1489,15 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
           originalValue,
           initialBookValue: originalValue,
           scrapPercent: item.depreciation.scrapPercent,
-          lengthYears: method === 'none' ? 0 : (item.depreciation.lengthYears ?? 0),
-          lengthMonths: item.depreciation.lengthMonths,
-          ratePercent: item.depreciation.ratePercent ?? undefined,
-          method,
+          lengthYears: effectiveMethod === 'none' ? 0 : (item.depreciation.lengthYears ?? 0),
+          lengthMonths: effectiveMethod === 'none' ? 0 : item.depreciation.lengthMonths,
+          ratePercent: effectiveMethod === 'none' ? undefined : (item.depreciation.ratePercent ?? undefined),
+          method: effectiveMethod,
           acquisitionPeriod,
-          startingAtPeriod,
-          firstDepreciationMonths: item.depreciation.firstDepreciationMonths,
+          startingAtPeriod: effectiveMethod === 'none' ? 1 : startingAtPeriod,
+          firstDepreciationMonths: effectiveMethod === 'none' ? 12 : item.depreciation.firstDepreciationMonths,
           acquisitionDate: acquired.date,
-          startingAtDate: starting?.date,
+          startingAtDate: effectiveMethod === 'none' ? undefined : starting?.date,
         })
       }
       for (const sale of item.sales.filter(row => row.acquisitionId === acquisition.id)) {
