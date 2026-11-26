@@ -17,7 +17,7 @@ const backupSource = (await readFile(new URL('../src/core/storage/backupService.
 const backupUrl = toDataUrl(backupSource)
 
 const previewUrl = 'http://127.0.0.1:4179/'
-const server = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', '4179', '--strictPort'], {
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4179', '--strictPort'], {
   stdio: 'ignore',
   env: { ...process.env, VITE_PREVIEW_BUILD: 'true' }
 })
