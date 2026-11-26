@@ -66,7 +66,7 @@ const documentedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInv
 }],1403,3,'annual')
 assert.equal(documentedDepreciation.assets[0]?.method,'linear-to-zero','A referenced and verified asset-by-asset source may calculate depreciation')
 const documentedLifecycle=financial.calculateComfarAssetLifecycle(documentedDepreciation.assets,[],3)
-close(documentedLifecycle.depreciation.periods[0].depreciation,200,'Documented 1,000 cost / 5-year asset depreciation')
+close(documentedLifecycle.depreciation.periods[1].depreciation,200,'Documented 1,000 cost / 5-year asset depreciation after acquisition year')
 const confirmedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{
  ...testAsset,depreciationBasis:'user-confirmed',depreciationEvidenceReference:'User note',depreciationEvidenceVerified:true,
 }],1403,3,'annual')
