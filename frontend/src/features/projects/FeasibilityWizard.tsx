@@ -235,6 +235,7 @@ function baseModel(project:FeasibilityProject):Model {
   foundation.taxation.rates=Array.from({length:report.operatingYears},(_,index)=>({id:project.id+'-tax-'+index,period:String(report.firstOperatingYear+index),ratePercent:report.taxPercent}))
   financialForms.tax={...financialForms.tax,system:'corporate',rates:foundation.taxation.rates.map(rate=>({period:rate.period,ratePercent:rate.ratePercent}))}
   const sourceSalesSchedule=sourceInputs.productionSalesSchedule??[]
+  const sourceByproductSchedule=sourceInputs.byproductSalesSchedule??[]
   const sourceSalesPeriods=[
    {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
    {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
@@ -276,6 +277,27 @@ function baseModel(project:FeasibilityProject):Model {
      openingWipConversionValue:null,
     }))
    }]
+  }
+  if(sourceByproductSchedule.length){
+   const byproductId=project.id+'-byproduct-scrape'
+   const byproductPeriods=[
+    {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
+    {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
+    ...sourceByproductSchedule.map(row=>({...row,period:String(Number(row.period)-reportYear+1)})),
+   ].map(row=>({
+    period:row.period,salesQuantity:row.sales,netUnitPrice:row.netUnitPrice,salesTaxPercent:0,
+    subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:row.openingInventory,
+    openingFinishedGoodsValue:row.openingInventory===0?0:null,finishedGoodsClosingQuantity:row.closingInventory,
+    rawMaterialPurchasesQuantity:null,rawMaterialPurchasesValue:null,rawMaterialConsumptionQuantity:null,
+    normalRawMaterialWasteQuantity:null,abnormalRawMaterialWasteQuantity:null,unitsStarted:row.production,
+    unitsCompleted:row.production,closingWipQuantity:null,materialCompletionPercent:null,
+    conversionCompletionPercent:null,conversionCost:null,openingRawMaterialQuantity:null,
+    openingRawMaterialValue:null,openingWipQuantity:null,openingWipMaterialValue:null,openingWipConversionValue:null,
+   }))
+   financialForms.sales.push({
+    productId:byproductId,unitOfMeasure:'تن',inventoryPolicy:'manual',finishedGoodsDaysCoverage:null,
+    productionStartPeriod:3,productionEndPeriod:17,periods:byproductPeriods,
+   })
   }
   const sourceLoanSchedule=sourceInputs.financingSchedule??[]
   if(sourceLoanSchedule.length){
@@ -334,6 +356,17 @@ function baseModel(project:FeasibilityProject):Model {
      variablePercent:null,
     })),
    }))
+   if(sourceByproductSchedule.length){
+    const byproductId=project.id+'-byproduct-scrape'
+    financialForms.productionCosts.push({
+     id:project.id+'-byproduct-cost-unallocated',
+     metadata:{description:'هزینه مستقل محصول جانبی در گزارش تفکیک نشده است',currencyCode,marketOrigin:'local',escalationPercent:0,remarks:report.reportFile+'؛ صفحات ۳۹ تا ۴۲؛ گزارش هزینه تولید مستقل برای Scrape# ارائه نکرده است و هزینه‌ها به محصول اصلی تخصیص داده شده‌اند.',costCentreId:null},
+     classification:'direct',productId:byproductId,basis:'period-adjustments',
+     standardQuantity:null,standardUnitPrice:null,standardTotal:null,nominalCapacity:null,
+     fixedPercent:null,variablePercent:null,
+     adjustments:sourceByproductSchedule.map(period=>({period:String(Number(period.period)-reportYear+1),quantity:null,unitPrice:null,total:0,fixedPercent:null,variablePercent:null})),
+    })
+   }
   }
   financialForms.workingCapital=[
    {id:project.id+'-wc-inventory',name:'موجودی کالا',category:'inventory',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:sourceInputs.workingCapital.map(period=>({period:period.period,amount:period.inventory}))},
