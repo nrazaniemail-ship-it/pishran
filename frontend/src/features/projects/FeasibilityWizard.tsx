@@ -191,6 +191,7 @@ function jalaliMonthToIso(value:string,end=false):string {
 }
 function baseModel(project:FeasibilityProject):Model {
  const leaveProjectBlank=project.id==='comfar-hr-plate-250k'
+ const isHrCoilReference=project.id==='comfar-hr-coil-200k'
  const blankCustomProject=leaveProjectBlank||project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
  const selectedStage=leaveProjectBlank?resolveProjectStage(project):blankCustomProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
  const parsedCapacity=leaveProjectBlank?0:Number(project.capacity.replace(/[^0-9.]/g,''))||0
@@ -220,7 +221,6 @@ function baseModel(project:FeasibilityProject):Model {
  ]:[]
  if(imported&&report&&sourceInputs){
   foundation.planning.periodFrequency='annual'
-  const isHrCoilReference=project.id==='comfar-hr-coil-200k'
   foundation.planning.projectStartDate=jalaliMonthToIso(report.constructionStart)
   const operationEndParts=report.operationEnd.split('/').map(Number)
   const liquidationEnd=isHrCoilReference&&operationEndParts.length===2
