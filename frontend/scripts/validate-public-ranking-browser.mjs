@@ -806,7 +806,7 @@ try {
   await page.getByRole('heading', { name: 'پروژه‌های امکان‌سنجی' }).waitFor()
   const publicComfarProjects = [
     { title:'خط نورد گرم کلاف ۲۰۰ هزار تن', capexName:'خرید زمین', capexAmount:'2015000', opexName:'مواد خام', opexAmount:'40901015.18' },
-    { title:'خط نورد گرم ورق تخت ۲۵۰ هزار تن', expectBlank:true },
+    { title:'خط نورد گرم ورق تخت ۲۵۰ هزار تن', capexName:'خرید زمین', capexAmount:'1000000', opexName:'مواد خام', opexAmount:'38162283.5' },
     { title:'خط نورد سرد کلاف ۲۰۰ هزار تن', capexName:'خرید زمین', capexAmount:'2015000', opexName:'مواد خام', opexAmount:'63058700' },
     { title:'فولادسازی ۱٫۲ میلیون و احیای مستقیم هات‌لینک ۱٫۷۶ میلیون تن', capexName:'محوطه‌سازی و بهبود زمین', capexAmount:'2456550', opexName:'مواد خام', opexAmount:'537485060' },
   ]
