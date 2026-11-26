@@ -34,7 +34,7 @@ for (const retiredModelMarker of [
 }
 
 assert.match(modelSource, /const blankTemplate=project\.templateId==='raw'/)
-assert.match(modelSource, /const blankCustomProject=project\.industry!==['"]فولاد و صنایع معدنی['"]\|\|project\.steelStage===['"]سایر['"]/)
+assert.match(modelSource, /const blankCustomProject=project\.industry!==['"]فولاد و صنایع معدنی['"]\|\|project\.steelStage===['"]سایر['"]\|\|leaveProjectBlank/)
 assert.match(modelSource, /productCapacityTotal=m\.products\.reduce/)
 assert.match(modelSource, /productCapacityMatchesNameplate=!isSteelProject\|\|Math\.abs\(productCapacityTotal-m\.capacity\.nameplate\)/)
 assert.match(modelSource, /&&productCapacityMatchesNameplate,/) 
