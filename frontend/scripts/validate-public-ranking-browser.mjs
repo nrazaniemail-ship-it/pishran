@@ -136,12 +136,45 @@ try {
   await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   await page.getByRole('button', { name: 'ذخیره نام' }).click()
   const renamedProjectStorageName='پروژه آزمایش رتبه‌بندی ویرایش‌شده'
-  await page.waitForFunction(({ key, expectedName }) => {
-    try {
-      const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
-      return Array.isArray(fallback) && fallback.some(item => item.name === expectedName)
-    } catch { return false }
-  }, { key: 'mod10-ranking-projects:v1', expectedName: renamedProjectStorageName }, { timeout: 10000 })
+  try {
+    await page.waitForFunction(({ key, expectedName }) => {
+      try {
+        const fallback = JSON.parse(localStorage.getItem('pishran_' + key) ?? 'null')
+        return Array.isArray(fallback) && fallback.some(item => item.name === expectedName)
+      } catch { return false }
+    }, { key: 'mod10-ranking-projects:v1', expectedName: renamedProjectStorageName }, { timeout: 10000 })
+  } catch (error) {
+    const renameDiagnostics = await page.evaluate(async () => {
+      const key = 'mod10-ranking-projects:v1'
+      let fallbackRaw = null, fallback = null, fallbackError = null
+      try { fallbackRaw = localStorage.getItem('pishran_' + key); fallback = fallbackRaw ? JSON.parse(fallbackRaw) : null } catch (cause) { fallbackError = String(cause) }
+      let indexedDb = null, indexedDbError = null
+      try {
+        const db = await new Promise((resolve, reject) => {
+          const request = indexedDB.open('pishran_store')
+          request.onsuccess = () => resolve(request.result)
+          request.onerror = () => reject(request.error)
+          request.onblocked = () => reject(new Error('IndexedDB open blocked'))
+        })
+        try {
+          indexedDb = await new Promise((resolve, reject) => {
+            const request = db.transaction('kv', 'readonly').objectStore('kv').get(key)
+            request.onsuccess = () => resolve(request.result?.value ?? null)
+            request.onerror = () => reject(request.error)
+          })
+        } finally { db.close() }
+      } catch (cause) { indexedDbError = String(cause) }
+      return {
+        href: location.href, title: document.title, readyState: document.readyState,
+        editInput: document.querySelector('#ranking-project-edit-name')?.value ?? null,
+        createInput: document.querySelector('#ranking-project-new-name')?.value ?? null,
+        fallbackRaw, fallback, fallbackError, indexedDb, indexedDbError,
+        localStorageLength: (() => { try { return localStorage.length } catch (cause) { return String(cause) } })(),
+        bodyText: document.body.innerText.slice(0, 3000)
+      }
+    })
+    throw new Error('MOD-10 rename did not persist to the expected localStorage mirror. Diagnostics=' + JSON.stringify({ renameDiagnostics, pageErrors, consoleErrors, failedRequests, badResponses }) + '; waitError=' + error.message)
+  }
   let indexesAfterRename=null
   for(let attempt=0;attempt<40;attempt++){
     indexesAfterRename=await readRankingProjectIndexes(page)
