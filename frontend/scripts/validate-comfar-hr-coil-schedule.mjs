@@ -90,6 +90,7 @@ const salesPeriods=[
  {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
  {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
  ...input.productionSalesSchedule.map(row=>({...row,period:String(Number(row.period)-1403+1)})),
+ {period:'18',openingInventory:input.productionSalesSchedule.at(-1).closingInventory,production:0,sales:0,closingInventory:input.productionSalesSchedule.at(-1).closingInventory,netUnitPrice:0},
 ].map(row=>({
  period:row.period,salesQuantity:row.sales,netUnitPrice:row.netUnitPrice,salesTaxPercent:0,
  subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:row.openingInventory,
@@ -113,6 +114,7 @@ const byproductPeriods=[
  {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
  {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
  ...input.byproductSalesSchedule.map(row=>({...row,period:String(Number(row.period)-1403+1)})),
+ {period:'18',openingInventory:input.byproductSalesSchedule.at(-1).closingInventory,production:0,sales:0,closingInventory:input.byproductSalesSchedule.at(-1).closingInventory,netUnitPrice:0},
 ].map(row=>({
  period:row.period,salesQuantity:row.sales,netUnitPrice:row.netUnitPrice,salesTaxPercent:0,
  subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:row.openingInventory,
