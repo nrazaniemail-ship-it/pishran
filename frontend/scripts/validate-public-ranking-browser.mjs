@@ -6,6 +6,23 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import * as XLSX from 'xlsx'
 import { chromium } from 'playwright'
 
+function referenceTopsis(matrix, weights, directions) {
+  const total = weights.reduce((sum, value) => sum + value, 0)
+  const normalizedWeights = weights.map(value => value / total)
+  const norms = matrix[0].map((_, column) => Math.sqrt(matrix.reduce((sum, row) => sum + row[column] ** 2, 0)))
+  const weighted = matrix.map(row => row.map((value, column) => value / norms[column] * normalizedWeights[column]))
+  const best = matrix[0].map((_, column) => directions[column] === 'benefit'
+    ? Math.max(...weighted.map(row => row[column]))
+    : Math.min(...weighted.map(row => row[column])))
+  const worst = matrix[0].map((_, column) => directions[column] === 'benefit'
+    ? Math.min(...weighted.map(row => row[column]))
+    : Math.max(...weighted.map(row => row[column])))
+  return weighted.map((row, alternativeIndex) => {
+    const positive = Math.sqrt(row.reduce((sum, value, column) => sum + (value - best[column]) ** 2, 0))
+    const negative = Math.sqrt(row.reduce((sum, value, column) => sum + (value - worst[column]) ** 2, 0))
+    return { alternativeIndex, score: positive + negative === 0 ? 0.5 : negative / (positive + negative) }
+  }).sort((a, b) => b.score - a.score)
+}
 function activeExportRoot(page) {
   return page.locator('[data-module-export-root="true"]').filter({ has: page.locator('.module-export-actions') }).last()
 }
@@ -467,6 +484,24 @@ try
       await page.getByLabel('زمان اجرا manual weight').fill('1')
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
+      const reference = referenceTopsis(
+        [[81, 82, 83], [84, 85, 86], [87, 88, 89]],
+        [7, 2, 1],
+        ['cost', 'benefit', 'cost']
+      )
+      const expectedRankingRows = reference.map((result, rank) => ({
+        alternative: ['گزینه الف', 'گزینه ب', 'گزینه ج'][result.alternativeIndex],
+        score: (result.score * 100).toFixed(2),
+        rank: rank + 1
+      }))
+      const excelReport = await verifyExcelExport(page, 'Export Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
+      assert.ok(excelReport.workbook.SheetNames.includes('Module report'), 'ranking Excel must contain the report worksheet')
+      for (const row of expectedRankingRows) {
+        assert.ok(excelReport.content.includes(row.alternative), `Excel must contain ranked alternative ${row.alternative}`)
+        assert.ok(excelReport.content.includes(row.score + '%'), `Excel must contain independently calculated TOPSIS score ${row.score}% for ${row.alternative}; content=${excelReport.content.slice(0, 3000)}`)
+        assert.ok(excelReport.content.includes('Rank ' + row.rank), `Excel must contain the expected rank ${row.rank} for ${row.alternative}`)
+      }
+      await verifyPdfScope(page, 'Print / Save PDF', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
     }
     if (method === 'TOPSIS + (AHP + BWM)') {
       const ahpShare = page.getByLabel('AHP contribution percentage')
