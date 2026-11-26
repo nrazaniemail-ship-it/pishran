@@ -126,7 +126,18 @@ try {
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
-  await page.locator('.ranking-project-open').filter({ hasText: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده' }).first().click()
+  const projectButtons=page.locator('.ranking-project-open')
+  const visibleProjectNames=await projectButtons.allTextContents()
+  console.log('Ranking project cards after creating project 2:',JSON.stringify(visibleProjectNames))
+  const normalizeProjectName=value=>value.normalize('NFKC').replace(/[\\p{P}\\p{Z}\\p{Cf}\\u0640]+/gu,'').toLocaleLowerCase()
+  const expectedRenamedName=normalizeProjectName('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
+  let renamedProjectButton=null
+  for(let index=0;index<await projectButtons.count();index++){
+    const candidate=projectButtons.nth(index)
+    if(normalizeProjectName(await candidate.innerText()).includes(expectedRenamedName)){renamedProjectButton=candidate;break}
+  }
+  assert.ok(renamedProjectButton, `renamed project card must remain visible after creating project 2; cards: ${visibleProjectNames.join(' | ')}`)
+  await renamedProjectButton.click()
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
