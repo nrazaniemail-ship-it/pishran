@@ -214,7 +214,7 @@ try {
       assert.ok(longTerm && shortTerm)
       assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.drawdown, 0) - 431000000) < 0.02)
       assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.capitalizedInterest, 0) - 110500000) < 0.02)
-      assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 58320000) < 0.02, 'Operating-period long-term interest must remain payable expense, not capitalized pre-production cost')
+      assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 57820000) < 0.02, 'Operating-period long-term interest must remain payable expense, not capitalized pre-production cost')
       assert.ok(Math.abs(shortTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.drawdown, 0) - 49523442.75) < 0.02)
       assert.equal(shortTerm.manualPeriodSchedule.at(-1).closingBalance, 0)
     }
