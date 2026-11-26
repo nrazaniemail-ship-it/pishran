@@ -136,6 +136,18 @@ for (const [id, expected] of Object.entries(expectedSourceTotals)) {
   assert.ok(Math.abs(lastWorkingCapital.inventory + lastWorkingCapital.cash - (lastWorkingCapital.payables ?? 0) - expected.workingCapital) < 0.02, `${id} terminal working capital must reconcile to the report`)
   assert.ok(input.workingCapital.length >= expected.years, `${id} must include a multi-year working-capital schedule`)
   if (id === 'comfar-cold-coil-200k') assert.deepEqual(input.capacityUtilization, [81.11, 90.14, 100.14, 100])
+  if (id === 'comfar-cold-coil-200k') {
+    assert.equal(input.productionSalesSchedule.length, 15, 'Cold-coil sales schedule must cover all 15 operating years')
+    assert.equal(input.productionSalesSchedule[0].salesRevenue, 63200000)
+    assert.equal(input.productionSalesSchedule[1].salesRevenue, 71100000)
+    assert.equal(input.productionSalesSchedule[2].salesRevenue, 79000000)
+    assert.equal(input.financingSchedule.length, 4, 'Cold-coil loan schedule must cover drawdown through final repayment')
+    assert.equal(input.financingSchedule[0].loanDisbursement, 5000000)
+    assert.equal(input.financingSchedule[0].capitalizedInterest, 350000)
+    assert.ok(Math.abs(input.financingSchedule.reduce((sum, row) => sum + row.principalRepayment, 0) - 5350000) < 0.02)
+    assert.ok(Math.abs(input.financingSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 2732907.68) < 0.02)
+    assert.equal(input.financingSchedule.at(-1).closingDebt, 0)
+  }
   if (id === 'comfar-hr-plate-250k') {
     assert.equal(input.productionSalesSchedule.length, 15, 'Plate sales schedule must cover all 15 operating years')
     assert.equal(input.byproductSalesSchedule.length, 15, 'Scrape# sales schedule must cover all 15 operating years')
