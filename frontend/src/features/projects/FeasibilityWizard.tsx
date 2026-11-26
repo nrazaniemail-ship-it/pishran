@@ -234,6 +234,44 @@ function baseModel(project:FeasibilityProject):Model {
   foundation.taxation.system='corporate'
   foundation.taxation.rates=Array.from({length:report.operatingYears},(_,index)=>({id:project.id+'-tax-'+index,period:String(report.firstOperatingYear+index),ratePercent:report.taxPercent}))
   financialForms.tax={...financialForms.tax,system:'corporate',rates:foundation.taxation.rates.map(rate=>({period:rate.period,ratePercent:rate.ratePercent}))}
+  const sourceSalesSchedule=sourceInputs.productionSalesSchedule??[]
+  if(sourceSalesSchedule.length){
+   financialForms.sales=[{
+    productId:project.id+'-main-product',
+    unitOfMeasure:'تن',
+    inventoryPolicy:'manual',
+    finishedGoodsDaysCoverage:null,
+    productionStartPeriod:1,
+    productionEndPeriod:sourceSalesSchedule.length,
+    periods:sourceSalesSchedule.map(row=>({
+     period:row.period,
+     salesQuantity:row.sales,
+     netUnitPrice:row.netUnitPrice,
+     salesTaxPercent:null,
+     subsidyPercent:null,
+     subsidyAmount:null,
+     openingFinishedGoodsQuantity:row.openingInventory,
+     openingFinishedGoodsValue:null,
+     finishedGoodsClosingQuantity:row.closingInventory,
+     rawMaterialPurchasesQuantity:null,
+     rawMaterialPurchasesValue:null,
+     rawMaterialConsumptionQuantity:null,
+     normalRawMaterialWasteQuantity:null,
+     abnormalRawMaterialWasteQuantity:null,
+     unitsStarted:row.production,
+     unitsCompleted:row.production,
+     closingWipQuantity:null,
+     materialCompletionPercent:null,
+     conversionCompletionPercent:null,
+     conversionCost:null,
+     openingRawMaterialQuantity:null,
+     openingRawMaterialValue:null,
+     openingWipQuantity:null,
+     openingWipMaterialValue:null,
+     openingWipConversionValue:null,
+    }))
+   }]
+  }
   financialForms.workingCapital=[
    {id:project.id+'-wc-inventory',name:'موجودی کالا',category:'inventory',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:sourceInputs.workingCapital.map(period=>({period:period.period,amount:period.inventory}))},
    {id:project.id+'-wc-cash',name:'موجودی نقد',category:'cash',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:sourceInputs.workingCapital.map(period=>({period:period.period,amount:period.cash}))},
