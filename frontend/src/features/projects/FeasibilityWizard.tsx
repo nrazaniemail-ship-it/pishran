@@ -190,14 +190,15 @@ function jalaliMonthToIso(value:string,end=false):string {
  return jalaliToGregorianIso(year,month,end?30:1)
 }
 function baseModel(project:FeasibilityProject):Model {
- const blankCustomProject=project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
- const selectedStage=blankCustomProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
- const parsedCapacity=Number(project.capacity.replace(/[^0-9.]/g,''))||0
+ const leaveProjectBlank=project.id==='comfar-hr-plate-250k'
+ const blankCustomProject=leaveProjectBlank||project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
+ const selectedStage=leaveProjectBlank?resolveProjectStage(project):blankCustomProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
+ const parsedCapacity=leaveProjectBlank?0:Number(project.capacity.replace(/[^0-9.]/g,''))||0
  const blankTemplate=project.templateId==='raw'
- const imported=project.templateId==='comfar-import'&&!!project.sourceReport
- const report=project.sourceReport
+ const report=leaveProjectBlank?undefined:project.sourceReport
+ const imported=project.templateId==='comfar-import'&&!!report
  const sourceInputs=imported?COMFAR_PROJECT_INPUTS[project.id]:undefined
- const reportYear=report?Number(report.constructionStart.slice(0,4)):1403
+ const reportYear=report?Number(report.constructionStart.slice(0,4)):leaveProjectBlank?0:1403
  const reportDebt=report?(report.longTermDebt+report.shortTermDebt):0
  const reportFunding=report?(report.equity+reportDebt):0
  const equityShare=reportFunding>0?report!.equity/reportFunding*100:0
