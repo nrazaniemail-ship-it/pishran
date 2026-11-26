@@ -132,7 +132,7 @@ export function bwm(bestIndex:number,worstIndex:number,bestToOthers:number[],oth
   left.forEach((v,i)=>lower[i]-=v);lower[xiIndex]=-1;A.push(lower);b.push(0);
  };
  for(let j=0;j<n;j++)if(j!==bestIndex){const terms=Array(n).fill(0);terms[bestIndex]=1;terms[j]-=bestToOthers[j];addAbs(terms);}
- for(let j=0;j<n;j++)if(j!==worstIndex){const terms=Array(n).fill(0);terms[j]=1;terms[worstIndex]-=othersToWorst[j];addAbs(terms,[]);}
+ for(let j=0;j<n;j++)if(j!==worstIndex){const terms=Array(n).fill(0);terms[j]=1;terms[worstIndex]-=othersToWorst[j];addAbs(terms);}
  A.push([...Array(n).fill(1),0]);b.push(1);
  A.push([...Array(n).fill(-1),0]);b.push(-1);
  const objective=Array(variableCount).fill(0);objective[xiIndex]=-1;
