@@ -521,9 +521,9 @@ function RankingMethodChooser({ language, registerBackHandler }: { language: 'fa
     setRankingProjects(next)
     try { localStorage.setItem('pishran_' + key, JSON.stringify(next)) } catch { /* IndexedDB remains authoritative. */ }
   }
-  const returnToRankingProjects = async () => {
-    const latest = await localStore.get<RankingWorkspaceProject[]>('mod10-ranking-projects:v1')
-    setRankingProjects(Array.isArray(latest) ? latest : [])
+  const returnToRankingProjects = () => {
+    // Creation and rename already commit the latest list and update React state.
+    // Do not re-read storage here: a stale read can replace the current list and hide a saved project card.
     setSelectedProjectId(null)
   }
   useEffect(() => {
