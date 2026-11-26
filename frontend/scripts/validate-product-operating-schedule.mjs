@@ -45,6 +45,12 @@ assert.deepEqual(result.annualCostOfSales,[1700])
 assert.equal(result.totalProductionQuantity,180)
 assert.equal(result.totalSalesQuantity,170)
 assert.equal(result.totalClosingInventoryValue,500)
+const carriedOpeningValue=module.buildProductOperatingSchedule({
+ ...base,sales:[{...base.sales[0],periods:base.sales[0].periods.map((row,index)=>index===1?{...row,openingFinishedGoodsValue:null}:row)}]
+},periods,1,'IRR')
+assert.equal(carriedOpeningValue.valid,true,carriedOpeningValue.issues.join('; '))
+assert.equal(carriedOpeningValue.rows[1].openingInventoryValue,300,
+ 'An omitted manual opening stock value must carry forward the prior calculated closing value, not default to zero')
 
 const badOpening=module.buildProductOperatingSchedule({
  ...base,sales:[{...base.sales[0],periods:[base.sales[0].periods[0],{...base.sales[0].periods[1],openingFinishedGoodsValue:301}]}]
