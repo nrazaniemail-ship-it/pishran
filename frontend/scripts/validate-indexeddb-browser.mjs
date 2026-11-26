@@ -200,6 +200,24 @@ try {
     } else {
       assert.equal(persisted.financialForms.tax.rates.length, 15, item.id + ' must include all 15 annual tax periods')
     }
+    if (item.id === 'comfar-integrated-steel-dri') {
+      assert.equal(persisted.financialForms.sales.length, 2, 'Steel slab and Extra DRI sales must both persist')
+      const steelSales = persisted.financialForms.sales.find(product => product.periods.some(row => row.salesQuantity === 840000))
+      const extraDriSales = persisted.financialForms.sales.find(product => product.periods.some(row => row.salesQuantity === 368000))
+      assert.ok(steelSales, 'Steel slab sales schedule must include 840,000 tonnes')
+      assert.ok(extraDriSales, 'Extra DRI sales schedule must include 368,000 tonnes')
+      assert.equal(steelSales.periods.find(row => row.salesQuantity === 840000).netUnitPrice, 634)
+      assert.equal(extraDriSales.periods.find(row => row.salesQuantity === 368000).netUnitPrice, 275)
+      assert.equal(persisted.financialForms.loans.length, 2, 'Separate long- and short-term facilities must persist')
+      const longTerm = persisted.financialForms.loans.find(loan => loan.name.includes('بلندمدت'))
+      const shortTerm = persisted.financialForms.loans.find(loan => loan.name.includes('کوتاه‌مدت'))
+      assert.ok(longTerm && shortTerm)
+      assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.drawdown, 0) - 431000000) < 0.02)
+      assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.capitalizedInterest, 0) - 110500000) < 0.02)
+      assert.ok(Math.abs(shortTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.drawdown, 0) - 49523442.75) < 0.02)
+      assert.equal(shortTerm.manualPeriodSchedule.at(-1).closingBalance, 0)
+    }
+
     if (item.id === 'comfar-hr-plate-250k') {
       assert.equal(persisted.financialForms.sales.length, 2, 'Plate and Scrape# sales schedules must both be imported')
       assert.equal(persisted.financialForms.sales[0].periods.length, 17, 'Plate sales schedule must include construction periods and all 15 operating years')
