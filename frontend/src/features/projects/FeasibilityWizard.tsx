@@ -587,7 +587,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
     fixedInvestmentItems:leaveProjectBlank?defaults.fixedInvestmentItems:(imported&&!hasFixedAcquisitions?defaults.fixedInvestmentItems:savedFixedItems).map(item=>({...item,depreciationBasis:item.depreciationBasis??'unresolved',acquisitions:item.acquisitions.map(acquisition=>({...acquisition,allocationBasis:acquisition.allocationBasis??'unallocated'})),depreciation:{...item.depreciation,lengthMonths:item.depreciation?.lengthMonths??0,firstDepreciationMonths:item.depreciation?.firstDepreciationMonths??12}})),
     fixedInvestmentSeedVersion:leaveProjectBlank?defaults.fixedInvestmentSeedVersion:Math.max(Number(v.fixedInvestmentSeedVersion)||0,defaults.fixedInvestmentSeedVersion),
     startingFixedAssets:leaveProjectBlank?[]:Array.isArray(v.startingFixedAssets)?v.startingFixedAssets:[],
-    project:leaveProjectBlank?{...defaults.project,name:v.project?.name||project.name,location:v.project?.location||project.location}:{...defaults.project,...v.project},
+    project:leaveProjectBlank?{...defaults.project,name:v.project?.name||project.name,location:v.project?.location||project.location,startYear:0,constructionYears:0,operatingYears:0}:{...defaults.project,...v.project},
     capacity:leaveProjectBlank?defaults.capacity:{...defaults.capacity,...v.capacity},
     market:leaveProjectBlank?defaults.market:{...defaults.market,...v.market},
     products:leaveProjectBlank?defaults.products:Array.isArray(v.products)?v.products:defaults.products,
