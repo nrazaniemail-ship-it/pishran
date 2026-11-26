@@ -49,6 +49,12 @@ jobs:
         run: npm run build
       - name: Native browser IndexedDB regression test
         run: npm run test:indexeddb:browser
+      - name: Financial model regression tests
+        run: npm run test:financial
+      - name: Executive dashboard MOD-01 integration tests
+        run: npm run test:modules
+      - name: Independent AHP and BWM ranking method tests
+        run: npm run test:ranking
       - name: Public ranking persistence regression against built preview
         env:
           PISHRA_RANKING_BASE_URL: http://127.0.0.1:4178/
@@ -63,9 +69,3 @@ jobs:
           done
           cat /tmp/pishran-preview.log
           exit 1
-      - name: Financial model regression tests
-        run: npm run test:financial
-      - name: Executive dashboard MOD-01 integration tests
-        run: npm run test:modules
-      - name: Independent AHP and BWM ranking method tests
-        run: npm run test:ranking
