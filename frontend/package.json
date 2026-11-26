@@ -45,6 +45,7 @@
     "@types/react-dom": "latest",
     "@capacitor/cli": "^7.4.3",
     "typescript": "^5.6.3",
-    "playwright": "^1.56.1"
+    "playwright": "^1.56.1",
+    "pdfjs-dist": "^5.4.394"
   }
 }
