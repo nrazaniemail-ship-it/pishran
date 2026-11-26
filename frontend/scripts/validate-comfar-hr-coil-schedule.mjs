@@ -84,7 +84,7 @@ operatingJs=operatingJs.replace("'../steel/periodicFinancialEngine'",JSON.string
  .replace("'./inventoryProductionFlow'",JSON.stringify(flowUrl))
  .replace("'./inventoryControlLedgers'",JSON.stringify(controlUrl))
 const operating=await import('data:text/javascript;base64,'+Buffer.from(operatingJs).toString('base64'))
-const periods=Array.from({length:18},(_,index)=>({index:index+1,startDate:String(2024+index)+'-01-01',endDate:String(2024+index)+'-12-31',days:365,partial:false}))
+const periods=Array.from({length:18},(_,index)=>{const year=2024+index;const startDate=year+'-01-01';const endDate=year+'-12-31';const days=(Date.parse(endDate+'T00:00:00Z')-Date.parse(startDate+'T00:00:00Z'))/86400000+1;return {index:index+1,startDate,endDate,days,partial:false}})
 const mainProductId='hr-coil-main'
 const salesPeriods=[
  {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
