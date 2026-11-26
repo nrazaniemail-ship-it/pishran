@@ -665,7 +665,7 @@ try {
   await page.getByRole('heading', { name: 'پروژه‌های امکان‌سنجی' }).waitFor()
   const publicComfarProjects = [
     { title:'خط نورد گرم کلاف ۲۰۰ هزار تن', capexName:'خرید زمین', capexAmount:'2015000', opexName:'مواد خام', opexAmount:'40901015.18' },
-    { title:'خط نورد گرم ورق تخت ۲۵۰ هزار تن', capexName:'خرید زمین', capexAmount:'1000000', opexName:'مواد خام', opexAmount:'38162283.5' },
+    { title:'خط نورد گرم ورق تخت ۲۵۰ هزار تن', expectBlank:true },
     { title:'خط نورد سرد کلاف ۲۰۰ هزار تن', capexName:'خرید زمین', capexAmount:'2015000', opexName:'مواد خام', opexAmount:'63058700' },
     { title:'فولادسازی ۱٫۲ میلیون و احیای مستقیم هات‌لینک ۱٫۷۶ میلیون تن', capexName:'محوطه‌سازی و بهبود زمین', capexAmount:'2456550', opexName:'مواد خام', opexAmount:'537485060' },
   ]
@@ -676,6 +676,16 @@ try {
     await card.click()
     await page.locator('.feasibility-project-export-root').waitFor({ state: 'visible' })
     await page.getByRole('button', { name: 'هزینه‌های دوره ساخت' }).click()
+    if (item.expectBlank) {
+      assert.equal(await page.locator('.fw-row').count(), 0,
+        `${item.title} must keep its CAPEX form blank until its source data is approved`)
+      await page.getByRole('button', { name: 'هزینه‌های دوره بهره‌برداری' }).click()
+      assert.equal(await page.locator('.fw-row').count(), 0,
+        `${item.title} must keep its OPEX form blank and must not inherit another project's data`)
+      await page.getByRole('navigation').getByRole('button', { name: 'پروژه‌ها' }).click()
+      await page.getByRole('heading', { name: 'پروژه‌های امکان‌سنجی' }).waitFor()
+      continue
+    }
     const capexTitles = await page.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
     const capexIndex = capexTitles.indexOf(item.capexName)
     assert.notEqual(capexIndex, -1, `${item.title} public CAPEX form must contain its report asset category`)
