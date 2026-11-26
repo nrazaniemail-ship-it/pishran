@@ -223,7 +223,6 @@ try {
     await feasibilityPage.locator('.project-card').first().waitFor({ state: 'visible' })
   }
   await feasibilityPage.close()
-  console.log('PASS: all four COMFAR project records load report-derived inputs and persist in native IndexedDB')  await feasibilityPage.close()
   console.log('PASS: all four COMFAR project records load report-derived inputs and persist in native IndexedDB')
 
   const result = await page.evaluate(async ({ storeUrl, projectsUrl, backupUrl }) => {
