@@ -27,6 +27,7 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   const filenameIdentity = value => value.normalize('NFKC').replace(/[\p{P}\p{Z}\p{Cf}\u0640]+/gu, '').toLocaleLowerCase()
   assert.ok(workbookIdentity(content).includes(workbookIdentity(expectedFilenameProject)), `Excel workbook must identify the active project ${expectedFilenameProject}; workbook content: ${content.slice(0, 1800)}`)
   assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedFilenameProject)), `Excel filename must identify the active project ${expectedFilenameProject}; filename: ${download.suggestedFilename()}`)
+  assert.ok(!/\s/u.test(download.suggestedFilename()), `Excel filename must normalize whitespace to hyphens; filename: ${download.suggestedFilename()}`)
   assert.ok(!content.includes(excludedProject.normalize('NFC')), `Excel export must not leak another project: ${excludedProject}`)
 }
 async function readRankingProjectIndexes(page) {
@@ -54,8 +55,23 @@ async function verifyPdfScope(page, buttonName) {
   await root.locator('.module-export-actions').getByRole('button', { name: buttonName, exact: true }).click()
   assert.equal(await page.evaluate(() => window.__pishranPrintCalls), 1, 'PDF action must invoke the browser print dialog')
   assert.ok(await root.evaluate(element => element.classList.contains('module-export-print-target')), 'PDF action must scope printing to the active project root')
+  await page.emulateMedia({ media: 'print' })
+  const printVisibility = await page.evaluate(() => {
+    const target = document.querySelector('.module-export-print-target')
+    const actions = target?.querySelector('.module-export-actions')
+    const roots = [...document.querySelectorAll('[data-module-export-root]')]
+    return {
+      targetVisibility: target ? getComputedStyle(target).visibility : 'missing',
+      actionsDisplay: actions ? getComputedStyle(actions).display : 'missing',
+      visibleProjectRoots: roots.filter(element => getComputedStyle(element).visibility === 'visible').length
+    }
+  })
+  assert.equal(printVisibility.targetVisibility, 'visible', 'PDF print media must expose the active project root')
+  assert.equal(printVisibility.actionsDisplay, 'none', 'PDF print media must hide export controls')
+  assert.equal(printVisibility.visibleProjectRoots, 1, 'PDF print media must expose exactly one project root')
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
   assert.equal(await root.evaluate(element => element.classList.contains('module-export-print-target')), false, 'PDF print scope must be cleaned up after printing')
+  await page.emulateMedia({ media: 'screen' })
 }
 
 const rankingBaseUrl=process.env.PISHRA_RANKING_BASE_URL??'https://nrazaniemail-ship-it.github.io/pishran/'
