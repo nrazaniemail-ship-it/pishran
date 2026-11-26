@@ -214,7 +214,13 @@ try {
       assert.equal(persisted.products?.length ?? 0, 0)
       assert.equal(persisted.capacity?.nameplate ?? 0, 0)
       assert.equal(persisted.project?.startYear ?? 0, 0)
+      assert.equal(persisted.project?.constructionYears ?? 0, 0)
+      assert.equal(persisted.project?.operatingYears ?? 0, 0)
+      assert.equal(persisted.finance?.equity ?? 0, 0)
+      assert.equal(persisted.finance?.debt ?? 0, 0)
       assert.equal(persisted.finance?.tax ?? 0, 0)
+      assert.equal(persisted.finance?.manualRate ?? 0, 0)
+      assert.equal(persisted.finance?.method ?? 'unspecified', 'unspecified')
       assert.equal(Boolean(persisted.foundation?.planning?.projectStartDate), false)
     } else {
       assert.equal(persisted.financialForms.tax.rates.length, 15, item.id + ' must include all 15 annual tax periods')
