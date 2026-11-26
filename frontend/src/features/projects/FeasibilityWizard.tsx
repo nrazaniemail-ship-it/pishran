@@ -233,11 +233,19 @@ function baseModel(project:FeasibilityProject):Model {
   foundation.discounting.financialRatePercent=report.investmentNpvRate
   foundation.taxation.system='corporate'
   const isHrCoilReference=project.id==='comfar-hr-coil-200k'
+  const sourceTaxAmounts=isHrCoilReference?(sourceInputs.taxAmountSchedule??[]):[]
   const sourceTaxRates=isHrCoilReference
-    ?[{period:'1405',ratePercent:5},{period:'1408',ratePercent:5},{period:'1419',ratePercent:25}]
+    ?[]
     :Array.from({length:report.operatingYears},(_,index)=>({period:String(report.firstOperatingYear+index),ratePercent:report.taxPercent}))
-  foundation.taxation.rates=sourceTaxRates.map((rate,index)=>({id:project.id+'-tax-source-'+index,period:isHrCoilReference?String(Number(rate.period)-reportYear+1):rate.period,ratePercent:rate.ratePercent}))
-  financialForms.tax={...financialForms.tax,system:'corporate',rates:sourceTaxRates.map(rate=>({period:isHrCoilReference?String(Number(rate.period)-reportYear+1):rate.period,ratePercent:rate.ratePercent}))}
+  foundation.taxation.rates=sourceTaxRates.map((rate,index)=>({id:project.id+'-tax-source-'+index,period:rate.period,ratePercent:rate.ratePercent}))
+  financialForms.tax={
+    ...financialForms.tax,system:'corporate',
+    rates:sourceTaxRates.map(rate=>({period:rate.period,ratePercent:rate.ratePercent})),
+    documentedAmounts:sourceTaxAmounts.map(row=>({
+      period:String(Number(row.period)-reportYear+1),amount:row.amount,
+      sourceReference:row.sourceReference,sourceVerified:true,
+    })),
+  }
   const sourceSalesSchedule=sourceInputs.productionSalesSchedule??[]
   const sourceByproductSchedule=sourceInputs.byproductSalesSchedule??[]
   const sourceSalesPeriods=[
