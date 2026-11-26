@@ -1425,13 +1425,13 @@ export function buildComfarDepreciationAssetsFromFixedInvestmentItems(
   }
   for (const item of items) {
     const method = methodMap[item.depreciation.method]
-    const hasVerifiedDepreciationBasis = item.depreciationBasis === 'source-table' || item.depreciationBasis === 'user-confirmed'
+    const hasVerifiedDepreciationBasis = item.depreciationBasis === 'source-table' && !!item.depreciationEvidenceReference?.trim() && item.depreciationEvidenceVerified === true
     const effectiveMethod = method !== 'none' && !hasVerifiedDepreciationBasis ? 'none' : method
     if (method !== 'none' && !hasVerifiedDepreciationBasis) {
       const reason = item.depreciationBasis === 'source-conflict'
         ? 'source documents conflict'
-        : 'asset-by-asset depreciation evidence is missing'
-      warnings.push(`${item.description || item.id}: ${reason}; depreciation is excluded until source-table evidence or explicit user confirmation is recorded.`)
+        : 'asset-by-asset source document reference is missing or not verified'
+      warnings.push(`${item.description || item.id}: ${reason}; depreciation is excluded until a verified asset-by-asset source document is recorded.`)
     }
     const starting = parsePeriod(item.depreciation.startingAt)
     if (effectiveMethod !== 'none' && !starting) {
