@@ -2,7 +2,7 @@ import {useRef,useState} from 'react'
 import * as XLSX from 'xlsx'
 
 type Props={moduleId:string;moduleTitle:string;language?:'fa'|'en'}
-const clean=(value:string)=>value.replace(/[\\/:*?"<>|]+/g,'-').replace(/\\s+/g,'-').slice(0,70)||'module'
+const clean=(value:string)=>value.replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,70)||'module'
 const visible=(element:Element)=>{const style=window.getComputedStyle(element);return style.display!=='none'&&style.visibility!=='hidden'}
 export default function ModuleExportActions({moduleId,moduleTitle,language='fa'}:Props){
  const en=language==='en',[busy,setBusy]=useState(false),[message,setMessage]=useState(''),rootRef=useRef<HTMLDivElement>(null)
