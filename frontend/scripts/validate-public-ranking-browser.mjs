@@ -57,9 +57,9 @@ async function verifyPdfScope(page, buttonName) {
   assert.equal(await page.evaluate(() => window.__pishranPrintCalls), 1, 'PDF action must invoke the browser print dialog')
   assert.ok(await root.evaluate(element => element.classList.contains('module-export-print-target')), 'PDF action must scope printing to the active project root')
   const printVisibility = await page.evaluate(() => {
-    const target = document.querySelector<HTMLElement>('.module-export-print-target')
-    const actions = target?.querySelector<HTMLElement>('.module-export-actions')
-    const roots = [...document.querySelectorAll<HTMLElement>('[data-module-export-root]')]
+    const target = document.querySelector('.module-export-print-target')
+    const actions = target?.querySelector('.module-export-actions')
+    const roots = [...document.querySelectorAll('[data-module-export-root]')]
     return {
       targetVisibility: target ? getComputedStyle(target).visibility : 'missing',
       actionsDisplay: actions ? getComputedStyle(actions).display : 'missing',
