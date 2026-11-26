@@ -235,6 +235,11 @@ function baseModel(project:FeasibilityProject):Model {
   foundation.taxation.rates=Array.from({length:report.operatingYears},(_,index)=>({id:project.id+'-tax-'+index,period:String(report.firstOperatingYear+index),ratePercent:report.taxPercent}))
   financialForms.tax={...financialForms.tax,system:'corporate',rates:foundation.taxation.rates.map(rate=>({period:rate.period,ratePercent:rate.ratePercent}))}
   const sourceSalesSchedule=sourceInputs.productionSalesSchedule??[]
+  const sourceSalesPeriods=[
+   {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
+   {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
+   ...sourceSalesSchedule.map(row=>({...row,period:String(Number(row.period)-reportYear+1)})),
+  ]
   if(sourceSalesSchedule.length){
    financialForms.sales=[{
     productId:project.id+'-main-product',
@@ -243,15 +248,15 @@ function baseModel(project:FeasibilityProject):Model {
     finishedGoodsDaysCoverage:null,
     productionStartPeriod:1,
     productionEndPeriod:sourceSalesSchedule.length,
-    periods:sourceSalesSchedule.map(row=>({
-     period:String(Number(row.period)-reportYear+1),
+    periods:sourceSalesPeriods.map(row=>({
+     period:row.period,
      salesQuantity:row.sales,
      netUnitPrice:row.netUnitPrice,
-     salesTaxPercent:null,
+     salesTaxPercent:0,
      subsidyPercent:null,
      subsidyAmount:null,
      openingFinishedGoodsQuantity:row.openingInventory,
-     openingFinishedGoodsValue:null,
+     openingFinishedGoodsValue:row.openingInventory===0?0:null,
      finishedGoodsClosingQuantity:row.closingInventory,
      rawMaterialPurchasesQuantity:null,
      rawMaterialPurchasesValue:null,
