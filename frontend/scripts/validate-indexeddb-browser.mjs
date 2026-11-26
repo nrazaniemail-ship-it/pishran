@@ -215,6 +215,21 @@ try {
       assert.ok(Math.abs(debtSchedule.reduce((sum, row) => sum + row.principal, 0) - 21346939.92) < 0.02)
       assert.ok(Math.abs(debtSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 17369293.32) < 0.02)
     }
+    if (item.id === 'comfar-cold-coil-200k') {
+      assert.equal(persisted.financialForms.sales.length, 1, 'Cold-coil sales schedule must be imported')
+      assert.equal(persisted.financialForms.sales[0].periods.length, 17)
+      assert.equal(persisted.financialForms.sales[0].periods[2].salesQuantity, 160000)
+      assert.equal(persisted.financialForms.sales[0].periods[2].netUnitPrice, 395)
+      assert.equal(persisted.financialForms.sales[0].periods[4].salesQuantity, 200000)
+      assert.equal(persisted.financialForms.loans.length, 1, 'Cold-coil long-term loan schedule must be imported')
+      const debtSchedule = persisted.financialForms.loans[0].manualPeriodSchedule
+      assert.equal(debtSchedule.length, 4)
+      assert.equal(debtSchedule[0].drawdown, 5000000)
+      assert.equal(debtSchedule[0].capitalizedInterest, 350000)
+      assert.equal(debtSchedule.at(-1).closingBalance, 0)
+      assert.ok(Math.abs(debtSchedule.reduce((sum, row) => sum + row.principal, 0) - 5350000) < 0.02)
+      assert.ok(Math.abs(debtSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 2732907.68) < 0.02)
+    }
 
     assert.equal(persisted.foundation.currencies.localCurrencyCode, item.currency)
     assert.equal(persisted.financialForms.workingCapital.length, item.workingCapitalComponents)
