@@ -272,6 +272,39 @@ function baseModel(project:FeasibilityProject):Model {
     }))
    }]
   }
+  const sourceLoanSchedule=sourceInputs.financingSchedule??[]
+  if(sourceLoanSchedule.length){
+   financialForms.loans=[{
+    id:project.id+'-comfar-loan',
+    name:'تسهیلات بلندمدت مطابق برنامه گزارش',
+    currencyCode,
+    marketOrigin:'local',
+    annualRatePercent:null,
+    openingBalance:0,
+    openingExchangeRateToLocal:null,
+    gracePeriods:null,
+    interestConvention:null,
+    loanType:'profile',
+    repaymentInterval:'annual',
+    firstRepaymentDate:'',
+    numberOfRepayments:null,
+    disbursements:[],
+    profileMovements:[],
+    interestRateChanges:[],
+    interestPaymentMonth:null,
+    capitalizedInterestPercent:null,
+    capitalizeUntilDate:'',
+    fees:[],
+    manualPeriodSchedule:sourceLoanSchedule.map(row=>({
+     period:String(Number(row.period)-reportYear+1),
+     drawdown:row.loanDisbursement,
+     principal:row.principalRepayment,
+     interestExpense:row.interestExpense,
+     capitalizedInterest:row.capitalizedInterest,
+     closingBalance:row.closingDebt,
+    })),
+   }]
+  }
   const sourceOperatingCosts=sourceInputs.operatingCostSchedule??[]
   if(sourceOperatingCosts.length){
    const productId=project.id+'-main-product'
