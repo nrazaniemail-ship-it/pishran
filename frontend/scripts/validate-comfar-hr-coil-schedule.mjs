@@ -67,15 +67,38 @@ const productionCosts=input.operatingCostSchedule[0].rows.map((sourceRow,rowInde
  adjustments:input.operatingCostSchedule.map(period=>({period:String(Number(period.period)-1403+1),
   quantity:null,unitPrice:null,total:period.rows[rowIndex].amount,fixedPercent:null,variablePercent:null})),
 }))
+const byproductId='hr-coil-scrape'
+const byproductPeriods=[
+ {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
+ {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
+ ...input.byproductSalesSchedule.map(row=>({...row,period:String(Number(row.period)-1403+1)})),
+].map(row=>({
+ period:row.period,salesQuantity:row.sales,netUnitPrice:row.netUnitPrice,salesTaxPercent:0,
+ subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:row.openingInventory,
+ openingFinishedGoodsValue:row.openingInventory===0?0:null,finishedGoodsClosingQuantity:row.closingInventory,
+ rawMaterialPurchasesQuantity:null,rawMaterialPurchasesValue:null,rawMaterialConsumptionQuantity:null,
+ normalRawMaterialWasteQuantity:null,abnormalRawMaterialWasteQuantity:null,unitsStarted:null,unitsCompleted:null,
+ closingWipQuantity:null,materialCompletionPercent:null,conversionCompletionPercent:null,conversionCost:null,
+ openingRawMaterialQuantity:null,openingRawMaterialValue:null,openingWipQuantity:null,openingWipMaterialValue:null,openingWipConversionValue:null,
+}))
+productionCosts.push({
+ id:'hr-coil-byproduct-cost',metadata:{description:'No separate byproduct production cost disclosed',currencyCode:'IRR',marketOrigin:'local',escalationPercent:0,remarks:'COMFAR pp.39-42; no separate cost schedule disclosed',costCentreId:null},
+ classification:'direct',productId:byproductId,basis:'period-adjustments',
+ standardQuantity:null,standardUnitPrice:null,standardTotal:null,nominalCapacity:null,fixedPercent:null,variablePercent:null,
+ adjustments:input.byproductSalesSchedule.map(row=>({period:String(Number(row.period)-1403+1),quantity:null,unitPrice:null,total:0,fixedPercent:null,variablePercent:null})),
+})
 const productSchedule=operating.buildProductOperatingSchedule({
- sales:[{productId:mainProductId,unitOfMeasure:'تن',inventoryPolicy:'manual',finishedGoodsDaysCoverage:null,
-  productionStartPeriod:3,productionEndPeriod:17,periods:salesPeriods}],
+ sales:[
+  {productId:mainProductId,unitOfMeasure:'تن',inventoryPolicy:'manual',finishedGoodsDaysCoverage:null,productionStartPeriod:3,productionEndPeriod:17,periods:salesPeriods},
+  {productId:byproductId,unitOfMeasure:'تن',inventoryPolicy:'manual',finishedGoodsDaysCoverage:null,productionStartPeriod:3,productionEndPeriod:17,periods:byproductPeriods},
+ ],
  productionCosts,
 },periods,3,'IRR')
 assert.equal(productSchedule.valid,true,productSchedule.issues.join('; '))
 assert.equal(productSchedule.rows.find(row=>row.period===3)?.productionQuantity,141944.44)
-close(productSchedule.periodRevenue[2],42980000,'Product engine 1405 net sales')
-close(productSchedule.periodRevenue[7],61400000,'Product engine 1410 net sales')
+close(productSchedule.periodRevenue[2],43581720,'Product engine 1405 total sales including Scrape#')
+close(productSchedule.periodRevenue[7],62259600,'Product engine 1408 total sales including Scrape#')
+close(productSchedule.rows.find(row=>row.productId===byproductId&&row.period===3)?.productionQuantity,2838.89,'Scrape# 1405 production')
 close(productSchedule.periodCostOfSales[2],30116060.85,'Product engine 1405 weighted-average cost of sales',0.02)
 close(productSchedule.rows.find(row=>row.period===3)?.productionCost,30534338.52,'Product engine 1405 detailed factory production cost')
 console.log('Hot-rolled coil product-by-product operating schedule validation passed.')
