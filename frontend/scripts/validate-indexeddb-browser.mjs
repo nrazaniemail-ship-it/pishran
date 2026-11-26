@@ -186,7 +186,13 @@ try {
     }, { storeUrl: localStoreUrl, id: item.id })
     assert.ok(persisted, `${item.id} model must persist in IndexedDB after autosave`)
     assert.equal(persisted.foundation.currencies.localCurrencyCode, item.currency)
-    assert.equal(persisted.financialForms.tax.rates.length, 15, `${item.id} must include all 15 annual tax periods`)
+    if(item.id==='comfar-hr-coil-200k'){
+      assert.equal(persisted.financialForms.tax.rates.length,3,'The HR coil model must retain only the three tax rates explicitly evidenced on COMFAR page 2')
+      assert.deepEqual(persisted.financialForms.tax.rates.map(row=>[row.period,row.ratePercent]),[['3',5],['6',5],['17',25]],
+        'Undocumented annual tax rates must remain missing instead of inheriting an assumed flat rate')
+    }else{
+      assert.equal(persisted.financialForms.tax.rates.length,15,item.id+' must include all 15 annual tax periods')
+    }
     assert.equal(persisted.financialForms.workingCapital.length, item.workingCapitalComponents)
     const workingCapital = Object.fromEntries(persisted.financialForms.workingCapital.map(component => [
       component.category, component.periodBalances.at(-1)?.amount ?? 0
