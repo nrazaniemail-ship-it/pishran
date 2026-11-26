@@ -669,6 +669,9 @@ export type PeriodicProjectFinanceInput = {
   annualMaintenanceCapex: number[]
   annualTaxRates: number[]
   taxRatesByPeriod?: number[]
+  /** Final income-tax amounts transcribed from a verified source, by exact project period. */
+  taxAmountOverridesByPeriod?: number[]
+  taxAmountSourceReference?: string
   taxableDeductionsByPeriod?: number[]
   /** Non-refundable period tax credits; excess credits are not carried forward. */
   taxCreditsByPeriod?: number[]
@@ -752,7 +755,8 @@ export type PeriodicProjectFinanceRow = {
   principal: number
   debtDrawdown: number
   debtService: number
-  taxRatePercent: number
+  taxRatePercent: number | null
+  taxAmountSourceReference?: string | null
   taxableDeduction: number
   taxCredit: number
   taxBeforeCredits: number
@@ -890,12 +894,13 @@ export function aggregatePeriodicFinanceByFiscalYear(
       yearRows.reduce((total,row)=>total+row[key],0)
     const equityContribution=yearRows.reduce((total,row)=>total+row.equityContribution+row.equityWorkingCapitalContribution,0)
     const netDebtFinancingFlow=yearRows.reduce((total,row)=>total+row.debtDrawdown+row.capitalizedInterest-row.principal,0)
-    const taxRates=[...new Set(yearRows.map(row=>Number(row.taxRatePercent.toFixed(4))))]
+    const rowTaxRates=yearRows.map(row=>row.taxRatePercent)
+    const taxRates=[...new Set(rowTaxRates.filter((rate):rate is number=>rate!==null).map(rate=>Number(rate.toFixed(4))))]
     const debtService=sum('debtService'),cfads=sum('cfads')
     return {
       fiscalYearIndex,rows:yearRows,projectFreeCashFlow:sum('projectFreeCashFlow'),
       equityContribution,netDebtFinancingFlow,
-      taxRatePercent:taxRates.length===1?taxRates[0]:null,depreciation:sum('depreciation'),
+      taxRatePercent:rowTaxRates.every(rate=>rate!==null)&&taxRates.length===1?taxRates[0]:null,depreciation:sum('depreciation'),
       changeInWorkingCapital:sum('changeInWorkingCapital'),interestExpense:sum('interestExpense'),
       principal:sum('principal'),debtService,cfads,dscr:debtService>0?cfads/debtService:null
     }
@@ -1140,6 +1145,16 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     warnings.push('Annual tax-rate schedule does not cover every project fiscal period.')
     return empty()
   }
+  if (input.taxAmountOverridesByPeriod && (
+      input.taxAmountOverridesByPeriod.length !== periods.length ||
+      input.taxAmountOverridesByPeriod.some(amount => !validFinite(amount) || amount < 0) ||
+      !input.taxAmountSourceReference?.trim() ||
+      (input.taxableDeductionsByPeriod?.some(amount => amount !== 0) ?? false) ||
+      (input.taxCreditsByPeriod?.some(amount => amount !== 0) ?? false)
+  )) {
+    warnings.push('Documented tax amounts require one finite non-negative amount per period, a source reference, and no additional tax deductions or credits.')
+    return empty()
+  }
   const loanSchedules: Record<string, PeriodicLoanRow[]> = {}
   for (const loan of input.loans) {
     const override=input.loanScheduleOverrides?.[loan.id]
@@ -1230,10 +1245,12 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const unleveredTaxWithExpiry=calculatePeriodTaxWithLossExpiry(
       ebit+shortTermDepositInterest[index]-taxableDeduction,taxRates[index],unleveredTaxLossVintages,currentFiscalYearIndex,
       lossCarryForwardEnabled?lossCarryForwardYears:null,lossCarryForwardEnabled)
-    const taxCredit=Math.min(input.taxCreditsByPeriod?.[index]??0,periodTaxWithExpiry.tax)
-    const unleveredTaxCredit=Math.min(input.taxCreditsByPeriod?.[index]??0,unleveredTaxWithExpiry.tax)
-    const periodTax:PeriodTaxResult={...periodTaxWithExpiry,tax:periodTaxWithExpiry.tax-taxCredit}
-    const unleveredPeriodTax:PeriodTaxResult={...unleveredTaxWithExpiry,tax:unleveredTaxWithExpiry.tax-unleveredTaxCredit}
+    const documentedTaxAmount=input.taxAmountOverridesByPeriod?.[index]
+    const hasDocumentedTaxAmount=documentedTaxAmount!==undefined
+    const taxCredit=hasDocumentedTaxAmount?0:Math.min(input.taxCreditsByPeriod?.[index]??0,periodTaxWithExpiry.tax)
+    const unleveredTaxCredit=hasDocumentedTaxAmount?0:Math.min(input.taxCreditsByPeriod?.[index]??0,unleveredTaxWithExpiry.tax)
+    const periodTax:PeriodTaxResult={...periodTaxWithExpiry,tax:hasDocumentedTaxAmount?documentedTaxAmount:periodTaxWithExpiry.tax-taxCredit}
+    const unleveredPeriodTax:PeriodTaxResult={...unleveredTaxWithExpiry,tax:hasDocumentedTaxAmount?documentedTaxAmount:unleveredTaxWithExpiry.tax-unleveredTaxCredit}
     if (![periodTax.tax,unleveredPeriodTax.tax,taxCredit,unleveredTaxCredit].every(validFinite)) {
       warnings.push('Tax calculation failed in project period ' + (index + 1) + '.')
       return empty()
@@ -1284,7 +1301,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
-      capitalizedInterest,capitalizedFinancingFees,foreignExchangeLoss,principal,debtDrawdown,debtService,taxRatePercent:taxRates[index],taxableDeduction,taxCredit,taxBeforeCredits:periodTaxWithExpiry.tax,
+      capitalizedInterest,capitalizedFinancingFees,foreignExchangeLoss,principal,debtDrawdown,debtService,taxRatePercent:hasDocumentedTaxAmount?null:taxRates[index],taxAmountSourceReference:hasDocumentedTaxAmount?input.taxAmountSourceReference??null:null,taxableDeduction,taxCredit,taxBeforeCredits:hasDocumentedTaxAmount?documentedTaxAmount:periodTaxWithExpiry.tax,
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
       closingWorkingCapital,rawMaterialsInventory:input.rawMaterialsInventoryByPeriod?.[index]??0,workInProgressInventory:input.workInProgressInventoryByPeriod?.[index]??0,finishedGoodsInventory:input.finishedGoodsInventoryByPeriod?.[index]??0,
