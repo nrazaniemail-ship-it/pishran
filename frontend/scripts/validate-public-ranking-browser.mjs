@@ -29,6 +29,23 @@ async function verifyExcelExport(page, buttonName, expectedProject, excludedProj
   assert.ok(filenameIdentity(download.suggestedFilename()).includes(filenameIdentity(expectedFilenameProject)), `Excel filename must identify the active project ${expectedFilenameProject}; filename: ${download.suggestedFilename()}`)
   assert.ok(!content.includes(excludedProject.normalize('NFC')), `Excel export must not leak another project: ${excludedProject}`)
 }
+async function readRankingProjectIndexes(page) {
+  return page.evaluate(async()=>{
+    let indexedDbNames=[]
+    try{
+      const db=await new Promise(resolve=>{const request=indexedDB.open('pishran_store');request.onsuccess=()=>resolve(request.result);request.onerror=()=>resolve(null)})
+      if(db){
+        try{
+          const record=await new Promise((resolve,reject)=>{const request=db.transaction('kv','readonly').objectStore('kv').get('mod10-ranking-projects:v1');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})
+          indexedDbNames=Array.isArray(record?.value)?record.value.map(item=>({id:item.id,name:item.name,updatedAt:item.updatedAt})):[]
+        }finally{db.close()}
+      }
+    }catch{}
+    let fallbackNames=[]
+    try{const fallback=JSON.parse(localStorage.getItem('pishran_mod10-ranking-projects:v1')??'null');fallbackNames=Array.isArray(fallback)?fallback.map(item=>({id:item.id,name:item.name,updatedAt:item.updatedAt})):[]}catch{}
+    return {indexedDbNames,fallbackNames}
+  })
+}
 async function verifyPdfScope(page, buttonName) {
   const root = activeExportRoot(page)
   await root.waitFor({ state: 'visible' })
@@ -114,9 +131,12 @@ try {
     const matches = item => item.name === expectedName && (moduleId === undefined || item.moduleId === moduleId)
     return Boolean(indexedDbProjects?.some(matches) && fallbackProjects?.some(matches))
   }, { key: 'mod10-ranking-projects:v1', expectedName: 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', moduleId: undefined }, { timeout: 10000 })
+  console.log('Ranking project indexes immediately after rename:',JSON.stringify(await readRankingProjectIndexes(page)))
   await activeExportRoot(page).waitFor({ state: 'visible' })
   await verifyExcelExport(page, 'خروجی Excel', 'پروژه آزمایش رتبه‌بندی ویرایش‌شده', 'پروژه دوم مستقل')
+  console.log('Ranking project indexes after Excel export:',JSON.stringify(await readRankingProjectIndexes(page)))
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
+  console.log('Ranking project indexes after PDF print:',JSON.stringify(await readRankingProjectIndexes(page)))
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
   await page.getByLabel('نام پروژه رتبه‌بندی جدید').fill('پروژه دوم مستقل')
@@ -126,21 +146,7 @@ try {
   await verifyPdfScope(page, 'چاپ / ذخیره PDF')
   await page.getByRole('button', { name: 'بازگشت به پروژه‌های رتبه‌بندی' }).click()
   await page.getByRole('heading', { name: 'پروژه‌های رتبه‌بندی' }).waitFor()
-  const storageNamesAfterSecondProject=await page.evaluate(async()=>{
-    let indexedDbNames=[]
-    try{
-      const db=await new Promise(resolve=>{const request=indexedDB.open('pishran_store');request.onsuccess=()=>resolve(request.result);request.onerror=()=>resolve(null)})
-      if(db){
-        try{
-          const record=await new Promise((resolve,reject)=>{const request=db.transaction('kv','readonly').objectStore('kv').get('mod10-ranking-projects:v1');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})
-          indexedDbNames=Array.isArray(record?.value)?record.value.map(item=>({id:item.id,name:item.name,updatedAt:item.updatedAt})):[]
-        }finally{db.close()}
-      }
-    }catch{}
-    let fallbackNames=[]
-    try{const fallback=JSON.parse(localStorage.getItem('pishran_mod10-ranking-projects:v1')??'null');fallbackNames=Array.isArray(fallback)?fallback.map(item=>({id:item.id,name:item.name,updatedAt:item.updatedAt})):[]}catch{}
-    return {indexedDbNames,fallbackNames}
-  })
+  const storageNamesAfterSecondProject=await readRankingProjectIndexes(page)
   console.log('Ranking project indexes after creating project 2:',JSON.stringify(storageNamesAfterSecondProject))
   const expectedStoredName='پروژه آزمایش رتبه‌بندی ویرایش‌شده'
   assert.ok(storageNamesAfterSecondProject.indexedDbNames.some(item=>item.name===expectedStoredName)&&storageNamesAfterSecondProject.fallbackNames.some(item=>item.name===expectedStoredName),'renamed project must remain in both storage indexes after creating project 2')
