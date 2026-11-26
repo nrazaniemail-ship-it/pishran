@@ -24,7 +24,7 @@ function referenceTopsis(matrix, weights, directions) {
   }).sort((a, b) => b.score - a.score)
 }
 function activeExportRoot(page) {
-  return page.locator('[data-module-export-root="true"]').filter({ has: page.locator('.module-export-actions') }).last()
+  return page.locator('[data-module-export-root="true"][data-project-export-id]').last()
 }
 async function verifyExcelExport(page, buttonName, expectedProject, excludedProject) {
   const root = activeExportRoot(page)
