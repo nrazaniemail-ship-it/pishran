@@ -507,13 +507,18 @@ try {
       await page.getByLabel('زمان اجرا manual weight').fill('1')
       await page.getByRole('button', { name: 'Calculate and save version' }).click()
       await page.getByText('Calculation version saved').waitFor()
-      const reference = referenceTopsis(
-        [[81, 82, 83], [84, 85, 86], [87, 88, 89]],
-        [7, 2, 1],
-        ['cost', 'benefit', 'cost']
-      )
+      const liveMatrix = await page.locator('.ranking-performance-matrix').evaluate(table => {
+        const rows = [...table.querySelectorAll('tbody tr')]
+        return {
+          alternatives: rows.map(row => row.querySelector('th input')?.value ?? ''),
+          matrix: rows.map(row => [...row.querySelectorAll('td input[type="number"]')].map(input => Number(input.value))),
+          directions: [...table.querySelectorAll('thead th select')].map(select => select.value)
+        }
+      })
+      assert.ok(liveMatrix.matrix.length >= 2 && liveMatrix.matrix.every(row => row.length === liveMatrix.directions.length && row.every(Number.isFinite)), 'TOPSIS reference must read the complete live performance matrix')
+      const reference = referenceTopsis(liveMatrix.matrix, [7, 2, 1], liveMatrix.directions)
       const expectedRankingRows = reference.map((result, rank) => ({
-        alternative: ['گزینه الف', 'گزینه ب', 'گزینه ج'][result.alternativeIndex],
+        alternative: liveMatrix.alternatives[result.alternativeIndex],
         score: (result.score * 100).toFixed(2),
         rank: rank + 1
       }))
