@@ -128,10 +128,16 @@ export default function FixedInvestmentPanel({ value, foundation, projectStartYe
         })()}
         <label className="fw-field"><span>{t('مبنای شرایط استهلاک','Depreciation Condition Evidence')}</span><select value={item.depreciationBasis??'unresolved'} onChange={e=>updateItem(item.id,{depreciationBasis:e.target.value as FixedInvestmentItem['depreciationBasis']})}>
           <option value="source-table">{t('مستند به جدول منبع','Source-table')}</option>
-          <option value="user-confirmed">{t('تأییدشده توسط کاربر','User-confirmed')}</option>
+          <option value="user-confirmed">{t('تأیید کاربر بدون سند (محاسبه نمی‌شود)','User-confirmed without source (not calculated)')}</option>
           <option value="source-conflict">{t('تعارض بین منابع','Source conflict')}</option>
           <option value="unresolved">{t('تعیین‌نشده','Unresolved')}</option>
         </select></label>
+        {item.depreciationBasis==='source-table'&&<>
+          {field(t('مرجع سند دارایی‌به‌دارایی (نام فایل/صفحه/شناسه)','Asset-by-asset source reference (file/page/ID)'),item.depreciationEvidenceReference??'',v=>updateItem(item.id,{depreciationEvidenceReference:v}),'text')}
+          <label className="fw-field"><span><input type="checkbox" checked={item.depreciationEvidenceVerified===true} onChange={e=>updateItem(item.id,{depreciationEvidenceVerified:e.target.checked})}/>{t('سند دارایی‌به‌دارایی بررسی و تأیید شده است','Asset-by-asset source document has been reviewed and verified')}</span></label>
+          {(!item.depreciationEvidenceReference?.trim()||item.depreciationEvidenceVerified!==true)&&<p className="fw-hint">{t('تا زمان ثبت مرجع سند و تأیید بررسی آن، استهلاک در موتور مالی صفر می‌ماند.','Depreciation remains zero in the finance engine until the source reference is recorded and verified.')}</p>}
+        </>}
+        {item.depreciationBasis==='user-confirmed'&&<p className="fw-hint">{t('تأیید کاربر به‌تنهایی سند دارایی‌به‌دارایی محسوب نمی‌شود و استهلاک محاسبه نخواهد شد.','User confirmation alone is not an asset-by-asset source document; depreciation will not be calculated.')}</p>}
         {field(t('شروع استهلاک','Starting at'), item.depreciation.startingAt, v => updateDepreciation(item.id, { startingAt: v }), 'text')}
         {field(t('نرخ استهلاک (% در سال)','Rate (% per annum)'), item.depreciation.ratePercent ?? '', v => updateDepreciation(item.id, { ratePercent: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none' || item.depreciation.method === 'sum-of-digits')}
         {field(t('مدت استهلاک ـ سال','Length — Years'), item.depreciation.lengthYears ?? '', v => updateDepreciation(item.id, { lengthYears: v === '' ? null : Number(v) }), 'number', 0, 100, item.depreciation.method === 'none', 0.001)}
