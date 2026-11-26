@@ -833,6 +833,9 @@ export type PeriodicFiscalYearSummary = {
   /** Net financing cash flow: drawdowns plus capitalized interest less principal repayments. */
   netDebtFinancingFlow: number
   taxRatePercent: number | null
+  taxAmountSourceReference: string | null
+  otherIncome: number
+  otherIncomeSourceReference: string | null
   depreciation: number
   changeInWorkingCapital: number
   interestExpense: number
@@ -901,11 +904,16 @@ export function aggregatePeriodicFinanceByFiscalYear(
     const netDebtFinancingFlow=yearRows.reduce((total,row)=>total+row.debtDrawdown+row.capitalizedInterest-row.principal,0)
     const rowTaxRates=yearRows.map(row=>row.taxRatePercent)
     const taxRates=[...new Set(rowTaxRates.filter((rate):rate is number=>rate!==null).map(rate=>Number(rate.toFixed(4))))]
+    const taxSourceReferences=[...new Set(yearRows.map(row=>row.taxAmountSourceReference).filter((value):value is string=>!!value))]
+    const otherIncomeSourceReferences=[...new Set(yearRows.map(row=>row.otherIncomeSourceReference).filter((value):value is string=>!!value))]
     const debtService=sum('debtService'),cfads=sum('cfads')
     return {
       fiscalYearIndex,rows:yearRows,projectFreeCashFlow:sum('projectFreeCashFlow'),
       equityContribution,netDebtFinancingFlow,
-      taxRatePercent:rowTaxRates.every(rate=>rate!==null)&&taxRates.length===1?taxRates[0]:null,depreciation:sum('depreciation'),
+      taxRatePercent:rowTaxRates.every(rate=>rate!==null)&&taxRates.length===1?taxRates[0]:null,
+      taxAmountSourceReference:taxSourceReferences.join(' | ')||null,
+      otherIncome:sum('otherIncome'),otherIncomeSourceReference:otherIncomeSourceReferences.join(' | ')||null,
+      depreciation:sum('depreciation'),
       changeInWorkingCapital:sum('changeInWorkingCapital'),interestExpense:sum('interestExpense'),
       principal:sum('principal'),debtService,cfads,dscr:debtService>0?cfads/debtService:null
     }
