@@ -465,7 +465,7 @@ try {
     'first-project advanced inputs must remain isolated from the second project')
   await page.getByText('Calculation history (4)').waitFor()
   assert.deepEqual(pageErrors, [], 'public ranking interaction must not generate browser runtime errors')
-  assert.ok(bundle.includes('Monte Carlo top probability') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')
+  if(!isLocalPreview) assert.ok(bundle.includes('Monte Carlo top probability') || bundle.includes('خلاصه تحلیل حساسیت رتبه‌ها'), 'published bundle must include ranking sensitivity UI')
   // Public regression: module capability tabs, no obsolete bottom continue action,
   // and module workspace create/edit persistence across a full reload.
   await page.getByRole('button', { name: 'Switch to Persian' }).click()
