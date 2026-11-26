@@ -232,9 +232,12 @@ function baseModel(project:FeasibilityProject):Model {
   foundation.discounting.method='manual'
   foundation.discounting.financialRatePercent=report.investmentNpvRate
   foundation.taxation.system='corporate'
-  const sourceTaxRates=[{period:'1405',ratePercent:5},{period:'1408',ratePercent:5},{period:'1419',ratePercent:25}]
-  foundation.taxation.rates=sourceTaxRates.map((rate,index)=>({id:project.id+'-tax-source-'+index,period:String(Number(rate.period)-reportYear+1),ratePercent:rate.ratePercent}))
-  financialForms.tax={...financialForms.tax,system:'corporate',rates:sourceTaxRates.map(rate=>({period:String(Number(rate.period)-reportYear+1),ratePercent:rate.ratePercent}))}
+  const isHrCoilReference=project.id==='comfar-hr-coil-200k'
+  const sourceTaxRates=isHrCoilReference
+    ?[{period:'1405',ratePercent:5},{period:'1408',ratePercent:5},{period:'1419',ratePercent:25}]
+    :Array.from({length:report.operatingYears},(_,index)=>({period:String(report.firstOperatingYear+index),ratePercent:report.taxPercent}))
+  foundation.taxation.rates=sourceTaxRates.map((rate,index)=>({id:project.id+'-tax-source-'+index,period:isHrCoilReference?String(Number(rate.period)-reportYear+1):rate.period,ratePercent:rate.ratePercent}))
+  financialForms.tax={...financialForms.tax,system:'corporate',rates:sourceTaxRates.map(rate=>({period:isHrCoilReference?String(Number(rate.period)-reportYear+1):rate.period,ratePercent:rate.ratePercent}))}
   const sourceSalesSchedule=sourceInputs.productionSalesSchedule??[]
   const sourceByproductSchedule=sourceInputs.byproductSalesSchedule??[]
   const sourceSalesPeriods=[
@@ -388,7 +391,7 @@ function baseModel(project:FeasibilityProject):Model {
   'سهم هزینه متغیر گزارش: '+sourceInputs.variableCostSharePercent+'٪؛ سهم خارجی CAPEX گزارش: '+sourceInputs.foreignFixedInvestmentSharePercent+'٪. این نسبت‌ها تجمیعی‌اند و به تفکیک دارایی تخصیص داده نشده‌اند.',
   'برنامه سالانه تولید و فروش از صفحه ۳۵: '+(sourceInputs.productionSalesSchedule??[]).map(row=>row.period+' تولید '+fmt(row.production,2)+' تن، فروش '+fmt(row.sales,2)+' تن، قیمت '+fmt(row.netUnitPrice,2)+' و درآمد '+fmt(row.salesRevenue,2)).join('؛ '),
   'برنامه بدهی صفحات ۵۱ تا ۵۳: '+(sourceInputs.financingSchedule??[]).map(row=>row.period+' برداشت '+fmt(row.loanDisbursement,2)+'، بازپرداخت اصل '+fmt(row.principalRepayment,2)+'، بهره '+fmt(row.interestExpense,2)+'، مانده '+fmt(row.closingDebt,2)).join('؛ '),
-  'نرخ مالیات فقط برای ۱۴۰۵ و ۱۴۰۸ برابر ۵٪ و برای ۱۴۱۹ برابر ۲۵٪ از صفحه ۲ مستند است؛ نرخ سال‌های دیگر و دو دوره ساخت در این گزارش خلاصه به‌طور کامل مشخص نشده و عمداً حدس زده نمی‌شود.',
+  ...(isHrCoilReference?['نرخ مالیات فقط برای ۱۴۰۵ و ۱۴۰۸ برابر ۵٪ و برای ۱۴۱۹ برابر ۲۵٪ از صفحه ۲ مستند است؛ نرخ سال‌های دیگر و دو دوره ساخت در این گزارش خلاصه به‌طور کامل مشخص نشده و عمداً حدس زده نمی‌شود.']:[]),
   'استهلاک کل سالانه صفحات ۲۴ تا ۲۷ در داده مرجع ثبت شده؛ ریز استهلاک دارایی‌به‌دارایی از این گزارش خلاصه قابل استخراج قطعی نیست.',
   ...sourceInputs.missingSourceDetails.map(item=>'اطلاعات گزارش برای ورود قطعی ارائه نشده است: '+item)
  ].join('\n'):''
