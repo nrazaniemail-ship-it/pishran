@@ -73,4 +73,28 @@ assert.deepEqual(manual.loanScheduleOverrides['comfar-manual'].map(row=>row.inte
  'Documented interest must be posted exactly without inferring an annual interest rate')
 assert.deepEqual(manual.loanScheduleOverrides['comfar-manual'].map(row=>row.principal),[0,30,80])
 assert.deepEqual(manual.loanScheduleOverrides['comfar-manual'].map(row=>row.closingBalance),[110,80,0])
+const comfarDataSource=await readFile(new URL('../src/features/projects/comfarProjectInputData.ts',import.meta.url),'utf8')
+const comfarDataJs=transpile(comfarDataSource)
+const {COMFAR_PROJECT_INPUTS}=await import(asUrl(comfarDataJs))
+const comfarSource=COMFAR_PROJECT_INPUTS['comfar-hr-coil-200k']
+const comfarPeriods=Array.from({length:17},(_,index)=>({
+ index:index+1,startDate:'2024-01-01',endDate:'2024-12-31',days:365,partial:false,
+}))
+const comfarManualLoan={
+ ...documentedManualLoan,id:'comfar-hr-coil-source',name:'COMFAR HR Coil documented schedule',
+ manualPeriodSchedule:comfarSource.financingSchedule.map(row=>({
+  period:String(Number(row.period)-1403+1),drawdown:row.loanDisbursement,
+  principal:row.principalRepayment,interestExpense:row.interestExpense,
+  capitalizedInterest:row.capitalizedInterest,closingBalance:row.closingDebt,
+ })),
+}
+const comfarOverride=adapter.buildProjectLoanDraftIntegration([comfarManualLoan],comfarPeriods,360,'annual',foundation)
+assert.equal(comfarOverride.valid,true,comfarOverride.issues.join('; '))
+const comfarRows=comfarOverride.loanScheduleOverrides['comfar-hr-coil-source']
+assert.equal(comfarRows.length,17)
+assert.equal(comfarRows[2].interestExpense,2399043.44,'1405 interest must be taken from the COMFAR source schedule')
+assert.equal(comfarRows[2].principal,964925.63,'1405 principal must be taken from the COMFAR source schedule')
+assert.equal(comfarRows[3].interestExpense,2099148.4,'1406 interest must be taken from the COMFAR source schedule')
+assert.equal(comfarRows[6].closingBalance,0,'Debt must be fully repaid in 1409')
+assert.equal(comfarRows[16].closingBalance,0,'No debt is invented after the documented 1409 repayment')
 console.log('Local and foreign loan draft integration validation passed.')
