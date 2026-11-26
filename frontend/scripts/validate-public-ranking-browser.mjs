@@ -85,16 +85,52 @@ try {
   const context = await browser.newContext({ acceptDownloads: true })
   const page = await context.newPage()
   const pageErrors = []
-  page.on('pageerror', error => pageErrors.push(error.message))
+  const consoleErrors = []
+  const failedRequests = []
+  const badResponses = []
+  page.on('pageerror', error => pageErrors.push(error.stack || error.message))
+  page.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') consoleErrors.push({ type: message.type(), text: message.text() }) })
+  page.on('requestfailed', request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText }))
+  page.on('response', response => { if (response.status() >= 400) badResponses.push({ status: response.status(), url: response.url() }) })
   const live = await page.goto(site, { waitUntil: 'domcontentloaded' })
   assert.equal(live?.status(), 200, 'public PWA must load with HTTP 200')
   const moduleCard = page.locator('.module-launcher-card').filter({ hasText: 'MOD-10' })
   await moduleCard.waitFor({ state: 'visible' })
   await moduleCard.click()
-  await page.waitForFunction(() => {
-    const input = document.querySelector('#ranking-project-new-name')
-    return input && !input.disabled
-  })
+  try {
+    await page.waitForFunction(() => {
+      const input = document.querySelector('#ranking-project-new-name')
+      return input && !input.disabled
+    }, null, { timeout: 10000 })
+  } catch (error) {
+    const diagnostics = await page.evaluate(async () => {
+      const input = document.querySelector('#ranking-project-new-name')
+      const dbState = await new Promise(resolve => {
+        if (typeof indexedDB === 'undefined') return resolve({ available: false })
+        let settled = false
+        const timer = setTimeout(() => { if (!settled) { settled = true; resolve({ available: true, open: 'timeout' }) } }, 1500)
+        try {
+          const request = indexedDB.open('pishran_store')
+          request.onsuccess = () => { if (settled) { request.result.close(); return } settled = true; clearTimeout(timer); const db = request.result; const result = { available: true, open: 'success', version: db.version, stores: [...db.objectStoreNames] }; db.close(); resolve(result) }
+          request.onerror = () => { if (!settled) { settled = true; clearTimeout(timer); resolve({ available: true, open: 'error', error: request.error?.message }) } }
+          request.onblocked = () => { if (!settled) { settled = true; clearTimeout(timer); resolve({ available: true, open: 'blocked' }) } }
+        } catch (cause) { if (!settled) { settled = true; clearTimeout(timer); resolve({ available: true, open: 'throw', error: String(cause) }) } }
+      })
+      let fallback = null
+      let fallbackError = null
+      try { fallback = JSON.parse(localStorage.getItem('pishran_mod10-ranking-projects:v1') ?? 'null') } catch (cause) { fallbackError = String(cause) }
+      return {
+        href: location.href, title: document.title, readyState: document.readyState,
+        input: input ? { disabled: input.disabled, outerHTML: input.outerHTML } : null,
+        modulePage: !!document.querySelector('.module-workspace-page'),
+        moduleId: document.querySelector('.module-workspace-page .module-id')?.textContent?.trim() ?? null,
+        rankingHeading: document.querySelector('#ranking-projects-title')?.textContent?.trim() ?? null,
+        visibleText: document.body.innerText.slice(0, 5000),
+        storage: { localStorageAvailable: (() => { try { return typeof localStorage !== 'undefined' } catch { return false } })(), fallback, fallbackError, indexedDB: dbState }
+      }
+    })
+    throw new Error('MOD-10 project create control did not become enabled. Diagnostics=' + JSON.stringify({ ...diagnostics, pageErrors, consoleErrors, failedRequests, badResponses }) + '; waitError=' + error.message)
+  }
   await page.getByLabel('نام پروژه رتبه‌بندی جدید').fill('پروژه آزمایش رتبه‌بندی')
   await page.getByRole('button', { name: 'ایجاد پروژه' }).click()
   await page.getByLabel('نام پروژه').fill('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
