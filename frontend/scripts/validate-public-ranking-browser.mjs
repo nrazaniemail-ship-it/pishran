@@ -109,9 +109,9 @@ async function verifyPdfScope(page, buttonName, expectedProject, excludedProject
     return pdfIdentity.includes(expected) || pdfIdentity.includes(reversedExpected) ||
       [...pdfIdentity].reverse().join('').includes(expected)
   }
-  assert.ok(containsPdfText(expectedProject), \`PDF bytes must contain the active project identity in logical or visual RTL order: \${expectedProject}; extracted text: \${pdfText.slice(0, 1600)}\`)
-  if (excludedProject) assert.ok(!containsPdfText(excludedProject), \`PDF bytes must not contain another project's identity: \${excludedProject}\`)
-  for (const fragment of expectedFragments) assert.ok(containsPdfText(fragment), \`PDF bytes must contain the expected report value \${fragment}; extracted text: \${pdfText.slice(0, 2400)}\`)
+  assert.ok(containsPdfText(expectedProject), 'PDF bytes must contain the active project identity in logical or visual RTL order: ' + expectedProject + '; extracted text: ' + pdfText.slice(0, 1600))
+  if (excludedProject) assert.ok(!containsPdfText(excludedProject), 'PDF bytes must not contain another project identity: ' + excludedProject)
+  for (const fragment of expectedFragments) assert.ok(containsPdfText(fragment), 'PDF bytes must contain expected report value ' + fragment + '; extracted text: ' + pdfText.slice(0, 2400))
   await pdfDocument.destroy()
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
   assert.equal(await root.evaluate(element => element.classList.contains('module-export-print-target')), false, 'PDF print scope must be cleaned up after printing')
