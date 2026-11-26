@@ -20,7 +20,7 @@ export type ComfarSourceInputData = {
   salesPriceSource?: string
   productionSalesSchedule?: { period: string; openingInventory: number; production: number; sales: number; closingInventory: number; netUnitPrice: number; salesRevenue: number }[]
   byproductSalesSchedule?: { productName:string; period:string; openingInventory:number; production:number; sales:number; closingInventory:number; netUnitPrice:number; salesRevenue:number }[]
-  financingSchedule?: { period: string; loanDisbursement: number; principalRepayment: number; interestExpense: number; capitalizedInterest: number; closingDebt: number }[]
+  financingSchedule?: { period: string; loanType?: 'long-term' | 'short-term'; loanDisbursement: number; principalRepayment: number; interestExpense: number; capitalizedInterest: number; closingDebt: number }[]
   depreciationSchedule?: { period: string; totalDepreciation: number }[]
   taxAmountSchedule?: { period:string; amount:number; sourceReference:string }[]
   otherIncomeSchedule?: { period:string; amount:number; sourceReference:string }[]
@@ -239,7 +239,7 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1403', net: 1656006.75, capitalizedInterest: 36080000 },
       { period: '1404', net: 1656006.75, capitalizedInterest: 41740000 },
     ],
-    operatingCostYear: 9,
+    operatingCostYear: 1409,
     variableCostSharePercent: 90.91,
     foreignFixedInvestmentSharePercent: 54.22,
     operatingCostRows: [
@@ -261,6 +261,36 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1408', inventory: 62070336.59, cash: 6162034.80 },
       ...Array.from({ length: 11 }, (_, index) => ({ period: String(1409 + index), inventory: 61997839.06, cash: 6157936.83 })),
     ],
-    missingSourceDetails: ['موازنه فیزیکی DRI هات‌لینک به فولاد مذاب و ترکیب شارژ', 'مصرف ویژه برق، گاز، اکسیژن، آب و فروآلیاژها', 'تفکیک تولید و فروش دو محصول و قیمت فروش هرکدام', 'عمر مفید و روش استهلاک تفکیکی تجهیزات احیا و فولادسازی', 'نرخ سود و برنامه تفصیلی بازپرداخت وام‌های بلندمدت و کوتاه‌مدت'],
+    salesUnitPrice: 634,
+    salesPriceSource: 'COMFAR III Expert؛ جدول‌های برنامه تولید و فروش Steel Slab و Extra DRI؛ یورو به ازای تن',
+    productionSalesSchedule: [
+      { period: '1405', openingInventory: 0, production: 851666.67, sales: 840000, closingInventory: 11666.67, netUnitPrice: 634, salesRevenue: 532560000 },
+      { period: '1406', openingInventory: 11666.67, production: 961666.67, sales: 960000, closingInventory: 13333.33, netUnitPrice: 634, salesRevenue: 608640000 },
+      { period: '1407', openingInventory: 13333.33, production: 1081666.67, sales: 1080000, closingInventory: 15000, netUnitPrice: 634, salesRevenue: 684720000 },
+      { period: '1408', openingInventory: 15000, production: 1201666.67, sales: 1200000, closingInventory: 16666.67, netUnitPrice: 634, salesRevenue: 760800000 },
+      ...Array.from({ length: 11 }, (_, index) => ({ period: String(1409 + index), openingInventory: 16666.67, production: 1200000, sales: 1200000, closingInventory: 16666.67, netUnitPrice: 634, salesRevenue: 760800000 })),
+    ],
+    byproductSalesSchedule: [
+      { productName: 'Extra DRI', period: '1405', openingInventory: 0, production: 373111.11, sales: 368000, closingInventory: 5111.11, netUnitPrice: 275, salesRevenue: 101200000 },
+      { productName: 'Extra DRI', period: '1406', openingInventory: 5111.11, production: 414638.89, sales: 414000, closingInventory: 5750, netUnitPrice: 275, salesRevenue: 113850000 },
+      { productName: 'Extra DRI', period: '1407', openingInventory: 5750, production: 460638.89, sales: 460000, closingInventory: 6388.89, netUnitPrice: 275, salesRevenue: 126500000 },
+      ...Array.from({ length: 12 }, (_, index) => ({ productName: 'Extra DRI', period: String(1408 + index), openingInventory: 6388.89, production: 460000, sales: 460000, closingInventory: 6388.89, netUnitPrice: 275, salesRevenue: 126500000 })),
+    ],
+    financingSchedule: [
+      { period: '1401', loanType: 'long-term', loanDisbursement: 101000000, principalRepayment: 0, interestExpense: 0, capitalizedInterest: 9760000, closingDebt: 101000000 },
+      { period: '1402', loanType: 'long-term', loanDisbursement: 135000000, principalRepayment: 0, interestExpense: 0, capitalizedInterest: 22920000, closingDebt: 236000000 },
+      { period: '1403', loanType: 'long-term', loanDisbursement: 135000000, principalRepayment: 0, interestExpense: 0, capitalizedInterest: 36080000, closingDebt: 371000000 },
+      { period: '1404', loanType: 'long-term', loanDisbursement: 60000000, principalRepayment: 0, interestExpense: 0, capitalizedInterest: 41740000, closingDebt: 431000000 },
+      { period: '1405', loanType: 'long-term', loanDisbursement: 0, principalRepayment: 101000000, interestExpense: 0, capitalizedInterest: 31980000, closingDebt: 330000000 },
+      { period: '1406', loanType: 'long-term', loanDisbursement: 0, principalRepayment: 135000000, interestExpense: 0, capitalizedInterest: 20180000, closingDebt: 195000000 },
+      { period: '1407', loanType: 'long-term', loanDisbursement: 0, principalRepayment: 135000000, interestExpense: 0, capitalizedInterest: 5660000, closingDebt: 60000000 },
+      { period: '1408', loanType: 'long-term', loanDisbursement: 0, principalRepayment: 60000000, interestExpense: 0, capitalizedInterest: 0, closingDebt: 0 },
+      { period: '1405', loanType: 'short-term', loanDisbursement: 49523442.75, principalRepayment: 0, interestExpense: 8914219.70, capitalizedInterest: 0, closingDebt: 49523442.75 },
+      { period: '1406', loanType: 'short-term', loanDisbursement: 0, principalRepayment: 12380860.69, interestExpense: 7892798.69, capitalizedInterest: 0, closingDebt: 37142582.06 },
+      { period: '1407', loanType: 'short-term', loanDisbursement: 0, principalRepayment: 12380860.69, interestExpense: 5664243.76, capitalizedInterest: 0, closingDebt: 24761721.38 },
+      { period: '1408', loanType: 'short-term', loanDisbursement: 0, principalRepayment: 12380860.69, interestExpense: 3435688.84, capitalizedInterest: 0, closingDebt: 12380860.69 },
+      { period: '1409', loanType: 'short-term', loanDisbursement: 0, principalRepayment: 12380860.69, interestExpense: 1207133.92, capitalizedInterest: 0, closingDebt: 0 },
+    ],
+    missingSourceDetails: ['موازنه فیزیکی DRI هات‌لینک به فولاد مذاب و ترکیب شارژ', 'مصرف ویژه برق، گاز، اکسیژن، آب و فروآلیاژها', 'تخصیص داخلی DRI تولیدی در فولادسازی در برابر Extra DRI مازاد قابل فروش', 'عمر مفید و روش استهلاک تفکیکی تجهیزات احیا و فولادسازی', 'نرخ قراردادی وام‌ها و کارمزدها؛ جدول مبالغ و بازپرداخت‌ها از گزارش استخراج شده است'],
   },
 }
