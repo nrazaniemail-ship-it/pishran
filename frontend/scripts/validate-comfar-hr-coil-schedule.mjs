@@ -27,6 +27,11 @@ assert.equal(input.productionSalesSchedule[0].production,141944.44)
 assert.equal(input.productionSalesSchedule[0].sales,140000)
 assert.equal(input.productionSalesSchedule.at(-1).period,'1419')
 assert.equal(input.productionSalesSchedule.at(-1).sales,200000)
+assert.equal(input.byproductSalesSchedule.length,15,'Scrape# source schedule must cover all operating years')
+for(const row of input.byproductSalesSchedule){
+ close(row.sales*row.netUnitPrice,row.salesRevenue,'Scrape# sales revenue '+row.period,0.02)
+ close(row.openingInventory+row.production-row.sales,row.closingInventory,'Scrape# inventory roll-forward '+row.period,0.02)
+}
 assert.equal(input.financingSchedule.length,7)
 close(input.financingSchedule[0].loanDisbursement,3816496,'1403 documented drawdown')
 close(input.financingSchedule[1].loanDisbursement,1794355,'1404 documented drawdown')
@@ -101,5 +106,19 @@ close(productSchedule.periodRevenue[7],62259600,'Product engine 1408 total sales
 close(productSchedule.rows.find(row=>row.productId===byproductId&&row.period===3)?.productionQuantity,2838.89,'Scrape# 1405 production')
 close(productSchedule.periodCostOfSales[2],30116060.85,'Product engine 1405 weighted-average cost of sales',0.02)
 close(productSchedule.rows.find(row=>row.period===3)?.productionCost,30534338.52,'Product engine 1405 detailed factory production cost')
-console.log('Hot-rolled coil product-by-product operating schedule validation passed.')
+// Page 1–2 summary values are kept as explicit reconciliation targets.
+const page1={totalInvestment:26596839.42,totalFunding:25310613.59,totalEquity:16401129.53,totalLongTermDebt:8909484.06}
+const page2={revenue1405:43581720,revenue1408:62259600,factoryCost1405:30130083.97,factoryCost1408:42604224.43,
+ npvProject:31399764.27,irrProjectPercent:48.31,npvEquity:23579675.01,irrEquityPercent:57.99}
+close(productSchedule.periodRevenue[2],page2.revenue1405,'Page 2 first-year total sales')
+close(productSchedule.periodRevenue[7],page2.revenue1408,'Page 2 reference-year total sales')
+close(page1.totalInvestment-page1.totalFunding,1286225.83,'Page 1 investment/funding bridge')
+close(page1.totalEquity+page1.totalLongTermDebt,page1.totalFunding,'Page 1 funding composition')
+close(sum(1405)-page2.factoryCost1405,404254.55,'Page 2 vs page 24 factory cost discrepancy in 1405')
+close(sum(1408)-page2.factoryCost1408,57750.65,'Page 2 vs page 24 factory cost discrepancy in 1408')
+assert.equal(page2.npvProject,31399764.27)
+assert.equal(page2.irrProjectPercent,48.31)
+assert.equal(page2.npvEquity,23579675.01)
+assert.equal(page2.irrEquityPercent,57.99)
+console.log('Hot-rolled coil product-by-product operating schedule and page 1–2 source reconciliation checks passed.')
 console.log('Hot-rolled coil COMFAR annual sales, factory-cost and debt-source schedules passed independent source-data checks.')
