@@ -157,6 +157,21 @@ close(taxSchedule.taxAmountOverridesByPeriod[2],477888.91,'COMFAR page 59 docume
 close(taxSchedule.taxAmountOverridesByPeriod[17],0,'COMFAR page 62 documented 1420 tax')
 assert.equal(taxSchedule.annualTaxRates.every(rate=>rate===0),true,'Amount-based tax must not invent a tax-rate schedule')
 
+const workingCapitalSource=await readFile(new URL('../src/features/projects/workingCapitalDraftIntegration.ts',import.meta.url),'utf8')
+const workingCapitalUrl='data:text/javascript;base64,'+Buffer.from(ts.transpileModule(workingCapitalSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64')
+const workingCapitalModule=await import(workingCapitalUrl)
+const workingCapitalDrafts={workingCapital:[
+ {id:'hrcr200-inventory',name:'Inventory',category:'inventory',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:input.workingCapital.map(row=>({period:String(Number(row.period)-1403+1),amount:row.inventory}))},
+ {id:'hrcr200-cash',name:'Cash',category:'cash',minimumDaysCoverage:null,turnoverCoefficient:null,valuationBasis:'user-defined',periodBalances:input.workingCapital.map(row=>({period:String(Number(row.period)-1403+1),amount:row.cash}))},
+]}
+const preserveWorkingCapital=workingCapitalModule.buildWorkingCapitalScheduleFromDrafts(workingCapitalDrafts,periods,0,false)
+assert.equal(preserveWorkingCapital.valid,true,preserveWorkingCapital.issues.join('; '))
+close(preserveWorkingCapital.terminalRecoveryAmount,0,'COMFAR terminal working capital is not separately recovered')
+close(preserveWorkingCapital.closingWorkingCapital[17],4595370.36,'COMFAR terminal working-capital balance remains on the balance sheet')
+close(preserveWorkingCapital.changeInWorkingCapital[17],0,'No unsupported terminal working-capital release is added')
+const defaultWorkingCapital=workingCapitalModule.buildWorkingCapitalScheduleFromDrafts(workingCapitalDrafts,periods,0)
+close(defaultWorkingCapital.terminalRecoveryAmount,4595370.36,'Default models retain the existing terminal working-capital recovery behavior')
+
 const amountByPeriod=(rows,amountOf)=>Array.from({length:18},(_,index)=>rows.filter(row=>Number(row.period)-1403===index).reduce((sum,row)=>sum+amountOf(row),0))
 const fixedInvestmentByPeriod=amountByPeriod(input.fixedInvestment.flatMap(item=>item.periods),row=>row.amount)
 const preOperatingByPeriod=amountByPeriod(input.preproduction,row=>row.net+row.capitalizedInterest)
