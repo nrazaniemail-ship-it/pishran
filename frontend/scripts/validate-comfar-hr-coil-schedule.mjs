@@ -59,12 +59,18 @@ const unresolvedLifecycle=financial.calculateComfarAssetLifecycle(unresolvedDepr
 assert.equal(unresolvedLifecycle.depreciation.periods.reduce((total,row)=>total+row.depreciation,0),0,'Unverified depreciation must be zero in the integrated asset lifecycle')
 const conflictedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{...testAsset,depreciationBasis:'source-conflict'}],1403,3,'annual')
 assert.equal(conflictedDepreciation.assets[0]?.method,'none','Conflicting depreciation evidence must not produce depreciation')
-const documentedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{...testAsset,depreciationBasis:'source-table'}],1403,3,'annual')
-assert.equal(documentedDepreciation.assets[0]?.method,'linear-to-zero','A source-table asset-level schedule may calculate depreciation')
+const unverifiedSourceDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{...testAsset,depreciationBasis:'source-table'}],1403,3,'annual')
+assert.equal(unverifiedSourceDepreciation.assets[0]?.method,'none','A source-table label without a document reference and verification must not calculate depreciation')
+const documentedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{
+ ...testAsset,depreciationBasis:'source-table',depreciationEvidenceReference:'Asset register, asset 001, page 4',depreciationEvidenceVerified:true,
+}],1403,3,'annual')
+assert.equal(documentedDepreciation.assets[0]?.method,'linear-to-zero','A referenced and verified asset-by-asset source may calculate depreciation')
 const documentedLifecycle=financial.calculateComfarAssetLifecycle(documentedDepreciation.assets,[],3)
 close(documentedLifecycle.depreciation.periods[0].depreciation,200,'Documented 1,000 cost / 5-year asset depreciation')
-const confirmedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{...testAsset,depreciationBasis:'user-confirmed'}],1403,3,'annual')
-assert.equal(confirmedDepreciation.assets[0]?.method,'linear-to-zero','Explicit per-asset user confirmation may calculate depreciation')
+const confirmedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInvestmentItems([{
+ ...testAsset,depreciationBasis:'user-confirmed',depreciationEvidenceReference:'User note',depreciationEvidenceVerified:true,
+}],1403,3,'annual')
+assert.equal(confirmedDepreciation.assets[0]?.method,'none','User confirmation without an asset-by-asset source document must not calculate depreciation')
 const engineSource=await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts',import.meta.url),'utf8')
 const engineUrl='data:text/javascript;base64,'+Buffer.from(ts.transpileModule(engineSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64')
 const engine=await import(engineUrl)
