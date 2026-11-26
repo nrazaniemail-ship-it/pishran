@@ -148,6 +148,19 @@ for (const [id, expected] of Object.entries(expectedSourceTotals)) {
     assert.ok(Math.abs(input.financingSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 2732907.68) < 0.02)
     assert.equal(input.financingSchedule.at(-1).closingDebt, 0)
   }
+  if (id === 'comfar-integrated-steel-dri') {
+    assert.equal(input.productionSalesSchedule.length, 15, 'Integrated steel slab schedule must cover all 15 operating years')
+    assert.equal(input.byproductSalesSchedule.length, 15, 'Extra DRI schedule must cover all 15 operating years')
+    assert.equal(input.productionSalesSchedule[0].salesRevenue, 532560000)
+    assert.equal(input.byproductSalesSchedule[0].salesRevenue, 101200000)
+    assert.equal(input.productionSalesSchedule[4].salesRevenue + input.byproductSalesSchedule[4].salesRevenue, 887300000)
+    assert.equal(input.financingSchedule.filter(row => row.loanType === 'long-term').length, 8)
+    assert.equal(input.financingSchedule.filter(row => row.loanType === 'short-term').length, 5)
+    assert.ok(Math.abs(input.financingSchedule.filter(row => row.loanType === 'long-term').reduce((sum, row) => sum + row.loanDisbursement, 0) - 431000000) < 0.02)
+    assert.ok(Math.abs(input.financingSchedule.filter(row => row.loanType === 'long-term').reduce((sum, row) => sum + row.capitalizedInterest, 0) - 110500000) < 0.02)
+    assert.ok(Math.abs(input.financingSchedule.filter(row => row.loanType === 'short-term').reduce((sum, row) => sum + row.loanDisbursement, 0) - 49523442.75) < 0.02)
+    assert.equal(input.financingSchedule.filter(row => row.loanType === 'short-term').at(-1).closingDebt, 0)
+  }
   if (id === 'comfar-hr-plate-250k') {
     assert.equal(input.productionSalesSchedule.length, 15, 'Plate sales schedule must cover all 15 operating years')
     assert.equal(input.byproductSalesSchedule.length, 15, 'Scrape# sales schedule must cover all 15 operating years')
