@@ -129,7 +129,7 @@ try {
   const projectButtons=page.locator('.ranking-project-open')
   const visibleProjectNames=await projectButtons.allTextContents()
   console.log('Ranking project cards after creating project 2:',JSON.stringify(visibleProjectNames))
-  const normalizeProjectName=value=>value.normalize('NFKC').replace(/[\\p{P}\\p{Z}\\p{Cf}\\u0640]+/gu,'').toLocaleLowerCase()
+  const normalizeProjectName=value=>value.normalize('NFKC').replace(/[\p{P}\p{Z}\p{Cf}\u0640]+/gu,'').toLocaleLowerCase()
   const expectedRenamedName=normalizeProjectName('پروژه آزمایش رتبه‌بندی ویرایش‌شده')
   let renamedProjectButton=null
   for(let index=0;index<await projectButtons.count();index++){
