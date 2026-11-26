@@ -6,10 +6,11 @@ const clean=(value:string)=>value.replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,'
 const visible=(element:Element)=>{const style=window.getComputedStyle(element);return style.display!=='none'&&style.visibility!=='hidden'}
 export default function ModuleExportActions({moduleId,moduleTitle,projectId='',language='fa'}:Props){
  const en=language==='en',[busy,setBusy]=useState(false),[message,setMessage]=useState(''),rootRef=useRef<HTMLDivElement>(null)
+ const findExportRoot=()=>rootRef.current?.closest<HTMLElement>('[data-module-export-root][data-project-export-id]')??rootRef.current?.closest<HTMLElement>('[data-module-export-root]')??null
  function exportExcel(){
   setBusy(true);setMessage('')
   try{
-   const root=rootRef.current?.closest<HTMLElement>('[data-module-export-root]') ?? null
+   const root=findExportRoot()
    if(!root)throw new Error(en?'Module report is not available.':'محتوای ماژول برای خروجی در دسترس نیست.')
    const projectName=(root.querySelector<HTMLInputElement>('#ranking-project-edit-name, [data-project-name-input]')?.value.trim()||root.getAttribute('data-project-export-name')||moduleTitle).trim()
    const activeProjectId=projectId||root.getAttribute('data-project-export-id')||''
@@ -26,7 +27,7 @@ export default function ModuleExportActions({moduleId,moduleTitle,projectId='',l
   finally{setBusy(false)}
  }
  function exportPdf(){
-  const root=rootRef.current?.closest<HTMLElement>('[data-module-export-root]');
+  const root=findExportRoot();
   if(!root){setMessage(en?'Module report is not available.':'محتوای پروژه برای خروجی در دسترس نیست.');return}
   setMessage('');
   const projectName=(root.querySelector<HTMLInputElement>('#ranking-project-edit-name, [data-project-name-input]')?.value.trim()||root.getAttribute('data-project-export-name')||moduleTitle).trim();
