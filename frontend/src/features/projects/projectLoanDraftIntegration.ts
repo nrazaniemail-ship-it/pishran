@@ -64,6 +64,10 @@ export function buildProjectLoanDraftIntegration(
         }
         byPeriod.set(period,row)
       }
+      if(!loan.currencyCode?.trim())issues.push(prefix+'a documented manual schedule requires an explicit facility currency.')
+      const sortedPeriods=[...byPeriod.keys()].sort((a,b)=>a-b)
+      if(sortedPeriods.length&&sortedPeriods.some((period,index)=>index>0&&period!==sortedPeriods[index-1]+1))
+        issues.push(prefix+'manual schedule period indexes must be contiguous; missing periods cannot be assumed to be zero.')
       if(issues.some(issue=>issue.startsWith(prefix)))continue
       let openingBalance=0
       const rows:PeriodicLoanRow[]=periods.map((_,index)=>{
@@ -77,6 +81,9 @@ export function buildProjectLoanDraftIntegration(
         openingBalance=closingBalance
         return row
       })
+      const lastDocumentedPeriod=sortedPeriods.at(-1)??0
+      if(lastDocumentedPeriod>0&&lastDocumentedPeriod<periods.length&&rows[lastDocumentedPeriod-1].closingBalance>0.01)
+        issues.push(prefix+'the documented schedule ends with outstanding principal; add subsequent repayment periods or a verified terminal balance.')
       if(issues.some(issue=>issue.startsWith(prefix)))continue
       const firstPrincipal=rows.findIndex(row=>row.principal>0)
       const drawdowns=rows.map(row=>row.drawdown)
