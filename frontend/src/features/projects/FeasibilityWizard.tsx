@@ -427,7 +427,7 @@ function baseModel(project:FeasibilityProject):Model {
   market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:0,domesticPrice:0,exportPrice:0,domesticShare:0,growth:0},
   capex:capexRows,
   opex:opexRows,
-  finance:{equity:imported?equityShare:(blankTemplate?0:40),debt:imported?debtShare:(blankTemplate?0:60),equityCost:0,debtCost:0,tax:imported&&!isHrCoilReference?report!.taxPercent:0,manualRate:imported?report!.investmentNpvRate:(blankTemplate?0:30),method:imported?'manual':(blankTemplate?'unspecified':'wacc'),depreciationYears:0,workingCapital:imported?report!.workingCapital:0,financeRate:0,reinvestmentRate:0},
+  finance:{equity:imported?equityShare:((blankTemplate||leaveProjectBlank)?0:40),debt:imported?debtShare:((blankTemplate||leaveProjectBlank)?0:60),equityCost:0,debtCost:0,tax:imported&&!isHrCoilReference?report!.taxPercent:0,manualRate:imported?report!.investmentNpvRate:((blankTemplate||leaveProjectBlank)?0:30),method:imported?'manual':((blankTemplate||leaveProjectBlank)?'unspecified':'wacc'),depreciationYears:0,workingCapital:imported?report!.workingCapital:0,financeRate:0,reinvestmentRate:0},
   risks:blankCustomProject?[]:[makeRow('افزایش قیمت مواد اولیه','درصد',0),makeRow('کاهش قیمت فروش','درصد',0),makeRow('افت ظرفیت تولید','درصد',0),makeRow('تأخیر در راه‌اندازی','ماه',0)]
  }
 }
