@@ -67,6 +67,7 @@ const confirmedDepreciation=financial.buildComfarDepreciationAssetsFromFixedInve
 assert.equal(confirmedDepreciation.assets[0]?.method,'linear-to-zero','Explicit per-asset user confirmation may calculate depreciation')
 const engineSource=await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts',import.meta.url),'utf8')
 const engineUrl='data:text/javascript;base64,'+Buffer.from(ts.transpileModule(engineSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64')
+const engine=await import(engineUrl)
 const flowSource=await readFile(new URL('../src/features/projects/inventoryProductionFlow.ts',import.meta.url),'utf8')
 const flowUrl='data:text/javascript;base64,'+Buffer.from(ts.transpileModule(flowSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64')
 const controlSource=await readFile(new URL('../src/features/projects/inventoryControlLedgers.ts',import.meta.url),'utf8')
@@ -77,7 +78,7 @@ operatingJs=operatingJs.replace("'../steel/periodicFinancialEngine'",JSON.string
  .replace("'./inventoryProductionFlow'",JSON.stringify(flowUrl))
  .replace("'./inventoryControlLedgers'",JSON.stringify(controlUrl))
 const operating=await import('data:text/javascript;base64,'+Buffer.from(operatingJs).toString('base64'))
-const periods=Array.from({length:17},(_,index)=>({index:index+1,startDate:String(2024+index)+'-01-01',endDate:String(2024+index)+'-12-31',days:365,partial:false}))
+const periods=Array.from({length:18},(_,index)=>({index:index+1,startDate:String(2024+index)+'-01-01',endDate:String(2024+index)+'-12-31',days:365,partial:false}))
 const mainProductId='hr-coil-main'
 const salesPeriods=[
  {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
@@ -135,6 +136,58 @@ close(productSchedule.periodRevenue[7],62259600,'Product engine 1408 total sales
 close(productSchedule.rows.find(row=>row.productId===byproductId&&row.period===3)?.productionQuantity,2838.89,'Scrape# 1405 production')
 close(productSchedule.periodCostOfSales[2],30116060.85,'Product engine 1405 weighted-average cost of sales',0.02)
 close(productSchedule.rows.find(row=>row.period===3)?.productionCost,30534338.52,'Product engine 1405 detailed factory production cost')
+assert.equal(productSchedule.periodRevenue.length,18,'The product program must include the non-operating liquidation period')
+assert.equal(productSchedule.periodRevenue[17],0,'The liquidation period must not create product sales')
+
+const taxDraftSource=await readFile(new URL('../src/features/projects/projectTaxDraftIntegration.ts',import.meta.url),'utf8')
+let taxDraftJs=ts.transpileModule(taxDraftSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+taxDraftJs=taxDraftJs.replace(/from ['"]\.\.\/steel\/periodicFinancialEngine['"]/, 'from "'+engineUrl+'"')
+const taxDraftUrl='data:text/javascript;base64,'+Buffer.from(taxDraftJs).toString('base64')
+const taxDraftModule=await import(taxDraftUrl)
+const taxSourceRows=input.taxAmountSchedule.map(row=>({
+ period:String(Number(row.period)-1403+1),amount:row.amount,sourceReference:row.sourceReference,sourceVerified:true,
+}))
+const taxSchedule=taxDraftModule.buildProjectTaxDraftSchedule({
+ system:'corporate',rates:[],documentedAmounts:taxSourceRows,allowances:[],
+ lossCarryForward:null,lossCarryForwardYears:null,openingLossVintages:[],
+},periods,1)
+assert.equal(taxSchedule.valid,true,taxSchedule.issues.join('; '))
+assert.equal(taxSchedule.taxAmountOverridesByPeriod.length,18,'Documented tax schedule must cover all 18 project periods')
+close(taxSchedule.taxAmountOverridesByPeriod[2],477888.91,'COMFAR page 59 documented 1405 tax')
+close(taxSchedule.taxAmountOverridesByPeriod[17],0,'COMFAR page 62 documented 1420 tax')
+assert.equal(taxSchedule.annualTaxRates.every(rate=>rate===0),true,'Amount-based tax must not invent a tax-rate schedule')
+
+const amountByPeriod=(rows,amountOf)=>Array.from({length:18},(_,index)=>rows.filter(row=>Number(row.period)-1403===index).reduce((sum,row)=>sum+amountOf(row),0))
+const fixedInvestmentByPeriod=amountByPeriod(input.fixedInvestment.flatMap(item=>item.periods),row=>row.amount)
+const preOperatingByPeriod=amountByPeriod(input.preproduction,row=>row.net+row.capitalizedInterest)
+const workingCapitalByPeriod=amountByPeriod(input.workingCapital,row=>row.inventory+row.cash-(row.payables??0))
+const otherIncomeByPeriod=amountByPeriod(input.otherIncomeSchedule??[],row=>row.amount)
+const periodicResult=engine.calculateIntegratedPeriodicFinance({
+ periods,fiscalYearStartMonth:1,constructionPeriodCount:2,dayCountBasis:360,cashFlowTiming:'period-end',
+ annualRevenue:productSchedule.periodRevenue,periodRevenue:productSchedule.periodRevenue,periodSubsidyIncome:Array(18).fill(0),
+ periodOtherIncomeByPeriod:otherIncomeByPeriod,periodOtherIncomeSourceReference:input.otherIncomeSchedule[0].sourceReference,
+ annualVariableCost:productSchedule.periodCostOfSales,periodVariableCost:productSchedule.periodCostOfSales,
+ annualFixedCost:Array(18).fill(0),annualDepreciation:Array(18).fill(0),
+ annualFixedInvestment:fixedInvestmentByPeriod,annualPreOperatingCost:preOperatingByPeriod,
+ annualMaintenanceCapex:Array(18).fill(0),annualTaxRates:taxSchedule.annualTaxRates,
+ taxRatesByPeriod:taxSchedule.taxRatesByPeriod,taxAmountOverridesByPeriod:taxSchedule.taxAmountOverridesByPeriod,
+ taxAmountSourceReference:taxSchedule.taxAmountSourceReference,
+ taxableDeductionsByPeriod:taxSchedule.taxableDeductionsByPeriod,taxCreditsByPeriod:taxSchedule.taxCreditsByPeriod,
+ annualEquityContributions:Array(18).fill(0),annualEquityWorkingCapitalContributions:Array(18).fill(0),
+ workingCapitalByPeriod,annualShortTermDepositInterest:Array(18).fill(0),
+ loans:[],openingWorkingCapital:0,openingCash:0,taxLossCarryForwardEnabled:false,
+ discountRatePercent:25,valuationDate:'2026-03-20',discountConvention:'period-count',
+})
+assert.equal(periodicResult.valid,true,periodicResult.issues.join('; '))
+assert.equal(periodicResult.rows.length,18,'Integrated finance engine must return all 18 project periods')
+close(periodicResult.rows[0].projectFreeCashFlow,-13907805.03,'COMFAR page 67 first construction-period cash flow')
+close(periodicResult.rows[1].projectFreeCashFlow,-8093664.03,'COMFAR page 67 second construction-period cash flow')
+close(periodicResult.rows[2].revenue,43581720,'Integrated engine receives 1405 product-program revenue')
+close(periodicResult.rows[2].tax,477888.91,'Integrated engine applies documented 1405 tax amount')
+assert.equal(periodicResult.rows[2].taxRatePercent,null,'Documented tax amount must not be represented as an inferred rate')
+close(periodicResult.rows[2].depreciation,0,'No asset-level depreciation evidence means no depreciation charge')
+close(periodicResult.rows[17].otherIncome,13735466.82,'COMFAR page 62/71 documented liquidation-period other income')
+close(periodicResult.rows[17].projectFreeCashFlow,13735466.82,'COMFAR page 71 terminal cash flow')
 // Page 1–2 summary values are kept as explicit reconciliation targets.
 const page1={totalInvestment:26596839.42,totalFunding:25310613.59,totalEquity:16401129.53,totalLongTermDebt:8909484.06}
 const page2={revenue1405:43581720,revenue1408:62259600,factoryCost1405:30130083.97,factoryCost1408:42604224.43,
