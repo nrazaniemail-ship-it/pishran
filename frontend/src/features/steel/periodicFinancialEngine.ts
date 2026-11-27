@@ -243,7 +243,17 @@ export function allocateAnnualFlowsToPeriods(
   for (let index = 1; index < periods.length; index++) {
     if ((starts[index] as Date).getTime() !== (ends[index - 1] as Date).getTime() + 86400000) return []
   }
+  // COMFAR annual periods can follow a non-Gregorian year boundary (e.g. Jalali
+  // 1 Farvardin = 21 March). When each supplied period is already a complete
+  // annual reporting bucket, preserve its one-to-one annual flow instead of
+  // splitting it at the first day of a Gregorian month and leaking days into
+  // an extra fiscal year.
   const firstFiscalStart = fiscalYearStartFor(starts[0] as Date, fiscalYearStartMonth)
+  const fiscalStartYears = starts.map(date => fiscalYearStartFor(date as Date, fiscalYearStartMonth).getUTCFullYear())
+  const oneToOneAnnualPeriods = periods.length === annualAmounts.length &&
+    periods.every(period => period.days >= 350 && period.days <= 380) &&
+    fiscalStartYears.every((year, index) => year === firstFiscalStart.getUTCFullYear() + index)
+  if (oneToOneAnnualPeriods) return [...annualAmounts]
   return periods.map((period, index) => {
     let cursor = starts[index] as Date
     const periodEnd = ends[index] as Date
