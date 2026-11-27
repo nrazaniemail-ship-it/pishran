@@ -134,6 +134,10 @@ assert.deepEqual(taxes.slice(0, 4), [0, 0, 0, 0],
 assert.deepEqual(depreciation.slice(0, 4), [0, 0, 0, 0],
   'No operating depreciation is documented during construction')
 
+const inventoryChangeByPeriod = years.map(year => {
+  const schedule = source.productionSalesSchedule.find(item => Number(item.period) === year)
+  return schedule ? 610812950.12 * (Number(schedule.production) - Number(schedule.sales)) / 1200000 : 0
+})
 const periods = jalaliAnnualPeriods(1401, 1419, 1)
 assert.equal(periods.length, 19, 'Project calendar must contain 19 annual periods')
 const result = engine.calculateIntegratedPeriodicFinance({
@@ -272,10 +276,7 @@ const opexSourceModel = {
     { name: 'سربار کارخانه', annualCost: 6642810, variableShare: 0.5 },
   ],
 }
-const inventoryChangeByPeriod = years.map(year => {
-  const schedule = source.productionSalesSchedule.find(item => Number(item.period) === year)
-  return schedule ? opexSourceModel.variableCost * (Number(schedule.production) - Number(schedule.sales)) / opexSourceModel.capacity : 0
-})
+
 assert.ok(Math.abs(opexSourceModel.items.reduce((sum, item) =>
   sum + item.annualCost * item.variableShare, 0) - opexSourceModel.variableCost) <= 0.5,
   'OPEX workbook variable-cost split must reconcile to the source model')
