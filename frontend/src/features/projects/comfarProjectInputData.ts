@@ -16,6 +16,7 @@ export type ComfarSourceInputData = {
   preproduction: { period: string; net: number; capitalizedInterest: number }[]
   operatingCostYear: number
   operatingCostSchedule?: { period:string; rows:{ name:string; amount:number }[] }[]
+  variableCostSharePercentByPeriod?: { period:string; percent:number }[]
   salesUnitPrice?: number
   salesPriceSource?: string
   productionSalesSchedule?: { period: string; openingInventory: number; production: number; sales: number; closingInventory: number; netUnitPrice: number; salesRevenue: number }[]
@@ -240,8 +241,45 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1403', net: 1656006.75, capitalizedInterest: 36080000 },
       { period: '1404', net: 1656006.75, capitalizedInterest: 41740000 },
     ],
-    operatingCostYear: 1409,
+    operatingCostYear: 1405,
     variableCostSharePercent: 90.91,
+    variableCostSharePercentByPeriod: [
+      { period: '1405', percent: 79.41 }, { period: '1406', percent: 83.57 },
+      { period: '1407', percent: 87.81 }, { period: '1408', percent: 90.29 },
+      { period: '1409', percent: 90.91 }, { period: '1410', percent: 91.19 },
+      { period: '1411', percent: 91.22 }, { period: '1412', percent: 91.25 },
+      ...Array.from({ length: 7 }, (_, index) => ({ period: String(1413 + index), percent: 91.28 })),
+    ],
+    operatingCostSchedule: [
+      { period: '1405', rows: [
+        { name: 'مواد خام', amount: 381465091.19 }, { name: 'انرژی', amount: 53384216.93 },
+        { name: 'تعمیرات و نگهداری', amount: 13802562.23 }, { name: 'دستمزد', amount: 10272936 },
+        { name: 'هزینه‌های بالاسری دستمزد', amount: 2054587 }, { name: 'سربار کارخانه', amount: 5678679.94 },
+      ] },
+      { period: '1406', rows: [
+        { name: 'مواد خام', amount: 430734555.03 }, { name: 'انرژی', amount: 58483143.58 },
+        { name: 'تعمیرات و نگهداری', amount: 15120896.68 }, { name: 'دستمزد', amount: 10272936 },
+        { name: 'هزینه‌های بالاسری دستمزد', amount: 2054587 }, { name: 'سربار کارخانه', amount: 5983142.06 },
+      ] },
+      { period: '1407', rows: [
+        { name: 'مواد خام', amount: 484483061.03 }, { name: 'انرژی', amount: 64045609.02 },
+        { name: 'تعمیرات و نگهداری', amount: 16559079.72 }, { name: 'دستمزد', amount: 10272936 },
+        { name: 'هزینه‌های بالاسری دستمزد', amount: 2054587 }, { name: 'سربار کارخانه', amount: 6315282.56 },
+      ] },
+      { period: '1408', rows: [
+        { name: 'مواد خام', amount: 538231567.03 }, { name: 'انرژی', amount: 69608074.46 },
+        { name: 'تعمیرات و نگهداری', amount: 17997262.76 }, { name: 'دستمزد', amount: 10272936 },
+        { name: 'هزینه‌های بالاسری دستمزد', amount: 2054587 }, { name: 'سربار کارخانه', amount: 6647423.06 },
+      ] },
+      ...Array.from({ length: 11 }, (_, index) => ({
+        period: String(1409 + index),
+        rows: [
+          { name: 'مواد خام', amount: 537485060 }, { name: 'انرژی', amount: 69530818 },
+          { name: 'تعمیرات و نگهداری', amount: 17977288 }, { name: 'دستمزد', amount: 10272936 },
+          { name: 'هزینه‌های بالاسری دستمزد', amount: 2054587 }, { name: 'سربار کارخانه', amount: 6642810 },
+        ],
+      })),
+    ],
     foreignFixedInvestmentSharePercent: 54.22,
     operatingCostRows: [
       { name: 'مواد خام', amount: 537485060 },
@@ -278,10 +316,10 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       ...Array.from({ length: 12 }, (_, index) => ({ productName: 'Extra DRI', period: String(1408 + index), openingInventory: 6388.89, production: 460000, sales: 460000, closingInventory: 6388.89, netUnitPrice: 275, salesRevenue: 126500000 })),
     ],
     financingSchedule: [
-      { period: '1401', loanType: 'long-term', loanDisbursement: 101000000, principalRepayment: 0, interestExpense: 0, capitalizedInterest: 9760000, closingDebt: 101000000 },
-      { period: '1402', loanType: 'long-term', loanDisbursement: 135000000, principalRepayment: 0, interestExpense: 0, capitalizedInterest: 22920000, closingDebt: 236000000 },
-      { period: '1403', loanType: 'long-term', loanDisbursement: 135000000, principalRepayment: 0, interestExpense: 0, capitalizedInterest: 36080000, closingDebt: 371000000 },
-      { period: '1404', loanType: 'long-term', loanDisbursement: 60000000, principalRepayment: 0, interestExpense: 0, capitalizedInterest: 41740000, closingDebt: 431000000 },
+      { period: '1401', loanType: 'long-term', loanDisbursement: 101000000, principalRepayment: 0, interestExpense: 9760000, capitalizedInterest: 0, closingDebt: 101000000 },
+      { period: '1402', loanType: 'long-term', loanDisbursement: 135000000, principalRepayment: 0, interestExpense: 22920000, capitalizedInterest: 0, closingDebt: 236000000 },
+      { period: '1403', loanType: 'long-term', loanDisbursement: 135000000, principalRepayment: 0, interestExpense: 36080000, capitalizedInterest: 0, closingDebt: 371000000 },
+      { period: '1404', loanType: 'long-term', loanDisbursement: 60000000, principalRepayment: 0, interestExpense: 41740000, capitalizedInterest: 0, closingDebt: 431000000 },
       { period: '1405', loanType: 'long-term', loanDisbursement: 0, principalRepayment: 101000000, interestExpense: 31980000, capitalizedInterest: 0, closingDebt: 330000000 },
       { period: '1406', loanType: 'long-term', loanDisbursement: 0, principalRepayment: 135000000, interestExpense: 20180000, capitalizedInterest: 0, closingDebt: 195000000 },
       { period: '1407', loanType: 'long-term', loanDisbursement: 0, principalRepayment: 135000000, interestExpense: 5660000, capitalizedInterest: 0, closingDebt: 60000000 },
