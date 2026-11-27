@@ -197,6 +197,10 @@ try {
       assert.equal(persisted.financialForms.tax.documentedAmounts.length, 18, 'HRCR200 must retain all 18 documented tax amounts')
       assert.deepEqual(persisted.financialForms.tax.documentedAmounts.slice(2, 5).map(row => [row.period, row.amount]), [['3',477888.91],['4',596279.32],['5',719330.04]])
       assert.equal(persisted.financialForms.tax.documentedAmounts[2].sourceVerified, true)
+    } else if (item.id === 'comfar-integrated-steel-dri') {
+      assert.equal(persisted.financialForms.tax.rates.length, 0, 'Integrated steel must use report-documented tax amounts, not inferred flat-rate rows')
+      assert.equal(persisted.financialForms.tax.documentedAmounts.length, 19, 'Integrated steel must retain construction and all 15 operating tax periods')
+      assert.deepEqual(persisted.financialForms.tax.documentedAmounts.slice(4, 7).map(row => [row.period, row.amount]), [['5',4687872.25],['6',6881488.65],['7',9254024.25]])
     } else {
       assert.equal(persisted.financialForms.tax.rates.length, 15, item.id + ' must include all 15 annual tax periods')
     }
@@ -212,6 +216,13 @@ try {
       const longTerm = persisted.financialForms.loans.find(loan => loan.name.includes('بلندمدت'))
       const shortTerm = persisted.financialForms.loans.find(loan => loan.name.includes('کوتاه‌مدت'))
       assert.ok(longTerm && shortTerm)
+      const advancedFinance = await feasibilityPage.evaluate(async ({ storeUrl, id }) => {
+        const { localStore } = await import(storeUrl)
+        return await localStore.get('feasibility:advanced-finance:' + id)
+      }, { storeUrl: localStoreUrl, id: item.id })
+      assert.ok(advancedFinance, 'Integrated steel advanced finance state must persist')
+      assert.deepEqual(advancedFinance.equityContributions.slice(0, 4), [13094839.16,22531066.5,34173260.44,70183158.9])
+      assert.ok(Math.abs(advancedFinance.equityContributions.reduce((sum, value) => sum + value, 0) - 139982325) < 0.02)
       assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.drawdown, 0) - 431000000) < 0.02)
       assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.capitalizedInterest, 0) - 110500000) < 0.02)
       assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 57820000) < 0.02, 'Operating-period long-term interest must remain payable expense, not capitalized pre-production cost')
