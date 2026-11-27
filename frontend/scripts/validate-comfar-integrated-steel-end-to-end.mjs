@@ -223,8 +223,14 @@ const statements = engine.buildPeriodicThreeFinancialStatements(result)
 assert.equal(statements.length, 19, 'Income statement, cash flow and balance sheet must be built for every period')
 for (let index = 0; index < statements.length; index++) {
   const statement = statements[index]
+  assert.ok(Math.abs(statement.movementChecks.cashRollForward) <= 0.01,
+    'Cash roll-forward must reconcile engine closing cash to linked statements for ' + years[index] +
+    '; movementChecks=' + JSON.stringify(statement.movementChecks) +
+    '; engineClosingCash=' + result.rows[index].closingCash +
+    '; statementClosingCash=' + statement.cashFlowStatement.closingCash)
   assert.equal(statement.balanceSheet.reconciled, true,
-    'Balance sheet must reconcile for ' + years[index] + '; difference=' + statement.balanceSheet.balanceDifference)
+    'Balance sheet must reconcile for ' + years[index] + '; difference=' + statement.balanceSheet.balanceDifference +
+    '; movementChecks=' + JSON.stringify(statement.movementChecks))
   assert.ok(Math.abs(statement.incomeStatement.tax - taxes[index]) <= 0.01,
     'Income statement tax must equal the imported COMFAR tax for ' + years[index])
   assert.ok(Math.abs(statement.cashFlowStatement.closingCash - statement.balanceSheet.cash) <= 0.01,
