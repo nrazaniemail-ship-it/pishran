@@ -230,7 +230,7 @@ try {
       assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.drawdown, 0) - 431000000) < 0.02)
       assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.capitalizedInterest, 0)) < 0.02, 'COMFAR debt schedule reports zero capitalized interest; construction-period interest is capitalized separately in pre-production investment')
       assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 168320000) < 0.02, 'Long-term payable interest must reconcile to the COMFAR liability schedule')
-      assert.ok(Math.abs(longTerm.manualPeriodSchedule.filter(row => Number(row.period) >= 1405).reduce((sum, row) => sum + row.interestExpense, 0) - 57820000) < 0.02, 'Operating-period long-term interest must remain payable expense')
+      assert.ok(Math.abs(longTerm.manualPeriodSchedule.filter(row => Number(row.period) >= 5).reduce((sum, row) => sum + row.interestExpense, 0) - 57820000) < 0.02, 'Operating-period long-term interest must remain payable expense')
       assert.ok(Math.abs(shortTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.drawdown, 0) - 49523442.75) < 0.02)
       assert.equal(shortTerm.manualPeriodSchedule.at(-1).closingBalance, 0)
     }
