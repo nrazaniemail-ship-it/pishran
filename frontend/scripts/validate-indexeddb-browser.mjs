@@ -221,7 +221,11 @@ try {
         return await localStore.get('feasibility:advanced-finance:' + id)
       }, { storeUrl: localStoreUrl, id: item.id })
       assert.ok(advancedFinance, 'Integrated steel advanced finance state must persist')
-      assert.deepEqual(advancedFinance.equityContributions.slice(0, 4), [13094839.16,22531066.5,34173260.44,70183158.9])
+      const expectedEquityContributions = [13094839.16,22531066.5,34173260.44,70183158.9]
+      assert.deepEqual(advancedFinance.equityContributions.slice(0, 4), expectedEquityContributions,
+        'COMFAR report-derived equity contributions must replace stale generated defaults on first source migration')
+      assert.equal(advancedFinance.equityContributionSourceFingerprint, JSON.stringify(expectedEquityContributions.concat(Array(15).fill(0))),
+        'the imported equity schedule source fingerprint must persist for subsequent user-edit preservation')
       assert.ok(Math.abs(advancedFinance.equityContributions.reduce((sum, value) => sum + value, 0) - 139982325) < 0.02)
       assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.drawdown, 0) - 431000000) < 0.02)
       assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.capitalizedInterest, 0) - 110500000) < 0.02)
