@@ -207,6 +207,28 @@ for (let index = 0; index < statements.length; index++) {
     'Cash flow roll-forward must reconcile for ' + years[index])
 }
 
+// COMFAR's total-capital-invested cash-flow schedule uses the documented corporate tax
+// actually paid in the financial plan. When a source tax override is supplied, project
+// cash flow must use that same tax rather than recomputing an unlevered tax shield.
+for (let index = 0; index < result.rows.length; index++) {
+  const row = result.rows[index]
+  const expectedProjectCashFlow = row.ebit + row.shortTermDepositInterest -
+    row.assetSaleOtherIncomeLoss - row.salvageGainLoss - row.tax + row.depreciation -
+    row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex -
+    row.changeInWorkingCapital + row.assetSaleProceeds + row.salvageValue
+  assert.ok(Math.abs(row.projectFreeCashFlow - expectedProjectCashFlow) <= 0.01,
+    'COMFAR project cash flow must use documented tax for ' + years[index])
+}
+const firstYearDetailedOperatingCost = operatingCostByYear.get(1405)
+const firstYearFinancialPlanningOperatingCost = 460719614.06
+const firstYearOperatingCostSourceDifference = cents(firstYearDetailedOperatingCost) -
+  cents(firstYearFinancialPlanningOperatingCost)
+assert.equal(firstYearDetailedOperatingCost, 466658073.29,
+  'Detailed product-cost schedule page 24 must retain its reported 1405 total')
+assert.equal(firstYearFinancialPlanningOperatingCost, 460719614.06,
+  'Financial-planning and summary schedules pages 1–2 and 58 must retain their reported 1405 total')
+assert.equal(firstYearOperatingCostSourceDifference, 593845923,
+  'The 1405 COMFAR source discrepancy must remain explicit and must not be silently reconciled')
 const referenceNpv = 19964251.38
 const referenceIrr = 26.08
 assert.ok(Number.isFinite(result.npvProject), 'Integrated project NPV must be finite')
@@ -228,7 +250,7 @@ console.log(JSON.stringify({
   operatingCostPeriods: operatingCostByYear.size,
   operatingCostFirstYearDetailedSchedule: operatingCostByYear.get(1405),
   operatingCostFirstYearSummaryReference: 460719614.06,
-  operatingCostFirstYearSourceDifference: operatingCostByYear.get(1405) - 460719614.06,
+  operatingCostFirstYearSourceDifference: operatingCostByYear.get(1405) - 460719614.06,\n  operatingCostSourceDiscrepancyStatus: 'unresolved-source-conflict; detailed page 24 differs from summary/financial-planning pages 1-2 and 58',
   variableCostShareByYear: [...variableShareByYear.entries()],
   loanFacilities: loans.map(loan => ({ id: loan.id, drawdown: loan.rows.reduce((sum, row) => sum + row.drawdown, 0), principal: loan.rows.reduce((sum, row) => sum + row.principal, 0), interest: loan.rows.reduce((sum, row) => sum + row.interestExpense, 0), capitalizedInterest: loan.rows.reduce((sum, row) => sum + row.capitalizedInterest, 0), closingDebt: loan.rows.at(-1).closingBalance })),
 }, null, 2))
