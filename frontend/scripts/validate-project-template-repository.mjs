@@ -159,7 +159,7 @@ for (const [id, expected] of Object.entries(expectedSourceTotals)) {
     assert.ok(Math.abs(input.financingSchedule.filter(row => row.loanType === 'long-term').reduce((sum, row) => sum + row.loanDisbursement, 0) - 431000000) < 0.02)
     assert.ok(Math.abs(input.preproduction.reduce((sum, row) => sum + row.capitalizedInterest, 0) - 110500000) < 0.02, 'Construction-period interest must reconcile to the pre-production investment schedule')
     assert.equal(input.financingSchedule.filter(row => row.loanType === 'long-term').reduce((sum, row) => sum + row.capitalizedInterest, 0), 0, 'The COMFAR long-term debt schedule reports construction-period interest as payable interest, not added to loan principal')
-    assert.ok(Math.abs(input.financingSchedule.filter(row => row.loanType === 'long-term').reduce((sum, row) => sum + row.interestExpense, 0) - 57820000) < 0.02, 'Long-term operating interest must be payable expense rather than capitalized interest')
+    assert.ok(Math.abs(input.financingSchedule.filter(row => row.loanType === 'long-term' && Number(row.period) >= 1405).reduce((sum, row) => sum + row.interestExpense, 0) - 57820000) < 0.02, 'Long-term operating interest from 1405 onward must reconcile separately from construction-period interest')
     assert.ok(Math.abs(input.financingSchedule.filter(row => row.loanType === 'short-term').reduce((sum, row) => sum + row.loanDisbursement, 0) - 49523442.75) < 0.02)
     assert.equal(input.financingSchedule.filter(row => row.loanType === 'short-term').at(-1).closingDebt, 0)
     assert.equal(input.depreciationSchedule.length, 15, 'Integrated steel depreciation schedule must cover all operating years')
