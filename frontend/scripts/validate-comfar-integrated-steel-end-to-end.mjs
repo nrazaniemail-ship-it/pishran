@@ -374,12 +374,23 @@ const discountedOpexSourceDifference = operatingCostReconciliationByYear.reduce(
 const npvGapExplainedByOpexSourceConflict = referenceNpv - result.npvProject
 assert.ok(Math.abs(discountedOpexSourceDifference - npvGapExplainedByOpexSourceConflict) <= 0.02,
   'Discounted detailed-vs-summary OPEX differences must reproduce the reported COMFAR NPV gap without changing source values')
+const summaryAdjustedNpv = engine.calculatePeriodicNpv(
+  summaryAdjustedProjectCashFlows, periods, 25, 365, 'period-end',
+  jalaliToIso(1401, 12, jalaliYearEndDay(1401)), 'period-count')
 const summaryAdjustedIrrPercent = engine.calculatePeriodicIrr(
   summaryAdjustedProjectCashFlows, periods, 365, 'period-end')
 const summaryAdjustedComfarPeriodCountIrrPercent =
   calculateComfarPeriodCountIrr(summaryAdjustedProjectCashFlows)
+assert.ok(Number.isFinite(summaryAdjustedNpv),
+  'The summary-adjusted project NPV must be calculated by the production financial engine')
+assert.ok(Math.abs(summaryAdjustedNpv - referenceNpv) <= 0.02,
+  'The production engine must reproduce COMFAR NPV after applying only the documented sales-basis OPEX source series; actual=' +
+  summaryAdjustedNpv + '; reference=' + referenceNpv)
 assert.ok(Number.isFinite(summaryAdjustedIrrPercent),
   'The summary-adjusted Pishran actual-day IRR must remain finite')
+assert.ok(Math.abs(summaryAdjustedIrrPercent - referenceIrr) <= 0.02,
+  'The actual-day IRR on the summary OPEX series must be within 0.02 percentage points of COMFAR; actual=' +
+  summaryAdjustedIrrPercent + '; reference=' + referenceIrr)
 assert.equal(summaryAdjustedComfarPeriodCountIrrPercent.toFixed(2), referenceIrr.toFixed(2),
   'COMFAR period-count IRR on the cash-flow-summary OPEX series must reproduce the published 26.08% IRR to two decimals')
 assert.ok(Number.isFinite(result.npvProject), 'Integrated project NPV must be finite')
@@ -407,6 +418,7 @@ console.log(JSON.stringify({
   opexProductionVsSalesReconciliation,
   discountedOpexSourceDifference,
   npvGapExplainedByOpexSourceConflict,
+  summaryAdjustedNpv,
   summaryAdjustedIrrPercent,
   summaryAdjustedComfarPeriodCountIrrPercent,
   operatingCostSourceDiscrepancyStatus: 'explained-volume-basis-difference; detailed OPEX scales variable cost with production including closing inventory, summary/cash-flow OPEX scales with sales utilization; source amounts retained unchanged',
