@@ -161,6 +161,14 @@ for (const [id, expected] of Object.entries(expectedSourceTotals)) {
     assert.ok(Math.abs(input.financingSchedule.filter(row => row.loanType === 'long-term').reduce((sum, row) => sum + row.interestExpense, 0) - 57820000) < 0.02, 'Long-term operating interest must be payable expense rather than capitalized interest')
     assert.ok(Math.abs(input.financingSchedule.filter(row => row.loanType === 'short-term').reduce((sum, row) => sum + row.loanDisbursement, 0) - 49523442.75) < 0.02)
     assert.equal(input.financingSchedule.filter(row => row.loanType === 'short-term').at(-1).closingDebt, 0)
+    assert.equal(input.depreciationSchedule.length, 15, 'Integrated steel depreciation schedule must cover all operating years')
+    assert.equal(input.depreciationSchedule[0].totalDepreciation, 38388721.26)
+    assert.equal(input.depreciationSchedule.at(-1).totalDepreciation, 25180187.80)
+    assert.equal(input.taxAmountSchedule.length, 19, 'Documented tax schedule must include construction and all operating periods')
+    assert.deepEqual(input.taxAmountSchedule.slice(0,4).map(row=>row.amount), [0,0,0,0])
+    assert.equal(input.taxAmountSchedule[4].amount, 6881488.65)
+    assert.equal(input.taxAmountSchedule[8].amount, 54371126.38)
+    assert.equal(input.taxAmountSchedule.at(-1).amount, 54539078.30)
   }
   if (id === 'comfar-hr-plate-250k') {
     assert.equal(input.productionSalesSchedule.length, 15, 'Plate sales schedule must cover all 15 operating years')
@@ -175,6 +183,8 @@ for (const [id, expected] of Object.entries(expectedSourceTotals)) {
   }
   assert.ok(input.missingSourceDetails.length >= 4, `${id} must explicitly disclose report details that were not supplied`)
 }
+assert.match(modelSource, /const sourceTaxAmounts=sourceInputs\.taxAmountSchedule\?\?\[\]/)
+assert.match(modelSource, /comfarDepreciationSchedule=/)
 assert.match(modelSource, /COMFAR_PROJECT_INPUTS/)
 assert.match(modelSource, /fixedInvestmentItems:importedFixedItems/)
 assert.match(modelSource, /workingCapital:imported\?report!\.workingCapital:0/)
