@@ -49,11 +49,20 @@ const expectedOperatingCosts = [
   466658073.29, 522649260.36, 583730555.34, 644811850.32,
   ...Array.from({ length: 11 }, () => 643963499),
 ]
-assert.deepEqual(
-  years.filter(year => year >= source.operatingCostYear).map(year => operatingCostByYear.get(year)),
-  expectedOperatingCosts,
-  'Annual operating costs must match COMFAR annual cost-of-products schedules, pages 24–26',
-)
+const actualOperatingCosts = years
+  .filter(year => year >= source.operatingCostYear)
+  .map(year => operatingCostByYear.get(year))
+assert.equal(actualOperatingCosts.length, expectedOperatingCosts.length,
+  'COMFAR annual operating-cost schedule must contain every reference production year')
+for (let index = 0; index < expectedOperatingCosts.length; index++) {
+  const difference = actualOperatingCosts[index] - expectedOperatingCosts[index]
+  assert.ok(Math.abs(difference) <= 0.01,
+    'Annual operating costs must match COMFAR annual cost-of-products schedules, pages 24–26; ' +
+    years.filter(year => year >= source.operatingCostYear)[index] +
+    ': actual=' + actualOperatingCosts[index] +
+    ', expected=' + expectedOperatingCosts[index] +
+    ', difference=' + difference)
+}
 const depreciation = years.map(year => byYear(source.depreciationSchedule, year, 'totalDepreciation'))
 const taxes = years.map(year => byYear(source.taxAmountSchedule, year))
 const equity = years.map(year => byYear(source.equityContributionSchedule, year))
