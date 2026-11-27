@@ -23,6 +23,7 @@ export type ComfarSourceInputData = {
   financingSchedule?: { period: string; loanType?: 'long-term' | 'short-term'; loanDisbursement: number; principalRepayment: number; interestExpense: number; capitalizedInterest: number; closingDebt: number }[]
   depreciationSchedule?: { period: string; totalDepreciation: number }[]
   taxAmountSchedule?: { period:string; amount:number; sourceReference:string }[]
+  equityContributionSchedule?: { period:string; amount:number }[]
   otherIncomeSchedule?: { period:string; amount:number; sourceReference:string }[]
   variableCostSharePercent: number
   foreignFixedInvestmentSharePercent: number
