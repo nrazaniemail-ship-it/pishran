@@ -100,6 +100,7 @@ type Props = {
   loanTermYears?: number
   depreciationAssets?: Asset[]
   comfarDepreciationAssets?: ComfarDepreciationAssetInput[]
+  comfarDepreciationSchedule?: number[]
   comfarAssetSales?: ComfarAssetSaleInput[]
   comfarDepreciationWarnings?: string[]
   useFixedInvestmentRegister?: boolean
@@ -247,9 +248,14 @@ export default function AdvancedFinancePanel(props: Props) {
   const comfarLifecycle = comfarCalendarLifecycle ?? (props.comfarDepreciationAssets?.length
     ? calculateComfarAssetLifecycle(props.comfarDepreciationAssets,props.comfarAssetSales??[],years)
     : null)
-  const periodDepreciationSchedule = comfarCalendarLifecycle
-    ? comfarCalendarLifecycle.depreciation.periods.map(row=>row.depreciation)
-    : undefined
+  const sourceDepreciationSchedule = props.comfarDepreciationSchedule?.length===years &&
+    props.comfarDepreciationSchedule.every(value=>Number.isFinite(value)&&value>=0)
+      ? props.comfarDepreciationSchedule : undefined
+  const periodDepreciationSchedule = sourceDepreciationSchedule&&sourceDepreciationSchedule.length===projectPeriods.length
+    ? sourceDepreciationSchedule
+    : comfarCalendarLifecycle
+      ? comfarCalendarLifecycle.depreciation.periods.map(row=>row.depreciation)
+      : undefined
   const periodAssetSaleSchedule = comfarCalendarLifecycle
     ? projectPeriods.map((period,index)=>{
         const rows=comfarCalendarLifecycle.sales.filter(sale=>sale.period===index+1)
@@ -261,12 +267,13 @@ export default function AdvancedFinancePanel(props: Props) {
         }
       })
     : undefined
-  const depreciationValues = comfarCalendarLifecycle
+  const calculatedDepreciationValues = comfarCalendarLifecycle
     ? Array.from({length:years},(_,year)=>comfarCalendarLifecycle.depreciation.periods.reduce((sum,row,index)=>
         fiscalYearIndexForPeriod(projectPeriods[index],projectPeriods,props.fiscalYearStartMonth!)===year?sum+row.depreciation:sum,0))
     : comfarLifecycle
       ? comfarLifecycle.depreciation.periods.map(row=>row.depreciation)
       : props.useFixedInvestmentRegister ? Array(years).fill(0) : depreciation.map(row=>row.depreciation)
+  const depreciationValues = sourceDepreciationSchedule ?? calculatedDepreciationValues
   const assetSaleSchedule = comfarCalendarLifecycle
     ? Array.from({length:years},(_,year)=>{
         const rows=comfarCalendarLifecycle.sales.filter(sale=>
