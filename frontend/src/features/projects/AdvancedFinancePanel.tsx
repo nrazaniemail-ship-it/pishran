@@ -95,6 +95,7 @@ type Props = {
   loanDrafts?: LoanFacilityFormDraft[]
   projectFoundation?: ProjectFoundation
   initialWorkingCapitalEquityContribution?: number
+  initialEquityContributions?: number[]
   initialLoanRatePercent?: number
   initialRepaymentMethod?: Loan['repaymentMethod']
   loanTermYears?: number
@@ -181,7 +182,7 @@ export default function AdvancedFinancePanel(props: Props) {
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
     loans:[{id:'loan-1',label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),drawdownMode:'annual-day-weighted',annualRate:props.initialLoanRatePercent??props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:props.initialRepaymentMethod??'equal-principal',capitalizeInterest:true}],
-    assets:props.depreciationAssets??[], equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??0):0),fundingStructureVersion:2,
+    assets:props.depreciationAssets??[], equityContributions:props.initialEquityContributions?.length===years?[...props.initialEquityContributions]:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??0):0),fundingStructureVersion:2,
     workingCapitalDays:{raw:0,factorySupplies:0,utilities:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0,...props.workingCapitalDefaults?.days},
     workingCapitalBases:{rawMaterials:0,factorySupplies:0,utilities:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0,...props.workingCapitalDefaults?.bases},
     wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},shortTermDepositSharePercent:0,shortTermDepositRatePercent:0,taxRates:Array(years).fill(props.taxRate),
