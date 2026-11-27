@@ -136,6 +136,10 @@ assert.deepEqual(depreciation.slice(0, 4), [0, 0, 0, 0],
 
 const periods = jalaliAnnualPeriods(1401, 1419, 1)
 assert.equal(periods.length, 19, 'Project calendar must contain 19 annual periods')
+const inventoryChangeByPeriod = years.map(year => {
+  const schedule = source.productionSalesSchedule.find(item => Number(item.period) === year)
+  return schedule ? opexSourceModel.variableCost * (Number(schedule.production) - Number(schedule.sales)) / opexSourceModel.capacity : 0
+})
 const result = engine.calculateIntegratedPeriodicFinance({
   periods,
   fiscalYearStartMonth: 3,
@@ -145,6 +149,7 @@ const result = engine.calculateIntegratedPeriodicFinance({
   annualRevenue: revenue,
   annualVariableCost: variableCost,
   annualFixedCost: fixedCost,
+  periodInventoryChange: inventoryChangeByPeriod,
   annualDepreciation: depreciation,
   periodDepreciationSchedule: depreciation,
   annualFixedInvestment: fixedInvestment,
@@ -193,6 +198,20 @@ for (let index = 0; index < years.length; index++) {
     'Capitalized loan interest did not reach engine row for ' + years[index])
 }
 
+// Production cost, inventory movement and cost of goods sold are distinct ledger measures.
+for (const year of [1405, 1406, 1407, 1408]) {
+  const index = years.indexOf(year), row = result.rows[index]
+  const productionCost = operatingCostByYear.get(year)
+  const expectedCogs = summaryOperatingCostsByYear.get(year)
+  assert.ok(Math.abs(row.productionCost - productionCost) <= 0.02, 'Production cost must match detailed COMFAR schedule for ' + year)
+  assert.ok(Math.abs(row.inventoryChange - inventoryChangeByPeriod[index]) <= 0.01, 'Inventory change must be explicit for ' + year)
+  assert.ok(Math.abs(row.costOfGoodsSold - expectedCogs) <= 1, 'COGS must match COMFAR financial-planning OPEX for ' + year)
+  assert.ok(Math.abs(row.productionCost - row.inventoryChange - row.costOfGoodsSold) <= 0.01, 'Production cost less inventory build must equal COGS for ' + year)
+}
+const fourYearProductionCost = [1405,1406,1407,1408].reduce((sum,year)=>sum+result.rows[years.indexOf(year)].productionCost,0)
+const fourYearInventoryBuild = [1405,1406,1407,1408].reduce((sum,year)=>sum+result.rows[years.indexOf(year)].inventoryChange,0)
+const fourYearCogs = [1405,1406,1407,1408].reduce((sum,year)=>sum+result.rows[years.indexOf(year)].costOfGoodsSold,0)
+assert.ok(Math.abs(fourYearProductionCost-fourYearInventoryBuild-fourYearCogs)<=0.02,'Four-year cumulative OPEX bridge must reconcile')
 const statements = engine.buildPeriodicThreeFinancialStatements(result)
 assert.equal(statements.length, 19, 'Income statement, cash flow and balance sheet must be built for every period')
 for (let index = 0; index < statements.length; index++) {
@@ -384,6 +403,9 @@ console.log(JSON.stringify({
     revenue: row.revenue,
     variableCost: row.variableCost,
     fixedCost: row.fixedCost,
+    productionCost: row.productionCost,
+    inventoryChange: row.inventoryChange,
+    costOfGoodsSold: row.costOfGoodsSold,
     ebit: row.ebit,
     depreciation: row.depreciation,
     documentedTax: row.tax,
