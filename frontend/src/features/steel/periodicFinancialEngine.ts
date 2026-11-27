@@ -1322,7 +1322,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       warnings.push('Shareholder working-capital funding must be finite and non-negative (period ' + (index + 1) + ').')
       return empty()
     }
-    const cfads = revenue[index] + otherIncome + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - periodTax.tax
+    // Cash-flow measures start from sold-goods cost; inventory build is then reflected once in working capital.
+    const cfads = revenue[index] + otherIncome + shortTermDepositInterest[index] - costOfGoodsSold - abnormalWasteExpense - periodTax.tax
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
@@ -1333,10 +1334,10 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const projectFreeCashFlow = ebit + shortTermDepositInterest[index] - assetSale.otherIncomeLoss - salvageGainLoss - projectCashFlowTax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
-    const equityFreeCashFlow = -equityContribution[index] + revenue[index] + otherIncome + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense
+    const equityFreeCashFlow = -equityContribution[index] + revenue[index] + otherIncome + shortTermDepositInterest[index] - costOfGoodsSold - abnormalWasteExpense
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
-    const periodCashChange = revenue[index] + otherIncome + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - periodTax.tax
+    const periodCashChange = revenue[index] + otherIncome + shortTermDepositInterest[index] - costOfGoodsSold - abnormalWasteExpense - periodTax.tax
       - interestExpense - principal - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage + debtDrawdown
       + equityContribution[index] + equityWorkingCapitalContributionAmount
