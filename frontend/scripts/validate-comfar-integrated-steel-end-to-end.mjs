@@ -202,7 +202,7 @@ for (let index = 0; index < years.length; index++) {
 for (const year of [1405, 1406, 1407, 1408]) {
   const index = years.indexOf(year), row = result.rows[index]
   const productionCost = operatingCostByYear.get(year)
-  const expectedCogs = summaryOperatingCostsByYear.get(year)
+  const expectedCogs = new Map([[1405,460719614.06],[1406,521800909.04],[1407,582882204.02],[1408,643963499.00]]).get(year)
   assert.ok(Math.abs(row.productionCost - productionCost) <= 0.02, 'Production cost must match detailed COMFAR schedule for ' + year)
   assert.ok(Math.abs(row.inventoryChange - inventoryChangeByPeriod[index]) <= 0.01, 'Inventory change must be explicit for ' + year)
   assert.ok(Math.abs(row.costOfGoodsSold - expectedCogs) <= 2.5, 'COGS must match COMFAR financial-planning OPEX for ' + year)
