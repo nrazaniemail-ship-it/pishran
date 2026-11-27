@@ -170,6 +170,9 @@ for (const [id, expected] of Object.entries(expectedSourceTotals)) {
     assert.equal(input.taxAmountSchedule[8].amount, 53850399.12)
     assert.equal(input.taxAmountSchedule[9].amount, 54371126.38)
     assert.equal(input.taxAmountSchedule.at(-1).amount, 54539078.30)
+    assert.equal(input.equityContributionSchedule.length, 19)
+    assert.deepEqual(input.equityContributionSchedule.slice(0,4).map(row=>row.amount), [13094839.16,22531066.50,34173260.44,70183158.90])
+    assert.ok(Math.abs(input.equityContributionSchedule.reduce((sum,row)=>sum+row.amount,0)-139982325)<0.02)
   }
   if (id === 'comfar-hr-plate-250k') {
     assert.equal(input.productionSalesSchedule.length, 15, 'Plate sales schedule must cover all 15 operating years')
