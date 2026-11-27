@@ -138,6 +138,12 @@ const inventoryChangeByPeriod = years.map(year => {
   const schedule = source.productionSalesSchedule.find(item => Number(item.period) === year)
   return schedule ? 610812950.12 * (Number(schedule.production) - Number(schedule.sales)) / 1200000 : 0
 })
+const finishedGoodsInventoryByPeriod = inventoryChangeByPeriod.reduce((balances, change, index) => {
+  balances.push((balances[index - 1] ?? 0) + change)
+  return balances
+}, [])
+const workingCapitalIncludingFinishedGoods = workingCapital.map((balance, index) =>
+  balance + finishedGoodsInventoryByPeriod[index])
 const periods = jalaliAnnualPeriods(1401, 1419, 1)
 assert.equal(periods.length, 19, 'Project calendar must contain 19 annual periods')
 const result = engine.calculateIntegratedPeriodicFinance({
@@ -159,7 +165,8 @@ const result = engine.calculateIntegratedPeriodicFinance({
   taxAmountOverridesByPeriod: taxes,
   taxAmountSourceReference: 'COMFAR III Expert, integrated DRI/steel project, pages 2 and 59–61',
   annualEquityContributions: equity,
-  workingCapitalByPeriod: workingCapital,
+  workingCapitalByPeriod: workingCapitalIncludingFinishedGoods,
+  finishedGoodsInventoryByPeriod,
   loans: loans.map(({ id, input }) => ({ id, input })),
   loanScheduleOverrides: Object.fromEntries(loans.map(({ id, rows }) => [id, rows])),
   discountRatePercent: 25,
