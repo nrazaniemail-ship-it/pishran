@@ -57,16 +57,15 @@ const expectedOperatingCosts = [
   466658073.29, 522649260.36, 583730555.34, 644811850.32,
   ...Array.from({ length: 11 }, () => 643963499),
 ]
-const actualOperatingCosts = years
-  .filter(year => year >= source.operatingCostYear)
-  .map(year => operatingCostByYear.get(year))
+const productionYears = years.filter(year => year >= source.operatingCostYear)
+const actualOperatingCosts = productionYears.map(year => operatingCostByYear.get(year))
 assert.equal(actualOperatingCosts.length, expectedOperatingCosts.length,
   'COMFAR annual operating-cost schedule must contain every reference production year')
 for (let index = 0; index < expectedOperatingCosts.length; index++) {
-  const difference = actualOperatingCosts[index] - expectedOperatingCosts[index]
-  assert.ok(Math.abs(difference) <= 0.01,
+  const differenceInCents = cents(actualOperatingCosts[index]) - cents(expectedOperatingCosts[index])
+  assert.ok(Math.abs(differenceInCents) <= 1,
     'Annual operating costs must match COMFAR annual cost-of-products schedules, pages 24–26; ' +
-    years.filter(year => year >= source.operatingCostYear)[index] +
+    productionYears[index] +
     ': actual=' + actualOperatingCosts[index] +
     ', expected=' + expectedOperatingCosts[index] +
     ', differenceInCents=' + differenceInCents)
