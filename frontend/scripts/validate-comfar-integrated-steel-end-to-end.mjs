@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
-import { jalaliAnnualPeriods, jalaliToIso, jalaliYearEndDay } from './comfar-jalali-calendar.mjs'
+import { calculateComfarPeriodCountIrr, jalaliAnnualPeriods, jalaliToIso, jalaliYearEndDay } from './comfar-jalali-calendar.mjs'
 
 const compile = async relativePath => {
   const source = await readFile(new URL(relativePath, import.meta.url), 'utf8')
@@ -229,6 +229,8 @@ assert.equal(firstYearFinancialPlanningOperatingCost, 460719614.06,
   'Financial-planning and summary schedules pages 1–2 and 58 must retain their reported 1405 total')
 assert.equal(firstYearOperatingCostSourceDifference, 593845923,
   'The 1405 COMFAR source discrepancy must remain explicit and must not be silently reconciled')
+const referenceNpv = 19964251.38
+const referenceIrr = 26.08
 
 // Keep the detailed product-cost schedule and the financial-planning/cash-flow
 // summary as separate source series. The report itself contains a source conflict;
@@ -268,11 +270,12 @@ assert.ok(Math.abs(discountedOpexSourceDifference - npvGapExplainedByOpexSourceC
   'Discounted detailed-vs-summary OPEX differences must reproduce the reported COMFAR NPV gap without changing source values')
 const summaryAdjustedIrrPercent = engine.calculatePeriodicIrr(
   summaryAdjustedProjectCashFlows, periods, 365, 'period-end')
-assert.ok(Number.isFinite(summaryAdjustedIrrPercent) &&
-  Math.abs(summaryAdjustedIrrPercent - 26.08) <= 0.02,
-  'Using the COMFAR cash-flow-summary OPEX series must reproduce the published 26.08% IRR within 0.02 percentage points')
-const referenceNpv = 19964251.38
-const referenceIrr = 26.08
+const summaryAdjustedComfarPeriodCountIrrPercent =
+  calculateComfarPeriodCountIrr(summaryAdjustedProjectCashFlows)
+assert.ok(Number.isFinite(summaryAdjustedIrrPercent),
+  'The summary-adjusted Pishran actual-day IRR must remain finite')
+assert.equal(summaryAdjustedComfarPeriodCountIrrPercent.toFixed(2), referenceIrr.toFixed(2),
+  'COMFAR period-count IRR on the cash-flow-summary OPEX series must reproduce the published 26.08% IRR to two decimals')
 assert.ok(Number.isFinite(result.npvProject), 'Integrated project NPV must be finite')
 assert.ok(Number.isFinite(result.irrProject), 'Integrated project IRR must be finite')
 console.log(JSON.stringify({
@@ -297,6 +300,7 @@ console.log(JSON.stringify({
   discountedOpexSourceDifference,
   npvGapExplainedByOpexSourceConflict,
   summaryAdjustedIrrPercent,
+  summaryAdjustedComfarPeriodCountIrrPercent,
   operatingCostSourceDiscrepancyStatus: 'unresolved-source-conflict; detailed page 24 differs from summary/financial-planning pages 1-2 and 58',
   annualCashFlowTrace: result.rows.map((row, index) => ({
     year: years[index],
