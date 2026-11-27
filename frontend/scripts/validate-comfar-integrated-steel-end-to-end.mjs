@@ -27,7 +27,7 @@ const revenue = years.map(year =>
   byYear(source.productionSalesSchedule, year, 'salesRevenue') +
   byYear(source.byproductSalesSchedule, year, 'salesRevenue'))
 const operatingCostByYear = new Map((source.operatingCostSchedule ?? []).map(item => [
-  Number(item.period), item.rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0),
+  Number(item.period), Math.round(item.rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0) * 100) / 100,
 ]))
 const variableShareByYear = new Map((source.variableCostSharePercentByPeriod ?? []).map(item => [
   Number(item.period), Number(item.percent),
