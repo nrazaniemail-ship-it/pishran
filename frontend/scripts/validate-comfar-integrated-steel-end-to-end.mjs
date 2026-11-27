@@ -26,17 +26,71 @@ const preOperatingCost = years.map(year => byYear(source.preproduction, year, 'n
 const revenue = years.map(year =>
   byYear(source.productionSalesSchedule, year, 'salesRevenue') +
   byYear(source.byproductSalesSchedule, year, 'salesRevenue'))
-const documentedOperatingCost = source.operatingCostRows.reduce((sum, row) => sum + row.amount, 0)
-const variableCost = years.map(year => year >= source.operatingCostYear
-  ? documentedOperatingCost * source.variableCostSharePercent / 100 : 0)
-const fixedCost = years.map(year => year >= source.operatingCostYear
-  ? documentedOperatingCost - documentedOperatingCost * source.variableCostSharePercent / 100 : 0)
+const operatingCostByYear = new Map((source.operatingCostSchedule ?? []).map(item => [
+  Number(item.period), item.rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0),
+]))
+const variableCost = years.map(year => {
+  const amount = operatingCostByYear.get(year) ?? 0
+  return amount * source.variableCostSharePercent / 100
+})
+const fixedCost = years.map(year => {
+  const amount = operatingCostByYear.get(year) ?? 0
+  return amount - amount * source.variableCostSharePercent / 100
+})
+assert.ok(source.operatingCostSchedule?.length, 'COMFAR year-by-year operating-cost schedule is required')
+assert.deepEqual([...operatingCostByYear.keys()], years.filter(year => year >= source.operatingCostYear),
+  'Every operating year must have an explicit COMFAR operating-cost schedule')
 const depreciation = years.map(year => byYear(source.depreciationSchedule, year, 'totalDepreciation'))
 const taxes = years.map(year => byYear(source.taxAmountSchedule, year))
 const equity = years.map(year => byYear(source.equityContributionSchedule, year))
 const workingCapital = years.map(year => {
   const row = source.workingCapital.find(item => Number(item.period) === year)
   return row ? row.inventory + row.cash : 0
+})
+const financingByType = new Map()
+for (const item of source.financingSchedule ?? []) {
+  const type = item.loanType ?? 'long-term'
+  if (!financingByType.has(type)) financingByType.set(type, [])
+  financingByType.get(type).push(item)
+}
+assert.ok(financingByType.size > 0, 'COMFAR financing schedule is required')
+const loans = [...financingByType.entries()].map(([type, entries]) => {
+  const byPeriod = new Map(entries.map(item => [Number(item.period), item]))
+  let priorClosing = 0
+  const rows = years.map((year, index) => {
+    const item = byPeriod.get(year)
+    const openingBalance = priorClosing
+    const drawdown = item?.loanDisbursement ?? 0
+    const principal = item?.principalRepayment ?? 0
+    const interestExpense = item?.interestExpense ?? 0
+    const capitalizedInterest = item?.capitalizedInterest ?? 0
+    const closingBalance = item?.closingDebt ?? priorClosing + drawdown + capitalizedInterest - principal
+    const debtService = principal + interestExpense
+    const periodRatePercent = openingBalance > 0
+      ? interestExpense / openingBalance * 100
+      : 0
+    priorClosing = closingBalance
+    return {
+      period: index + 1, drawdown, openingBalance, periodRatePercent,
+      interestExpense, capitalizedInterest, financingFeeExpense: 0,
+      commitmentFeeExpense: 0, capitalizedFinancingFees: 0,
+      principal, closingBalance, debtService,
+    }
+  })
+  for (let index = 0; index < rows.length; index++) {
+    assert.ok(Math.abs(rows[index].closingBalance -
+      (rows[index].openingBalance + rows[index].drawdown + rows[index].capitalizedInterest - rows[index].principal)) <= 0.02,
+    type + ' debt roll-forward must reconcile in ' + years[index])
+  }
+  return {
+    id: 'comfar-' + type,
+    input: {
+      annualRatePercent: 0, drawdowns: years.map(() => 0),
+      repaymentMethod: 'custom', repaymentStartPeriod: 1, gracePeriods: 0,
+      termPeriods: years.length, capitalizeInterest: false,
+    },
+    rows,
+  }
 })
 
 assert.deepEqual(equity.slice(0, 4), [
@@ -70,7 +124,8 @@ const result = engine.calculateIntegratedPeriodicFinance({
   taxAmountSourceReference: 'COMFAR III Expert, integrated DRI/steel project, pages 2 and 59–61',
   annualEquityContributions: equity,
   workingCapitalByPeriod: workingCapital,
-  loans: [],
+  loans: loans.map(({ id, input }) => ({ id, input })),
+  loanScheduleOverrides: Object.fromEntries(loans.map(({ id, rows }) => [id, rows])),
   discountRatePercent: 25,
   valuationDate: jalaliToIso(1401, 12, jalaliYearEndDay(1401)),
   discountConvention: 'period-count',
@@ -87,6 +142,24 @@ for (let index = 0; index < years.length; index++) {
     'Documented tax did not reach engine row for ' + years[index])
   assert.ok(Math.abs(result.rows[index].depreciation - depreciation[index]) <= 0.01,
     'Depreciation did not reach engine row for ' + years[index])
+  const expectedLoans = loans.reduce((sum, loan) => {
+    const row = loan.rows[index]
+    return {
+      drawdown: sum.drawdown + row.drawdown,
+      principal: sum.principal + row.principal,
+      interest: sum.interest + row.interestExpense,
+      capitalizedInterest: sum.capitalizedInterest + row.capitalizedInterest,
+      closing: sum.closing + row.closingBalance,
+    }
+  }, { drawdown: 0, principal: 0, interest: 0, capitalizedInterest: 0, closing: 0 })
+  assert.ok(Math.abs(result.rows[index].debtDrawdown - expectedLoans.drawdown) <= 0.01,
+    'Loan drawdown did not reach engine row for ' + years[index])
+  assert.ok(Math.abs(result.rows[index].principal - expectedLoans.principal) <= 0.01,
+    'Loan principal repayment did not reach engine row for ' + years[index])
+  assert.ok(Math.abs(result.rows[index].cashInterestExpense - expectedLoans.interest) <= 0.01,
+    'Loan interest did not reach engine row for ' + years[index])
+  assert.ok(Math.abs(result.rows[index].capitalizedInterest - expectedLoans.capitalizedInterest) <= 0.01,
+    'Capitalized loan interest did not reach engine row for ' + years[index])
 }
 
 const statements = engine.buildPeriodicThreeFinancialStatements(result)
@@ -121,4 +194,6 @@ console.log(JSON.stringify({
   maximumBalanceDifference: Math.max(...statements.map(row => Math.abs(row.balanceSheet.balanceDifference))),
   taxSchedulePeriods: taxes.length,
   depreciationPeriods: depreciation.filter(value => value > 0).length,
+  operatingCostPeriods: operatingCostByYear.size,
+  loanFacilities: loans.map(loan => ({ id: loan.id, drawdown: loan.rows.reduce((sum, row) => sum + row.drawdown, 0), principal: loan.rows.reduce((sum, row) => sum + row.principal, 0), interest: loan.rows.reduce((sum, row) => sum + row.interestExpense, 0), closingDebt: loan.rows.at(-1).closingBalance })),
 }, null, 2))
