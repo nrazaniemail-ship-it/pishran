@@ -241,6 +241,79 @@ const summaryOperatingCostsByYear = new Map([
   [1407, 582882204.02],
   [1408, 643963499.00],
 ])
+// Source OPEX workbook: "OPEX.xlsx", sheets "سر به سری" and "هزینه‌های جاری سالیانه".
+// Variable/fixed classification excludes depreciation because this reconciliation is
+// strictly for operating expenditure (cash OPEX), not total product cost.
+const opexSourceModel = {
+  capacity: 1200000,
+  variableCost: 610812950.12,
+  fixedCost: 33150549.28,
+  items: [
+    { name: 'مواد خام', annualCost: 537485060, variableShare: 1 },
+    { name: 'انرژی', annualCost: 69530818.4, variableShare: 0.8 },
+    { name: 'تعمیرات و نگهداری', annualCost: 17977288, variableShare: 0.8 },
+    { name: 'دستمزد', annualCost: 10272936, variableShare: 0 },
+    { name: 'هزینه‌های بالاسری دستمزد', annualCost: 2054587, variableShare: 0 },
+    { name: 'سربار کارخانه', annualCost: 6642810, variableShare: 0.5 },
+  ],
+}
+assert.ok(Math.abs(opexSourceModel.items.reduce((sum, item) =>
+  sum + item.annualCost * item.variableShare, 0) - opexSourceModel.variableCost) <= 0.5,
+  'OPEX workbook variable-cost split must reconcile to the source model')
+assert.ok(Math.abs(opexSourceModel.items.reduce((sum, item) =>
+  sum + item.annualCost * (1 - item.variableShare), 0) - opexSourceModel.fixedCost) <= 0.5,
+  'OPEX workbook fixed-cost split must reconcile to the source model')
+
+const opexProductionVsSalesReconciliation = [1405, 1406, 1407, 1408].map(year => {
+  const detail = source.operatingCostSchedule.find(item => Number(item.period) === year)
+  const detailedTotal = operatingCostByYear.get(year)
+  const summaryTotal = summaryOperatingCostsByYear.get(year)
+  const sales = source.productionSalesSchedule.find(item => Number(item.period) === year)
+  assert.ok(detail && sales, 'COMFAR detailed OPEX and steel-slab production/sales rows must exist for ' + year)
+  const salesUtilization = Number(sales.sales) / opexSourceModel.capacity
+  const productionUtilization = Number(sales.production) / opexSourceModel.capacity
+  const expectedSummaryFromSales = opexSourceModel.fixedCost +
+    opexSourceModel.variableCost * salesUtilization
+  const expectedDetailFromProduction = opexSourceModel.items.reduce((sum, item) =>
+    sum + item.annualCost * (1 - item.variableShare + item.variableShare * productionUtilization), 0)
+  const expectedInventoryBuildCost = opexSourceModel.variableCost *
+    (Number(sales.production) - Number(sales.sales)) / opexSourceModel.capacity
+  const itemReconciliation = opexSourceModel.items.map(item => {
+    const actual = detail.rows.find(row => row.name === item.name)
+    assert.ok(actual, 'Detailed COMFAR OPEX row must exist for ' + item.name + ' in ' + year)
+    const expected = item.annualCost *
+      (1 - item.variableShare + item.variableShare * productionUtilization)
+    assert.ok(Math.abs(Number(actual.amount) - expected) <= 2,
+      'Detailed OPEX row must follow production-volume variable/fixed scaling for ' + item.name + ' in ' + year)
+    return {
+      item: item.name,
+      actualDetailed: Number(actual.amount),
+      expectedFromProductionVolume: expected,
+      difference: Number(actual.amount) - expected,
+    }
+  })
+  assert.ok(Math.abs(summaryTotal - expectedSummaryFromSales) <= 1,
+    'Summary/cash-flow OPEX must follow sales utilization and the OPEX workbook fixed/variable split in ' + year)
+  assert.ok(Math.abs(detailedTotal - expectedDetailFromProduction) <= 3,
+    'Detailed OPEX must follow production utilization and the OPEX workbook fixed/variable split in ' + year)
+  assert.ok(Math.abs((detailedTotal - summaryTotal) - expectedInventoryBuildCost) <= 3,
+    'Detailed-vs-summary OPEX difference must be explained by variable cost of production retained in closing inventory in ' + year)
+  return {
+    year,
+    steelSlabProduction: Number(sales.production),
+    steelSlabSales: Number(sales.sales),
+    closingInventory: Number(sales.closingInventory),
+    salesUtilization,
+    productionUtilization,
+    detailedTotal,
+    summaryTotal,
+    expectedSummaryFromSales,
+    expectedDetailFromProduction,
+    expectedInventoryBuildCost,
+    observedDetailedMinusSummary: detailedTotal - summaryTotal,
+    itemReconciliation,
+  }
+})
 const operatingCostReconciliationByYear = [1405, 1406, 1407, 1408].map(year => {
   const detail = source.operatingCostSchedule.find(item => Number(item.period) === year)
   const detailedTotal = operatingCostByYear.get(year)
@@ -297,11 +370,13 @@ console.log(JSON.stringify({
   operatingCostFirstYearSummaryReference: 460719614.06,
   operatingCostFirstYearSourceDifference: operatingCostByYear.get(1405) - 460719614.06,
   operatingCostReconciliationByYear,
+  opexSourceModel,
+  opexProductionVsSalesReconciliation,
   discountedOpexSourceDifference,
   npvGapExplainedByOpexSourceConflict,
   summaryAdjustedIrrPercent,
   summaryAdjustedComfarPeriodCountIrrPercent,
-  operatingCostSourceDiscrepancyStatus: 'unresolved-source-conflict; detailed page 24 differs from summary/financial-planning pages 1-2 and 58',
+  operatingCostSourceDiscrepancyStatus: 'explained-volume-basis-difference; detailed OPEX scales variable cost with production including closing inventory, summary/cash-flow OPEX scales with sales utilization; source amounts retained unchanged',
   annualCashFlowTrace: result.rows.map((row, index) => ({
     year: years[index],
     periodStart: row.startDate,
