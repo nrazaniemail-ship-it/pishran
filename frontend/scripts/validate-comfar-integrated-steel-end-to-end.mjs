@@ -76,7 +76,7 @@ const result = engine.calculateIntegratedPeriodicFinance({
   discountConvention: 'period-count',
   salvageValue: 224704008.39,
 })
-assert.equal(result.valid, true, 'Imported project schedules must produce a valid integrated financial result')
+assert.equal(result.valid, true, 'Imported project schedules must produce a valid integrated financial result: ' + JSON.stringify(result.warnings))
 assert.equal(result.rows.length, 19, 'Financial engine must return all 19 project periods')
 assert.equal(result.totalEquityContribution, 139982325,
   'Financial engine must consume the imported shareholder funding schedule')
