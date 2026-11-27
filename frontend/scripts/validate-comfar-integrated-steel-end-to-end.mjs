@@ -29,13 +29,18 @@ const revenue = years.map(year =>
 const operatingCostByYear = new Map((source.operatingCostSchedule ?? []).map(item => [
   Number(item.period), item.rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0),
 ]))
+const variableShareByYear = new Map((source.variableCostSharePercentByPeriod ?? []).map(item => [
+  Number(item.period), Number(item.percent),
+]))
 const variableCost = years.map(year => {
   const amount = operatingCostByYear.get(year) ?? 0
-  return amount * source.variableCostSharePercent / 100
+  const share = variableShareByYear.get(year) ?? source.variableCostSharePercent
+  return amount * share / 100
 })
 const fixedCost = years.map(year => {
   const amount = operatingCostByYear.get(year) ?? 0
-  return amount - amount * source.variableCostSharePercent / 100
+  const share = variableShareByYear.get(year) ?? source.variableCostSharePercent
+  return amount - amount * share / 100
 })
 assert.ok(source.operatingCostSchedule?.length, 'COMFAR year-by-year operating-cost schedule is required')
 assert.deepEqual([...operatingCostByYear.keys()], years.filter(year => year >= source.operatingCostYear),
@@ -64,7 +69,8 @@ const loans = [...financingByType.entries()].map(([type, entries]) => {
     const principal = item?.principalRepayment ?? 0
     const interestExpense = item?.interestExpense ?? 0
     const capitalizedInterest = item?.capitalizedInterest ?? 0
-    const closingBalance = item?.closingDebt ?? priorClosing + drawdown + capitalizedInterest - principal
+    // COMFAR reports interest payable separately from outstanding loan principal.
+    const closingBalance = item?.closingDebt ?? priorClosing + drawdown - principal
     const debtService = principal + interestExpense
     const periodRatePercent = openingBalance > 0
       ? interestExpense / openingBalance * 100
@@ -79,7 +85,7 @@ const loans = [...financingByType.entries()].map(([type, entries]) => {
   })
   for (let index = 0; index < rows.length; index++) {
     assert.ok(Math.abs(rows[index].closingBalance -
-      (rows[index].openingBalance + rows[index].drawdown + rows[index].capitalizedInterest - rows[index].principal)) <= 0.02,
+      (rows[index].openingBalance + rows[index].drawdown - rows[index].principal)) <= 0.02,
     type + ' debt roll-forward must reconcile in ' + years[index])
   }
   return {
