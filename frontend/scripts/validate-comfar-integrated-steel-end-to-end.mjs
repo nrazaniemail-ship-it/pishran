@@ -250,7 +250,8 @@ console.log(JSON.stringify({
   operatingCostPeriods: operatingCostByYear.size,
   operatingCostFirstYearDetailedSchedule: operatingCostByYear.get(1405),
   operatingCostFirstYearSummaryReference: 460719614.06,
-  operatingCostFirstYearSourceDifference: operatingCostByYear.get(1405) - 460719614.06,\n  operatingCostSourceDiscrepancyStatus: 'unresolved-source-conflict; detailed page 24 differs from summary/financial-planning pages 1-2 and 58',
+  operatingCostFirstYearSourceDifference: operatingCostByYear.get(1405) - 460719614.06,
+  operatingCostSourceDiscrepancyStatus: 'unresolved-source-conflict; detailed page 24 differs from summary/financial-planning pages 1-2 and 58',
   variableCostShareByYear: [...variableShareByYear.entries()],
   loanFacilities: loans.map(loan => ({ id: loan.id, drawdown: loan.rows.reduce((sum, row) => sum + row.drawdown, 0), principal: loan.rows.reduce((sum, row) => sum + row.principal, 0), interest: loan.rows.reduce((sum, row) => sum + row.interestExpense, 0), capitalizedInterest: loan.rows.reduce((sum, row) => sum + row.capitalizedInterest, 0), closingDebt: loan.rows.at(-1).closingBalance })),
 }, null, 2))
