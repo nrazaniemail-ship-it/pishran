@@ -45,6 +45,15 @@ const fixedCost = years.map(year => {
 assert.ok(source.operatingCostSchedule?.length, 'COMFAR year-by-year operating-cost schedule is required')
 assert.deepEqual([...operatingCostByYear.keys()], years.filter(year => year >= source.operatingCostYear),
   'Every operating year must have an explicit COMFAR operating-cost schedule')
+const expectedOperatingCosts = [
+  466658073.29, 522649260.36, 583730555.34, 644811850.32,
+  ...Array.from({ length: 11 }, () => 643963499),
+]
+assert.deepEqual(
+  years.filter(year => year >= source.operatingCostYear).map(year => operatingCostByYear.get(year)),
+  expectedOperatingCosts,
+  'Annual operating costs must match COMFAR annual cost-of-products schedules, pages 24–26',
+)
 const depreciation = years.map(year => byYear(source.depreciationSchedule, year, 'totalDepreciation'))
 const taxes = years.map(year => byYear(source.taxAmountSchedule, year))
 const equity = years.map(year => byYear(source.equityContributionSchedule, year))
@@ -201,5 +210,9 @@ console.log(JSON.stringify({
   taxSchedulePeriods: taxes.length,
   depreciationPeriods: depreciation.filter(value => value > 0).length,
   operatingCostPeriods: operatingCostByYear.size,
-  loanFacilities: loans.map(loan => ({ id: loan.id, drawdown: loan.rows.reduce((sum, row) => sum + row.drawdown, 0), principal: loan.rows.reduce((sum, row) => sum + row.principal, 0), interest: loan.rows.reduce((sum, row) => sum + row.interestExpense, 0), closingDebt: loan.rows.at(-1).closingBalance })),
+  operatingCostFirstYearDetailedSchedule: operatingCostByYear.get(1405),
+  operatingCostFirstYearSummaryReference: 460719614.06,
+  operatingCostFirstYearSourceDifference: operatingCostByYear.get(1405) - 460719614.06,
+  variableCostShareByYear: [...variableShareByYear.entries()],
+  loanFacilities: loans.map(loan => ({ id: loan.id, drawdown: loan.rows.reduce((sum, row) => sum + row.drawdown, 0), principal: loan.rows.reduce((sum, row) => sum + row.principal, 0), interest: loan.rows.reduce((sum, row) => sum + row.interestExpense, 0), capitalizedInterest: loan.rows.reduce((sum, row) => sum + row.capitalizedInterest, 0), closingDebt: loan.rows.at(-1).closingBalance })),
 }, null, 2))
