@@ -328,7 +328,7 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1417', amount: 54539078.3, sourceReference: 'COMFAR III Expert؛ خلاصه و جریان نقدی مالی، صفحات ۲ و ۵۹ تا ۶۱' },
       { period: '1418', amount: 54539078.3, sourceReference: 'COMFAR III Expert؛ خلاصه و جریان نقدی مالی، صفحات ۲ و ۵۹ تا ۶۱' },
       { period: '1419', amount: 54539078.3, sourceReference: 'COMFAR III Expert؛ خلاصه و جریان نقدی مالی، صفحات ۲ و ۵۹ تا ۶۱' },
-
+    ],
     missingSourceDetails: ['موازنه فیزیکی DRI هات‌لینک به فولاد مذاب و ترکیب شارژ', 'مصرف ویژه برق، گاز، اکسیژن، آب و فروآلیاژها', 'تخصیص داخلی DRI تولیدی در فولادسازی در برابر Extra DRI مازاد قابل فروش', 'عمر مفید و روش استهلاک تفکیکی تجهیزات احیا و فولادسازی', 'نرخ قراردادی وام‌ها و کارمزدها؛ جدول مبالغ و بازپرداخت‌ها از گزارش استخراج شده است'],
   },
 }
