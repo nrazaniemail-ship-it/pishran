@@ -229,6 +229,48 @@ assert.equal(firstYearFinancialPlanningOperatingCost, 460719614.06,
   'Financial-planning and summary schedules pages 1–2 and 58 must retain their reported 1405 total')
 assert.equal(firstYearOperatingCostSourceDifference, 593845923,
   'The 1405 COMFAR source discrepancy must remain explicit and must not be silently reconciled')
+
+// Keep the detailed product-cost schedule and the financial-planning/cash-flow
+// summary as separate source series. The report itself contains a source conflict;
+// do not overwrite either series to force a match.
+const summaryOperatingCostsByYear = new Map([
+  [1405, 460719614.06],
+  [1406, 521800909.04],
+  [1407, 582882204.02],
+  [1408, 643963499.00],
+])
+const operatingCostReconciliationByYear = [1405, 1406, 1407, 1408].map(year => {
+  const detail = source.operatingCostSchedule.find(item => Number(item.period) === year)
+  const detailedTotal = operatingCostByYear.get(year)
+  const summaryTotal = summaryOperatingCostsByYear.get(year)
+  const itemTotal = detail.rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0)
+  assert.ok(Math.abs(itemTotal - detailedTotal) <= 0.01,
+    'Detailed OPEX item rows must reconcile to the imported detail total for ' + year)
+  return {
+    year,
+    detailedItems: detail.rows.map(row => ({ name: row.name, amount: row.amount })),
+    detailedTotal,
+    financialPlanningAndCashFlowSummaryTotal: summaryTotal,
+    detailedMinusSummary: detailedTotal - summaryTotal,
+  }
+})
+const summaryAdjustedProjectCashFlows = result.rows.map((row, index) => {
+  const year = years[index]
+  const summaryTotal = summaryOperatingCostsByYear.get(year)
+  return summaryTotal == null
+    ? row.projectFreeCashFlow
+    : row.projectFreeCashFlow + operatingCostByYear.get(year) - summaryTotal
+})
+const discountedOpexSourceDifference = operatingCostReconciliationByYear.reduce((sum, row) =>
+  sum + row.detailedMinusSummary / Math.pow(1.25, row.year - 1401), 0)
+const npvGapExplainedByOpexSourceConflict = referenceNpv - result.npvProject
+assert.ok(Math.abs(discountedOpexSourceDifference - npvGapExplainedByOpexSourceConflict) <= 0.02,
+  'Discounted detailed-vs-summary OPEX differences must reproduce the reported COMFAR NPV gap without changing source values')
+const summaryAdjustedIrrPercent = engine.calculatePeriodicIrr(
+  summaryAdjustedProjectCashFlows, periods, 365, 'period-end')
+assert.ok(Number.isFinite(summaryAdjustedIrrPercent) &&
+  Math.abs(summaryAdjustedIrrPercent - 26.08) <= 0.02,
+  'Using the COMFAR cash-flow-summary OPEX series must reproduce the published 26.08% IRR within 0.02 percentage points')
 const referenceNpv = 19964251.38
 const referenceIrr = 26.08
 assert.ok(Number.isFinite(result.npvProject), 'Integrated project NPV must be finite')
@@ -251,6 +293,10 @@ console.log(JSON.stringify({
   operatingCostFirstYearDetailedSchedule: operatingCostByYear.get(1405),
   operatingCostFirstYearSummaryReference: 460719614.06,
   operatingCostFirstYearSourceDifference: operatingCostByYear.get(1405) - 460719614.06,
+  operatingCostReconciliationByYear,
+  discountedOpexSourceDifference,
+  npvGapExplainedByOpexSourceConflict,
+  summaryAdjustedIrrPercent,
   operatingCostSourceDiscrepancyStatus: 'unresolved-source-conflict; detailed page 24 differs from summary/financial-planning pages 1-2 and 58',
   annualCashFlowTrace: result.rows.map((row, index) => ({
     year: years[index],
