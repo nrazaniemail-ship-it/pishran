@@ -166,8 +166,9 @@ for (const [id, expected] of Object.entries(expectedSourceTotals)) {
     assert.equal(input.depreciationSchedule.at(-1).totalDepreciation, 25180187.80)
     assert.equal(input.taxAmountSchedule.length, 19, 'Documented tax schedule must include construction and all operating periods')
     assert.deepEqual(input.taxAmountSchedule.slice(0,4).map(row=>row.amount), [0,0,0,0])
-    assert.equal(input.taxAmountSchedule[4].amount, 6881488.65)
-    assert.equal(input.taxAmountSchedule[8].amount, 54371126.38)
+    assert.equal(input.taxAmountSchedule[4].amount, 4687872.25)
+    assert.equal(input.taxAmountSchedule[8].amount, 53850399.12)
+    assert.equal(input.taxAmountSchedule[9].amount, 54371126.38)
     assert.equal(input.taxAmountSchedule.at(-1).amount, 54539078.30)
   }
   if (id === 'comfar-hr-plate-250k') {
