@@ -1313,7 +1313,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const dscrCovenantStatus: 'not-tested' | 'pass' | 'breach' = input.minimumDscr == null || dscr == null
       ? 'not-tested' : dscr + 1e-9 >= input.minimumDscr ? 'pass' : 'breach'
     if (dscrCovenantStatus === 'breach') warnings.push('Minimum DSCR covenant breached in period ' + (index + 1) + ': actual ' + dscr!.toFixed(4) + ', minimum ' + input.minimumDscr!.toFixed(4) + '.')
-    const projectFreeCashFlow = ebit + shortTermDepositInterest[index] - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
+    const projectCashFlowTax = input.taxAmountOverridesByPeriod ? periodTax.tax : unleveredPeriodTax.tax
+    const projectFreeCashFlow = ebit + shortTermDepositInterest[index] - assetSale.otherIncomeLoss - salvageGainLoss - projectCashFlowTax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
     const equityFreeCashFlow = -equityContribution[index] + revenue[index] + otherIncome + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense
