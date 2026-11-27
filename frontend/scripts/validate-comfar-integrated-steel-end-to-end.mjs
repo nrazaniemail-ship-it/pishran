@@ -45,6 +45,14 @@ const fixedCost = years.map(year => {
 assert.ok(source.operatingCostSchedule?.length, 'COMFAR year-by-year operating-cost schedule is required')
 assert.deepEqual([...operatingCostByYear.keys()], years.filter(year => year >= source.operatingCostYear),
   'Every operating year must have an explicit COMFAR operating-cost schedule')
+const cents = value => Math.round(Number(value) * 100)
+const isWithinOneCent = (actual, expected) => Math.abs(cents(actual) - cents(expected)) <= 1
+// Reproducible precision regression: binary floating-point may represent a one-cent
+// difference as 0.0100001; compare integer cents, while rejecting a two-cent variance.
+assert.equal(isWithinOneCent(644811850.31, 644811850.32), true,
+  'A one-cent COMFAR schedule variance must be accepted after cent normalization')
+assert.equal(isWithinOneCent(644811850.30, 644811850.32), false,
+  'A two-cent COMFAR schedule variance must remain a regression failure')
 const expectedOperatingCosts = [
   466658073.29, 522649260.36, 583730555.34, 644811850.32,
   ...Array.from({ length: 11 }, () => 643963499),
@@ -61,7 +69,7 @@ for (let index = 0; index < expectedOperatingCosts.length; index++) {
     years.filter(year => year >= source.operatingCostYear)[index] +
     ': actual=' + actualOperatingCosts[index] +
     ', expected=' + expectedOperatingCosts[index] +
-    ', difference=' + difference)
+    ', differenceInCents=' + differenceInCents)
 }
 const depreciation = years.map(year => byYear(source.depreciationSchedule, year, 'totalDepreciation'))
 const taxes = years.map(year => byYear(source.taxAmountSchedule, year))
