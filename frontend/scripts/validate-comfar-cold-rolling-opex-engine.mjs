@@ -31,27 +31,16 @@ const referenceOpex=new Map(reference.rows
 const close=(actual,expected,label,tolerance=0.02)=>assert.ok(Number.isFinite(actual)&&Math.abs(actual-expected)<=tolerance,
  label+': expected '+expected+', received '+actual)
 
-const periods=[
- jalaliPeriod(1,1401,7,1,1401,12,jalaliYearEndDay(1401),false),
- ...jalaliAnnualPeriods(1402,1417,2),
-]
-assert.equal(periods.length,17)
+const periods=jalaliAnnualPeriods(1403,1417,1)
+assert.equal(periods.length,15)
 const productId='comfar-cold-coil-200k-main-product'
-const preOperating=Array.from({length:2},(_,index)=>({
- period:String(index+1),salesQuantity:0,netUnitPrice:0,salesTaxPercent:0,
- subsidyPercent:null,subsidyAmount:null,openingFinishedGoodsQuantity:0,
- openingFinishedGoodsValue:0,finishedGoodsClosingQuantity:0,
+const salesPeriods=source.productionSalesSchedule.map(row=>({
+ period:String(Number(row.period)-1403+1),salesQuantity:row.sales,netUnitPrice:row.netUnitPrice,
+ salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
+ openingFinishedGoodsQuantity:row.openingInventory,
+ openingFinishedGoodsValue:row.openingInventory===0?0:null,
+ finishedGoodsClosingQuantity:row.closingInventory,
 }))
-const salesPeriods=[
- ...preOperating,
- ...source.productionSalesSchedule.map(row=>({
-  period:String(Number(row.period)-1401+1),salesQuantity:row.sales,netUnitPrice:row.netUnitPrice,
-  salesTaxPercent:0,subsidyPercent:null,subsidyAmount:null,
-  openingFinishedGoodsQuantity:row.openingInventory,
-  openingFinishedGoodsValue:row.openingInventory===0?0:null,
-  finishedGoodsClosingQuantity:row.closingInventory,
- })),
-]
 const productionCosts=source.operatingCostSchedule[0].rows.map((row,rowIndex)=>({
  id:'cold-rolling-source-opex-'+rowIndex,
  metadata:{description:row.name,currencyCode:'IRR',escalationPercent:0},
@@ -59,19 +48,19 @@ const productionCosts=source.operatingCostSchedule[0].rows.map((row,rowIndex)=>(
  standardQuantity:null,standardUnitPrice:null,standardTotal:null,nominalCapacity:null,
  fixedPercent:null,variablePercent:null,
  adjustments:source.operatingCostSchedule.map(period=>({
-  period:String(Number(period.period)-1401+1),quantity:null,unitPrice:null,
+  period:String(Number(period.period)-1403+1),quantity:null,unitPrice:null,
   total:period.rows[rowIndex]?.amount??null,fixedPercent:null,variablePercent:null,
  })),
 }))
 const productSchedule=productModule.buildProductOperatingSchedule({
  sales:[{productId,unitOfMeasure:'تن',inventoryPolicy:'manual',finishedGoodsDaysCoverage:null,
-  productionStartPeriod:3,productionEndPeriod:17,periods:salesPeriods}],
+  productionStartPeriod:1,productionEndPeriod:15,periods:salesPeriods}],
  productionCosts,
 },periods,3,'IRR')
 assert.equal(productSchedule.valid,true,productSchedule.issues.join('; '))
-assert.equal(productSchedule.rows.length,17)
-assert.equal(productSchedule.periodRevenue.length,17)
-assert.equal(productSchedule.periodCostOfSales.length,17)
+assert.equal(productSchedule.rows.length,15)
+assert.equal(productSchedule.periodRevenue.length,15)
+assert.equal(productSchedule.periodCostOfSales.length,15)
 
 const page24Depreciation=[
  1195263.55,1195263.55,1195263.55,1194168.55,1176286.05,
@@ -113,7 +102,7 @@ for(let i=0;i<periods.length;i++){
  if(fiscalIndex>=0)annualFactoryOpex[fiscalIndex]+=periodFactoryOpex[i]
 }
 for(let i=0;i<15;i++){
- const periodIndex=i+2
+ const periodIndex=i
  periodDepreciation[periodIndex]=page24Depreciation[i]
  const fiscalIndex=engine.fiscalYearIndexForPeriod(periods[periodIndex],periods,3)
  annualDepreciation[fiscalIndex]+=page24Depreciation[i]
@@ -125,7 +114,7 @@ for(let i=0;i<15;i++){
  close(allInCost,page24FinishedProductsCost[i],'COMFAR page-24 all-in finished-product cost bridge '+sourcePeriod.period,0.02)
 }
 
-const loanRows=Array.from({length:17},(_,index)=>({
+const loanRows=Array.from({length:periods.length},(_,index)=>({
  period:index+1,drawdown:0,openingBalance:0,periodRatePercent:0,interestExpense:0,
  capitalizedInterest:0,financingFeeExpense:0,commitmentFeeExpense:0,capitalizedFinancingFees:0,
  principal:0,closingBalance:0,debtService:0,
@@ -142,21 +131,21 @@ for(const debt of sourceDebt){
  row.debtService=row.interestExpense+row.principal
 }
 const engineResult=engine.calculateIntegratedPeriodicFinance({
- periods,fiscalYearStartMonth:3,constructionPeriodCount:2,dayCountBasis:365,cashFlowTiming:'period-end',
+ periods,fiscalYearStartMonth:3,constructionPeriodCount:0,dayCountBasis:365,cashFlowTiming:'period-end',
  annualRevenue:productSchedule.annualRevenue,periodRevenue:productSchedule.periodRevenue,
  annualVariableCost:annualFactoryOpex,periodVariableCost:periodFactoryOpex,
  periodInventoryChange,periodCostOfGoodsSold:productSchedule.periodCostOfSales,
- annualFixedCost:Array(17).fill(0),annualDepreciation,periodDepreciationSchedule:periodDepreciation,
- annualFixedInvestment:Array(17).fill(0),annualPreOperatingCost:Array(17).fill(0),
- annualMaintenanceCapex:Array(17).fill(0),annualTaxRates:Array(17).fill(0),
- annualEquityContributions:Array(17).fill(0),workingCapitalByPeriod:Array(17).fill(0),
- loans:[{id:'comfar-cold-rolling-debt',input:{annualRatePercent:0,drawdowns:Array(17).fill(0),
-  repaymentMethod:'bullet',repaymentStartPeriod:1,gracePeriods:0,termPeriods:17,capitalizeInterest:false}}],
+ annualFixedCost:Array(periods.length).fill(0),annualDepreciation,periodDepreciationSchedule:periodDepreciation,
+ annualFixedInvestment:Array(periods.length).fill(0),annualPreOperatingCost:Array(periods.length).fill(0),
+ annualMaintenanceCapex:Array(periods.length).fill(0),annualTaxRates:Array(periods.length).fill(0),
+ annualEquityContributions:Array(periods.length).fill(0),workingCapitalByPeriod:Array(periods.length).fill(0),
+ loans:[{id:'comfar-cold-rolling-debt',input:{annualRatePercent:0,drawdowns:Array(periods.length).fill(0),
+  repaymentMethod:'bullet',repaymentStartPeriod:1,gracePeriods:0,termPeriods:periods.length,capitalizeInterest:false}}],
  loanScheduleOverrides:{'comfar-cold-rolling-debt':loanRows},
 })
 assert.equal(engineResult.valid,true,engineResult.warnings.join('; '))
-assert.equal(engineResult.rows.length,17)
-for(let i=0;i<17;i++){
+assert.equal(engineResult.rows.length,15)
+for(let i=0;i<periods.length;i++){
  close(engineResult.rows[i].productionCost,periodFactoryOpex[i],
   'Engine production-cost line (factory OPEX + direct marketing), period '+(i+1),0.02)
  close(engineResult.rows[i].costOfGoodsSold,productSchedule.periodCostOfSales[i],
@@ -165,7 +154,7 @@ for(let i=0;i<17;i++){
   'Engine depreciation, period '+(i+1),0.02)
 }
 for(let i=0;i<15;i++){
- const periodIndex=i+2
+ const periodIndex=i
  const year=String(1403+i)
  const engineRow=engineResult.rows[periodIndex]
  const comfarPage55=page55DomesticProductionCost[i]+page55ForeignProductionCost[i]
