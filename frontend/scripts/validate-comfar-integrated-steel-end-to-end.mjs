@@ -414,6 +414,7 @@ const summaryAdjustedProjectCashFlows = doubleCountedProjectCashFlows.map((cashF
 const discountedOpexSourceDifference = operatingCostReconciliationByYear.reduce((sum,row)=>
   sum+row.detailedMinusSummary/Math.pow(1.25,row.year-1401),0)
 const npvGapExplainedByFinishedGoodsDoubleCount = result.npvProject-doubleCountedNpv
+console.log('DRI_NPV_BRIDGE_DEBUG '+JSON.stringify({resultNpv:result.npvProject,doubleCountedNpv,referenceNpv,discountedOpexSourceDifference,npvGapExplainedByFinishedGoodsDoubleCount,finishedGoodsInventoryChangeByPeriod}))
 assert.ok(Math.abs(discountedOpexSourceDifference-npvGapExplainedByFinishedGoodsDoubleCount)<=0.02,
   'The prior NPV gap must be reproduced by adding finished-goods inventory twice to working capital, without changing COMFAR source values')
 for(let index=0;index<result.rows.length;index++){
