@@ -257,6 +257,14 @@ for (let index = 0; index < statements.length; index++) {
     'Cash flow closing cash must reconcile to balance sheet cash for ' + years[index])
   assert.ok(Math.abs(statement.movementChecks.cashRollForward) <= 0.01,
     'Cash flow roll-forward must reconcile for ' + years[index])
+  assert.ok(Math.abs(statement.balanceSheet.netWorkingCapital - workingCapital[index]) <= 0.01,
+    'Balance sheet net working capital must equal the imported COMFAR total inventory plus cash, without a second finished-goods addition, for ' + years[index])
+  assert.ok(Math.abs(statement.balanceSheet.rawMaterialsInventory + statement.balanceSheet.workInProgressInventory +
+    statement.balanceSheet.finishedGoodsInventory + statement.balanceSheet.otherNetWorkingCapital - workingCapital[index]) <= 0.01,
+    'Inventory sub-ledgers plus residual working capital must reconcile to COMFAR total NWC for ' + years[index])
+  assert.ok(Math.abs(result.rows[index].changeInWorkingCapital -
+    (workingCapital[index] - (index > 0 ? workingCapital[index - 1] : 0))) <= 0.01,
+    'Period change in working capital must equal the COMFAR source schedule movement for ' + years[index])
 }
 
 // COMFAR's total-capital-invested cash-flow schedule uses the documented corporate tax
