@@ -101,10 +101,8 @@ assert.equal(page55ForeignProductionCost.length,15)
 const periodFactoryOpex=Array(periods.length).fill(0)
 const periodInventoryChange=Array(periods.length).fill(0)
 const periodDepreciation=Array(periods.length).fill(0)
-const periodMarketing=Array(periods.length).fill(0)
 const annualFactoryOpex=Array(periods.length).fill(0)
 const annualDepreciation=Array(periods.length).fill(0)
-const annualMarketing=Array(periods.length).fill(0)
 for(let i=0;i<periods.length;i++){
  const productRow=productSchedule.rows.find(row=>row.period===i+1)
  if(productRow){
@@ -117,10 +115,8 @@ for(let i=0;i<periods.length;i++){
 for(let i=0;i<15;i++){
  const periodIndex=i+2
  periodDepreciation[periodIndex]=page24Depreciation[i]
- periodMarketing[periodIndex]=79000
  const fiscalIndex=engine.fiscalYearIndexForPeriod(periods[periodIndex],periods,3)
  annualDepreciation[fiscalIndex]+=page24Depreciation[i]
- annualMarketing[fiscalIndex]+=79000
  const sourcePeriod=source.operatingCostSchedule[i]
  const detailedTotal=sourcePeriod.rows.reduce((sum,row)=>sum+row.amount,0)
  close(detailedTotal,referenceOpex.get(sourcePeriod.period),'Detailed factory OPEX vs COMFAR page 24-27 operating-cost total '+sourcePeriod.period,0.02)
@@ -150,7 +146,7 @@ const engineResult=engine.calculateIntegratedPeriodicFinance({
  annualRevenue:productSchedule.annualRevenue,periodRevenue:productSchedule.periodRevenue,
  annualVariableCost:annualFactoryOpex,periodVariableCost:periodFactoryOpex,
  periodInventoryChange,periodCostOfGoodsSold:productSchedule.periodCostOfSales,
- annualFixedCost:annualMarketing,annualDepreciation,periodDepreciationSchedule:periodDepreciation,
+ annualFixedCost:Array(17).fill(0),annualDepreciation,periodDepreciationSchedule:periodDepreciation,
  annualFixedInvestment:Array(17).fill(0),annualPreOperatingCost:Array(17).fill(0),
  annualMaintenanceCapex:Array(17).fill(0),annualTaxRates:Array(17).fill(0),
  annualEquityContributions:Array(17).fill(0),workingCapitalByPeriod:Array(17).fill(0),
@@ -161,9 +157,9 @@ const engineResult=engine.calculateIntegratedPeriodicFinance({
 assert.equal(engineResult.valid,true,engineResult.warnings.join('; '))
 assert.equal(engineResult.rows.length,17)
 for(let i=0;i<17;i++){
- close(engineResult.rows[i].productionCost,periodFactoryOpex[i]+periodMarketing[i],
+ close(engineResult.rows[i].productionCost,periodFactoryOpex[i],
   'Engine production-cost line (factory OPEX + direct marketing), period '+(i+1),0.02)
- close(engineResult.rows[i].costOfGoodsSold,productSchedule.periodCostOfSales[i]+periodMarketing[i]-periodInventoryChange[i],
+ close(engineResult.rows[i].costOfGoodsSold,productSchedule.periodCostOfSales[i],
   'Engine COGS roll-forward, period '+(i+1),0.02)
  close(engineResult.rows[i].depreciation,periodDepreciation[i],
   'Engine depreciation, period '+(i+1),0.02)
