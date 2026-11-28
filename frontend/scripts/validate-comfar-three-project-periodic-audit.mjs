@@ -15,11 +15,11 @@ const projects = [
 ]
 const tolerance = 0.02
 const rows = []
-const close = (actual, expected, label) => {
-  const variance = actual - expected
-  rows.push({ label, expected, actual, variance })
-  assert.ok(Number.isFinite(actual) && Math.abs(variance) <= tolerance,
-    label + ': reference=' + expected + ', engine/recomputed=' + actual + ', variance=' + variance)
+const close = (recomputed, expected, label) => {
+  const variance = recomputed - expected
+  rows.push({ label, expected, recomputed, variance })
+  assert.ok(Number.isFinite(recomputed) && Math.abs(variance) <= tolerance,
+    label + ': reference=' + expected + ', source-schedule-recomputed=' + recomputed + ', variance=' + variance)
 }
 const finite = (v, label) => assert.ok(Number.isFinite(v), label + ' must be finite')
 
@@ -80,6 +80,7 @@ for (const [projectName, key] of projects) {
     ' period rows checked; unavailable source statements: ' + missing.join('، '))
 }
 
-console.log('COMFAR three-project schedule audit passed: ' + rows.length + ' numeric variance checks; tolerance ±' + tolerance)
-console.log('PERIOD_VARIANCE_REPORT')
-for (const row of rows) console.log([row.label, row.expected.toFixed(2), row.actual.toFixed(2), row.variance.toFixed(2)].join(' | '))
+console.log('COMFAR three-project SOURCE-SCHEDULE consistency audit passed: ' + rows.length + ' arithmetic checks; tolerance ±' + tolerance)
+console.log('SOURCE_SCHEDULE_RECONCILIATION (not engine-output parity)')
+for (const row of rows) console.log([row.label, row.expected.toFixed(2), row.recomputed.toFixed(2), row.variance.toFixed(2)].join(' | '))
+console.log('LIMITATION: this script does not compare complete P&L, cash-flow, balance-sheet, depreciation, tax or NPV/IRR outputs from the production financial engine against all COMFAR report periods.')
