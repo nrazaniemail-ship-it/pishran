@@ -3811,6 +3811,546 @@
       "unit": "million Rial",
       "sourcePage": 55,
       "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_salesRevenue",
+      "value": 63200000,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_operatingCost",
+      "value": 53459511.66,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_administrativeOverhead",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_depreciation",
+      "value": 1195263.55,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_financeCost",
+      "value": 1366423.77,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_totalProductionCost",
+      "value": 56021198.97,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_marketingCost",
+      "value": 79000,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_costOfProducts",
+      "value": 56100198.97,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_shortTermDepositInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_grossOperatingProfit",
+      "value": 7099801.03,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_unexpectedIncome",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_unexpectedLoss",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_depreciationReserve",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_netProfitBeforeTax",
+      "value": 7099801.03,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_investmentReserve",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_taxableProfit",
+      "value": 7099801.03,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_incomeTax",
+      "value": 354990.05,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "incomeStatement",
+      "lineItem": "summary_netProfit",
+      "value": 6744810.98,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_salesRevenue",
+      "value": 79000000,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_operatingCost",
+      "value": 66205570.9,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_administrativeOverhead",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_depreciation",
+      "value": 1195263.55,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_financeCost",
+      "value": 412759.57,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_totalProductionCost",
+      "value": 67813594.02,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_marketingCost",
+      "value": 79000,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_costOfProducts",
+      "value": 67892594.02,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_shortTermDepositInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_grossOperatingProfit",
+      "value": 11107405.98,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_unexpectedIncome",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_unexpectedLoss",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_depreciationReserve",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_netProfitBeforeTax",
+      "value": 11107405.98,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_investmentReserve",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_taxableProfit",
+      "value": 11107405.98,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_incomeTax",
+      "value": 555370.3,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "incomeStatement",
+      "lineItem": "summary_netProfit",
+      "value": 10552035.68,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_salesRevenue",
+      "value": 79000000,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_operatingCost",
+      "value": 66205570.9,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_administrativeOverhead",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_depreciation",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_financeCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_totalProductionCost",
+      "value": 66205570.9,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_marketingCost",
+      "value": 79000,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_costOfProducts",
+      "value": 66284570.9,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_shortTermDepositInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_grossOperatingProfit",
+      "value": 12715429.1,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_unexpectedIncome",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_unexpectedLoss",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_depreciationReserve",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_netProfitBeforeTax",
+      "value": 12715429.1,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_investmentReserve",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_taxableProfit",
+      "value": 12715429.1,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_incomeTax",
+      "value": 3178857.27,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "incomeStatement",
+      "lineItem": "summary_netProfit",
+      "value": 9536571.82,
+      "unit": "million Rial",
+      "sourcePage": 2,
+      "extraction": "transcribed"
     }
   ]
 }
