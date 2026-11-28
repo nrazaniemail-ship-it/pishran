@@ -39,6 +39,30 @@ export type ComfarSourceInputData = {
  * Amounts remain in each report's accounting currency; no FX conversion is inferred.
  * Missing engineering and financing assumptions are deliberately left unfilled.
  */
+/**
+ * Cold-rolling factory operating-cost detail transcribed by year from COMFAR III,
+ * "Annual cost of products - total", pp. 24-27 (million Rial).
+ * Marketing, depreciation and financing costs are intentionally excluded here:
+ * they are separate COMFAR lines and must not be folded into factory OPEX.
+ */
+const coldRollingFactoryCostNames = [
+  'مواد خام', 'ملزومات کارخانه', 'یوتیلیتی', 'انرژی', 'قطعات یدکی مصرف‌شده',
+  'تعمیرات، نگهداری و مواد اولیه', 'حق امتیاز', 'دستمزد',
+  'هزینه‌های بالاسری دستمزد', 'سربار کارخانه',
+]
+const coldRollingOperatingCostSchedule = [
+  { period: '1403', amounts: [50446960, 0, 0, 441856, 149806.82, 446706.13, 0, 176397.01, 167722.87, 1637525] },
+  { period: '1404', amounts: [56752830, 0, 0, 441856, 162552.16, 484711.23, 0, 181461.41, 172538.24, 1637525] },
+  { period: '1405', amounts: [63058700, 0, 0, 441856, 176670.08, 526809.19, 0, 187071.21, 177872.18, 1637525] },
+  ...Array.from({ length: 13 }, (_, index) => ({
+    period: String(1406 + index),
+    amounts: [63058700, 0, 0, 441856, 176474, 526224.50, 0, 186993.30, 177798.10, 1637525],
+  })),
+].map(({ period, amounts }) => ({
+  period,
+  rows: coldRollingFactoryCostNames.map((name, index) => ({ name, amount: amounts[index] })),
+}))
+
 export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
   'comfar-hr-coil-200k': {
     fixedInvestment: [
@@ -189,6 +213,7 @@ export const COMFAR_PROJECT_INPUTS: Record<string, ComfarSourceInputData> = {
       { period: '1402', net: 211680, capitalizedInterest: 350000 },
     ],
     operatingCostYear: 1405,
+    operatingCostSchedule: coldRollingOperatingCostSchedule,
     variableCostSharePercent: 95.60,
     foreignFixedInvestmentSharePercent: 48.28,
     capacityUtilization: [81.11, 90.14, 100.14, 100],
