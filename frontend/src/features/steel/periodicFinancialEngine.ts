@@ -683,6 +683,8 @@ export type PeriodicProjectFinanceInput = {
   annualDepreciation: number[]
   annualFixedInvestment: number[]
   annualPreOperatingCost: number[]
+  /** Cash-paid finance costs capitalized to pre-production assets; distinct from debt-capitalized interest and excluded from total-investment NPV. */
+  capitalizedPreOperatingFinancialCostsByPeriod?: number[]
   annualMaintenanceCapex: number[]
   annualTaxRates: number[]
   taxRatesByPeriod?: number[]
@@ -763,8 +765,12 @@ export type PeriodicProjectFinanceRow = {
   assetReturnOfCapital: number
   assetSaleOtherIncomeLoss: number
   assetBookValueDisposed: number
-  /** Legacy total financing expense: cash interest plus expensed financing fees. */
+  /** Legacy total cash financing expense: cash interest plus expensed financing fees. */
   interestExpense: number
+  /** Portion of cash financing costs capitalized to pre-production assets rather than expensed in profit. */
+  capitalizedPreOperatingFinancialCosts: number
+  /** Interest expense recognized in profit after removing capitalized pre-production finance costs. */
+  incomeStatementInterestExpense: number
   /** Contractual interest before financing and commitment fees. */
   cashInterestExpense: number
   /** All expense-classified financing fees, including commitment fees. */
@@ -1205,6 +1211,20 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     }
     loanSchedules[loan.id] = schedule.rows
   }
+  const capitalizedPreOperatingFinancialCostsByPeriod = input.capitalizedPreOperatingFinancialCostsByPeriod ?? Array(periods.length).fill(0)
+  if (capitalizedPreOperatingFinancialCostsByPeriod.length !== periods.length ||
+      capitalizedPreOperatingFinancialCostsByPeriod.some(value => !validFinite(value) || value < 0)) {
+    warnings.push('Capitalized pre-production financial costs must contain one finite non-negative amount for every project period.')
+    return empty()
+  }
+  for (let index = 0; index < periods.length; index++) {
+    const eligibleCashFinancialCosts = Object.values(loanSchedules).reduce((sum, schedule) =>
+      sum + schedule[index].interestExpense + schedule[index].financingFeeExpense, 0)
+    if (capitalizedPreOperatingFinancialCostsByPeriod[index] > eligibleCashFinancialCosts + 0.01) {
+      warnings.push('Capitalized pre-production financial costs cannot exceed cash-paid interest and financing fees in project period ' + (index + 1) + '.')
+      return empty()
+    }
+  }
   if(input.foreignExchangeLossByPeriod){
     const scheduledFx=input.foreignExchangeLossByPeriod.map((_,index)=>Object.values(loanSchedules).reduce((sum,schedule)=>{
       const row=schedule[index]
@@ -1265,6 +1285,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     // Preserve the existing total-financing-cost field for downstream consumers,
     // while exposing its components for audit trails and lender reporting.
     const interestExpense = cashInterestExpense + financingFeeExpense
+    const capitalizedPreOperatingFinancialCosts = capitalizedPreOperatingFinancialCostsByPeriod[index]
+    const incomeStatementInterestExpense = interestExpense - capitalizedPreOperatingFinancialCosts
     const foreignExchangeLoss=input.foreignExchangeLossByPeriod?.[index]??0
     const capitalizedInterest = loanRows.reduce((sum,row)=>sum+row.capitalizedInterest,0)
     const capitalizedFinancingFees = loanRows.reduce((sum,row)=>sum+row.capitalizedFinancingFees,0)
@@ -1288,7 +1310,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const currentFiscalYearIndex=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
     const taxableDeduction=input.taxableDeductionsByPeriod?.[index]??0
     const periodTaxWithExpiry=calculatePeriodTaxWithLossExpiry(
-      ebit+shortTermDepositInterest[index]-interestExpense-foreignExchangeLoss-taxableDeduction,taxRates[index],taxLossVintages,currentFiscalYearIndex,
+      ebit+shortTermDepositInterest[index]-incomeStatementInterestExpense-foreignExchangeLoss-taxableDeduction,taxRates[index],taxLossVintages,currentFiscalYearIndex,
       lossCarryForwardEnabled?lossCarryForwardYears:null,lossCarryForwardEnabled)
     const unleveredTaxWithExpiry=calculatePeriodTaxWithLossExpiry(
       ebit+shortTermDepositInterest[index]-taxableDeduction,taxRates[index],unleveredTaxLossVintages,currentFiscalYearIndex,
@@ -1350,7 +1372,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       revenue:revenue[index],subsidyIncome:input.periodSubsidyIncome?.[index]??0,otherIncome,otherIncomeSourceReference:otherIncome!==0?input.periodOtherIncomeSourceReference??null:null,shortTermDepositInterest:shortTermDepositInterest[index],variableCost:variableCost[index],fixedCost:fixedCost[index],productionCost,inventoryChange,costOfGoodsSold,abnormalWasteExpense,depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
-      interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
+      interestExpense,capitalizedPreOperatingFinancialCosts,incomeStatementInterestExpense,
+      cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
       capitalizedInterest,capitalizedFinancingFees,foreignExchangeLoss,principal,debtDrawdown,debtService,taxRatePercent:hasDocumentedTaxAmount?null:taxRates[index],taxAmountSourceReference:hasDocumentedTaxAmount?input.taxAmountSourceReference??null:null,taxableDeduction,taxCredit,taxBeforeCredits:hasDocumentedTaxAmount?documentedTaxAmount:periodTaxWithExpiry.tax,
       tax:periodTax.tax,unleveredTax:unleveredPeriodTax.tax,taxLossCarryForward:taxLoss,
       fixedInvestment:fixedInvestment[index],preOperatingCost:preOperatingCost[index],maintenanceCapex:maintenanceCapex[index],
@@ -1913,10 +1936,12 @@ export function buildPeriodicThreeFinancialStatements(
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
     const ebitda = row.revenue - row.costOfGoodsSold - row.abnormalWasteExpense
     const ebit = ebitda - row.depreciation + assetDisposalGainLoss
-    const profitBeforeTax = ebit + row.shortTermDepositInterest - row.interestExpense - foreignExchangeLoss
+    const incomeStatementInterestExpense = row.incomeStatementInterestExpense ?? row.interestExpense
+    const capitalizedPreOperatingFinancialCosts = row.capitalizedPreOperatingFinancialCosts ?? 0
+    const profitBeforeTax = ebit + row.shortTermDepositInterest - incomeStatementInterestExpense - foreignExchangeLoss
     const netIncome = profitBeforeTax - row.tax
     const operatingCashFlow = netIncome + row.depreciation - assetDisposalGainLoss - row.changeInWorkingCapital + foreignExchangeLoss
-    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - row.maintenanceCapex +
+    const investingCashFlow = -row.fixedInvestment - row.preOperatingCost - capitalizedPreOperatingFinancialCosts - row.maintenanceCapex +
       row.assetSaleProceeds + row.salvageValue
     const automaticFinancingCashFlow = automaticFunding.automaticEquity +
       automaticFunding.automaticOverdraftDrawdown - automaticFunding.automaticOverdraftRepayment
@@ -1931,7 +1956,7 @@ export function buildPeriodicThreeFinancialStatements(
     const closingOtherNetWorkingCapital = closingWorkingCapital - closingRawMaterialsInventory - closingWorkInProgressInventory - closingFinishedGoodsInventory
     const closingNetFixedAssets = netFixedAssets + row.fixedInvestment + row.maintenanceCapex -
       row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed
-    const closingPreOperatingAssets = deferredPreOperatingAssets + row.preOperatingCost + row.capitalizedInterest + row.capitalizedFinancingFees
+    const closingPreOperatingAssets = deferredPreOperatingAssets + row.preOperatingCost + capitalizedPreOperatingFinancialCosts + row.capitalizedInterest + row.capitalizedFinancingFees
     const closingPaidInCapital = paidInCapital + row.equityContribution +
       row.equityWorkingCapitalContribution + automaticFunding.automaticEquity
     const closingRetainedEarnings = retainedEarnings + netIncome
@@ -1952,7 +1977,7 @@ export function buildPeriodicThreeFinancialStatements(
       netWorkingCapital: closingWorkingCapital - netWorkingCapital - row.changeInWorkingCapital,
       netFixedAssets: closingNetFixedAssets - netFixedAssets -
         (row.fixedInvestment + row.maintenanceCapex - row.depreciation - row.assetBookValueDisposed - row.salvageBookValueDisposed),
-      deferredPreOperatingAssets: closingPreOperatingAssets - deferredPreOperatingAssets - row.preOperatingCost - row.capitalizedInterest - row.capitalizedFinancingFees,
+      deferredPreOperatingAssets: closingPreOperatingAssets - deferredPreOperatingAssets - row.preOperatingCost - capitalizedPreOperatingFinancialCosts - row.capitalizedInterest - row.capitalizedFinancingFees,
       paidInCapital: closingPaidInCapital - paidInCapital - row.equityContribution -
         row.equityWorkingCapitalContribution - automaticFunding.automaticEquity,
       retainedEarnings: closingRetainedEarnings - retainedEarnings - netIncome,
@@ -1961,7 +1986,7 @@ export function buildPeriodicThreeFinancialStatements(
     statements.push({
       period: row.period, startDate: row.startDate, endDate: row.endDate, openingBalances,
       incomeStatement: { revenue: row.revenue, shortTermDepositInterest: row.shortTermDepositInterest, cashOperatingCosts, productionCost: row.productionCost, inventoryChange: row.inventoryChange, costOfGoodsSold: row.costOfGoodsSold, abnormalWasteExpense: row.abnormalWasteExpense, ebitda, depreciation: row.depreciation,
-        assetDisposalGainLoss, ebit, interest: row.interestExpense,
+        assetDisposalGainLoss, ebit, interest: incomeStatementInterestExpense,
         cashInterestExpense: row.cashInterestExpense, financingFeeExpense: row.financingFeeExpense,
         commitmentFeeExpense: row.commitmentFeeExpense,
         profitBeforeTax, foreignExchangeGainLoss:-foreignExchangeLoss, taxableDeductions:row.taxableDeduction??0, taxCredits:row.taxCredit??0, taxBeforeCredits:row.taxBeforeCredits??row.tax, tax: row.tax, netIncome },
