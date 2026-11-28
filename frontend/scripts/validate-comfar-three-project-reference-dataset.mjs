@@ -90,7 +90,7 @@ for (const period of ['1405', '1406', '1407']) {
 }
 assert.equal(page220DebtValue('domesticDebtWorkingCapital', '1405', 'capitalizedInterest'), 207545.09);
 assert.equal(page220DebtValue('domesticDebtTotal', '1405', 'capitalizedInterest'), 207545.09);
-console.log('COMFAR cold-coil debt aggregation validation passed for pages 219-220; page 221 intentionally withheld pending verification.');
+console.log('COMFAR cold-coil debt aggregation validation passed for pages 219-221.');
 
 
 const page221DebtValue = (group, period, item) => {
@@ -110,18 +110,24 @@ for (const period of ['1408', '1409', '1410']) {
   }
 }
 
-// Fixed-capital debt roll-forward only: the printed schedule shows no drawdowns,
-// FX adjustments or capitalized interest in 1408-1410.
-const fixedBalanceAtEnd = (period) => page221DebtValue('domesticDebtFixed', period, 'closingBalance');
-let fixedOpeningBalance = page220DebtValue('domesticDebtFixed', '1407', 'closingBalance');
-for (const period of ['1408', '1409', '1410']) {
+// Fixed-capital debt roll-forward across all consecutive annual columns.
+// 1403 is the first reported construction period; the independently auditable
+// opening balance for the multi-year roll-forward is the printed 1403 closing balance.
+const fixedDebtValue = (period, item) => {
+  if (period === '1403' || period === '1404') return debtValue('domesticDebtFixed', period, item);
+  if (['1405', '1406', '1407'].includes(period)) return page220DebtValue('domesticDebtFixed', period, item);
+  return page221DebtValue('domesticDebtFixed', period, item);
+};
+let fixedOpeningBalance = fixedDebtValue('1403', 'closingBalance');
+for (const period of ['1404', '1405', '1406', '1407', '1408', '1409', '1410']) {
   const expectedClosing = fixedOpeningBalance
-    + page221DebtValue('domesticDebtFixed', period, 'drawdown')
-    - page221DebtValue('domesticDebtFixed', period, 'repayment')
-    + page221DebtValue('domesticDebtFixed', period, 'fxAdjustment')
-    + page221DebtValue('domesticDebtFixed', period, 'capitalizedInterest');
-  assert.ok(Math.abs(expectedClosing - fixedBalanceAtEnd(period)) <= 0.01,
-    `Fixed-capital debt roll-forward mismatch for ${period}: expected ${expectedClosing}, printed ${fixedBalanceAtEnd(period)}`);
-  fixedOpeningBalance = fixedBalanceAtEnd(period);
+    + fixedDebtValue(period, 'drawdown')
+    - fixedDebtValue(period, 'repayment')
+    + fixedDebtValue(period, 'fxAdjustment')
+    + fixedDebtValue(period, 'capitalizedInterest');
+  const printedClosing = fixedDebtValue(period, 'closingBalance');
+  assert.ok(Math.abs(expectedClosing - printedClosing) <= 0.01,
+    `Fixed-capital debt roll-forward mismatch for ${period}: expected ${expectedClosing}, printed ${printedClosing}`);
+  fixedOpeningBalance = printedClosing;
 }
-console.log('COMFAR cold-coil debt aggregation and fixed-capital roll-forward validation passed for pages 219-221.');
+console.log('COMFAR cold-coil debt aggregation passed for pages 219-221; fixed-capital debt roll-forward passed for 1404-1410 (±0.01 million Rial).');
