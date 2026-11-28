@@ -8,7 +8,17 @@
       "projectName": "HRCR200 - hot rolled coil",
       "sourceDocument": "COMFAR III - HRCR200",
       "pdfPages": 135,
-      "verifiedPagesReadInThisAudit": [50, 51, 52, 53, 54, 55, 56, 57, 58],
+      "verifiedPagesReadInThisAudit": [
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58
+      ],
       "coverage": {
         "balanceSheet": "not-extracted-completely",
         "incomeStatement": "not-extracted-completely",
@@ -31,7 +41,13 @@
       "projectName": "SARZAMIN - hot rolled plate",
       "sourceDocument": "COMFAR III - SARZAMIN hot rolled plate",
       "pdfPages": 114,
-      "verifiedPagesReadInThisAudit": [50, 51, 52, 53, 54],
+      "verifiedPagesReadInThisAudit": [
+        50,
+        51,
+        52,
+        53,
+        54
+      ],
       "coverage": {
         "balanceSheet": "not-extracted-completely",
         "incomeStatement": "summary-only-previously-transcribed-not-period-complete",
@@ -54,15 +70,34 @@
       "projectName": "SARZAMIN - cold rolled coil",
       "sourceDocument": "COMFAR III - SARZAMIN cold rolled coil",
       "pdfPages": 126,
-      "verifiedPagesReadInThisAudit": [47, 48, 49, 50, 51, 52, 53, 54, 55],
+      "verifiedPagesReadInThisAudit": [
+        24,
+        25,
+        26,
+        27,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        57,
+        58,
+        59,
+        60,
+        61
+      ],
       "coverage": {
         "balanceSheet": "not-extracted-completely",
-        "incomeStatement": "partial-sales-and-production-cost-page-55",
-        "depreciation": "not-extracted-completely",
-        "tax": "partial-tax-and-cash-flow-pages-49-to-52",
-        "workingCapital": "partial-net-working-capital-page-49",
+        "incomeStatement": "partial-operating-cost-and-depreciation-pages-24-to-27; sales-and-production-schedule-page-55-not-transcribed-into-reference-rows",
+        "depreciation": "annual-total-depreciation-transcribed-pages-24-to-27; asset-level-assumptions-not-verified",
+        "tax": "partial-tax-and-cash-flow-pages-57-to-61; tax rows not yet normalized into reference dataset",
+        "workingCapital": "partial-net-working-capital-changes-pages-57-to-58; not yet normalized into reference dataset",
         "debt": "partial-pages-47-to-48",
-        "cashFlow": "partial-pages-49-to-54"
+        "cashFlow": "partial-summary-pages-57-to-61; not yet normalized into reference dataset"
       },
       "periodRows": [],
       "notes": [
@@ -70,7 +105,10 @@
         "Page 49 shows cash flow, tax, financing cost, loan repayment and net working capital change for construction periods and 1403-1405.",
         "Pages 50-51 show later cash flow and tax periods; pages 52-54 show cumulative and annual cash-flow summaries.",
         "Page 55 contains sales and production cost rows for 1403-1417.",
-        "This remains partial extraction; complete periodic statements and asset-level depreciation have not been transcribed."
+        "This remains partial extraction; complete periodic statements and asset-level depreciation have not been transcribed.",
+        "The reference dataset now includes annual operatingCost and depreciation totals for 1403-1417 transcribed from pages 24-27. These are source schedule rows only and are not engine outputs.",
+        "Page 24 itemized operating cost totals for 1403 (53,466,973.84) and 1405 (66,206,503.67) differ from discounted cash-flow page 57 (53,459,511.66 for 1403) and recurring operating-cost rows (66,205,570.90 for 1405). Preserve both as source discrepancies; do not overwrite or force parity.",
+        "Page 24-27 depreciation totals are annual aggregate values; asset-level acquisition dates, useful lives, methods and salvage assumptions remain unverified."
       ]
     }
   ],
