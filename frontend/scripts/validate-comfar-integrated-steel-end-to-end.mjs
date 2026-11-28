@@ -23,6 +23,8 @@ const byYear = (rows, year, field = 'amount') =>
 const fixedInvestment = years.map(year =>
   source.fixedInvestment.reduce((sum, asset) => sum + byYear(asset.periods, year), 0))
 const preOperatingCost = years.map(year => byYear(source.preproduction, year, 'net'))
+const capitalizedPreOperatingFinancialCosts = years.map(year =>
+  byYear(source.preproduction, year, 'capitalizedInterest'))
 const revenue = years.map(year =>
   byYear(source.productionSalesSchedule, year, 'salesRevenue') +
   byYear(source.byproductSalesSchedule, year, 'salesRevenue'))
@@ -142,8 +144,12 @@ const finishedGoodsInventoryByPeriod = inventoryChangeByPeriod.reduce((balances,
   balances.push((balances[index - 1] ?? 0) + change)
   return balances
 }, [])
-const workingCapitalIncludingFinishedGoods = workingCapital.map((balance, index) =>
-  balance + finishedGoodsInventoryByPeriod[index])
+// COMFAR's total inventory line already includes raw materials, WIP and finished products.
+// The finished-goods amount is a sub-ledger disclosure within NWC, not an additional asset.
+const workingCapitalIncludingFinishedGoods = workingCapital
+assert.ok(finishedGoodsInventoryByPeriod.every((balance, index) =>
+  balance <= workingCapitalIncludingFinishedGoods[index] + 0.01),
+  'Finished-goods inventory must remain a disclosed component of COMFAR total inventory, never be added on top of total NWC')
 const periods = jalaliAnnualPeriods(1401, 1419, 1)
 assert.equal(periods.length, 19, 'Project calendar must contain 19 annual periods')
 const result = engine.calculateIntegratedPeriodicFinance({
@@ -160,6 +166,7 @@ const result = engine.calculateIntegratedPeriodicFinance({
   periodDepreciationSchedule: depreciation,
   annualFixedInvestment: fixedInvestment,
   annualPreOperatingCost: preOperatingCost,
+  capitalizedPreOperatingFinancialCostsByPeriod: capitalizedPreOperatingFinancialCosts,
   annualMaintenanceCapex: years.map(() => 0),
   annualTaxRates: years.map(() => 25),
   taxAmountOverridesByPeriod: taxes,
@@ -202,7 +209,12 @@ for (let index = 0; index < years.length; index++) {
   assert.ok(Math.abs(result.rows[index].cashInterestExpense - expectedLoans.interest) <= 0.01,
     'Loan interest did not reach engine row for ' + years[index])
   assert.ok(Math.abs(result.rows[index].capitalizedInterest - expectedLoans.capitalizedInterest) <= 0.01,
-    'Capitalized loan interest did not reach engine row for ' + years[index])
+    'Debt-capitalized interest did not reach engine row for ' + years[index])
+  assert.ok(Math.abs(result.rows[index].capitalizedPreOperatingFinancialCosts - capitalizedPreOperatingFinancialCosts[index]) <= 0.01,
+    'Cash-paid finance costs capitalized to pre-production assets must match COMFAR for ' + years[index])
+  assert.ok(Math.abs(result.rows[index].incomeStatementInterestExpense -
+    (expectedLoans.interest - capitalizedPreOperatingFinancialCosts[index])) <= 0.01,
+    'Income-statement interest must exclude finance costs capitalized to pre-production assets for ' + years[index])
 }
 
 // Production cost, inventory movement and cost of goods sold are distinct ledger measures.
@@ -221,6 +233,14 @@ const fourYearCogs = [1405,1406,1407,1408].reduce((sum,year)=>sum+result.rows[ye
 assert.ok(Math.abs(fourYearProductionCost-fourYearInventoryBuild-fourYearCogs)<=0.02,'Four-year cumulative OPEX bridge must reconcile')
 const statements = engine.buildPeriodicThreeFinancialStatements(result)
 assert.equal(statements.length, 19, 'Income statement, cash flow and balance sheet must be built for every period')
+const constructionEndIndex = years.indexOf(1404)
+assert.ok(Math.abs(statements[constructionEndIndex].balanceSheet.deferredPreOperatingAssets - 117124027) <= 0.02,
+  'Construction-end pre-production assets must include net pre-production costs plus 110.5m of paid capitalized interest')
+assert.ok(Math.abs(statements[constructionEndIndex].incomeStatement.interest) <= 0.01,
+  'Construction interest capitalized to pre-production assets must not be expensed again in profit')
+assert.ok(Math.abs(statements[constructionEndIndex].cashFlowStatement.investingCashFlow -
+  (-fixedInvestment[constructionEndIndex] - preOperatingCost[constructionEndIndex] - capitalizedPreOperatingFinancialCosts[constructionEndIndex])) <= 0.02,
+  'Cash-paid capitalized construction interest must remain a cash outflow in investing cash flow')
 for (let index = 0; index < statements.length; index++) {
   const statement = statements[index]
   assert.ok(Math.abs(statement.movementChecks.cashRollForward) <= 0.01,
@@ -237,6 +257,14 @@ for (let index = 0; index < statements.length; index++) {
     'Cash flow closing cash must reconcile to balance sheet cash for ' + years[index])
   assert.ok(Math.abs(statement.movementChecks.cashRollForward) <= 0.01,
     'Cash flow roll-forward must reconcile for ' + years[index])
+  assert.ok(Math.abs(statement.balanceSheet.netWorkingCapital - workingCapital[index]) <= 0.01,
+    'Balance sheet net working capital must equal the imported COMFAR total inventory plus cash, without a second finished-goods addition, for ' + years[index])
+  assert.ok(Math.abs(statement.balanceSheet.rawMaterialsInventory + statement.balanceSheet.workInProgressInventory +
+    statement.balanceSheet.finishedGoodsInventory + statement.balanceSheet.otherNetWorkingCapital - workingCapital[index]) <= 0.01,
+    'Inventory sub-ledgers plus residual working capital must reconcile to COMFAR total NWC for ' + years[index])
+  assert.ok(Math.abs(result.rows[index].changeInWorkingCapital -
+    (workingCapital[index] - (index > 0 ? workingCapital[index - 1] : 0))) <= 0.01,
+    'Period change in working capital must equal the COMFAR source schedule movement for ' + years[index])
 }
 
 // COMFAR's total-capital-invested cash-flow schedule uses the documented corporate tax
@@ -362,39 +390,18 @@ const operatingCostReconciliationByYear = [1405, 1406, 1407, 1408].map(year => {
     detailedMinusSummary: detailedTotal - summaryTotal,
   }
 })
-const summaryAdjustedProjectCashFlows = result.rows.map((row, index) => {
-  const year = years[index]
-  const summaryTotal = summaryOperatingCostsByYear.get(year)
-  return summaryTotal == null
-    ? row.projectFreeCashFlow
-    : row.projectFreeCashFlow + operatingCostByYear.get(year) - summaryTotal
-})
 const discountedOpexSourceDifference = operatingCostReconciliationByYear.reduce((sum, row) =>
   sum + row.detailedMinusSummary / Math.pow(1.25, row.year - 1401), 0)
-const npvGapExplainedByOpexSourceConflict = referenceNpv - result.npvProject
-assert.ok(Math.abs(discountedOpexSourceDifference - npvGapExplainedByOpexSourceConflict) <= 0.02,
-  'Discounted detailed-vs-summary OPEX differences must reproduce the reported COMFAR NPV gap without changing source values')
-const summaryAdjustedNpv = engine.calculatePeriodicNpv(
-  summaryAdjustedProjectCashFlows, periods, 25, 365, 'period-end',
-  jalaliToIso(1401, 12, jalaliYearEndDay(1401)), 'period-count')
-const summaryAdjustedIrrPercent = engine.calculatePeriodicIrr(
-  summaryAdjustedProjectCashFlows, periods, 365, 'period-end')
-const summaryAdjustedComfarPeriodCountIrrPercent =
-  calculateComfarPeriodCountIrr(summaryAdjustedProjectCashFlows)
-assert.ok(Number.isFinite(summaryAdjustedNpv),
-  'The summary-adjusted project NPV must be calculated by the production financial engine')
-assert.ok(Math.abs(summaryAdjustedNpv - referenceNpv) <= 0.02,
-  'The production engine must reproduce COMFAR NPV after applying only the documented sales-basis OPEX source series; actual=' +
-  summaryAdjustedNpv + '; reference=' + referenceNpv)
-assert.ok(Number.isFinite(summaryAdjustedIrrPercent),
-  'The summary-adjusted Pishran actual-day IRR must remain finite')
-assert.ok(Math.abs(summaryAdjustedIrrPercent - referenceIrr) <= 0.02,
-  'The actual-day IRR on the summary OPEX series must be within 0.02 percentage points of COMFAR; actual=' +
-  summaryAdjustedIrrPercent + '; reference=' + referenceIrr)
-assert.equal(summaryAdjustedComfarPeriodCountIrrPercent.toFixed(2), referenceIrr.toFixed(2),
-  'COMFAR period-count IRR on the cash-flow-summary OPEX series must reproduce the published 26.08% IRR to two decimals')
-assert.ok(Number.isFinite(result.npvProject), 'Integrated project NPV must be finite')
-assert.ok(Number.isFinite(result.irrProject), 'Integrated project IRR must be finite')
+const discountedFinishedGoodsInventoryBuild = inventoryChangeByPeriod.reduce((sum, change, index) =>
+  sum + change / Math.pow(1.25, index), 0)
+assert.ok(Math.abs(discountedOpexSourceDifference - discountedFinishedGoodsInventoryBuild) <= 0.02,
+  'Detailed-vs-summary OPEX difference must reconcile to finished-goods inventory build, already included in COMFAR total inventory')
+assert.ok(Math.abs(result.npvProject - referenceNpv) <= 0.02,
+  'Integrated production engine NPV must match COMFAR without post-hoc cash-flow adjustment; actual=' + result.npvProject + '; reference=' + referenceNpv)
+assert.ok(Math.abs(result.irrProject - referenceIrr) <= 0.02,
+  'Integrated production engine actual-day IRR must match COMFAR after correct NWC sub-ledger treatment; actual=' + result.irrProject + '; reference=' + referenceIrr)
+assert.equal(calculateComfarPeriodCountIrr(result.rows.map(row => row.projectFreeCashFlow)).toFixed(2), referenceIrr.toFixed(2),
+  'COMFAR period-count IRR on production-engine cash flows must reproduce 26.08%')
 console.log(JSON.stringify({
   project: 'comfar-integrated-steel-dri',
   periods: result.rows.length,
@@ -417,11 +424,8 @@ console.log(JSON.stringify({
   opexSourceModel,
   opexProductionVsSalesReconciliation,
   discountedOpexSourceDifference,
-  npvGapExplainedByOpexSourceConflict,
-  summaryAdjustedNpv,
-  summaryAdjustedIrrPercent,
-  summaryAdjustedComfarPeriodCountIrrPercent,
-  operatingCostSourceDiscrepancyStatus: 'explained-volume-basis-difference; detailed OPEX scales variable cost with production including closing inventory, summary/cash-flow OPEX scales with sales utilization; source amounts retained unchanged',
+  discountedFinishedGoodsInventoryBuild,
+  operatingCostSourceDiscrepancyStatus: 'production-vs-sales cost difference is the finished-goods inventory build; COMFAR total inventory already includes finished products, so finished goods are a sub-ledger within NWC and must not be added twice',
   annualCashFlowTrace: result.rows.map((row, index) => ({
     year: years[index],
     periodStart: row.startDate,
@@ -446,6 +450,8 @@ console.log(JSON.stringify({
     discountExponent: index,
     discountedProjectCashFlow: row.projectFreeCashFlow / Math.pow(1.25, index),
     loanInterest: row.cashInterestExpense,
+    capitalizedPreOperatingFinancialCosts: row.capitalizedPreOperatingFinancialCosts,
+    incomeStatementInterestExpense: row.incomeStatementInterestExpense,
     principal: row.principal,
     debtDrawdown: row.debtDrawdown,
     equityContribution: row.equityContribution,
