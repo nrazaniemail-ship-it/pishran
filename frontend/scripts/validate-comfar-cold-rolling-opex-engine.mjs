@@ -174,3 +174,62 @@ for(let i=0;i<15;i++){
   expectedPage55Variance[i],'Independent COMFAR page 55 vs page 24 source difference '+(1403+i),0.02)
 }
 console.log('COMFAR cold-rolling OPEX source schedule, weighted-average COGS and calculateIntegratedPeriodicFinance path passed. Page-55/page-24 source variances are reported explicitly; engine parity with COMFAR all-in product cost is not asserted.')
+
+
+/**
+ * Full operating-period finance diagnostic using the actual 5% tax assumption,
+ * the report's 1403-1405 loan amortization (pp. 48-49), working-capital balances,
+ * and cash-flow/tax reference values (pp. 57-61). The construction periods are
+ * intentionally not invented; therefore this operating-horizon NPV/IRR is not
+ * asserted equal to the report's whole-project NPV/IRR.
+ */
+const reportTax=[354990.05,451973.54,555370.30,576063.03,576957.15,2888845.76,2888845.76,2888845.76,2888845.76,3118706.19,3126266.19,3126266.19,3133779.20,3178857.27,3178857.27]
+const reportNetCashFlow=[6912999.97,10453127.90,11876468.51,12139399.36,12138471.95,9826583.34,9826583.34,9826583.34,9826583.34,9596722.91,9589162.91,9589162.91,9581649.90,9536571.83,9536571.83]
+assert.equal(reportTax.length,15)
+assert.equal(reportNetCashFlow.length,15)
+const workingCapitalBalances=source.workingCapital.map(row=>row.inventory+row.cash)
+assert.equal(workingCapitalBalances.length,15,'COMFAR working-capital schedule must cover 1403-1417')
+const fullFinanceResult=engine.calculateIntegratedPeriodicFinance({
+ periods,fiscalYearStartMonth:3,constructionPeriodCount:0,dayCountBasis:365,cashFlowTiming:'period-end',
+ annualRevenue:productSchedule.annualRevenue,periodRevenue:productSchedule.periodRevenue,
+ annualVariableCost:annualFactoryOpex,periodVariableCost:periodFactoryOpex,
+ periodInventoryChange,periodCostOfGoodsSold:productSchedule.periodCostOfSales.map(value=>value+79000),
+ annualFixedCost:Array(periods.length).fill(79000),annualDepreciation,periodDepreciationSchedule:periodDepreciation,
+ annualFixedInvestment:Array(periods.length).fill(0),annualPreOperatingCost:Array(periods.length).fill(0),
+ annualMaintenanceCapex:Array(periods.length).fill(0),annualTaxRates:Array(periods.length).fill(5),
+ annualEquityContributions:Array(periods.length).fill(0),workingCapitalByPeriod:workingCapitalBalances,
+ loans:[{id:'comfar-cold-rolling-reported-loan',input:{annualRatePercent:0,drawdowns:Array(periods.length).fill(0),
+  repaymentMethod:'bullet',repaymentStartPeriod:1,gracePeriods:0,termPeriods:periods.length,capitalizeInterest:false}}],
+ loanScheduleOverrides:{'comfar-cold-rolling-reported-loan':loanRows},
+ discountRatePercent:20,
+})
+assert.equal(fullFinanceResult.valid,true,fullFinanceResult.warnings.join('; '))
+assert.equal(fullFinanceResult.rows.length,15)
+for(let i=0;i<15;i++){
+ const row=fullFinanceResult.rows[i]
+ assert.ok(Number.isFinite(row.tax)&&Number.isFinite(row.cfads)&&Number.isFinite(row.projectFreeCashFlow),
+  'Integrated tax, CFADS and project cash flow must be finite in '+(1403+i))
+ close(row.taxRatePercent,5,'Integrated tax rate must be 5% in '+(1403+i),0.000001)
+ console.log([
+  String(1403+i),
+  'engineTax='+row.tax.toFixed(2),
+  'reportTax='+reportTax[i].toFixed(2),
+  'taxDelta='+(row.tax-reportTax[i]).toFixed(2),
+  'CFADS='+row.cfads.toFixed(2),
+  'engineProjectFCF='+row.projectFreeCashFlow.toFixed(2),
+  'reportNetCF='+reportNetCashFlow[i].toFixed(2),
+  'cashFlowDelta='+(row.projectFreeCashFlow-reportNetCashFlow[i]).toFixed(2),
+  'debtService='+row.debtService.toFixed(2),
+  'DSCR='+(row.dscr===null?'n/a':row.dscr.toFixed(5)),
+ ].join(' | '))
+}
+for(let i=0;i<3;i++){
+ const actual=fullFinanceResult.loanSchedules['comfar-cold-rolling-reported-loan'][i]
+ close(actual.openingBalance,sourceDebt[i].openingBalance,'Reported opening debt '+(1403+i),0.02)
+ close(actual.principal,sourceDebt[i].principal,'Reported principal repayment '+(1403+i),0.02)
+ close(actual.interestExpense,sourceDebt[i].interestExpense,'Reported interest expense '+(1403+i),0.02)
+ close(actual.closingBalance,sourceDebt[i].closingBalance,'Reported closing debt '+(1403+i),0.02)
+}
+assert.ok(Number.isFinite(fullFinanceResult.npvProject),'Integrated operating-horizon NPV at 20% must be calculated')
+console.log('Operating-horizon NPV at 20%='+fullFinanceResult.npvProject.toFixed(2)+'; operating-horizon IRR='+String(fullFinanceResult.irrProject))
+console.log('Whole-project COMFAR NPV 31,425,182.71 and IRR 52.83% (p.57) are not parity assertions: this fixture begins in 1403 and lacks the actual 7/1401-1402 construction-period cash-flow schedule. Tax/CFADS/net-cash-flow differences are diagnostics; no COMFAR values are altered.')
