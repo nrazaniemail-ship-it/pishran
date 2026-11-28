@@ -120,10 +120,9 @@ const loanRows=Array.from({length:periods.length},(_,index)=>({
  principal:0,closingBalance:0,debtService:0,
 }))
 const sourceDebt=[
- {period:2,drawdown:5000000,openingBalance:0,capitalizedInterest:350000,closingBalance:5350000},
- {period:3,drawdown:0,openingBalance:5350000,interestExpense:1366423.77,principal:1327878.79,closingBalance:4022121.21},
- {period:4,drawdown:0,openingBalance:4022121.21,interestExpense:953724.34,principal:1740578.22,closingBalance:2281542.99},
- {period:5,drawdown:0,openingBalance:2281542.99,interestExpense:412759.57,principal:2281542.99,closingBalance:0},
+ {period:1,drawdown:0,openingBalance:5350000,interestExpense:1366423.77,principal:1327878.79,closingBalance:4022121.21},
+ {period:2,drawdown:0,openingBalance:4022121.21,interestExpense:953724.34,principal:1740578.22,closingBalance:2281542.99},
+ {period:3,drawdown:0,openingBalance:2281542.99,interestExpense:412759.57,principal:2281542.99,closingBalance:0},
 ]
 for(const debt of sourceDebt){
  const row=loanRows[debt.period-1]
