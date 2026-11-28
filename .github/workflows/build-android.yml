@@ -53,6 +53,8 @@ jobs:
           cp native/android/PishranBackupPlugin.java android/app/src/main/java/com/pishran/app/PishranBackupPlugin.java
           cp native/android/MainActivity.java android/app/src/main/java/com/pishran/app/MainActivity.java
           npx cap sync android
+          rm -rf android/app/src/main/res/mipmap-*
+          cp -R native/android/res/. android/app/src/main/res/
           VERSION_NAME=$(node -p "require('./package.json').version")
           VERSION_CODE=${GITHUB_RUN_NUMBER}
           sed -i "s/versionCode 1/versionCode ${VERSION_CODE}/" android/app/build.gradle
