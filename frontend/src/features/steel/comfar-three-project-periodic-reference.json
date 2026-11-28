@@ -4981,6 +4981,1266 @@
       "unit": "million Rial",
       "sourcePage": 219,
       "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtFixed",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtFixed",
+      "lineItem": "repayment",
+      "value": 891095.38,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtFixed",
+      "lineItem": "closingBalance",
+      "value": 6778043.82,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtFixed",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtFixed",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtFixed",
+      "lineItem": "payableInterest",
+      "value": 1837960.71,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtFixed",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "drawdown",
+      "value": 924675.96,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "repayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "closingBalance",
+      "value": 1132221.05,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "capitalizedInterest",
+      "value": 2075450.09,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "payableInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtTotal",
+      "lineItem": "drawdown",
+      "value": 924675.96,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtTotal",
+      "lineItem": "repayment",
+      "value": 891095.38,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtTotal",
+      "lineItem": "closingBalance",
+      "value": 7910264.87,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtTotal",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtTotal",
+      "lineItem": "capitalizedInterest",
+      "value": 2075450.09,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtTotal",
+      "lineItem": "payableInterest",
+      "value": 1837960.71,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "domesticDebtTotal",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtFixed",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtFixed",
+      "lineItem": "repayment",
+      "value": 1135638.07,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtFixed",
+      "lineItem": "closingBalance",
+      "value": 5642405.74,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtFixed",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtFixed",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtFixed",
+      "lineItem": "payableInterest",
+      "value": 1593418.01,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtFixed",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "repayment",
+      "value": 131555.44,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "closingBalance",
+      "value": 1000665.62,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "payableInterest",
+      "value": 271344.38,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtTotal",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtTotal",
+      "lineItem": "repayment",
+      "value": 1267193.51,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtTotal",
+      "lineItem": "closingBalance",
+      "value": 6643071.36,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtTotal",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtTotal",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtTotal",
+      "lineItem": "payableInterest",
+      "value": 1864762.39,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "domesticDebtTotal",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtFixed",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtFixed",
+      "lineItem": "repayment",
+      "value": 1447290.46,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtFixed",
+      "lineItem": "closingBalance",
+      "value": 4195115.28,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtFixed",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtFixed",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtFixed",
+      "lineItem": "payableInterest",
+      "value": 1281765.63,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtFixed",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "repayment",
+      "value": 167658.1,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "closingBalance",
+      "value": 833007.51,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "payableInterest",
+      "value": 235241.71,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtTotal",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtTotal",
+      "lineItem": "repayment",
+      "value": 1614948.56,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtTotal",
+      "lineItem": "closingBalance",
+      "value": 5028122.8,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtTotal",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtTotal",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtTotal",
+      "lineItem": "payableInterest",
+      "value": 1517007.34,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "domesticDebtTotal",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 220,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtFixed",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtFixed",
+      "lineItem": "repayment",
+      "value": 1844469.4,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtFixed",
+      "lineItem": "closingBalance",
+      "value": 2350645.88,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtFixed",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtFixed",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtFixed",
+      "lineItem": "payableInterest",
+      "value": 884586.69,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtFixed",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "repayment",
+      "value": 213668.4,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "closingBalance",
+      "value": 619339.11,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "payableInterest",
+      "value": 189231.41,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtTotal",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtTotal",
+      "lineItem": "repayment",
+      "value": 2058137.8,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtTotal",
+      "lineItem": "closingBalance",
+      "value": 2969984.99,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtTotal",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtTotal",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtTotal",
+      "lineItem": "payableInterest",
+      "value": 1073818.1,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "domesticDebtTotal",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtFixed",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtFixed",
+      "lineItem": "repayment",
+      "value": 2350645.88,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtFixed",
+      "lineItem": "closingBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtFixed",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtFixed",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtFixed",
+      "lineItem": "payableInterest",
+      "value": 278410.2,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtFixed",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "repayment",
+      "value": 272305.28,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "closingBalance",
+      "value": 347033.83,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "payableInterest",
+      "value": 130594.54,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtTotal",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtTotal",
+      "lineItem": "repayment",
+      "value": 2622951.16,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtTotal",
+      "lineItem": "closingBalance",
+      "value": 347033.83,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtTotal",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtTotal",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtTotal",
+      "lineItem": "payableInterest",
+      "value": 409004.74,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "domesticDebtTotal",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtFixed",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtFixed",
+      "lineItem": "repayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtFixed",
+      "lineItem": "closingBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtFixed",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtFixed",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtFixed",
+      "lineItem": "payableInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtFixed",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "repayment",
+      "value": 347033.83,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "closingBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "payableInterest",
+      "value": 55865.98,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtWorkingCapital",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtTotal",
+      "lineItem": "drawdown",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtTotal",
+      "lineItem": "repayment",
+      "value": 347033.83,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtTotal",
+      "lineItem": "closingBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtTotal",
+      "lineItem": "fxAdjustment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtTotal",
+      "lineItem": "capitalizedInterest",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtTotal",
+      "lineItem": "payableInterest",
+      "value": 55865.98,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "domesticDebtTotal",
+      "lineItem": "otherFinancingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 221,
+      "extraction": "transcribed-from-page-image"
     }
   ]
 }
