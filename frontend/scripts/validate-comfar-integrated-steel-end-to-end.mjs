@@ -23,6 +23,8 @@ const byYear = (rows, year, field = 'amount') =>
 const fixedInvestment = years.map(year =>
   source.fixedInvestment.reduce((sum, asset) => sum + byYear(asset.periods, year), 0))
 const preOperatingCost = years.map(year => byYear(source.preproduction, year, 'net'))
+const capitalizedPreOperatingFinancialCosts = years.map(year =>
+  byYear(source.preproduction, year, 'capitalizedInterest'))
 const revenue = years.map(year =>
   byYear(source.productionSalesSchedule, year, 'salesRevenue') +
   byYear(source.byproductSalesSchedule, year, 'salesRevenue'))
@@ -160,6 +162,7 @@ const result = engine.calculateIntegratedPeriodicFinance({
   periodDepreciationSchedule: depreciation,
   annualFixedInvestment: fixedInvestment,
   annualPreOperatingCost: preOperatingCost,
+  capitalizedPreOperatingFinancialCostsByPeriod: capitalizedPreOperatingFinancialCosts,
   annualMaintenanceCapex: years.map(() => 0),
   annualTaxRates: years.map(() => 25),
   taxAmountOverridesByPeriod: taxes,
@@ -202,7 +205,12 @@ for (let index = 0; index < years.length; index++) {
   assert.ok(Math.abs(result.rows[index].cashInterestExpense - expectedLoans.interest) <= 0.01,
     'Loan interest did not reach engine row for ' + years[index])
   assert.ok(Math.abs(result.rows[index].capitalizedInterest - expectedLoans.capitalizedInterest) <= 0.01,
-    'Capitalized loan interest did not reach engine row for ' + years[index])
+    'Debt-capitalized interest did not reach engine row for ' + years[index])
+  assert.ok(Math.abs(result.rows[index].capitalizedPreOperatingFinancialCosts - capitalizedPreOperatingFinancialCosts[index]) <= 0.01,
+    'Cash-paid finance costs capitalized to pre-production assets must match COMFAR for ' + years[index])
+  assert.ok(Math.abs(result.rows[index].incomeStatementInterestExpense -
+    (expectedLoans.interest - capitalizedPreOperatingFinancialCosts[index])) <= 0.01,
+    'Income-statement interest must exclude finance costs capitalized to pre-production assets for ' + years[index])
 }
 
 // Production cost, inventory movement and cost of goods sold are distinct ledger measures.
@@ -221,6 +229,14 @@ const fourYearCogs = [1405,1406,1407,1408].reduce((sum,year)=>sum+result.rows[ye
 assert.ok(Math.abs(fourYearProductionCost-fourYearInventoryBuild-fourYearCogs)<=0.02,'Four-year cumulative OPEX bridge must reconcile')
 const statements = engine.buildPeriodicThreeFinancialStatements(result)
 assert.equal(statements.length, 19, 'Income statement, cash flow and balance sheet must be built for every period')
+const constructionEndIndex = years.indexOf(1404)
+assert.ok(Math.abs(statements[constructionEndIndex].balanceSheet.deferredPreOperatingAssets - 117124027) <= 0.02,
+  'Construction-end pre-production assets must include net pre-production costs plus 110.5m of paid capitalized interest')
+assert.ok(Math.abs(statements[constructionEndIndex].incomeStatement.interest) <= 0.01,
+  'Construction interest capitalized to pre-production assets must not be expensed again in profit')
+assert.ok(Math.abs(statements[constructionEndIndex].cashFlowStatement.investingCashFlow -
+  (-fixedInvestment[constructionEndIndex] - preOperatingCost[constructionEndIndex] - capitalizedPreOperatingFinancialCosts[constructionEndIndex])) <= 0.02,
+  'Cash-paid capitalized construction interest must remain a cash outflow in investing cash flow')
 for (let index = 0; index < statements.length; index++) {
   const statement = statements[index]
   assert.ok(Math.abs(statement.movementChecks.cashRollForward) <= 0.01,
@@ -446,6 +462,8 @@ console.log(JSON.stringify({
     discountExponent: index,
     discountedProjectCashFlow: row.projectFreeCashFlow / Math.pow(1.25, index),
     loanInterest: row.cashInterestExpense,
+    capitalizedPreOperatingFinancialCosts: row.capitalizedPreOperatingFinancialCosts,
+    incomeStatementInterestExpense: row.incomeStatementInterestExpense,
     principal: row.principal,
     debtDrawdown: row.debtDrawdown,
     equityContribution: row.equityContribution,
