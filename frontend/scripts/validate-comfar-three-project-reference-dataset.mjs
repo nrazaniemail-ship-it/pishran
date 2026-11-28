@@ -36,3 +36,24 @@ assert.equal(manifest.engineIntegration.status, 'not-connected-to-reference-data
 assert.equal(manifest.engineIntegration.parityClaimAllowed, false);
 assert.ok(reference.rows.every((row) => !Object.hasOwn(row, 'engineValue')));
 console.log(`COMFAR reference dataset validation passed: ${reference.rows.length} source rows; engine parity intentionally not asserted.`);
+
+const coldDebtRows = reference.rows.filter((row) =>
+  row.projectId === 'comfar-cold-coil-200k' &&
+  row.sourcePage === 219 &&
+  ['domesticDebtFixed', 'domesticDebtWorkingCapital', 'domesticDebtTotal'].includes(row.statement)
+);
+assert.equal(coldDebtRows.length, 63, 'Page 219 must contain 3 debt groups × 7 line items × 3 period columns');
+const debtValue = (group, period, item) => {
+  const row = coldDebtRows.find((entry) => entry.statement === group && entry.period === period && entry.lineItem === item);
+  assert.ok(row, `Missing page-219 debt value: ${group}/${period}/${item}`);
+  return row.value;
+};
+for (const item of ['drawdown', 'repayment', 'closingBalance', 'fxAdjustment', 'capitalizedInterest', 'payableInterest', 'otherFinancingCost']) {
+  for (const period of ['all-periods', '1403', '1404']) {
+    const fixed = debtValue('domesticDebtFixed', period, item);
+    const working = debtValue('domesticDebtWorkingCapital', period, item);
+    const total = debtValue('domesticDebtTotal', period, item);
+    assert.ok(Math.abs((fixed + working) - total) <= 0.011,
+      `Page-219 debt aggregation mismatch for ${item}/${period}: ${fixed} + ${working} != ${total}`);
+  }
+}
