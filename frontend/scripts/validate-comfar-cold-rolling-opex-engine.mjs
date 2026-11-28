@@ -235,6 +235,7 @@ console.log('Operating-horizon NPV at 20%='+fullFinanceResult.npvProject.toFixed
 console.log('Whole-project COMFAR NPV 31,425,182.71 and IRR 52.83% (p.57) are not parity assertions: this fixture begins in 1403 and lacks the actual 7/1401-1402 construction-period cash-flow schedule. Tax/CFADS/net-cash-flow differences are diagnostics; no COMFAR values are altered.')
 
 
+{
 // End-to-end financial validation against the cold-rolling COMFAR report (126 pages).
 // The operating cash-flow statements (pp. 49-61) consistently use the summary OPEX
 // amounts, while the factory-cost detail (pp. 24-27) contains documented differences.
@@ -380,3 +381,4 @@ const periodCountIrr=calculateComfarPeriodCountIrr(valuationResult.rows.map(row=
 close(periodCountIrr,52.83,'COMFAR period-count project IRR',0.01)
 assert.ok(Number.isFinite(valuationResult.irrProject),'Integrated engine must return a finite actual-date project IRR')
 console.log('COMFAR cold-rolling integrated end-to-end validation passed: 5% tax through 1407, 25% thereafter, exact source tax/CFADS/depreciation/debt, NPV parity at 20%, and period-count IRR parity. Engine actual-date IRR='+valuationResult.irrProject.toFixed(6)+'%; COMFAR period-count IRR='+periodCountIrr.toFixed(6)+'%.')
+}
