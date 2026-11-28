@@ -66,9 +66,12 @@ const coldPage220DebtRows = reference.rows.filter((row) =>
   ['domesticDebtFixed', 'domesticDebtWorkingCapital', 'domesticDebtTotal'].includes(row.statement)
 );
 assert.equal(coldPage220DebtRows.length, 63, 'Page 220 must contain 3 years × 3 debt groups × 7 line items');
-assert.equal(reference.rows.filter((row) =>
-  row.projectId === 'comfar-cold-coil-200k' && row.sourcePage === 221
-).length, 0, 'Unverified page-221 debt rows must not be promoted into the reference dataset');
+const coldPage221DebtRows = reference.rows.filter((row) =>
+  row.projectId === 'comfar-cold-coil-200k' &&
+  row.sourcePage === 221 &&
+  ['domesticDebtFixed', 'domesticDebtWorkingCapital', 'domesticDebtTotal'].includes(row.statement)
+);
+assert.equal(coldPage221DebtRows.length, 63, 'Page 221 must contain 3 years × 3 debt groups × 7 line items');
 const page220DebtValue = (group, period, item) => {
   const row = coldPage220DebtRows.find((entry) =>
     entry.statement === group && entry.period === period && entry.lineItem === item
@@ -88,3 +91,37 @@ for (const period of ['1405', '1406', '1407']) {
 assert.equal(page220DebtValue('domesticDebtWorkingCapital', '1405', 'capitalizedInterest'), 207545.09);
 assert.equal(page220DebtValue('domesticDebtTotal', '1405', 'capitalizedInterest'), 207545.09);
 console.log('COMFAR cold-coil debt aggregation validation passed for pages 219-220; page 221 intentionally withheld pending verification.');
+
+
+const page221DebtValue = (group, period, item) => {
+  const row = coldPage221DebtRows.find((entry) =>
+    entry.statement === group && entry.period === period && entry.lineItem === item
+  );
+  assert.ok(row, `Missing page-221 debt value: ${group}/${period}/${item}`);
+  return row.value;
+};
+for (const period of ['1408', '1409', '1410']) {
+  for (const item of ['drawdown', 'repayment', 'closingBalance', 'fxAdjustment', 'capitalizedInterest', 'payableInterest', 'otherFinancingCost']) {
+    const fixed = page221DebtValue('domesticDebtFixed', period, item);
+    const working = page221DebtValue('domesticDebtWorkingCapital', period, item);
+    const total = page221DebtValue('domesticDebtTotal', period, item);
+    assert.ok(Math.abs((fixed + working) - total) <= 0.01,
+      `Page-221 debt aggregation mismatch for ${item}/${period}: ${fixed} + ${working} != ${total}`);
+  }
+}
+
+// Fixed-capital debt roll-forward only: the printed schedule shows no drawdowns,
+// FX adjustments or capitalized interest in 1408-1410.
+const fixedBalanceAtEnd = (period) => page221DebtValue('domesticDebtFixed', period, 'closingBalance');
+let fixedOpeningBalance = page220DebtValue('domesticDebtFixed', '1407', 'closingBalance');
+for (const period of ['1408', '1409', '1410']) {
+  const expectedClosing = fixedOpeningBalance
+    + page221DebtValue('domesticDebtFixed', period, 'drawdown')
+    - page221DebtValue('domesticDebtFixed', period, 'repayment')
+    + page221DebtValue('domesticDebtFixed', period, 'fxAdjustment')
+    + page221DebtValue('domesticDebtFixed', period, 'capitalizedInterest');
+  assert.ok(Math.abs(expectedClosing - fixedBalanceAtEnd(period)) <= 0.01,
+    `Fixed-capital debt roll-forward mismatch for ${period}: expected ${expectedClosing}, printed ${fixedBalanceAtEnd(period)}`);
+  fixedOpeningBalance = fixedBalanceAtEnd(period);
+}
+console.log('COMFAR cold-coil debt aggregation and fixed-capital roll-forward validation passed for pages 219-221.');
