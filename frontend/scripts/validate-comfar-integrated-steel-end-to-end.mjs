@@ -73,6 +73,26 @@ for (let index = 0; index < expectedOperatingCosts.length; index++) {
 const depreciation = years.map(year => byYear(source.depreciationSchedule, year, 'totalDepreciation'))
 const taxes = years.map(year => byYear(source.taxAmountSchedule, year))
 const equity = years.map(year => byYear(source.equityContributionSchedule, year))
+// The source keeps construction-period interest in the pre-production asset schedule,
+// while the loan ledger reports the same accrual as interest expense payable. It is
+// not capitalized into loan principal: do not add it to closing debt a second time.
+const constructionInterestBridge = years.slice(0,4).map(year => {
+  const preproduction = source.preproduction.find(row => Number(row.period) === year)
+  const financing = source.financingSchedule.find(row =>
+    Number(row.period) === year && (row.loanType ?? 'long-term') === 'long-term')
+  assert.ok(preproduction && financing, 'Construction interest source rows must exist for ' + year)
+  assert.ok(Math.abs(preproduction.capitalizedInterest - financing.interestExpense) <= 0.01,
+    'Pre-production capitalized-interest source and financing interest-payable source must reconcile for ' + year)
+  assert.equal(financing.capitalizedInterest, 0,
+    'Construction interest must not be added to loan principal when COMFAR reports it separately for ' + year)
+  assert.ok(Math.abs(preproduction.net - 1656006.75) <= 0.01,
+    'Net pre-production expenditure must remain separate from capitalized interest for ' + year)
+  return { year, netPreproduction: preproduction.net,
+    preproductionCapitalizedInterest: preproduction.capitalizedInterest,
+    financingInterestPayable: financing.interestExpense,
+    loanCapitalizedInterest: financing.capitalizedInterest,
+    closingLoanPrincipal: financing.closingDebt }
+})
 const workingCapital = years.map(year => {
   const row = source.workingCapital.find(item => Number(item.period) === year)
   return row ? row.inventory + row.cash : 0
@@ -185,6 +205,12 @@ for (let index = 0; index < years.length; index++) {
     'Documented tax did not reach engine row for ' + years[index])
   assert.ok(Math.abs(result.rows[index].depreciation - depreciation[index]) <= 0.01,
     'Depreciation did not reach engine row for ' + years[index])
+  assert.ok(Math.abs(result.rows[index].preOperatingCost - preOperatingCost[index]) <= 0.01,
+    'Net pre-production expenditure must reach the engine without folding capitalized interest into it for ' + years[index])
+  const priorWorkingCapital = index === 0 ? 0 : workingCapitalIncludingFinishedGoods[index - 1]
+  const expectedWorkingCapitalChange = workingCapitalIncludingFinishedGoods[index] - priorWorkingCapital
+  assert.ok(Math.abs(result.rows[index].changeInWorkingCapital - expectedWorkingCapitalChange) <= 0.01,
+    'Working-capital movement must reconcile to source closing balances, including finished goods, for ' + years[index])
   const expectedLoans = loans.reduce((sum, loan) => {
     const row = loan.rows[index]
     return {
@@ -203,6 +229,13 @@ for (let index = 0; index < years.length; index++) {
     'Loan interest did not reach engine row for ' + years[index])
   assert.ok(Math.abs(result.rows[index].capitalizedInterest - expectedLoans.capitalizedInterest) <= 0.01,
     'Capitalized loan interest did not reach engine row for ' + years[index])
+  if (index < 4) {
+    const sourceInterest = constructionInterestBridge[index]
+    assert.ok(Math.abs(result.rows[index].cashInterestExpense - sourceInterest.financingInterestPayable) <= 0.01,
+      'Construction interest payable must be carried once as financing interest expense for ' + years[index])
+    assert.equal(result.rows[index].capitalizedInterest, 0,
+      'Construction interest payable must not also increase loan principal in ' + years[index])
+  }
 }
 
 // Production cost, inventory movement and cost of goods sold are distinct ledger measures.
@@ -399,6 +432,7 @@ console.log(JSON.stringify({
   project: 'comfar-integrated-steel-dri',
   periods: result.rows.length,
   shareholderEquity: result.totalEquityContribution,
+  constructionInterestBridge,
   npv: result.npvProject,
   irrPercent: result.irrProject,
   comfarReferenceNpv: referenceNpv,
