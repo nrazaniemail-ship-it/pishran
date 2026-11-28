@@ -57,3 +57,31 @@ for (const item of ['drawdown', 'repayment', 'closingBalance', 'fxAdjustment', '
       `Page-219 debt aggregation mismatch for ${item}/${period}: ${fixed} + ${working} != ${total}`);
   }
 }
+
+
+const coldOperatingDebtRows = reference.rows.filter((row) =>
+  row.projectId === 'comfar-cold-coil-200k' &&
+  [220, 221].includes(row.sourcePage) &&
+  ['domesticDebtFixed', 'domesticDebtWorkingCapital', 'domesticDebtTotal'].includes(row.statement)
+);
+assert.equal(coldOperatingDebtRows.length, 126, 'Pages 220-221 must contain 2 pages × 3 years × 3 debt groups × 7 line items');
+const operatingDebtValue = (page, group, period, item) => {
+  const row = coldOperatingDebtRows.find((entry) =>
+    entry.sourcePage === page && entry.statement === group &&
+    entry.period === period && entry.lineItem === item
+  );
+  assert.ok(row, `Missing page-${page} debt value: ${group}/${period}/${item}`);
+  return row.value;
+};
+for (const [page, periods] of [[220, ['1405', '1406', '1407']], [221, ['1408', '1409', '1410']]]) {
+  for (const period of periods) {
+    for (const item of ['drawdown', 'repayment', 'closingBalance', 'fxAdjustment', 'capitalizedInterest', 'payableInterest', 'otherFinancingCost']) {
+      const fixed = operatingDebtValue(page, 'domesticDebtFixed', period, item);
+      const working = operatingDebtValue(page, 'domesticDebtWorkingCapital', period, item);
+      const total = operatingDebtValue(page, 'domesticDebtTotal', period, item);
+      assert.ok(Math.abs((fixed + working) - total) <= 0.01,
+        `Page-${page} debt aggregation mismatch for ${item}/${period}: ${fixed} + ${working} != ${total}`);
+    }
+  }
+}
+console.log('COMFAR cold-coil debt aggregation validation passed for pages 219-221.');
