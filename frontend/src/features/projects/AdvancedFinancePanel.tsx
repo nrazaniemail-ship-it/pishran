@@ -79,6 +79,8 @@ type Props = {
   openingGrants?: number
   openingCurrentAccounts?: OpeningCurrentAccounts
   workingCapitalDrafts?: WorkingCapitalComponentFormDraft[]
+  /** True when the imported aggregate inventory balance already includes finished goods. */
+  workingCapitalIncludesFinishedGoods?: boolean
   productFinancialDrafts?: Pick<ProjectModelFinancialFormDrafts, 'sales' | 'productionCosts'> & Partial<Pick<ProjectModelFinancialFormDrafts, 'wasteLedgerEntries' | 'productionTransfers' | 'inventoryReferenceBenchmarks' | 'costCentres' | 'costCentreInventoryMovements' | 'inventoryStageTransfers'>>
   cppCpsTraceItems?: CppCpsTraceItem[]
   onCppCpsTraceLedger?: (ledger: CppCpsTraceLedger) => void
@@ -546,7 +548,7 @@ export default function AdvancedFinancePanel(props: Props) {
     const bindFinishedGoods=(financeInput:PeriodicProjectFinanceInput):PeriodicProjectFinanceInput|null=>{
       let boundInput=financeInput
       if(productOperatingSchedule?.valid){
-        const hasExplicitFinishedGoods=props.workingCapitalDrafts?.some(item=>item.category==='finished-goods')??false
+        const hasExplicitFinishedGoods=(props.workingCapitalDrafts?.some(item=>item.category==='finished-goods')??false)||props.workingCapitalIncludesFinishedGoods===true
         const estimatedFinishedGoodsByPeriod=!props.workingCapitalDrafts?.length
           ?workingCapitalBreakdownByPeriod.map((row,index)=>index===periods.length-1?0:row.finishedGoods)
           :[]
