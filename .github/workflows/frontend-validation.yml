@@ -41,6 +41,8 @@ jobs:
         run: npm run test:foundation
       - name: TypeScript and production build
         run: npm run build
+      - name: Validate Android launcher icon resources
+        run: node scripts/validate-android-icon-assets.mjs
       - name: Install Chromium for native IndexedDB browser test
         run: npx playwright install --with-deps chromium
       - name: Build relative-base preview for browser smoke test

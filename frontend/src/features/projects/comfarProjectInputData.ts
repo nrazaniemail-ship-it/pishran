@@ -13,6 +13,8 @@ export type ComfarSourceWorkingCapitalPeriod = {
 }
 export type ComfarSourceInputData = {
   fixedInvestment: ComfarSourceCapexItem[]
+  // Interest included in pre-production expenditure; this is not necessarily interest
+  // capitalized into loan principal. The loan schedule has its own capitalizedInterest field.
   preproduction: { period: string; net: number; capitalizedInterest: number }[]
   operatingCostYear: number
   operatingCostSchedule?: { period:string; rows:{ name:string; amount:number }[] }[]
