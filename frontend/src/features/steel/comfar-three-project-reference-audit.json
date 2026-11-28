@@ -100,7 +100,7 @@
         "depreciation": "annual-total-depreciation-transcribed-pages-24-to-27; asset-level-assumptions-not-verified",
         "tax": "annual corporate income tax and cash flow transcribed for 1403-1417 from pages 57-61; taxable-income/P&L bridge not fully extracted",
         "workingCapital": "annual net working-capital change transcribed for 1403-1407 from pages 57-58; explicit zero changes transcribed for 1408-1417 from pages 58-61",
-        "debt": "page 219 lifetime totals and 1403-1404; page 220 annual operating periods 1405-1407; page 221 reviewed but withheld pending row-by-row verification",
+        "debt": "page 219 lifetime totals and 1403-1404; page 220 annual operating periods 1405-1407; page 221 annual operating periods 1408-1410; all 3 debt groups × 7 line items transcribed; group aggregation controlled within 0.01 million Rial",
         "cashFlow": "annual total inflow, total outflow, corporate tax and net cash flow transcribed for 1403-1417 from pages 57-61; not a complete three-statement model"
       },
       "periodRows": [],
@@ -127,8 +127,8 @@
         "Page 219 (printed page number) was read from the original page image. Domestic debt rows for fixed-capital loans, working-capital loans and total debt were transcribed for all-period totals and construction periods 1403-1404, in million Rial. For flow rows, the all-period column is the schedule total; for closing balance it is the terminal balance. Annual operating-period values on pages 220-221 are not included yet.",
         "Pages 220-221 (printed page numbers) were opened and visually reviewed. Page 220 contains operating-period columns 1405-1407; page 221 contains 1408-1410. These pages are not yet transcribed into reference rows because all 3 debt groups × 7 line items × 3 annual columns must be verified together; no inferred or OCR-only values are promoted to source data. Debt-balance roll-forward is also left unasserted until COMFAR's treatment of capitalized interest is confirmed.",
         "Correction after a second visual audit: page 220 working-capital capitalized interest in 1405 is 207,545.09 million Rial (not 2,075,450.09). The fixed + working-capital + total debt groups are updated consistently. This also agrees with the 1405 closing balance arithmetic: 924,675.96 drawdown + 207,545.09 capitalized interest = 1,132,221.05 closing balance.",
-        "Page 221 was visually reviewed, but the previous 63-row transcription was withdrawn because some row/column readings could not be confirmed with sufficient confidence from the image. No page-221 values are currently included in the reference dataset; re-extract only after a row-by-row image verification. The earlier passing aggregation test was an internal arithmetic check and did not establish transcription accuracy.",
-        "For fixed-capital debt, the page 219 closing balance in 1404 (7,669,139.19) reconciles with page 220-221 repayments and reported closing balances through 1409, within 0.01 million Rial rounding. Working-capital debt roll-forward remains unasserted until the page 221 values and COMFAR capitalized-interest treatment are fully verified."
+        "Page 221 was re-read from the original image at enlarged scale, column-by-column and row-by-row. Columns are 1408 (right), 1409 (middle), 1410 (left). All 3 debt groups × 7 line items × 3 years (63 rows) were transcribed in million Rial. Fixed + working-capital debt equals total debt for all 21 line-item/year combinations within 0.01 million Rial.",
+        "Fixed-capital debt roll-forward reconciles from page 220 closing balance 1407 (4,195,115.28) through page 221: 1408 repayment 1,844,469.40 gives closing 2,350,645.88; 1409 repayment 2,350,645.88 gives closing 0; 1410 remains 0. No drawdowns, FX adjustments or capitalized interest are printed for fixed-capital debt in these periods. Working-capital debt roll-forward remains unasserted."
       ]
     }
   ],
