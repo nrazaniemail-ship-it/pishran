@@ -8,20 +8,21 @@
       "projectName": "HRCR200 - hot rolled coil",
       "sourceDocument": "COMFAR III - HRCR200",
       "pdfPages": 135,
-      "verifiedPagesReadInThisAudit": [50, 51, 52, 53, 54],
+      "verifiedPagesReadInThisAudit": [50, 51, 52, 53, 54, 55, 56, 57, 58],
       "coverage": {
         "balanceSheet": "not-extracted-completely",
         "incomeStatement": "not-extracted-completely",
         "depreciation": "not-extracted-completely",
         "tax": "not-extracted-completely",
         "workingCapital": "not-extracted-completely",
-        "debt": "partial-pages-52-to-54",
+        "debt": "partial-pages-52-to-58",
         "cashFlow": "partial-pages-50-to-51"
       },
       "periodRows": [],
       "notes": [
-        "Page 52 confirms long-term loan drawdowns, repayments, closing balances, capitalized interest and payable interest for the construction periods and 1405.",
-        "Pages 53-54 continue long-term debt rows for 1406-1413; page 54 shows zeros for the remaining debt items.",
+        "Page 52 contains long-term debt drawdown, repayment, closing balance, capitalized interest and payable interest for construction years 1403-1404 and operation year 1405.",
+        "Pages 53-55 contain long-term debt schedule through 1413; pages 55-56 show no later long-term or short-term debt movements.",
+        "Pages 57-58 contain debt balance roll-forward through 1419.",
         "The complete periodic balance sheet, P&L, depreciation, tax and working-capital rows have not yet been transcribed."
       ]
     },
@@ -30,20 +31,22 @@
       "projectName": "SARZAMIN - hot rolled plate",
       "sourceDocument": "COMFAR III - SARZAMIN hot rolled plate",
       "pdfPages": 114,
-      "verifiedPagesReadInThisAudit": [],
+      "verifiedPagesReadInThisAudit": [50, 51, 52, 53, 54],
       "coverage": {
         "balanceSheet": "not-extracted-completely",
         "incomeStatement": "summary-only-previously-transcribed-not-period-complete",
         "depreciation": "not-extracted-completely",
         "tax": "not-extracted-completely",
         "workingCapital": "not-extracted-completely",
-        "debt": "not-extracted-completely",
-        "cashFlow": "not-extracted-completely"
+        "debt": "partial-pages-52-to-54",
+        "cashFlow": "partial-pages-50-to-51"
       },
       "periodRows": [],
       "notes": [
-        "Earlier headline figures were transcribed from report page 2, but page 2 is not a substitute for all periodic schedules.",
-        "No complete periodic schedule is asserted in this manifest."
+        "Page 50 contains annual domestic/foreign financial cash flows for 1402-1418.",
+        "Page 51 contains annual equity, long-term loan and short-term financing flows for 1402-1418.",
+        "Pages 52-54 contain debt schedules for long-term and short-term facilities from construction years 1402-1403 through operating years 1404-1412.",
+        "Earlier headline figures were transcribed from report page 2, but page 2 is not a substitute for all periodic schedules."
       ]
     },
     {
@@ -51,22 +54,23 @@
       "projectName": "SARZAMIN - cold rolled coil",
       "sourceDocument": "COMFAR III - SARZAMIN cold rolled coil",
       "pdfPages": 126,
-      "verifiedPagesReadInThisAudit": [51, 52, 53, 54, 55],
+      "verifiedPagesReadInThisAudit": [47, 48, 49, 50, 51, 52, 53, 54, 55],
       "coverage": {
         "balanceSheet": "not-extracted-completely",
         "incomeStatement": "partial-sales-and-production-cost-page-55",
         "depreciation": "not-extracted-completely",
-        "tax": "partial-tax-and-cash-flow-pages-51-to-52",
-        "workingCapital": "not-extracted-completely",
-        "debt": "not-extracted-completely",
-        "cashFlow": "partial-pages-51-to-54"
+        "tax": "partial-tax-and-cash-flow-pages-49-to-52",
+        "workingCapital": "partial-net-working-capital-page-49",
+        "debt": "partial-pages-47-to-48",
+        "cashFlow": "partial-pages-49-to-54"
       },
       "periodRows": [],
       "notes": [
-        "Pages 51-52 contain annual cash flow rows including tax, operating cost, cash balances and funding surplus for 1411-1418.",
-        "Pages 53-54 contain period cash flow and cumulative cash flow rows for 7/1401-1418.",
+        "Pages 47-48 show debt balances from 7/1401-12/1401 through 1417: long-term balance 5,350,000 in 1402, 4,022,121.21 in 1403, 2,281,542.99 in 1404 and zero from 1405 onward.",
+        "Page 49 shows cash flow, tax, financing cost, loan repayment and net working capital change for construction periods and 1403-1405.",
+        "Pages 50-51 show later cash flow and tax periods; pages 52-54 show cumulative and annual cash-flow summaries.",
         "Page 55 contains sales and production cost rows for 1403-1417.",
-        "This is partial extraction only; no complete periodic statement is asserted."
+        "This remains partial extraction; complete periodic statements and asset-level depreciation have not been transcribed."
       ]
     }
   ],
