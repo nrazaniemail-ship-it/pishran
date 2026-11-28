@@ -1,0 +1,2166 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "comfar-three-project-periodic-reference",
+  "currencyUnit": "million Rial",
+  "completeness": "partial-extraction-not-parity-ready",
+  "valuePolicy": "Only transcribed values are present. Missing periods/lines are absent, never zero-filled.",
+  "sourceDocuments": [
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "name": "HRCR200 hot rolled coil",
+      "pdfPages": 135
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "name": "SARZAMIN hot rolled plate",
+      "pdfPages": 114
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "name": "SARZAMIN cold rolled coil",
+      "pdfPages": 126
+    }
+  ],
+  "rows": [
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1408",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashInflow",
+      "value": 62259600,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1408",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashOutflow",
+      "value": 47320461.3,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1408",
+      "statement": "financialCashFlow",
+      "lineItem": "corporateIncomeTax",
+      "value": 848840.31,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1408",
+      "statement": "financialCashFlow",
+      "lineItem": "financingCost",
+      "value": 1190771.67,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1408",
+      "statement": "financialCashFlow",
+      "lineItem": "loanRepayment",
+      "value": 2173197.39,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1408",
+      "statement": "financialCashFlow",
+      "lineItem": "additionalFundsSurplusDeficit",
+      "value": 14939138.7,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1408",
+      "statement": "financialCashFlow",
+      "lineItem": "cumulativeCashBalance",
+      "value": 48575217.27,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1408",
+      "statement": "financialCashFlow",
+      "lineItem": "netWorkingCapital",
+      "value": -3363969.07,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1409",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashInflow",
+      "value": 62259600,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1409",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashOutflow",
+      "value": 46910718.38,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1409",
+      "statement": "financialCashFlow",
+      "lineItem": "corporateIncomeTax",
+      "value": 885590.12,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1409",
+      "statement": "financialCashFlow",
+      "lineItem": "financingCost",
+      "value": 515350.59,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1409",
+      "statement": "financialCashFlow",
+      "lineItem": "loanRepayment",
+      "value": 2848618.47,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1409",
+      "statement": "financialCashFlow",
+      "lineItem": "additionalFundsSurplusDeficit",
+      "value": 15348881.62,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1409",
+      "statement": "financialCashFlow",
+      "lineItem": "cumulativeCashBalance",
+      "value": 63924098.88,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1409",
+      "statement": "financialCashFlow",
+      "lineItem": "netWorkingCapital",
+      "value": -3363969.07,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1410",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashInflow",
+      "value": 62259600,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1410",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashOutflow",
+      "value": 47235535.18,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1410",
+      "statement": "financialCashFlow",
+      "lineItem": "corporateIncomeTax",
+      "value": 4569050.75,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1410",
+      "statement": "financialCashFlow",
+      "lineItem": "financingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1410",
+      "statement": "financialCashFlow",
+      "lineItem": "loanRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1410",
+      "statement": "financialCashFlow",
+      "lineItem": "additionalFundsSurplusDeficit",
+      "value": 15024064.82,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1410",
+      "statement": "financialCashFlow",
+      "lineItem": "cumulativeCashBalance",
+      "value": 78948163.71,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1410",
+      "statement": "financialCashFlow",
+      "lineItem": "netWorkingCapital",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1411",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashInflow",
+      "value": 62259600,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1411",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashOutflow",
+      "value": 47235535.18,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1411",
+      "statement": "financialCashFlow",
+      "lineItem": "corporateIncomeTax",
+      "value": 4569050.75,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1411",
+      "statement": "financialCashFlow",
+      "lineItem": "financingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1411",
+      "statement": "financialCashFlow",
+      "lineItem": "loanRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1411",
+      "statement": "financialCashFlow",
+      "lineItem": "additionalFundsSurplusDeficit",
+      "value": 15024064.82,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1411",
+      "statement": "financialCashFlow",
+      "lineItem": "cumulativeCashBalance",
+      "value": 93972228.53,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1411",
+      "statement": "financialCashFlow",
+      "lineItem": "netWorkingCapital",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1412",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashInflow",
+      "value": 62259600,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1412",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashOutflow",
+      "value": 47235535.18,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1412",
+      "statement": "financialCashFlow",
+      "lineItem": "corporateIncomeTax",
+      "value": 4569050.75,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1412",
+      "statement": "financialCashFlow",
+      "lineItem": "financingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1412",
+      "statement": "financialCashFlow",
+      "lineItem": "loanRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1412",
+      "statement": "financialCashFlow",
+      "lineItem": "additionalFundsSurplusDeficit",
+      "value": 15024064.82,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1412",
+      "statement": "financialCashFlow",
+      "lineItem": "cumulativeCashBalance",
+      "value": 108996293.36,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1412",
+      "statement": "financialCashFlow",
+      "lineItem": "netWorkingCapital",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1413",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashInflow",
+      "value": 62259600,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1413",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashOutflow",
+      "value": 47235535.18,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1413",
+      "statement": "financialCashFlow",
+      "lineItem": "corporateIncomeTax",
+      "value": 4569050.75,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1413",
+      "statement": "financialCashFlow",
+      "lineItem": "financingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1413",
+      "statement": "financialCashFlow",
+      "lineItem": "loanRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1413",
+      "statement": "financialCashFlow",
+      "lineItem": "additionalFundsSurplusDeficit",
+      "value": 15024064.82,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1413",
+      "statement": "financialCashFlow",
+      "lineItem": "cumulativeCashBalance",
+      "value": 124020358.18,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1413",
+      "statement": "financialCashFlow",
+      "lineItem": "netWorkingCapital",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1414",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashInflow",
+      "value": 62259600,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1414",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashOutflow",
+      "value": 47540053.2,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1414",
+      "statement": "financialCashFlow",
+      "lineItem": "corporateIncomeTax",
+      "value": 4873568.77,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1414",
+      "statement": "financialCashFlow",
+      "lineItem": "financingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1414",
+      "statement": "financialCashFlow",
+      "lineItem": "loanRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1414",
+      "statement": "financialCashFlow",
+      "lineItem": "additionalFundsSurplusDeficit",
+      "value": 14719546.8,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1414",
+      "statement": "financialCashFlow",
+      "lineItem": "cumulativeCashBalance",
+      "value": 138739904.98,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1414",
+      "statement": "financialCashFlow",
+      "lineItem": "netWorkingCapital",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1415",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashInflow",
+      "value": 62259600,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1415",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashOutflow",
+      "value": 47540053.2,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1415",
+      "statement": "financialCashFlow",
+      "lineItem": "corporateIncomeTax",
+      "value": 4873568.77,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1415",
+      "statement": "financialCashFlow",
+      "lineItem": "financingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1415",
+      "statement": "financialCashFlow",
+      "lineItem": "loanRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1415",
+      "statement": "financialCashFlow",
+      "lineItem": "additionalFundsSurplusDeficit",
+      "value": 14719546.8,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1415",
+      "statement": "financialCashFlow",
+      "lineItem": "cumulativeCashBalance",
+      "value": 153459451.78,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1415",
+      "statement": "financialCashFlow",
+      "lineItem": "netWorkingCapital",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1416",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashInflow",
+      "value": 62259600,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1416",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashOutflow",
+      "value": 47540053.2,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1416",
+      "statement": "financialCashFlow",
+      "lineItem": "corporateIncomeTax",
+      "value": 4873568.77,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1416",
+      "statement": "financialCashFlow",
+      "lineItem": "financingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1416",
+      "statement": "financialCashFlow",
+      "lineItem": "loanRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1416",
+      "statement": "financialCashFlow",
+      "lineItem": "additionalFundsSurplusDeficit",
+      "value": 14719546.8,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1416",
+      "statement": "financialCashFlow",
+      "lineItem": "cumulativeCashBalance",
+      "value": 168178998.58,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1416",
+      "statement": "financialCashFlow",
+      "lineItem": "netWorkingCapital",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1417",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashInflow",
+      "value": 62259600,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1417",
+      "statement": "financialCashFlow",
+      "lineItem": "totalCashOutflow",
+      "value": 47541128.22,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1417",
+      "statement": "financialCashFlow",
+      "lineItem": "corporateIncomeTax",
+      "value": 4874643.79,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1417",
+      "statement": "financialCashFlow",
+      "lineItem": "financingCost",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1417",
+      "statement": "financialCashFlow",
+      "lineItem": "loanRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1417",
+      "statement": "financialCashFlow",
+      "lineItem": "additionalFundsSurplusDeficit",
+      "value": 14718471.78,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1417",
+      "statement": "financialCashFlow",
+      "lineItem": "cumulativeCashBalance",
+      "value": 182897470.36,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "period": "1417",
+      "statement": "financialCashFlow",
+      "lineItem": "netWorkingCapital",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 60,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1402",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1402",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 9585330.41,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1402",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 1559638.84,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1402",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 8025691.57,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1402",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1403",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1403",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 9424854.75,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1403",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 1159440.32,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1403",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 8265414.43,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1403",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1404",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1404",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 4536348.9,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1404",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1404",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 4535176.48,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1404",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 1172.42,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1405",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1405",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": -2569784.77,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1405",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1405",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": -2569900.33,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1405",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 115.56,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1406",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1406",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": -3307278.76,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1406",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1406",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": -3307401.34,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1406",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 122.58,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1407",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1407",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": -4256433.57,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1407",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1407",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": -4256556.14,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1407",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 122.57,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1408",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1408",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": -5478110.25,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1408",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1408",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": -5478109.23,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1408",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": -1.02,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1409",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1409",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": -5214315.45,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1409",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1409",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": -5214315.46,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1409",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1410",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1410",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1410",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1410",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1410",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1411",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1411",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1411",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1411",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1411",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1412",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1412",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1412",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1412",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1412",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1413",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1413",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1413",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1413",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1413",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1414",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1414",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1414",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1414",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1414",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1415",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1415",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1415",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1415",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1415",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1416",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1416",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1416",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1416",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1416",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1417",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1417",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1417",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1417",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1417",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1418",
+      "statement": "financialFlows",
+      "lineItem": "domesticFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1418",
+      "statement": "financialFlows",
+      "lineItem": "foreignFinancialFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 50,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1418",
+      "statement": "financialFlows",
+      "lineItem": "shortTermFinancingFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1418",
+      "statement": "financialFlows",
+      "lineItem": "longTermLoanFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1418",
+      "statement": "financialFlows",
+      "lineItem": "shareholderEquityFlows",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 51,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1405",
+      "statement": "debt",
+      "lineItem": "debtRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1405",
+      "statement": "debt",
+      "lineItem": "debtClosingBalance",
+      "value": 5478109.23,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1405",
+      "statement": "debt",
+      "lineItem": "debtOpeningOrCarryBalance",
+      "value": 5214315.46,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1405",
+      "statement": "debt",
+      "lineItem": "interestPayable",
+      "value": 2265137.42,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1406",
+      "statement": "debt",
+      "lineItem": "debtRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1406",
+      "statement": "debt",
+      "lineItem": "debtClosingBalance",
+      "value": 4256556.14,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1406",
+      "statement": "debt",
+      "lineItem": "debtOpeningOrCarryBalance",
+      "value": 10692424.68,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1406",
+      "statement": "debt",
+      "lineItem": "interestPayable",
+      "value": 3486690.51,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1407",
+      "statement": "debt",
+      "lineItem": "debtRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1407",
+      "statement": "debt",
+      "lineItem": "debtClosingBalance",
+      "value": 3307401.34,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1407",
+      "statement": "debt",
+      "lineItem": "debtOpeningOrCarryBalance",
+      "value": 14948980.82,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1407",
+      "statement": "debt",
+      "lineItem": "interestPayable",
+      "value": 4435845.31,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1408",
+      "statement": "debt",
+      "lineItem": "debtRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1408",
+      "statement": "debt",
+      "lineItem": "debtClosingBalance",
+      "value": 2569900.33,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1408",
+      "statement": "debt",
+      "lineItem": "debtOpeningOrCarryBalance",
+      "value": 18256382.16,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1408",
+      "statement": "debt",
+      "lineItem": "interestPayable",
+      "value": 5173346.32,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1409",
+      "statement": "debt",
+      "lineItem": "debtRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1409",
+      "statement": "debt",
+      "lineItem": "debtClosingBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1409",
+      "statement": "debt",
+      "lineItem": "debtOpeningOrCarryBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1409",
+      "statement": "debt",
+      "lineItem": "interestPayable",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1410",
+      "statement": "debt",
+      "lineItem": "debtRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1410",
+      "statement": "debt",
+      "lineItem": "debtClosingBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1410",
+      "statement": "debt",
+      "lineItem": "debtOpeningOrCarryBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1410",
+      "statement": "debt",
+      "lineItem": "interestPayable",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1411",
+      "statement": "debt",
+      "lineItem": "debtRepayment",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1411",
+      "statement": "debt",
+      "lineItem": "debtClosingBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1411",
+      "statement": "debt",
+      "lineItem": "debtOpeningOrCarryBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1411",
+      "statement": "debt",
+      "lineItem": "interestPayable",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 53,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1412",
+      "statement": "debt",
+      "lineItem": "debtRepayment",
+      "value": 5214315.46,
+      "unit": "million Rial",
+      "sourcePage": 54,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1412",
+      "statement": "debt",
+      "lineItem": "debtClosingBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 54,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1412",
+      "statement": "debt",
+      "lineItem": "debtOpeningOrCarryBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 54,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "period": "1412",
+      "statement": "debt",
+      "lineItem": "interestPayable",
+      "value": 693007.19,
+      "unit": "million Rial",
+      "sourcePage": 54,
+      "extraction": "transcribed-check-column-order"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "7/1401-12/1401",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1402",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 5350000,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1403",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 4022121.21,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1404",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 2281542.99,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1405",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1406",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1407",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1408",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1409",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1410",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1411",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1412",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1413",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1414",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1415",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1416",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "period": "1417",
+      "statement": "debt",
+      "lineItem": "totalDebtBalance",
+      "value": 0,
+      "unit": "million Rial",
+      "sourcePage": 47,
+      "extraction": "transcribed"
+    }
+  ]
+}
