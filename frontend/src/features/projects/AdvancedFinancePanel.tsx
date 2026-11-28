@@ -95,11 +95,13 @@ type Props = {
   loanDrafts?: LoanFacilityFormDraft[]
   projectFoundation?: ProjectFoundation
   initialWorkingCapitalEquityContribution?: number
+  initialEquityContributions?: number[]
   initialLoanRatePercent?: number
   initialRepaymentMethod?: Loan['repaymentMethod']
   loanTermYears?: number
   depreciationAssets?: Asset[]
   comfarDepreciationAssets?: ComfarDepreciationAssetInput[]
+  comfarDepreciationSchedule?: number[]
   comfarAssetSales?: ComfarAssetSaleInput[]
   comfarDepreciationWarnings?: string[]
   useFixedInvestmentRegister?: boolean
@@ -133,6 +135,8 @@ type SavedState = {
   loans: Loan[]
   assets: Asset[]
   equityContributions: number[]
+  /** Fingerprint of the report-derived opening schedule; keeps user edits while allowing one-time source migration. */
+  equityContributionSourceFingerprint?: string
   equityWorkingCapitalContributions: number[]
   workingCapitalDays: { raw: number; factorySupplies:number; utilities:number; energy:number; spareParts:number; wip: number; finished: number; receivable: number; cash: number; payable: number }
   workingCapitalBases: { rawMaterials: number; factorySupplies:number; utilities:number; energy:number; spareParts:number; conversion: number; finishedGoods: number; cash: number; payables: number }
@@ -177,10 +181,12 @@ export default function AdvancedFinancePanel(props: Props) {
   const activeFixedInvestmentSchedule = props.fixedInvestmentSchedule?.length===years ? props.fixedInvestmentSchedule : fallbackFixedInvestmentSchedule
   const activePreOperatingSchedule = props.preOperatingSchedule?.length===years ? props.preOperatingSchedule : fallbackPreOperatingSchedule
   const initialCapexSchedule = activeFixedInvestmentSchedule.map((amount,i)=>amount+activePreOperatingSchedule[i])
+  const initialEquityContributionFingerprint = props.initialEquityContributions?.length===years && props.initialEquityContributions.every(value=>Number.isFinite(value)&&value>=0)
+    ? JSON.stringify(props.initialEquityContributions) : ''
   const initialDebtShare = Math.max(0,100-Math.max(0,Math.min(100,props.equityPercent)))/100
   const [state,setState] = useState<SavedState>(() => ({
     loans:[{id:'loan-1',label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(v=>v*initialDebtShare),drawdownMode:'annual-day-weighted',annualRate:props.initialLoanRatePercent??props.costOfDebt,graceYears:0,termYears:Math.max(1,Math.min(opYears,props.loanTermYears??opYears)),repaymentStartYear:construction+1,repaymentMethod:props.initialRepaymentMethod??'equal-principal',capitalizeInterest:true}],
-    assets:props.depreciationAssets??[], equityContributions:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??0):0),fundingStructureVersion:2,
+    assets:props.depreciationAssets??[], equityContributions:props.initialEquityContributions?.length===years?[...props.initialEquityContributions]:initialCapexSchedule.map(v=>v*Math.max(0,Math.min(100,props.equityPercent))/100), equityContributionSourceFingerprint:initialEquityContributionFingerprint||undefined, equityWorkingCapitalContributions:Array.from({length:years},(_,i)=>i===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??0):0),fundingStructureVersion:2,
     workingCapitalDays:{raw:0,factorySupplies:0,utilities:0,energy:0,spareParts:0,wip:0,finished:0,receivable:0,cash:0,payable:0,...props.workingCapitalDefaults?.days},
     workingCapitalBases:{rawMaterials:0,factorySupplies:0,utilities:0,energy:0,spareParts:0,conversion:0,finishedGoods:0,cash:0,payables:0,...props.workingCapitalDefaults?.bases},
     wipCompletion:props.workingCapitalDefaults?.wipCompletion??{material:0,conversion:0},shortTermDepositSharePercent:0,shortTermDepositRatePercent:0,taxRates:Array(years).fill(props.taxRate),
@@ -199,7 +205,7 @@ export default function AdvancedFinancePanel(props: Props) {
     return()=>{active=false}
   },[props.projectId])
 
-  useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved,workingCapitalDays:{...state.workingCapitalDays,...saved.workingCapitalDays},workingCapitalBases:{...state.workingCapitalBases,...saved.workingCapitalBases}};if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const matchesLegacyDefault=Math.abs(legacyContribution-legacyWorkingCapitalEquity)<0.01;restored.equityWorkingCapitalContributions=Array(years).fill(0);if(matchesLegacyDefault){restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-legacyWorkingCapitalEquity):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??legacyWorkingCapitalEquity):0)}}if((saved.fundingStructureVersion??0)<2){const legacyDrawdowns=initialCapexSchedule.map((value,index)=>value*initialDebtShare+(index===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0));restored.loans=restored.loans.map(loan=>{const untouchedLegacyDefault=loan.label==='تسهیلات اصلی و سرمایه در گردش'&&loan.drawdowns.length===years&&loan.drawdowns.every((value,index)=>Math.abs(value-legacyDrawdowns[index])<0.01)&&Math.abs(loan.annualRate-props.costOfDebt)<0.0001&&loan.repaymentMethod==='equal-principal';return untouchedLegacyDefault?{...loan,label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(value=>value*initialDebtShare),annualRate:props.initialLoanRatePercent??props.costOfDebt,repaymentMethod:props.initialRepaymentMethod??'equal-principal'}:loan});if(props.initialWorkingCapitalEquityContribution&&restored.equityWorkingCapitalContributions.every(value=>value===0)){restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?props.initialWorkingCapitalEquityContribution!:0)}restored.fundingStructureVersion=2}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey])
+  useEffect(()=>{let alive=true;localStore.get<SavedState>(storageKey).then(saved=>{if(alive){if(saved){const restored={...state,...saved,workingCapitalDays:{...state.workingCapitalDays,...saved.workingCapitalDays},workingCapitalBases:{...state.workingCapitalBases,...saved.workingCapitalBases}};if(initialEquityContributionFingerprint && saved.equityContributionSourceFingerprint!==initialEquityContributionFingerprint){restored.equityContributions=[...(props.initialEquityContributions??[])];restored.equityContributionSourceFingerprint=initialEquityContributionFingerprint}if(!saved.equityWorkingCapitalContributions){const legacyWorkingCapitalEquity=Math.max(0,props.initialWorkingCapital??0)*Math.max(0,Math.min(100,props.equityPercent))/100;const legacyContribution=restored.equityContributions[construction]??0;const matchesLegacyDefault=Math.abs(legacyContribution-legacyWorkingCapitalEquity)<0.01;restored.equityWorkingCapitalContributions=Array(years).fill(0);if(matchesLegacyDefault){restored.equityContributions=restored.equityContributions.map((value,index)=>index===construction?Math.max(0,value-legacyWorkingCapitalEquity):value);restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?Math.max(0,props.initialWorkingCapitalEquityContribution??legacyWorkingCapitalEquity):0)}}if((saved.fundingStructureVersion??0)<2){const legacyDrawdowns=initialCapexSchedule.map((value,index)=>value*initialDebtShare+(index===construction?Math.max(0,props.initialWorkingCapital??0)*initialDebtShare:0));restored.loans=restored.loans.map(loan=>{const untouchedLegacyDefault=loan.label==='تسهیلات اصلی و سرمایه در گردش'&&loan.drawdowns.length===years&&loan.drawdowns.every((value,index)=>Math.abs(value-legacyDrawdowns[index])<0.01)&&Math.abs(loan.annualRate-props.costOfDebt)<0.0001&&loan.repaymentMethod==='equal-principal';return untouchedLegacyDefault?{...loan,label:'تسهیلات بلندمدت سرمایه ثابت',drawdowns:initialCapexSchedule.map(value=>value*initialDebtShare),annualRate:props.initialLoanRatePercent??props.costOfDebt,repaymentMethod:props.initialRepaymentMethod??'equal-principal'}:loan});if(props.initialWorkingCapitalEquityContribution&&restored.equityWorkingCapitalContributions.every(value=>value===0)){restored.equityWorkingCapitalContributions=Array.from({length:years},(_,index)=>index===construction?props.initialWorkingCapitalEquityContribution!:0)}restored.fundingStructureVersion=2}setState(restored)}setLoaded(true)}}).catch(()=>setLoaded(true));return()=>{alive=false}},[storageKey,initialEquityContributionFingerprint])
   useEffect(()=>{if(loaded)void localStore.set(storageKey,state)},[loaded,storageKey,state])
 
   const capexSchedule = activeFixedInvestmentSchedule
@@ -247,9 +253,14 @@ export default function AdvancedFinancePanel(props: Props) {
   const comfarLifecycle = comfarCalendarLifecycle ?? (props.comfarDepreciationAssets?.length
     ? calculateComfarAssetLifecycle(props.comfarDepreciationAssets,props.comfarAssetSales??[],years)
     : null)
-  const periodDepreciationSchedule = comfarCalendarLifecycle
-    ? comfarCalendarLifecycle.depreciation.periods.map(row=>row.depreciation)
-    : undefined
+  const sourceDepreciationSchedule = props.comfarDepreciationSchedule?.length===years &&
+    props.comfarDepreciationSchedule.every(value=>Number.isFinite(value)&&value>=0)
+      ? props.comfarDepreciationSchedule : undefined
+  const periodDepreciationSchedule = sourceDepreciationSchedule&&sourceDepreciationSchedule.length===projectPeriods.length
+    ? sourceDepreciationSchedule
+    : comfarCalendarLifecycle
+      ? comfarCalendarLifecycle.depreciation.periods.map(row=>row.depreciation)
+      : undefined
   const periodAssetSaleSchedule = comfarCalendarLifecycle
     ? projectPeriods.map((period,index)=>{
         const rows=comfarCalendarLifecycle.sales.filter(sale=>sale.period===index+1)
@@ -261,12 +272,13 @@ export default function AdvancedFinancePanel(props: Props) {
         }
       })
     : undefined
-  const depreciationValues = comfarCalendarLifecycle
+  const calculatedDepreciationValues = comfarCalendarLifecycle
     ? Array.from({length:years},(_,year)=>comfarCalendarLifecycle.depreciation.periods.reduce((sum,row,index)=>
         fiscalYearIndexForPeriod(projectPeriods[index],projectPeriods,props.fiscalYearStartMonth!)===year?sum+row.depreciation:sum,0))
     : comfarLifecycle
       ? comfarLifecycle.depreciation.periods.map(row=>row.depreciation)
       : props.useFixedInvestmentRegister ? Array(years).fill(0) : depreciation.map(row=>row.depreciation)
+  const depreciationValues = sourceDepreciationSchedule ?? calculatedDepreciationValues
   const assetSaleSchedule = comfarCalendarLifecycle
     ? Array.from({length:years},(_,year)=>{
         const rows=comfarCalendarLifecycle.sales.filter(sale=>

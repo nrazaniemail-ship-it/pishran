@@ -168,33 +168,28 @@ try {
     await projectCard.waitFor({ state: 'visible' })
     await projectCard.click()
     await feasibilityPage.locator('.fw-steps').waitFor({ state: 'visible' })
-    const keepBlank = item.id === 'comfar-hr-plate-250k'
+
     await feasibilityPage.getByRole('button', { name: 'هزینه‌های دوره ساخت' }).click()
-    if (keepBlank) {
-      assert.equal(await feasibilityPage.locator('.fw-row').count(), 0, 'Project 2 fixed-investment form must remain blank')
-    } else {
-      const capexTitles = await feasibilityPage.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
-      const capexIndex = capexTitles.indexOf(item.capexName)
-      assert.notEqual(capexIndex, -1, `${item.id} must populate the fixed-investment form with ${item.capexName}`)
-      assert.equal(await feasibilityPage.locator('.fw-row').nth(capexIndex).getByLabel('قیمت واحد').inputValue(), item.capexAmount,
-        `${item.id} fixed-investment amount must match the COMFAR report`)
-    }
+    const capexTitles = await feasibilityPage.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
+    const capexIndex = capexTitles.indexOf(item.capexName)
+    assert.notEqual(capexIndex, -1, `${item.id} must populate the fixed-investment form with ${item.capexName}`)
+    assert.equal(await feasibilityPage.locator('.fw-row').nth(capexIndex).getByLabel('قیمت واحد').inputValue(), item.capexAmount,
+      `${item.id} fixed-investment amount must match the COMFAR report`)
+
     await feasibilityPage.getByRole('button', { name: 'هزینه‌های دوره بهره‌برداری' }).click()
-    if (keepBlank) {
-      assert.equal(await feasibilityPage.locator('.fw-row').count(), 0, 'Project 2 operating-cost form must remain blank')
-    } else {
-      const opexTitles = await feasibilityPage.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
-      const opexIndex = opexTitles.indexOf(item.opexName)
-      assert.notEqual(opexIndex, -1, `${item.id} must populate the operating-cost form with raw materials`)
-      assert.equal(await feasibilityPage.locator('.fw-row').nth(opexIndex).getByLabel('مقدار').inputValue(), item.opexAmount,
-        `${item.id} reference-year raw-material cost must match the COMFAR report`)
-    }
+    const opexTitles = await feasibilityPage.locator('.fw-row input[aria-label="عنوان قلم"]').evaluateAll(inputs => inputs.map(input => input.value))
+    const opexIndex = opexTitles.indexOf(item.opexName)
+    assert.notEqual(opexIndex, -1, `${item.id} must populate the operating-cost form with raw materials`)
+    assert.equal(await feasibilityPage.locator('.fw-row').nth(opexIndex).getByLabel('مقدار').inputValue(), item.opexAmount,
+      `${item.id} reference-year raw-material cost must match the COMFAR report`)
+
     await feasibilityPage.locator('.fw-save').filter({ hasText: 'ذخیره شد' }).waitFor({ timeout: 10000 })
     const persisted = await feasibilityPage.evaluate(async ({ storeUrl, id }) => {
       const { localStore } = await import(storeUrl)
       return await localStore.get('feasibility:project:' + id + ':v1')
     }, { storeUrl: localStoreUrl, id: item.id })
     assert.ok(persisted, `${item.id} model must persist in IndexedDB after autosave`)
+
     if (item.id === 'comfar-hr-coil-200k') {
       assert.equal(persisted.financialForms.tax.rates.length, 0, 'HRCR200 must not use inferred tax-rate rows')
       assert.equal(persisted.finance.tax, 0, 'HRCR200 must not fall back to a general tax-rate assumption')
@@ -202,57 +197,98 @@ try {
       assert.equal(persisted.financialForms.tax.documentedAmounts.length, 18, 'HRCR200 must retain all 18 documented tax amounts')
       assert.deepEqual(persisted.financialForms.tax.documentedAmounts.slice(2, 5).map(row => [row.period, row.amount]), [['3',477888.91],['4',596279.32],['5',719330.04]])
       assert.equal(persisted.financialForms.tax.documentedAmounts[2].sourceVerified, true)
-    } else if (keepBlank) {
-      assert.equal(persisted.financialForms?.tax?.rates?.length ?? 0, 0, 'Project 2 must not inherit tax-rate assumptions')
-      assert.equal(persisted.financialForms?.tax?.documentedAmounts?.length ?? 0, 0, 'Project 2 must not inherit project 1 tax amounts')
-      assert.equal(persisted.financialForms?.workingCapital?.length ?? 0, 0)
-      assert.equal(persisted.financialForms?.sales?.length ?? 0, 0)
-      assert.equal(persisted.financialForms?.loans?.length ?? 0, 0)
-      assert.equal(persisted.financialForms?.productionCosts?.length ?? 0, 0)
-      assert.equal(persisted.fixedInvestmentItems?.length ?? 0, 0)
-      assert.equal(persisted.capex?.length ?? 0, 0)
-      assert.equal(persisted.opex?.length ?? 0, 0)
-      assert.equal(persisted.products?.length ?? 0, 0)
-      assert.equal(persisted.capacity?.nameplate ?? 0, 0)
-      assert.equal(persisted.project?.startYear ?? 0, 0)
-      assert.equal(persisted.project?.constructionYears ?? 0, 0)
-      assert.equal(persisted.project?.operatingYears ?? 0, 0)
-      assert.equal(persisted.finance?.equity ?? 0, 0)
-      assert.equal(persisted.finance?.debt ?? 0, 0)
-      assert.equal(persisted.finance?.tax ?? 0, 0)
-      assert.equal(persisted.finance?.manualRate ?? 0, 0)
-      assert.equal(persisted.finance?.method ?? 'unspecified', 'unspecified')
-      assert.equal(Boolean(persisted.foundation?.planning?.projectStartDate), false)
+    } else if (item.id === 'comfar-integrated-steel-dri') {
+      assert.equal(persisted.financialForms.tax.rates.length, 0, 'Integrated steel must use report-documented tax amounts, not inferred flat-rate rows')
+      assert.equal(persisted.financialForms.tax.documentedAmounts.length, 19, 'Integrated steel must retain construction and all 15 operating tax periods')
+      assert.deepEqual(persisted.financialForms.tax.documentedAmounts.slice(4, 7).map(row => [row.period, row.amount]), [['5',4687872.25],['6',6881488.65],['7',9254024.25]])
     } else {
       assert.equal(persisted.financialForms.tax.rates.length, 15, item.id + ' must include all 15 annual tax periods')
     }
-    if (!keepBlank) {
-      assert.equal(persisted.foundation.currencies.localCurrencyCode, item.currency)
-      assert.equal(persisted.financialForms.workingCapital.length, item.workingCapitalComponents)
-      const workingCapital = Object.fromEntries(persisted.financialForms.workingCapital.map(component => [
-        component.category, component.periodBalances.at(-1)?.amount ?? 0
-      ]))
-      assert.ok(Math.abs(workingCapital.inventory + workingCapital.cash - (workingCapital.payables ?? 0) - item.workingCapital) < 0.02,
-        `${item.id} net working capital schedule must reconcile to the COMFAR report`)
-      const registeredInvestment = persisted.fixedInvestmentItems.reduce((total, asset) =>
-        total + asset.acquisitions.reduce((sum, acquisition) => sum + acquisition.quantity * acquisition.unitPrice, 0), 0)
-      assert.ok(Math.abs(registeredInvestment - item.fixed - item.preproduction) < 0.02,
-        `${item.id} fixed-asset and pre-production registers must reconcile to the report`)
-      assert.ok(Math.abs(persisted.financialForms.economic.discountRatePercent - item.discount) < 0.001)
-      if (item.id === 'comfar-cold-coil-200k') assert.deepEqual(persisted.capacity.ramp, [81.11, 90.14, 100.14, 100])
-      if (item.id === 'comfar-integrated-steel-dri') {
-        assert.equal(persisted.products.length, 2)
-        assert.equal(persisted.products[1].quantity, 1760000)
-      }
+    if (item.id === 'comfar-integrated-steel-dri') {
+      assert.equal(persisted.financialForms.sales.length, 2, 'Steel slab and Extra DRI sales must both persist')
+      const steelSales = persisted.financialForms.sales.find(product => product.periods.some(row => row.salesQuantity === 840000))
+      const extraDriSales = persisted.financialForms.sales.find(product => product.periods.some(row => row.salesQuantity === 368000))
+      assert.ok(steelSales, 'Steel slab sales schedule must include 840,000 tonnes')
+      assert.ok(extraDriSales, 'Extra DRI sales schedule must include 368,000 tonnes')
+      assert.equal(steelSales.periods.find(row => row.salesQuantity === 840000).netUnitPrice, 634)
+      assert.equal(extraDriSales.periods.find(row => row.salesQuantity === 368000).netUnitPrice, 275)
+      assert.equal(persisted.financialForms.loans.length, 2, 'Separate long- and short-term facilities must persist')
+      const longTerm = persisted.financialForms.loans.find(loan => loan.name.includes('بلندمدت'))
+      const shortTerm = persisted.financialForms.loans.find(loan => loan.name.includes('کوتاه‌مدت'))
+      assert.ok(longTerm && shortTerm)
+      const advancedFinance = await feasibilityPage.evaluate(async ({ storeUrl, id }) => {
+        const { localStore } = await import(storeUrl)
+        return await localStore.get('feasibility:advanced-finance:' + id)
+      }, { storeUrl: localStoreUrl, id: item.id })
+      assert.ok(advancedFinance, 'Integrated steel advanced finance state must persist')
+      const expectedEquityContributions = [13094839.16,22531066.5,34173260.44,70183158.9]
+      assert.deepEqual(advancedFinance.equityContributions.slice(0, 4), expectedEquityContributions,
+        'COMFAR report-derived equity contributions must replace stale generated defaults on first source migration')
+      assert.equal(advancedFinance.equityContributionSourceFingerprint, JSON.stringify(expectedEquityContributions.concat(Array(15).fill(0))),
+        'the imported equity schedule source fingerprint must persist for subsequent user-edit preservation')
+      assert.ok(Math.abs(advancedFinance.equityContributions.reduce((sum, value) => sum + value, 0) - 139982325) < 0.02)
+      assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.drawdown, 0) - 431000000) < 0.02)
+      assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.capitalizedInterest, 0)) < 0.02, 'COMFAR debt schedule reports zero capitalized interest; construction-period interest is capitalized separately in pre-production investment')
+      assert.ok(Math.abs(longTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 168320000) < 0.02, 'Long-term payable interest must reconcile to the COMFAR liability schedule')
+      assert.ok(Math.abs(longTerm.manualPeriodSchedule.filter(row => Number(row.period) >= 5).reduce((sum, row) => sum + row.interestExpense, 0) - 57820000) < 0.02, 'Operating-period long-term interest must remain payable expense')
+      assert.ok(Math.abs(shortTerm.manualPeriodSchedule.reduce((sum, row) => sum + row.drawdown, 0) - 49523442.75) < 0.02)
+      assert.equal(shortTerm.manualPeriodSchedule.at(-1).closingBalance, 0)
     }
-    console.log(`PASS: ${item.id} ${keepBlank ? 'remains blank' : 'report-derived feasibility inputs and IndexedDB persistence'}`)
+
+    if (item.id === 'comfar-hr-plate-250k') {
+      assert.equal(persisted.financialForms.sales.length, 2, 'Plate and Scrape# sales schedules must both be imported')
+      assert.equal(persisted.financialForms.sales[0].periods.length, 17, 'Plate sales schedule must include construction periods and all 15 operating years')
+      assert.equal(persisted.financialForms.sales[0].periods[2].salesQuantity, 175000)
+      assert.equal(persisted.financialForms.sales[0].periods[2].netUnitPrice, 193.58)
+      assert.equal(persisted.financialForms.sales[1].periods[2].salesQuantity, 21875)
+      assert.equal(persisted.financialForms.loans.length, 1, 'COMFAR long-term loan schedule must be imported')
+      const debtSchedule = persisted.financialForms.loans[0].manualPeriodSchedule
+      assert.equal(debtSchedule.length, 8)
+      assert.equal(debtSchedule[0].drawdown, 6238555.38)
+      assert.equal(debtSchedule[2].capitalizedInterest, 3738117.98)
+      assert.equal(debtSchedule.at(-1).closingBalance, 0)
+      assert.ok(Math.abs(debtSchedule.reduce((sum, row) => sum + row.principal, 0) - 21346939.92) < 0.02)
+      assert.ok(Math.abs(debtSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 17369293.32) < 0.02)
+    }
+    if (item.id === 'comfar-cold-coil-200k') {
+      assert.equal(persisted.financialForms.sales.length, 1, 'Cold-coil sales schedule must be imported')
+      assert.equal(persisted.financialForms.sales[0].periods.length, 17)
+      assert.equal(persisted.financialForms.sales[0].periods[2].salesQuantity, 160000)
+      assert.equal(persisted.financialForms.sales[0].periods[2].netUnitPrice, 395)
+      assert.equal(persisted.financialForms.sales[0].periods[4].salesQuantity, 200000)
+      assert.equal(persisted.financialForms.loans.length, 1, 'Cold-coil long-term loan schedule must be imported')
+      const debtSchedule = persisted.financialForms.loans[0].manualPeriodSchedule
+      assert.equal(debtSchedule.length, 4)
+      assert.equal(debtSchedule[0].drawdown, 5000000)
+      assert.equal(debtSchedule[0].capitalizedInterest, 350000)
+      assert.equal(debtSchedule.at(-1).closingBalance, 0)
+      assert.ok(Math.abs(debtSchedule.reduce((sum, row) => sum + row.principal, 0) - 5350000) < 0.02)
+      assert.ok(Math.abs(debtSchedule.reduce((sum, row) => sum + row.interestExpense, 0) - 2732907.68) < 0.02)
+    }
+
+    assert.equal(persisted.foundation.currencies.localCurrencyCode, item.currency)
+    assert.equal(persisted.financialForms.workingCapital.length, item.workingCapitalComponents)
+    const workingCapital = Object.fromEntries(persisted.financialForms.workingCapital.map(component => [
+      component.category, component.periodBalances.at(-1)?.amount ?? 0
+    ]))
+    assert.ok(Math.abs(workingCapital.inventory + workingCapital.cash - (workingCapital.payables ?? 0) - item.workingCapital) < 0.02,
+      `${item.id} net working capital schedule must reconcile to the COMFAR report`)
+    const registeredInvestment = persisted.fixedInvestmentItems.reduce((total, asset) =>
+      total + asset.acquisitions.reduce((sum, acquisition) => sum + acquisition.quantity * acquisition.unitPrice, 0), 0)
+    assert.ok(Math.abs(registeredInvestment - item.fixed - item.preproduction) < 0.02,
+      `${item.id} fixed-asset and pre-production registers must reconcile to the report`)
+    assert.ok(Math.abs(persisted.financialForms.economic.discountRatePercent - item.discount) < 0.001)
+    if (item.id === 'comfar-cold-coil-200k') assert.deepEqual(persisted.capacity.ramp, [81.11, 90.14, 100.14, 100])
+    if (item.id === 'comfar-integrated-steel-dri') {
+      assert.equal(persisted.products.length, 2)
+      assert.equal(persisted.products[1].quantity, 1760000)
+    }
+    console.log(`PASS: ${item.id} report-derived feasibility inputs and IndexedDB persistence`)
     await feasibilityPage.getByRole('button', { name: 'پروژه‌ها', exact: true }).click()
     await feasibilityPage.locator('.project-card').first().waitFor({ state: 'visible' })
   }
   await feasibilityPage.close()
-  console.log('PASS: project 1 remains source-integrated, project 2 remains blank, and remaining reference projects persist')
-  await feasibilityPage.close()
-  console.log('PASS: all four COMFAR project records persist in native IndexedDB; project 2 remains intentionally blank')
+  console.log('PASS: all four COMFAR project records load report-derived inputs and persist in native IndexedDB')
 
   const result = await page.evaluate(async ({ storeUrl, projectsUrl, backupUrl }) => {
     const { localStore } = await import(storeUrl)

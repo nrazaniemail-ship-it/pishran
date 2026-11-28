@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "auditStatus": "incomplete-source-extraction-and-engine-adapter",
+  "unit": "million Rial",
+  "sourceDocuments": [
+    {
+      "projectId": "comfar-hr-coil-200k",
+      "projectName": "HRCR200 - hot rolled coil",
+      "sourceDocument": "COMFAR III - HRCR200",
+      "pdfPages": 135,
+      "verifiedPagesReadInThisAudit": [
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58
+      ],
+      "coverage": {
+        "balanceSheet": "not-extracted-completely",
+        "incomeStatement": "not-extracted-completely",
+        "depreciation": "not-extracted-completely",
+        "tax": "not-extracted-completely",
+        "workingCapital": "not-extracted-completely",
+        "debt": "partial-pages-52-to-58",
+        "cashFlow": "partial-pages-50-to-51"
+      },
+      "periodRows": [],
+      "notes": [
+        "Page 52 contains long-term debt drawdown, repayment, closing balance, capitalized interest and payable interest for construction years 1403-1404 and operation year 1405.",
+        "Pages 53-55 contain long-term debt schedule through 1413; pages 55-56 show no later long-term or short-term debt movements.",
+        "Pages 57-58 contain debt balance roll-forward through 1419.",
+        "The complete periodic balance sheet, P&L, depreciation, tax and working-capital rows have not yet been transcribed."
+      ]
+    },
+    {
+      "projectId": "comfar-hr-plate-250k",
+      "projectName": "SARZAMIN - hot rolled plate",
+      "sourceDocument": "COMFAR III - SARZAMIN hot rolled plate",
+      "pdfPages": 114,
+      "verifiedPagesReadInThisAudit": [
+        50,
+        51,
+        52,
+        53,
+        54
+      ],
+      "coverage": {
+        "balanceSheet": "not-extracted-completely",
+        "incomeStatement": "summary-only-previously-transcribed-not-period-complete",
+        "depreciation": "not-extracted-completely",
+        "tax": "not-extracted-completely",
+        "workingCapital": "not-extracted-completely",
+        "debt": "partial-pages-52-to-54",
+        "cashFlow": "partial-pages-50-to-51"
+      },
+      "periodRows": [],
+      "notes": [
+        "Page 50 contains annual domestic/foreign financial cash flows for 1402-1418.",
+        "Page 51 contains annual equity, long-term loan and short-term financing flows for 1402-1418.",
+        "Pages 52-54 contain debt schedules for long-term and short-term facilities from construction years 1402-1403 through operating years 1404-1412.",
+        "Earlier headline figures were transcribed from report page 2, but page 2 is not a substitute for all periodic schedules."
+      ]
+    },
+    {
+      "projectId": "comfar-cold-coil-200k",
+      "projectName": "SARZAMIN - cold rolled coil",
+      "sourceDocument": "COMFAR III - SARZAMIN cold rolled coil",
+      "pdfPages": 126,
+      "verifiedPagesReadInThisAudit": [
+        2,
+        24,
+        25,
+        26,
+        27,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        57,
+        58,
+        59,
+        60,
+        61,
+        219,
+        220,
+        221
+      ],
+      "coverage": {
+        "balanceSheet": "not-extracted-completely",
+        "incomeStatement": "page 55 domestic/foreign sales and reported cost-of-products components transcribed for 1403-1417; page 2 summary P&L anchors transcribed for 1403, 1405 and 1417; full annual P&L and taxable-income bridge remain incomplete",
+        "depreciation": "annual-total-depreciation-transcribed-pages-24-to-27; asset-level-assumptions-not-verified",
+        "tax": "annual corporate income tax and cash flow transcribed for 1403-1417 from pages 57-61; taxable-income/P&L bridge not fully extracted",
+        "workingCapital": "annual net working-capital change transcribed for 1403-1407 from pages 57-58; explicit zero changes transcribed for 1408-1417 from pages 58-61",
+        "debt": "pages 219-221 visually re-audited against original page images; page 219 lifetime totals and 1403-1404; page 220 annual periods 1405-1407; page 221 annual periods 1408-1410; all 3 debt groups × 7 line items transcribed; group aggregation controlled within 0.01 million Rial; fixed-capital roll-forward independently tested for 1404-1410",
+        "cashFlow": "annual total inflow, total outflow, corporate tax and net cash flow transcribed for 1403-1417 from pages 57-61; not a complete three-statement model"
+      },
+      "periodRows": [],
+      "notes": [
+        "Pages 47-48 show debt balances from 7/1401-12/1401 through 1417: long-term balance 5,350,000 in 1402, 4,022,121.21 in 1403, 2,281,542.99 in 1404 and zero from 1405 onward.",
+        "Page 49 shows cash flow, tax, financing cost, loan repayment and net working capital change for construction periods and 1403-1405.",
+        "Pages 50-51 show later cash flow and tax periods; pages 52-54 show cumulative and annual cash-flow summaries.",
+        "Page 55 contains sales and production cost rows for 1403-1417.",
+        "This remains partial extraction; complete periodic statements and asset-level depreciation have not been transcribed.",
+        "The reference dataset now includes annual operatingCost and depreciation totals for 1403-1417 transcribed from pages 24-27. These are source schedule rows only and are not engine outputs.",
+        "Page 24 itemized operating cost totals for 1403 (53,466,973.84) and 1405 (66,206,503.67) differ from discounted cash-flow page 57 (53,459,511.66 for 1403) and recurring operating-cost rows (66,205,570.90 for 1405). Preserve both as source discrepancies; do not overwrite or force parity.",
+        "Page 24-27 depreciation totals are annual aggregate values; asset-level acquisition dates, useful lives, methods and salvage assumptions remain unverified.",
+        "Pages 57-61 were re-read and normalized into 75 annual reference rows for 1403-1417: total cash inflow, total cash outflow, corporate income tax, net cash flow and net working-capital change. Values retain their printed report pages and million-Rial units.",
+        "Pages 57-61 are discounted cash flow summaries. The transcribed net cash flow is the report's printed line and must not be treated as an engine-calculated operating cash flow or as proof of financial-statement parity.",
+        "Working-capital changes are explicitly printed as 2,393,498.33 (1403), 283,357.28 (1404), 283,590.29 (1405), -33.29 (1406), and 0.00 in 1407-1417; zeroes are retained only where the source explicitly prints zero.",
+        "Page 55 annual schedule was transcribed for 1403-1417 into 60 income-statement reference rows: foreign sales, domestic sales, foreign production costs and domestic production costs. The report prints foreign sales as zero in all listed years and foreign production costs as zero from 1412 onward; explicit zeroes are retained.",
+        "Page 2 summary income statement anchor values were transcribed for 1403, 1405 and 1417 (54 rows), including sales, operating costs, depreciation, financing costs, total production costs, marketing, cost of products, gross operating profit, taxable profit, income tax and net profit.",
+        "Cross-check: page 55 domestic plus foreign reported production-cost components sum exactly to page 2 cost of products for the three anchor years: 1403 = 56,100,198.97; 1405 = 67,892,594.02; 1417 = 66,284,570.90 (million Rial). Therefore page 55 cost components are recorded as cost-of-products components, not as operatingCost. Page 2 operatingCost remains a distinct P&L line.",
+        "Page 2 operatingCost and page 24/57 annual operating cost schedules can differ slightly; these are retained as separate source lines with page provenance. No attempt has been made to force these schedules to agree.",
+        "Observed effective tax ratios differ by year: 1403 and 1405 summary tax are about 5% of taxable profit, while 1417 is 25%. No single tax rate is inferred from these anchor rows.",
+        "Page 2 arithmetic check: taxable profit minus corporate income tax equals net profit for 1403 (7,099,801.03 - 354,990.05 = 6,744,810.98) and 1405 (11,107,405.98 - 555,370.30 = 10,552,035.68). For 1417 the subtraction gives 9,536,571.83 while the printed net profit is 9,536,571.82, a 0.01 million-Rial rounding difference retained as printed.",
+        "Page 24 operating cost (factory operating cost) differs from the page 2 summary P&L operating cost: 1403 page 24 = 53,466,973.84 vs page 2 = 53,459,511.66; 1405 page 24 = 66,206,503.67 vs page 2 = 66,205,570.90. Page 57 discounted cash flow also reports 53,459,511.66 in 1403. These schedule-specific values remain separately traceable; no overwrite or assumed correction.",
+        "Tax schedule observations: the page 2 effective tax ratios at anchor years are approximately 5% (1403), 5% (1405), and 25% (1417). Pages 57-61 show the annual cash-flow tax line, but do not by themselves expose the complete taxable-income bridge, loss carryforward, exemptions or rate-change assumptions. Therefore the underlying tax policy remains unresolved.",
+        "Correction after a second visual audit: page 220 working-capital capitalized interest in 1405 is 207,545.09 million Rial (not 2,075,450.09). The fixed + working-capital + total debt groups are updated consistently. This also agrees with the 1405 closing balance arithmetic: 924,675.96 drawdown + 207,545.09 capitalized interest = 1,132,221.05 closing balance.",
+        "Page 221 was re-read from the original image at enlarged scale, column-by-column and row-by-row. Columns are 1408 (right), 1409 (middle), 1410 (left). All 3 debt groups × 7 line items × 3 years (63 rows) were transcribed in million Rial. Fixed + working-capital debt equals total debt for all 21 line-item/year combinations within 0.01 million Rial.",
+        "Independent image audit completed for printed pages 219, 220 and 221. Page 219 columns are all-period totals, 1403 and 1404; page 220 columns are 1405, 1406 and 1407 from right to left; page 221 columns are 1408, 1409 and 1410 from right to left. All 189 debt values (3 pages × 3 groups × 7 line items × 3 columns) were checked visually against the original page images; no transcription discrepancy was identified in this pass.",
+        "Group aggregation controls cover 21 annual/all-period combinations per page (7 line items × 3 columns): fixed-capital debt + working-capital debt = total domestic debt within 0.01 million Rial. Fixed-capital debt roll-forward is independently checked from 1404 through 1410 using the prior printed closing balance, drawdown, principal repayment, FX adjustment and capitalized interest; tolerance ±0.01 million Rial. No roll-forward formula is asserted for working-capital debt."
+      ]
+    }
+  ],
+  "engineIntegration": {
+    "status": "not-connected-to-reference-dataset",
+    "productionEngineFile": "frontend/src/features/steel/periodicFinancialEngine.ts",
+    "entryPoint": "calculateIntegratedPeriodicFinance(input: PeriodicProjectFinanceInput): PeriodicProjectFinanceResult",
+    "linkedStatementsEntryPoint": "buildPeriodicThreeFinancialStatements(result, openingBalances, tolerance)",
+    "depreciationEntryPoint": "calculatePeriodicComfarAssetLifecycle(...)",
+    "currentInputDataFile": "frontend/src/features/projects/comfarProjectInputData.ts",
+    "requiredAdapterInputs": [
+      "contiguous ProjectCalendarPeriod values with exact ISO startDate/endDate/days for every COMFAR period",
+      "annual and/or exact-period revenue, variable cost, fixed cost, depreciation, capex, pre-operating cost and maintenance capex arrays",
+      "tax rates and verified taxAmountOverridesByPeriod with source references",
+      "workingCapitalByPeriod and exact gross inventory subledgers only where the report supplies them",
+      "loan facilities, dated drawdowns, repayment convention, opening debt and verified loan schedule overrides where needed",
+      "asset-level acquisition dates, original values, useful lives, salvage values and depreciation methods for the depreciation lifecycle",
+      "opening balances for cash, debt, net fixed assets, working capital, paid-in capital, retained earnings and grants to build linked statements"
+    ],
+    "blockingReasons": [
+      "The current COMFAR_PROJECT_INPUTS records are not PeriodicProjectFinanceInput objects and no audited adapter maps all source schedules into the engine contract.",
+      "The current reference data does not contain complete period-by-period P&L, balance-sheet, depreciation, tax and working-capital rows for all three projects.",
+      "The available project input data contains summary and partial schedules, but does not carry a verified PDF page citation for every individual value.",
+      "Asset-level depreciation assumptions and complete opening statement balances have not been verified for all three source reports."
+    ],
+    "requiredComparison": "Only after source extraction and adapter validation: run calculateIntegratedPeriodicFinance, pass the actual result to buildPeriodicThreeFinancialStatements, and compare each matched period/line item using referenceValue, engineValue and variance=engineValue-referenceValue. Missing rows must remain un-compared, never be treated as zero.",
+    "parityClaimAllowed": false,
+    "sourceConsumptionTrace": {
+      "referenceDataset": "frontend/src/features/steel/comfar-three-project-periodic-reference.json",
+      "referenceDatasetConsumedByProductionEngine": false,
+      "evidence": "engineIntegration.status remains not-connected-to-reference-dataset; periodicFinancialEngine receives PeriodicProjectFinanceInput, and no adapter maps the 3-page reference rows into that contract.",
+      "separateImportedInputPath": "frontend/src/features/projects/comfarProjectInputData.ts",
+      "importedInputConsumption": "FeasibilityWizard reads COMFAR_PROJECT_INPUTS[project.id], converts financingSchedule rows into LoanFacilityFormDraft.manualPeriodSchedule, then AdvancedFinancePanel passes loanDrafts through buildProjectLoanDraftIntegration and supplies valid loanScheduleOverrides to calculateIntegratedPeriodicFinance.",
+      "limitation": "This imported loan schedule is a separate manually curated source-input path; it is not the same as consuming the periodic-reference JSON dataset, and full COMFAR engine parity is not established."
+    }
+  }
+}

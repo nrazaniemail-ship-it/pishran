@@ -190,16 +190,15 @@ function jalaliMonthToIso(value:string,end=false):string {
  return jalaliToGregorianIso(year,month,end?30:1)
 }
 function baseModel(project:FeasibilityProject):Model {
- const leaveProjectBlank=project.id==='comfar-hr-plate-250k'
  const isHrCoilReference=project.id==='comfar-hr-coil-200k'
- const blankCustomProject=leaveProjectBlank||project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
- const selectedStage=leaveProjectBlank?resolveProjectStage(project):blankCustomProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
- const parsedCapacity=leaveProjectBlank?0:Number(project.capacity.replace(/[^0-9.]/g,''))||0
+ const blankCustomProject=project.industry!=='فولاد و صنایع معدنی'||project.steelStage==='سایر'
+ const selectedStage=blankCustomProject?(stageOptions.find(s=>s.id==='other') as typeof stageOptions[number]):resolveProjectStage(project)
+ const parsedCapacity=Number(project.capacity.replace(/[^0-9.]/g,''))||0
  const blankTemplate=project.templateId==='raw'
- const report=leaveProjectBlank?undefined:project.sourceReport
+ const report=project.sourceReport
  const imported=project.templateId==='comfar-import'&&!!report
  const sourceInputs=imported?COMFAR_PROJECT_INPUTS[project.id]:undefined
- const reportYear=report?Number(report.constructionStart.slice(0,4)):leaveProjectBlank?0:1403
+ const reportYear=report?Number(report.constructionStart.slice(0,4)):1403
  const reportDebt=report?(report.longTermDebt+report.shortTermDebt):0
  const reportFunding=report?(report.equity+reportDebt):0
  const equityShare=reportFunding>0?report!.equity/reportFunding*100:0
@@ -240,8 +239,8 @@ function baseModel(project:FeasibilityProject):Model {
   foundation.discounting.method='manual'
   foundation.discounting.financialRatePercent=report.investmentNpvRate
   foundation.taxation.system='corporate'
-  const sourceTaxAmounts=isHrCoilReference?(sourceInputs.taxAmountSchedule??[]):[]
-  const sourceTaxRates=isHrCoilReference
+  const sourceTaxAmounts=sourceInputs.taxAmountSchedule??[]
+  const sourceTaxRates=sourceTaxAmounts.length
     ?[]
     :Array.from({length:report.operatingYears},(_,index)=>({period:String(report.firstOperatingYear+index),ratePercent:report.taxPercent}))
   foundation.taxation.rates=sourceTaxRates.map((rate,index)=>({id:project.id+'-tax-source-'+index,period:rate.period,ratePercent:rate.ratePercent}))
@@ -255,9 +254,11 @@ function baseModel(project:FeasibilityProject):Model {
   }
   const sourceSalesSchedule=sourceInputs.productionSalesSchedule??[]
   const sourceByproductSchedule=sourceInputs.byproductSalesSchedule??[]
+  const preOperatingSalesPeriods=Array.from({length:Math.max(0,Number(report.firstOperatingYear)-reportYear)},(_,index)=>({period:String(index+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0}))
+  const byproductName=sourceByproductSchedule[0]?.productName??'محصول جانبی'
+  const byproductId=project.id+'-byproduct-'+(byproductName.toLowerCase().includes('extra')?'extra-dri':'scrape')
   const sourceSalesPeriods=[
-   {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
-   {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0},
+   ...preOperatingSalesPeriods,
    ...sourceSalesSchedule.map(row=>({...row,period:String(Number(row.period)-reportYear+1)})),
    ...(isHrCoilReference?[{period:String((operationEndParts[0]<=12&&operationEndParts[1]>1000?operationEndParts[1]:operationEndParts[0])+1-reportYear+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0,salesRevenue:0}]:[]),
   ]
@@ -298,10 +299,8 @@ function baseModel(project:FeasibilityProject):Model {
    }]
   }
   if(sourceByproductSchedule.length){
-   const byproductId=project.id+'-byproduct-scrape'
    const byproductPeriods=[
-    {period:'1',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
-    {period:'2',openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0},
+    ...preOperatingSalesPeriods.map(row=>({...row})), 
     ...sourceByproductSchedule.map(row=>({...row,period:String(Number(row.period)-reportYear+1)})),
     ...(isHrCoilReference?[{period:String((operationEndParts[0]<=12&&operationEndParts[1]>1000?operationEndParts[1]:operationEndParts[0])+1-reportYear+1),openingInventory:0,production:0,sales:0,closingInventory:0,netUnitPrice:0}]:[]),
    ].map(row=>({
@@ -315,14 +314,19 @@ function baseModel(project:FeasibilityProject):Model {
    }))
    financialForms.sales.push({
     productId:byproductId,unitOfMeasure:'تن',inventoryPolicy:'manual',finishedGoodsDaysCoverage:null,
-    productionStartPeriod:3,productionEndPeriod:17,periods:byproductPeriods,
+    productionStartPeriod:Number(report.firstOperatingYear)-reportYear+1,productionEndPeriod:Number(report.firstOperatingYear)-reportYear+sourceByproductSchedule.length,periods:byproductPeriods,
    })
   }
   const sourceLoanSchedule=sourceInputs.financingSchedule??[]
   if(sourceLoanSchedule.length){
-   financialForms.loans=[{
-    id:project.id+'-comfar-loan',
-    name:'تسهیلات بلندمدت مطابق برنامه گزارش',
+   const sourceLoanGroups=new Map<string,typeof sourceLoanSchedule>()
+   sourceLoanSchedule.forEach(row=>{
+    const group=row.loanType??'long-term'
+    sourceLoanGroups.set(group,[...(sourceLoanGroups.get(group)??[]),row])
+   })
+   financialForms.loans=[...sourceLoanGroups.entries()].map(([loanType,rows])=>({
+    id:project.id+'-comfar-'+loanType,
+    name:loanType==='short-term'?'تسهیلات کوتاه‌مدت سرمایه در گردش مطابق برنامه گزارش':'تسهیلات بلندمدت مطابق برنامه گزارش',
     currencyCode,
     marketOrigin:'local',
     annualRatePercent:null,
@@ -341,7 +345,7 @@ function baseModel(project:FeasibilityProject):Model {
     capitalizedInterestPercent:null,
     capitalizeUntilDate:'',
     fees:[],
-    manualPeriodSchedule:sourceLoanSchedule.map(row=>({
+    manualPeriodSchedule:rows.map(row=>({
      period:String(Number(row.period)-reportYear+1),
      drawdown:row.loanDisbursement,
      principal:row.principalRepayment,
@@ -349,7 +353,7 @@ function baseModel(project:FeasibilityProject):Model {
      capitalizedInterest:row.capitalizedInterest,
      closingBalance:row.closingDebt,
     })),
-   }]
+   }))
   }
   const sourceOperatingCosts=sourceInputs.operatingCostSchedule??[]
   if(sourceOperatingCosts.length){
@@ -379,7 +383,7 @@ function baseModel(project:FeasibilityProject):Model {
     const byproductId=project.id+'-byproduct-scrape'
     financialForms.productionCosts.push({
      id:project.id+'-byproduct-cost-unallocated',
-     metadata:{description:'هزینه مستقل محصول جانبی در گزارش تفکیک نشده است',currencyCode,marketOrigin:'local',escalationPercent:0,remarks:report.reportFile+'؛ صفحات ۳۹ تا ۴۲؛ گزارش هزینه تولید مستقل برای Scrape# ارائه نکرده است و هزینه‌ها به محصول اصلی تخصیص داده شده‌اند.',costCentreId:null},
+     metadata:{description:'هزینه مستقل '+byproductName+' در گزارش تفکیک نشده است',currencyCode,marketOrigin:'local',escalationPercent:0,remarks:report.reportFile+'؛ هزینه تولید مستقل برای '+byproductName+' ارائه نشده و هزینه‌ها به محصول اصلی تخصیص داده شده‌اند.',costCentreId:null},
      classification:'direct',productId:byproductId,basis:'period-adjustments',
      standardQuantity:null,standardUnitPrice:null,standardTotal:null,nominalCapacity:null,
      fixedPercent:null,variablePercent:null,
@@ -406,8 +410,10 @@ function baseModel(project:FeasibilityProject):Model {
   'اطلاعات CAPEX، مخارج پیش از تولید، بهره سرمایه‌ای‌شده و سرمایه در گردش از جداول تفصیلی گزارش مرجع وارد شده‌اند.',
   'ردیف‌های OPEX مربوط به سال مرجع '+sourceInputs.operatingCostYear+' هستند؛ اختلاف جمع ریزاقلام با خلاصه گزارش (پس از اصلاح ردیف‌های منبع): '+fmt(sourceCostVariance,2)+' '+report.currency+'.',
   'سهم هزینه متغیر گزارش: '+sourceInputs.variableCostSharePercent+'٪؛ سهم خارجی CAPEX گزارش: '+sourceInputs.foreignFixedInvestmentSharePercent+'٪. این نسبت‌ها تجمیعی‌اند و به تفکیک دارایی تخصیص داده نشده‌اند.',
-  'برنامه سالانه تولید و فروش از صفحه ۳۵: '+(sourceInputs.productionSalesSchedule??[]).map(row=>row.period+' تولید '+fmt(row.production,2)+' تن، فروش '+fmt(row.sales,2)+' تن، قیمت '+fmt(row.netUnitPrice,2)+' و درآمد '+fmt(row.salesRevenue,2)).join('؛ '),
-  'برنامه بدهی صفحات ۵۱ تا ۵۳: '+(sourceInputs.financingSchedule??[]).map(row=>row.period+' برداشت '+fmt(row.loanDisbursement,2)+'، بازپرداخت اصل '+fmt(row.principalRepayment,2)+'، بهره '+fmt(row.interestExpense,2)+'، مانده '+fmt(row.closingDebt,2)).join('؛ '),
+  'برنامه سالانه تولید و فروش محصولات اصلی و جانبی از جداول تفصیلی گزارش مرجع: '+(sourceInputs.productionSalesSchedule??[]).map(row=>row.period+' تولید '+fmt(row.production,2)+' تن، فروش '+fmt(row.sales,2)+' تن، قیمت '+fmt(row.netUnitPrice,2)+' و درآمد '+fmt(row.salesRevenue,2)).join('؛ '),
+  ...(sourceInputs.byproductSalesSchedule??[]).length?['برنامه فروش محصول جانبی '+(sourceInputs.byproductSalesSchedule?.[0]?.productName??'محصول جانبی')+': '+(sourceInputs.byproductSalesSchedule??[]).map(row=>row.period+' فروش '+fmt(row.sales,2)+' تن، قیمت '+fmt(row.netUnitPrice,2)+' و درآمد '+fmt(row.salesRevenue,2)).join('؛ ')]:[],
+  ...(sourceInputs.equityContributionSchedule?.length?['برنامه آورده نقدی سهام‌داران از جریان نقدی مالی گزارش مرجع: '+sourceInputs.equityContributionSchedule.filter(row=>row.amount>0).map(row=>row.period+' '+fmt(row.amount,2)).join('؛ ')]:[]),
+  'برنامه بدهی از جداول تفصیلی گزارش مرجع: '+(sourceInputs.financingSchedule??[]).map(row=>(row.loanType??'long-term')+' '+row.period+' برداشت '+fmt(row.loanDisbursement,2)+'، بازپرداخت اصل '+fmt(row.principalRepayment,2)+'، بهره '+fmt(row.interestExpense,2)+'، بهره سرمایه‌ای '+fmt(row.capitalizedInterest,2)+'، مانده '+fmt(row.closingDebt,2)).join('؛ '),
   ...(project.id==='comfar-hr-coil-200k'?['نرخ مالیات فقط برای ۱۴۰۵ و ۱۴۰۸ برابر ۵٪ و برای ۱۴۱۹ برابر ۲۵٪ از صفحه ۲ مستند است؛ نرخ سال‌های دیگر و دو دوره ساخت در این گزارش خلاصه به‌طور کامل مشخص نشده و عمداً حدس زده نمی‌شود.']:[]),
   'استهلاک کل سالانه صفحات ۲۴ تا ۲۷ در داده مرجع ثبت شده؛ ریز استهلاک دارایی‌به‌دارایی از این گزارش خلاصه قابل استخراج قطعی نیست.',
   ...sourceInputs.missingSourceDetails.map(item=>'اطلاعات گزارش برای ورود قطعی ارائه نشده است: '+item)
@@ -416,7 +422,7 @@ function baseModel(project:FeasibilityProject):Model {
   projectCategory:selectedStage.id==='mining'?'mining':'industrial',analysisMode:'new',partners:[],partnerDistributionPercent:100,
   scope:{studyLevel:'feasibility',jointVenture:false,economicAnalysis:false,costCentreAnalysis:false,costAllocation:false,valueAddedAnalysis:false,foreignExchangeEffect:false,employmentEffects:false},
   foundation,financialForms,fixedInvestmentItems:importedFixedItems,fixedInvestmentSeedVersion:imported?2:0,startingFixedAssets:[],
-  project:{name:project.name,location:project.location,owner:imported?report!.reportTitle:'',startYear:imported?reportYear:((blankTemplate||leaveProjectBlank)?0:1403),constructionYears:imported?report!.constructionYears:((blankTemplate||leaveProjectBlank)?0:2),operatingYears:imported?report!.operatingYears:((blankTemplate||leaveProjectBlank)?0:10),currency:imported?report!.currency:(blankTemplate?'':'میلیون ریال'),fxRate:blankTemplate?0:1},
+  project:{name:project.name,location:project.location,owner:imported?report!.reportTitle:'',startYear:imported?reportYear:(blankTemplate?0:1403),constructionYears:imported?report!.constructionYears:(blankTemplate?0:2),operatingYears:imported?report!.operatingYears:(blankTemplate?0:10),currency:imported?report!.currency:(blankTemplate?'':'میلیون ریال'),fxRate:blankTemplate?0:1},
   stage:selectedStage.id,
   products:blankCustomProject?[]:[makeRow(imported?report!.product:'محصول اصلی','تن/سال',imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),imported?(sourceInputs?.salesUnitPrice??0):0,imported?(sourceInputs?.salesPriceSource??'گزارش مرجع؛ قیمت فروش تأیید نشده'):'فرض کاربر'),...(imported&&report!.secondaryCapacity?[makeRow('آهن اسفنجی هات‌لینک','تن/سال',report!.secondaryCapacity,0,'گزارش مرجع؛ خلاصه صفحه اول')]:[])],
   capacity:{nameplate:imported?report!.primaryCapacity:(blankTemplate?0:parsedCapacity),operatingDays:0,hoursPerDay:0,availability:0,yield:0,ramp:blankTemplate?[]:(imported?sourceInputs?.capacityUtilization??[]:[70,80,90,100])},
@@ -427,7 +433,7 @@ function baseModel(project:FeasibilityProject):Model {
   market:{demand:0,domesticProduction:0,imports:0,exports:0,targetShare:0,domesticPrice:0,exportPrice:0,domesticShare:0,growth:0},
   capex:capexRows,
   opex:opexRows,
-  finance:{equity:imported?equityShare:((blankTemplate||leaveProjectBlank)?0:40),debt:imported?debtShare:((blankTemplate||leaveProjectBlank)?0:60),equityCost:0,debtCost:0,tax:imported&&!isHrCoilReference?report!.taxPercent:0,manualRate:imported?report!.investmentNpvRate:((blankTemplate||leaveProjectBlank)?0:30),method:imported?'manual':((blankTemplate||leaveProjectBlank)?'unspecified':'wacc'),depreciationYears:0,workingCapital:imported?report!.workingCapital:0,financeRate:0,reinvestmentRate:0},
+  finance:{equity:imported?equityShare:(blankTemplate?0:40),debt:imported?debtShare:(blankTemplate?0:60),equityCost:0,debtCost:0,tax:imported&&!isHrCoilReference?report!.taxPercent:0,manualRate:imported?report!.investmentNpvRate:(blankTemplate?0:30),method:imported?'manual':(blankTemplate?'unspecified':'wacc'),depreciationYears:0,workingCapital:imported?report!.workingCapital:0,financeRate:0,reinvestmentRate:0},
   risks:blankCustomProject?[]:[makeRow('افزایش قیمت مواد اولیه','درصد',0),makeRow('کاهش قیمت فروش','درصد',0),makeRow('افت ظرفیت تولید','درصد',0),makeRow('تأخیر در راه‌اندازی','ماه',0)]
  }
 }
@@ -540,7 +546,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
     ?buildProjectCalendarPeriods(m.foundation.planning.projectStartDate,m.foundation.planning.projectEndDate,m.foundation.planning.periodFrequency,m.foundation.planning.fiscalYearStartMonth)
     :[]
   const terminalPeriods=project.id==='comfar-hr-coil-200k'?1:0
-  const projectComfarSourceInputs=project.id==='comfar-hr-plate-250k'?undefined:project.templateId==='comfar-import'?COMFAR_PROJECT_INPUTS[project.id]:undefined
+  const projectComfarSourceInputs=project.templateId==='comfar-import'?COMFAR_PROJECT_INPUTS[project.id]:undefined
   const periodOtherIncomeByPeriod=projectComfarSourceInputs?.otherIncomeSchedule
     ?projectCalendarPeriods.map((_,index)=>projectComfarSourceInputs.otherIncomeSchedule!.filter(row=>Number(row.period)===m.project.startYear+index).reduce((sum,row)=>sum+row.amount,0))
     :undefined
@@ -552,15 +558,15 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
    if(!alive)return
    if(!v){setM(baseModel(project));setLoaded(true);return}
    const defaults=baseModel(project)
-   const leaveProjectBlank=project.id==='comfar-hr-plate-250k'
-   const imported=project.templateId==='comfar-import'&&!!project.sourceReport&&!leaveProjectBlank
+     const imported=project.templateId==='comfar-import'&&!!project.sourceReport
    const hasPositiveRows=(rows:Row[]|undefined)=>Array.isArray(rows)&&rows.some(row=>Number(row.quantity)>0&&Number(row.unitPrice)>0)
    const savedFixedItems=Array.isArray(v.fixedInvestmentItems)?v.fixedInvestmentItems:[]
    const hasFixedAcquisitions=savedFixedItems.some(item=>(item.acquisitions??[]).some(acquisition=>Number(acquisition.quantity)>0&&Number(acquisition.unitPrice)>0))
+   const legacyBlankComfarPlate=project.id==='comfar-hr-plate-250k'&&Number(v.project?.startYear)===0&&!hasFixedAcquisitions&&(!Array.isArray(v.products)||v.products.length===0)&&!hasPositiveRows(v.capex)&&!hasPositiveRows(v.opex)
    const savedForms=mergeProjectModelFinancialFormDrafts(v.financialForms)
    const defaultForms=defaults.financialForms
    const hasWorkingCapital=savedForms.workingCapital.some(component=>component.periodBalances.some(period=>period.amount!==null&&Number.isFinite(period.amount)))
-   const financialForms=leaveProjectBlank?defaultForms:imported?{
+   const financialForms=legacyBlankComfarPlate?defaultForms:imported?{
     ...defaultForms,...savedForms,
     workingCapital:hasWorkingCapital?savedForms.workingCapital:defaultForms.workingCapital,
     tax:project.id==='comfar-hr-coil-200k'
@@ -572,34 +578,34 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
      discountRateSourceVerified:savedForms.economic.discountRateSourceVerified||defaultForms.economic.discountRateSourceVerified}
    }:savedForms
    const mergedFoundation=mergeProjectFoundation(v.foundation)
-   const resolvedFoundation=leaveProjectBlank?defaults.foundation:imported&&project.id==='comfar-hr-coil-200k'
+   const resolvedFoundation=legacyBlankComfarPlate?defaults.foundation:imported&&project.id==='comfar-hr-coil-200k'
      ?{...mergedFoundation,planning:{...mergedFoundation.planning,projectEndDate:defaults.foundation.planning.projectEndDate},taxation:{...mergedFoundation.taxation,rates:[]}}
      :imported&&!v.foundation?.currencies?.localCurrencyCode?defaults.foundation:mergedFoundation
    setM({
     ...defaults,...v,
-    partners:leaveProjectBlank?defaults.partners:Array.isArray(v.partners)?v.partners:defaults.partners,
-    partnerDistributionPercent:leaveProjectBlank?defaults.partnerDistributionPercent:Number.isFinite(v.partnerDistributionPercent)?v.partnerDistributionPercent:defaults.partnerDistributionPercent,
-    projectCategory:leaveProjectBlank?defaults.projectCategory:v.projectCategory??defaults.projectCategory,
-    analysisMode:leaveProjectBlank?defaults.analysisMode:v.analysisMode??defaults.analysisMode,
+    partners:legacyBlankComfarPlate?defaults.partners:Array.isArray(v.partners)?v.partners:defaults.partners,
+    partnerDistributionPercent:legacyBlankComfarPlate?defaults.partnerDistributionPercent:Number.isFinite(v.partnerDistributionPercent)?v.partnerDistributionPercent:defaults.partnerDistributionPercent,
+    projectCategory:legacyBlankComfarPlate?defaults.projectCategory:v.projectCategory??defaults.projectCategory,
+    analysisMode:legacyBlankComfarPlate?defaults.analysisMode:v.analysisMode??defaults.analysisMode,
     stage:defaults.stage,
     foundation:resolvedFoundation,
     financialForms,
-    fixedInvestmentItems:leaveProjectBlank?defaults.fixedInvestmentItems:(imported&&!hasFixedAcquisitions?defaults.fixedInvestmentItems:savedFixedItems).map(item=>({...item,depreciationBasis:item.depreciationBasis??'unresolved',acquisitions:item.acquisitions.map(acquisition=>({...acquisition,allocationBasis:acquisition.allocationBasis??'unallocated'})),depreciation:{...item.depreciation,lengthMonths:item.depreciation?.lengthMonths??0,firstDepreciationMonths:item.depreciation?.firstDepreciationMonths??12}})),
-    fixedInvestmentSeedVersion:leaveProjectBlank?defaults.fixedInvestmentSeedVersion:Math.max(Number(v.fixedInvestmentSeedVersion)||0,defaults.fixedInvestmentSeedVersion),
-    startingFixedAssets:leaveProjectBlank?[]:Array.isArray(v.startingFixedAssets)?v.startingFixedAssets:[],
-    project:leaveProjectBlank?{...defaults.project,name:v.project?.name||project.name,location:v.project?.location||project.location,startYear:0,constructionYears:0,operatingYears:0}:{...defaults.project,...v.project},
-    capacity:leaveProjectBlank?defaults.capacity:{...defaults.capacity,...v.capacity},
-    market:leaveProjectBlank?defaults.market:{...defaults.market,...v.market},
-    products:leaveProjectBlank?defaults.products:Array.isArray(v.products)?v.products:defaults.products,
-    process:leaveProjectBlank?defaults.process:{...defaults.process,...v.process},
-    technical:leaveProjectBlank?defaults.technical:Array.isArray(v.technical)?v.technical:defaults.technical,
-    balance:leaveProjectBlank?defaults.balance:Array.isArray(v.balance)?v.balance:defaults.balance,
-    utilities:leaveProjectBlank?defaults.utilities:Array.isArray(v.utilities)?v.utilities:defaults.utilities,
-    risks:leaveProjectBlank?defaults.risks:Array.isArray(v.risks)?v.risks:defaults.risks,
-    finance:leaveProjectBlank?defaults.finance:{...defaults.finance,...v.finance},
-    capex:leaveProjectBlank?defaults.capex:imported&&!hasPositiveRows(v.capex)?defaults.capex:(Array.isArray(v.capex)?v.capex:defaults.capex),
-    opex:leaveProjectBlank?defaults.opex:imported&&!hasPositiveRows(v.opex)?defaults.opex:(Array.isArray(v.opex)?v.opex:defaults.opex),
-    scope:leaveProjectBlank?defaults.scope:{...defaults.scope,...v.scope}
+    fixedInvestmentItems:legacyBlankComfarPlate?defaults.fixedInvestmentItems:(imported&&!hasFixedAcquisitions?defaults.fixedInvestmentItems:savedFixedItems).map(item=>({...item,depreciationBasis:item.depreciationBasis??'unresolved',acquisitions:item.acquisitions.map(acquisition=>({...acquisition,allocationBasis:acquisition.allocationBasis??'unallocated'})),depreciation:{...item.depreciation,lengthMonths:item.depreciation?.lengthMonths??0,firstDepreciationMonths:item.depreciation?.firstDepreciationMonths??12}})),
+    fixedInvestmentSeedVersion:legacyBlankComfarPlate?defaults.fixedInvestmentSeedVersion:Math.max(Number(v.fixedInvestmentSeedVersion)||0,defaults.fixedInvestmentSeedVersion),
+    startingFixedAssets:legacyBlankComfarPlate?[]:Array.isArray(v.startingFixedAssets)?v.startingFixedAssets:[],
+    project:legacyBlankComfarPlate?{...defaults.project,name:v.project?.name||project.name,location:v.project?.location||project.location}:{...defaults.project,...v.project},
+    capacity:legacyBlankComfarPlate?defaults.capacity:{...defaults.capacity,...v.capacity},
+    market:legacyBlankComfarPlate?defaults.market:{...defaults.market,...v.market},
+    products:legacyBlankComfarPlate?defaults.products:Array.isArray(v.products)?v.products:defaults.products,
+    process:legacyBlankComfarPlate?defaults.process:{...defaults.process,...v.process},
+    technical:legacyBlankComfarPlate?defaults.technical:Array.isArray(v.technical)?v.technical:defaults.technical,
+    balance:legacyBlankComfarPlate?defaults.balance:Array.isArray(v.balance)?v.balance:defaults.balance,
+    utilities:legacyBlankComfarPlate?defaults.utilities:Array.isArray(v.utilities)?v.utilities:defaults.utilities,
+    risks:legacyBlankComfarPlate?defaults.risks:Array.isArray(v.risks)?v.risks:defaults.risks,
+    finance:legacyBlankComfarPlate?defaults.finance:{...defaults.finance,...v.finance},
+    capex:legacyBlankComfarPlate?defaults.capex:imported&&!hasPositiveRows(v.capex)?defaults.capex:(Array.isArray(v.capex)?v.capex:defaults.capex),
+    opex:legacyBlankComfarPlate?defaults.opex:imported&&!hasPositiveRows(v.opex)?defaults.opex:(Array.isArray(v.opex)?v.opex:defaults.opex),
+    scope:legacyBlankComfarPlate?defaults.scope:{...defaults.scope,...v.scope}
    })
    setLoaded(true)
   }).catch(()=>setLoaded(true))
@@ -808,7 +814,7 @@ export default function FeasibilityWizard({project,onBack,language='fa'}:{projec
 <article><small>{fieldLabel('IRR افزایشی')}</small><b>{reportIncrementalEnterpriseAnalysis.incrementalIrr===null?'—':fmt(reportIncrementalEnterpriseAnalysis.incrementalIrr*100,2)+'٪'}</b></article>
 </div><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{fieldLabel('دوره')}</th><th>{fieldLabel('بدون طرح')}</th><th>{fieldLabel('با طرح')}</th><th>{fieldLabel('اثر افزایشی')}</th></tr></thead><tbody>{reportIncrementalEnterpriseAnalysis.periods.map(row=><tr key={row.period}><td>{row.period}</td><td>{fmt(row.withoutProjectCashFlow)}</td><td>{fmt(row.withProjectCashFlow)}</td><td>{fmt(row.incrementalCashFlow)}</td></tr>)}</tbody></table></div></div>}{m.scope.economicAnalysis&&economicAnalysisResult?.valid&&<div className="fw-card"><h3>{fieldLabel('ارزیابی اقتصادی پروژه')}</h3><div className="fw-kpis"><article><small>{fieldLabel('ارزش فعلی خالص اقتصادی')}</small><b>{fmt(economicAnalysisResult.economicNpv??NaN)} {m.project.currency}</b></article><article><small>{fieldLabel('نرخ بازده اقتصادی')}</small><b>{economicAnalysisResult.economicIrr===null?'—':fmt(economicAnalysisResult.economicIrr*100,2)+'٪'}</b></article><article><small>{fieldLabel('حذف مالیات انتقالی')}</small><b>{fmt(economicAnalysisResult.totalTaxTransferRemoved)}</b></article><article><small>{fieldLabel('حذف مالیات غیرمستقیم انتقالی')}</small><b>{fmt(economicAnalysisResult.totalIndirectTaxTransferRemoved)}</b></article><article><small>{fieldLabel('حذف یارانه انتقالی')}</small><b>{fmt(economicAnalysisResult.totalSubsidyTransferRemoved)}</b></article><article><small>{fieldLabel('تعدیل اقتصادی ارز')}</small><b>{fmt(economicAnalysisResult.totalForeignExchangeAdjustment)}</b></article><article><small>{fieldLabel('تعدیل اقتصادی اشتغال')}</small><b>{fmt(economicAnalysisResult.totalEmploymentAdjustment)}</b></article></div><div style={{overflowX:'auto'}}><table className="fw-table"><thead><tr><th>{fieldLabel('دوره')}</th><th>{fieldLabel('جریان نقدی مالی پروژه')}</th><th>{fieldLabel('حذف مالیات عملکرد')}</th><th>{fieldLabel('حذف مالیات غیرمستقیم')}</th><th>{fieldLabel('حذف یارانه')}</th><th>{fieldLabel('تعدیل قیمت سایه‌ای')}</th><th>{fieldLabel('جریان نقدی اقتصادی')}</th></tr></thead><tbody>{economicAnalysisResult.rows.map(row=><tr key={row.period}><td>{row.period}</td><td>{fmt(row.financialProjectCashFlow)}</td><td>{fmt(row.taxTransferRemoved)}</td><td>{fmt(row.indirectTaxTransferRemoved)}</td><td>{fmt(row.subsidyTransferRemoved)}</td><td>{fmt(row.economicAdjustment)}</td><td>{fmt(row.economicCashFlow)}</td></tr>)}</tbody></table></div><p className="fw-hint">{fieldLabel('تعدیلات اقتصادی بر اساس ارزش مالی و اقتصادی ثبت‌شده توسط کاربر محاسبه شده‌اند؛ نرخ‌ها و مقادیر سایه‌ای باید مستند به مطالعه اقتصادی پروژه باشند.')}</p></div>}<div className="fw-kpis"><article><small>{fieldLabel('ظرفیت عملی قابل فروش')}</small><b>{fmt(cap)} تن/سال</b></article><article><small>{fieldLabel('سرمایه‌گذاری دوره ساخت')}</small><b>{fmt(capex)} {m.project.currency}</b></article><article><small>{fieldLabel('هزینه نقدی سالانه بهره‌برداری')}</small><b>{fmt(model.operatingCost)} {m.project.currency}</b></article><article><small>WACC</small><b>{fmt(wacc*100,2)}٪</b></article><article><small>NPV</small><b>{fmt(displayNpv??NaN)} {m.project.currency}</b></article><article><small>IRR</small><b>{displayIrr != null && Number.isFinite(displayIrr)?fmt(displayIrr*100,2)+'٪':t('قابل محاسبه نیست','Not calculable')}</b></article></div><h3>{fieldLabel('مفروضات و شاخص‌های کلیدی')}</h3><div className="fw-validation"><span>{fieldLabel('دوره ساخت / بهره‌برداری')}</span><b>{fmt(m.project.constructionYears)} / {fmt(m.project.operatingYears)} سال</b></div><div className="fw-validation"><span>{fieldLabel('اندازه ظاهری بازار')}</span><b>{fmt(marketSize)} تن</b></div><div className="fw-validation"><span>{fieldLabel('قیمت فروش ترکیبی')}</span><b>{fmt(revenuePrice)} {m.project.currency}/تن</b></div><div className="fw-validation"><span>{fieldLabel('ظرفیت سربه‌سر')}</span><b>{Number.isFinite(model.breakEven)?fmt(model.breakEven)+' تن':t('قابل محاسبه نیست','Not calculable')}</b></div><h3>{fieldLabel('وضعیت تکمیل مراحل')}</h3>{steps.slice(0,9).map(([id,label],index)=><div className="fw-validation" key={id}><span>{fmt(index+1)}. {label}</span>{done[id]?<b className="good">{fieldLabel('تکمیل اولیه')}</b>:<b className="missing">{fieldLabel('نیازمند تکمیل')}</b>}</div>)}<p className="fw-hint">{fieldLabel('گزارش پیش‌نمایش مدیریتی است. اعتبار ارقام تابع کیفیت منابع، مفروضات و تکمیل مطالعات فنی و مالی است.')}</p></div><button className="primary" onClick={()=>window.print()}><Printer size={16}/> {t('چاپ گزارش / ذخیره PDF','Print Report / Save PDF')}</button><button type="button" className="primary" style={{marginInlineStart:8}} onClick={()=>setStep('profile')}>{t('انجام بده','Do it')}</button></>}
   </>}
-  <div style={{display:step==='cashflow'&&!unintegratedFinancialDraftInputs.length?'block':'none'}}><AdvancedFinancePanel language={language} projectPeriods={projectCalendarPeriods} terminalPeriods={terminalPeriods} recoverTerminalWorkingCapital={project.id!=='comfar-hr-coil-200k'} periodOtherIncomeByPeriod={periodOtherIncomeByPeriod} periodOtherIncomeSourceReference={periodOtherIncomeSourceReference} periodFrequency={m.foundation.planning.periodFrequency} fiscalYearStartMonth={m.foundation.planning.fiscalYearStartMonth} valuationDate={m.foundation.planning.valuationDate} discountConvention={m.foundation.planning.discountConvention} dayCountBasis={m.foundation.planning.dayCountBasis} cashFlowTiming={m.foundation.planning.cashFlowTiming} projectId={project.id} jointVenture={m.scope.jointVenture} partners={m.partners} partnerDistributionPercent={m.partnerDistributionPercent??100} currency={m.project.currency} constructionYears={m.project.constructionYears} operatingYears={m.project.operatingYears} capacity={cap} fullCapacityRevenue={cap*revenuePrice} fullCapacityVariableCashCost={cap*variable} fullCapacityFixedCashCost={fixed} fixedInvestment={capex} preOperatingCost={preOperatingCost} initialWorkingCapital={m.finance.workingCapital} openingWorkingCapitalBalance={m.analysisMode==='new'?0:startingBalances.netWorkingCapital} openingCashBalance={m.analysisMode==='new'?0:startingBalances.cash} openingDebtBalance={m.analysisMode==='new'?0:startingBalances.debt} openingFixedAssetsNetBookValue={openingFixedAssetsNetBookValue} openingPaidInCapital={m.analysisMode==='new'?0:startingBalances.paidInCapital} openingRetainedEarnings={m.analysisMode==='new'?0:startingBalances.retainedEarnings} openingGrants={m.analysisMode==='new'?0:startingBalances.grants} openingCurrentAccounts={m.analysisMode==='new'?undefined:startingBalances.currentAccounts} workingCapitalDrafts={m.financialForms.workingCapital??[]} productFinancialDrafts={{sales:m.financialForms.sales??[],productionCosts:m.financialForms.productionCosts??[],wasteLedgerEntries:m.financialForms.wasteLedgerEntries??[],productionTransfers:m.financialForms.productionTransfers??[],inventoryReferenceBenchmarks:m.financialForms.inventoryReferenceBenchmarks??[],costCentres:m.financialForms.costCentres??[],costCentreInventoryMovements:m.financialForms.costCentreInventoryMovements??[],inventoryStageTransfers:m.financialForms.inventoryStageTransfers??[]}} cppCpsTraceItems={m.financialForms.cppCpsTraceItems??[]} onCppCpsTraceLedger={setReportCppCpsTraceLedger} onEditFinancialForms={()=>setStep('profile')} taxDraft={m.financialForms.tax} salesTaxLedgerDraft={m.financialForms.salesTaxLedger} onSalesTaxLedgerResult={setReportSalesTaxLedgerResult} valueAddedAnalysisEnabled={m.scope.valueAddedAnalysis} valueAddedPeriodDrafts={m.financialForms.economic.valueAddedPeriods??[]} economicDiscountRatePercent={m.financialForms.economic.discountRatePercent} economicDiscountRateSourceReference={m.financialForms.economic.discountRateSourceReference} economicDiscountRateSourceVerified={m.financialForms.economic.discountRateSourceVerified} onValueAddedAnalysisResult={setReportValueAddedAnalysisResult} loanDrafts={m.financialForms.loans??[]} projectFoundation={m.foundation} initialLoanRatePercent={m.finance.debtCost} comfarDepreciationAssets={integratedComfarDepreciationAssets} comfarAssetSales={[...fixedInvestmentLifecycleInputs.sales,...openingAssetSales]} fixedInvestmentSchedule={confirmedFixedInvestmentSchedule} preOperatingSchedule={confirmedPreOperatingSchedule} comfarDepreciationWarnings={[...fixedInvestmentLifecycleInputs.warnings,...openingAssetDepreciationWarnings]} useFixedInvestmentRegister={true} initialDiscountMode={m.finance.method==='wacc'?'wacc':'manual'} initialManualRate={m.finance.manualRate} mirrFinanceRate={m.finance.financeRate} mirrReinvestmentRate={m.finance.reinvestmentRate} onResult={setIntegratedFinanceResult} onSensitivity={setReportSensitivity} onScenarioAnalysis={handleScenarioAnalysis} onPeriodicResult={setReportPeriodicFinance} onPartnerFinanceResult={setReportPartnerFinance} equityPercent={m.finance.equity} costOfEquity={m.finance.equityCost} costOfDebt={m.finance.debtCost} taxRate={m.finance.tax} capexRows={m.capex.map(r=>({id:r.id,name:r.name,amount:r.quantity*r.unitPrice}))} ramp={m.capacity.ramp}/></div>
+  <div style={{display:step==='cashflow'&&!unintegratedFinancialDraftInputs.length?'block':'none'}}><AdvancedFinancePanel language={language} projectPeriods={projectCalendarPeriods} terminalPeriods={terminalPeriods} recoverTerminalWorkingCapital={project.id!=='comfar-hr-coil-200k'} periodOtherIncomeByPeriod={periodOtherIncomeByPeriod} periodOtherIncomeSourceReference={periodOtherIncomeSourceReference} periodFrequency={m.foundation.planning.periodFrequency} fiscalYearStartMonth={m.foundation.planning.fiscalYearStartMonth} valuationDate={m.foundation.planning.valuationDate} discountConvention={m.foundation.planning.discountConvention} dayCountBasis={m.foundation.planning.dayCountBasis} cashFlowTiming={m.foundation.planning.cashFlowTiming} projectId={project.id} jointVenture={m.scope.jointVenture} partners={m.partners} partnerDistributionPercent={m.partnerDistributionPercent??100} currency={m.project.currency} constructionYears={m.project.constructionYears} operatingYears={m.project.operatingYears} capacity={cap} fullCapacityRevenue={cap*revenuePrice} fullCapacityVariableCashCost={cap*variable} fullCapacityFixedCashCost={fixed} fixedInvestment={capex} preOperatingCost={preOperatingCost} initialWorkingCapital={m.finance.workingCapital} openingWorkingCapitalBalance={m.analysisMode==='new'?0:startingBalances.netWorkingCapital} openingCashBalance={m.analysisMode==='new'?0:startingBalances.cash} openingDebtBalance={m.analysisMode==='new'?0:startingBalances.debt} openingFixedAssetsNetBookValue={openingFixedAssetsNetBookValue} openingPaidInCapital={m.analysisMode==='new'?0:startingBalances.paidInCapital} openingRetainedEarnings={m.analysisMode==='new'?0:startingBalances.retainedEarnings} openingGrants={m.analysisMode==='new'?0:startingBalances.grants} openingCurrentAccounts={m.analysisMode==='new'?undefined:startingBalances.currentAccounts} workingCapitalDrafts={m.financialForms.workingCapital??[]} productFinancialDrafts={{sales:m.financialForms.sales??[],productionCosts:m.financialForms.productionCosts??[],wasteLedgerEntries:m.financialForms.wasteLedgerEntries??[],productionTransfers:m.financialForms.productionTransfers??[],inventoryReferenceBenchmarks:m.financialForms.inventoryReferenceBenchmarks??[],costCentres:m.financialForms.costCentres??[],costCentreInventoryMovements:m.financialForms.costCentreInventoryMovements??[],inventoryStageTransfers:m.financialForms.inventoryStageTransfers??[]}} cppCpsTraceItems={m.financialForms.cppCpsTraceItems??[]} onCppCpsTraceLedger={setReportCppCpsTraceLedger} onEditFinancialForms={()=>setStep('profile')} taxDraft={m.financialForms.tax} salesTaxLedgerDraft={m.financialForms.salesTaxLedger} onSalesTaxLedgerResult={setReportSalesTaxLedgerResult} valueAddedAnalysisEnabled={m.scope.valueAddedAnalysis} valueAddedPeriodDrafts={m.financialForms.economic.valueAddedPeriods??[]} economicDiscountRatePercent={m.financialForms.economic.discountRatePercent} economicDiscountRateSourceReference={m.financialForms.economic.discountRateSourceReference} economicDiscountRateSourceVerified={m.financialForms.economic.discountRateSourceVerified} onValueAddedAnalysisResult={setReportValueAddedAnalysisResult} loanDrafts={m.financialForms.loans??[]} projectFoundation={m.foundation} initialLoanRatePercent={m.finance.debtCost} comfarDepreciationAssets={integratedComfarDepreciationAssets} comfarDepreciationSchedule={project.templateId==='comfar-import'&&COMFAR_PROJECT_INPUTS[project.id]?.depreciationSchedule?Array.from({length:projectCalendarPeriods.length},(_,index)=>COMFAR_PROJECT_INPUTS[project.id]?.depreciationSchedule?.find(row=>Number(row.period)===m.project.startYear+index)?.totalDepreciation??0):undefined} initialEquityContributions={projectComfarSourceInputs?.equityContributionSchedule?Array.from({length:Math.max(1,Math.ceil(m.project.constructionYears)+Math.ceil(m.project.operatingYears)+terminalPeriods)},(_,index)=>projectComfarSourceInputs.equityContributionSchedule?.find(row=>Number(row.period)===m.project.startYear+index)?.amount??0):undefined} comfarAssetSales={[...fixedInvestmentLifecycleInputs.sales,...openingAssetSales]} fixedInvestmentSchedule={confirmedFixedInvestmentSchedule} preOperatingSchedule={confirmedPreOperatingSchedule} comfarDepreciationWarnings={[...fixedInvestmentLifecycleInputs.warnings,...openingAssetDepreciationWarnings]} useFixedInvestmentRegister={true} initialDiscountMode={m.finance.method==='wacc'?'wacc':'manual'} initialManualRate={m.finance.manualRate} mirrFinanceRate={m.finance.financeRate} mirrReinvestmentRate={m.finance.reinvestmentRate} onResult={setIntegratedFinanceResult} onSensitivity={setReportSensitivity} onScenarioAnalysis={handleScenarioAnalysis} onPeriodicResult={setReportPeriodicFinance} onPartnerFinanceResult={setReportPartnerFinance} equityPercent={m.finance.equity} costOfEquity={m.finance.equityCost} costOfDebt={m.finance.debtCost} taxRate={m.finance.tax} capexRows={m.capex.map(r=>({id:r.id,name:r.name,amount:r.quantity*r.unitPrice}))} ramp={m.capacity.ramp}/></div>
     </main>
   <footer className="fw-footer"><button className="secondary-button" onClick={()=>go(-1)} disabled={current===0}><ArrowRight size={15}/> {en?'Previous':'قبلی'}</button><span>{en?'Step':'مرحله'} {fmt(current+1)} {en?'of':'از'} {fmt(steps.length)} · {required[step].map(trField).join(en ? ', ' : '، ')}</span><button className="primary" onClick={()=>go(1)} disabled={current===steps.length-1}>{en?'Save & Continue':'ذخیره و ادامه'} <ArrowLeft size={15}/></button></footer>
  </section>

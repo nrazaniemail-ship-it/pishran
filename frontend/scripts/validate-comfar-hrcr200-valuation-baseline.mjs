@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
+import { jalaliAnnualPeriods, jalaliToIso, jalaliYearEndDay, assertJalaliPeriodSequence, calculateComfarPeriodCountIrr } from './comfar-jalali-calendar.mjs'
 
 const source = await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts', import.meta.url), 'utf8')
 const js = ts.transpileModule(source, {
@@ -9,7 +10,7 @@ const js = ts.transpileModule(source, {
 const engine = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'))
 
 // COMFAR III Expert, HRCR200: total-capital cash flow, pp. 67-71;
-// shareholder cash flow, pp. 76-80. Each row is one annual fiscal period.
+// shareholder cash flow, pp. 76-80. Each row is one COMFAR project period. Dates are exact Jalali fiscal-year boundaries; IRR uses COMFAR's annual project-period convention.
 // The terminal salvage amount shown by COMFAR in the residual-value column
 // is included in the final operating period for discounting to 12/1404.
 const projectCashFlows = [
@@ -51,32 +52,18 @@ const equityCashFlows = [
   14_708_024.54 + 13_735_466.82,
 ]
 
-const addDays = (isoDate, days) => {
-  const date = new Date(isoDate + 'T00:00:00.000Z')
-  date.setUTCDate(date.getUTCDate() + days)
-  return date.toISOString().slice(0, 10)
-}
-const periods = Array.from({ length: 17 }, (_, index) => {
-  const startDate = addDays('2024-01-01', index * 365)
-  return {
-    index: index + 1,
-    startDate,
-    endDate: addDays(startDate, 364),
-    days: 365,
-    partial: false,
-  }
-})
-// COMFAR valuation date: end of 12/1404, i.e. the end of the second
-// annual project period in this normalized annual-period regression fixture.
-const valuationDate = periods[1].endDate
+const periods = jalaliAnnualPeriods(1403, 1419, 1)
+assertJalaliPeriodSequence(periods, jalaliToIso(1403, 1, 1), jalaliToIso(1419, 12, jalaliYearEndDay(1419)))
+// Report valuation date: 12/1404 (end of construction year 2).
+const valuationDate = jalaliToIso(1404, 12, jalaliYearEndDay(1404))
 const projectNpv = engine.calculatePeriodicNpv(
   projectCashFlows, periods, 25, 365, 'period-end', valuationDate, 'period-count', 1,
 )
-const projectIrr = engine.calculatePeriodicIrr(projectCashFlows, periods, 365, 'period-end')
+const projectIrr = calculateComfarPeriodCountIrr(projectCashFlows)
 const equityNpv = engine.calculatePeriodicNpv(
   equityCashFlows, periods, 30, 365, 'period-end', valuationDate, 'period-count', 1,
 )
-const equityIrr = engine.calculatePeriodicIrr(equityCashFlows, periods, 365, 'period-end')
+const equityIrr = calculateComfarPeriodCountIrr(equityCashFlows)
 
 const close = (actual, expected, label, tolerance) => assert.ok(
   Number.isFinite(actual) && Math.abs(actual - expected) <= tolerance,

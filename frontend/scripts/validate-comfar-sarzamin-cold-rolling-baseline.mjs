@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
+import { jalaliAnnualPeriods, jalaliPeriod, jalaliToIso, jalaliYearEndDay, assertJalaliPeriodSequence, calculateComfarPeriodCountIrr } from './comfar-jalali-calendar.mjs'
 
 const source = await readFile(new URL('../src/features/steel/periodicFinancialEngine.ts', import.meta.url), 'utf8')
 const js = ts.transpileModule(source, {
@@ -34,26 +35,18 @@ const cashFlows = [
   9_536_571.83 + 6_562_709.81, // 1417 + residual value shown in 1418
 ]
 
-const addDays = (isoDate, days) => {
-  const date = new Date(isoDate + 'T00:00:00.000Z')
-  date.setUTCDate(date.getUTCDate() + days)
-  return date.toISOString().slice(0, 10)
-}
-const periods = Array.from({ length: cashFlows.length }, (_, index) => {
-  const startDate = addDays('2024-01-01', index * 365)
-  return {
-    index: index + 1,
-    startDate,
-    endDate: addDays(startDate, 364),
-    days: 365,
-    partial: false,
-  }
-})
-const valuationDate = periods[1].endDate
+// COMFAR horizon: 7/1401-12/1401, then 1402 construction, then 1403-1417 production.
+// The initial half-year is one displayed COMFAR project period; keep period-count weighting.
+const periods = [
+  jalaliPeriod(1, 1401, 7, 1, 1401, 12, jalaliYearEndDay(1401), false),
+  ...jalaliAnnualPeriods(1402, 1417, 2),
+]
+assertJalaliPeriodSequence(periods, jalaliToIso(1401, 7, 1), jalaliToIso(1417, 12, jalaliYearEndDay(1417)))
+const valuationDate = jalaliToIso(1402, 12, jalaliYearEndDay(1402))
 const npv = engine.calculatePeriodicNpv(
   cashFlows, periods, 20, 365, 'period-end', valuationDate, 'period-count', 1,
 )
-const irr = engine.calculatePeriodicIrr(cashFlows, periods, 365, 'period-end')
+const irr = calculateComfarPeriodCountIrr(cashFlows)
 const close = (actual, expected, label, tolerance) => assert.ok(
   Number.isFinite(actual) && Math.abs(actual - expected) <= tolerance,
   label + ': expected ' + expected + ', received ' + actual,

@@ -243,7 +243,17 @@ export function allocateAnnualFlowsToPeriods(
   for (let index = 1; index < periods.length; index++) {
     if ((starts[index] as Date).getTime() !== (ends[index - 1] as Date).getTime() + 86400000) return []
   }
+  // COMFAR annual periods can follow a non-Gregorian year boundary (e.g. Jalali
+  // 1 Farvardin = 21 March). When each supplied period is already a complete
+  // annual reporting bucket, preserve its one-to-one annual flow instead of
+  // splitting it at the first day of a Gregorian month and leaking days into
+  // an extra fiscal year.
   const firstFiscalStart = fiscalYearStartFor(starts[0] as Date, fiscalYearStartMonth)
+  const fiscalStartYears = starts.map(date => fiscalYearStartFor(date as Date, fiscalYearStartMonth).getUTCFullYear())
+  const oneToOneAnnualPeriods = periods.length === annualAmounts.length &&
+    periods.every(period => period.days >= 350 && period.days <= 380) &&
+    fiscalStartYears.every((year, index) => year === firstFiscalStart.getUTCFullYear() + index)
+  if (oneToOneAnnualPeriods) return [...annualAmounts]
   return periods.map((period, index) => {
     let cursor = starts[index] as Date
     const periodEnd = ends[index] as Date
@@ -659,8 +669,12 @@ export type PeriodicProjectFinanceInput = {
   /** Other operating / liquidation income documented separately from product sales. */
   periodOtherIncomeByPeriod?: number[]
   periodOtherIncomeSourceReference?: string
-  /** Optional product-led cost of sales by exact project period; fiscal-year totals must reconcile to annualVariableCost. */
+  /** Optional product-led variable production cost by exact project period. */
   periodVariableCost?: number[]
+  /** Positive values are inventory builds; negative values are inventory releases. */
+  periodInventoryChange?: number[]
+  /** Optional COGS control; must equal production cost less inventory build. */
+  periodCostOfGoodsSold?: number[]
   annualShortTermDepositInterest?: number[]
   annualVariableCost: number[]
   annualFixedCost: number[]
@@ -738,6 +752,9 @@ export type PeriodicProjectFinanceRow = {
   shortTermDepositInterest: number
   variableCost: number
   fixedCost: number
+  productionCost: number
+  inventoryChange: number
+  costOfGoodsSold: number
   /** Separately expensed abnormal waste; not presumed fixed or variable. */
   abnormalWasteExpense: number
   depreciation: number
@@ -1027,6 +1044,8 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       (input.finishedGoodsInventoryByPeriod != null && (input.finishedGoodsInventoryByPeriod.length !== periods.length || input.finishedGoodsInventoryByPeriod.some(value => !validFinite(value) || value < 0))) ||
       (input.cashInHandByPeriod != null && (input.cashInHandByPeriod.length !== periods.length || input.cashInHandByPeriod.some(value => !validFinite(value) || value < 0))) ||
       (input.shortTermDepositsByPeriod != null && (input.shortTermDepositsByPeriod.length !== periods.length || input.shortTermDepositsByPeriod.some(value => !validFinite(value) || value < 0))) ||
+      (input.periodInventoryChange != null && (input.periodInventoryChange.length !== periods.length || input.periodInventoryChange.some(value => !validFinite(value)))) ||
+      (input.periodCostOfGoodsSold != null && (input.periodCostOfGoodsSold.length !== periods.length || input.periodCostOfGoodsSold.some(value => !validFinite(value) || value < 0))) ||
       input.loans.some(loan => !loan.id || !loan.input) ||
       (input.foreignExchangeLossByPeriod!=null&&(input.foreignExchangeLossByPeriod.length!==periods.length||input.foreignExchangeLossByPeriod.some(value=>!validFinite(value)))) ||
       Object.entries(input.loanScheduleOverrides??{}).some(([id,rows])=>!input.loans.some(loan=>loan.id===id)||!Array.isArray(rows)||rows.length!==periods.length||rows.some((row,index)=>!row||row.period!==index+1||![row.drawdown,row.openingBalance,row.periodRatePercent,row.interestExpense,row.capitalizedInterest,row.financingFeeExpense,row.commitmentFeeExpense,row.capitalizedFinancingFees,row.principal,row.closingBalance,row.debtService].every(validFinite)||[row.drawdown,row.openingBalance,row.interestExpense,row.capitalizedInterest,row.financingFeeExpense,row.commitmentFeeExpense,row.capitalizedFinancingFees,row.principal,row.closingBalance,row.debtService].some(value=>value<0)))) {
@@ -1257,7 +1276,14 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     const salvageGainLoss = terminalSalvage - salvageBookValueDisposed
     const abnormalWasteExpense=input.periodAbnormalWasteExpense?.[index]??0
     const otherIncome=input.periodOtherIncomeByPeriod?.[index]??0
-    const ebit = revenue[index] + otherIncome - variableCost[index] - fixedCost[index] - abnormalWasteExpense - depreciation[index] +
+    const productionCost = variableCost[index] + fixedCost[index]
+    const inventoryChange = input.periodInventoryChange?.[index] ?? 0
+    const costOfGoodsSold = input.periodCostOfGoodsSold?.[index] ?? productionCost - inventoryChange
+    if (Math.abs(costOfGoodsSold - (productionCost - inventoryChange)) > 0.01) {
+      warnings.push('Cost of goods sold must equal production cost less inventory build in project period ' + (index + 1) + '.')
+      return empty()
+    }
+    const ebit = revenue[index] + otherIncome - costOfGoodsSold - abnormalWasteExpense - depreciation[index] +
       assetSale.otherIncomeLoss + salvageGainLoss
     const currentFiscalYearIndex=fiscalYearIndexForPeriod(periods[index],periods,fiscalYearStartMonth)
     const taxableDeduction=input.taxableDeductionsByPeriod?.[index]??0
@@ -1296,20 +1322,22 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
       warnings.push('Shareholder working-capital funding must be finite and non-negative (period ' + (index + 1) + ').')
       return empty()
     }
-    const cfads = revenue[index] + otherIncome + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - periodTax.tax
+    // Cash-flow measures start from sold-goods cost; inventory build is then reflected once in working capital.
+    const cfads = revenue[index] + otherIncome + shortTermDepositInterest[index] - costOfGoodsSold - abnormalWasteExpense - periodTax.tax
       - maintenanceCapex[index] - changeInWorkingCapital + assetSale.saleProceeds
     const debtService = interestExpense + principal
     const dscr = debtService > 0 ? cfads / debtService : null
     const dscrCovenantStatus: 'not-tested' | 'pass' | 'breach' = input.minimumDscr == null || dscr == null
       ? 'not-tested' : dscr + 1e-9 >= input.minimumDscr ? 'pass' : 'breach'
     if (dscrCovenantStatus === 'breach') warnings.push('Minimum DSCR covenant breached in period ' + (index + 1) + ': actual ' + dscr!.toFixed(4) + ', minimum ' + input.minimumDscr!.toFixed(4) + '.')
-    const projectFreeCashFlow = ebit + shortTermDepositInterest[index] - assetSale.otherIncomeLoss - salvageGainLoss - unleveredPeriodTax.tax + depreciation[index]
+    const projectCashFlowTax = input.taxAmountOverridesByPeriod ? periodTax.tax : unleveredPeriodTax.tax
+    const projectFreeCashFlow = ebit + shortTermDepositInterest[index] - assetSale.otherIncomeLoss - salvageGainLoss - projectCashFlowTax + depreciation[index]
       - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage
-    const equityFreeCashFlow = -equityContribution[index] + revenue[index] + otherIncome + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense
+    const equityFreeCashFlow = -equityContribution[index] + revenue[index] + otherIncome + shortTermDepositInterest[index] - costOfGoodsSold - abnormalWasteExpense
       - periodTax.tax - interestExpense - principal - maintenanceCapex[index]
       - equityWorkingCapitalCashFlow + assetSale.saleProceeds + terminalSalvage
-    const periodCashChange = revenue[index] + otherIncome + shortTermDepositInterest[index] - variableCost[index] - fixedCost[index] - abnormalWasteExpense - periodTax.tax
+    const periodCashChange = revenue[index] + otherIncome + shortTermDepositInterest[index] - costOfGoodsSold - abnormalWasteExpense - periodTax.tax
       - interestExpense - principal - fixedInvestment[index] - preOperatingCost[index] - maintenanceCapex[index]
       - changeInWorkingCapital + assetSale.saleProceeds + terminalSalvage + debtDrawdown
       + equityContribution[index] + equityWorkingCapitalContributionAmount
@@ -1319,7 +1347,7 @@ export function calculateIntegratedPeriodicFinance(input: PeriodicProjectFinance
     if (fundingGap > 0.01) warnings.push('Funding shortfall at the end of project period ' + (index + 1) + ': ' + fundingGap.toFixed(2) + '.')
     rows.push({
       period:index+1,startDate:periods[index].startDate,endDate:periods[index].endDate,days:periods[index].days,
-      revenue:revenue[index],subsidyIncome:input.periodSubsidyIncome?.[index]??0,otherIncome,otherIncomeSourceReference:otherIncome!==0?input.periodOtherIncomeSourceReference??null:null,shortTermDepositInterest:shortTermDepositInterest[index],variableCost:variableCost[index],fixedCost:fixedCost[index],abnormalWasteExpense,depreciation:depreciation[index],ebit,
+      revenue:revenue[index],subsidyIncome:input.periodSubsidyIncome?.[index]??0,otherIncome,otherIncomeSourceReference:otherIncome!==0?input.periodOtherIncomeSourceReference??null:null,shortTermDepositInterest:shortTermDepositInterest[index],variableCost:variableCost[index],fixedCost:fixedCost[index],productionCost,inventoryChange,costOfGoodsSold,abnormalWasteExpense,depreciation:depreciation[index],ebit,
       assetSaleProceeds:assetSale.saleProceeds,assetReturnOfCapital:assetSale.returnOfCapital,
       assetSaleOtherIncomeLoss:assetSale.otherIncomeLoss,assetBookValueDisposed:assetSale.bookValueDisposed,
       interestExpense,cashInterestExpense,financingFeeExpense,commitmentFeeExpense,
@@ -1693,7 +1721,7 @@ export type PeriodicFinancialStatement = {
   endDate: string
   openingBalances: Required<PeriodicStatementOpeningBalances>
   incomeStatement: {
-    revenue: number; shortTermDepositInterest: number; cashOperatingCosts: number; abnormalWasteExpense: number; ebitda: number; depreciation: number
+    revenue: number; shortTermDepositInterest: number; cashOperatingCosts: number; productionCost: number; inventoryChange: number; costOfGoodsSold: number; abnormalWasteExpense: number; ebitda: number; depreciation: number
     assetDisposalGainLoss: number; ebit: number; interest: number
     cashInterestExpense: number; financingFeeExpense: number; commitmentFeeExpense: number
     profitBeforeTax: number; foreignExchangeGainLoss: number; taxableDeductions: number; taxCredits: number; taxBeforeCredits: number; tax: number; netIncome: number
@@ -1881,9 +1909,9 @@ export function buildPeriodicThreeFinancialStatements(
     if (Math.abs(closingDebt - (unmodelledOpeningDebt + scheduledPeriod.closingBalance +
         automaticFunding.automaticOverdraftBalance)) > tolerance) return []
     const openingBalances = { cash, debt, netFixedAssets, netWorkingCapital, rawMaterialsInventory, workInProgressInventory, finishedGoodsInventory, deferredPreOperatingAssets, paidInCapital, retainedEarnings, grants }
-    const cashOperatingCosts = row.variableCost + row.fixedCost + row.abnormalWasteExpense
+    const cashOperatingCosts = row.productionCost + row.abnormalWasteExpense
     const assetDisposalGainLoss = row.assetSaleOtherIncomeLoss + row.salvageGainLoss
-    const ebitda = row.revenue - cashOperatingCosts
+    const ebitda = row.revenue - row.costOfGoodsSold - row.abnormalWasteExpense
     const ebit = ebitda - row.depreciation + assetDisposalGainLoss
     const profitBeforeTax = ebit + row.shortTermDepositInterest - row.interestExpense - foreignExchangeLoss
     const netIncome = profitBeforeTax - row.tax
@@ -1932,7 +1960,7 @@ export function buildPeriodicThreeFinancialStatements(
     }
     statements.push({
       period: row.period, startDate: row.startDate, endDate: row.endDate, openingBalances,
-      incomeStatement: { revenue: row.revenue, shortTermDepositInterest: row.shortTermDepositInterest, cashOperatingCosts, abnormalWasteExpense: row.abnormalWasteExpense, ebitda, depreciation: row.depreciation,
+      incomeStatement: { revenue: row.revenue, shortTermDepositInterest: row.shortTermDepositInterest, cashOperatingCosts, productionCost: row.productionCost, inventoryChange: row.inventoryChange, costOfGoodsSold: row.costOfGoodsSold, abnormalWasteExpense: row.abnormalWasteExpense, ebitda, depreciation: row.depreciation,
         assetDisposalGainLoss, ebit, interest: row.interestExpense,
         cashInterestExpense: row.cashInterestExpense, financingFeeExpense: row.financingFeeExpense,
         commitmentFeeExpense: row.commitmentFeeExpense,

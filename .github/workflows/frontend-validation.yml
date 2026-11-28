@@ -51,6 +51,8 @@ jobs:
         run: npm run test:indexeddb:browser
       - name: Financial model regression tests
         run: npm run test:financial
+      - name: Consolidated four-project COMFAR audit
+        run: node scripts/validate-comfar-four-project-audit.mjs
       - name: Executive dashboard MOD-01 integration tests
         run: npm run test:modules
       - name: Independent AHP and BWM ranking method tests
