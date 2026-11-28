@@ -189,6 +189,10 @@ assert.equal(reportTax.length,15)
 assert.equal(reportNetCashFlow.length,15)
 const workingCapitalBalances=source.workingCapital.map(row=>row.inventory+row.cash)
 assert.equal(workingCapitalBalances.length,15,'COMFAR working-capital schedule must cover 1403-1417')
+// LEGACY_DIAGNOSTIC_PAGE24_OPEX: this path intentionally uses the detailed page-24 factory-cost
+// schedule, not the page-57-61 cash-flow OPEX series used by the end-to-end valuation below.
+// It is retained to expose source-basis deltas, but must use the report's actual tax-rate bands.
+const legacyDiagnosticTaxRates=Array.from({length:periods.length},(_,index)=>index<=4?5:25)
 const fullFinanceResult=engine.calculateIntegratedPeriodicFinance({
  periods,fiscalYearStartMonth:3,constructionPeriodCount:0,dayCountBasis:365,cashFlowTiming:'period-end',
  annualRevenue:productSchedule.annualRevenue,periodRevenue:productSchedule.periodRevenue,
@@ -196,7 +200,8 @@ const fullFinanceResult=engine.calculateIntegratedPeriodicFinance({
  periodInventoryChange,periodCostOfGoodsSold:productSchedule.periodCostOfSales.map(value=>value+79000),
  annualFixedCost:Array(periods.length).fill(79000),annualDepreciation,periodDepreciationSchedule:periodDepreciation,
  annualFixedInvestment:Array(periods.length).fill(0),annualPreOperatingCost:Array(periods.length).fill(0),
- annualMaintenanceCapex:Array(periods.length).fill(0),annualTaxRates:Array(periods.length).fill(5),
+ annualMaintenanceCapex:Array(periods.length).fill(0),annualTaxRates:legacyDiagnosticTaxRates,
+ taxRatesByPeriod:legacyDiagnosticTaxRates,
  annualEquityContributions:Array(periods.length).fill(0),workingCapitalByPeriod:workingCapitalBalances,
  loans:[{id:'comfar-cold-rolling-reported-loan',input:{annualRatePercent:0,drawdowns:Array(periods.length).fill(0),
   repaymentMethod:'bullet',repaymentStartPeriod:1,gracePeriods:0,termPeriods:periods.length,capitalizeInterest:false}}],
@@ -205,13 +210,16 @@ const fullFinanceResult=engine.calculateIntegratedPeriodicFinance({
 })
 assert.equal(fullFinanceResult.valid,true,fullFinanceResult.warnings.join('; '))
 assert.equal(fullFinanceResult.rows.length,15)
+assert.deepEqual(fullFinanceResult.rows.map(row=>row.taxRatePercent),legacyDiagnosticTaxRates,
+ 'LEGACY_DIAGNOSTIC_PAGE24_OPEX must apply 5% through 1407 and 25% from 1408')
+console.log('LEGACY_DIAGNOSTIC_PAGE24_OPEX: detailed factory-cost basis from pages 24-27; tax-band regression passed; values below are diagnostic deltas, not the page-57-61 E2E cash-flow fixture.')
 for(let i=0;i<15;i++){
  const row=fullFinanceResult.rows[i]
  assert.ok(Number.isFinite(row.tax)&&Number.isFinite(row.cfads)&&Number.isFinite(row.projectFreeCashFlow),
-  'Integrated tax, CFADS and project cash flow must be finite in '+(1403+i))
- close(row.taxRatePercent,5,'Integrated tax rate must be 5% in '+(1403+i),0.000001)
+  'Legacy diagnostic tax, CFADS and project cash flow must be finite in '+(1403+i))
+ close(row.taxRatePercent,legacyDiagnosticTaxRates[i],'Legacy diagnostic tax-rate band '+(1403+i),0.000001)
  console.log([
-  String(1403+i),
+  'LEGACY_DIAGNOSTIC_PAGE24_OPEX '+String(1403+i),
   'engineTax='+row.tax.toFixed(2),
   'reportTax='+reportTax[i].toFixed(2),
   'taxDelta='+(row.tax-reportTax[i]).toFixed(2),
@@ -231,7 +239,8 @@ for(let i=0;i<3;i++){
  close(actual.closingBalance,sourceDebt[i].closingBalance,'Reported closing debt '+(1403+i),0.02)
 }
 assert.ok(Number.isFinite(fullFinanceResult.npvProject),'Integrated operating-horizon NPV at 20% must be calculated')
-console.log('Operating-horizon NPV at 20%='+fullFinanceResult.npvProject.toFixed(2)+'; operating-horizon IRR='+String(fullFinanceResult.irrProject))
+console.log('LEGACY_DIAGNOSTIC_PAGE24_OPEX operating-horizon NPV at 20%='+fullFinanceResult.npvProject.toFixed(2)+'; operating-horizon IRR='+String(fullFinanceResult.irrProject))
+console.log('LEGACY_DIAGNOSTIC_PAGE24_OPEX is not interchangeable with the PAGE57_61_E2E_CASHFLOW basis; its cost/tax/cash-flow deltas are intentionally preserved.')
 console.log('Whole-project COMFAR NPV 31,425,182.71 and IRR 52.83% (p.57) are not parity assertions: this fixture begins in 1403 and lacks the actual 7/1401-1402 construction-period cash-flow schedule. Tax/CFADS/net-cash-flow differences are diagnostics; no COMFAR values are altered.')
 
 
@@ -332,6 +341,9 @@ const integratedInput={
 const integratedResult=engine.calculateIntegratedPeriodicFinance(integratedInput)
 assert.equal(integratedResult.valid,true,integratedResult.warnings.join('; '))
 assert.equal(integratedResult.rows.length,17)
+assert.deepEqual(integratedResult.rows.slice(2).map(row=>row.taxRatePercent),reportedTaxRates,
+ 'PAGE57_61_E2E_CASHFLOW must apply 5% through 1407 and 25% from 1408')
+console.log('PAGE57_61_E2E_CASHFLOW: cash-flow statement OPEX basis; independent tax-band regression passed.')
 for(let i=0;i<15;i++){
   const row=integratedResult.rows[i+2]
   const year=1403+i
@@ -380,5 +392,5 @@ close(valuationResult.npvProject,31425182.71,'COMFAR project NPV at 20%, valuati
 const periodCountIrr=calculateComfarPeriodCountIrr(valuationResult.rows.map(row=>row.projectFreeCashFlow))
 close(periodCountIrr,52.83,'COMFAR period-count project IRR',0.01)
 assert.ok(Number.isFinite(valuationResult.irrProject),'Integrated engine must return a finite actual-date project IRR')
-console.log('COMFAR cold-rolling integrated end-to-end validation passed: 5% tax through 1407, 25% thereafter, exact source tax/CFADS/depreciation/debt, NPV parity at 20%, and period-count IRR parity. Engine actual-date IRR='+valuationResult.irrProject.toFixed(6)+'%; COMFAR period-count IRR='+periodCountIrr.toFixed(6)+'%.')
+console.log('PAGE57_61_E2E_CASHFLOW validation passed: 5% tax through 1407, 25% thereafter, source tax/CFADS/depreciation/debt, NPV parity at 20%, and period-count IRR parity. Engine actual-date IRR='+valuationResult.irrProject.toFixed(6)+'%; COMFAR period-count IRR='+periodCountIrr.toFixed(6)+'%.')
 }
